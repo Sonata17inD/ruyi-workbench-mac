@@ -732,7 +732,7 @@
       "dependsOn": [
         "P1"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "effortDays": {
         "low": 6,
         "high": 10
@@ -746,9 +746,24 @@
             "high": 3
           },
           "deliverable": "pywin32/winsdk/UIA 条件化；共享模块可独立安装，失败隔离且报告真实能力；为 Mac 文件工具补保护规则。",
-          "status": "planned",
-          "owner": null,
-          "evidence": []
+          "status": "done",
+          "owner": "Codex",
+          "evidence": [
+            "evidence/P3/acc-shared/README.md",
+            "evidence/P3/acc-shared/validation.json",
+            "evidence/P3/acc-shared/review.json",
+            "evidence/P3/acc-shared/source-fingerprint.json"
+          ],
+          "implementationCommit": "f135bda1c4bb9703ccbb926f36d99f855ad0f63c",
+          "localDeliveryStatus": "done",
+          "completedDate": "2026-11-06",
+          "completionScope": "Mac共享ACC子集开发与单独本地验收；Windows实机/CI回归未执行，保留P3整体阶段关口，并未获豁免。",
+          "pendingPhaseAcceptance": [
+            "Windows同候选CI/实机回归"
+          ],
+          "laterPhaseCarryover": [
+            "macOS14 arm64最低系统与wheel部署目标继续P3/P6验证；当前不宣称已兼容"
+          ]
         },
         {
           "id": "P3-02",
@@ -758,9 +773,27 @@
             "high": 3
           },
           "deliverable": "验证 docx/xlsx/pptx/pdf 与图片提取、图表、中文字体；把依赖清单和最小样例固定下来，保证检查点与写入审计。",
-          "status": "planned",
-          "owner": null,
-          "evidence": []
+          "status": "done",
+          "owner": "Codex",
+          "evidence": [
+            "evidence/P3/office/README.md",
+            "evidence/P3/office/validation.json",
+            "evidence/P3/office/review.json",
+            "evidence/P3/office/source-fingerprint.json"
+          ],
+          "startedDate": "2026-11-06",
+          "progress": "真实MCP24项、独立产物24项、116 Office/98读取/43图表检查、锁定60依赖的新环境断网重放与六页视觉检查通过；独立复核无剩余发现。",
+          "implementationCommit": "bd2eb093fc85e05dfb36f63c9254fb24c271bfde",
+          "continuedDate": "2026-11-07",
+          "completedDate": "2026-11-07",
+          "localDeliveryStatus": "done",
+          "completionScope": "Mac文档/图表/字体开发与单独本地验收；Windows同候选实际回归未执行，仍保留P3阶段关口，未豁免。",
+          "pendingPhaseAcceptance": [
+            "Windows同候选CI/实机回归"
+          ],
+          "laterPhaseCarryover": [
+            "macOS14 arm64与wheel部署目标、签名发行保持原阶段交接"
+          ]
         },
         {
           "id": "P3-03",
@@ -770,9 +803,25 @@
             "high": 2
           },
           "deliverable": "验证 Mac Chromium、独立 profile、离线浏览器缓存路径、标签页/输入/截图和退出清理；区别原生打开 URL 与浏览器自动化。",
-          "status": "planned",
-          "owner": null,
-          "evidence": []
+          "status": "done",
+          "owner": "Codex",
+          "evidence": [
+            "evidence/P3/browser/README.md",
+            "evidence/P3/browser/validation.json",
+            "evidence/P3/browser/review.json",
+            "evidence/P3/browser/source-fingerprint.json"
+          ],
+          "implementationCommit": "35ce93b9106d331472ea94f49dfd82e9968f2da4",
+          "localDeliveryStatus": "done",
+          "completedDate": "2026-11-07",
+          "completionScope": "Mac浏览器运行时开发与单独本地验收；Windows实际同候选回归未执行且未豁免。",
+          "pendingPhaseAcceptance": [
+            "Windows同候选CI/实机回归"
+          ],
+          "laterPhaseCarryover": [
+            "macOS14、签名/干净机离线发行与默认有界面模式用户可见交互待受控实机验收"
+          ],
+          "progress": "真实MCP与全新离线wheel重放各25项、8项生命周期及98读取回归通过；独立复核修复两项真实取消驱动泄漏。完整单元2490通过/18既有跳过；静态首轮78/80，两个工程门修复定向通过。"
         },
         {
           "id": "P3-04",
@@ -782,11 +831,40 @@
             "high": 2
           },
           "deliverable": "逐项检查 16 个 Playbook、离线技能/角色及示例命令；为 PowerShell/Windows 控制模板提供 Mac 路径或禁用条件；更新中英文说明。",
-          "status": "planned",
-          "owner": null,
-          "evidence": []
+          "status": "done",
+          "owner": "Codex",
+          "evidence": [
+            "evidence/P3/templates/README.md",
+            "evidence/P3/templates/validation.json",
+            "evidence/P3/templates/review.json",
+            "evidence/P3/templates/content-audit.json",
+            "evidence/P3/templates/source-fingerprint.json"
+          ],
+          "implementationCommit": "2f45aba4a916b6ff321c5318c4d79ba953d734a3",
+          "localDeliveryStatus": "done",
+          "completedDate": "2026-11-07",
+          "completionScope": "Mac平台模板/能力文案开发与单独本地验收；71项内容审计不等于每种模型任务都已实跑。Windows同候选实际回归未执行且未豁免。",
+          "pendingPhaseAcceptance": [
+            "Windows同候选CI/实机回归"
+          ],
+          "laterPhaseCarryover": [
+            "macOS14、正式签名/干净机离线发行、默认有界面浏览器用户交互维持原阶段交接；Mac桌面/OCR待P5、废纸篓能力待P6"
+          ],
+          "progress": "71项资源独立审计；真实模板38、中英UI18、Playbooks94、能力56、权限37、技能工具26项通过。独立复核三项状态/缓存缺陷关闭；完整单元2491通过/18既有跳过，静态79/80，旧枚举锁更新后定向通过。"
         }
-      ]
+      ],
+      "owner": "Codex",
+      "startedDate": "2026-11-06",
+      "progress": "P3四个工作包均完成开发和单独Mac本地验收；整体仍in_progress，Windows同候选CI/实机回归未执行且未获豁免，最低系统与正式发行不计通过。",
+      "pendingPhaseAcceptance": [
+        "Windows同候选CI/实机回归未执行且未获豁免"
+      ],
+      "localDelivery": {
+        "status": "done",
+        "completedDate": "2026-11-07",
+        "scope": "四工作包Mac本地开发、专项验证与逐包独立复核验收；不等于P3阶段/M1或正式发行验收",
+        "evidence": "evidence/P3/README.md"
+      }
     },
     {
       "id": "P4",

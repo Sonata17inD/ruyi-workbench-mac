@@ -44,6 +44,7 @@ if sys.platform == "win32":
 import functools
 import inspect
 import time
+from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
 
@@ -51,12 +52,32 @@ from ai_computer_control.utils.errors import exc_text, hint_for
 
 VERSION = "1.9.1"
 
+@asynccontextmanager
+async def _tool_lifespan(_server):
+    try:
+        yield {}
+    finally:
+        # Normal stdio EOF must release browsers before the server exits. Never
+        # import optional toolsets while shutting down a minimal installation.
+        browser = sys.modules.get("ai_computer_control.tools.browser")
+        if browser is not None:
+            import anyio
+            with anyio.move_on_after(10, shield=True) as scope:
+                result = await browser.shutdown_browser()
+                if result.get("cleanupIncomplete"):
+                    raise RuntimeError("browser cleanup incomplete: " + result["error"])
+            if scope.cancel_called:
+                raise RuntimeError("browser cleanup timed out")
+
+
 mcp = FastMCP(
     "AI Computer Control",
     instructions="A comprehensive toolkit for AI agents to control Windows computers. "
     "Provides screen capture, mouse/keyboard control, window management, "
     "file operations, browser automation, document editing, and more. "
-    "Every tool returns a dict with a boolean 'ok' field.",
+    "Every tool returns a dict with a boolean 'ok' field. "
+    "On macOS only implemented shared tools are registered; diagnostics reports unsupported backends.",
+    lifespan=_tool_lifespan,
 )
 
 # The original FastMCP decorator; our wrapper below registers through it.
@@ -281,6 +302,21 @@ _TOOLSET_MODULES = {
 }
 _ALWAYS_MODULES = ["audit", "diagnostics"]
 
+# P3 shared Mac subset. Desktop/TCC backends belong to P5; importing their Windows
+# implementations (even if an optional package happens to be installed) must not
+# advertise tools that cannot execute. Windows registration remains unchanged.
+_MAC_UNSUPPORTED_TOOLSETS = frozenset({
+    "desktop", "uia", "ocr", "vision", "macro", "observe", "audio", "sync",
+})
+_UNSUPPORTED_MODULES = {
+    module: "platform.unsupported: macOS desktop backend is not implemented"
+    for group in _MAC_UNSUPPORTED_TOOLSETS for module in _TOOLSET_MODULES[group]
+} if sys.platform == "darwin" else {}
+
+
+def _platform_modules(modules: list[str]) -> list[str]:
+    return [module for module in modules if module not in _UNSUPPORTED_MODULES]
+
 
 def _active_modules() -> list[str]:
     hide_memory = _os.environ.get("ACC_HIDE_MEMORY", "").strip().lower() in {"1", "true", "yes", "on"}
@@ -289,7 +325,7 @@ def _active_modules() -> list[str]:
         mods = []
         for group in _TOOLSET_MODULES.values():
             mods.extend(group)
-        return _ALWAYS_MODULES + [m for m in mods if not (hide_memory and m == "memory")]
+        return _platform_modules(_ALWAYS_MODULES + [m for m in mods if not (hide_memory and m == "memory")])
     mods = list(_ALWAYS_MODULES)
     unknown = []
     for name in (p.strip().lower() for p in raw.split(",")):
@@ -308,7 +344,7 @@ def _active_modules() -> list[str]:
         if m not in seen:
             seen.add(m)
             out.append(m)
-    return [m for m in out if not (hide_memory and m == "memory")]
+    return _platform_modules([m for m in out if not (hide_memory and m == "memory")])
 
 
 import importlib as _importlib  # noqa: E402
