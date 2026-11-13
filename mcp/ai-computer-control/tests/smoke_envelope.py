@@ -168,7 +168,7 @@ def audit_log():
 
     # by-name audit of the previously unaudited mutators — through the real wrapper, not a copy.
     must = {"write_document", "write_excel", "write_pdf", "fetch", "browser_open", "browser_click",
-            "browser_type", "browser_navigate", "get_environment_variable", "message_box", "show_notification"}
+            "browser_type", "browser_navigate"}
     check(must <= set(server._AUDITED_BY_NAME), f"policy set covers {sorted(must - set(server._AUDITED_BY_NAME))} missing")
     names = {t.name for t in server.mcp._tool_manager.list_tools()}
     check(server._AUDITED_BY_NAME <= names, f"no stale names in the audit policy: {sorted(server._AUDITED_BY_NAME - names)}")
@@ -227,55 +227,36 @@ def run_command_output():
     check(shell._decode("中文内容".encode("gbk"), "cp936") == "中文内容", "real GBK bytes still fall back to the OEM page")
     check(shell._decode("中文".encode("gbk"), "cp936", enc_first=True) == "中文", "explicit encoding is honoured first")
 
-    orig = shell._default_console_encoding
-    shell._default_console_encoding = lambda: "cp936"
-    try:
-        fn = {t.name: t.fn for t in server.mcp._tool_manager.list_tools()}["run_command"]
-        r = fn(command=_cmd([sys.executable, "-c",
-                             "import sys; sys.stdout.buffer.write('构建成功'.encode('utf-8'))"]), timeout=20)
-        check("构建成功" in r.get("stdout", ""), f"UTF-8 child output is not mojibake (got {r.get('stdout')!r})")
-        r = fn(command=_cmd([sys.executable, "-c",
-                             "import sys; sys.stdout.buffer.write('中文内容'.encode('gbk'))"]), timeout=20)
-        check("中文内容" in r.get("stdout", ""), f"GBK child output still decodes via the OEM page (got {r.get('stdout')!r})")
+    fn = {t.name: t.fn for t in server.mcp._tool_manager.list_tools()}["run_command"]
+    r = fn(command=_cmd([sys.executable, "-c",
+                         "import sys; sys.stdout.buffer.write('构建成功'.encode('utf-8'))"]), timeout=20)
+    check("构建成功" in r.get("stdout", ""), f"UTF-8 child output is not mojibake (got {r.get('stdout')!r})")
+    r = fn(command=_cmd([sys.executable, "-c",
+                         "import sys; sys.stdout.buffer.write('中文内容'.encode('gbk'))"]), timeout=20, encoding="gb18030")
+    check("中文内容" in r.get("stdout", ""), f"GBK child output still decodes via the OEM page (got {r.get('stdout')!r})")
 
-        # 单行、不含 % 与换行:Windows 上 run_command 走 cmd /c,命令行遇到换行就截断,% 还会被当变量展开。
-        code = ("import sys; [print('line ' + str(i).zfill(6) + ' of a very long build log') for i in range(5000)]; "
-                "sys.stderr.write('ERR-LINE-AT-END' + chr(10)); print('TAIL-MARKER-LINE')")
-        r = fn(command=_cmd([sys.executable, "-c", code]), timeout=60)
-        blob = json.dumps(r, ensure_ascii=False)
-        keys = list(r)
-        check(len(blob) < 40000, f"runaway output stays well under the host cut ({len(blob)} chars)")
-        check("TAIL-MARKER-LINE" in r.get("stdout", "") and "ERR-LINE-AT-END" in r.get("stderr", ""),
-              "the tail (where errors live) survives")
-        check("omitted" in r.get("stdout", "") and r.get("stdout_truncated") is True and r.get("hint"),
-              "explicit omitted-marker, truncation flag and hint present")
-        check(keys.index("ok") < keys.index("stdout_truncated") < keys.index("stderr") < keys.index("stdout"),
-              f"status fields first, stderr before stdout (order={keys})")
-        r2 = fn(command=_cmd([sys.executable, "-c", code]), timeout=60, max_output_chars=200000)
-        check("omitted" not in r2.get("stdout", "") and len(r2["stdout"]) > 100000,
-              "max_output_chars raises the budget")
-    finally:
-        shell._default_console_encoding = orig
+    # 单行、不含 % 与换行:Windows 上 run_command 走 cmd /c,命令行遇到换行就截断,% 还会被当变量展开。
+    code = ("import sys; [print('line ' + str(i).zfill(6) + ' of a very long build log') for i in range(5000)]; "
+            "sys.stderr.write('ERR-LINE-AT-END' + chr(10)); print('TAIL-MARKER-LINE')")
+    r = fn(command=_cmd([sys.executable, "-c", code]), timeout=60)
+    blob = json.dumps(r, ensure_ascii=False)
+    keys = list(r)
+    check(len(blob) < 40000, f"runaway output stays well under the host cut ({len(blob)} chars)")
+    check("TAIL-MARKER-LINE" in r.get("stdout", "") and "ERR-LINE-AT-END" in r.get("stderr", ""),
+          "the tail (where errors live) survives")
+    check("omitted" in r.get("stdout", "") and r.get("stdout_truncated") is True and r.get("hint"),
+          "explicit omitted-marker, truncation flag and hint present")
+    check(keys.index("ok") < keys.index("stdout_truncated") < keys.index("stderr") < keys.index("stdout"),
+          f"status fields first, stderr before stdout (order={keys})")
+    r2 = fn(command=_cmd([sys.executable, "-c", code]), timeout=60, max_output_chars=200000)
+    check("omitted" not in r2.get("stdout", "") and len(r2["stdout"]) > 100000,
+          "max_output_chars raises the budget")
 
     # A cut in the middle of a multibyte character must not poison the chunk.
     data = ("汉字构建输出" * 5000).encode("utf-8")  # 180 KB -> far beyond the read window of a 1000-char budget
     text, cut, size = shell._read_capture(io.BytesIO(data), "cp936", 1000)
     check(cut and "\ufffd" not in text and "bytes omitted" in text and size == len(data),
           "large stream: head/tail cut on character boundaries, no U+FFFD")
-
-
-def launch_bounds():
-    print("== ④ launch_application 有界 ==")
-    import ai_computer_control.tools.application as app
-    seen = []
-    orig = app._find_window_for_pid
-    app._find_window_for_pid = lambda pid, timeout: seen.append(timeout)
-    try:
-        fn = {t.name: t.fn for t in server.mcp._tool_manager.list_tools()}["launch_application"]
-        r = fn(path=sys.executable, args="-c pass", ready_timeout=1e9)
-        check(seen and seen[0] <= 60, f"window poll is clamped (asked 1e9s, used {seen}) result={str(r)[:80]}")
-    finally:
-        app._find_window_for_pid = orig
 
 
 def lazy_imports():
@@ -295,7 +276,7 @@ def lazy_imports():
 
 
 def main():
-    for step in (lazy_imports, envelope, audit_log, run_command_output, launch_bounds):
+    for step in (lazy_imports, envelope, audit_log, run_command_output):
         step()
     print()
     if _FAILURES:

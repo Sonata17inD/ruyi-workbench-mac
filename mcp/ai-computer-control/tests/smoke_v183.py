@@ -100,46 +100,7 @@ def main() -> int:
     check(le.get("total") == 1000 and le.get("capped") is None,
           f"exactly 1000 entries are not falsely marked capped (got total={le.get('total')}, capped={le.get('capped')})")
 
-    # ============================================================ ③ ocr_click nth 包络
-    print("\n== ③ ocr_click: nth 越界 = ok:false 执行拒绝 + found:true 查询有果 ==")
-    import ai_computer_control.tools.ocr as ocr_mod
-
-    async def _fake_ocr_screen(region=None, lang=None):
-        return {"success": True, "words": [
-            {"text": "保存", "left": 10, "top": 10, "width": 20, "height": 10, "center": [20, 15]},
-            {"text": "另存为", "left": 10, "top": 30, "width": 30, "height": 10, "center": [25, 35]},
-        ]}
-
-    old_avail, old_screen = ocr_mod._AVAILABLE, ocr_mod.ocr_screen
-    ocr_mod._AVAILABLE = True
-    ocr_mod.ocr_screen = _fake_ocr_screen
-    try:
-        r5 = asyncio.run(_FNS["ocr_click"](text="存", nth=7))
-        check(r5.get("ok") is False, f"nth 越界 ok:false (got {r5.get('ok')})")
-        check(r5.get("found") is True and r5.get("clicked") is None and r5.get("count") == 2,
-              f"查询结果字段保留 (found/count/clicked) (got {r5})")
-        check(bool(r5.get("error")) and "out of range" in r5["error"], f"人话错 (got {r5.get('error')!r})")
-    finally:
-        ocr_mod._AVAILABLE, ocr_mod.ocr_screen = old_avail, old_screen
-
-    # ============================================================ ④ launch_application wait_timeout
-    print("\n== ④ launch_application: wait 用独立 wait_timeout, 不再被 2 秒 ready_timeout 卡死 ==")
-    t0 = time.monotonic()
-    r6 = _FNS["launch_application"](path=sys.executable, args='-c "import time; time.sleep(3)"',
-                                    wait=True, wait_timeout=15, ready_timeout=0)
-    dt = time.monotonic() - t0
-    check(r6.get("success") is True and r6.get("return_code") == 0 and dt >= 3,
-          f"3 秒进程等到退出 ({dt:.1f}s, rc={r6.get('return_code')}) —— 旧码 2 秒必 timed_out")
-
-    r7 = _FNS["launch_application"](path=sys.executable, args='-c "import time; time.sleep(30)"',
-                                    wait=True, wait_timeout=2, ready_timeout=0)
-    check(r7.get("timed_out") is True and r7.get("wait_timeout") == 2,
-          f"wait_timeout=2 如实超时并回显预算 (got {r7})")
-    try:  # 不泄漏 30 秒睡眠进程
-        import psutil
-        psutil.Process(r7["pid"]).kill()
-    except Exception:
-        pass
+    # Native OCR selection and GUI launch contracts: smoke_macos_visual/input.
 
     # ============================================================ ⑤ audit 值脱敏
     print("\n== ⑤ audit: 值级脱敏 (命令行里的口令不进日志), 良性值不动 ==")
@@ -163,43 +124,8 @@ def main() -> int:
     s3 = _summarize_args({"api_key": "whatever"})
     check("whatever" not in s3 and "***" in s3, "键名脱敏仍整值 ***")
 
-    # ============================================================ ⑥ 输出路径 protected 护栏 (best-effort)
-    print("\n== ⑥ window_screenshot / get_clipboard_image: 输出路径过 protected 护栏 ==")
-    sysroot = os.environ.get("SystemRoot", r"C:\Windows")
-    refuse_at = os.path.join(sysroot, "wcw_should_refuse.png")
+    # Native capture path guards: smoke_macos_capture; installer retired.
 
-    ws = _FNS["window_screenshot"](title_substring="", output_path=refuse_at)
-    if ws.get("error") and "no visible window" in ws["error"]:
-        print("  [skip] 无可见窗口 (headless?) —— 护栏接线不断言")
-    else:
-        check(ws.get("ok") is False and "refused" in (ws.get("error") or ""),
-              f"window_screenshot 写 SystemRoot 被拒 (got {ws.get('error')!r})")
-        check(not os.path.exists(refuse_at), "被拒后无落盘文件")
-
-    # 剪贴板有图才能测 save_path 护栏: 先放一张图 (STA PowerShell, 无桌面会话则 skip)
-    png = os.path.join(_DATA, "clip.png")
-    from PIL import Image
-    Image.new("RGB", (8, 8), (1, 2, 3)).save(png)
-    sc = _FNS["set_clipboard_image"](path=png)
-    if not sc.get("success"):
-        print(f"  [skip] 无剪贴板环境 ({sc.get('error')}) —— get_clipboard_image 护栏不断言")
-    else:
-        gc = _FNS["get_clipboard_image"](save_path=refuse_at)
-        check(bool(gc.get("error")) and "refused" in gc["error"],
-              f"get_clipboard_image 写 SystemRoot 被拒 (got {gc.get('error')!r})")
-        check(not os.path.exists(refuse_at), "被拒后无落盘文件")
-
-    # ============================================================ ⑦ update.bat 双布局 (静态)
-    print("\n== ⑦ installer/update.bat: 新旧两种安装布局探测 (静态锁) ==")
-    bat = os.path.join(_ROOT, "installer", "update.bat")
-    with open(bat, "r", encoding="utf-8", errors="replace") as f:
-        src = f.read()
-    check("runtime\\python\\python.exe" in src, "探测新布局 runtime\\python")
-    check("venv\\Scripts\\python.exe" in src, "保留旧布局 venv 兜底")
-    check("runtime\\python\\Lib\\site-packages\\ai_computer_control" in src,
-          "新布局 site-packages 路径正确")
-
-    # ---------------------------------------------------------------- summary
     print()
     if _FAILURES:
         print(f"FAILED: {len(_FAILURES)} assertion(s)")

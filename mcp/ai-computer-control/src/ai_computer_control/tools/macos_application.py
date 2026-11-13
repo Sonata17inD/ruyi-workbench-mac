@@ -11,6 +11,8 @@ def launch_application(path: str, args: str = "", working_dir: str | None = None
                        ready_timeout: float = 2.0, wait_timeout: float = 120.0) -> dict:
     """Launch or activate a Mac GUI application through LaunchServices and confirm its process identity.
 
+    何时用：启动或激活 Mac GUI 应用。何时别用：命令输出、工作目录或同步等待请用 run_command。
+
     path accepts an absolute .app path, bundle ID such as com.apple.TextEdit, or an unambiguous installed
     name such as TextEdit. args uses POSIX quoting and supports up to 64 arguments, each at most 4096 bytes.
     Existing applications may be activated with empty args. Arguments require a new application process.

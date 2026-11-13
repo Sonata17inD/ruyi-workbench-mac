@@ -27,9 +27,6 @@ sys.path.insert(0, _SRC)
 _DATA = os.path.join(tempfile.gettempdir(), "acc_smoke_v19_data")
 os.makedirs(_DATA, exist_ok=True)
 os.environ["WCW_DATA_DIR"] = _DATA
-# Off Windows there is no %SystemRoot%: the "writing into SystemRoot is refused" checks would otherwise resolve
-# "C:\Windows/x" against the cwd, find it unprotected and leave a `C:\Windows/` directory in the repo.
-os.environ.setdefault("SystemRoot", os.path.join(_DATA, "FakeWindows"))
 
 import ai_computer_control.server as server  # noqa: E402
 import ai_computer_control.tools.web_fetch as wf  # noqa: E402
@@ -92,7 +89,7 @@ def main() -> int:
         cjk_body = f.read()
     check(r7.get("success") is True and "新名字" in cjk_body and "正文保持" in cjk_body, "CJK 编辑编码回环")
 
-    sysroot = os.environ.get("SystemRoot", r"C:\Windows")
+    sysroot = "/System"
     r8 = _FNS["edit_file"](path=os.path.join(sysroot, "x.ini"), old_string="a", new_string="b")
     check(r8.get("ok") is False and "refused" in (r8.get("error") or ""), f"protected 护栏 (got {r8.get('error')!r})")
 

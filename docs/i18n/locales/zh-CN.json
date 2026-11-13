@@ -3783,7 +3783,7 @@
   "settings.catalog.autoCompactThreshold": "上下文用到多少自动压缩",
   "settings.catalog.autoCompactThreshold.hint": "对话占满上下文窗口的这个比例时，自动把早期内容压缩成摘要。",
   "settings.catalog.shellSessionMax": "同时保持的命令行窗口",
-  "settings.catalog.shellSessionMax.hint": "模型可保持运行的 bash 会话数。",
+  "settings.catalog.shellSessionMax.hint": "模型可保持运行的 bash 进程数。",
   "settings.catalog.agentTaskPoolPolicy": "新任务要不要你批",
   "settings.catalog.agentTaskPoolPolicy.hint": "「每条都问我」最稳；「不允许加任务」会让工作流只做开工时排好的事。",
   "settings.catalog.agentTaskPoolAutoCap": "自动批准上限",

@@ -392,12 +392,26 @@ def move_file(source: str, destination: str, allow_protected: bool = False) -> d
         return {"error": f"refused: {reason}. Pass allow_protected=true to override."}
     try:
         os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
-        # normcase: on Windows a case-only rename (readme.md -> README.md) names the SAME file, so the
-        # destination "already exists" only because it is the source itself — that must be allowed.
-        same_path = os.path.normcase(os.path.abspath(source)) == os.path.normcase(os.path.abspath(destination))
-        if os.path.exists(destination) and not same_path:
-            return {"error": f"refused: destination '{destination}' already exists. Delete it first or pick a different destination."}
-        shutil.move(source, destination)
+        source_abs, destination_abs = os.path.abspath(source), os.path.abspath(destination)
+        same_entry = source_abs == destination_abs
+        if os.path.lexists(destination) and not same_entry:
+            # Volume semantics, not platform spelling rules: one directory entry may
+            # accept multiple case/Unicode spellings. Distinct hardlinks stay protected.
+            src_stat, dst_stat = os.lstat(source), os.lstat(destination)
+            same_inode = (src_stat.st_dev, src_stat.st_ino) == (dst_stat.st_dev, dst_stat.st_ino)
+            src_parent, dst_parent = os.path.dirname(source_abs), os.path.dirname(destination_abs)
+            if same_inode and os.path.samefile(src_parent, dst_parent):
+                normalize = lambda name: unicodedata.normalize("NFD", name).casefold()
+                src_name, dst_name = os.path.basename(source_abs), os.path.basename(destination_abs)
+                if normalize(src_name) == normalize(dst_name):
+                    aliases = [name for name in os.listdir(src_parent) if normalize(name) == normalize(src_name)]
+                    same_entry = len(aliases) == 1
+            if not same_entry:
+                return {"error": f"refused: destination '{destination}' already exists. Delete it first or pick a different destination."}
+        if same_entry:
+            os.rename(source, destination)
+        else:
+            shutil.move(source, destination)
         return {"success": True, "source": source, "destination": destination}
     except Exception as e:
         return {"error": str(e)}

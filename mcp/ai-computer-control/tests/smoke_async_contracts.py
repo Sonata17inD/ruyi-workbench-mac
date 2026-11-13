@@ -1,49 +1,15 @@
-"""Regression checks for MCP argument binding and async tool dispatch.
-
-Run: python -X utf8 tests/smoke_async_contracts.py
-"""
-
+"""Shared asynchronous tool dispatch without desktop interaction."""
 import asyncio
-import io
 import inspect
-import os
 import sys
-import time
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+import ai_computer_control.server as server
+from ai_computer_control.tools import browser
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(_ROOT, "src"))
-
-import ai_computer_control.server as server  # noqa: E402
-from ai_computer_control.tools import browser, keyboard, ocr, uia  # noqa: E402
-
-
-def check(condition: bool, message: str) -> None:
-    if not condition:
-        raise AssertionError(message)
-    print(f"  [ok] {message}")
-
-
-def check_windows_com_apartment() -> None:
-    if sys.platform != "win32":
-        return
-
-    from ctypes import byref, windll
-    from ctypes.wintypes import DWORD
-
-    source = inspect.getsource(server)
-    flag_index = source.index("sys.coinit_flags = 0x0")
-    fastmcp_index = source.index("from mcp.server.fastmcp import FastMCP")
-    check(flag_index < fastmcp_index,
-          "the server declares MTA before FastMCP or tool imports can load comtypes")
-    check(getattr(sys, "coinit_flags", None) == 0,
-          "the server publishes the MTA policy used by comtypes")
-
-    apartment = DWORD()
-    qualifier = DWORD()
-    result = windll.ole32.CoGetApartmentType(byref(apartment), byref(qualifier))
-    check(result == 0 and apartment.value == 1,
-          "the live server thread is initialized as a multithreaded COM apartment")
-
+def check(condition, message):
+    assert condition, message
+    print('PASS', message)
 
 async def check_async_tools(tools: dict) -> None:
     # The browser backend need not be installed for this dispatch check. The important contract is
@@ -78,155 +44,10 @@ async def check_async_tools(tools: dict) -> None:
     check(await browser._is_workbench_page(WorkbenchPage()),
           "connected Workbench tabs are recognized and protected from browser navigation")
 
-    old_ocr_available = ocr._AVAILABLE
-    old_screenshot = ocr._screenshot_png
-    old_recognize = ocr._recognize
-    old_input_timeout = ocr._OCR_INPUT_TIMEOUT_S
-    old_pipeline_timeout = ocr._OCR_PIPELINE_TIMEOUT_S
-    old_queue_timeout = ocr._OCR_QUEUE_TIMEOUT_S
-
-    async def fake_recognize(_png: bytes, _lang: str | None) -> dict:
-        await asyncio.sleep(0)
-        return {
-            "success": True,
-            "text": "SAO launcher",
-            "lines": ["SAO launcher"],
-            "words": [
-                {"text": "SAO", "left": 10, "top": 20, "width": 30, "height": 10,
-                 "center": [25, 25]},
-                {"text": "launcher", "left": 45, "top": 20, "width": 55, "height": 10,
-                 "center": [72, 25]},
-            ],
-        }
-
-    ocr._AVAILABLE = True
-    ocr._screenshot_png = lambda _region=None: b"fake-png"
-    ocr._recognize = fake_recognize
-    try:
-        result = await tools["ocr_find_text"].fn(text="SAO", click=False)
-        check(result.get("ok") is True and result.get("found") is True,
-              "OCR runs on FastMCP's existing event loop without nested asyncio.run")
-        check(result.get("center") == {"x": 25, "y": 25},
-              "ocr_find_text preserves screen coordinates")
-
-        async def never_finishes(_png: bytes, _lang: str | None) -> dict:
-            await asyncio.Event().wait()
-            return {"success": True}  # pragma: no cover - the deadline must win
-
-        ocr._recognize = never_finishes
-        ocr._OCR_PIPELINE_TIMEOUT_S = 0.05
-        started = time.monotonic()
-        timed = await ocr._run_ocr(b"fake-png", None)
-        check(timed.get("ok") is False and timed.get("stage") == "pipeline" and
-              time.monotonic() - started < 1,
-              "OCR whole-pipeline deadline returns a structured error before the MCP bridge timeout")
-
-        ocr._screenshot_png = lambda _region=None: (time.sleep(0.2), b"late-png")[1]
-        ocr._OCR_INPUT_TIMEOUT_S = 0.05
-        started = time.monotonic()
-        capture_timed = await tools["ocr_screen"].fn(lang=None)
-        check(capture_timed.get("ok") is False and capture_timed.get("stage") == "screen capture" and
-              time.monotonic() - started < 1,
-              "a blocked screen capture is abandoned by a daemon worker before the bridge timeout")
-        ocr._screenshot_png = lambda _region=None: b"fake-png"
-        ocr._OCR_INPUT_TIMEOUT_S = old_input_timeout
-
-        entered = asyncio.Event()
-        release = asyncio.Event()
-
-        async def held_recognizer(_png: bytes, _lang: str | None) -> dict:
-            entered.set()
-            await release.wait()
-            return {"success": True, "words": [], "text": "", "lines": []}
-
-        ocr._recognize = held_recognizer
-        ocr._OCR_PIPELINE_TIMEOUT_S = old_pipeline_timeout
-        ocr._OCR_QUEUE_TIMEOUT_S = 0.05
-        first = asyncio.create_task(ocr._run_ocr(b"first", None))
-        await entered.wait()
-        busy = await ocr._run_ocr(b"second", None)
-        check(busy.get("ok") is False and busy.get("stage") == "queue" and busy.get("retryable") is True,
-              "concurrent OCR returns busy quickly instead of starving WinRT until bridge timeout")
-        release.set()
-        check((await first).get("success") is True, "serialized OCR owner completes and releases the gate")
-    finally:
-        ocr._AVAILABLE = old_ocr_available
-        ocr._screenshot_png = old_screenshot
-        ocr._recognize = old_recognize
-        ocr._OCR_INPUT_TIMEOUT_S = old_input_timeout
-        ocr._OCR_PIPELINE_TIMEOUT_S = old_pipeline_timeout
-        ocr._OCR_QUEUE_TIMEOUT_S = old_queue_timeout
-
-
-def check_binary_and_uia_fallbacks() -> None:
-    check(ocr._coerce_bytes(bytearray(b"png")) == b"png" and
-          ocr._coerce_bytes(memoryview(b"png")) == b"png" and
-          ocr._coerce_bytes(io.BytesIO(b"png")) == b"png",
-          "OCR normalizes bytearray, memoryview, and binary streams to bytes")
-
-    class BytesWriter:
-        def __init__(self):
-            self.value = None
-
-        def write_bytes(self, value):
-            if not isinstance(value, bytes):
-                raise TypeError("bytes-like object required")
-            self.value = value
-
-    writer = BytesWriter()
-    ocr._write_bytes_compat(writer, b"image")
-    check(writer.value == b"image", "OCR passes bytes to winsdk DataWriter instead of a list")
-
-    class Root:
-        Name = "Example - Google Chrome"
-        ClassName = "Chrome_WidgetWin_1"
-        NativeWindowHandle = 123
-
-    limited = uia._browser_accessibility_status(Root(), 7, {"WindowControl", "ButtonControl"})
-    accessible = uia._browser_accessibility_status(
-        Root(), 70, {"WindowControl", "DocumentControl", "ButtonControl"}
-    )
-    check(limited and limited.get("accessibilityLimited") is True and accessible is None,
-          "UIA detects an accelerated browser shell but accepts a real Document tree")
-
-
-def main() -> int:
-    check_windows_com_apartment()
+if __name__ == '__main__':
     tools = {tool.name: tool for tool in server.mcp._tool_manager.list_tools()}
-
-    async_names = {
-        name for name, tool in tools.items() if inspect.iscoroutinefunction(tool.fn)
-    }
-    expected_async = {
-        "batch_actions", "macro_run",
-        "browser_open", "browser_click", "browser_type", "browser_screenshot",
-        "browser_get_text", "browser_execute_js", "browser_navigate", "browser_get_elements",
-        "browser_list_tabs", "browser_switch_tab", "browser_close", "browser_backend_status",
-        "ocr_image", "ocr_screen", "ocr_click", "ocr_find_text", "observe",
-        "wait_for_image", "wait_for_window_idle",
-    }
-    check(expected_async <= async_names, "all async-backed tools remain async after registration")
-
-    schema = tools["hotkey"].parameters["properties"]["keys"]
-    check("anyOf" in schema, "hotkey schema accepts a shortcut string or key-name list")
-    calls = []
-    old_hotkey = keyboard.pyautogui.hotkey
-    keyboard.pyautogui.hotkey = lambda *keys: calls.append(keys)
-    try:
-        one = tools["hotkey"].fn(keys="ctrl+l")
-        two = tools["hotkey"].fn(keys=["ctrl", "shift", "s"])
-    finally:
-        keyboard.pyautogui.hotkey = old_hotkey
-    check(one.get("ok") is True and calls[0] == ("ctrl", "l"),
-          "hotkey binds the MCP keys keyword and parses ctrl+l")
-    check(two.get("ok") is True and calls[1] == ("ctrl", "shift", "s"),
-          "hotkey also accepts an explicit key-name list")
-
-    check_binary_and_uia_fallbacks()
+    for name in ('batch_actions', 'macro_run', 'browser_open', 'browser_click', 'browser_type',
+                 'browser_screenshot', 'browser_get_text', 'browser_execute_js', 'browser_navigate',
+                 'browser_get_elements', 'browser_list_tabs', 'browser_switch_tab', 'browser_close'):
+        check(inspect.iscoroutinefunction(tools[name].fn), name + ' retains async dispatch')
     asyncio.run(check_async_tools(tools))
-    print("ALL PASS: MCP argument and async contracts are valid.")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

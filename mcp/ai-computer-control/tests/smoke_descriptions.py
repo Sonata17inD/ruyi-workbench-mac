@@ -83,7 +83,7 @@ def main() -> int:
             legacy_no_convention.append(name)
 
     print(f"# description 审计: {total} 件")
-    print(f"#   Args 段覆盖: {have_args_doc}/{total - len([t for t in tools if True])} "
+    print(f"#   Args 段覆盖: {have_args_doc}/{have_args_doc + len(missing_args_doc)} "
           f"(缺: {len(missing_args_doc)})")
     print(f"#   新约定(何时用/别用)覆盖: {have_convention}/{total}")
     if missing_args_doc:

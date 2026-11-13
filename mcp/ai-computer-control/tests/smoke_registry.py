@@ -18,29 +18,17 @@ import ai_computer_control.server as server  # noqa: E402
 
 # Tools that MUST be present (baseline + v1.3 additions).
 _EXPECTED = {
-    # baseline / earlier iterations
     "screenshot", "mouse_click", "type_text", "press_key", "hotkey", "get_clipboard",
-    "set_clipboard", "list_windows", "focus_window", "launch_application", "kill_process",
-    "read_file", "write_file", "delete_file", "move_file", "copy_file", "run_command",
-    "get_system_info", "list_monitors", "get_dpi_info", "get_pixel_color", "batch_actions",
-    "macro_run", "ui_inspect", "ui_find", "ui_invoke", "ocr_screen", "ocr_click",
-    "find_template", "mouse_drag", "mouse_scroll",
-    # v1.3
+    "set_clipboard", "list_windows", "focus_window", "launch_application", "read_file",
+    "write_file", "delete_file", "move_file", "copy_file", "run_command", "list_monitors",
+    "get_dpi_info", "batch_actions", "macro_run", "ui_inspect", "ui_find", "ui_invoke",
+    "ocr_screen", "ocr_click", "ocr_image", "find_template", "mouse_drag", "mouse_scroll",
     "diagnostics", "version_info", "safety_info", "audit_tail", "window_screenshot",
-    "ocr_find_text", "vision_click", "wait_for_pixel", "scroll_at",
-    # v1.4
-    "observe", "act_and_verify", "record_start", "record_stop", "macro_list",
-    # v1.5
-    "write_pdf",
-    # v1.6 Office 模板驱动
-    "excel_beautify", "excel_chart", "write_pptx", "chart_image",
-    # v1.8 补齐盲操作痛点: 结构化读表 / 分页读 PDF / 图片信息+缩放
-    "excel_read", "pdf_read_pages", "image_info", "image_resize",
-    # v1.9 生态工具首批: 局部编辑 / 网页抓取(SSRF) / 持久记忆 x4 / 链式思考
+    "ocr_find_text", "vision_click", "scroll_at", "observe", "act_and_verify",
+    "record_start", "record_stop", "macro_list", "write_pdf", "excel_beautify", "excel_chart",
+    "write_pptx", "chart_image", "excel_read", "pdf_read_pages", "image_info", "image_resize",
     "edit_file", "fetch", "memory_save", "memory_read", "memory_list", "memory_delete",
-    "sequential_thinking",
-    # v1.9.1 CJK OCR 硬化: 列出已装 OCR 语言包(确认 zh-Hans 是否就位)
-    "ocr_available_languages",
+    "ocr_available_languages", "sequential_thinking", "input_sequence", "execution_receipt",
 }
 
 
@@ -70,13 +58,12 @@ def main() -> int:
     if pyproject_version is not None and pyproject_version != server.VERSION:
         failures.append(f"pyproject version {pyproject_version!r} != server.VERSION {server.VERSION!r}")
 
-    # 2) exact count (v1.5 was 89; +4 v1.6 Office tools = 93; v1.7 upgrades existing, no new = 93;
-    #    v1.8 adds 4 read/image tools = 97; v1.8.1 adds browser tab list/switch = 99;
-    #    v1.8.2 adds browser_backend_status = 100; v1.8.3 fixes existing, no new = 100;
-    #    v1.9 adds 7 eco tools (edit_file/fetch/memory x4/sequential_thinking) = 107;
-    #    v1.9.1 adds ocr_available_languages (CJK OCR hardening) = 108.)
-    if len(names) != 108:
-        failures.append(f"tool count {len(names)} != expected 108 (v1.9.1 adds ocr_available_languages)")
+    if len(names) != 93:
+        failures.append(f"tool count {len(names)} != expected 93 Mac/shared tools")
+    retired = {"kill_process", "get_system_info", "get_pixel_color", "wait_for_pixel",
+               "wait_for_window_idle"}
+    if names & retired:
+        failures.append(f"retired tools registered: {sorted(names & retired)}")
 
     # 3) all expected tools present
     missing = sorted(_EXPECTED - names)

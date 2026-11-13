@@ -1,7 +1,7 @@
 """P3-01: real Mac shared registry, dependency isolation, and filesystem identities.
 
 No desktop permissions, external services, or system writes. Run with the installed
-Python 3.12 environment. Windows registry assertions remain in smoke_registry.
+Python 3.12 environment.
 """
 import importlib.util
 import asyncio
@@ -78,6 +78,41 @@ class MacShared(unittest.TestCase):
         result = run_command("/bin/sleep 10", timeout=1)
         self.assertTrue(result["timed_out"])
         self.assertFalse(result["ok"])
+
+    def test_workbook_bad_path_is_bounded(self):
+        from ai_computer_control.tools.office_read import _load_workbook_bounded
+        workbook, error = _load_workbook_bounded(str(self.home / "absent.xlsx"), timeout=5)
+        self.assertIsNone(workbook)
+        self.assertIsNotNone(error)
+
+    def test_rename_obeys_volume_identity_and_preserves_other_entries(self):
+        from ai_computer_control.tools.filesystem import move_file
+        with tempfile.TemporaryDirectory(prefix="rename-", dir=self.home) as folder:
+            folder = Path(folder)
+            source, destination = folder / "readme.txt", folder / "README.txt"
+            source.write_text("original")
+            result = move_file(str(source), str(destination))
+            self.assertTrue(result.get("ok"), result)
+            self.assertIn("README.txt", os.listdir(folder))
+            self.assertEqual(destination.read_text(), "original")
+            other = folder / "other.txt"
+            other.write_text("keep")
+            self.assertFalse(move_file(str(destination), str(other)).get("ok"))
+            self.assertEqual(other.read_text(), "keep")
+            hardlink = folder / "hardlink.txt"
+            os.link(destination, hardlink)
+            self.assertFalse(move_file(str(destination), str(hardlink)).get("ok"))
+            self.assertTrue(hardlink.exists())
+            dangling = folder / "dangling.txt"
+            dangling.symlink_to(folder / "absent")
+            self.assertFalse(move_file(str(destination), str(dangling)).get("ok"))
+            self.assertTrue(dangling.is_symlink())
+            directory = folder / "Folder"
+            directory.mkdir()
+            (directory / "keep").write_text("data")
+            result = move_file(str(directory), str(folder / "FOLDER"))
+            self.assertTrue(result.get("ok"), result)
+            self.assertEqual((folder / "FOLDER" / "keep").read_text(), "data")
 
     def test_explicit_toolsets_select_implemented_mac_backends(self):
         with patch.dict(os.environ, {"ACC_TOOLSETS": "desktop,uia,ocr,office,browser"}):

@@ -242,8 +242,6 @@ _AUDITED_BY_NAME = frozenset({
     "write_document", "write_excel", "write_pdf",
     "fetch",
     "browser_open", "browser_click", "browser_type", "browser_navigate", "browser_switch_tab", "browser_close",
-    "get_environment_variable",
-    "message_box", "show_notification", "notify_attention",
 })
 
 

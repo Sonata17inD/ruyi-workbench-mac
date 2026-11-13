@@ -47,7 +47,7 @@
 - **桥接 `wait` 契约对齐**：ACC `wait` 上限 300s，桥接超时表给它 310s，不再用默认 120s 杀掉合法 `wait(300)`。
 - **回合收尾段清理**：原生工具段（tool/subagent/workflow）在回合被 Stop/看门狗/异常中止时不再以 `running` 落盘永远显示「运行中」--`finalizeAll` 在 `snapshot()` 前把它们标 `cancelled`，`loadSession` 的 `healStalePendingSegments` 兜底修复存量会话。
 - **CJK 编码**：`read_file` 默认 UTF-8 解码失败时回退系统 ANSI 代码页（cp936），原生中文应用写的 GBK 文件不再静默变 U+FFFD 乱码；`launch_application(wait=True)` 用 OEM 代码页而非硬编码 UTF-8 解码子进程输出。
-- 行为锁：`tests/smoke_v191.py`（30+ 断言，含语言归一化/CJK 短语/放大/超时契约/GBK 回退）、`dev-harness/finalize-segments.static.e2e.js`（段清理 + 桥超时表）。
+- 行为锁：`tests/smoke_macos_visual.py` 与 `tests/smoke_macos_shared.py`（原生视觉、超时契约及文件编码）、`dev-harness/finalize-segments.static.e2e.js`（段清理 + 桥超时表）。
 
 ### v1.9.0 生态工具首批 + 质量战役（如意工作台第49波）
 

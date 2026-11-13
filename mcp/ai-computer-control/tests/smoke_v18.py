@@ -28,9 +28,6 @@ sys.path.insert(0, _SRC)
 _DATA = os.path.join(tempfile.gettempdir(), "acc_smoke_v18_data")
 os.makedirs(_DATA, exist_ok=True)
 os.environ["WCW_DATA_DIR"] = _DATA
-# Off Windows there is no %SystemRoot%: the "writing into SystemRoot is refused" checks would otherwise resolve
-# "C:\Windows/x" against the cwd, find it unprotected and leave a `C:\Windows/` directory in the repo.
-os.environ.setdefault("SystemRoot", os.path.join(_DATA, "FakeWindows"))
 
 import ai_computer_control.server as server  # noqa: E402
 
@@ -224,7 +221,7 @@ def main() -> int:
     check(qbad.get("error") and "width" in qbad["error"], f"缺尺寸参数人话错 (got {qbad.get('error')!r})")
 
     # protected 护栏：往 SystemRoot 写 → refused
-    sysroot = os.environ.get("SystemRoot", r"C:\Windows")
+    sysroot = "/System"
     qprot = _FNS["image_resize"](path=ip, output_path=os.path.join(sysroot, "wcw_should_refuse.png"), width=50)
     check(qprot.get("error") and "refused" in qprot["error"], f"protected 护栏拦截 (got {qprot.get('error')!r})")
 
@@ -233,19 +230,7 @@ def main() -> int:
                                  output_path=os.path.join(_DATA, "y.png"), width=50)
     check(qmiss.get("error") and "不存在" in qmiss["error"], "源不存在人话错")
 
-    # ============================================================ ④ 剪贴板文本往返 (best-effort)
-    print("\n== ④ 剪贴板文本一等公民: set_clipboard(中文) → get_clipboard 往返 (无环境则 SKIP) ==")
-    marker = "如意剪贴板往返_UNIQUE_中文测试_✓"
-    sc = _FNS["set_clipboard"](text=marker)
-    if sc.get("ok"):
-        gc = _FNS["get_clipboard"]()
-        if gc.get("ok") and isinstance(gc.get("text"), str):
-            check(gc["text"] == marker, f"剪贴板中文往返一致 (got {gc.get('text')!r})")
-        else:
-            print("  [skip] get_clipboard 读不到 (无剪贴板后端) —— 不计失败")
-    else:
-        print(f"  [skip] set_clipboard 无剪贴板环境 ({sc.get('error')}) —— 不计失败")
-    check(sc.get("ok") is True or "error" in sc, "set_clipboard 返回规范信封 (ok 或 error)")
+    # Clipboard round-trip uses native IPC fakes in smoke_macos_input; never overwrite the user clipboard.
 
     # ---------------------------------------------------------------- summary
     print()
