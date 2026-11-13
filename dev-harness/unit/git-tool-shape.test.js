@@ -1,6 +1,6 @@
 'use strict';
 // git_* 工具的 cwd 解析与结果形状(审计 NE-6 / NE-7)。真跑本机 git;没有 git 的机器整件跳过。
-//   [G1] 不传 cwd → 用对话工作目录(与 powershell_run/script_run/shell_start 同一套解析),不是家目录
+//   [G1] 不传 cwd → 用对话工作目录(与 shell_run/script_run/shell_start 同一套解析),不是家目录
 //   [G2] 显式 cwd 不存在 → 报「目录不存在」,不再悄悄换成家目录
 //   [G3] git_diff 只有未跟踪文件 → 列出 untracked,不说「没有改动」
 //   [G4] 中文路径原样显示(core.quotepath=false),不是 "\346\226\260..." 八进制

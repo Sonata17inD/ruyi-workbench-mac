@@ -229,7 +229,7 @@ Object.assign(process.env, platformRuntimeEnvironment(process.env));
 const BUNDLED_PYTHON_RUNTIME = exposeBundledPythonRuntime();
 
 // 随包 ripgrep(app/vendor-bin/rg.exe)对模型开的每一个子进程都可见 —— 与上面随包 Python 同一个模具:
-// 进程级 PATH 前置一次,Claude/Kimi CLI、原生 shell_start/powershell_run/script_run、Kimi ACP 终端、
+// 进程级 PATH 前置一次,Claude/Kimi CLI、原生 shell_start/shell_run/script_run、Kimi ACP 终端、
 // 子代理与 MCP stdio 子进程全部继承,不必在十几个 spawn 点各拼一遍 env。修前只有 file_search 快路径
 // 认得它,模型在终端里敲 rg 是 command not found。
 // 更糟的是修前 probeRg 找的是 appRoot()/vendor-bin —— appRoot() 是 server.js 的【上一级】(产品根),
@@ -543,7 +543,6 @@ function safeJsonParse(raw, fallback = null) {
 // 启动本进程的那个终端:RuyiDesktop.exe(CreateNoWindow + 重定向)、Start-Workbench.cmd(Start-Process -WindowStyle Hidden)、
 // 直接 `node server.js serve`(可见控制台,是 node 自己的,子进程不共享)。即便将来有路径让它漏出去,Node 写 TTY 走
 // WriteConsoleW(UTF-16)不受代码页影响,后续子进程输出 UTF-8 也被 ② 正确解码,风险仅限于终端里别的程序的显示编码。
-const PS_UTF8_OUTPUT_PREAMBLE = 'try{[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)}catch{};$OutputEncoding=[Console]::OutputEncoding;';
 let _consoleGbDecoder = null;
 const _consoleUtf8Strict = new TextDecoder('utf-8', { fatal: true });
 function decodeConsoleSegment(buf) {
@@ -4151,10 +4150,10 @@ const PrivacyRegex = ((workerThreads, core) => {
   return Object.freeze({ LIMITS, scan, validate, validateSchema, activeJobs: () => activeJobs });
 })(require('node:worker_threads'), PrivacyCore);
 
-// Shared platform protector. DPAPI bytes stay unchanged; Mac uses a versioned Keychain/AES-GCM envelope.
+// Mac credential protection. Unknown legacy ciphertext remains opaque and fails without mutation.
 const LocalSecretCryptoHooks = { helperPath: () => require('node:path').resolve(__dirname, '..', 'runtime', 'macos', 'ruyi-keychain-helper') };
 const LocalSecretCrypto = (() => {
-  const childProcess = require('node:child_process'), path = require('node:path');
+  const childProcess = require('node:child_process');
   const cryptoApi = require('node:crypto');
   const MAC_MAGIC = Buffer.from('ruyi.keychain.v1\0');
   const MAC_PROVIDER = 'macos-keychain';
@@ -4163,75 +4162,8 @@ const LocalSecretCrypto = (() => {
   const LIMIT = Object.freeze({ processMs: 15000, outputBytes: 131072, cipherBytes: 65536 });
   const exact = (value, keys) => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
   const base64 = (value, max) => typeof value === 'string' && value.length > 0 && value.length <= max * 2 && value.length % 4 === 0 && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value) && Buffer.from(value, 'base64').length <= max && Buffer.from(value, 'base64').toString('base64') === value;
-  const DPAPI_SCRIPT = `$ErrorActionPreference='Stop'
-$ProgressPreference='SilentlyContinue'
-$PSModuleAutoLoadingPreference='None'
-try {
-  [void][Reflection.Assembly]::Load('System.Security, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a')
-  [Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
-  [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
-  $op = [Console]::In.ReadLine()
-  $bytes = [Convert]::FromBase64String([Console]::In.ReadLine())
-  $entropy = [Convert]::FromBase64String([Console]::In.ReadLine())
-  if ($op -eq 'protect') {
-    $result = [Security.Cryptography.ProtectedData]::Protect($bytes,$entropy,[Security.Cryptography.DataProtectionScope]::CurrentUser)
-  } elseif ($op -eq 'unprotect') {
-    $result = [Security.Cryptography.ProtectedData]::Unprotect($bytes,$entropy,[Security.Cryptography.DataProtectionScope]::CurrentUser)
-  } else { throw 'operation' }
-  [Console]::Out.Write('{"ok":true,"value":"'+[Convert]::ToBase64String($result)+'"}')
-  [Array]::Clear($bytes,0,$bytes.Length)
-  [Array]::Clear($result,0,$result.Length)
-  exit 0
-} catch { [Console]::Out.Write('{"ok":false}'); exit 1 }`;
-  function runDpapi(op, value, entropy) {
-    if (!['protect', 'unprotect'].includes(op) || !Buffer.isBuffer(value) || !value.length || value.length > LIMIT.cipherBytes || !Buffer.isBuffer(entropy) || entropy.length > 4096) return Promise.reject(Object.assign(new Error('local_crypto.input_invalid'), { code: 'local_crypto.input_invalid' }));
-    if (process.platform !== 'win32') return Promise.reject(Object.assign(new Error('local_crypto.unsupported'), { code: 'local_crypto.unsupported', apiCode: 'local_crypto.unsupported', statusCode: 501 }));
-    return new Promise((resolve, reject) => {
-      let child, complete = false, outputSize = 0;
-      const output = [];
-      const finish = (suffix, result) => {
-        if (complete) return;
-        complete = true; clearTimeout(timer);
-        for (const chunk of output) chunk.fill(0);
-        output.length = 0;
-        if (suffix) reject(Object.assign(new Error('local_crypto.' + suffix), { code: 'local_crypto.' + suffix, apiCode: 'local_crypto.' + suffix, statusCode: 503 }));
-        else resolve(result);
-      };
-      const stop = suffix => { finish(suffix); if (child) { try { child.kill(); } catch { /* own PowerShell has no descendants */ } } };
-      const timer = setTimeout(() => stop('process_timeout'), LIMIT.processMs);
-      const environment = {};
-      // Do not inherit RUYI_BOT_* or provider credentials into the helper environment.
-      for (const key of ['SystemRoot', 'SystemDrive', 'WINDIR', 'TEMP', 'TMP', 'USERPROFILE', 'LOCALAPPDATA', 'APPDATA']) if (typeof process.env[key] === 'string') environment[key] = process.env[key];
-      const executable = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-      // Only Windows' built-in modules are needed. Without an explicit path PowerShell discovers
-      // third-party modules installed machine-wide, even with -NoProfile and a sanitized environment.
-      environment.PSModulePath = path.join(path.dirname(executable), 'Modules');
-      try {
-        child = childProcess.spawn(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(DPAPI_SCRIPT, 'utf16le').toString('base64')],
-          { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'], env: environment });
-        child.on('error', () => finish('process_failed'));
-        child.stdout.on('data', chunk => {
-          if (complete) { chunk.fill(0); return; }
-          outputSize += chunk.length;
-          if (outputSize > LIMIT.outputBytes) { chunk.fill(0); stop('process_capacity'); return; }
-          output.push(chunk);
-        });
-        child.stdout.on('error', () => stop('process_failed'));
-        child.stdin.on('error', () => stop('process_failed'));
-        child.on('close', code => {
-          if (complete) return;
-          let response;
-          const bytes = Buffer.concat(output);
-          try { response = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { finish('process_failed'); return; }
-          finally { bytes.fill(0); }
-          if (code !== 0 || !exact(response, ['ok', 'value']) || response.ok !== true || !base64(response.value, LIMIT.cipherBytes)) { finish(op === 'unprotect' ? 'decrypt_failed' : 'process_failed'); return; }
-          finish(null, Buffer.from(response.value, 'base64'));
-        });
-        // Three ASCII lines need neither pipe EOF nor cmdlet/module discovery (Add-Type/JSON).
-        child.stdin.end([op, value.toString('base64'), entropy.toString('base64'), ''].join('\n'));
-      } catch { stop('process_failed'); }
-    });
-  }
+
+
   const failure = suffix => Object.assign(new Error('local_crypto.' + suffix), { code: 'local_crypto.' + suffix, apiCode: 'local_crypto.' + suffix, statusCode: suffix === 'unsupported' ? 501 : 503 });
   function keychainKey(create) {
     if (macInFlight >= 4) return Promise.reject(failure('process_busy'));
@@ -4308,9 +4240,9 @@ try {
   function run(op, value, entropy) {
     if (process.platform === 'darwin') return runMac(op, value, entropy);
     if (op === 'unprotect' && Buffer.isBuffer(value) && value.subarray(0, MAC_MAGIC.length).equals(MAC_MAGIC)) return Promise.reject(failure('provider_mismatch'));
-    return runDpapi(op, value, entropy);
+    return Promise.reject(failure('unsupported'));
   }
-  return Object.freeze({ run, supported: () => process.platform === 'win32' || process.platform === 'darwin', MAC_ERRORS });
+  return Object.freeze({ run, supported: () => process.platform === 'darwin', MAC_ERRORS });
 })();
 
 // 浏览器目标的合法模式(normalizeConfig 清洗与 mcp_configure set-browser 的入口校验共用一份,别再各抄一个数组)。
@@ -4543,7 +4475,7 @@ function defaultConfig() {
     runtimeBudgetGuardV1: false,
     budgetGuardTurnTokensV1: 0,
     budgetGuardWarnRatioV1: 0.8,
-    // 106 #13a-t: 长命令时间预算 —— 仅作用于 INTERRUPTIBLE_NATIVE_TOOLS(powershell_run/script_run,
+    // 106 #13a-t: 长命令时间预算 —— 仅作用于 INTERRUPTIBLE_NATIVE_TOOLS(shell_run/script_run,
     // 已有 steer 中断与进程树回收路径,不造第二套控制器)。shadow 开关只统计「本应触发」的脱敏
     // 事件(零行为变化,上线前校准阈值用);主动开关 = 软警告(tool_progress 有界告警)+ 硬终态
     // (沿既有取消路径杀树、写合法配对 tool_result、回合继续)。两开关独立、默认关。
@@ -5479,7 +5411,7 @@ function normalizeConfig(raw, opts = {}) {
   // v0.8-S4b: toolAllowRules — {nativeToolName:'allow'} persistent fine-grained allowlist. HARD cleanse:
   //  - value must be exactly 'allow';
   //  - the tool's NATIVE tier must be 'read' or 'edit' — exec/desktop tools are NEVER persistable (a
-  //    persistent auto-allow on powershell_run / a desktop action is exactly the class of blanket grant
+  //    persistent auto-allow on shell_run / a desktop action is exactly the class of blanket grant
   //    this feature must not enable; those get session-scoped allow in the front-end only).
   // Any entry failing either check is dropped silently (a bad rule must never widen permissions).
   {
@@ -9508,7 +9440,7 @@ function configForSessionEngineRoute(config, session) {
 
 // 02f-turn-effect-kinds.js - 架构还债批 3·B: 从 02-session-store.js 搬出的回合摘要工具分类表与不可逆操作账分类(纯数据+纯函数;buildTurnSummary 仍在 02;纯搬家,零行为变更)。
 const TURN_SUMMARY_FILE_TOOLS = new Set(['file_write', 'file_edit', 'file_delete']);
-const TURN_SUMMARY_COMMAND_TOOLS = new Set(['shell_run', 'powershell_run', 'script_run', 'shell_send']);
+const TURN_SUMMARY_COMMAND_TOOLS = new Set(['shell_run', 'script_run', 'shell_send']);
 
 // v0.9-S4: keys a bridged/creation tool result may use to report a file it produced (ACC document creation,
 // screenshot tools, office bridges all echo one of these). Harvested into turn_summary.artifacts alongside
@@ -9543,7 +9475,7 @@ const TURN_SUMMARY_KNOWN_TOOLS = new Set([
   'git_diff', 'git_log', 'git_commit', // v1.0-S4 git 工具族
   'dependency_inventory', 'code_review_scan', 'frontend_audit', 'claude_md_audit', 'docs_search', 'codebase_symbol_search',
   'shell_start', 'shell_poll', 'shell_kill', 'shell_list', 'http_request', 'browser_open', 'office_open',
-  'desktop_screenshot', 'keyboard_send_keys', 'permission_prompt',
+  'desktop_screenshot', 'permission_prompt',
   // v1.1-W2 (T1): 新五工具是内建可撤销工具(journal 驱动) —— 归入 KNOWN 集合,故 claude 引擎不会把它们误计为「命令」。
   // 它们产生的 journal 条目由 buildTurnSummary 的 journalEntries 叠加为 filesChanged(revertible:true)。
   'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download',
@@ -9560,9 +9492,9 @@ const TURN_SUMMARY_KNOWN_TOOLS = new Set([
 //    其余未知名保持原样只进 commands 计数。
 // 注意:exec 命令【结果失败也记账】(ok:false)——命令已跑,副作用可能已发生;与文件工具「失败=未改动」不同。
 const IRREVERSIBLE_NATIVE_KIND = {
-  shell_run: 'exec', powershell_run: 'exec', script_run: 'exec', shell_start: 'exec', shell_send: 'exec', shell_kill: 'exec',
+  shell_run: 'exec', script_run: 'exec', shell_start: 'exec', shell_send: 'exec', shell_kill: 'exec',
   git_commit: 'exec', mcp_configure: 'exec',
-  keyboard_send_keys: 'desktop', browser_open: 'desktop', office_open: 'desktop', desktop_screenshot: 'desktop',
+  browser_open: 'desktop', office_open: 'desktop', desktop_screenshot: 'desktop',
   http_request: 'network',
 };
 // 桥接(exec 默认)里的已知副作用族 → kind;未列出的桥接 exec 工具不记账(见上「不谎称账全」)。
@@ -17410,12 +17342,12 @@ async function bridgedReadPathGate(bridgedName, args, ctx) {
   return null;
 }
 // v2.7 (workspace permissions): exec gate. A configured workspace with execute === false denies the exec-tier
-// command/shell tools (powershell_run / script_run / shell_*) when their effective cwd resolves inside it.
+// command/shell tools (shell_run / script_run / shell_*) when their effective cwd resolves inside it.
 // Backward compatible: no workspace entries, or every entry execute:true, leaves behavior unchanged (exec
 // tools are NOT otherwise contained by the workspace boundary). Only consults the per-workspace execute flag;
 // sensitive/autoexec path checks remain the file guard's responsibility.
 // 107-S0(46 号文 §1.5 ②):执行类工具的【有效工作目录】单点解析,闸与执行共用。修前闸在这里按「显式 cwd → 会话
-// cwd → defaultWorkspace → 家目录」判,而 shell_start／powershell_run／script_run 缺省 cwd 时直接起在家目录 ——
+// cwd → defaultWorkspace → 家目录」判,而 shell_start／shell_run／script_run 缺省 cwd 时直接起在家目录 ——
 // 闸判一个目录、命令跑在另一个:模型以为在线程工作夹里,相对路径实际落在家目录(45 号文 §9.6.4 真模型实测),
 // 授权书「cwd 须在 grantRoot 内」也因为不传 cwd 就被绕开。现在 guardWorkspaceExecute 把解析结果随 ok 一并
 // 交回(cwd 字段),三个工具只用交回的这一个值,不各自再推一遍。
@@ -22521,7 +22453,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
   // 执行结果整形(NE-1)。模型最终只看得到序列化 JSON 的前 ~60K 字符(10 truncateToolResult 平切),而修前 runProcess
   // 把 stdout 放在 stderr/退出码/超时标记之前、单流最多 2MB:输出一过 60K,错误文本、timedOut、尾部(构建报错所在)整块丢失。
   // 修法是在【源头】整形:每条流 头+尾(中间明确写「已省略 N 字符」),键序 ok/code/timedOut/interrupted/error/stderr 在前、
-  // stdout 在后,`\r` 覆盖式进度条折叠成最终一行、ANSI 控制序列剥掉。只对 options.shape===true 的调用方(powershell_run /
+  // stdout 在后,`\r` 覆盖式进度条折叠成最终一行、ANSI 控制序列剥掉。只对 options.shape===true 的调用方(shell_run /
   // script_run)生效 —— 其余内部调用方(MCP 登记、迁移中心、校验命令)要解析完整 stdout,不能被截。
   // ---------------------------------------------------------------------------------------------------
   const EXEC_TIMEOUT_DEFAULT = 60000;
@@ -22807,285 +22739,19 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
     } finally { await fsp.rm(directory, { recursive: true, force: true }).catch(() => {}); }
   }
 
-  // v1.0.1 编码修复(输入侧):无控制台 spawn(用户双击运行时的真实场景)的 powershell.exe 解析 `-Command`
-  // 参数里的中文会损坏(实测「娄山关」→「|???」——输入阶段就丢字,非输出解码问题)。改用带 BOM 的 UTF-8
-  // 临时 .ps1 + `-File`:BOM 让 PS 无视控制台代码页、权威按 UTF-8 读脚本,中文 100% 正确进入。输出侧的 GBK
-  // 乱码由 runProcess 的 decodeBestEffort 兜底(先 UTF-8、有替换符退 GBK)。两侧合起来彻底解决中文乱码。
-  // NE-15:Windows PowerShell 5.1 在有进度条时 Invoke-WebRequest / Expand-Archive 慢一个数量级,无头运行又没人看进度 —— 脚本头静音。
-  // 写在【第一行同一行】不加换行(报错行号不漂);脚本里有 param()/using/#requires/[CmdletBinding] 时它们必须是第一条语句,不加。
-  // 2026-10:同一处再加 UTF-8 输出编码前导(PS_UTF8_OUTPUT_PREAMBLE,放在 $ProgressPreference 之前,同样同一行不换行),
-  // 给 powershell_run / script_run(PowerShell)/ runPowerShell 的内部调用方(截图、SendKeys 等)统一修源头编码;
-  // 豁免规则与静音进度条共用同一条 —— 豁免的脚本两样都不加(仍靠 Node 侧按行解码兜底)。
-  function withQuietProgress(command) {
-    const text = String(command == null ? '' : command);
-    // 「第一条语句」前面可能有 <# 帮助注释 #>,所以不只看开头:任何行首出现 param( / [CmdletBinding / using / #requires 都不动脚本(宁可不静音也不破坏脚本)。
-    if (/^\s*(?:param\s*\(|using\s|#requires|\[CmdletBinding)/im.test(text)) return text;
-    return PS_UTF8_OUTPUT_PREAMBLE + "$ProgressPreference='SilentlyContinue'; " + text;
+  function revealInFinder(absPath, mode) {
+    return fsp.realpath(absPath).then(realPath => {
+      const spec = platformOpenSpawn(realPath, mode);
+      return spawnDetachedChecked(spec.command, spec.args, { detached: true, stdio: 'ignore' }).then(result => result.ok);
+    }).catch(() => false);
   }
-  // opts.shape:powershell_run 用 —— 结果按 runProcess 的整形模式(头+尾、键序、error/hint)返回;桌面截图等内部调用方要完整 stdout,不传。
-  // NE-3:-NonInteractive —— Read-Host / pause / -Confirm 这类提示立刻抛错(模型能读到),不再挂到超时。
-  async function runPowerShell(command, cwd, timeoutMs, signal, opts = {}) {
-    const tmpFile = path.join(os.tmpdir(), `ruyi-ps-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.ps1`);
-    await fsp.writeFile(tmpFile, '﻿' + withQuietProgress(command), 'utf8'); // UTF-8 BOM(﻿)+ 命令 → PS -File 权威按 UTF-8 读
-    try {
-      return await runProcess('powershell.exe', [
-        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', tmpFile,
-      ], { cwd: cwd || os.homedir(), timeoutMs, signal, shape: !!(opts && opts.shape) });
-    } finally {
-      fsp.unlink(tmpFile).catch(() => {});
-    }
+  async function pickFolder() {
+    return { ok: false, code: 'host_required', error: '请在 Mac 应用中选择文件夹，或粘贴完整路径' };
   }
-
-  // v1.0.2 返修三:reveal-in-explorer WITH foreground.  真机诊断(把关人亲验):/api/file/reveal 直接
-  // cp.spawn('explorer.exe','/select,…') 从【后台服务进程】启动时,资源管理器窗口开在浏览器【后面】—— Windows
-  // 前台锁不让后台进程抢占前台(实测:server 端点调用后 revfg 窗口数 +1 但前台仍是 chrome)。用户遂报「弹不出来」。
-  // 修:改由 PowerShell 助手打开/定位后,用 AttachThreadInput+SetForegroundWindow 把窗口提到最前(从前台锁绕行的
-  // 标准手法,已实测 claude→explorer 生效)。安全:目标路径经【环境变量 RUYI_REVEAL_PATH】传入,绝不拼进脚本文本
-  // → 零命令注入;脚本纯 ASCII + BOM 临时文件(v1.0.1 编码教训)。windowsHide 只作用于 powershell 自身(消除其
-  // 控制台闪窗),它 Start-Process 出来的 explorer 是独立进程、照常显示并被提前台(与 office_open 的 cmd/c start 同理)。
-  // mode:'select'=定位并选中 | 'open'=用默认程序打开(server 已对可执行/脚本降级为 select,见 buildRevealSpawn)。
-  const REVEAL_PS_SCRIPT = [
-    "$target = $env:RUYI_REVEAL_PATH",
-    "if (-not $target) { exit 2 }",
-    "$mode = $env:RUYI_REVEAL_MODE; if (-not $mode) { $mode = 'select' }",
-    "if ($mode -eq 'open') { Start-Process -FilePath $target; exit 0 }",
-    "Add-Type -TypeDefinition @\"",
-    "using System;",
-    "using System.Runtime.InteropServices;",
-    "public class RuyiFg {",
-    "  [DllImport(\"user32.dll\")] static extern bool SetForegroundWindow(IntPtr h);",
-    "  [DllImport(\"user32.dll\")] static extern IntPtr GetForegroundWindow();",
-    "  [DllImport(\"user32.dll\")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);",
-    "  [DllImport(\"user32.dll\")] static extern bool AttachThreadInput(uint a, uint b, bool f);",
-    "  [DllImport(\"user32.dll\")] static extern bool BringWindowToTop(IntPtr h);",
-    "  [DllImport(\"user32.dll\")] static extern bool ShowWindow(IntPtr h, int n);",
-    "  [DllImport(\"kernel32.dll\")] static extern uint GetCurrentThreadId();",
-    "  public static void Force(long hw) {",
-    "    IntPtr h = new IntPtr(hw);",
-    "    if (h == IntPtr.Zero) return;",
-    "    ShowWindow(h, 9);", // SW_RESTORE
-    "    IntPtr fg = GetForegroundWindow();",
-    "    uint pidA; uint tA = GetWindowThreadProcessId(fg, out pidA);",
-    "    uint me = GetCurrentThreadId();",
-    "    if (tA != me) AttachThreadInput(me, tA, true);",
-    "    BringWindowToTop(h); SetForegroundWindow(h);",
-    "    if (tA != me) AttachThreadInput(me, tA, false);",
-    "  }",
-    "}",
-    "\"@",
-    "Start-Process explorer.exe -ArgumentList ('/select,' + $target)",
-    "Start-Sleep -Milliseconds 500",
-    "$folder = (Split-Path -Parent $target).TrimEnd('\\')",
-    "$sh = New-Object -ComObject Shell.Application",
-    "foreach ($w in @($sh.Windows())) {",
-    "  $u = $null; try { $u = $w.LocationURL } catch {}",
-    "  if ($u) { try { if (([Uri]$u).LocalPath.TrimEnd('\\') -ieq $folder) { [RuyiFg]::Force([int64]$w.HWND); break } } catch {} }",
-    "}",
-    "exit 0",
-  ].join('\r\n');
-  // Fire-and-forget reveal. Writes the BOM'd ASCII script to a temp .ps1 and spawns powershell with the target
-  // path in the environment (never in the argv/script text). Never throws to the caller — best-effort; the HTTP
-  // handler returns ok as soon as the spawn is initiated (matching prior behavior; the window appears ~1s later).
-  function revealInExplorer(absPath, mode) {
-    if (process.platform === 'darwin') {
-      return fsp.realpath(absPath).then(realPath => {
-        const spec = platformOpenSpawn(realPath, mode);
-        return spawnDetachedChecked(spec.command, spec.args, { detached: true, windowsHide: true, stdio: 'ignore' }).then(result => result.ok);
-      }).catch(() => false);
-    }
-    const tmpFile = path.join(os.tmpdir(), `ruyi-reveal-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.ps1`);
-    try {
-      fs.writeFileSync(tmpFile, '﻿' + REVEAL_PS_SCRIPT, 'utf8'); // sync so the file exists before spawn reads it
-      const child = cp.spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', tmpFile], {
-        stdio: 'ignore', windowsHide: true, // hides PS console only; Start-Process'd explorer still shows + foregrounds
-        env: { ...process.env, RUYI_REVEAL_PATH: absPath, RUYI_REVEAL_MODE: (mode === 'open' ? 'open' : 'select') },
-      });
-      const cleanup = () => { fsp.unlink(tmpFile).catch(() => {}); };
-      child.on('exit', cleanup);
-      child.on('error', () => { // powershell missing → fall back to a plain (possibly-behind) explorer open
-        cleanup();
-        try { spawnDetachedChecked('explorer.exe', mode === 'open' ? [absPath] : ['/select,' + absPath], { detached: true, stdio: 'ignore' }); } catch { /* give up */ }
-      });
-      child.unref();
-      return true;
-    } catch (e) {
-      fsp.unlink(tmpFile).catch(() => {});
-      // Synchronous spawn failure → last-ditch direct explorer (opens, may be behind the browser).
-      try { spawnDetachedChecked('explorer.exe', mode === 'open' ? [absPath] : ['/select,' + absPath], { detached: true, stdio: 'ignore' }); return true; } catch { return false; }
-    }
+  async function pickFile() {
+    return { ok: false, code: 'host_required', error: '请在 Mac 应用中选择文件，或粘贴完整路径' };
   }
-
-  // v0.9-S3 (C3): pop the native Windows folder picker. The dialog REQUIRES a Single-Threaded Apartment —
-  // `powershell -STA` (COM / WinForms deadlock or misbehave under the default MTA). Returns { ok:true, path } on
-  // selection, { ok:true, cancelled:true } on cancel, or { ok:false, error, hint } when unavailable (non-Windows,
-  // or WinForms can't load). 120s timeout: the user is interacting with a modal dialog, so this must outlast a
-  // normal tool. STDOUT = "OK<TAB><path>" or "CANCEL" (the sentinel disambiguates cancel from an empty selection).
-  //
-  // 3.0 收口(用户:「选择路径的那个界面太古老了」):对话框本体换成 Vista 起的「通用项目对话框」(IFileOpenDialog +
-  // FOS_PICKFOLDERS)—— 与资源管理器同一套界面:地址栏可直接粘贴 / 输入路径、左侧快速访问与「此电脑」、搜索、最近位置,
-  // 并从【当前工作文件夹】打开(调用方经 opts.initialDir 传)。修前是 WinForms FolderBrowserDialog:Windows PowerShell 跑在
-  // .NET Framework 上,它仍是 SHBrowseForFolder 那棵 XP 时代的树 —— 不能粘贴路径、不能搜索,深目录要一层层点开。
-  // COM 接口由 Add-Type 现编(约 1 秒);Add-Type 用不了(受约束语言模式 / 组策略禁编译)或 COM 起不来时退回老对话框,
-  // 行为与修前一致,所以最坏情况只是「还是老样子」。
-  // 编码与注入:脚本纯 ASCII、整段走 -EncodedCommand(不经任何引号转义);标题与起始目录一律经环境变量传入(folderPickerEnv),
-  // 不拼进脚本文本。起始目录只认本机盘符绝对路径 —— UNC(\\主机\共享)不传:让对话框一打开就去连别人的 SMB 不是选择器该做的事。
-  // v1.0.2 返修:无 owner 的 ShowDialog() 常被压在浏览器窗口后面 —— 用户以为「点了没反应」。造一个隐形 TopMost owner form,
-  // 对话框随 owner 置顶到最前(新老两种对话框都挂在它上面)。
-  // v1.0.2 返修·致命修复:成功行用 'OK' + [char]9 拼 TAB(单引号字符串里的 `t 不转义,修前选好的路径被当「取消」丢掉)。
-  // 2026-10:前导 PS_UTF8_OUTPUT_PREAMBLE(纯 ASCII,见 00-boot)—— 非中文代码页(en-US)的机器上选到中文路径不被写成 `?`。
-  const FOLDER_PICKER_CS = [
-    'using System;',
-    'using System.Runtime.InteropServices;',
-    'public static class RuyiFolderPicker {',
-    '  [ComImport, Guid("DC1C5A9C-E88A-4dde-A5A1-60F82A20AEF7")] private class FileOpenDialogCoClass { }',
-    '  [ComImport, Guid("42f85136-db7e-439c-85f1-e4075d135fc8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]',
-    '  private interface IFileDialog {',
-    '    [PreserveSig] int Show(IntPtr parent);',
-    '    void SetFileTypes(uint cFileTypes, IntPtr rgFilterSpec);',
-    '    void SetFileTypeIndex(uint iFileType);',
-    '    void GetFileTypeIndex(out uint piFileType);',
-    '    void Advise(IntPtr pfde, out uint pdwCookie);',
-    '    void Unadvise(uint dwCookie);',
-    '    void SetOptions(uint fos);',
-    '    void GetOptions(out uint pfos);',
-    '    void SetDefaultFolder(IShellItem psi);',
-    '    void SetFolder(IShellItem psi);',
-    '    void GetFolder(out IShellItem ppsi);',
-    '    void GetCurrentSelection(out IShellItem ppsi);',
-    '    void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string pszName);',
-    '    void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string pszName);',
-    '    void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string pszTitle);',
-    '    void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string pszText);',
-    '    void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string pszLabel);',
-    '    void GetResult(out IShellItem ppsi);',
-    '  }',
-    '  [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]',
-    '  private interface IShellItem {',
-    '    void BindToHandler(IntPtr pbc, [In] ref Guid bhid, [In] ref Guid riid, out IntPtr ppv);',
-    '    void GetParent(out IShellItem ppsi);',
-    '    void GetDisplayName(uint sigdnName, [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);',
-    '  }',
-    '  [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]',
-    '  private static extern void SHCreateItemFromParsingName([MarshalAs(UnmanagedType.LPWStr)] string pszPath, IntPtr pbc, [In] ref Guid riid, [MarshalAs(UnmanagedType.Interface)] out IShellItem ppv);',
-    '  // FOS_NOCHANGEDIR | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST',
-    '  private const uint FOS_FLAGS = 0x8 | 0x20 | 0x40 | 0x800;',
-    '  private const uint SIGDN_FILESYSPATH = 0x80058000;',
-    '  private const int HR_CANCELLED = unchecked((int)0x800704C7);',
-    '  public static string Pick(IntPtr owner, string title, string initialDir) {',
-    '    IFileDialog dlg = (IFileDialog)new FileOpenDialogCoClass();',
-    '    try {',
-    '      uint opts; dlg.GetOptions(out opts); dlg.SetOptions(opts | FOS_FLAGS);',
-    '      if (!String.IsNullOrEmpty(title)) dlg.SetTitle(title);',
-    '      if (!String.IsNullOrEmpty(initialDir)) {',
-    '        try { Guid iid = typeof(IShellItem).GUID; IShellItem start; SHCreateItemFromParsingName(initialDir, IntPtr.Zero, ref iid, out start); if (start != null) dlg.SetFolder(start); } catch { }',
-    '      }',
-    '      int hr = dlg.Show(owner);',
-    '      if (hr == HR_CANCELLED) return null;',
-    '      if (hr != 0) Marshal.ThrowExceptionForHR(hr);',
-    '      IShellItem item; dlg.GetResult(out item);',
-    '      string picked; item.GetDisplayName(SIGDN_FILESYSPATH, out picked);',
-    '      return picked;',
-    '    } finally { Marshal.ReleaseComObject(dlg); }',
-    '  }',
-    '}',
-  ].join('\n');
-  const FOLDER_PICKER_PS_SCRIPT = [
-    "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'",
-    PS_UTF8_OUTPUT_PREAMBLE,
-    'Add-Type -AssemblyName System.Windows.Forms',
-    '$title = $env:RUYI_PICK_TITLE; $initial = $env:RUYI_PICK_INITIAL',
-    'if ($initial -and -not [System.IO.Directory]::Exists($initial)) { $initial = $null }',
-    '$f = New-Object System.Windows.Forms.Form',
-    "$f.TopMost = $true; $f.ShowInTaskbar = $false; $f.FormBorderStyle = 'None'; $f.Opacity = 0",
-    "$f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate()",
-    '$picked = $null; $modern = $false',
-    "try { Add-Type -TypeDefinition @'",
-    FOLDER_PICKER_CS,
-    "'@",
-    '  $modern = $true } catch { $modern = $false }',
-    'if ($modern) {',
-    '  try { $picked = [RuyiFolderPicker]::Pick($f.Handle, $title, $initial) } catch { $modern = $false }',
-    '}',
-    'if (-not $modern) {',
-    '  $d = New-Object System.Windows.Forms.FolderBrowserDialog',
-    '  if ($title) { $d.Description = $title }',
-    '  if ($initial) { $d.SelectedPath = $initial }',
-    "  if ($d.ShowDialog($f) -eq 'OK') { $picked = $d.SelectedPath }",
-    '}',
-    '$f.Close()',
-    "if ($picked) { Write-Output ('OK' + [char]9 + $picked) } else { Write-Output 'CANCEL' }",
-  ].join('\n');
-  // 标题 / 起始目录 → 环境变量(纯函数,单测直调)。控制字符剥掉、长度封顶;起始目录只认 `C:\…` / `C:/…` 形的本机盘符绝对路径。
-  function folderPickerEnv(opts) {
-    const o = opts && typeof opts === 'object' ? opts : {};
-    const clip = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
-    const env = {};
-    const title = clip(o.title, 120);
-    if (title) env.RUYI_PICK_TITLE = title;
-    const dir = clip(o.initialDir, 1024);
-    if (/^[A-Za-z]:[\\/]/.test(dir)) env.RUYI_PICK_INITIAL = path.win32.normalize(dir);
-    return env;
-  }
-  async function pickFolder(opts) {
-    if (process.platform !== 'win32') {
-      return { ok: false, error: '原生文件夹选择器仅支持 Windows', hint: '请在文件夹输入框中直接粘贴完整路径' };
-    }
-    let result;
-    try {
-      // -STA is the load-bearing flag (COM/WinForms apartment). runProcess sets windowsHide:true, which only hides
-      // the PowerShell console — the modal dialog is owned by the STA message loop and still shows.
-      result = await runProcess('powershell.exe', [
-        '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA',
-        '-EncodedCommand', Buffer.from(FOLDER_PICKER_PS_SCRIPT, 'utf16le').toString('base64'),
-      ], { cwd: os.homedir(), timeoutMs: 120000, env: folderPickerEnv(opts) });
-    } catch (e) {
-      return { ok: false, error: '无法启动文件夹选择器: ' + (e && e.message || e), hint: '请在文件夹输入框中直接粘贴完整路径' };
-    }
-    const out = String((result && result.stdout) || '').trim();
-    // WinForms load failure surfaces on stderr with a non-zero exit → treat as unavailable.
-    if (result && result.ok === false && !out) {
-      return { ok: false, error: String(result.stderr || '选择器不可用').slice(0, 400), hint: '请在文件夹输入框中直接粘贴完整路径' };
-    }
-    if (/^CANCEL$/m.test(out) || out === '') return { ok: true, cancelled: true };
-    const m = out.match(/^OK\t(.+)$/m);
-    if (m && m[1].trim()) return { ok: true, path: path.resolve(m[1].trim()) };
-    // Unexpected shape → treat as cancel rather than inventing a path.
-    return { ok: true, cancelled: true };
-  }
-
-  // 第53波 EC-B(53d):原生文件选择器(OpenFileDialog,选 overlay zip 等单文件)。同 pickFolder 的 TopMost owner
-  // 模式(无 owner 的 ShowDialog 会被压浏览器后面);filter 如 "Zip 包 (*.zip)|*.zip|所有文件|*.*"。
-  async function pickFile(filter) {
-    if (process.platform !== 'win32') {
-      return { ok: false, error: '原生文件选择器仅支持 Windows', hint: '请直接粘贴完整路径' };
-    }
-    const safeFilter = String(filter || 'All files|*.*').replace(/'/g, '');
-    const script = PS_UTF8_OUTPUT_PREAMBLE + "Add-Type -AssemblyName System.Windows.Forms; " // 前导同 pickFolder(中文文件路径不被写成 ?)
-      + "$f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; $f.ShowInTaskbar = $false; "
-      + "$f.FormBorderStyle = 'None'; $f.Opacity = 0; "
-      + "$f.StartPosition = 'CenterScreen'; $f.Show(); $f.Activate(); "
-      + "$d = New-Object System.Windows.Forms.OpenFileDialog; "
-      + "$d.Filter = '" + safeFilter + "'; "
-      + "if ($d.ShowDialog($f) -eq 'OK') { Write-Output ('OK' + [char]9 + $d.FileName) } else { Write-Output 'CANCEL' }; "
-      + "$f.Close()";
-    let result;
-    try {
-      result = await runProcess('powershell.exe', [
-        '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-Command', script,
-      ], { cwd: os.homedir(), timeoutMs: 120000 });
-    } catch (e) {
-      return { ok: false, error: '无法启动文件选择器: ' + (e && e.message || e), hint: '请直接粘贴完整路径' };
-    }
-    const out = String((result && result.stdout) || '').trim();
-    if (result && result.ok === false && !out) {
-      return { ok: false, error: String(result.stderr || '选择器不可用').slice(0, 400), hint: '请直接粘贴完整路径' };
-    }
-    if (/^CANCEL$/m.test(out) || out === '') return { ok: true, cancelled: true };
-    const m = out.match(/^OK	(.+)$/m);
-    if (m && m[1].trim()) return { ok: true, path: path.resolve(m[1].trim()) };
-    return { ok: true, cancelled: true };
-  }
-  return Object.freeze({ decodeBestEffort, runProcess, runPowerShell, runBash, withQuietProgress, revealInExplorer, pickFolder, pickFile, folderPickerEnv, FOLDER_PICKER_PS_SCRIPT });
+  return Object.freeze({ decodeBestEffort, runProcess, runBash, revealInFinder, pickFolder, pickFile });
 })(fs, fsp, path, os, cp, killChildTree, batchSafeSpawn, spawnDetachedChecked, decodeConsoleText);
 
 // ── 04f · ruyi-toolbox 服务类组件:拉起、探活、接成能力端点、回收 ─────────────────────────────────────────
@@ -33061,7 +32727,6 @@ const TOOL_REQUIRES = {
   git_commit: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
   shell_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   script_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
-  powershell_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   shell_start: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   desktop_screenshot: { requires: ['desktopCapture'], reason: 'Mac 屏幕捕获尚未就绪，请检查屏幕录制权限和自动化组件' },
 };
@@ -36880,9 +36545,9 @@ function isStewardToolName(name) {
 const STEWARD_EXEMPT_TOOL_PATTERNS = /send|mail|sms|post_message|pay|purchase|transfer|uninstall|install|registry|system_setting|shutdown|format|mcp_configure/i;
 // 127 波 2-bis(45 号文 §2-bis,用户真机走查):上面那条正则是裸子串,工作台自己的两个本机工具只因名字里有
 // send 就被当成「对外发送」进了永久豁免 —— 于是全自动线程每递一行 shell_send 都得用户亲手按,而同族的
-// powershell_run/run_command 名字不命中、走的是下面的命令文本扫描。方向是反的。这里只放出【精确全名】,
+// shell_run/run_command 名字不命中、走的是下面的命令文本扫描。方向是反的。这里只放出【精确全名】,
 // 正则本身一个字不动:外部 MCP 的 slack_send/send_message 之类照样按名字拦(宁可误判成「要人按」)。
-//   · shell_send —— 往本进程已起的 PowerShell 会话递一行字。危险全在那行字里,与 powershell_run 同族,
+//   · shell_send —— 往本进程已起的 PowerShell 会话递一行字。危险全在那行字里,与 shell_run 同族,
 //     交给命令文本扫描判。前提已用真夹具证过:两条路径(原生闸门 / steward_decide)都把它的 input 交到了
 //     扫描手里(dev-harness/steward-exempt-shell-send.e2e.js H2/P1)。
 //   · keyboard_send_keys —— 用户 2026-09-17 拍板放出(「放出来吧，估计有很多操作也是要按键盘的」)。
@@ -36894,7 +36559,7 @@ const STEWARD_EXEMPT_TOOL_PATTERNS = /send|mail|sms|post_message|pay|purchase|tr
 // `mcp__ruyi__shell_send` 在原生引擎里能被一个 id 为 mcp 的外部服务器凑出来
 // (serverId=mcp + 工具名 ruyi__shell_send);CLI 那两条路上 shell 族在 MCP 子进程里本就是
 // 引导性报错(12 shellMcpChildGuard),放它没有收益。
-const STEWARD_EXEMPT_NAME_CARVEOUTS = Object.freeze(['shell_send', 'keyboard_send_keys']);
+const STEWARD_EXEMPT_NAME_CARVEOUTS = Object.freeze(['shell_send']);
 
 // 116-3 P0-1(对抗审查):只匹配 toolName 字面量的判据在【通用执行工具】面前形同虚设 ——
 // `Bash`/`PowerShell`/`run_command`/`delete_file`/`kill_process`/`git_push` 一个都不命中上面那条正则,
@@ -37089,7 +36754,7 @@ const STEWARD_AUTO_ASK_EGRESS_PATTERNS = Object.freeze([
   /\brsync\b[^\n]{0,200}?(?:\s[\w.@-]+@[\w.-]+:|rsync:\/\/)/i, /\b(?:nslookup|resolve-dnsname)\b/i,
 ]);
 // 读如意数据根里的密钥 / 状态文件:runtime.json(WCW token)、<数据根>\config.json(明文 provider 密钥)及其备份族、会话 / 记忆 / 计费 / 审计 / 管家 / 事项 / 调度。
-// 文件工具层早已把这些封死(03 isSensitiveDataPath),但 exec 工具(script_run / powershell_run)直接读盘,实测把 token 读出来 POST 到外部端口全程零弹窗。
+// 文件工具层早已把这些封死(03 isSensitiveDataPath),但 exec 工具(script_run / shell_run)直接读盘,实测把 token 读出来 POST 到外部端口全程零弹窗。
 // 单独的 `config.json` 在普通工程里太常见,所以只认「数据根目录名后面跟着这些名字」「runtime.json」「config.json 备份族」与数据根 / token 的环境变量名。
 const STEWARD_AUTO_ASK_DATAROOT_PATTERNS = Object.freeze([
   /\bruntime\.json\b/i,
@@ -37154,7 +36819,7 @@ function stewardAutoAskReason(toolName, input) {
 // 相对路径仍可能经 `..` 爬出工作夹,那一层由执行闸(03 guardWorkspaceExecute)兜;这里要的只是
 // 「管家不准替用户批一条把绝对路径写在脸上的删除」。
 // 【按叶子判,不按摊平后的整段判】:摊平文本把 input 的【所有】字符串值用空格接起来,而
-// `powershell_run{command:'Remove-Item .\tmp -Recurse', cwd:'C:\…\work'}` 是常态 —— 拿整段判会把
+// `shell_run{command:'Remove-Item .\tmp -Recurse', cwd:'C:\…\work'}` 是常态 —— 拿整段判会把
 // 每一条「线程清自己临时目录」都误判成绝对目标(B2 的主用例),那是把判据做成了「谁传 cwd 谁不许代批」。
 // 所以:逐个叶子串看,只有【自己就命中删数据正则】的那个叶子里的绝对形态才算目标。
 // 一个叶子都没能复现删数据命中(命中是跨叶子拼出来的 argv 形态,如 ['Remove-Item','C:\Users','-Recurse'])
@@ -38001,7 +37666,7 @@ function stewardClipSay(value) {
 // 常用工具说清要对哪个文件做什么;认不出的工具才退回工具名 —— 总比「edit 级」这种档位黑话好懂。
 const STEWARD_PERMISSION_VERBS = Object.freeze({
   file_write: '写入文件', file_edit: '修改文件', file_delete: '删除文件', file_move: '移动文件', file_copy: '复制文件',
-  shell_run: '运行一条命令', powershell_run: '运行一条命令', script_run: '运行一段脚本', http_download: '下载文件',
+  shell_run: '运行一条命令', script_run: '运行一段脚本', http_download: '下载文件',
 });
 // 第三波 M4：权限待决要对哪个文件动手（只取文件名）。独立出来，让 asksYou 也能带上结构化的 target，前端按界面语言拼句。
 function stewardPermissionTarget(iv) {
@@ -41766,11 +41431,11 @@ const CLI_TOOL_TIER = {
   Edit: 'edit', Write: 'edit', MultiEdit: 'edit', NotebookEdit: 'edit',
   Bash: 'exec',
 };
-// 对抗轮 P1(field-shadow)防线:可签 exec 授权的工具白名单 + 各自【真正被执行的命令字段】。powershell_run 执行 args.command
+// 对抗轮 P1(field-shadow)防线:可签 exec 授权的工具白名单 + 各自【真正被执行的命令字段】。shell_run 执行 args.command
 //(runPowerShell(args.command));Claude Bash 执行 args.command。二者命令可前缀化且校验字段=执行字段。script_run 执行 args.code
 //(整段脚本体)、shell_*/git_commit/http_request/office_open/browser_open/keyboard_send_keys/desktop_screenshot 等语义不符 → 不入表。
-const GRANT_EXEC_TOOLS = new Set(['powershell_run', 'Bash']);
-const GRANT_EXEC_CMD_FIELD = { powershell_run: 'command', Bash: 'command' };
+const GRANT_EXEC_TOOLS = new Set(['shell_run', 'Bash']);
+const GRANT_EXEC_CMD_FIELD = { shell_run: 'command', Bash: 'command' };
 // 签发时推断 entrypoint + tier(不信任调用方传入的 tier;消耗点再按 entrypoint 重算)。未知工具 → null(拒绝签发,
 // 无法精确 gate 的工具不给授权)。禁 spawn_agent/orchestrate_agents(红线#4:防子代理递归放大授权)。
 function grantIssueTierInfo(tool) {
@@ -41782,7 +41447,7 @@ function grantIssueTierInfo(tool) {
   if (!info) return null;
   // 对抗轮 P1(field-shadow):exec 授权只允许【命令可前缀化 且 校验字段=执行字段】的工具。script_run 执行 args.code
   // (整段脚本体,非可前缀化命令)、shell_*/git_commit/http_request 等执行字段与 cmdAllow 语义不符 → 一律不可签 exec 授权
-  //(否则「校验 command、执行 code」= 绕过 cmdAllow 的任意 RCE)。仅 powershell_run(native)/Bash(cli)执行 args.command,可签。
+  //(否则「校验 command、执行 code」= 绕过 cmdAllow 的任意 RCE)。仅 shell_run(native)/Bash(cli)执行 args.command,可签。
   if (info.tier === 'exec' && !GRANT_EXEC_TOOLS.has(t)) return null;
   return info;
 }
@@ -41811,8 +41476,8 @@ function resolveToolPermissionContext(name, args, entrypoint) {
     // 补齐后:consumeGrant 对每条路径(含数组源)都验 grantRoot/denylist/glob → 授权书对这些工具既生效又受约束。
     for (const k of ['path', 'source', 'destination', 'dest', 'output', 'output_path', 'root', 'from', 'to', 'src', 'destDir']) pushPath(input[k]);
     if (Array.isArray(input.paths)) for (const p of input.paths) pushPath(p);
-    // 对抗轮 P1(field-shadow):按【真正被执行的字段】取命令,绝不 OR-merge 多字段 —— powershell_run 只执行 args.command
-    //(见 case 'powershell_run')。未在 GRANT_EXEC_CMD_FIELD 映射的 exec 工具 → cmdArg=null → consumeGrant 恒不命中(fail-closed)。
+    // 对抗轮 P1(field-shadow):按【真正被执行的字段】取命令,绝不 OR-merge 多字段 —— shell_run 只执行 args.command
+    //(见 case 'shell_run')。未在 GRANT_EXEC_CMD_FIELD 映射的 exec 工具 → cmdArg=null → consumeGrant 恒不命中(fail-closed)。
     if (tier === 'exec') { const f = GRANT_EXEC_CMD_FIELD[tool]; cmdArg = f ? String(input[f] || '') : null; }
     if (typeof input.cwd === 'string' && input.cwd.trim()) cwdArg = input.cwd.trim();
   }
@@ -42258,8 +41923,7 @@ function inferToolResources(name, args, bridge, cwd, tier) {
   // 现在按 ACC 的真实工具名(mcp/ai-computer-control 平台源码注册名并集 109 个逐个分过类)显式分两张表:会动桌面的 → 独占写锁,
   // 只看桌面的 → 共享读锁(读读可并发、与写互斥),其余 ACC 工具(文件/Office/记忆/网络/浏览器…)不占桌面。
   // 表外的名字(第三方 MCP)仍走旧正则兜底 —— 未知的保守当写。原生 keyboard_send_keys 修前完全没锁,一并补上。
-  const deskMode = name === 'keyboard_send_keys' ? 'write'
-    : name === 'desktop_screenshot' ? 'read'
+  const deskMode = name === 'desktop_screenshot' ? 'read'
     : bridge ? bridgedDesktopLeaseMode(bare, input) : '';
   if (deskMode) add('desktop', deskMode);
   if (bridge) {
@@ -43237,8 +42901,8 @@ function adaptiveMetaToolSchemas(includeInvoke = false) {
 // 审计 N4:allowCommandTools / allowDesktopTools 不只是「不 offer」—— 分发点也按同一判据拒绝(bypass/auto 下 gate 恒 allow,
 // 光藏 schema 拦不住模型直接吐出的 script_run)。offer 面(buildOpenAiTools)与分发面(09 主循环 / 08 子代理 / 12 toolCall)共用本函数。
 // 返回空串 = 放行;否则是给模型看的中文原因。desktopOverride 语义同 buildOpenAiTools(null = 跟随全局)。
-const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'powershell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
-const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot', 'keyboard_send_keys']);
+const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
+const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot']);
 // 桌面闸的唯一判法(原生与桥接共用):会话级覆盖 desktopOverride 非 null 时以它为准,否则跟随全局 allowDesktopTools。
 function desktopToolsDisabledReason(cfg, desktopOverride) {
   const allowDesk = desktopOverride == null ? (cfg || {}).allowDesktopTools !== false : desktopOverride === true;
@@ -43260,9 +42924,6 @@ async function policyDesktopOverrideFor(ctx) {
 
 function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
   const cfg = config || {};
-  if (process.platform === 'darwin' && (name === 'powershell_run' || name === 'keyboard_send_keys')) {
-    return 'platform.unsupported: 此工具依赖 Windows PowerShell，尚无 Mac 实现';
-  }
   if (NATIVE_COMMAND_TOOL_NAMES.has(name) && cfg.allowCommandTools === false) return 'allowCommandTools=false';
   if (NATIVE_DESKTOP_TOOL_NAMES.has(name)) return desktopToolsDisabledReason(cfg, desktopOverride);
   return '';
@@ -43275,7 +42936,7 @@ function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
 // offer 面(09 目录 / 08 子代理 / 11 MCP 子进程目录 / 07 createToolLoadingState)与分发面(09 / 08 / 12 代理 / 13d CLI 权限桥)
 // 都调它;CLI 直挂 ACC 的那一路(01 addExternalMcpServersToMap / syncMcpServersToClaude)按同一张表算出 ACC_HIDE_TOOLS 交给
 // ACC 自己在注册表里摘掉。
-//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 powershell_run / script_run / shell_* 同一类能力。
+//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 shell_run / script_run / shell_* 同一类能力。
 //     list_processes 只读进程表、不执行任何东西,不收。
 //   桌面族(随 allowDesktopTools 与会话级 desktopTools 覆盖,判法与 NATIVE_DESKTOP_TOOL_NAMES 是同一个 desktopToolsDisabledReason):
 //     按「作用于真实桌面」归类 ——
@@ -43569,7 +43230,7 @@ const NATIVE_TOOL_TIER = {
   file_write: 'edit', file_edit: 'edit', file_delete: 'edit', // v0.8-S4a: delete is journaled (revertible) → edit tier
   // v1.1-W2 (T1): 移动/复制/压缩/解压/下载 —— 均落盘且经检查点(可撤销) → edit tier。
   file_move: 'edit', file_copy: 'edit', archive_zip: 'edit', archive_unzip: 'edit', http_download: 'edit',
-  shell_run: 'exec', powershell_run: 'exec', script_run: 'exec', keyboard_send_keys: 'exec', browser_open: 'exec', office_open: 'exec',
+  shell_run: 'exec', script_run: 'exec', browser_open: 'exec', office_open: 'exec',
   desktop_screenshot: 'exec', http_request: 'exec',
   // 127-114c③(26 号文 §3):读本地音频后出网转写 —— 用户文件内容离开本进程,与「文件出网」同档 exec。
   audio_transcribe: 'exec',
@@ -43693,10 +43354,10 @@ const TOOL_PACK_DESCRIPTIONS = Object.freeze({
 // 2026-10 起手工具:模型服务商回合的按需装载里,不论这句话分到哪些包,第一发就带上的几个原生工具(相当于给 core 扩一小圈;
 // 不改 core 包本身 —— core 同时决定 Claude CLI 的 MCP 工具清单,而 CLI 有自己的 Read/WebSearch/WebFetch/Bash)。
 // 依据(本机 4 天真实调用):联网 web_search + web_fetch 占全部工具调用的六成多(147/230),3 个会话里 2 个用到;
-// 命令行 3 个会话都用到(powershell_run 27 次、script_run 9 次)。开局没装、中途补装时,提供方的前缀缓存会整段失效
+// 命令行 3 个会话都用到(shell_run 27 次、script_run 9 次)。开局没装、中途补装时,提供方的前缀缓存会整段失效
 // (实测命中率 97%→3%、94%→8%,下一发几乎整段上下文按未缓存计);三个合计约 630 token,每发基本都命中缓存,比中途断一次便宜。
 // file_read 不进:分包对文件类说法的召回本就高(文件/目录/路径/代码/项目/查看/搜索…),tool-loading e2e 也用它钉「按需注入」。
-const PROVIDER_STARTER_TOOLS = Object.freeze(['web_search', 'web_fetch', process.platform === 'darwin' ? 'shell_run' : 'powershell_run']);
+const PROVIDER_STARTER_TOOLS = Object.freeze(['web_search', 'web_fetch', 'shell_run']);
 const NATIVE_TOOL_PACKS = Object.freeze({
   threads_search: 'memory', thread_read: 'memory',
   permission_prompt: 'core', request_user_input: 'core', todo_write: 'core', mission_update: 'core',
@@ -43721,9 +43382,9 @@ const NATIVE_TOOL_PACKS = Object.freeze({
   checkpoint_list: 'files_write',
   dependency_inventory: 'code', code_review_scan: 'code', frontend_audit: 'code', claude_md_audit: 'code', docs_search: 'code', codebase_symbol_search: 'code', debug_hypothesis: 'code', data_profile: 'code',
   git_status: 'code', git_diff: 'code', git_log: 'code', git_commit: 'code',
-  shell_run: 'shell', powershell_run: 'shell', script_run: 'shell', shell_start: 'shell', shell_send: 'shell', shell_poll: 'shell', shell_kill: 'shell', shell_list: 'shell',
+  shell_run: 'shell', script_run: 'shell', shell_start: 'shell', shell_send: 'shell', shell_poll: 'shell', shell_kill: 'shell', shell_list: 'shell',
   web_search: 'web', web_fetch: 'web', http_request: 'web', http_download: 'web', browser_open: 'web',
-  desktop_screenshot: 'desktop', keyboard_send_keys: 'desktop', office_open: 'office',
+  desktop_screenshot: 'desktop', office_open: 'office',
   archive_zip: 'archive', archive_unzip: 'archive', spawn_agent: 'agents', orchestrate_agents: 'agents', wait_agents: 'agents', agent_result: 'agents', send_to_agent: 'agents', skill_read: 'skills',
   playbook_list: 'skills', playbook_read: 'skills', skill_list: 'skills', // 61 号文 C1:不进 PROVIDER_STARTER_TOOLS(起手工具影响前缀缓存),说到 Playbook/技能时 classifyToolPacks 带出
   mcp_list: 'integrations', mcp_configure: 'integrations',
@@ -43792,7 +43453,6 @@ const TOOL_RETRIEVAL_HINTS = Object.freeze({
   git_status: { capabilities: ['git.status'], aliases: ['查看代码变更', '仓库状态', 'working tree status'] },
   git_diff: { capabilities: ['git.diff'], aliases: ['查看差异', '代码改动', 'show changes diff'] },
   shell_run: { capabilities: ['shell.exec'], aliases: ['运行命令', '执行 bash', 'run command'] },
-  powershell_run: { capabilities: ['shell.powershell.execute'], aliases: ['运行命令', '执行 powershell', 'run command'] },
   script_run: { capabilities: ['shell.script.execute'], aliases: ['运行脚本', '执行脚本', 'run script'] },
   web_search: { capabilities: ['web.search'], aliases: ['搜索互联网', '联网搜索', 'search the web'] },
   web_fetch: { capabilities: ['web.page.fetch'], aliases: ['抓取网页', '读取网页', 'fetch web page'] },
@@ -43800,7 +43460,6 @@ const TOOL_RETRIEVAL_HINTS = Object.freeze({
   http_download: { capabilities: ['network.http.download', 'workspace.file.write'], aliases: ['下载文件', '从网址下载', 'download url to file'] },
   desktop_screenshot: { capabilities: ['desktop.screen.capture'], aliases: ['桌面截图', '屏幕截图', 'take screenshot'] },
   // 下面两件和桥接桌面服务器的 type_text/hotkey、browser_open 是同一件事;给中文叫法,中文检索时与桥接的同分、按原生优先排在前面。
-  keyboard_send_keys: { capabilities: ['desktop.keyboard.send'], aliases: ['键盘输入', '发送按键', '按快捷键', 'send keystrokes'] },
   browser_open: { capabilities: ['browser.url.open'], aliases: ['打开网页', '浏览器打开', '打开网址', 'open url in browser'] },
   office_open: { capabilities: ['office.document.open'], aliases: ['打开办公文档', '打开 excel word ppt pdf', 'open office document'] },
   orchestrate_agents: { capabilities: ['agent.workflow.orchestrate'], aliases: ['编排多个代理', '多代理工作流', 'orchestrate agents'] },
@@ -44169,7 +43828,7 @@ function withToolArgSkeletons(result, catalog, opts) {
 const BRIDGED_SHADOWED_BY_NATIVE = Object.freeze({
   read_file: 'file_read', write_file: 'file_write', edit_file: 'file_edit',
   delete_file: 'file_delete', move_file: 'file_move', copy_file: 'file_copy',
-  list_directory: 'file_list', fetch: 'web_fetch', run_command: process.platform === 'darwin' ? 'shell_run' : 'powershell_run',
+  list_directory: 'file_list', fetch: 'web_fetch', run_command: 'shell_run',
 });
 function bridgedShadowNative(item, nativeNames) {
   if (!item || !item.bridged) return '';
@@ -44193,7 +43852,7 @@ function withShadowedBridgeHints(result, catalog) {
   return { ...result, matches: tagged.filter(m => !m || !m.preferred).concat(tagged.filter(m => m && m.preferred)) };
 }
 // 61-A4:零命中不再只回一张空表 —— 模型分不清「措辞没对上」和「真没有这类工具」,于是换着说法连搜(真机搜「撤销/回滚」)。
-const TOOL_SEARCH_EMPTY_NOTE = 'No dedicated tool matched. Try other capability words (Chinese or English) or browse with list_tools {pack}; if nothing fits, do it with the general tools you already have (e.g. powershell_run / script_run when available) or tell the user it is not supported.';
+const TOOL_SEARCH_EMPTY_NOTE = 'No dedicated tool matched. Try other capability words (Chinese or English) or browse with list_tools {pack}; if nothing fits, do it with the general tools you already have (e.g. shell_run / script_run when available) or tell the user it is not supported.';
 function searchToolCatalog(catalog, args, config, opts) {
   const q = normalizeToolSearchText(args && args.query || '');
   // New media/background entry points must remain discoverable when legacy retrieval is selected.
@@ -44944,7 +44603,7 @@ Object.assign(ProviderWireHooks, { makeId, redact, repairProviderHistoryPairing,
 // (session.actionAudit + providerHistory 原消息),provider model view 投影为紧凑 envelope。
 // 投影纪律:只投影 status=completed 且 sha256 与原始 arguments 可校验的动作;失败/中断/待审批不瘦身;
 // 只加/换 arguments 字段,tool_call id/type/function.name 原样保留(pairing 铁律不破坏)。
-const ACTION_VIEW_TOOLS = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download', 'script_run', 'shell_run', 'powershell_run', 'tool_invoke_edit', 'tool_invoke_exec']);
+const ACTION_VIEW_TOOLS = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download', 'script_run', 'shell_run', 'tool_invoke_edit', 'tool_invoke_exec']);
 const ACTION_VIEW_MIN_CHARS = 512;
 
 function actionTargetMeta(toolName, args) {
@@ -44954,7 +44613,7 @@ function actionTargetMeta(toolName, args) {
   if (/^(script_run|file_)/.test(name) && pathKey) {
     return { kind: 'path', basename: path.win32.basename(String(pathKey)) }; // win32:模型给的是 Windows 路径,\ 与 / 都认,非 Windows 主机上也只取尾段
   }
-  if (name === 'powershell_run' || name === 'shell_run') {
+  if (name === 'shell_run') {
     const cmd = String(input.command || '');
     return { kind: 'cmd', basename: cmd.slice(0, 40) || (name === 'shell_run' ? 'shell' : 'powershell') };
   }
@@ -46791,7 +46450,7 @@ async function runSubAgentCoreBody({ parentSession, provider, config, task, disp
     lastStreamActivityEventAt = now;
     onEvent({ type: 'subagent_progress', subagentId, note: '模型流式响应中', noteCode: 'streaming' });
   };
-  // A3: 工具执行心跳 —— 子代理 await 长工具(>watchdog idle 上限的 powershell_run/script_run 等)期间,
+  // A3: 工具执行心跳 —— 子代理 await 长工具(>watchdog idle 上限的 shell_run/script_run 等)期间,
   // 除 tool_use/tool_result 外不发任何事件,会被节点级/工作流级看门狗误判卡死而 abort。
   // 工具执行(含资源租约等待)期间以 streamActivityEventMs 节流发 progress 事件刷新看门狗时钟;一执行完立即停。
   const startToolBeat = () => {
@@ -50779,7 +50438,7 @@ function canonicalToolInvokeCall(tc) {
   return { ...tc, rawArgs: JSON.stringify(args), proxyRepair: repair };
 }
 
-// 61-B2:代理档低报(tool_invoke_read 去叫 exec 档的 powershell_run)时,在入批处改写成目标档的代理 —— 只升不降。
+// 61-B2:代理档低报(tool_invoke_read 去叫 exec 档的 shell_run)时,在入批处改写成目标档的代理 —— 只升不降。
 // 改写发生在权限闸之前,等价于模型一次就选对:闸照常按改写后的代理档(= 目标真实档)判,不多放一个调用;
 // 12 invokeAdaptiveMcpTool 的 tier-mismatch 检查留作纵深防御。只在模型服务商回合做:MCP / CLI 路径里审批已在 CLI 侧按
 // 低档代理名发生,子进程里升档就是提权,那边只回错误与正确代理名。桥接目标按【本次入参】定档(与 12 的重校同口径)。
@@ -51636,7 +51295,7 @@ async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, prov
   const toolHeartbeatMs = Math.max(250, Number(process.env.WCW_TOOL_HEARTBEAT_MS)
     || Math.min(15000, Math.max(1000, Math.floor(idleLimitMs / 3))));
   // shell_poll:waitMs 长轮询(≤30s)循环里看 ctx.signal,必须可被插话 / 停止打断,否则排队的插话要等满 30s。
-  const INTERRUPTIBLE_NATIVE_TOOLS = new Set(['shell_run', 'powershell_run', 'script_run', 'shell_poll', ...(process.platform === 'darwin' ? ['shell_send'] : [])]);
+  const INTERRUPTIBLE_NATIVE_TOOLS = new Set(['shell_run', 'script_run', 'shell_poll', ...(process.platform === 'darwin' ? ['shell_send'] : [])]);
   const awaitProviderTool = async (tc, runner, interruptible = false) => {
     const startedAt = Date.now();
     const toolAbort = interruptible ? new AbortController() : null;
@@ -52908,7 +52567,7 @@ async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, prov
                     // mainTurn:会话自己的主回合标记(08 子代理、MCP 子进程、/api/tools 都不带)。只写本会话旁车的工具(C2 scratchpad_write)
                     // 据此 fail-closed;代理 tool_invoke_* 把同一个 ctx 原样转给目标(12 invokeAdaptiveMcpTool)。
                     signal => toolCall(tc.name, args, { sessionId: session.id, turnSeq: session.turnSeq, session, config, workingDir, signal, mainTurn: true, toolCallId: tc.id, onBridgedInvocationAttempt, desktopExecution }),
-                    // 审计 N1:tool_invoke_* 代理的目标是 powershell_run/script_run 时同样可被 steer/stop 中断(信号经 ctx 一路转发到目标)。
+                    // 审计 N1:tool_invoke_* 代理的目标是 shell_run/script_run 时同样可被 steer/stop 中断(信号经 ctx 一路转发到目标)。
                     INTERRUPTIBLE_NATIVE_TOOLS.has(tc.name) || (tc.name.startsWith('tool_invoke_') && INTERRUPTIBLE_NATIVE_TOOLS.has(String(args && args.name || ''))),
                   ); // P3-4: workingDir 单一真源(skill_read 优先用它)
                 }
@@ -57956,29 +57615,10 @@ function shellShapeOutput(slice, cap, paging) {
     hint: '输出过长,只返回了开头和最新一段;中间被省略的部分可用 cursor=omittedFrom 分页读回' };
 }
 
-// PowerShell 不可用时的统一回复:非 Windows(Linux / macOS)没有 powershell.exe,Windows 上则是 PATH 被改坏 / 精简系统。
-// 修前各个工具把 Node 的 `spawn powershell.exe ENOENT` 原样甩给模型(shell_start 甚至回 ok:true 的死会话),模型无从判断「是环境没有」还是「命令写错了」。
-function powershellUnavailable(extra = {}) {
-  const win = process.platform === 'win32';
-  return {
-    ok: false,
-    code: win ? 'powershell_missing' : 'windows_only',
-    error: win ? '没有找到 PowerShell(powershell.exe 不在 PATH 上)' : `本机不是 Windows(${process.platform}),没有 powershell.exe;这个工具依赖 Windows PowerShell,在此无法使用`,
-    hint: extra.hint || (win ? '确认 Windows PowerShell 5.1 可用(系统自带),并且 %SystemRoot%\\System32\\WindowsPowerShell\\v1.0 在 PATH 上' : '改用 script_run 的 language:"python" 或 "node" 来执行脚本'),
-  };
-}
-// runProcess / runPowerShell 的结果里带 commandNotFound(找不到 powershell.exe 本身)→ 换成上面的统一回复;其余原样。
-function powershellMissingOr(result, hint) {
-  return result && result.commandNotFound ? powershellUnavailable(hint ? { hint } : {}) : result;
-}
 // 持久 shell 的数量上限。cap(config.shellSessionMax,默认 3)是【每个会话】的:shell_list / shell_kill 本来就只看得见、管得了本会话开的
 // (见 shellVisibleTo),修前上限却是全进程共用的 —— 会话 B 被「已达上限 3」拒绝,自己的 shell_list 却是空的、也杀不掉 A 开的。
 // 全局另设一个安全上限(防止多会话 / 多子代理合起来把机器的进程撑爆),它与每会话上限取大者。
 const SHELL_GLOBAL_MAX = 12;
-// -EncodedCommand 把命令按 UTF-16LE 再 Base64,体积约 2.67 倍;Windows 命令行总长上限 32767 字符(Linux 单个参数 128KB 的 E2BIG)。
-// 编码后超过这个值直接给人话,不让 CreateProcess 抛「文件名或扩展名太长」。≈ 12000 字符的命令。
-const SHELL_ENCODED_COMMAND_MAX = 32000;
-
 // Command input is NUL-delimited; completion metadata uses fd 4, separate from stdout/stderr.
 const MAC_SHELL_DRIVER = [
   'function __ruyi_report() {',
@@ -58106,7 +57746,7 @@ function shellCleanupFields(sess) {
 }
 
 // Spawn a persistent powershell child. Returns { ok, shellId, name, cwd } or { ok:false, error, hint }.
-// 异步:要等到子进程【真的起来了】(spawn 事件)才回 ok —— 没有 powershell.exe 时 spawn 的 ENOENT 是异步 error 事件,修前回 ok:true 却是个死会话。
+// 异步:要等到子进程【真的起来了】(spawn 事件)才回 ok —— spawn 的 ENOENT 是异步 error 事件,修前回 ok:true 却是个死会话。
 async function shellStart(args, config, ctx = {}) {
   const max = (config && Number.isFinite(config.shellSessionMax)) ? config.shellSessionMax : 3;
   // The cap counts LIVE sessions only. Exited (running:false) sessions stay in the Map so their output
@@ -58132,24 +57772,24 @@ async function shellStart(args, config, ctx = {}) {
   }
   // 107-S0:工具分发(12 shell_start)总是传入执行闸解析好的 cwd;家目录兜底只留给没有 cwd 的直接调用方。
   const cwd = args.cwd ? path.resolve(String(args.cwd)) : os.homedir();
-  // NE-13:cwd 不存在时 Node 报的是 `spawn powershell.exe ENOENT`,模型会误以为没装 PowerShell —— 先明说目录不存在。
+  // NE-13:cwd 不存在时 spawn 只报告 ENOENT —— 先明说目录不存在。
   try { if (!fs.statSync(cwd).isDirectory()) throw new Error('not a directory'); }
-  catch { return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 用线程工作目录' }; }
+  catch { return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录,或省略 cwd 用线程工作目录' }; }
   const name = args.name ? String(args.name).slice(0, 80) : shellId;
   const command = args.command == null ? '' : String(args.command).trim();
   const mode = command ? 'background' : 'interactive';
   const timeoutMs = Math.min(24 * 60 * 60 * 1000, Math.max(1000, Number(args.timeoutMs) || SHELL_IDLE_MS));
-  const language = args.language || (process.platform === 'darwin' ? 'bash' : 'powershell');
+  const language = args.language || 'bash';
+  if (language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_start supports bash' };
   if (language === 'bash' && process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 会话' };
-  const isMacShell = language === 'bash';
-  if (isMacShell) {
+  {
     const capability = ProcessRuntime.helperCapability();
     if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac shell 的原生进程监督器尚未就绪', capability };
   }
   let scriptDirectory = '';
   let startingSession = null;
-  const launchArgs = isMacShell ? ['--noprofile', '--norc'] : ['-NoLogo', '-NoProfile'];
-  if (isMacShell) {
+  const launchArgs = ['--noprofile', '--norc'];
+  {
     if (command) {
       if (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES) return { ok: false, code: 'command_too_long', error: '命令不能包含 NUL，且 UTF-8 内容不得超过 1MiB' };
       startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
@@ -58170,34 +57810,12 @@ async function shellStart(args, config, ctx = {}) {
         return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
       }
     } else launchArgs.push('-c', MAC_SHELL_DRIVER);
-  } else if (!command) {
-    // 交互式 shell:没有脚本可前置,用 -NoExit -Command 先跑一遍 UTF-8 输出编码前导,然后照常读 stdin(2026-10 实测:
-    // 提示符与回显的格式与不带它时一致,启动时不多出任何输出)。注意不能用 -EncodedCommand:它会让 PowerShell 往 stderr
-    // 写一份 CLIXML 进度对象(`#< CLIXML ...`),污染 shell_poll 的输出。前导是纯 ASCII、无需引号转义(spawn 不经 shell)。
-    // 为什么要它:非中文代码页(en-US 的 437/1252)的机器上不设的话,Write-Output '中文' 在源头就是 `?`(见 00-boot 注释)。
-    // stdin is a pipe, so use ConsoleHost's line reader rather than PSReadLine's console input.
-    // With -NoExit -Command alone, PSReadLine can echo shell_send input without executing it.
-    launchArgs.push('-NonInteractive');
-    launchArgs.push('-NoExit', '-Command', PS_UTF8_OUTPUT_PREAMBLE);
-  } else {
-    // A finite command has an actual completion/exit code; shell_poll.running now describes the job,
-    // rather than an interactive prompt that stays alive forever after its command completed.
-    // 第一行前面接 UTF-8 输出编码前导(00-boot PS_UTF8_OUTPUT_PREAMBLE):同一行、不加换行,用户命令的行号不漂。
-    // 不需要像 04 withQuietProgress 那样豁免 param()/using —— 用户命令在 `& { }` 里,不是脚本的第一条语句。
-    const script = PS_UTF8_OUTPUT_PREAMBLE + "$ErrorActionPreference = 'Stop'\n$global:LASTEXITCODE = 0\ntry {\n& {\n" + command
-      + "\n}\nif (-not $?) { exit 1 }\nexit $LASTEXITCODE\n} catch { [Console]::Error.WriteLine($_.ToString()); exit 1 }";
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    if (encoded.length > SHELL_ENCODED_COMMAND_MAX) {
-      return { ok: false, code: 'command_too_long', error: `命令太长(${command.length} 字符),超过命令行长度上限(约 12000 字符)`,
-        hint: '把长脚本用 script_run 执行(代码落成文件再运行,没有这个长度限制),或先 file_write 写成 .ps1 再在 shell_start 里 & 调用它' };
-    }
-    launchArgs.push('-NonInteractive', '-EncodedCommand', encoded);
   }
   let child;
   try {
-    child = ProcessRuntime.spawn(isMacShell ? '/bin/bash' : 'powershell.exe', launchArgs, {
-      cwd, env: isMacShell ? platformShellEnvironment(process.env) : { ...process.env }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
-      ...(isMacShell && !command ? { extraStdio: ['pipe'] } : {}),
+    child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
+      cwd, env: platformShellEnvironment(process.env), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+      ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
     if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId);
@@ -58211,7 +57829,7 @@ async function shellStart(args, config, ctx = {}) {
   // 135c(线程内后台任务条):记下命令原文供界面显示 —— 先过 04 的 redact(与权限弹窗/审计同一张表),压成一行、裁 200。
   const commandShown = command ? redact(command).replace(/\s+/g, ' ').trim().slice(0, 200) : '';
   const sess = { child, name, cwd, mode, shellLanguage: language, platform: process.platform, command: commandShown, sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), jobId: crypto.randomBytes(12).toString('hex'), timedOut: false, buf: '', baseOffset: 0, running: true, exitCode: null, startedAt: now, lastUsedAt: now };
-  if (isMacShell && !command) bindMacShellProtocol(sess);
+  if (!command) bindMacShellProtocol(sess);
   let deadline = null;
   if (command) {
     child.stdin.end();
@@ -58223,19 +57841,13 @@ async function shellStart(args, config, ctx = {}) {
     }, timeoutMs);
     deadline.unref();
   }
-  // 每条流一个按行的控制台解码器(00-boot createConsoleLineDecoder):中文 Windows 上无控制台的 powershell.exe
-  // 往管道里写的是 GBK(用户实测:shell 会话里的中文输出全是乱码),修前一律按 UTF-8 解。整行才解码(chunk 切开的
-  // 多字节字符不会变成 U+FFFD);不带换行的尾巴(提示符、「[Y/N]」)停 150ms 没有新输出就先吐出来;关闭时 end()。
-  // 2026-10 起 PowerShell 的输出编码在源头就设成 UTF-8(上面的 PS_UTF8_OUTPUT_PREAMBLE),这里的按行解码退为兜底
-  // (中文系统上设置失败、原生命令自己写 GBK):UTF-8 优先的判定正好接住源头已是 UTF-8 的输出。
+  // Preserve UTF-8 characters split across pipe chunks.
   const makeDecoder = () => {
-    if (!isMacShell) return createConsoleLineDecoder();
     const decoder = new StringDecoder('utf8');
     return { write: data => decoder.write(data), flush: () => '', end: () => decoder.end() };
   };
   const outDecoder = makeDecoder();
   const errDecoder = makeDecoder();
-  let idleFlush = null;
   let exitAt = 0;
   let exitTimer = null;
   let finalized = false;
@@ -58247,7 +57859,6 @@ async function shellStart(args, config, ctx = {}) {
     if (scriptDirectory) void fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
     if (sess.spawnFailed) return; // 根本没起来的进程不算一次「作业完成」:不弹完成通知、不留死会话(shellStart 已回 ok:false)
     if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
-    if (idleFlush) { clearTimeout(idleFlush); idleFlush = null; }
     shellAppend(sess, outDecoder.end() + errDecoder.end());
     if (note) shellAppend(sess, note);
     sess.running = false; sess.exitCode = (code === null || code === undefined ? null : code); sess.lastUsedAt = Date.now();
@@ -58265,7 +57876,7 @@ async function shellStart(args, config, ctx = {}) {
     exitTimer = setTimeout(() => {
       exitTimer = null;
       if (finalized) return;
-      try { if (child.stdout) child.stdout.destroy(); if (child.stderr) child.stderr.destroy(); if (isMacShell) child.stdio[4]?.destroy(); } catch { /* already closed */ }
+      try { if (child.stdout) child.stdout.destroy(); if (child.stderr) child.stderr.destroy(); child.stdio[4]?.destroy(); } catch { /* already closed */ }
       finalize(exitInfoCode, '\n[process exited; a background child kept the output pipe open — later output is not captured]\n');
     }, 500);
     if (exitTimer.unref) exitTimer.unref();
@@ -58273,9 +57884,6 @@ async function shellStart(args, config, ctx = {}) {
   let exitInfoCode = null;
   const feed = (decoder, d) => {
     shellAppend(sess, decoder.write(d));
-    if (idleFlush) clearTimeout(idleFlush);
-    idleFlush = setTimeout(() => { idleFlush = null; shellAppend(sess, outDecoder.flush() + errDecoder.flush()); }, 150);
-    if (idleFlush.unref) idleFlush.unref();
     if (exitAt && !finalized && Date.now() - exitAt < 3000) armExitTimer();
   };
   child.stdout?.on('data', d => feed(outDecoder, d));
@@ -58283,13 +57891,13 @@ async function shellStart(args, config, ctx = {}) {
   let spawned = false;
   child.once('spawn', () => { spawned = true; });
   child.on('error', err => { clearTimeout(deadline); if (!spawned) sess.spawnFailed = true; shellAppend(sess, `\n[shell error] ${err && err.message ? err.message : err}\n`); sess.running = false; });
-  if (command || isMacShell) child.on('exit', code => { exitInfoCode = code; exitAt = Date.now(); armExitTimer(); });
+  child.on('exit', code => { exitInfoCode = code; exitAt = Date.now(); armExitTimer(); });
   child.on('close', code => finalize(code));
   shellSessions.set(shellId, sess);
   // 等子进程真的起来(或起不来):起不来就别留一个 running:false 的空壳,直接说明原因。
   const readiness = await ProcessRuntime.ready(child);
   let spawnErr = readiness.ok ? null : readiness.error;
-  if (!spawnErr && isMacShell && !command) {
+  if (!spawnErr && !command) {
     let readyTimer;
     try {
       const protocol = await Promise.race([sess.protocolReady, new Promise(resolve => { readyTimer = setTimeout(() => resolve({ ok: false }), 5000); })]);
@@ -58301,20 +57909,13 @@ async function shellStart(args, config, ctx = {}) {
     sess.spawnFailed = true;
     killChildTree(child);
     if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId);
-    if (isMacShell) return { ok: false, code: 'shell_unavailable', error: spawnErr.message };
-    if (spawnErr.code === 'ENOENT') return powershellUnavailable();
-    return { ok: false, error: `无法启动 PowerShell:${(spawnErr && spawnErr.message) || spawnErr}` };
+    return { ok: false, code: 'shell_unavailable', error: spawnErr.message };
+
   }
   if (sess.cancelled || shellSessions.get(shellId) !== sess) return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
-  return { ok: true, shellId, name, cwd: sess.cwd, mode, ...(isMacShell ? { shell: 'bash', tty: false } : {}), ...(command ? { jobId: sess.jobId, notification: sess.sessionId ? 'session_push' : 'unbound', running: true, timeoutMs, cursor: 0 } : {}) };
+  return { ok: true, shellId, name, cwd: sess.cwd, mode, shell: 'bash', tty: false, ...(command ? { jobId: sess.jobId, notification: sess.sessionId ? 'session_push' : 'unbound', running: true, timeoutMs, cursor: 0 } : {}) };
 }
 
-// Write input to a session and wait for output to settle. best-effort capture: polls buffer growth and
-// returns when ~300ms passes with no new bytes, or timeoutMs elapses. A newly spawned PowerShell may need
-// several seconds before it consumes its first stdin command on a cold hosted Windows runner, so an
-// entirely silent command gets a bounded 5s startup/grace window; returning earlier can leave that command
-// queued and misattribute its output to the next shell_send. Long-running tasks won't finish
-// within one send — track them with shell_poll. output = increment from the pre-send cursor to now.
 // 135c(真机核实的隔离缺口):shell_list 修前列出【整个进程】的 shell,shell_poll/send/kill 也不认主 ——
 // A 线程的模型能看到并杀掉 B 线程的后台命令。现在带 ctx.sessionId 的调用只看得见自己线程开的;
 // 子代理的工具调用用的是父会话 id(08 toolCall 传 parentSession.id),所以父子之间照常互通。
@@ -58328,16 +57929,6 @@ function shellLookup(shellId, ctx) {
   return sess && shellVisibleTo(sess, ctx) ? sess : null;
 }
 
-// 交互式 shell 的输入:无控制台的 powershell.exe 按系统代码页(GBK)读 stdin,我们写进去的 UTF-8 中文在【输入阶段】就坏了
-// (命令里的中文路径、中文参数全变问号)。含非 ASCII 字符的输入改成一条纯 ASCII 的等价命令:把原文按 UTF-8 编成
-// Base64,在 PowerShell 里解回来再 Invoke-Expression —— 与直接敲入同一作用域执行,变量、cd 都照常生效。纯 ASCII 输入原样。
-// 代价:如果 shell 里正停在 Read-Host 等你回答,一句中文回答会被当成命令执行 —— 模型给 shell 的几乎总是命令,取这一头。
-function shellInputForPowerShell(input) {
-  const text = String(input == null ? '' : input);
-  if (!/[^\x00-\x7f]/.test(text)) return text;
-  const b64 = Buffer.from(text, 'utf8').toString('base64');
-  return `Invoke-Expression ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${b64}')))`;
-}
 async function shellSend(args, ctx) {
   const shellId = String(args.shellId || '');
   const sess = shellLookup(shellId, ctx);
@@ -58345,38 +57936,7 @@ async function shellSend(args, ctx) {
   // at shell_list / shell_start rather than leaving it to retry the same dead id.
   if (!sess) return { ok: false, error: `未知 shellId '${shellId}'`, hint: '用 shell_list 查看现有会话,或 shell_start 新建' };
   if (sess.mode === 'background') return { ok: false, error: '后台命令不接受输入;用 shell_poll 读取结果或 shell_kill 取消' };
-  if (sess.shellLanguage === 'bash') return runKeyedChain(macShellSendChains, sess.jobId, () => sendMacShell(sess, args, ctx));
-  sess.lastUsedAt = Date.now();
-  const startCursor = shellEndOffset(sess);
-  const timeoutMs = Math.min(120000, Math.max(1000, Number(args.timeoutMs || 10000)));
-  if (sess.running && sess.child.stdin && sess.child.stdin.writable) {
-    try { sess.child.stdin.write(shellInputForPowerShell(args.input != null ? args.input : '') + '\n'); }
-    catch (e) { return { ok: false, error: `写入失败: ${e && e.message ? e.message : e}` }; }
-  } else if (!sess.running) {
-    // Child already exited — still return whatever fresh output exists, but flag not-running.
-    return shellSendResult(sess, shellSliceFrom(sess, startCursor), args, 'exit');
-  }
-  // Settle loop: poll every 60ms; resolve once ~300ms passes with no growth, or on timeout / child exit.
-  const deadline = Date.now() + timeoutMs;
-  const sentAt = Date.now();
-  let lastLen = shellEndOffset(sess);
-  let stableSince = Date.now();
-  let settled = 'timeout';   // NE-15:告诉模型这次是怎么返回的 —— exit=进程退出 / quiet=输出安静了(命令大概率跑完) / silent=没输出 / timeout=超时仍在出
-  for (;;) {
-    await new Promise(r => setTimeout(r, 60));
-    const nowLen = shellEndOffset(sess);
-    if (nowLen !== lastLen) { lastLen = nowLen; stableSince = Date.now(); }
-    if (!sess.running) { settled = 'exit'; break; }
-    if (Date.now() - stableSince >= 300 && nowLen > startCursor) { settled = 'quiet'; break; } // grew then went quiet
-    if (nowLen === startCursor && Date.now() - sentAt >= Math.min(5000, timeoutMs)) {
-      // No output at all within a settle window (e.g. a command that prints nothing) — don't hang.
-      settled = 'silent';
-      break;
-    }
-    if (Date.now() >= deadline) break;
-  }
-  sess.lastUsedAt = Date.now();
-  return shellSendResult(sess, shellSliceFrom(sess, startCursor), args, settled);
+  return runKeyedChain(macShellSendChains, sess.jobId, () => sendMacShell(sess, args, ctx));
 }
 // shell_send 的返回:状态字段在前,output(封顶,见 shellShapeOutput)在最后。
 function shellSendResult(sess, slice, args, settled) {
@@ -58515,7 +58075,7 @@ shellIdleReaper.unref();
 
 // v0.8-S2: the guarding stub returned when a shell_* tool runs in the one-shot MCP child (Claude CLI
 // engine). The session cannot live there; steer the model to the persistent provider engine, or to
-// powershell_run for a one-shot command.
+// shell_run for a one-shot command.
 function shellMcpChildGuard() {
   return {
     ok: false,
@@ -59940,7 +59500,7 @@ async function readIfExists(file, limit = 200000) {
 //   • windowsHide + 超时(默认 15s,commit 30s)+ maxBuffer 上限。
 //   • git 不存在(ENOENT) / 非仓库 / 缺身份 → 全部转「人话引导错误」,永不崩溃。
 // 两个引擎路径都注册(serve 进程 provider 循环 + `node server.js mcp` 子进程),因为这是无状态一次性命令,
-// 同 file_read/powershell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
+// 同 file_read/shell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
 // ============================================================================
 // NE-7:git_diff 上限按【序列化后的 JSON 字符】算,并要低于模型可见上限(10 truncateToolResult 的 60K)。修前 200KB 的 diff 序列化后
 // 超过 60K,会被下游平切 —— 「已截断」说明和 truncated 字段恰好落在被切掉的尾部,模型不知道自己没看到哪些文件。
@@ -60093,7 +59653,7 @@ function resolveGitCwd(raw) {
   return null;
 }
 function gitCwdMissingError(raw) {
-  return { ok: false, error: `目录不存在: ${String(raw || '').trim()}`, hint: '确认 cwd 是已存在的仓库目录(Windows 用完整盘符路径),或省略 cwd 使用当前对话的工作目录。' };
+  return { ok: false, error: `目录不存在: ${String(raw || '').trim()}`, hint: '确认 cwd 是已存在的仓库目录,或省略 cwd 使用当前对话的工作目录。' };
 }
 // Map a failed git invocation to a 中文人话引导错误. Order matters: binary-missing first (nothing else is
 // meaningful without git), then the common "not a repo" and "missing identity" cases, else the raw stderr.
@@ -65858,7 +65418,7 @@ async function fileToolDropPhantom(jctx, tool, p, jr) {
   if (!seqs.length) return { ok: true, dropped: 0 };
   return journalDropEntries(jctx.sessionId, jctx.turnSeq, tool, [p], seqs).catch(() => ({ ok: false }));
 }
-// file_edit 编码类拒绝(not_utf8 / not_roundtrip)的指路。以前写「可用 powershell_run 按原编码读写」—— 模型会直接 Get-Content /
+// file_edit 编码类拒绝(not_utf8 / not_roundtrip)的指路。以前写「可用 shell_run 按原编码读写」—— 模型会直接 Get-Content /
 // Set-Content,而 Windows PowerShell 5.1 对无 BOM 文件按【系统 ANSI 代码页】读写:中文系统恰好是 GBK 勉强能用,非中文代码页
 // (en-US 的 1252)的机器上把 GBK 文件读成乱码、写回时再损坏一次。所以给可靠配方:优先 file_read / file_write(自动识别编码,
 // 或显式 encoding 参数);确需 PowerShell 时一律显式指定编码的 .NET 静态方法,不依赖任何默认编码。
@@ -66403,7 +65963,7 @@ const FILE_TOOL_HANDLERS = {
         }
         // b2-P1: 超大文件编辑需整文件进内存 + 双份快照 —— 拒绝并提示改用人话行定位/分段处理
         if (!rawBytes || rawBytes.length > FILE_EDIT_MAX_BYTES) {
-          return { ok: false, error: '文件超过 50MB,编辑需整文件进内存,请改用 file_read(行模式 / offset)定位 + powershell_run 或 script_run 分段处理', path: p, hint: '大文件建议先用 file_read 的 lineOffset/lineLimit 定位,再用脚本按行分段改写(file_write 会整份覆盖)' };
+          return { ok: false, error: '文件超过 50MB,编辑需整文件进内存,请改用 file_read(行模式 / offset)定位 + shell_run 或 script_run 分段处理', path: p, hint: '大文件建议先用 file_read 的 lineOffset/lineLimit 定位,再用脚本按行分段改写(file_write 会整份覆盖)' };
         }
         // hunt2 #2:只编辑「能无损往返」的文本。修前按 utf8 宽松解码 —— GBK/ANSI 源文件里每个汉字都变成 U+FFFD,替换一处
         // ASCII 就把全文件的中文写成乱码并回 ok:true。F3:现在按 BOM / 严格 UTF-8 / GB18030 判编码,【原编码写回】
@@ -67159,7 +66719,7 @@ async function execCwdProblem(cwd) {
   try { if ((await fsp.stat(cwd)).isDirectory()) return null; } catch { /* fall through */ }
   return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 使用当前对话的工作目录。' };
 }
-// NE-6:git_* 与 powershell_run/script_run/shell_start 同一套 cwd 解析(显式 cwd → 回合工作目录 → 会话 cwd → defaultWorkspace → 家目录)。
+// NE-6:git_* 与 shell_run/script_run/shell_start 同一套 cwd 解析(显式 cwd → 回合工作目录 → 会话 cwd → defaultWorkspace → 家目录)。
 // 读类 git 只要解析 cwd(不做执行闸);git_commit 会跑 hooks,走 guardWorkspaceExecute。显式给了不存在的目录是错误,不再悄悄换成家目录。
 async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
   let cwd;
@@ -67172,7 +66732,7 @@ async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
     if (!config) { try { config = await readConfig(); } catch { config = {}; } }
     cwd = resolveExecCwd(args && args.cwd, ctx, config);
     // 读类 git 是 read 档(不弹窗),范围要与 file_read 同一道工作区围栏:修前 git_diff 能把工作区外仓库里
-    // 文件的改动内容整段读出来,而 file_read 读同一个文件是 not-allowed。git_commit 是 exec 档,与 powershell_run
+    // 文件的改动内容整段读出来,而 file_read 读同一个文件是 not-allowed。git_commit 是 exec 档,与 shell_run
     // 同样走执行闸,不在这里拦。
     const fence = await guardFileToolPath(cwd, ctx, { tool: 'git', write: false });
     if (!fence.ok) return { ok: false, error: fence.error, code: fence.code, cwd };
@@ -67199,8 +66759,7 @@ async function runPythonScript(scriptPath, opts) {
 
 const SHELL_TOOL_HANDLERS = {
   shell_run: { paths: null, guardNote: 'exec tier and workspace execution guard', handler: async (args, ctx) => {
-      const language = args.language || (process.platform === 'darwin' ? 'bash' : 'powershell');
-      if (language === 'powershell') return SHELL_TOOL_HANDLERS.powershell_run.handler(args, ctx);
+      if (args.language && args.language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_run supports bash' };
       if (!String(args.command || '').trim()) return { ok: false, code: 'invalid_args', error: 'command 不能为空' };
       const guard = await guardWorkspaceExecute(args.cwd, ctx);
       if (!guard.ok) return { ok: false, error: guard.error, code: guard.code };
@@ -67208,18 +66767,8 @@ const SHELL_TOOL_HANDLERS = {
       if (problem) return problem;
       return DesktopShell.runBash(String(args.command), guard.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true });
   } },
-  powershell_run: { paths: null, guardNote: "任意 shell 命令,exec tier+权限弹窗/授权书把守;路径闸对自由命令不可施", handler: async (args, ctx) => {
-      if (!String(args.command == null ? '' : args.command).trim()) return { ok: false, code: 'invalid_args', error: 'command 不能为空', hint: '传入要执行的 PowerShell 命令文本' };
-      // 107-S0:三个执行工具一律跑在闸交回的 g.cwd(03 resolveExecCwd)—— 判的目录就是跑的目录;修前缺省 cwd 落家目录。
-      const g = await guardWorkspaceExecute(args.cwd, ctx);
-      if (!g.ok) return { ok: false, error: g.error, code: g.code };
-      const badCwd = await execCwdProblem(g.cwd);
-      if (badCwd) return badCwd;
-      // 找不到 powershell.exe(非 Windows / 没装)→ 人话的 windows_only / powershell_missing,不再甩裸的 `spawn powershell.exe ENOENT`。
-      return powershellMissingOr(await DesktopShell.runPowerShell(String(args.command || ''), g.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true }));
-  } },
   script_run: { paths: null, guardNote: "任意脚本执行(落 generated/scripts 应用自选目录),exec tier+权限链把守;Office 手写软闸内置", handler: async (args, ctx) => {
-      if (!String(args.code == null ? '' : args.code).trim()) return { ok: false, code: 'invalid_args', error: 'code 不能为空', hint: '传入要执行的脚本源码(Mac 缺省 bash，Windows 缺省 powershell，也可显式选 python / node)' };
+      if (!String(args.code == null ? '' : args.code).trim()) return { ok: false, code: 'invalid_args', error: 'code 不能为空', hint: '传入要执行的脚本源码(缺省 bash，也可显式选 python / node)' };
       const g = await guardWorkspaceExecute(args.cwd, ctx);
       if (!g.ok) return { ok: false, error: g.error, code: g.code };
       const badCwd = await execCwdProblem(g.cwd);
@@ -67240,7 +66789,7 @@ const SHELL_TOOL_HANDLERS = {
           };
         }
       }
-      const language = String(args.language || (process.platform === 'darwin' ? 'bash' : 'powershell')).toLowerCase();
+      const language = String(args.language || 'bash').toLowerCase();
       if (language === 'bash') return DesktopShell.runBash(String(args.code), g.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true });
       const id = makeId('script');
       const dir = path.join(paths.generated, 'scripts');
@@ -67265,20 +66814,7 @@ const SHELL_TOOL_HANDLERS = {
         try { return await DesktopShell.runProcess(process.execPath, [p], { cwd: g.cwd, timeoutMs: args.timeoutMs || 60000, signal: ctx && ctx.signal, shape: true, env: { NODE_PATH: nodePath } }); }
         finally { await dropScript(p); }
       }
-      const p = path.join(dir, `${id}.ps1`);
-      // hunt2 #10:带 BOM 落盘 —— Windows PowerShell 5.1 按 ANSI 读无 BOM 的 .ps1,脚本里的中文字面量会被读成乱码
-      // (04 runPowerShell 头注同一条)。
-      await fsp.writeFile(p, '\ufeff' + DesktopShell.withQuietProgress(String(args.code || '')), 'utf8');
-      // NE-3:-NonInteractive(提示立刻报错而不是挂到超时);stdin 由 runProcess 关掉;NE-15:脚本头静音进度条。
-      // language 缺省是 powershell:非 Windows 上没有 powershell.exe,回 windows_only 并指路 python / node(而不是裸 ENOENT)。
-      try {
-        return powershellMissingOr(await DesktopShell.runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', p], {
-          cwd: g.cwd,
-          timeoutMs: args.timeoutMs || 60000,
-          signal: ctx && ctx.signal,
-          shape: true,
-        }), '本机没有 PowerShell;script_run 的 language 缺省就是 powershell,请显式传 language:"python" 或 language:"node"');
-      } finally { await dropScript(p); }
+      return { ok: false, code: 'invalid_args', error: 'script_run supports bash, python or node' };
   } },
   shell_start: { paths: null, guardNote: "持久 shell 会话状态面,exec tier 门+MCP 子进程拒;不直接触文件路径", handler: async (args, ctx) => {
     // v0.8-S2 shell session族 — provider-engine only. In the one-shot MCP child (Claude CLI engine) the
@@ -67343,51 +66879,12 @@ async function attachScreenshotImage(result, outPath, useSidecar = true) {
 // SendKeys 把 + ^ % ~ ( ) { } [ ] 当控制符(Shift / Ctrl / Alt / 回车 / 分组 / 大括号语法):「Hello (world)」发出去括号会吞掉、「a+b」变成 Shift+b。
 // literal:true 时按【字面文字】发送 —— 每个控制符包进花括号({+} {^} {%} {~} {(} {)} {{} {}} {[} {]}),换行 / 制表符换成 {ENTER} / {TAB}
 // (SendKeys 对裸 LF 的行为不确定)。不开 literal 时 keys 原样交给 SendKeys,模型照 SendKeys 语法写组合键(如 ^c、%{F4}、{ENTER})。
-function sendKeysEscapeLiteral(text) {
-  let out = '';
-  for (const ch of String(text)) {
-    if ('+^%~(){}[]'.includes(ch)) out += '{' + ch + '}';
-    else if (ch === '\n') out += '{ENTER}';
-    else if (ch === '\r') continue;
-    else if (ch === '\t') out += '{TAB}';
-    else out += ch;
-  }
-  return out;
-}
+
 // desktop_screenshot 的 PowerShell 脚本。DPI 感知必须在碰 System.Windows.Forms 之前设好:修前进程不感知 DPI,在 125% / 150% 缩放的屏幕上
 // Screen.PrimaryScreen.Bounds 给的是缩放后的「逻辑」尺寸,CopyFromScreen 只截到左上角的一部分。SetProcessDPIAware(user32,Vista+ 都有)
 // 之后 Bounds 就是物理像素。放在 try 里:调不成只是退回旧行为,不影响截图本身。
 // 【只在 Windows 上有意义,这里(Linux 云端)无法真机验证】—— 由 dev-harness/tool-audit-r2-netexec.e2e.js 对生成的脚本文本做静态断言。
-function buildDesktopScreenshotScript(outPath) {
-  return `
-try {
-  Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();' -Name 'RuyiDpi' -Namespace 'RuyiNative' -ErrorAction Stop
-  [void][RuyiNative.RuyiDpi]::SetProcessDPIAware()
-} catch { }
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-$bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-$graphics = [System.Drawing.Graphics]::FromImage($bmp)
-$graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-$bmp.Save('${psSingleQuoted(outPath)}', [System.Drawing.Imaging.ImageFormat]::Png)
-try {
-  # 审计 NE-12:给视觉模型的缩略副本(长边 <= 1600 的 JPEG,落在 <outPath>.vision.jpg)。失败只是没有副本,主截图不受影响。
-  $scale = [Math]::Min(1.0, 1600.0 / [Math]::Max($bounds.Width, $bounds.Height))
-  $nw = [int][Math]::Max(1, [Math]::Round($bounds.Width * $scale)); $nh = [int][Math]::Max(1, [Math]::Round($bounds.Height * $scale))
-  $small = New-Object System.Drawing.Bitmap $nw, $nh
-  $g2 = [System.Drawing.Graphics]::FromImage($small)
-  $g2.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-  $g2.DrawImage($bmp, 0, 0, $nw, $nh)
-  $g2.Dispose()
-  $small.Save('${psSingleQuoted(outPath + VISION_SIDECAR_SUFFIX)}', [System.Drawing.Imaging.ImageFormat]::Jpeg)
-  $small.Dispose()
-} catch { }
-$graphics.Dispose()
-$bmp.Dispose()
-Write-Output '${psSingleQuoted(outPath)}'
-`;
-}
+
 
 const DESKTOP_TOOL_HANDLERS = {
   desktop_screenshot: { paths: "conditional", guardNote: '', handler: async (args, ctx) => {
@@ -67427,27 +66924,7 @@ const DESKTOP_TOOL_HANDLERS = {
           origin: { x: bounds.x, y: bounds.y }, scale: captured.width / bounds.width,
           scale_y: captured.height / bounds.height, coordinate_space: captured.coordinate_space, method: captured.method }, outPath, false);
       }
-      const ps = buildDesktopScreenshotScript(outPath);
-      const result = powershellMissingOr(await DesktopShell.runPowerShell(ps, os.homedir(), args.timeoutMs || 15000, ctx && ctx.signal), '桌面截图只能在 Windows 上使用(依赖 Windows PowerShell 与 System.Drawing)');
-      // path 只在文件【真的存在】时才给:修前失败(没有 PowerShell / 脚本出错)也回一个从未创建的 path,模型会拿着它去 file_read。
-      const made = await fsp.stat(outPath).then(st => st.isFile()).catch(() => false);
-      if (!made) {
-        const { path: _omit, ...rest } = result || {};
-        if (rest.ok !== false) return { ...rest, ok: false, error: '截图脚本执行完了,但没有生成图片文件', hint: '可能没有可截的桌面会话(服务以无桌面的服务账户 / 远程会话运行),或目标目录不可写' };
-        return rest;
-      }
-      return await attachScreenshotImage({ ...result, path: outPath }, outPath);
-  } },
-  keyboard_send_keys: { paths: null, guardNote: "键盘注入,不触文件路径", handler: async (args, ctx) => {
-      const keys = String(args.keys == null ? '' : args.keys);
-      if (!keys) return { ok: false, code: 'invalid_args', error: 'keys 不能为空', hint: '传入要发送的按键(SendKeys 语法,如 ^c、%{F4}、{ENTER});要发的是普通文字就加 literal:true' };
-      // delayMs:发送前的等待(给目标窗口切到前台的时间)。限在 0..10000:修前不设上限,一个 99999999 能让工具挂上一天。
-      const delayMs = Number.isFinite(Number(args.delayMs)) ? Math.min(10000, Math.max(0, Number(args.delayMs))) : 200; // b2-P1: 非法值回退默认,不再 NaN 进 PS 脚本
-      const sendText = args.literal === true ? sendKeysEscapeLiteral(keys) : keys;
-      const ps = `$wshell = New-Object -ComObject wscript.shell; Start-Sleep -Milliseconds ${Math.floor(delayMs)}; $wshell.SendKeys('${psSingleQuoted(sendText)}')`;
-      // 超时 = 调用方给的(缺省 10s)与「等待 + 5s」取大者,免得最长的等待把自己杀了;signal 接上用户 Stop。
-      const timeoutMs = Math.max(Number(args.timeoutMs) > 0 ? Number(args.timeoutMs) : 10000, delayMs + 5000);
-      return powershellMissingOr(await DesktopShell.runPowerShell(ps, os.homedir(), timeoutMs, ctx && ctx.signal), '键盘注入只能在 Windows 上使用(依赖 Windows PowerShell 的 SendKeys)');
+      return { ok: false, code: 'platform_unsupported', error: 'Mac native capture is required' };
   } },
   office_open: { paths: null, guardNote: "第36波录在案:不加读闸(打开不回流模型;exec tier 权限门);v1.4.6-S2 无 shell spawn", handler: async (args, ctx) => {
       // path 为空时 path.resolve('') 是【服务进程的当前目录】—— 修前会把它在资源管理器里打开。
@@ -67522,7 +66999,7 @@ const NETWORK_TOOL_HANDLERS = {
         maxBytesCap: ZIP_MAX_SINGLE_FILE,
         hint: maxBytes < ZIP_MAX_SINGLE_FILE
           ? `可把 maxBytes 调大重试(最多 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB)`
-          : `已是单文件硬上限 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 powershell_run(Invoke-WebRequest -OutFile)下载,或让用户手动下载`,
+          : `已是单文件硬上限 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 shell_run(Invoke-WebRequest -OutFile)下载,或让用户手动下载`,
       });
       // ① SSRF 前置拒绝（与 webFetch 同：内网/回环/非 http(s) 一律不发包）。
       const pre = ssrfCheck(url);
@@ -67645,7 +67122,7 @@ const CODE_TOOL_HANDLERS = {
       if (!g.ok) return g;
       return gitLog({ ...args, cwd: g.cwd });
   } },
-  git_commit: { paths: null, guardNote: "git 子进程 execFile 无 shell;exec tier(commit 触发 hooks)录在案;cwd 经 guardWorkspaceExecute(同 powershell_run)", handler: async (args, ctx) => {
+  git_commit: { paths: null, guardNote: "git 子进程 execFile 无 shell;exec tier(commit 触发 hooks)录在案;cwd 经 guardWorkspaceExecute(同 shell_run)", handler: async (args, ctx) => {
       const g = await resolveGitToolCwd(args, ctx, { exec: true });
       if (!g.ok) return g;
       return gitCommit({ ...args, cwd: g.cwd });
@@ -68857,38 +68334,25 @@ const MCP_TOOLS = [
   },
   {
     name: 'shell_run',
-    description: 'One-shot platform shell (macOS bash, Windows PowerShell). No profiles or stdin. Explicit language overrides default. Bounded output.',
+    description: 'One-shot platform shell (macOS bash). No profiles or stdin. Explicit language overrides default. Bounded output.',
     inputSchema: { type: 'object', properties: {
       command: { type: 'string', description: 'command text' },
-      language: { type: 'string', enum: process.platform === 'darwin' ? ['bash'] : ['bash', 'powershell'], description: 'default platform shell' },
+      language: { type: 'string', enum: ['bash'], description: 'default platform shell' },
       cwd: { type: 'string', description: 'Conversation cwd, must exist' },
       timeoutMs: { type: 'number', description: '1000..1800000 ms, default 60000' },
     }, required: ['command'] },
   },
-  {
-    name: 'powershell_run',
-    description: 'Windows PowerShell, closed stdin, prompts fail fast. Timeout 60000ms (1000..1800000). Returns code/timedOut/error/hint and head/tail stdout/stderr with omitted counts. Long jobs use shell_start.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'command text' },
-        cwd: { type: 'string', description: 'default: conversation folder; must exist' },
-        timeoutMs: { type: 'number', description: 'ms, default 60000' },
-      },
-      required: ['command'],
-    },
-  },
   // v0.8-S2 shell session族 — a persistent PowerShell terminal that keeps working directory, variables,
   // and background processes alive across calls. AVAILABLE ONLY on the native provider engine: session
   // state lives in the serve process. Under the Claude CLI engine (tools run in a one-shot MCP subprocess)
-  // these return a guiding error — use powershell_run for one-shot commands there.
+  // these return a guiding error — use shell_run for one-shot commands there.
   {
     name: 'shell_start',
-    description: 'Provider only, non-TTY. Default macOS bash or Windows PowerShell. With command, run a finite background job (poll/kill). Otherwise retain cwd/variables for shell_send. Mac commands have closed stdin and private completion. Jobs survive turns, stop with server.',
+    description: 'Provider only, non-TTY. Default macOS bash. With command, run a finite background job (poll/kill). Otherwise retain cwd/variables for shell_send. Mac commands have closed stdin and private completion. Jobs survive turns, stop with server.',
     inputSchema: {
       type: 'object',
       properties: {
-        language: { type: 'string', enum: process.platform === 'darwin' ? ['bash'] : ['bash', 'powershell'], description: 'Default bash on macOS, powershell on Windows.' },
+        language: { type: 'string', enum: ['bash'], description: 'Default bash on macOS.' },
         cwd: { type: 'string', description: 'default: conversation folder' },
         name: { type: 'string', description: 'label' },
         command: { type: 'string', description: 'Finite background command. Poll until running:false. This mode rejects input.' },
@@ -68945,7 +68409,7 @@ const MCP_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        language: { type: 'string', enum: process.platform === 'darwin' ? ['bash', 'python', 'node', 'javascript'] : ['bash', 'powershell', 'python', 'node', 'javascript'], description: 'default bash on macOS, powershell on Windows' },
+        language: { type: 'string', enum: ['bash', 'python', 'node', 'javascript'], description: 'default bash on macOS' },
         code: { type: 'string', description: 'script source' },
         cwd: { type: 'string', description: 'default: conversation folder; must exist' },
         timeoutMs: { type: 'number', description: 'ms, default 60000' },
@@ -69214,15 +68678,6 @@ const MCP_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: { outputPath: { type: 'string', description: 'PNG path; default: app generated folder' }, timeoutMs: { type: 'number', description: 'ms' } },
-    },
-  },
-  {
-    name: 'keyboard_send_keys',
-    description: 'Send keystrokes to the active Windows application. CAUTION: keys go to whatever window currently has focus; SendKeys meta characters + ^ % ~ ( ) { } [ ] are live modifiers (e.g. ^s = Ctrl+S, %{F4} = Alt+F4) unless literal:true (plain text). Confirm the focus target before sending, and prefer explicit app control over raw keys when possible.',
-    inputSchema: {
-      type: 'object',
-      properties: { keys: { type: 'string', description: 'SendKeys string' }, literal: { type: 'boolean', description: 'true = type as plain text' }, delayMs: { type: 'number', description: 'ms before send' }, timeoutMs: { type: 'number', description: 'ms' } },
-      required: ['keys'],
     },
   },
   {
@@ -70354,7 +69809,7 @@ function helpDocTitle(markdown, fallback) {
 // 所以「打开数据目录 / 日志目录 / 工作文件夹 / 手册目录」由服务端直接把资源管理器开出来。
 // 安全口径:请求只能传下面这张【源码写死】的枚举 key。绝对路径全部由服务端常量(paths.*)、
 // 手册目录解析或当前会话的 cwd 推导,客户端字符串永不参与拼路径、也永不进 spawn 的 argv;
-// 执行沿用 /api/file/reveal 的 DesktopShell.revealInExplorer(路径经环境变量交给 PowerShell 助手,
+// 执行沿用 /api/file/reveal 的 DesktopShell.revealInFinder(路径经环境变量交给 PowerShell 助手,
 // 零 shell 拼接,且能把窗口提到前台 : 后台服务直接 spawn explorer 会开在浏览器后面)。
 const OPEN_PATH_TARGETS = Object.freeze(['data', 'logs', 'workspace', 'manuals']);
 
@@ -71813,7 +71268,7 @@ async function handleApi(req, res, pathname) {
     if (!directoryStat || !directoryStat.isDirectory()) {
       return send(res, apiFailure('openPath.missing', { target }, '这个位置不存在或不是文件夹，请选择有效的工作文件夹', 404));
     }
-    const started = await DesktopShell.revealInExplorer(realDirectory, 'open');
+    const started = await DesktopShell.revealInFinder(realDirectory, 'open');
     if (!started) return send(res, json({ ok: false, error: '无法打开文件管理器，请检查系统默认打开程序' }));
     logEvent({ kind: 'open_path', target, pathLen: dir.length });
     return send(res, json({ ok: true, target }));
@@ -71912,9 +71367,9 @@ async function handleApi(req, res, pathname) {
     try { stat = await fsp.stat(guard.absPath); } catch { /* missing */ }
     if (!stat) return send(res, json({ ok: false, error: '文件不存在' }, 404));
     // buildRevealSpawn 仍是「模式决策」的权威:决定 open vs select + 对可执行/脚本扩展名把 open 降级为 select。
-    // 但【执行】改走 revealInExplorer(前台助手),不再直接 spawn explorer(后台服务直接 spawn 会开在浏览器后面)。
+    // 但【执行】改走 revealInFinder(前台助手),不再直接 spawn explorer(后台服务直接 spawn 会开在浏览器后面)。
     const spawnSpec = buildRevealSpawn(mode, guard.absPath);
-    const okStarted = await DesktopShell.revealInExplorer(guard.absPath, spawnSpec.mode);
+    const okStarted = await DesktopShell.revealInFinder(guard.absPath, spawnSpec.mode);
     if (!okStarted) return send(res, json({ ok: false, error: '无法打开文件管理器，请检查系统默认打开程序' }));
     logEvent({ kind: 'file_reveal', sessionId: sessionId || '', mode: spawnSpec.mode, degraded: !!spawnSpec.degraded, pathLen: guard.absPath.length });
     // 把关加固:可执行/脚本类「打开」被降级为「定位」时明确告知前端(前端可提示用户)。

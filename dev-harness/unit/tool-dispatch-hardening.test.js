@@ -58,7 +58,7 @@ test('[N4] 命令 / 桌面工具开关在分发点也生效(且与 offer 面同�
   const proof = path.join(root, 'n4-proof.txt');
   const code = `require('fs').writeFileSync(${JSON.stringify(proof)},'ran')`;
   const off = { allowCommandTools: false, allowDesktopTools: false };
-  for (const [name, args] of [['script_run', { language: 'node', code }], ['powershell_run', { command: 'echo 1' }], ['shell_start', { command: 'x' }], ['desktop_screenshot', {}], ['keyboard_send_keys', { keys: 'a' }]]) {
+  for (const [name, args] of [['script_run', { language: 'node', code }], ['shell_run', { command: 'echo 1' }], ['shell_start', { command: 'x' }], ['desktop_screenshot', {}]]) {
     const r = await toolCall(name, args, { config: off });
     assert.equal(r.ok, false, name);
     assert.equal(r.code, 'tool-disabled', name);
@@ -69,12 +69,11 @@ test('[N4] 命令 / 桌面工具开关在分发点也生效(且与 offer 面同�
   // 会话级桌面覆盖 true 放行(全局关也一样);覆盖 false 拒
   const overridden = H.nativeToolDisabledByPolicy('desktop_screenshot', off, true);
   assert.equal(overridden, '', 'the implemented screenshot backend honours the session desktop override');
-  if (process.platform === 'darwin') assert.match(H.nativeToolDisabledByPolicy('keyboard_send_keys',off,true),
-    /platform\.unsupported/, 'session override cannot supply a missing input backend');
+  await assert.rejects(toolCall('keyboard_send_keys', { keys: 'a' }, { config: off }), /Unknown tool/);
   assert.notEqual(H.nativeToolDisabledByPolicy('desktop_screenshot', { allowDesktopTools: true }, false), '');
   // offer 面:被拒的工具不在 schema 里
   const names = buildOpenAiTools({ ...off, toolLoadingMode: 'auto' }, null, {}).map(t => t.function.name);
-  for (const n of ['script_run', 'powershell_run', 'shell_start', 'desktop_screenshot', 'keyboard_send_keys']) assert.ok(!names.includes(n), n);
+  for (const n of ['script_run', 'shell_run', 'shell_start', 'desktop_screenshot', 'keyboard_send_keys']) assert.ok(!names.includes(n), n);
 });
 
 test('[N5] 未知工具:toolCall 仍抛 Unknown tool(消息逐字),建议走 toolFailureResult', async () => {
@@ -301,7 +300,7 @@ test('[A9] 桌面租约按 ACC 真实工具名分类', () => {
   assert.equal(lease('ocr_find_text', { text: 'x', click: true }), 'write');
   for (const n of ['read_document', 'excel_read', 'write_excel', 'memory_save', 'fetch', 'run_command', 'ocr_image']) assert.equal(lease(n, {}), '', `${n} 不占桌面`);
   // 原生桌面工具:键盘注入修前没有锁
-  assert.deepEqual(inferToolResources('keyboard_send_keys', { keys: 'a' }, null, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:write']);
+  assert.deepEqual(inferToolResources('mcp__ai_computer_control__hotkey', { keys: ['CMD', 'a'] }, { toolName: 'hotkey' }, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:write']);
   assert.deepEqual(inferToolResources('desktop_screenshot', {}, null, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:read']);
   // 表外(第三方 MCP)走旧正则兜底
   assert.equal(lease('click_element'), 'write');

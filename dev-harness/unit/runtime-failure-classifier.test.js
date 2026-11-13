@@ -56,7 +56,7 @@ test('[A] 真正的权限拒绝仍是 permission_denied / request_authority', ()
     ['file_write', 'edit', { ok: false, error: 'denied by user' }],
     ['file_write', 'edit', { ok: false, error: '用户拒绝授权' }],
     ['file_write', 'edit', { ok: false, error: 'Access is denied' }],
-    ['powershell_run', 'exec', { ok: false, error: 'blocked by permission mode' }],
+    ['shell_run', 'exec', { ok: false, error: 'blocked by permission mode' }],
     ['file_read', 'read', { ok: false, error: '用户拒绝了请求' }],
     ['file_read', 'read', { ok: false, code: 'no_permission', error: '没有读取该文件的权限' }],
   ]) {
@@ -193,7 +193,7 @@ test('[B] tier-mismatch / 控制面不能经代理 / 参数不是完整 JSON →
     ['file_write', { ok: false, error: 'whatever' }, 'edit', 'args_invalid'],                 // 或靠 disposition
     // 12-tool-dispatch 的参数校验码
     ['file_read', { ok: false, code: 'invalid-arguments', error: 'file_read: arguments must be a JSON object (got string)' }, 'read'],
-    ['powershell_run', { ok: false, code: 'invalid_args', error: 'command 不能为空' }, 'exec'],
+    ['shell_run', { ok: false, code: 'invalid_args', error: 'command 不能为空' }, 'exec'],
     ['steward_thread_read', { ok: false, error: 'invalid_request', message: 'sessionId is required' }, 'read'],
   ];
   for (const [tool, result, tier, disposition] of shapes) {

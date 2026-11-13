@@ -1225,12 +1225,12 @@ async function bridgedReadPathGate(bridgedName, args, ctx) {
   return null;
 }
 // v2.7 (workspace permissions): exec gate. A configured workspace with execute === false denies the exec-tier
-// command/shell tools (powershell_run / script_run / shell_*) when their effective cwd resolves inside it.
+// command/shell tools (shell_run / script_run / shell_*) when their effective cwd resolves inside it.
 // Backward compatible: no workspace entries, or every entry execute:true, leaves behavior unchanged (exec
 // tools are NOT otherwise contained by the workspace boundary). Only consults the per-workspace execute flag;
 // sensitive/autoexec path checks remain the file guard's responsibility.
 // 107-S0(46 号文 §1.5 ②):执行类工具的【有效工作目录】单点解析,闸与执行共用。修前闸在这里按「显式 cwd → 会话
-// cwd → defaultWorkspace → 家目录」判,而 shell_start／powershell_run／script_run 缺省 cwd 时直接起在家目录 ——
+// cwd → defaultWorkspace → 家目录」判,而 shell_start／shell_run／script_run 缺省 cwd 时直接起在家目录 ——
 // 闸判一个目录、命令跑在另一个:模型以为在线程工作夹里,相对路径实际落在家目录(45 号文 §9.6.4 真模型实测),
 // 授权书「cwd 须在 grantRoot 内」也因为不传 cwd 就被绕开。现在 guardWorkspaceExecute 把解析结果随 ok 一并
 // 交回(cwd 字段),三个工具只用交回的这一个值,不各自再推一遍。

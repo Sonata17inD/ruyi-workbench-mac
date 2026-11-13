@@ -1014,7 +1014,7 @@ async function fileToolDropPhantom(jctx, tool, p, jr) {
   if (!seqs.length) return { ok: true, dropped: 0 };
   return journalDropEntries(jctx.sessionId, jctx.turnSeq, tool, [p], seqs).catch(() => ({ ok: false }));
 }
-// file_edit 编码类拒绝(not_utf8 / not_roundtrip)的指路。以前写「可用 powershell_run 按原编码读写」—— 模型会直接 Get-Content /
+// file_edit 编码类拒绝(not_utf8 / not_roundtrip)的指路。以前写「可用 shell_run 按原编码读写」—— 模型会直接 Get-Content /
 // Set-Content,而 Windows PowerShell 5.1 对无 BOM 文件按【系统 ANSI 代码页】读写:中文系统恰好是 GBK 勉强能用,非中文代码页
 // (en-US 的 1252)的机器上把 GBK 文件读成乱码、写回时再损坏一次。所以给可靠配方:优先 file_read / file_write(自动识别编码,
 // 或显式 encoding 参数);确需 PowerShell 时一律显式指定编码的 .NET 静态方法,不依赖任何默认编码。
@@ -1559,7 +1559,7 @@ const FILE_TOOL_HANDLERS = {
         }
         // b2-P1: 超大文件编辑需整文件进内存 + 双份快照 —— 拒绝并提示改用人话行定位/分段处理
         if (!rawBytes || rawBytes.length > FILE_EDIT_MAX_BYTES) {
-          return { ok: false, error: '文件超过 50MB,编辑需整文件进内存,请改用 file_read(行模式 / offset)定位 + powershell_run 或 script_run 分段处理', path: p, hint: '大文件建议先用 file_read 的 lineOffset/lineLimit 定位,再用脚本按行分段改写(file_write 会整份覆盖)' };
+          return { ok: false, error: '文件超过 50MB,编辑需整文件进内存,请改用 file_read(行模式 / offset)定位 + shell_run 或 script_run 分段处理', path: p, hint: '大文件建议先用 file_read 的 lineOffset/lineLimit 定位,再用脚本按行分段改写(file_write 会整份覆盖)' };
         }
         // hunt2 #2:只编辑「能无损往返」的文本。修前按 utf8 宽松解码 —— GBK/ANSI 源文件里每个汉字都变成 U+FFFD,替换一处
         // ASCII 就把全文件的中文写成乱码并回 ok:true。F3:现在按 BOM / 严格 UTF-8 / GB18030 判编码,【原编码写回】
@@ -2315,7 +2315,7 @@ async function execCwdProblem(cwd) {
   try { if ((await fsp.stat(cwd)).isDirectory()) return null; } catch { /* fall through */ }
   return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 使用当前对话的工作目录。' };
 }
-// NE-6:git_* 与 powershell_run/script_run/shell_start 同一套 cwd 解析(显式 cwd → 回合工作目录 → 会话 cwd → defaultWorkspace → 家目录)。
+// NE-6:git_* 与 shell_run/script_run/shell_start 同一套 cwd 解析(显式 cwd → 回合工作目录 → 会话 cwd → defaultWorkspace → 家目录)。
 // 读类 git 只要解析 cwd(不做执行闸);git_commit 会跑 hooks,走 guardWorkspaceExecute。显式给了不存在的目录是错误,不再悄悄换成家目录。
 async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
   let cwd;
@@ -2328,7 +2328,7 @@ async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
     if (!config) { try { config = await readConfig(); } catch { config = {}; } }
     cwd = resolveExecCwd(args && args.cwd, ctx, config);
     // 读类 git 是 read 档(不弹窗),范围要与 file_read 同一道工作区围栏:修前 git_diff 能把工作区外仓库里
-    // 文件的改动内容整段读出来,而 file_read 读同一个文件是 not-allowed。git_commit 是 exec 档,与 powershell_run
+    // 文件的改动内容整段读出来,而 file_read 读同一个文件是 not-allowed。git_commit 是 exec 档,与 shell_run
     // 同样走执行闸,不在这里拦。
     const fence = await guardFileToolPath(cwd, ctx, { tool: 'git', write: false });
     if (!fence.ok) return { ok: false, error: fence.error, code: fence.code, cwd };
@@ -2355,8 +2355,7 @@ async function runPythonScript(scriptPath, opts) {
 
 const SHELL_TOOL_HANDLERS = {
   shell_run: { paths: null, guardNote: 'exec tier and workspace execution guard', handler: async (args, ctx) => {
-      const language = args.language || (process.platform === 'darwin' ? 'bash' : 'powershell');
-      if (language === 'powershell') return SHELL_TOOL_HANDLERS.powershell_run.handler(args, ctx);
+      if (args.language && args.language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_run supports bash' };
       if (!String(args.command || '').trim()) return { ok: false, code: 'invalid_args', error: 'command 不能为空' };
       const guard = await guardWorkspaceExecute(args.cwd, ctx);
       if (!guard.ok) return { ok: false, error: guard.error, code: guard.code };
@@ -2364,18 +2363,8 @@ const SHELL_TOOL_HANDLERS = {
       if (problem) return problem;
       return DesktopShell.runBash(String(args.command), guard.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true });
   } },
-  powershell_run: { paths: null, guardNote: "任意 shell 命令,exec tier+权限弹窗/授权书把守;路径闸对自由命令不可施", handler: async (args, ctx) => {
-      if (!String(args.command == null ? '' : args.command).trim()) return { ok: false, code: 'invalid_args', error: 'command 不能为空', hint: '传入要执行的 PowerShell 命令文本' };
-      // 107-S0:三个执行工具一律跑在闸交回的 g.cwd(03 resolveExecCwd)—— 判的目录就是跑的目录;修前缺省 cwd 落家目录。
-      const g = await guardWorkspaceExecute(args.cwd, ctx);
-      if (!g.ok) return { ok: false, error: g.error, code: g.code };
-      const badCwd = await execCwdProblem(g.cwd);
-      if (badCwd) return badCwd;
-      // 找不到 powershell.exe(非 Windows / 没装)→ 人话的 windows_only / powershell_missing,不再甩裸的 `spawn powershell.exe ENOENT`。
-      return powershellMissingOr(await DesktopShell.runPowerShell(String(args.command || ''), g.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true }));
-  } },
   script_run: { paths: null, guardNote: "任意脚本执行(落 generated/scripts 应用自选目录),exec tier+权限链把守;Office 手写软闸内置", handler: async (args, ctx) => {
-      if (!String(args.code == null ? '' : args.code).trim()) return { ok: false, code: 'invalid_args', error: 'code 不能为空', hint: '传入要执行的脚本源码(Mac 缺省 bash，Windows 缺省 powershell，也可显式选 python / node)' };
+      if (!String(args.code == null ? '' : args.code).trim()) return { ok: false, code: 'invalid_args', error: 'code 不能为空', hint: '传入要执行的脚本源码(缺省 bash，也可显式选 python / node)' };
       const g = await guardWorkspaceExecute(args.cwd, ctx);
       if (!g.ok) return { ok: false, error: g.error, code: g.code };
       const badCwd = await execCwdProblem(g.cwd);
@@ -2396,7 +2385,7 @@ const SHELL_TOOL_HANDLERS = {
           };
         }
       }
-      const language = String(args.language || (process.platform === 'darwin' ? 'bash' : 'powershell')).toLowerCase();
+      const language = String(args.language || 'bash').toLowerCase();
       if (language === 'bash') return DesktopShell.runBash(String(args.code), g.cwd, args.timeoutMs, ctx && ctx.signal, { shape: true });
       const id = makeId('script');
       const dir = path.join(paths.generated, 'scripts');
@@ -2421,20 +2410,7 @@ const SHELL_TOOL_HANDLERS = {
         try { return await DesktopShell.runProcess(process.execPath, [p], { cwd: g.cwd, timeoutMs: args.timeoutMs || 60000, signal: ctx && ctx.signal, shape: true, env: { NODE_PATH: nodePath } }); }
         finally { await dropScript(p); }
       }
-      const p = path.join(dir, `${id}.ps1`);
-      // hunt2 #10:带 BOM 落盘 —— Windows PowerShell 5.1 按 ANSI 读无 BOM 的 .ps1,脚本里的中文字面量会被读成乱码
-      // (04 runPowerShell 头注同一条)。
-      await fsp.writeFile(p, '\ufeff' + DesktopShell.withQuietProgress(String(args.code || '')), 'utf8');
-      // NE-3:-NonInteractive(提示立刻报错而不是挂到超时);stdin 由 runProcess 关掉;NE-15:脚本头静音进度条。
-      // language 缺省是 powershell:非 Windows 上没有 powershell.exe,回 windows_only 并指路 python / node(而不是裸 ENOENT)。
-      try {
-        return powershellMissingOr(await DesktopShell.runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', p], {
-          cwd: g.cwd,
-          timeoutMs: args.timeoutMs || 60000,
-          signal: ctx && ctx.signal,
-          shape: true,
-        }), '本机没有 PowerShell;script_run 的 language 缺省就是 powershell,请显式传 language:"python" 或 language:"node"');
-      } finally { await dropScript(p); }
+      return { ok: false, code: 'invalid_args', error: 'script_run supports bash, python or node' };
   } },
   shell_start: { paths: null, guardNote: "持久 shell 会话状态面,exec tier 门+MCP 子进程拒;不直接触文件路径", handler: async (args, ctx) => {
     // v0.8-S2 shell session族 — provider-engine only. In the one-shot MCP child (Claude CLI engine) the
@@ -2499,51 +2475,12 @@ async function attachScreenshotImage(result, outPath, useSidecar = true) {
 // SendKeys 把 + ^ % ~ ( ) { } [ ] 当控制符(Shift / Ctrl / Alt / 回车 / 分组 / 大括号语法):「Hello (world)」发出去括号会吞掉、「a+b」变成 Shift+b。
 // literal:true 时按【字面文字】发送 —— 每个控制符包进花括号({+} {^} {%} {~} {(} {)} {{} {}} {[} {]}),换行 / 制表符换成 {ENTER} / {TAB}
 // (SendKeys 对裸 LF 的行为不确定)。不开 literal 时 keys 原样交给 SendKeys,模型照 SendKeys 语法写组合键(如 ^c、%{F4}、{ENTER})。
-function sendKeysEscapeLiteral(text) {
-  let out = '';
-  for (const ch of String(text)) {
-    if ('+^%~(){}[]'.includes(ch)) out += '{' + ch + '}';
-    else if (ch === '\n') out += '{ENTER}';
-    else if (ch === '\r') continue;
-    else if (ch === '\t') out += '{TAB}';
-    else out += ch;
-  }
-  return out;
-}
+
 // desktop_screenshot 的 PowerShell 脚本。DPI 感知必须在碰 System.Windows.Forms 之前设好:修前进程不感知 DPI,在 125% / 150% 缩放的屏幕上
 // Screen.PrimaryScreen.Bounds 给的是缩放后的「逻辑」尺寸,CopyFromScreen 只截到左上角的一部分。SetProcessDPIAware(user32,Vista+ 都有)
 // 之后 Bounds 就是物理像素。放在 try 里:调不成只是退回旧行为,不影响截图本身。
 // 【只在 Windows 上有意义,这里(Linux 云端)无法真机验证】—— 由 dev-harness/tool-audit-r2-netexec.e2e.js 对生成的脚本文本做静态断言。
-function buildDesktopScreenshotScript(outPath) {
-  return `
-try {
-  Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();' -Name 'RuyiDpi' -Namespace 'RuyiNative' -ErrorAction Stop
-  [void][RuyiNative.RuyiDpi]::SetProcessDPIAware()
-} catch { }
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-$bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-$graphics = [System.Drawing.Graphics]::FromImage($bmp)
-$graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-$bmp.Save('${psSingleQuoted(outPath)}', [System.Drawing.Imaging.ImageFormat]::Png)
-try {
-  # 审计 NE-12:给视觉模型的缩略副本(长边 <= 1600 的 JPEG,落在 <outPath>.vision.jpg)。失败只是没有副本,主截图不受影响。
-  $scale = [Math]::Min(1.0, 1600.0 / [Math]::Max($bounds.Width, $bounds.Height))
-  $nw = [int][Math]::Max(1, [Math]::Round($bounds.Width * $scale)); $nh = [int][Math]::Max(1, [Math]::Round($bounds.Height * $scale))
-  $small = New-Object System.Drawing.Bitmap $nw, $nh
-  $g2 = [System.Drawing.Graphics]::FromImage($small)
-  $g2.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-  $g2.DrawImage($bmp, 0, 0, $nw, $nh)
-  $g2.Dispose()
-  $small.Save('${psSingleQuoted(outPath + VISION_SIDECAR_SUFFIX)}', [System.Drawing.Imaging.ImageFormat]::Jpeg)
-  $small.Dispose()
-} catch { }
-$graphics.Dispose()
-$bmp.Dispose()
-Write-Output '${psSingleQuoted(outPath)}'
-`;
-}
+
 
 const DESKTOP_TOOL_HANDLERS = {
   desktop_screenshot: { paths: "conditional", guardNote: '', handler: async (args, ctx) => {
@@ -2583,27 +2520,7 @@ const DESKTOP_TOOL_HANDLERS = {
           origin: { x: bounds.x, y: bounds.y }, scale: captured.width / bounds.width,
           scale_y: captured.height / bounds.height, coordinate_space: captured.coordinate_space, method: captured.method }, outPath, false);
       }
-      const ps = buildDesktopScreenshotScript(outPath);
-      const result = powershellMissingOr(await DesktopShell.runPowerShell(ps, os.homedir(), args.timeoutMs || 15000, ctx && ctx.signal), '桌面截图只能在 Windows 上使用(依赖 Windows PowerShell 与 System.Drawing)');
-      // path 只在文件【真的存在】时才给:修前失败(没有 PowerShell / 脚本出错)也回一个从未创建的 path,模型会拿着它去 file_read。
-      const made = await fsp.stat(outPath).then(st => st.isFile()).catch(() => false);
-      if (!made) {
-        const { path: _omit, ...rest } = result || {};
-        if (rest.ok !== false) return { ...rest, ok: false, error: '截图脚本执行完了,但没有生成图片文件', hint: '可能没有可截的桌面会话(服务以无桌面的服务账户 / 远程会话运行),或目标目录不可写' };
-        return rest;
-      }
-      return await attachScreenshotImage({ ...result, path: outPath }, outPath);
-  } },
-  keyboard_send_keys: { paths: null, guardNote: "键盘注入,不触文件路径", handler: async (args, ctx) => {
-      const keys = String(args.keys == null ? '' : args.keys);
-      if (!keys) return { ok: false, code: 'invalid_args', error: 'keys 不能为空', hint: '传入要发送的按键(SendKeys 语法,如 ^c、%{F4}、{ENTER});要发的是普通文字就加 literal:true' };
-      // delayMs:发送前的等待(给目标窗口切到前台的时间)。限在 0..10000:修前不设上限,一个 99999999 能让工具挂上一天。
-      const delayMs = Number.isFinite(Number(args.delayMs)) ? Math.min(10000, Math.max(0, Number(args.delayMs))) : 200; // b2-P1: 非法值回退默认,不再 NaN 进 PS 脚本
-      const sendText = args.literal === true ? sendKeysEscapeLiteral(keys) : keys;
-      const ps = `$wshell = New-Object -ComObject wscript.shell; Start-Sleep -Milliseconds ${Math.floor(delayMs)}; $wshell.SendKeys('${psSingleQuoted(sendText)}')`;
-      // 超时 = 调用方给的(缺省 10s)与「等待 + 5s」取大者,免得最长的等待把自己杀了;signal 接上用户 Stop。
-      const timeoutMs = Math.max(Number(args.timeoutMs) > 0 ? Number(args.timeoutMs) : 10000, delayMs + 5000);
-      return powershellMissingOr(await DesktopShell.runPowerShell(ps, os.homedir(), timeoutMs, ctx && ctx.signal), '键盘注入只能在 Windows 上使用(依赖 Windows PowerShell 的 SendKeys)');
+      return { ok: false, code: 'platform_unsupported', error: 'Mac native capture is required' };
   } },
   office_open: { paths: null, guardNote: "第36波录在案:不加读闸(打开不回流模型;exec tier 权限门);v1.4.6-S2 无 shell spawn", handler: async (args, ctx) => {
       // path 为空时 path.resolve('') 是【服务进程的当前目录】—— 修前会把它在资源管理器里打开。
@@ -2678,7 +2595,7 @@ const NETWORK_TOOL_HANDLERS = {
         maxBytesCap: ZIP_MAX_SINGLE_FILE,
         hint: maxBytes < ZIP_MAX_SINGLE_FILE
           ? `可把 maxBytes 调大重试(最多 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB)`
-          : `已是单文件硬上限 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 powershell_run(Invoke-WebRequest -OutFile)下载,或让用户手动下载`,
+          : `已是单文件硬上限 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 shell_run(Invoke-WebRequest -OutFile)下载,或让用户手动下载`,
       });
       // ① SSRF 前置拒绝（与 webFetch 同：内网/回环/非 http(s) 一律不发包）。
       const pre = ssrfCheck(url);
@@ -2801,7 +2718,7 @@ const CODE_TOOL_HANDLERS = {
       if (!g.ok) return g;
       return gitLog({ ...args, cwd: g.cwd });
   } },
-  git_commit: { paths: null, guardNote: "git 子进程 execFile 无 shell;exec tier(commit 触发 hooks)录在案;cwd 经 guardWorkspaceExecute(同 powershell_run)", handler: async (args, ctx) => {
+  git_commit: { paths: null, guardNote: "git 子进程 execFile 无 shell;exec tier(commit 触发 hooks)录在案;cwd 经 guardWorkspaceExecute(同 shell_run)", handler: async (args, ctx) => {
       const g = await resolveGitToolCwd(args, ctx, { exec: true });
       if (!g.ok) return g;
       return gitCommit({ ...args, cwd: g.cwd });

@@ -28,7 +28,7 @@ const lines = (n, text) => Array.from({ length: n }, (_, i) => `${text} ${i}`).j
 test('N2 shell 结果:stderr / code / timedOut 与 stdout 末尾在截断后仍在', () => {
   const stdout = lines(20000, 'build line') + 'ERROR at end: linker failed';
   const res = { ok: false, code: 3, stdout, stderr: 'fatal stderr', elapsedMs: 1234, timedOut: false, interrupted: false };
-  const out = T.truncateToolResult('powershell_run', JSON.stringify(res));
+  const out = T.truncateToolResult('shell_run', JSON.stringify(res));
   assert.ok(out.length <= 60000, `length ${out.length}`);
   assert.ok(out.length >= 50000, `换行转义后仍应把预算基本用满,而不是收得过狠(实得 ${out.length})`);
   const parsed = JSON.parse(out);                                   // 仍是合法 JSON
@@ -84,11 +84,11 @@ test('N2 数组:按条数截断并留计数标记,其余键不动', () => {
 
 test('N2 幂等:预算内的结果原样返回;已收缩过的结果再收缩一次不变', () => {
   const small = JSON.stringify({ ok: true, stdout: 'x'.repeat(30000), stderr: '' });
-  assert.equal(T.truncateToolResult('powershell_run', small), small);
+  assert.equal(T.truncateToolResult('shell_run', small), small);
   const big = JSON.stringify({ ok: true, code: 0, stdout: lines(30000, 'row') });
-  const once = T.truncateToolResult('powershell_run', big);
-  assert.equal(T.truncateToolResult('powershell_run', once), once);
-  assert.equal(T.truncateToolResult('powershell_run', T.truncateToolResult('powershell_run', big)), once);
+  const once = T.truncateToolResult('shell_run', big);
+  assert.equal(T.truncateToolResult('shell_run', once), once);
+  assert.equal(T.truncateToolResult('shell_run', T.truncateToolResult('shell_run', big)), once);
 });
 
 test('N2 中文结果按 token 口径收紧:同样的字符数,CJK 更早被截', () => {
@@ -128,7 +128,7 @@ test('N3 展示副本:大结果同构收缩、原对象不动;小结果同一引
   assert.ok(T.shrinkToolResultForDisplay, '需要 shrinkToolResultForDisplay');
   const res = { ok: true, code: 0, stdout: lines(40000, 'chatty build output line'), stderr: 'warn: x', elapsedMs: 9 };
   const before = JSON.stringify(res);
-  const shown = T.shrinkToolResultForDisplay('powershell_run', res);
+  const shown = T.shrinkToolResultForDisplay('shell_run', res);
   assert.equal(JSON.stringify(res), before, '原对象不被改动(写时复制)');
   assert.notEqual(shown, res);
   const size = JSON.stringify(shown).length;
@@ -140,7 +140,7 @@ test('N3 展示副本:大结果同构收缩、原对象不动;小结果同一引
   const small = { ok: true, path: 'a.txt', content: 'hello' };
   assert.equal(T.shrinkToolResultForDisplay('file_read', small), small);
   const frozen = Object.freeze({ ok: true, stdout: 'z'.repeat(300000) });
-  assert.doesNotThrow(() => T.shrinkToolResultForDisplay('powershell_run', frozen));
+  assert.doesNotThrow(() => T.shrinkToolResultForDisplay('shell_run', frozen));
 });
 
 test('N3 展示副本:嵌套字段(results[i].body)也按最大字段先收', () => {

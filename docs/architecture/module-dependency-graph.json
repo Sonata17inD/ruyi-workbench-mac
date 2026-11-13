@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3906,
-    "requiredSymbols": 3545,
-    "edges": 652,
+    "providedSymbols": 3901,
+    "requiredSymbols": 3535,
+    "edges": 649,
     "forwardEdges": 66,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -48,7 +48,6 @@
         "MAX_BODY_BYTES",
         "MigrationHooks",
         "OVERLAY_ID",
-        "PS_UTF8_OUTPUT_PREAMBLE",
         "RUYI_DATA_DIR_NAME",
         "RUYI_EVENTS",
         "RUYI_EVENT_SUBSCRIBERS",
@@ -476,15 +475,7 @@
         "LocalSecretCrypto",
         "LocalSecretCryptoHooks"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "01-config.js",
@@ -3334,13 +3325,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PS_UTF8_OUTPUT_PREAMBLE",
           "kinds": [
             "read"
           ]
@@ -12421,7 +12405,6 @@
         "SEARCH_JS_DEFAULT_MAX_FILES",
         "SEARCH_MAX_FILE_BYTES_CEILING",
         "SHELL_BUF_MAX",
-        "SHELL_ENCODED_COMMAND_MAX",
         "SHELL_GLOBAL_MAX",
         "SHELL_IDLE_MS",
         "SHELL_OUTPUT_DEFAULT_CHARS",
@@ -12477,8 +12460,6 @@
         "patternMayMatchNonAscii",
         "peekRgProbe",
         "persistBackgroundJob",
-        "powershellMissingOr",
-        "powershellUnavailable",
         "privacyProjectSearch",
         "privacyReadTextWindow",
         "privacySourceActive",
@@ -12518,7 +12499,6 @@
         "shellEndOffset",
         "shellIdValid",
         "shellIdleReaper",
-        "shellInputForPowerShell",
         "shellKill",
         "shellLastLine",
         "shellList",
@@ -12550,13 +12530,6 @@
           "symbol": "cp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "createConsoleLineDecoder",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12632,13 +12605,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PS_UTF8_OUTPUT_PREAMBLE",
           "kinds": [
             "read"
           ]
@@ -13318,13 +13284,6 @@
           ]
         },
         {
-          "provider": "01n-desktop-automation.js",
-          "symbol": "MacDesktopAutomation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02-session-store.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
@@ -13487,20 +13446,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "buildOpenSpawn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildRevealSpawn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
             "call"
@@ -13550,13 +13495,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "REVEAL_OPEN_SAFE_EXTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
           "kinds": [
             "read"
@@ -13572,13 +13510,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -13981,13 +13912,6 @@
           "symbol": "NativeSourceHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "powershellMissingOr",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -29913,14 +29837,6 @@
       "direction": "backward"
     },
     {
-      "from": "01j-local-crypto.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "path"
-      ],
-      "direction": "backward"
-    },
-    {
       "from": "01k-credential-vault.js",
       "to": "00-boot.js",
       "symbols": [
@@ -30360,7 +30276,6 @@
       "from": "04-desktop-shell.js",
       "to": "00-boot.js",
       "symbols": [
-        "PS_UTF8_OUTPUT_PREAMBLE",
         "cp",
         "decodeConsoleText",
         "fs",
@@ -32948,13 +32863,11 @@
       "to": "00-boot.js",
       "symbols": [
         "EventStreamHooks",
-        "PS_UTF8_OUTPUT_PREAMBLE",
         "RUYI_EVENTS",
         "RUYI_PATH_BEFORE_VENDOR",
         "StringDecoder",
         "URL",
         "cp",
-        "createConsoleLineDecoder",
         "crypto",
         "dataRoot",
         "dataRootAliases",
@@ -33164,14 +33077,6 @@
     },
     {
       "from": "12-tool-dispatch.js",
-      "to": "01n-desktop-automation.js",
-      "symbols": [
-        "MacDesktopAutomation"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "12-tool-dispatch.js",
       "to": "02-session-store.js",
       "symbols": [
         "JOURNAL_KEEP_TURNS",
@@ -33215,14 +33120,11 @@
       "from": "12-tool-dispatch.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "REVEAL_OPEN_SAFE_EXTS",
         "UNC_DENIED_ERROR",
         "WriteBoundaryHooks",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
         "buildBrowserOpenSpawn",
-        "buildOpenSpawn",
-        "buildRevealSpawn",
         "guardFileToolPath",
         "isBrowserDocumentTarget",
         "journalBridgedWrite",
@@ -33238,14 +33140,6 @@
       "to": "03a-privacy-gateway.js",
       "symbols": [
         "PrivacyGateway"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "12-tool-dispatch.js",
-      "to": "04-desktop-shell.js",
-      "symbols": [
-        "DesktopShell"
       ],
       "direction": "backward"
     },
@@ -33373,7 +33267,6 @@
         "gitStatus",
         "isBinaryReadPath",
         "levenshtein",
-        "powershellMissingOr",
         "privacyReadTextWindow",
         "privacySourceActive",
         "privacySourceLine",

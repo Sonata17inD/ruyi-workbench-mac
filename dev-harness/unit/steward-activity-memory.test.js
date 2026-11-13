@@ -95,7 +95,7 @@ test('状态查询给未命名线程可读名字,普通执行待决包含脱敏�
   // Assemble a synthetic token at runtime so source hygiene still rejects literal credentials.
   const fakeSecret = 'sk-' + 'abcdefghijklmnopqrstuvwxyz1234567890';
   fs.appendFileSync(path.join(home, 'sessions', session.id + '.interventions.ndjson'), [
-    { id: 'pending_exec', type: 'permission', tier: 'exec', toolName: 'powershell_run', input: { command: 'Get-ChildItem; $api_key="' + fakeSecret + '"' } },
+    { id: 'pending_exec', type: 'permission', tier: 'exec', toolName: 'shell_run', input: { command: 'Get-ChildItem; $api_key="' + fakeSecret + '"' } },
     { id: 'pending_edit', type: 'permission', tier: 'edit', toolName: 'file_write', input: { content: 'private full document' } },
   ].map(iv => JSON.stringify({ ...iv, sessionId: session.id, status: 'pending', requestedAt: new Date().toISOString() })).join('\n') + '\n');
   const status = await call('steward_thread_status', { sessionId: session.id });

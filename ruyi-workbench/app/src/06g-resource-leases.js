@@ -240,8 +240,7 @@ function inferToolResources(name, args, bridge, cwd, tier) {
   // 现在按 ACC 的真实工具名(mcp/ai-computer-control 平台源码注册名并集 109 个逐个分过类)显式分两张表:会动桌面的 → 独占写锁,
   // 只看桌面的 → 共享读锁(读读可并发、与写互斥),其余 ACC 工具(文件/Office/记忆/网络/浏览器…)不占桌面。
   // 表外的名字(第三方 MCP)仍走旧正则兜底 —— 未知的保守当写。原生 keyboard_send_keys 修前完全没锁,一并补上。
-  const deskMode = name === 'keyboard_send_keys' ? 'write'
-    : name === 'desktop_screenshot' ? 'read'
+  const deskMode = name === 'desktop_screenshot' ? 'read'
     : bridge ? bridgedDesktopLeaseMode(bare, input) : '';
   if (deskMode) add('desktop', deskMode);
   if (bridge) {

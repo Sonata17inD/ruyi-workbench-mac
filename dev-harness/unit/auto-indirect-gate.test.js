@@ -18,7 +18,7 @@ process.env.RUYI_HOME = root;
 const { nativeToolGate } = require(path.join(__dirname, '..', '..', 'ruyi-workbench', 'app', 'server.js'));
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));
 
-const gate = (command, mode = 'auto') => nativeToolGate(mode, 'exec', 'powershell_run', { command });
+const gate = (command, mode = 'auto') => nativeToolGate(mode, 'exec', 'shell_run', { command });
 
 const OBFUSCATED = [
   "& ('shut' + 'down') /s /t 0",

@@ -8,15 +8,6 @@ const cp = require('node:child_process');
 const vm = require('node:vm');
 const fixture = require('../lib/platform-shell-fixture');
 
-test('Windows fixture quotes remain PowerShell literals and select the Windows tool', () => {
-  const context = { process: { platform: 'win32' }, module: { exports: {} } };
-  vm.runInNewContext(fs.readFileSync(require.resolve('../lib/platform-shell-fixture'), 'utf8'), context);
-  const windows = context.module.exports;
-  assert.equal(windows.shellTool, 'powershell_run');
-  assert.equal(windows.quote("文档 a'b"), "'文档 a''b'");
-  assert.match(windows.delay(2, 'finished'), /^Start-Sleep -Seconds 2; Write-Output 'finished'$/);
-});
-
 test('POSIX fixture commands write exact literal paths without expanding shell syntax',
   { skip: process.platform === 'win32' }, () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-shell-fixture-'));

@@ -30,7 +30,7 @@ function helpDocTitle(markdown, fallback) {
 // 所以「打开数据目录 / 日志目录 / 工作文件夹 / 手册目录」由服务端直接把资源管理器开出来。
 // 安全口径:请求只能传下面这张【源码写死】的枚举 key。绝对路径全部由服务端常量(paths.*)、
 // 手册目录解析或当前会话的 cwd 推导,客户端字符串永不参与拼路径、也永不进 spawn 的 argv;
-// 执行沿用 /api/file/reveal 的 DesktopShell.revealInExplorer(路径经环境变量交给 PowerShell 助手,
+// 执行沿用 /api/file/reveal 的 DesktopShell.revealInFinder(路径经环境变量交给 PowerShell 助手,
 // 零 shell 拼接,且能把窗口提到前台 : 后台服务直接 spawn explorer 会开在浏览器后面)。
 const OPEN_PATH_TARGETS = Object.freeze(['data', 'logs', 'workspace', 'manuals']);
 
@@ -1489,7 +1489,7 @@ async function handleApi(req, res, pathname) {
     if (!directoryStat || !directoryStat.isDirectory()) {
       return send(res, apiFailure('openPath.missing', { target }, '这个位置不存在或不是文件夹，请选择有效的工作文件夹', 404));
     }
-    const started = await DesktopShell.revealInExplorer(realDirectory, 'open');
+    const started = await DesktopShell.revealInFinder(realDirectory, 'open');
     if (!started) return send(res, json({ ok: false, error: '无法打开文件管理器，请检查系统默认打开程序' }));
     logEvent({ kind: 'open_path', target, pathLen: dir.length });
     return send(res, json({ ok: true, target }));
@@ -1588,9 +1588,9 @@ async function handleApi(req, res, pathname) {
     try { stat = await fsp.stat(guard.absPath); } catch { /* missing */ }
     if (!stat) return send(res, json({ ok: false, error: '文件不存在' }, 404));
     // buildRevealSpawn 仍是「模式决策」的权威:决定 open vs select + 对可执行/脚本扩展名把 open 降级为 select。
-    // 但【执行】改走 revealInExplorer(前台助手),不再直接 spawn explorer(后台服务直接 spawn 会开在浏览器后面)。
+    // 但【执行】改走 revealInFinder(前台助手),不再直接 spawn explorer(后台服务直接 spawn 会开在浏览器后面)。
     const spawnSpec = buildRevealSpawn(mode, guard.absPath);
-    const okStarted = await DesktopShell.revealInExplorer(guard.absPath, spawnSpec.mode);
+    const okStarted = await DesktopShell.revealInFinder(guard.absPath, spawnSpec.mode);
     if (!okStarted) return send(res, json({ ok: false, error: '无法打开文件管理器，请检查系统默认打开程序' }));
     logEvent({ kind: 'file_reveal', sessionId: sessionId || '', mode: spawnSpec.mode, degraded: !!spawnSpec.degraded, pathLen: guard.absPath.length });
     // 把关加固:可执行/脚本类「打开」被降级为「定位」时明确告知前端(前端可提示用户)。

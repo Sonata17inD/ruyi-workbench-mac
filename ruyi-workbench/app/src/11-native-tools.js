@@ -310,29 +310,10 @@ function shellShapeOutput(slice, cap, paging) {
     hint: '输出过长,只返回了开头和最新一段;中间被省略的部分可用 cursor=omittedFrom 分页读回' };
 }
 
-// PowerShell 不可用时的统一回复:非 Windows(Linux / macOS)没有 powershell.exe,Windows 上则是 PATH 被改坏 / 精简系统。
-// 修前各个工具把 Node 的 `spawn powershell.exe ENOENT` 原样甩给模型(shell_start 甚至回 ok:true 的死会话),模型无从判断「是环境没有」还是「命令写错了」。
-function powershellUnavailable(extra = {}) {
-  const win = process.platform === 'win32';
-  return {
-    ok: false,
-    code: win ? 'powershell_missing' : 'windows_only',
-    error: win ? '没有找到 PowerShell(powershell.exe 不在 PATH 上)' : `本机不是 Windows(${process.platform}),没有 powershell.exe;这个工具依赖 Windows PowerShell,在此无法使用`,
-    hint: extra.hint || (win ? '确认 Windows PowerShell 5.1 可用(系统自带),并且 %SystemRoot%\\System32\\WindowsPowerShell\\v1.0 在 PATH 上' : '改用 script_run 的 language:"python" 或 "node" 来执行脚本'),
-  };
-}
-// runProcess / runPowerShell 的结果里带 commandNotFound(找不到 powershell.exe 本身)→ 换成上面的统一回复;其余原样。
-function powershellMissingOr(result, hint) {
-  return result && result.commandNotFound ? powershellUnavailable(hint ? { hint } : {}) : result;
-}
 // 持久 shell 的数量上限。cap(config.shellSessionMax,默认 3)是【每个会话】的:shell_list / shell_kill 本来就只看得见、管得了本会话开的
 // (见 shellVisibleTo),修前上限却是全进程共用的 —— 会话 B 被「已达上限 3」拒绝,自己的 shell_list 却是空的、也杀不掉 A 开的。
 // 全局另设一个安全上限(防止多会话 / 多子代理合起来把机器的进程撑爆),它与每会话上限取大者。
 const SHELL_GLOBAL_MAX = 12;
-// -EncodedCommand 把命令按 UTF-16LE 再 Base64,体积约 2.67 倍;Windows 命令行总长上限 32767 字符(Linux 单个参数 128KB 的 E2BIG)。
-// 编码后超过这个值直接给人话,不让 CreateProcess 抛「文件名或扩展名太长」。≈ 12000 字符的命令。
-const SHELL_ENCODED_COMMAND_MAX = 32000;
-
 // Command input is NUL-delimited; completion metadata uses fd 4, separate from stdout/stderr.
 const MAC_SHELL_DRIVER = [
   'function __ruyi_report() {',
@@ -460,7 +441,7 @@ function shellCleanupFields(sess) {
 }
 
 // Spawn a persistent powershell child. Returns { ok, shellId, name, cwd } or { ok:false, error, hint }.
-// 异步:要等到子进程【真的起来了】(spawn 事件)才回 ok —— 没有 powershell.exe 时 spawn 的 ENOENT 是异步 error 事件,修前回 ok:true 却是个死会话。
+// 异步:要等到子进程【真的起来了】(spawn 事件)才回 ok —— spawn 的 ENOENT 是异步 error 事件,修前回 ok:true 却是个死会话。
 async function shellStart(args, config, ctx = {}) {
   const max = (config && Number.isFinite(config.shellSessionMax)) ? config.shellSessionMax : 3;
   // The cap counts LIVE sessions only. Exited (running:false) sessions stay in the Map so their output
@@ -486,24 +467,24 @@ async function shellStart(args, config, ctx = {}) {
   }
   // 107-S0:工具分发(12 shell_start)总是传入执行闸解析好的 cwd;家目录兜底只留给没有 cwd 的直接调用方。
   const cwd = args.cwd ? path.resolve(String(args.cwd)) : os.homedir();
-  // NE-13:cwd 不存在时 Node 报的是 `spawn powershell.exe ENOENT`,模型会误以为没装 PowerShell —— 先明说目录不存在。
+  // NE-13:cwd 不存在时 spawn 只报告 ENOENT —— 先明说目录不存在。
   try { if (!fs.statSync(cwd).isDirectory()) throw new Error('not a directory'); }
-  catch { return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 用线程工作目录' }; }
+  catch { return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录,或省略 cwd 用线程工作目录' }; }
   const name = args.name ? String(args.name).slice(0, 80) : shellId;
   const command = args.command == null ? '' : String(args.command).trim();
   const mode = command ? 'background' : 'interactive';
   const timeoutMs = Math.min(24 * 60 * 60 * 1000, Math.max(1000, Number(args.timeoutMs) || SHELL_IDLE_MS));
-  const language = args.language || (process.platform === 'darwin' ? 'bash' : 'powershell');
+  const language = args.language || 'bash';
+  if (language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_start supports bash' };
   if (language === 'bash' && process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 会话' };
-  const isMacShell = language === 'bash';
-  if (isMacShell) {
+  {
     const capability = ProcessRuntime.helperCapability();
     if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac shell 的原生进程监督器尚未就绪', capability };
   }
   let scriptDirectory = '';
   let startingSession = null;
-  const launchArgs = isMacShell ? ['--noprofile', '--norc'] : ['-NoLogo', '-NoProfile'];
-  if (isMacShell) {
+  const launchArgs = ['--noprofile', '--norc'];
+  {
     if (command) {
       if (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES) return { ok: false, code: 'command_too_long', error: '命令不能包含 NUL，且 UTF-8 内容不得超过 1MiB' };
       startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
@@ -524,34 +505,12 @@ async function shellStart(args, config, ctx = {}) {
         return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
       }
     } else launchArgs.push('-c', MAC_SHELL_DRIVER);
-  } else if (!command) {
-    // 交互式 shell:没有脚本可前置,用 -NoExit -Command 先跑一遍 UTF-8 输出编码前导,然后照常读 stdin(2026-10 实测:
-    // 提示符与回显的格式与不带它时一致,启动时不多出任何输出)。注意不能用 -EncodedCommand:它会让 PowerShell 往 stderr
-    // 写一份 CLIXML 进度对象(`#< CLIXML ...`),污染 shell_poll 的输出。前导是纯 ASCII、无需引号转义(spawn 不经 shell)。
-    // 为什么要它:非中文代码页(en-US 的 437/1252)的机器上不设的话,Write-Output '中文' 在源头就是 `?`(见 00-boot 注释)。
-    // stdin is a pipe, so use ConsoleHost's line reader rather than PSReadLine's console input.
-    // With -NoExit -Command alone, PSReadLine can echo shell_send input without executing it.
-    launchArgs.push('-NonInteractive');
-    launchArgs.push('-NoExit', '-Command', PS_UTF8_OUTPUT_PREAMBLE);
-  } else {
-    // A finite command has an actual completion/exit code; shell_poll.running now describes the job,
-    // rather than an interactive prompt that stays alive forever after its command completed.
-    // 第一行前面接 UTF-8 输出编码前导(00-boot PS_UTF8_OUTPUT_PREAMBLE):同一行、不加换行,用户命令的行号不漂。
-    // 不需要像 04 withQuietProgress 那样豁免 param()/using —— 用户命令在 `& { }` 里,不是脚本的第一条语句。
-    const script = PS_UTF8_OUTPUT_PREAMBLE + "$ErrorActionPreference = 'Stop'\n$global:LASTEXITCODE = 0\ntry {\n& {\n" + command
-      + "\n}\nif (-not $?) { exit 1 }\nexit $LASTEXITCODE\n} catch { [Console]::Error.WriteLine($_.ToString()); exit 1 }";
-    const encoded = Buffer.from(script, 'utf16le').toString('base64');
-    if (encoded.length > SHELL_ENCODED_COMMAND_MAX) {
-      return { ok: false, code: 'command_too_long', error: `命令太长(${command.length} 字符),超过命令行长度上限(约 12000 字符)`,
-        hint: '把长脚本用 script_run 执行(代码落成文件再运行,没有这个长度限制),或先 file_write 写成 .ps1 再在 shell_start 里 & 调用它' };
-    }
-    launchArgs.push('-NonInteractive', '-EncodedCommand', encoded);
   }
   let child;
   try {
-    child = ProcessRuntime.spawn(isMacShell ? '/bin/bash' : 'powershell.exe', launchArgs, {
-      cwd, env: isMacShell ? platformShellEnvironment(process.env) : { ...process.env }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
-      ...(isMacShell && !command ? { extraStdio: ['pipe'] } : {}),
+    child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
+      cwd, env: platformShellEnvironment(process.env), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+      ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
     if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId);
@@ -565,7 +524,7 @@ async function shellStart(args, config, ctx = {}) {
   // 135c(线程内后台任务条):记下命令原文供界面显示 —— 先过 04 的 redact(与权限弹窗/审计同一张表),压成一行、裁 200。
   const commandShown = command ? redact(command).replace(/\s+/g, ' ').trim().slice(0, 200) : '';
   const sess = { child, name, cwd, mode, shellLanguage: language, platform: process.platform, command: commandShown, sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), jobId: crypto.randomBytes(12).toString('hex'), timedOut: false, buf: '', baseOffset: 0, running: true, exitCode: null, startedAt: now, lastUsedAt: now };
-  if (isMacShell && !command) bindMacShellProtocol(sess);
+  if (!command) bindMacShellProtocol(sess);
   let deadline = null;
   if (command) {
     child.stdin.end();
@@ -577,19 +536,13 @@ async function shellStart(args, config, ctx = {}) {
     }, timeoutMs);
     deadline.unref();
   }
-  // 每条流一个按行的控制台解码器(00-boot createConsoleLineDecoder):中文 Windows 上无控制台的 powershell.exe
-  // 往管道里写的是 GBK(用户实测:shell 会话里的中文输出全是乱码),修前一律按 UTF-8 解。整行才解码(chunk 切开的
-  // 多字节字符不会变成 U+FFFD);不带换行的尾巴(提示符、「[Y/N]」)停 150ms 没有新输出就先吐出来;关闭时 end()。
-  // 2026-10 起 PowerShell 的输出编码在源头就设成 UTF-8(上面的 PS_UTF8_OUTPUT_PREAMBLE),这里的按行解码退为兜底
-  // (中文系统上设置失败、原生命令自己写 GBK):UTF-8 优先的判定正好接住源头已是 UTF-8 的输出。
+  // Preserve UTF-8 characters split across pipe chunks.
   const makeDecoder = () => {
-    if (!isMacShell) return createConsoleLineDecoder();
     const decoder = new StringDecoder('utf8');
     return { write: data => decoder.write(data), flush: () => '', end: () => decoder.end() };
   };
   const outDecoder = makeDecoder();
   const errDecoder = makeDecoder();
-  let idleFlush = null;
   let exitAt = 0;
   let exitTimer = null;
   let finalized = false;
@@ -601,7 +554,6 @@ async function shellStart(args, config, ctx = {}) {
     if (scriptDirectory) void fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
     if (sess.spawnFailed) return; // 根本没起来的进程不算一次「作业完成」:不弹完成通知、不留死会话(shellStart 已回 ok:false)
     if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
-    if (idleFlush) { clearTimeout(idleFlush); idleFlush = null; }
     shellAppend(sess, outDecoder.end() + errDecoder.end());
     if (note) shellAppend(sess, note);
     sess.running = false; sess.exitCode = (code === null || code === undefined ? null : code); sess.lastUsedAt = Date.now();
@@ -619,7 +571,7 @@ async function shellStart(args, config, ctx = {}) {
     exitTimer = setTimeout(() => {
       exitTimer = null;
       if (finalized) return;
-      try { if (child.stdout) child.stdout.destroy(); if (child.stderr) child.stderr.destroy(); if (isMacShell) child.stdio[4]?.destroy(); } catch { /* already closed */ }
+      try { if (child.stdout) child.stdout.destroy(); if (child.stderr) child.stderr.destroy(); child.stdio[4]?.destroy(); } catch { /* already closed */ }
       finalize(exitInfoCode, '\n[process exited; a background child kept the output pipe open — later output is not captured]\n');
     }, 500);
     if (exitTimer.unref) exitTimer.unref();
@@ -627,9 +579,6 @@ async function shellStart(args, config, ctx = {}) {
   let exitInfoCode = null;
   const feed = (decoder, d) => {
     shellAppend(sess, decoder.write(d));
-    if (idleFlush) clearTimeout(idleFlush);
-    idleFlush = setTimeout(() => { idleFlush = null; shellAppend(sess, outDecoder.flush() + errDecoder.flush()); }, 150);
-    if (idleFlush.unref) idleFlush.unref();
     if (exitAt && !finalized && Date.now() - exitAt < 3000) armExitTimer();
   };
   child.stdout?.on('data', d => feed(outDecoder, d));
@@ -637,13 +586,13 @@ async function shellStart(args, config, ctx = {}) {
   let spawned = false;
   child.once('spawn', () => { spawned = true; });
   child.on('error', err => { clearTimeout(deadline); if (!spawned) sess.spawnFailed = true; shellAppend(sess, `\n[shell error] ${err && err.message ? err.message : err}\n`); sess.running = false; });
-  if (command || isMacShell) child.on('exit', code => { exitInfoCode = code; exitAt = Date.now(); armExitTimer(); });
+  child.on('exit', code => { exitInfoCode = code; exitAt = Date.now(); armExitTimer(); });
   child.on('close', code => finalize(code));
   shellSessions.set(shellId, sess);
   // 等子进程真的起来(或起不来):起不来就别留一个 running:false 的空壳,直接说明原因。
   const readiness = await ProcessRuntime.ready(child);
   let spawnErr = readiness.ok ? null : readiness.error;
-  if (!spawnErr && isMacShell && !command) {
+  if (!spawnErr && !command) {
     let readyTimer;
     try {
       const protocol = await Promise.race([sess.protocolReady, new Promise(resolve => { readyTimer = setTimeout(() => resolve({ ok: false }), 5000); })]);
@@ -655,20 +604,13 @@ async function shellStart(args, config, ctx = {}) {
     sess.spawnFailed = true;
     killChildTree(child);
     if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId);
-    if (isMacShell) return { ok: false, code: 'shell_unavailable', error: spawnErr.message };
-    if (spawnErr.code === 'ENOENT') return powershellUnavailable();
-    return { ok: false, error: `无法启动 PowerShell:${(spawnErr && spawnErr.message) || spawnErr}` };
+    return { ok: false, code: 'shell_unavailable', error: spawnErr.message };
+
   }
   if (sess.cancelled || shellSessions.get(shellId) !== sess) return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
-  return { ok: true, shellId, name, cwd: sess.cwd, mode, ...(isMacShell ? { shell: 'bash', tty: false } : {}), ...(command ? { jobId: sess.jobId, notification: sess.sessionId ? 'session_push' : 'unbound', running: true, timeoutMs, cursor: 0 } : {}) };
+  return { ok: true, shellId, name, cwd: sess.cwd, mode, shell: 'bash', tty: false, ...(command ? { jobId: sess.jobId, notification: sess.sessionId ? 'session_push' : 'unbound', running: true, timeoutMs, cursor: 0 } : {}) };
 }
 
-// Write input to a session and wait for output to settle. best-effort capture: polls buffer growth and
-// returns when ~300ms passes with no new bytes, or timeoutMs elapses. A newly spawned PowerShell may need
-// several seconds before it consumes its first stdin command on a cold hosted Windows runner, so an
-// entirely silent command gets a bounded 5s startup/grace window; returning earlier can leave that command
-// queued and misattribute its output to the next shell_send. Long-running tasks won't finish
-// within one send — track them with shell_poll. output = increment from the pre-send cursor to now.
 // 135c(真机核实的隔离缺口):shell_list 修前列出【整个进程】的 shell,shell_poll/send/kill 也不认主 ——
 // A 线程的模型能看到并杀掉 B 线程的后台命令。现在带 ctx.sessionId 的调用只看得见自己线程开的;
 // 子代理的工具调用用的是父会话 id(08 toolCall 传 parentSession.id),所以父子之间照常互通。
@@ -682,16 +624,6 @@ function shellLookup(shellId, ctx) {
   return sess && shellVisibleTo(sess, ctx) ? sess : null;
 }
 
-// 交互式 shell 的输入:无控制台的 powershell.exe 按系统代码页(GBK)读 stdin,我们写进去的 UTF-8 中文在【输入阶段】就坏了
-// (命令里的中文路径、中文参数全变问号)。含非 ASCII 字符的输入改成一条纯 ASCII 的等价命令:把原文按 UTF-8 编成
-// Base64,在 PowerShell 里解回来再 Invoke-Expression —— 与直接敲入同一作用域执行,变量、cd 都照常生效。纯 ASCII 输入原样。
-// 代价:如果 shell 里正停在 Read-Host 等你回答,一句中文回答会被当成命令执行 —— 模型给 shell 的几乎总是命令,取这一头。
-function shellInputForPowerShell(input) {
-  const text = String(input == null ? '' : input);
-  if (!/[^\x00-\x7f]/.test(text)) return text;
-  const b64 = Buffer.from(text, 'utf8').toString('base64');
-  return `Invoke-Expression ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${b64}')))`;
-}
 async function shellSend(args, ctx) {
   const shellId = String(args.shellId || '');
   const sess = shellLookup(shellId, ctx);
@@ -699,38 +631,7 @@ async function shellSend(args, ctx) {
   // at shell_list / shell_start rather than leaving it to retry the same dead id.
   if (!sess) return { ok: false, error: `未知 shellId '${shellId}'`, hint: '用 shell_list 查看现有会话,或 shell_start 新建' };
   if (sess.mode === 'background') return { ok: false, error: '后台命令不接受输入;用 shell_poll 读取结果或 shell_kill 取消' };
-  if (sess.shellLanguage === 'bash') return runKeyedChain(macShellSendChains, sess.jobId, () => sendMacShell(sess, args, ctx));
-  sess.lastUsedAt = Date.now();
-  const startCursor = shellEndOffset(sess);
-  const timeoutMs = Math.min(120000, Math.max(1000, Number(args.timeoutMs || 10000)));
-  if (sess.running && sess.child.stdin && sess.child.stdin.writable) {
-    try { sess.child.stdin.write(shellInputForPowerShell(args.input != null ? args.input : '') + '\n'); }
-    catch (e) { return { ok: false, error: `写入失败: ${e && e.message ? e.message : e}` }; }
-  } else if (!sess.running) {
-    // Child already exited — still return whatever fresh output exists, but flag not-running.
-    return shellSendResult(sess, shellSliceFrom(sess, startCursor), args, 'exit');
-  }
-  // Settle loop: poll every 60ms; resolve once ~300ms passes with no growth, or on timeout / child exit.
-  const deadline = Date.now() + timeoutMs;
-  const sentAt = Date.now();
-  let lastLen = shellEndOffset(sess);
-  let stableSince = Date.now();
-  let settled = 'timeout';   // NE-15:告诉模型这次是怎么返回的 —— exit=进程退出 / quiet=输出安静了(命令大概率跑完) / silent=没输出 / timeout=超时仍在出
-  for (;;) {
-    await new Promise(r => setTimeout(r, 60));
-    const nowLen = shellEndOffset(sess);
-    if (nowLen !== lastLen) { lastLen = nowLen; stableSince = Date.now(); }
-    if (!sess.running) { settled = 'exit'; break; }
-    if (Date.now() - stableSince >= 300 && nowLen > startCursor) { settled = 'quiet'; break; } // grew then went quiet
-    if (nowLen === startCursor && Date.now() - sentAt >= Math.min(5000, timeoutMs)) {
-      // No output at all within a settle window (e.g. a command that prints nothing) — don't hang.
-      settled = 'silent';
-      break;
-    }
-    if (Date.now() >= deadline) break;
-  }
-  sess.lastUsedAt = Date.now();
-  return shellSendResult(sess, shellSliceFrom(sess, startCursor), args, settled);
+  return runKeyedChain(macShellSendChains, sess.jobId, () => sendMacShell(sess, args, ctx));
 }
 // shell_send 的返回:状态字段在前,output(封顶,见 shellShapeOutput)在最后。
 function shellSendResult(sess, slice, args, settled) {
@@ -869,7 +770,7 @@ shellIdleReaper.unref();
 
 // v0.8-S2: the guarding stub returned when a shell_* tool runs in the one-shot MCP child (Claude CLI
 // engine). The session cannot live there; steer the model to the persistent provider engine, or to
-// powershell_run for a one-shot command.
+// shell_run for a one-shot command.
 function shellMcpChildGuard() {
   return {
     ok: false,
@@ -2294,7 +2195,7 @@ async function readIfExists(file, limit = 200000) {
 //   • windowsHide + 超时(默认 15s,commit 30s)+ maxBuffer 上限。
 //   • git 不存在(ENOENT) / 非仓库 / 缺身份 → 全部转「人话引导错误」,永不崩溃。
 // 两个引擎路径都注册(serve 进程 provider 循环 + `node server.js mcp` 子进程),因为这是无状态一次性命令,
-// 同 file_read/powershell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
+// 同 file_read/shell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
 // ============================================================================
 // NE-7:git_diff 上限按【序列化后的 JSON 字符】算,并要低于模型可见上限(10 truncateToolResult 的 60K)。修前 200KB 的 diff 序列化后
 // 超过 60K,会被下游平切 —— 「已截断」说明和 truncated 字段恰好落在被切掉的尾部,模型不知道自己没看到哪些文件。
@@ -2447,7 +2348,7 @@ function resolveGitCwd(raw) {
   return null;
 }
 function gitCwdMissingError(raw) {
-  return { ok: false, error: `目录不存在: ${String(raw || '').trim()}`, hint: '确认 cwd 是已存在的仓库目录(Windows 用完整盘符路径),或省略 cwd 使用当前对话的工作目录。' };
+  return { ok: false, error: `目录不存在: ${String(raw || '').trim()}`, hint: '确认 cwd 是已存在的仓库目录,或省略 cwd 使用当前对话的工作目录。' };
 }
 // Map a failed git invocation to a 中文人话引导错误. Order matters: binary-missing first (nothing else is
 // meaningful without git), then the common "not a repo" and "missing identity" cases, else the raw stderr.

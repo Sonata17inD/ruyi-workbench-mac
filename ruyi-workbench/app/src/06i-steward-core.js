@@ -272,9 +272,9 @@ function isStewardToolName(name) {
 const STEWARD_EXEMPT_TOOL_PATTERNS = /send|mail|sms|post_message|pay|purchase|transfer|uninstall|install|registry|system_setting|shutdown|format|mcp_configure/i;
 // 127 波 2-bis(45 号文 §2-bis,用户真机走查):上面那条正则是裸子串,工作台自己的两个本机工具只因名字里有
 // send 就被当成「对外发送」进了永久豁免 —— 于是全自动线程每递一行 shell_send 都得用户亲手按,而同族的
-// powershell_run/run_command 名字不命中、走的是下面的命令文本扫描。方向是反的。这里只放出【精确全名】,
+// shell_run/run_command 名字不命中、走的是下面的命令文本扫描。方向是反的。这里只放出【精确全名】,
 // 正则本身一个字不动:外部 MCP 的 slack_send/send_message 之类照样按名字拦(宁可误判成「要人按」)。
-//   · shell_send —— 往本进程已起的 PowerShell 会话递一行字。危险全在那行字里,与 powershell_run 同族,
+//   · shell_send —— 往本进程已起的 PowerShell 会话递一行字。危险全在那行字里,与 shell_run 同族,
 //     交给命令文本扫描判。前提已用真夹具证过:两条路径(原生闸门 / steward_decide)都把它的 input 交到了
 //     扫描手里(dev-harness/steward-exempt-shell-send.e2e.js H2/P1)。
 //   · keyboard_send_keys —— 用户 2026-09-17 拍板放出(「放出来吧，估计有很多操作也是要按键盘的」)。
@@ -286,7 +286,7 @@ const STEWARD_EXEMPT_TOOL_PATTERNS = /send|mail|sms|post_message|pay|purchase|tr
 // `mcp__ruyi__shell_send` 在原生引擎里能被一个 id 为 mcp 的外部服务器凑出来
 // (serverId=mcp + 工具名 ruyi__shell_send);CLI 那两条路上 shell 族在 MCP 子进程里本就是
 // 引导性报错(12 shellMcpChildGuard),放它没有收益。
-const STEWARD_EXEMPT_NAME_CARVEOUTS = Object.freeze(['shell_send', 'keyboard_send_keys']);
+const STEWARD_EXEMPT_NAME_CARVEOUTS = Object.freeze(['shell_send']);
 
 // 116-3 P0-1(对抗审查):只匹配 toolName 字面量的判据在【通用执行工具】面前形同虚设 ——
 // `Bash`/`PowerShell`/`run_command`/`delete_file`/`kill_process`/`git_push` 一个都不命中上面那条正则,
@@ -481,7 +481,7 @@ const STEWARD_AUTO_ASK_EGRESS_PATTERNS = Object.freeze([
   /\brsync\b[^\n]{0,200}?(?:\s[\w.@-]+@[\w.-]+:|rsync:\/\/)/i, /\b(?:nslookup|resolve-dnsname)\b/i,
 ]);
 // 读如意数据根里的密钥 / 状态文件:runtime.json(WCW token)、<数据根>\config.json(明文 provider 密钥)及其备份族、会话 / 记忆 / 计费 / 审计 / 管家 / 事项 / 调度。
-// 文件工具层早已把这些封死(03 isSensitiveDataPath),但 exec 工具(script_run / powershell_run)直接读盘,实测把 token 读出来 POST 到外部端口全程零弹窗。
+// 文件工具层早已把这些封死(03 isSensitiveDataPath),但 exec 工具(script_run / shell_run)直接读盘,实测把 token 读出来 POST 到外部端口全程零弹窗。
 // 单独的 `config.json` 在普通工程里太常见,所以只认「数据根目录名后面跟着这些名字」「runtime.json」「config.json 备份族」与数据根 / token 的环境变量名。
 const STEWARD_AUTO_ASK_DATAROOT_PATTERNS = Object.freeze([
   /\bruntime\.json\b/i,
@@ -546,7 +546,7 @@ function stewardAutoAskReason(toolName, input) {
 // 相对路径仍可能经 `..` 爬出工作夹,那一层由执行闸(03 guardWorkspaceExecute)兜;这里要的只是
 // 「管家不准替用户批一条把绝对路径写在脸上的删除」。
 // 【按叶子判,不按摊平后的整段判】:摊平文本把 input 的【所有】字符串值用空格接起来,而
-// `powershell_run{command:'Remove-Item .\tmp -Recurse', cwd:'C:\…\work'}` 是常态 —— 拿整段判会把
+// `shell_run{command:'Remove-Item .\tmp -Recurse', cwd:'C:\…\work'}` 是常态 —— 拿整段判会把
 // 每一条「线程清自己临时目录」都误判成绝对目标(B2 的主用例),那是把判据做成了「谁传 cwd 谁不许代批」。
 // 所以:逐个叶子串看,只有【自己就命中删数据正则】的那个叶子里的绝对形态才算目标。
 // 一个叶子都没能复现删数据命中(命中是跨叶子拼出来的 argv 形态,如 ['Remove-Item','C:\Users','-Recurse'])
@@ -1393,7 +1393,7 @@ function stewardClipSay(value) {
 // 常用工具说清要对哪个文件做什么;认不出的工具才退回工具名 —— 总比「edit 级」这种档位黑话好懂。
 const STEWARD_PERMISSION_VERBS = Object.freeze({
   file_write: '写入文件', file_edit: '修改文件', file_delete: '删除文件', file_move: '移动文件', file_copy: '复制文件',
-  shell_run: '运行一条命令', powershell_run: '运行一条命令', script_run: '运行一段脚本', http_download: '下载文件',
+  shell_run: '运行一条命令', script_run: '运行一段脚本', http_download: '下载文件',
 });
 // 第三波 M4：权限待决要对哪个文件动手（只取文件名）。独立出来，让 asksYou 也能带上结构化的 target，前端按界面语言拼句。
 function stewardPermissionTarget(iv) {

@@ -33,12 +33,11 @@ function load() {
     functionBlock(source, 'decodeConsoleText'),
     functionBlock(source, 'consoleIncompleteTail'),
     functionBlock(source, 'createConsoleLineDecoder'),
-    functionBlock(source, 'shellInputForPowerShell'),
-    '({ decodeConsoleText, createConsoleLineDecoder, shellInputForPowerShell })',
+    '({ decodeConsoleText, createConsoleLineDecoder })',
   ].join('\n');
   return vm.runInNewContext(code, { Buffer, TextDecoder });
 }
-const { decodeConsoleText, createConsoleLineDecoder, shellInputForPowerShell } = load();
+const { decodeConsoleText, createConsoleLineDecoder } = load();
 
 const GBK_ZHONGWEN = [0xd6, 0xd0, 0xce, 0xc4];                          // 中文
 const GBK_LUANMA = [0xc2, 0xd2, 0xc2, 0xeb];                            // 乱码
@@ -76,127 +75,9 @@ test('[E2] 流式解码:切在汉字中间不出替换符,尾巴 flush 时吐出
   assert.equal(dec.end(), '提示符> ');
 });
 
-test('[E3] 交互式 shell 的中文输入改成纯 ASCII 的等价命令', () => {
-  assert.equal(shellInputForPowerShell('Get-ChildItem -Force'), 'Get-ChildItem -Force', '纯 ASCII 原样');
-  const cmd = 'Get-ChildItem "C:\\用户\\如意 文档"';
-  const wrapped = shellInputForPowerShell(cmd);
-  assert.ok(!/[^\x00-\x7f]/.test(wrapped), '包装后纯 ASCII');
-  const b64 = /FromBase64String\('([A-Za-z0-9+/=]+)'\)/.exec(wrapped)[1];
-  assert.equal(Buffer.from(b64, 'base64').toString('utf8'), cmd, 'Base64 里是原文的 UTF-8');
-  assert.match(wrapped, /^Invoke-Expression \(\[System\.Text\.Encoding\]::UTF8\.GetString\(/);
-});
-
-test('[E4] 接线:runProcess、shell 会话、覆盖包、进程取证都走按行解码', () => {
-  const desktop = readSrcFile('04-desktop-shell.js');
-  assert.match(functionBlock(desktop, 'decodeBestEffort'), /decodeConsoleTextFn\(buf\)/);
+test('Mac shell decodes UTF-8 incrementally and uses its private completion channel', () => {
   const shell = functionBlock(readSrcFile('11-native-tools.js'), 'shellStart');
-  assert.match(shell, /createConsoleLineDecoder\(\)/);
-  assert.match(shell, /if \(!isMacShell\) return createConsoleLineDecoder\(\)/, 'PowerShell 会话继续按行判编码');
-  assert.match(shell, /new StringDecoder\('utf8'\)/, 'Mac bash 使用即时 UTF-8 流解码');
-  assert.match(functionBlock(readSrcFile('11-native-tools.js'), 'shellSend'), /shellInputForPowerShell\(/);
-  assert.match(functionBlock(readSrcFile('13-http-router.js'), 'processCommandLine'), /decodeConsoleText\(stdout\)/);
-});
-
-test('[E6] 前导的形状:同一行放在 $ProgressPreference 之前;无 BOM 编码;豁免脚本不加;shell_start 两种形态都带', () => {
-  const code = [
-    constBlock(source, 'PS_UTF8_OUTPUT_PREAMBLE'),
-    functionBlock(readSrcFile('04-desktop-shell.js'), 'withQuietProgress'),
-    '({ PS_UTF8_OUTPUT_PREAMBLE, withQuietProgress })',
-  ].join('\n');
-  const { PS_UTF8_OUTPUT_PREAMBLE: pre, withQuietProgress } = vm.runInNewContext(code);
-  assert.ok(pre.length > 40 && !/[\r\n]/.test(pre), '前导非空且是单行');
-  assert.match(pre, /\[Text\.UTF8Encoding\]::new\(\$false\)/, '必须是无 BOM 的 UTF8Encoding($false)');
-  assert.ok(!/\[Text\.Encoding\]::UTF8/.test(pre), '[Text.Encoding]::UTF8 带 BOM,会污染首行');
-  assert.match(pre, /^try\{.*\}catch\{\};/, '设置失败要被 try/catch 吞掉(退回修前行为,不让脚本因此报错)');
-  assert.match(pre, /\$OutputEncoding=\[Console\]::OutputEncoding;$/);
-  assert.ok(!/ProgressPreference/.test(pre), '前导里不碰 ProgressPreference(S8 的 doesNotMatch 靠它判「豁免脚本没被前置语句」)');
-
-  const out = withQuietProgress('Write-Output hi');
-  assert.equal(out, pre + "$ProgressPreference='SilentlyContinue'; Write-Output hi", '前导 + 静音进度条同一行');
-  const multi = withQuietProgress('Write-Output 1\nWrite-Output 2');
-  assert.equal(multi.split('\n').length, 2, '不加换行:用户脚本的行号不漂');
-  for (const exempt of ['param($x)\nWrite-Output $x', 'using namespace System\nWrite-Output 1', '#requires -Version 5\nWrite-Output 1',
-    '<#\n.SYNOPSIS\n help\n#>\n[CmdletBinding()]\nparam($x)\nWrite-Output $x']) {
-    assert.equal(withQuietProgress(exempt), exempt, '第一条语句必须是 param/using/#requires/[CmdletBinding] 的脚本一个字都不能动');
-  }
-
-  // shell_start:后台命令的 -EncodedCommand 脚本头 / 交互式的 -NoExit -Command 都带前导。
-  const shell = functionBlock(readSrcFile('11-native-tools.js'), 'shellStart');
-  assert.match(shell, /const script = PS_UTF8_OUTPUT_PREAMBLE \+ "\$ErrorActionPreference = 'Stop'\\n/, '后台命令:前导接在第一行同一行,不加换行');
-  assert.match(shell, /launchArgs\.push\('-NoExit', '-Command', PS_UTF8_OUTPUT_PREAMBLE\)/, '交互式:-NoExit -Command 前导');
-  assert.match(shell, /launchArgs\.push\('-NonInteractive'\)/, '管道输入绕过 PSReadLine,交给 ConsoleHost 执行');
-  assert.ok(!/-NoExit['"],\s*['"]-EncodedCommand/.test(shell), '交互式不能用 -EncodedCommand(会往 stderr 写 CLIXML 进度对象)');
-});
-
-const havePowerShell = process.platform === 'win32' && (() => {
-  try { return cp.spawnSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', 'exit 0'], { windowsHide: true, timeout: 30000 }).status === 0; } catch { return false; }
-})();
-
-test('[E5] 源头编码:powershell_run / script_run / shell_start 的中文输出与中文文件名不再变成 ?', { skip: havePowerShell ? false : '仅 Windows 且有 powershell.exe' }, async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-console-enc-'));
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'data');
-  process.env.RUYI_HOME = path.join(root, 'data');
-  const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-  const ws = path.join(root, 'ws');
-  fs.mkdirSync(ws, { recursive: true });
-  const fileName = '如意中文名-测试文件.txt';
-  fs.writeFileSync(path.join(ws, fileName), 'x');
-  const ctx = () => ({ config: { permissionMode: 'default' }, session: { id: 's', cwd: ws } });
-  // 脚本自带中文字面量(UTF-8 + BOM 落盘,PS 按 UTF-8 读,输入侧没问题);输出走五条路:
-  // Write-Output / Write-Host / 列目录(中文文件名)/ 原生 cmd(它按控制台代码页写)/ stderr。
-  const script = [
-    "Write-Output '中文输出'",
-    "Write-Host '宿主输出'",
-    'Get-ChildItem -Name',
-    'cmd /c dir /b',
-    "[Console]::Error.WriteLine('错误输出')",
-  ].join('\n');
-  const check = (label, out, err) => {
-    const all = String(out) + '\n' + String(err);
-    for (const want of ['中文输出', '宿主输出']) assert.ok(String(out).includes(want), `${label}: stdout 缺 ${want};got ${JSON.stringify(out)}`);
-    assert.ok(String(err).includes('错误输出'), `${label}: stderr 缺 错误输出;got ${JSON.stringify(err)}`);
-    const withName = String(out).split('\n').filter(l => l.includes(fileName)).length;
-    assert.ok(withName >= 2, `${label}: Get-ChildItem 与 cmd dir 都应列出中文文件名(出现 ${withName} 次);got ${JSON.stringify(out)}`);
-    assert.ok(!all.includes('?'), `${label}: 输出里不应有 ?(代码页有损编码的痕迹);got ${JSON.stringify(all)}`);
-    assert.ok(!all.includes('�'), `${label}: 输出里不应有替换符;got ${JSON.stringify(all)}`);
-  };
-  try {
-    const rp = await srv.toolCall('powershell_run', { command: script, cwd: ws }, ctx());
-    assert.equal(rp.ok, true, 'powershell_run: ' + JSON.stringify(rp).slice(0, 400));
-    check('powershell_run', rp.stdout, rp.stderr);
-
-    const rs = await srv.toolCall('script_run', { language: 'powershell', code: script, cwd: ws }, ctx());
-    assert.equal(rs.ok, true, 'script_run: ' + JSON.stringify(rs).slice(0, 400));
-    check('script_run', rs.stdout, rs.stderr);
-
-    // shell_start 的后台命令:两条流合在一个 output 里。
-    const st = await srv.toolCall('shell_start', { command: script, shellId: 'e5enc', cwd: ws }, ctx());
-    assert.equal(st.ok, true, 'shell_start: ' + JSON.stringify(st).slice(0, 400));
-    let poll;
-    for (let i = 0; i < 100; i++) {
-      poll = await srv.toolCall('shell_poll', { shellId: 'e5enc' }, ctx());
-      if (poll.running === false) break;
-      await new Promise(r => setTimeout(r, 300));
-    }
-    assert.equal(poll.running, false, 'shell_start 的后台命令应已结束: ' + JSON.stringify(poll).slice(0, 400));
-    check('shell_start', poll.output, poll.output);
-
-    // 交互式 shell(shell_start 不带 command → -NoExit -Command 前导,再读 stdin):输入侧中文已由 shellInputForPowerShell 转成 ASCII,
-    // 这里验的是输出侧。stderr 与 stdout 合在 output 里,提示符里的路径是纯 ASCII。
-    const si = await srv.toolCall('shell_start', { shellId: 'e5int', cwd: ws }, ctx());
-    assert.equal(si.ok, true, 'shell_start(interactive): ' + JSON.stringify(si).slice(0, 400));
-    const sent = await srv.toolCall('shell_send', { shellId: 'e5int', input: script }, ctx());
-    assert.equal(sent.ok, true, 'shell_send: ' + JSON.stringify(sent).slice(0, 400));
-    let seen = String(sent.output || '');
-    for (let i = 0; i < 50 && !seen.includes('错误输出'); i++) {
-      await new Promise(r => setTimeout(r, 300));
-      const more = await srv.toolCall('shell_poll', { shellId: 'e5int', cursor: 0 }, ctx());
-      seen = String(more.output || '');
-    }
-    check('shell_send(interactive)', seen, seen);
-  } finally {
-    try { await srv.toolCall('shell_kill', { shellId: 'e5int' }, ctx()); } catch { /* 已结束 */ }
-    try { await srv.toolCall('shell_kill', { shellId: 'e5enc' }, ctx()); } catch { /* 已结束 */ }
-    try { fs.rmSync(ws, { recursive: true, force: true }); } catch { /* 清理尽力而为 */ }
-  }
+  assert.ok(shell.includes("new StringDecoder('utf8')"));
+  assert.ok(shell.includes('bindMacShellProtocol(sess)'));
+  assert.ok(!shell.includes('powershell.exe'));
 });

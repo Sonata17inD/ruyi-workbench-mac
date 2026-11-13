@@ -825,7 +825,7 @@ async function runSubAgentCoreBody({ parentSession, provider, config, task, disp
     lastStreamActivityEventAt = now;
     onEvent({ type: 'subagent_progress', subagentId, note: '模型流式响应中', noteCode: 'streaming' });
   };
-  // A3: 工具执行心跳 —— 子代理 await 长工具(>watchdog idle 上限的 powershell_run/script_run 等)期间,
+  // A3: 工具执行心跳 —— 子代理 await 长工具(>watchdog idle 上限的 shell_run/script_run 等)期间,
   // 除 tool_use/tool_result 外不发任何事件,会被节点级/工作流级看门狗误判卡死而 abort。
   // 工具执行(含资源租约等待)期间以 streamActivityEventMs 节流发 progress 事件刷新看门狗时钟;一执行完立即停。
   const startToolBeat = () => {

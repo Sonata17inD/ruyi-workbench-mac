@@ -92,8 +92,8 @@ describe('prompt-queue 纯函数', () => {
     const { bulkAllowCandidates } = await load();
     const rows = [
       perm('p1', 's'), perm('p2', 's'),
-      { id: 'x1', type: 'permission', payload: { toolName: 'powershell_run', tier: 'exec' } },
-      { id: 'x2', type: 'permission', payload: { toolName: 'powershell_run', tier: 'exec' } },
+      { id: 'x1', type: 'permission', payload: { toolName: 'shell_run', tier: 'exec' } },
+      { id: 'x2', type: 'permission', payload: { toolName: 'shell_run', tier: 'exec' } },
       { id: 'r1', type: 'permission', payload: { toolName: 'file_read', tier: 'read' } },
       { id: 'q1', type: 'question', payload: {} },
     ];

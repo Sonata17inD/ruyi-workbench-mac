@@ -1442,7 +1442,7 @@ function canonicalToolInvokeCall(tc) {
   return { ...tc, rawArgs: JSON.stringify(args), proxyRepair: repair };
 }
 
-// 61-B2:代理档低报(tool_invoke_read 去叫 exec 档的 powershell_run)时,在入批处改写成目标档的代理 —— 只升不降。
+// 61-B2:代理档低报(tool_invoke_read 去叫 exec 档的 shell_run)时,在入批处改写成目标档的代理 —— 只升不降。
 // 改写发生在权限闸之前,等价于模型一次就选对:闸照常按改写后的代理档(= 目标真实档)判,不多放一个调用;
 // 12 invokeAdaptiveMcpTool 的 tier-mismatch 检查留作纵深防御。只在模型服务商回合做:MCP / CLI 路径里审批已在 CLI 侧按
 // 低档代理名发生,子进程里升档就是提权,那边只回错误与正确代理名。桥接目标按【本次入参】定档(与 12 的重校同口径)。
@@ -2299,7 +2299,7 @@ async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, prov
   const toolHeartbeatMs = Math.max(250, Number(process.env.WCW_TOOL_HEARTBEAT_MS)
     || Math.min(15000, Math.max(1000, Math.floor(idleLimitMs / 3))));
   // shell_poll:waitMs 长轮询(≤30s)循环里看 ctx.signal,必须可被插话 / 停止打断,否则排队的插话要等满 30s。
-  const INTERRUPTIBLE_NATIVE_TOOLS = new Set(['shell_run', 'powershell_run', 'script_run', 'shell_poll', ...(process.platform === 'darwin' ? ['shell_send'] : [])]);
+  const INTERRUPTIBLE_NATIVE_TOOLS = new Set(['shell_run', 'script_run', 'shell_poll', ...(process.platform === 'darwin' ? ['shell_send'] : [])]);
   const awaitProviderTool = async (tc, runner, interruptible = false) => {
     const startedAt = Date.now();
     const toolAbort = interruptible ? new AbortController() : null;
@@ -3571,7 +3571,7 @@ async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, prov
                     // mainTurn:会话自己的主回合标记(08 子代理、MCP 子进程、/api/tools 都不带)。只写本会话旁车的工具(C2 scratchpad_write)
                     // 据此 fail-closed;代理 tool_invoke_* 把同一个 ctx 原样转给目标(12 invokeAdaptiveMcpTool)。
                     signal => toolCall(tc.name, args, { sessionId: session.id, turnSeq: session.turnSeq, session, config, workingDir, signal, mainTurn: true, toolCallId: tc.id, onBridgedInvocationAttempt, desktopExecution }),
-                    // 审计 N1:tool_invoke_* 代理的目标是 powershell_run/script_run 时同样可被 steer/stop 中断(信号经 ctx 一路转发到目标)。
+                    // 审计 N1:tool_invoke_* 代理的目标是 shell_run/script_run 时同样可被 steer/stop 中断(信号经 ctx 一路转发到目标)。
                     INTERRUPTIBLE_NATIVE_TOOLS.has(tc.name) || (tc.name.startsWith('tool_invoke_') && INTERRUPTIBLE_NATIVE_TOOLS.has(String(args && args.name || ''))),
                   ); // P3-4: workingDir 单一真源(skill_read 优先用它)
                 }

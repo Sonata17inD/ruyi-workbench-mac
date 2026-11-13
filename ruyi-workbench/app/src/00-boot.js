@@ -189,7 +189,7 @@ Object.assign(process.env, platformRuntimeEnvironment(process.env));
 const BUNDLED_PYTHON_RUNTIME = exposeBundledPythonRuntime();
 
 // 随包 ripgrep(app/vendor-bin/rg.exe)对模型开的每一个子进程都可见 —— 与上面随包 Python 同一个模具:
-// 进程级 PATH 前置一次,Claude/Kimi CLI、原生 shell_start/powershell_run/script_run、Kimi ACP 终端、
+// 进程级 PATH 前置一次,Claude/Kimi CLI、原生 shell_start/shell_run/script_run、Kimi ACP 终端、
 // 子代理与 MCP stdio 子进程全部继承,不必在十几个 spawn 点各拼一遍 env。修前只有 file_search 快路径
 // 认得它,模型在终端里敲 rg 是 command not found。
 // 更糟的是修前 probeRg 找的是 appRoot()/vendor-bin —— appRoot() 是 server.js 的【上一级】(产品根),
@@ -503,7 +503,6 @@ function safeJsonParse(raw, fallback = null) {
 // 启动本进程的那个终端:RuyiDesktop.exe(CreateNoWindow + 重定向)、Start-Workbench.cmd(Start-Process -WindowStyle Hidden)、
 // 直接 `node server.js serve`(可见控制台,是 node 自己的,子进程不共享)。即便将来有路径让它漏出去,Node 写 TTY 走
 // WriteConsoleW(UTF-16)不受代码页影响,后续子进程输出 UTF-8 也被 ② 正确解码,风险仅限于终端里别的程序的显示编码。
-const PS_UTF8_OUTPUT_PREAMBLE = 'try{[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)}catch{};$OutputEncoding=[Console]::OutputEncoding;';
 let _consoleGbDecoder = null;
 const _consoleUtf8Strict = new TextDecoder('utf-8', { fatal: true });
 function decodeConsoleSegment(buf) {

@@ -64,7 +64,7 @@ test('[E1b] 能被还原执行的形状,原始入参里的命令仍在高风险�
   // 原始形状里的命令都扫得到;更深的套娃不还原(照旧被拒),不能出现「闸看不见、却被执行」。
   const cmd = { command: 'shutdown /s /t 0' };
   const wrap = (inner, n) => { let x = inner; for (let i = 0; i < n; i += 1) x = { name: 'tool_invoke_exec', arguments: x }; return x; };
-  const canonical = { name: 'powershell_run', arguments: cmd };
+  const canonical = { name: 'shell_run', arguments: cmd };
   assert.ok(srv.stewardToolPermanentlyExempt('tool_invoke_exec', canonical), '正统形状本身扫得到(基线)');
   const shapes = [
     wrap(canonical, 1), wrap(canonical, 2),
@@ -72,7 +72,7 @@ test('[E1b] 能被还原执行的形状,原始入参里的命令仍在高风险�
   ];
   for (const raw of shapes) {
     const r = H.toolInvokeEnvelopeRepair(raw);
-    assert.equal(r.args.name, 'powershell_run', JSON.stringify(raw));
+    assert.equal(r.args.name, 'shell_run', JSON.stringify(raw));
     assert.ok(srv.stewardToolPermanentlyExempt('tool_invoke_exec', raw), `还原前的原始入参也扫得到:${JSON.stringify(raw)}`);
   }
   // 再深一层就不还原:目标仍是代理名,分发点按控制面拒绝
@@ -135,8 +135,8 @@ test('[E5] 回合账按还原后的真实目标记', () => {
   const t = H.unwrapToolInvokeCall({ name: 'tool_invoke_exec', input: { arguments: { name: 'script_run', arguments: { language: 'node', code: '1' } } } });
   assert.equal(t.name, 'script_run');
   assert.deepEqual(t.input, { language: 'node', code: '1' });
-  const s = H.unwrapToolInvokeCall({ name: 'tool_invoke_exec', input: { name: 'tool_invoke_exec', arguments: { name: 'powershell_run', arguments: { command: 'dir' } } } });
-  assert.equal(s.name, 'powershell_run');
+  const s = H.unwrapToolInvokeCall({ name: 'tool_invoke_exec', input: { name: 'tool_invoke_exec', arguments: { name: 'shell_run', arguments: { command: 'dir' } } } });
+  assert.equal(s.name, 'shell_run');
 });
 
 test('[E6] 分包认得实时信息类说法', () => {

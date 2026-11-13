@@ -133,8 +133,8 @@ function adaptiveMetaToolSchemas(includeInvoke = false) {
 // 审计 N4:allowCommandTools / allowDesktopTools 不只是「不 offer」—— 分发点也按同一判据拒绝(bypass/auto 下 gate 恒 allow,
 // 光藏 schema 拦不住模型直接吐出的 script_run)。offer 面(buildOpenAiTools)与分发面(09 主循环 / 08 子代理 / 12 toolCall)共用本函数。
 // 返回空串 = 放行;否则是给模型看的中文原因。desktopOverride 语义同 buildOpenAiTools(null = 跟随全局)。
-const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'powershell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
-const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot', 'keyboard_send_keys']);
+const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
+const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot']);
 // 桌面闸的唯一判法(原生与桥接共用):会话级覆盖 desktopOverride 非 null 时以它为准,否则跟随全局 allowDesktopTools。
 function desktopToolsDisabledReason(cfg, desktopOverride) {
   const allowDesk = desktopOverride == null ? (cfg || {}).allowDesktopTools !== false : desktopOverride === true;
@@ -156,9 +156,6 @@ async function policyDesktopOverrideFor(ctx) {
 
 function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
   const cfg = config || {};
-  if (process.platform === 'darwin' && (name === 'powershell_run' || name === 'keyboard_send_keys')) {
-    return 'platform.unsupported: 此工具依赖 Windows PowerShell，尚无 Mac 实现';
-  }
   if (NATIVE_COMMAND_TOOL_NAMES.has(name) && cfg.allowCommandTools === false) return 'allowCommandTools=false';
   if (NATIVE_DESKTOP_TOOL_NAMES.has(name)) return desktopToolsDisabledReason(cfg, desktopOverride);
   return '';
@@ -171,7 +168,7 @@ function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
 // offer 面(09 目录 / 08 子代理 / 11 MCP 子进程目录 / 07 createToolLoadingState)与分发面(09 / 08 / 12 代理 / 13d CLI 权限桥)
 // 都调它;CLI 直挂 ACC 的那一路(01 addExternalMcpServersToMap / syncMcpServersToClaude)按同一张表算出 ACC_HIDE_TOOLS 交给
 // ACC 自己在注册表里摘掉。
-//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 powershell_run / script_run / shell_* 同一类能力。
+//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 shell_run / script_run / shell_* 同一类能力。
 //     list_processes 只读进程表、不执行任何东西,不收。
 //   桌面族(随 allowDesktopTools 与会话级 desktopTools 覆盖,判法与 NATIVE_DESKTOP_TOOL_NAMES 是同一个 desktopToolsDisabledReason):
 //     按「作用于真实桌面」归类 ——
@@ -465,7 +462,7 @@ const NATIVE_TOOL_TIER = {
   file_write: 'edit', file_edit: 'edit', file_delete: 'edit', // v0.8-S4a: delete is journaled (revertible) → edit tier
   // v1.1-W2 (T1): 移动/复制/压缩/解压/下载 —— 均落盘且经检查点(可撤销) → edit tier。
   file_move: 'edit', file_copy: 'edit', archive_zip: 'edit', archive_unzip: 'edit', http_download: 'edit',
-  shell_run: 'exec', powershell_run: 'exec', script_run: 'exec', keyboard_send_keys: 'exec', browser_open: 'exec', office_open: 'exec',
+  shell_run: 'exec', script_run: 'exec', browser_open: 'exec', office_open: 'exec',
   desktop_screenshot: 'exec', http_request: 'exec',
   // 127-114c③(26 号文 §3):读本地音频后出网转写 —— 用户文件内容离开本进程,与「文件出网」同档 exec。
   audio_transcribe: 'exec',
@@ -589,10 +586,10 @@ const TOOL_PACK_DESCRIPTIONS = Object.freeze({
 // 2026-10 起手工具:模型服务商回合的按需装载里,不论这句话分到哪些包,第一发就带上的几个原生工具(相当于给 core 扩一小圈;
 // 不改 core 包本身 —— core 同时决定 Claude CLI 的 MCP 工具清单,而 CLI 有自己的 Read/WebSearch/WebFetch/Bash)。
 // 依据(本机 4 天真实调用):联网 web_search + web_fetch 占全部工具调用的六成多(147/230),3 个会话里 2 个用到;
-// 命令行 3 个会话都用到(powershell_run 27 次、script_run 9 次)。开局没装、中途补装时,提供方的前缀缓存会整段失效
+// 命令行 3 个会话都用到(shell_run 27 次、script_run 9 次)。开局没装、中途补装时,提供方的前缀缓存会整段失效
 // (实测命中率 97%→3%、94%→8%,下一发几乎整段上下文按未缓存计);三个合计约 630 token,每发基本都命中缓存,比中途断一次便宜。
 // file_read 不进:分包对文件类说法的召回本就高(文件/目录/路径/代码/项目/查看/搜索…),tool-loading e2e 也用它钉「按需注入」。
-const PROVIDER_STARTER_TOOLS = Object.freeze(['web_search', 'web_fetch', process.platform === 'darwin' ? 'shell_run' : 'powershell_run']);
+const PROVIDER_STARTER_TOOLS = Object.freeze(['web_search', 'web_fetch', 'shell_run']);
 const NATIVE_TOOL_PACKS = Object.freeze({
   threads_search: 'memory', thread_read: 'memory',
   permission_prompt: 'core', request_user_input: 'core', todo_write: 'core', mission_update: 'core',
@@ -617,9 +614,9 @@ const NATIVE_TOOL_PACKS = Object.freeze({
   checkpoint_list: 'files_write',
   dependency_inventory: 'code', code_review_scan: 'code', frontend_audit: 'code', claude_md_audit: 'code', docs_search: 'code', codebase_symbol_search: 'code', debug_hypothesis: 'code', data_profile: 'code',
   git_status: 'code', git_diff: 'code', git_log: 'code', git_commit: 'code',
-  shell_run: 'shell', powershell_run: 'shell', script_run: 'shell', shell_start: 'shell', shell_send: 'shell', shell_poll: 'shell', shell_kill: 'shell', shell_list: 'shell',
+  shell_run: 'shell', script_run: 'shell', shell_start: 'shell', shell_send: 'shell', shell_poll: 'shell', shell_kill: 'shell', shell_list: 'shell',
   web_search: 'web', web_fetch: 'web', http_request: 'web', http_download: 'web', browser_open: 'web',
-  desktop_screenshot: 'desktop', keyboard_send_keys: 'desktop', office_open: 'office',
+  desktop_screenshot: 'desktop', office_open: 'office',
   archive_zip: 'archive', archive_unzip: 'archive', spawn_agent: 'agents', orchestrate_agents: 'agents', wait_agents: 'agents', agent_result: 'agents', send_to_agent: 'agents', skill_read: 'skills',
   playbook_list: 'skills', playbook_read: 'skills', skill_list: 'skills', // 61 号文 C1:不进 PROVIDER_STARTER_TOOLS(起手工具影响前缀缓存),说到 Playbook/技能时 classifyToolPacks 带出
   mcp_list: 'integrations', mcp_configure: 'integrations',
@@ -688,7 +685,6 @@ const TOOL_RETRIEVAL_HINTS = Object.freeze({
   git_status: { capabilities: ['git.status'], aliases: ['查看代码变更', '仓库状态', 'working tree status'] },
   git_diff: { capabilities: ['git.diff'], aliases: ['查看差异', '代码改动', 'show changes diff'] },
   shell_run: { capabilities: ['shell.exec'], aliases: ['运行命令', '执行 bash', 'run command'] },
-  powershell_run: { capabilities: ['shell.powershell.execute'], aliases: ['运行命令', '执行 powershell', 'run command'] },
   script_run: { capabilities: ['shell.script.execute'], aliases: ['运行脚本', '执行脚本', 'run script'] },
   web_search: { capabilities: ['web.search'], aliases: ['搜索互联网', '联网搜索', 'search the web'] },
   web_fetch: { capabilities: ['web.page.fetch'], aliases: ['抓取网页', '读取网页', 'fetch web page'] },
@@ -696,7 +692,6 @@ const TOOL_RETRIEVAL_HINTS = Object.freeze({
   http_download: { capabilities: ['network.http.download', 'workspace.file.write'], aliases: ['下载文件', '从网址下载', 'download url to file'] },
   desktop_screenshot: { capabilities: ['desktop.screen.capture'], aliases: ['桌面截图', '屏幕截图', 'take screenshot'] },
   // 下面两件和桥接桌面服务器的 type_text/hotkey、browser_open 是同一件事;给中文叫法,中文检索时与桥接的同分、按原生优先排在前面。
-  keyboard_send_keys: { capabilities: ['desktop.keyboard.send'], aliases: ['键盘输入', '发送按键', '按快捷键', 'send keystrokes'] },
   browser_open: { capabilities: ['browser.url.open'], aliases: ['打开网页', '浏览器打开', '打开网址', 'open url in browser'] },
   office_open: { capabilities: ['office.document.open'], aliases: ['打开办公文档', '打开 excel word ppt pdf', 'open office document'] },
   orchestrate_agents: { capabilities: ['agent.workflow.orchestrate'], aliases: ['编排多个代理', '多代理工作流', 'orchestrate agents'] },
@@ -1065,7 +1060,7 @@ function withToolArgSkeletons(result, catalog, opts) {
 const BRIDGED_SHADOWED_BY_NATIVE = Object.freeze({
   read_file: 'file_read', write_file: 'file_write', edit_file: 'file_edit',
   delete_file: 'file_delete', move_file: 'file_move', copy_file: 'file_copy',
-  list_directory: 'file_list', fetch: 'web_fetch', run_command: process.platform === 'darwin' ? 'shell_run' : 'powershell_run',
+  list_directory: 'file_list', fetch: 'web_fetch', run_command: 'shell_run',
 });
 function bridgedShadowNative(item, nativeNames) {
   if (!item || !item.bridged) return '';
@@ -1089,7 +1084,7 @@ function withShadowedBridgeHints(result, catalog) {
   return { ...result, matches: tagged.filter(m => !m || !m.preferred).concat(tagged.filter(m => m && m.preferred)) };
 }
 // 61-A4:零命中不再只回一张空表 —— 模型分不清「措辞没对上」和「真没有这类工具」,于是换着说法连搜(真机搜「撤销/回滚」)。
-const TOOL_SEARCH_EMPTY_NOTE = 'No dedicated tool matched. Try other capability words (Chinese or English) or browse with list_tools {pack}; if nothing fits, do it with the general tools you already have (e.g. powershell_run / script_run when available) or tell the user it is not supported.';
+const TOOL_SEARCH_EMPTY_NOTE = 'No dedicated tool matched. Try other capability words (Chinese or English) or browse with list_tools {pack}; if nothing fits, do it with the general tools you already have (e.g. shell_run / script_run when available) or tell the user it is not supported.';
 function searchToolCatalog(catalog, args, config, opts) {
   const q = normalizeToolSearchText(args && args.query || '');
   // New media/background entry points must remain discoverable when legacy retrieval is selected.
@@ -1840,7 +1835,7 @@ Object.assign(ProviderWireHooks, { makeId, redact, repairProviderHistoryPairing,
 // (session.actionAudit + providerHistory 原消息),provider model view 投影为紧凑 envelope。
 // 投影纪律:只投影 status=completed 且 sha256 与原始 arguments 可校验的动作;失败/中断/待审批不瘦身;
 // 只加/换 arguments 字段,tool_call id/type/function.name 原样保留(pairing 铁律不破坏)。
-const ACTION_VIEW_TOOLS = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download', 'script_run', 'shell_run', 'powershell_run', 'tool_invoke_edit', 'tool_invoke_exec']);
+const ACTION_VIEW_TOOLS = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download', 'script_run', 'shell_run', 'tool_invoke_edit', 'tool_invoke_exec']);
 const ACTION_VIEW_MIN_CHARS = 512;
 
 function actionTargetMeta(toolName, args) {
@@ -1850,7 +1845,7 @@ function actionTargetMeta(toolName, args) {
   if (/^(script_run|file_)/.test(name) && pathKey) {
     return { kind: 'path', basename: path.win32.basename(String(pathKey)) }; // win32:模型给的是 Windows 路径,\ 与 / 都认,非 Windows 主机上也只取尾段
   }
-  if (name === 'powershell_run' || name === 'shell_run') {
+  if (name === 'shell_run') {
     const cmd = String(input.command || '');
     return { kind: 'cmd', basename: cmd.slice(0, 40) || (name === 'shell_run' ? 'shell' : 'powershell') };
   }

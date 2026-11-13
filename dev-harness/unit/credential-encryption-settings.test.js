@@ -9,7 +9,7 @@ const { loadServerInternals } = require('../lib/server-internals');
 const TEMP_BASE = path.resolve(os.tmpdir());
 const initial = () => ({ privacyModeV1: 'off', stewardEnabledV1: false, schedulerEnabledV1: false,
   providers: [{ id: 'fixture', type: 'openai-compat', model: 'fixture-model', apiKey: 'SYNTHETIC-OPTIN-KEY', baseUrl: 'https://fixture.invalid/v1' }] });
-function setup(t, testPlatform = 'win32') {
+function setup(t, testPlatform = 'darwin') {
   const root = fs.mkdtempSync(path.join(TEMP_BASE, 'ruyi-encryption-settings-'));
   Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), path.join(root, 'data')));
   fs.mkdirSync(path.join(root, 'data'), { recursive: true });

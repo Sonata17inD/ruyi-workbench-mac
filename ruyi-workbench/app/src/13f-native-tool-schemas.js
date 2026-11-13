@@ -144,38 +144,25 @@ const MCP_TOOLS = [
   },
   {
     name: 'shell_run',
-    description: 'One-shot platform shell (macOS bash, Windows PowerShell). No profiles or stdin. Explicit language overrides default. Bounded output.',
+    description: 'One-shot platform shell (macOS bash). No profiles or stdin. Explicit language overrides default. Bounded output.',
     inputSchema: { type: 'object', properties: {
       command: { type: 'string', description: 'command text' },
-      language: { type: 'string', enum: process.platform === 'darwin' ? ['bash'] : ['bash', 'powershell'], description: 'default platform shell' },
+      language: { type: 'string', enum: ['bash'], description: 'default platform shell' },
       cwd: { type: 'string', description: 'Conversation cwd, must exist' },
       timeoutMs: { type: 'number', description: '1000..1800000 ms, default 60000' },
     }, required: ['command'] },
   },
-  {
-    name: 'powershell_run',
-    description: 'Windows PowerShell, closed stdin, prompts fail fast. Timeout 60000ms (1000..1800000). Returns code/timedOut/error/hint and head/tail stdout/stderr with omitted counts. Long jobs use shell_start.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        command: { type: 'string', description: 'command text' },
-        cwd: { type: 'string', description: 'default: conversation folder; must exist' },
-        timeoutMs: { type: 'number', description: 'ms, default 60000' },
-      },
-      required: ['command'],
-    },
-  },
   // v0.8-S2 shell session族 — a persistent PowerShell terminal that keeps working directory, variables,
   // and background processes alive across calls. AVAILABLE ONLY on the native provider engine: session
   // state lives in the serve process. Under the Claude CLI engine (tools run in a one-shot MCP subprocess)
-  // these return a guiding error — use powershell_run for one-shot commands there.
+  // these return a guiding error — use shell_run for one-shot commands there.
   {
     name: 'shell_start',
-    description: 'Provider only, non-TTY. Default macOS bash or Windows PowerShell. With command, run a finite background job (poll/kill). Otherwise retain cwd/variables for shell_send. Mac commands have closed stdin and private completion. Jobs survive turns, stop with server.',
+    description: 'Provider only, non-TTY. Default macOS bash. With command, run a finite background job (poll/kill). Otherwise retain cwd/variables for shell_send. Mac commands have closed stdin and private completion. Jobs survive turns, stop with server.',
     inputSchema: {
       type: 'object',
       properties: {
-        language: { type: 'string', enum: process.platform === 'darwin' ? ['bash'] : ['bash', 'powershell'], description: 'Default bash on macOS, powershell on Windows.' },
+        language: { type: 'string', enum: ['bash'], description: 'Default bash on macOS.' },
         cwd: { type: 'string', description: 'default: conversation folder' },
         name: { type: 'string', description: 'label' },
         command: { type: 'string', description: 'Finite background command. Poll until running:false. This mode rejects input.' },
@@ -232,7 +219,7 @@ const MCP_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        language: { type: 'string', enum: process.platform === 'darwin' ? ['bash', 'python', 'node', 'javascript'] : ['bash', 'powershell', 'python', 'node', 'javascript'], description: 'default bash on macOS, powershell on Windows' },
+        language: { type: 'string', enum: ['bash', 'python', 'node', 'javascript'], description: 'default bash on macOS' },
         code: { type: 'string', description: 'script source' },
         cwd: { type: 'string', description: 'default: conversation folder; must exist' },
         timeoutMs: { type: 'number', description: 'ms, default 60000' },
@@ -501,15 +488,6 @@ const MCP_TOOLS = [
     inputSchema: {
       type: 'object',
       properties: { outputPath: { type: 'string', description: 'PNG path; default: app generated folder' }, timeoutMs: { type: 'number', description: 'ms' } },
-    },
-  },
-  {
-    name: 'keyboard_send_keys',
-    description: 'Send keystrokes to the active Windows application. CAUTION: keys go to whatever window currently has focus; SendKeys meta characters + ^ % ~ ( ) { } [ ] are live modifiers (e.g. ^s = Ctrl+S, %{F4} = Alt+F4) unless literal:true (plain text). Confirm the focus target before sending, and prefer explicit app control over raw keys when possible.',
-    inputSchema: {
-      type: 'object',
-      properties: { keys: { type: 'string', description: 'SendKeys string' }, literal: { type: 'boolean', description: 'true = type as plain text' }, delayMs: { type: 'number', description: 'ms before send' }, timeoutMs: { type: 'number', description: 'ms' } },
-      required: ['keys'],
     },
   },
   {

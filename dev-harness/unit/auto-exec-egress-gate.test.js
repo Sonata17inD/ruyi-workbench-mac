@@ -9,7 +9,7 @@
 //   · 网络外发与读数据根密钥:另立两张只管「智能自动停问」的表(stewardAutoAskSensitiveKind),不进豁免组 —— unit/steward-exempt.test.js 钉着
 //     「纯 GET 的 curl / Invoke-WebRequest 不算对外发送(豁免)」;管家(13l)对这一类不代批。
 // 误伤纪律:git status / diff / log、npm test、node script.js、读本地文件等日常开发动作必须仍然放行。
-//   [A] 绕过写法全部在 auto 下 ask(powershell_run 与 script_run 两种入参形状)
+//   [A] 绕过写法全部在 auto 下 ask(shell_run 与 script_run 两种入参形状)
 //   [B] 日常开发命令全部仍 allow
 //   [C] 其余档位口径不变(bypass allow、default / acceptEdits exec ask、plan block);编排类工具的任务描述文字不扫
 //   [D] 新补的删除 / 推送 / 系统类落进原有类别与底线标记;豁免判据对「纯 GET」仍判不豁免(既有口径不动)
@@ -39,7 +39,7 @@ catch (e) {
 }
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 
-const ps = command => ['powershell_run', { command }];
+const ps = command => ['shell_run', { command }];
 const script = (code, language = 'python') => ['script_run', { code, language }];
 const gateOf = ([tool, input], mode = 'auto') => I.nativeToolGate(mode, 'exec', tool, input);
 

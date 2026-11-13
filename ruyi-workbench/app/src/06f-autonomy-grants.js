@@ -40,11 +40,11 @@ const CLI_TOOL_TIER = {
   Edit: 'edit', Write: 'edit', MultiEdit: 'edit', NotebookEdit: 'edit',
   Bash: 'exec',
 };
-// 对抗轮 P1(field-shadow)防线:可签 exec 授权的工具白名单 + 各自【真正被执行的命令字段】。powershell_run 执行 args.command
+// 对抗轮 P1(field-shadow)防线:可签 exec 授权的工具白名单 + 各自【真正被执行的命令字段】。shell_run 执行 args.command
 //(runPowerShell(args.command));Claude Bash 执行 args.command。二者命令可前缀化且校验字段=执行字段。script_run 执行 args.code
 //(整段脚本体)、shell_*/git_commit/http_request/office_open/browser_open/keyboard_send_keys/desktop_screenshot 等语义不符 → 不入表。
-const GRANT_EXEC_TOOLS = new Set(['powershell_run', 'Bash']);
-const GRANT_EXEC_CMD_FIELD = { powershell_run: 'command', Bash: 'command' };
+const GRANT_EXEC_TOOLS = new Set(['shell_run', 'Bash']);
+const GRANT_EXEC_CMD_FIELD = { shell_run: 'command', Bash: 'command' };
 // 签发时推断 entrypoint + tier(不信任调用方传入的 tier;消耗点再按 entrypoint 重算)。未知工具 → null(拒绝签发,
 // 无法精确 gate 的工具不给授权)。禁 spawn_agent/orchestrate_agents(红线#4:防子代理递归放大授权)。
 function grantIssueTierInfo(tool) {
@@ -56,7 +56,7 @@ function grantIssueTierInfo(tool) {
   if (!info) return null;
   // 对抗轮 P1(field-shadow):exec 授权只允许【命令可前缀化 且 校验字段=执行字段】的工具。script_run 执行 args.code
   // (整段脚本体,非可前缀化命令)、shell_*/git_commit/http_request 等执行字段与 cmdAllow 语义不符 → 一律不可签 exec 授权
-  //(否则「校验 command、执行 code」= 绕过 cmdAllow 的任意 RCE)。仅 powershell_run(native)/Bash(cli)执行 args.command,可签。
+  //(否则「校验 command、执行 code」= 绕过 cmdAllow 的任意 RCE)。仅 shell_run(native)/Bash(cli)执行 args.command,可签。
   if (info.tier === 'exec' && !GRANT_EXEC_TOOLS.has(t)) return null;
   return info;
 }
@@ -85,8 +85,8 @@ function resolveToolPermissionContext(name, args, entrypoint) {
     // 补齐后:consumeGrant 对每条路径(含数组源)都验 grantRoot/denylist/glob → 授权书对这些工具既生效又受约束。
     for (const k of ['path', 'source', 'destination', 'dest', 'output', 'output_path', 'root', 'from', 'to', 'src', 'destDir']) pushPath(input[k]);
     if (Array.isArray(input.paths)) for (const p of input.paths) pushPath(p);
-    // 对抗轮 P1(field-shadow):按【真正被执行的字段】取命令,绝不 OR-merge 多字段 —— powershell_run 只执行 args.command
-    //(见 case 'powershell_run')。未在 GRANT_EXEC_CMD_FIELD 映射的 exec 工具 → cmdArg=null → consumeGrant 恒不命中(fail-closed)。
+    // 对抗轮 P1(field-shadow):按【真正被执行的字段】取命令,绝不 OR-merge 多字段 —— shell_run 只执行 args.command
+    //(见 case 'shell_run')。未在 GRANT_EXEC_CMD_FIELD 映射的 exec 工具 → cmdArg=null → consumeGrant 恒不命中(fail-closed)。
     if (tier === 'exec') { const f = GRANT_EXEC_CMD_FIELD[tool]; cmdArg = f ? String(input[f] || '') : null; }
     if (typeof input.cwd === 'string' && input.cwd.trim()) cwdArg = input.cwd.trim();
   }

@@ -31,11 +31,11 @@ test('[F1] desktop_screenshot 相对 outputPath 按工作区解析:越界相对�
     `报出的路径应是工作区解析的结果;修前是 path.resolve('../escape-shot.png') 落到进程 cwd(${process.cwd()})`);
 });
 
-test('[F1] desktop_screenshot 工作区内的相对 outputPath 不再被判越界(Windows 视图在非 Windows 夹具上报告缺 PowerShell)', { skip: process.platform === 'win32' }, async () => {
+test('[F1] desktop_screenshot 工作区内的相对 outputPath 不再被判越界(非目标平台明确拒绝执行)', { skip: process.platform === 'win32' }, async () => {
   const r = await toolCall('desktop_screenshot', { outputPath: 'shots/inside.png' }, ctx);
   assert.notEqual(r.code, 'not-allowed', `工作区内的相对路径不该被写闸拒(got ${JSON.stringify(r).slice(0, 200)})`);
-  assert.equal(r.code, 'powershell_missing', 'the Windows path guard reaches the screenshot handler after accepting the workspace path');
-  assert.match(String(r.error || ''), /PowerShell/);
+  assert.equal(r.code, 'platform_unsupported', 'path guard accepts the workspace path before platform rejection');
+  assert.equal(r.ok, false);
 });
 
 test('[F1] desktop_screenshot 的 ~ 先展开成家目录再过写闸(家目录在工作区外 → 拒,报展开后的真路径)', async () => {

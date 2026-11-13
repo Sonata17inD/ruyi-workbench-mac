@@ -33,7 +33,6 @@ const TOOL_REQUIRES = {
   git_commit: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
   shell_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   script_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
-  powershell_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   shell_start: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
   desktop_screenshot: { requires: ['desktopCapture'], reason: 'Mac 屏幕捕获尚未就绪，请检查屏幕录制权限和自动化组件' },
 };

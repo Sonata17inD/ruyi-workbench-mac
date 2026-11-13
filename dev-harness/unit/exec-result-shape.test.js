@@ -193,8 +193,8 @@ test('[S5] 超时结果:error + hint + 已产生的部分输出', async () => {
 
 test('[S6] cwd 不存在:明说「工作目录不存在」,不是 spawn ENOENT', async () => {
   const bad = path.join(root, 'no-such-dir');
-  for (const [tool, args] of [['script_run', { language: 'node', code: 'console.log(1)' }], ['powershell_run', { command: 'echo 1' }]]) {
-    const r = await (tool === 'powershell_run' ? psToolCall : srv.toolCall)(tool, { ...args, cwd: bad }, ctx());
+  for (const [tool, args] of [['script_run', { language: 'node', code: 'console.log(1)' }], ['shell_run', { command: 'echo 1' }]]) {
+    const r = await (tool === 'shell_run' ? psToolCall : srv.toolCall)(tool, { ...args, cwd: bad }, ctx());
     assert.equal(r.ok, false, tool);
     assert.match(String(r.error), /工作目录不存在/, tool + ': ' + JSON.stringify(r).slice(0, 200));
     assert.ok(String(r.error).includes(bad), tool);
@@ -210,23 +210,10 @@ test('[S7] python 子进程环境:PYTHONUTF8=1 / PYTHONIOENCODING=utf-8', { skip
   assert.match(r.stdout, /✓ ok/);
 });
 
-test('[S8] PowerShell 一次性运行:-NonInteractive,脚本头静音进度条(powershell_run 与 script_run)', { skip: skipFake }, async () => {
-  process.env.FAKE_PS_MODE = 'argv';
-  for (const [tool, args] of [['powershell_run', { command: 'Write-Output hi' }], ['script_run', { language: 'powershell', code: 'Write-Output hi' }]]) {
-    const r = await psToolCall(tool, { ...args, cwd: ws }, ctx());
-    assert.equal(r.ok, true, tool + ': ' + JSON.stringify(r).slice(0, 300));
-    const seen = JSON.parse(r.stdout);
-    assert.ok(seen.argv.includes('-NonInteractive'), tool + ' argv: ' + seen.argv.join(' '));
-    assert.ok(seen.argv.indexOf('-NonInteractive') < seen.argv.indexOf('-File'), tool);
-    assert.match(seen.script, /\$ProgressPreference='SilentlyContinue'; Write-Output hi/, tool);
-    // 2026-10:UTF-8 输出编码前导在 $ProgressPreference 之前、同一行(脚本以 UTF-8 BOM 开头)。console-output-decoding [E5] 在真 PowerShell 上验效果。
-    assert.match(seen.script, /^﻿?try\{\[Console\]::OutputEncoding=\[Text\.UTF8Encoding\]::new\(\$false\)\}catch\{\};\$OutputEncoding=\[Console\]::OutputEncoding;\$ProgressPreference='SilentlyContinue'; Write-Output hi$/, tool);
-  }
-  // param()/using 开头的脚本不能被前置语句破坏
-  const r2 = await psToolCall('script_run', { language: 'powershell', code: 'param($x)\nWrite-Output $x', cwd: ws }, ctx());
-  assert.doesNotMatch(JSON.parse(r2.stdout).script, /ProgressPreference|OutputEncoding/);
-  const r3 = await psToolCall('script_run', { language: 'powershell', code: '<#\n.SYNOPSIS\n help\n#>\n[CmdletBinding()]\nparam($x)\nWrite-Output $x', cwd: ws }, ctx());
-  assert.doesNotMatch(JSON.parse(r3.stdout).script, /ProgressPreference|OutputEncoding/, '帮助注释在前、param 在后也不能前置语句');
+test('[S8] removed PowerShell execution is rejected', async () => {
+  await assert.rejects(srv.toolCall('powershell_run', { command: 'echo hi' }, ctx()), /Unknown tool/);
+  const result = await srv.toolCall('script_run', { language: 'powershell', code: 'echo hi' }, ctx());
+  assert.equal(result.ok, false);
 });
 
 async function startJob(mode, shellId) {

@@ -34,7 +34,6 @@
         "MAX_BODY_BYTES",
         "MigrationHooks",
         "OVERLAY_ID",
-        "PS_UTF8_OUTPUT_PREAMBLE",
         "RUYI_DATA_DIR_NAME",
         "RUYI_EVENTS",
         "RUYI_EVENT_SUBSCRIBERS",
@@ -436,15 +435,7 @@
         "LocalSecretCrypto",
         "LocalSecretCryptoHooks"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "01-config.js",
@@ -3264,13 +3255,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PS_UTF8_OUTPUT_PREAMBLE",
           "kinds": [
             "read"
           ]
@@ -12293,7 +12277,6 @@
         "SEARCH_JS_DEFAULT_MAX_FILES",
         "SEARCH_MAX_FILE_BYTES_CEILING",
         "SHELL_BUF_MAX",
-        "SHELL_ENCODED_COMMAND_MAX",
         "SHELL_GLOBAL_MAX",
         "SHELL_IDLE_MS",
         "SHELL_OUTPUT_DEFAULT_CHARS",
@@ -12349,8 +12332,6 @@
         "patternMayMatchNonAscii",
         "peekRgProbe",
         "persistBackgroundJob",
-        "powershellMissingOr",
-        "powershellUnavailable",
         "privacyProjectSearch",
         "privacyReadTextWindow",
         "privacySourceActive",
@@ -12390,7 +12371,6 @@
         "shellEndOffset",
         "shellIdValid",
         "shellIdleReaper",
-        "shellInputForPowerShell",
         "shellKill",
         "shellLastLine",
         "shellList",
@@ -12422,13 +12402,6 @@
           "symbol": "cp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "createConsoleLineDecoder",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12504,13 +12477,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PS_UTF8_OUTPUT_PREAMBLE",
           "kinds": [
             "read"
           ]
@@ -13182,13 +13148,6 @@
           ]
         },
         {
-          "provider": "01n-desktop-automation.js",
-          "symbol": "MacDesktopAutomation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02-session-store.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
@@ -13351,20 +13310,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "buildOpenSpawn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildRevealSpawn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
             "call"
@@ -13414,13 +13359,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "REVEAL_OPEN_SAFE_EXTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
           "kinds": [
             "read"
@@ -13436,13 +13374,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -13845,13 +13776,6 @@
           "symbol": "NativeSourceHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "powershellMissingOr",
-          "kinds": [
-            "call"
           ]
         },
         {

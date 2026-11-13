@@ -28,11 +28,11 @@ test('20-F1 report passes only with enough deterministic recoverable failures', 
 test('20-F1 report excludes unrelated log records and surfaces unsafe side effects', () => {
   const report = summarizeFailureEvents([
     { kind: 'turn_end' },
-    row('side_effect_unknown', false, { toolName: 'powershell_run', tier: 'exec' }),
+    row('side_effect_unknown', false, { toolName: 'shell_run', tier: 'exec' }),
   ]);
   assert.equal(report.sampleSize, 1);
   assert.equal(report.sideEffectUnknownCount, 1);
-  assert.equal(report.byTool[0].name, 'powershell_run');
+  assert.equal(report.byTool[0].name, 'shell_run');
 });
 
 test('20-F1 report gates only the newest classifier cohort', () => {

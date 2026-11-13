@@ -228,7 +228,7 @@ function defaultConfig() {
     runtimeBudgetGuardV1: false,
     budgetGuardTurnTokensV1: 0,
     budgetGuardWarnRatioV1: 0.8,
-    // 106 #13a-t: 长命令时间预算 —— 仅作用于 INTERRUPTIBLE_NATIVE_TOOLS(powershell_run/script_run,
+    // 106 #13a-t: 长命令时间预算 —— 仅作用于 INTERRUPTIBLE_NATIVE_TOOLS(shell_run/script_run,
     // 已有 steer 中断与进程树回收路径,不造第二套控制器)。shadow 开关只统计「本应触发」的脱敏
     // 事件(零行为变化,上线前校准阈值用);主动开关 = 软警告(tool_progress 有界告警)+ 硬终态
     // (沿既有取消路径杀树、写合法配对 tool_result、回合继续)。两开关独立、默认关。
@@ -1164,7 +1164,7 @@ function normalizeConfig(raw, opts = {}) {
   // v0.8-S4b: toolAllowRules — {nativeToolName:'allow'} persistent fine-grained allowlist. HARD cleanse:
   //  - value must be exactly 'allow';
   //  - the tool's NATIVE tier must be 'read' or 'edit' — exec/desktop tools are NEVER persistable (a
-  //    persistent auto-allow on powershell_run / a desktop action is exactly the class of blanket grant
+  //    persistent auto-allow on shell_run / a desktop action is exactly the class of blanket grant
   //    this feature must not enable; those get session-scoped allow in the front-end only).
   // Any entry failing either check is dropped silently (a bad rule must never widen permissions).
   {
