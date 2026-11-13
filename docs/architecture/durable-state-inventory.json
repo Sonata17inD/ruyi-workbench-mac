@@ -97,7 +97,7 @@
     {
       "id": "privacy-mapping-v1",
       "pattern": "<data>/privacy-scopes/<sha256(scopeId)>.json",
-      "owner": "03a-privacy-gateway.js",
+      "owner": "../backend/privacy-gateway.cjs",
       "anchor": "'privacy-scopes'",
       "schema": "version 1 authenticated encrypted stable reference map",
       "writePrimitive": "host-injected DurableJsonStore strictRead cache:false quarantine:false; per-scope writes chained and completed before network send",

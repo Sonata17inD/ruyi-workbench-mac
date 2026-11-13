@@ -26,16 +26,12 @@ async function main() {
   const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
   const provider = (config.providers || []).find(item => item.id === config.activeProvider);
   if (!provider || !provider.apiKey || !provider.baseUrl || !provider.model) failure('active_provider_not_supported');
-  const context = vm.createContext({ require, Buffer, URL, AbortController, setTimeout, clearTimeout, ...require('../lib/privacy-primitives').createPrivacyPrimitives() });
-  vm.runInContext(load('04h-provider-http.js') + '\n'
-    + load('04i-provider-anthropic.js') + '\n' + load('04i-provider-wire.js')
-    + '\nProviderWireHooks.makeId = () => "call_" + require("node:crypto").randomBytes(8).toString("hex");'
-    + '\nProviderWireHooks.redact = () => "[redacted]";'
-    // Fixture histories are constructed as complete pairs below; pairing repair is outside this experiment.
-    + '\nProviderWireHooks.repairProviderHistoryToolArgs = () => 0;'
-    + '\nProviderWireHooks.repairProviderHistoryPairing = () => 0;'
-    + '\nthis.probe = { PrivacyCore, providerWireProtocol };', context);
-  const { PrivacyCore: core, providerWireProtocol } = context.probe;
+  const { PrivacyCore: core } = require('../lib/privacy-primitives').createPrivacyPrimitives();
+  const http = require('../../ruyi-workbench/app/backend/provider-http.cjs').createProviderHttp({});
+  const anthropic = require('../../ruyi-workbench/app/backend/provider-anthropic.cjs').createAnthropicProtocol(http);
+  const { providerWireProtocol, ProviderWireHooks } = require('../../ruyi-workbench/app/backend/provider-wire.cjs').createProviderWire({ ...http, ...anthropic });
+  Object.assign(ProviderWireHooks, { makeId: () => 'call_' + crypto.randomBytes(8).toString('hex'), redact: () => '[redacted]',
+    repairProviderHistoryToolArgs: () => 0, repairProviderHistoryPairing: () => 0 });
   const wire = providerWireProtocol(provider), model = provider.model;
   const endpoint = new URL(wire.completionUrl(provider.baseUrl));
   if (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname))) failure('endpoint_transport_refused');

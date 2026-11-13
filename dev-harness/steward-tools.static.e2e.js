@@ -116,7 +116,7 @@ const HOOK_KEY = {
 
 const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort();   // 116-2e ⑦ 全仓扫描用
-const src06i = read('06i-steward-core.js');
+const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
 const src12 = read('12-tool-dispatch.js');
@@ -498,7 +498,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // 「有人把其中一处改小」;「有人把其中一处改大」在行为层要造一张比上限还大的表才看得见,不是
 // 这条锁的形状 —— 那一半靠这里的源码锁。
 {
-  const src06i = read('06i-steward-core.js');
+  const src06i = read('../backend/steward-core.cjs');
   const src13k = read('13k-steward-threads.js');
   const src13o = read('13o-steward-runner-prompt.js');
   const defs = (src06i.match(/const STEWARD_WORKSPACE_TABLE_MAX = /g) || []).length;

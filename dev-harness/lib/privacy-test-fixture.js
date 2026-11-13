@@ -12,9 +12,11 @@ function fixture() {
   return { ...primitives, vault: primitives.CredentialVault.create(host), restartVault: () => primitives.CredentialVault.create(host), state: () => clone(state) };
 }
 function gateway(root, f) {
-  return vm.runInNewContext(read('03a-privacy-gateway.js') + '\nPrivacyGateway.setHost({ data: paths.data, makeStore: file => ({ read: async () => JSON.parse(await fsp.readFile(file, "utf8")), write: value => atomicWriteJson(file, value) }) }); PrivacyGateway', {
-    require, Buffer, structuredClone, URL, PrivacyRegex: f.PrivacyRegex, PrivacyCore: { ...f.PrivacyCore, configHooks: { sealLocal: f.vault.sealLocal, openLocal: f.vault.openLocal } },
-    fsp: fs.promises, path, paths: { data: root }, atomicWriteJson: async (file, value) => { await fs.promises.writeFile(file, JSON.stringify(value)); },
+  const service = require('../../ruyi-workbench/app/backend/privacy-gateway.cjs').createPrivacyGateway({
+    PrivacyRegex: f.PrivacyRegex, core: { ...f.PrivacyCore, configHooks: { sealLocal: f.vault.sealLocal, openLocal: f.vault.openLocal } },
   });
+  service.setHost({ data: root, makeStore: file => ({ read: async () => JSON.parse(await fs.promises.readFile(file, 'utf8')), write: async value => fs.promises.writeFile(file, JSON.stringify(value)) }) });
+  return service;
 }
+
 module.exports = { fixture, gateway, clone };

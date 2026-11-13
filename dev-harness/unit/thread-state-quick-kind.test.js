@@ -137,7 +137,7 @@ ok(aggregate(['quick_ask']) === 'stopped', "③ aggregateMissionState(['quick_as
 
 /* ═══════════ ④ 静态锁:逃生舱真的换了判据,而且两份抄写件逐字同一行 ═══════════ */
 
-const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '06i-steward-core.js'), 'utf8');
+const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '../backend/steward-core.cjs'), 'utf8');
 const srcFront = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'public', 'js', 'mission-state.js'), 'utf8');
 const src13d = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
 

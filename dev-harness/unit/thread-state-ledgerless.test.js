@@ -111,7 +111,7 @@ cardBoth({ kind: 'mission', status: 'none', runCount: 0 }, 'dispatching',
 
 /* ═══════════ ④ 静态锁(只加不改)═══════════ */
 
-const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '06i-steward-core.js'), 'utf8');
+const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '../backend/steward-core.cjs'), 'utf8');
 const srcFront = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'public', 'js', 'mission-state.js'), 'utf8');
 const src13d = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
 ok(!/turnSeq:\s*0\s*,/.test(src06i) && !/turnSeq:\s*0\s*(,|\/\/)/.test(srcFront),

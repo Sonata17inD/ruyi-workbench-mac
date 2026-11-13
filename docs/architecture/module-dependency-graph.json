@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 91,
-    "providedSymbols": 3851,
+    "providedSymbols": 3829,
     "requiredSymbols": 3495,
     "edges": 638,
     "forwardEdges": 66,
@@ -3485,7 +3485,7 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -3539,28 +3539,28 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerApiBase",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerCompletionUrl",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerRequestHeaders",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3623,21 +3623,21 @@
           "provider": "04i-provider-anthropic.js",
           "symbol": "createAnthropicStreamDecoder",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-anthropic.js",
           "symbol": "decodeAnthropicCompletion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-anthropic.js",
           "symbol": "encodeAnthropicMessages",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23415,38 +23415,16 @@
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
-        "EVENT_STREAM_CLIENTS_MAX",
-        "EVENT_STREAM_HEARTBEAT_MS",
-        "EVENT_STREAM_LIVE_SESSIONS_MAX",
-        "EVENT_STREAM_LIVE_THROTTLE_MS",
-        "EVENT_STREAM_RING_MAX",
-        "EVENT_STREAM_ROW_SIG_MAX",
-        "EVENT_STREAM_SUMMARY_MAX",
-        "EVENT_STREAM_TEXT_TAIL",
-        "EVENT_STREAM_VIEWING_MAX",
-        "eventStreamClients",
+        "EventStreamService",
         "eventStreamEmitThreadState",
-        "eventStreamIsStewardSession",
-        "eventStreamLastRowSig",
-        "eventStreamLiveLastAt",
-        "eventStreamOnActiveChildEvent",
-        "eventStreamPruneLiveTable",
-        "eventStreamPublish",
-        "eventStreamRing",
-        "eventStreamSeq",
-        "eventStreamStateAgain",
-        "eventStreamStateBusy",
-        "eventStreamViewingFrom",
-        "eventStreamWriteFrame",
-        "handleEventStreamApiRoutes",
-        "stewardPresenceSnapshot"
+        "eventStreamRing"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
           "symbol": "apiFailure",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23460,7 +23438,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23481,42 +23459,42 @@
           "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "send",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23530,7 +23508,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "subscribeActiveChildEvents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23544,28 +23522,28 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardWatchedThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "threadOriginOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13d-core-domain-routes.js",
           "symbol": "missionPendingCounts",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

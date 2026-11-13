@@ -251,7 +251,7 @@ function typeExpressionLiterals(text) {
   // 而 13e 拼在 13i 之前,引用 13i 会是前向边。断言的意图一个字没变(「三条判据只有一份实现」),
   // 变的只是它钉在哪个文件;而且这里比修前【更紧】:除了钉住 06i 有那一份,还反向钉住 13i 里
   // 不许再冒出第二份实现(修前那条断言只看 13i 有,拦不住别处再抄一份)。
-  const src06i = read('06i-steward-core.js');
+  const src06i = read('../backend/steward-core.cjs');
   ok(src06i.includes('function stewardWatchedThread(')
     && src06i.includes('if (head.stewardQuick && typeof head.stewardQuick === ' + Q + 'object' + Q + ') return true;')
     && src06i.includes('if (head.launchedBy === ' + Q + 'steward' + Q + ') return true;')

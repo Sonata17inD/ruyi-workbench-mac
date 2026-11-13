@@ -17,7 +17,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-mission-aggregate-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
-const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
+const srv = require('../../ruyi-workbench/app/backend/steward-core.cjs').createStewardCore({});
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };

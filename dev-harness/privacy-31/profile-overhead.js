@@ -31,7 +31,7 @@ async function main() {
       assert.equal(seals, mode === 'off' ? 0 : 1, 'stable references persist once; off never encrypts');
       f.vault.clear();
     }
-    const report = { schema: 1, node: process.version, platform: process.platform, sourceSha256: require('node:crypto').createHash('sha256').update(fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/03a-privacy-gateway.js'))).digest('hex'), synthetic: true, networkCalls: 0, storageProtector: 'synthetic wrapper with real AES; DPAPI startup and model latency excluded', rows };
+    const report = { schema: 1, node: process.version, platform: process.platform, sourceSha256: require('node:crypto').createHash('sha256').update(fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/privacy-gateway.cjs'))).digest('hex'), synthetic: true, networkCalls: 0, storageProtector: 'synthetic wrapper with real AES; DPAPI startup and model latency excluded', rows };
     const output = process.argv.find(value => value.startsWith('--report='))?.slice(9);
     if (output) fs.writeFileSync(path.resolve(output), JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify(report, null, 2));

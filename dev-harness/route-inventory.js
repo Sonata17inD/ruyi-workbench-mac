@@ -47,7 +47,7 @@ const ROUTER_FILES = [
   '13h-steward-runner.js',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
-  '13r-event-stream.js',
+  '../backend/event-stream.cjs',
   // 第 123 波 M1（37 号文 §3.3）：定时任务六条 /api/scheduler/tasks（13s 拼接顺序在 13 之后，
   // 经 handleApi 里一行 `await handleSchedulerApiRoutes(...)` 直调委派，同 13b/13c/13d）。
   '13s-scheduler.js',
@@ -98,7 +98,7 @@ const DOMAIN_BY_FILE = {
   '13e-pretender-index.js': 'pretender-index',
   '13g-steward.js': 'steward',
   '13h-steward-runner.js': 'steward',
-  '13r-event-stream.js': 'event-stream',
+  '../backend/event-stream.cjs': 'event-stream',
   '13s-scheduler.js': 'scheduler',
 };
 
@@ -374,7 +374,7 @@ function computeInventory(opts = {}) {
     schema: 1,
     _comment: '第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。',
     generatedAt: new Date().toISOString(),
-    sources: { routeAuth: 'ruyi-workbench/app/src/' + ROUTE_AUTH_FILE, routers: ROUTER_FILES.map(f => 'ruyi-workbench/app/src/' + f) },
+    sources: { routeAuth: 'ruyi-workbench/app/src/' + ROUTE_AUTH_FILE, routers: ROUTER_FILES.map(f => path.posix.normalize('ruyi-workbench/app/src/' + f)) },
     summary: {
       routeAuthEntries: routeAuth.length,
       decisionPoints: allPoints.length,

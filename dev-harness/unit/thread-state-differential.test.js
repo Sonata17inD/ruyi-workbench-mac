@@ -70,7 +70,7 @@ function* grid() {
 test('[D1] 两边判定表的规则 id 与顺序相同', () => {
   const front = MissionState.RULE_IDS;
   assert.ok(Array.isArray(front) && front.length >= 7, '前端导出 RULE_IDS');
-  const block = constBlock(fs.readFileSync(path.join(APP, 'src', '06i-steward-core.js'), 'utf8'), 'STEWARD_THREAD_STATE_RULES');
+  const block = constBlock(fs.readFileSync(path.join(APP, 'src', '../backend/steward-core.cjs'), 'utf8'), 'STEWARD_THREAD_STATE_RULES');
   assert.ok(block.length > 200, '切到了服务端 STEWARD_THREAD_STATE_RULES');
   const server = [...block.matchAll(/\bid: '([a-z_]+)'/g)].map(m => m[1]);
   assert.deepEqual(server, front);

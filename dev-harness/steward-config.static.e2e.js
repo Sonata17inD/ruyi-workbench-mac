@@ -169,7 +169,7 @@ ok(idxD >= 0 && idxD === idxI + 1, '06d-memory-domain.js 紧跟在 06i-steward-c
 
 /* ═══════════════════════ ③ 06i-steward-core.js 源码契约 ═══════════════════════ */
 
-const stewardSrc = fs.readFileSync(path.join(SRC, '06i-steward-core.js'), 'utf8');
+const stewardSrc = fs.readFileSync(path.join(SRC, '../backend/steward-core.cjs'), 'utf8');
 ok(/const StewardHooks = \{\};/.test(stewardSrc), '06i 声明空的延迟绑定命名空间 StewardHooks = {}');
 // 121-K3(34 号文 §4.4「交接」):五类 -> 六类,表尾加 adopted(用户把线程交给管家盯)。
 // 前五类的字面量与顺序仍然逐字钉住 —— 到访摘要(13q stewardVisitDigest)按本表顺序归纳,

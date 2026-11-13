@@ -39,7 +39,7 @@ function ok(condition, label) {
 
 const store = readSrc('02-session-store.js');
 const provider = readSrc('06-provider-engine.js');
-const core = readSrc('06i-steward-core.js');
+const core = readSrc('../backend/steward-core.cjs');
 const config = readSrc('01-config.js');
 const domain = readSrc('13d-core-domain-routes.js');
 // 117 波 T1(32 号文 §2.1):13g 拆成 13j/13k/13l/13g 四个文件(纯搬家),steward_threads_search

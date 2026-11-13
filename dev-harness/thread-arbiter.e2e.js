@@ -657,7 +657,7 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
     {
       const SRC = path.join(WB, 'app', 'src');
       const rd = f => fs.readFileSync(path.join(SRC, f), 'utf8');
-      ok(/function waitReasonFor\(thread, ctx\)/.test(rd('06i-steward-core.js')), '单点:waitReasonFor 只声明在 06i(引擎层纯函数)');
+      ok(/function waitReasonFor\(thread, ctx\)/.test(rd('../backend/steward-core.cjs')), '单点:waitReasonFor 只声明在 06i(引擎层纯函数)');
       // 117 波 T1(32 号文 §2.1)重钉:steward_thread_status 的实现随拆分搬进 13k-steward-threads.js
       // (纯搬家,逐字节不变)。判据不变 —— 那个展示面必须经 06i 的 waitReasonFor,只是它现在住在
       // 13g 族的哪个文件里由拆分决定,故改读整族。下面「没有第二处自己拼的等待人话」也随之覆盖全族。

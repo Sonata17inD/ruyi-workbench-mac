@@ -33,7 +33,7 @@ process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const serverPath = path.join(app, 'server.js');
-const srv = require(serverPath);
+const srv = require('../../ruyi-workbench/app/backend/scheduler-core.cjs').createSchedulerCore();
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -322,7 +322,7 @@ const render = (described, lang) => TEXT[lang][described.key](described.params);
   const base = { title: 't', schedule: { kind: 'daily', at: '09:00' }, payload: { kind: 'prompt', text: 'x' } };
   // 两处值域相等:06j 抄的字面量 vs 13f 里 steward_thread_new / steward_schedule_create 的 tier 枚举(真产物内省,
   // 从管家会话能拿到的工具表里取 —— 不 grep 源码形状)。
-  const tools = srv.buildOpenAiTools({ subagentMaxPerTurn: 0 }, null, { stewardSession: true });
+  const tools = require(serverPath).buildOpenAiTools({ subagentMaxPerTurn: 0 }, null, { stewardSession: true });
   const enumOf = name => {
     const tool = tools.find(item => item && item.function && item.function.name === name);
     const tier = tool && tool.function.parameters && tool.function.parameters.properties && tool.function.parameters.properties.tier;
@@ -376,7 +376,7 @@ const render = (described, lang) => TEXT[lang][described.key](described.params);
 // (那一天有两个 01:30)。
 {
   const DST_SCRIPT = [
-    'const srv = require(' + JSON.stringify(serverPath) + ');',
+    'const srv = require(' + JSON.stringify(path.join(app, 'backend/scheduler-core.cjs')) + ').createSchedulerCore();',
     'const nf = srv.nextFireAt;',
     'const at = (y,mo,d,hh,mm) => new Date(y,mo-1,d,hh,mm,0,0).getTime();',
     'const parts = ms => { const t = new Date(ms); return { iso:t.toISOString(), y:t.getFullYear(), mo:t.getMonth()+1, d:t.getDate(), hh:t.getHours(), mm:t.getMinutes(), off:t.getTimezoneOffset() }; };',

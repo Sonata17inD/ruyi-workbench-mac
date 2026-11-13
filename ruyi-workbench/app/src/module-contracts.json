@@ -3411,7 +3411,7 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -3463,28 +3463,28 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerApiBase",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerCompletionUrl",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerRequestHeaders",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3547,21 +3547,21 @@
           "provider": "04i-provider-anthropic.js",
           "symbol": "createAnthropicStreamDecoder",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-anthropic.js",
           "symbol": "decodeAnthropicCompletion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-anthropic.js",
           "symbol": "encodeAnthropicMessages",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23245,38 +23245,16 @@
       "file": "13r-event-stream.js",
       "layer": "transport",
       "provides": [
-        "EVENT_STREAM_CLIENTS_MAX",
-        "EVENT_STREAM_HEARTBEAT_MS",
-        "EVENT_STREAM_LIVE_SESSIONS_MAX",
-        "EVENT_STREAM_LIVE_THROTTLE_MS",
-        "EVENT_STREAM_RING_MAX",
-        "EVENT_STREAM_ROW_SIG_MAX",
-        "EVENT_STREAM_SUMMARY_MAX",
-        "EVENT_STREAM_TEXT_TAIL",
-        "EVENT_STREAM_VIEWING_MAX",
-        "eventStreamClients",
+        "EventStreamService",
         "eventStreamEmitThreadState",
-        "eventStreamIsStewardSession",
-        "eventStreamLastRowSig",
-        "eventStreamLiveLastAt",
-        "eventStreamOnActiveChildEvent",
-        "eventStreamPruneLiveTable",
-        "eventStreamPublish",
-        "eventStreamRing",
-        "eventStreamSeq",
-        "eventStreamStateAgain",
-        "eventStreamStateBusy",
-        "eventStreamViewingFrom",
-        "eventStreamWriteFrame",
-        "handleEventStreamApiRoutes",
-        "stewardPresenceSnapshot"
+        "eventStreamRing"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
           "symbol": "apiFailure",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23290,7 +23268,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23311,42 +23289,42 @@
           "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "send",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23360,7 +23338,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "subscribeActiveChildEvents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23374,28 +23352,28 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardWatchedThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "threadOriginOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13d-core-domain-routes.js",
           "symbol": "missionPendingCounts",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
