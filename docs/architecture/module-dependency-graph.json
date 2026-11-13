@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 91,
-    "providedSymbols": 3881,
-    "requiredSymbols": 3512,
+    "providedSymbols": 3880,
+    "requiredSymbols": 3509,
     "edges": 641,
     "forwardEdges": 66,
     "duplicateProvides": 0,
@@ -112,7 +112,6 @@
         "http",
         "installRegistryPath",
         "isDirectServeInvocation",
-        "isPkg",
         "json",
         "localTurnTimeParts",
         "lstatOrNull",
@@ -731,13 +730,6 @@
           "symbol": "fsp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5881,13 +5873,6 @@
           "symbol": "fsp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14097,13 +14082,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "isDirectServeInvocation",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
           "kinds": [
             "call"
           ]
@@ -29474,7 +29452,6 @@
         "findRuyiPackageRootFor",
         "fs",
         "fsp",
-        "isPkg",
         "normalizePricing",
         "os",
         "path",
@@ -30852,7 +30829,6 @@
         "externalRoot",
         "fs",
         "fsp",
-        "isPkg",
         "neutralizeFenceTag",
         "nowIso",
         "os",
@@ -33075,7 +33051,6 @@
         "fsp",
         "http",
         "isDirectServeInvocation",
-        "isPkg",
         "json",
         "lstatOrNull",
         "makeId",

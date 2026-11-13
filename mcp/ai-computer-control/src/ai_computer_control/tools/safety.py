@@ -146,45 +146,20 @@ def _custom_protected_norm() -> list[str]:
     return sorted(set(out))
 
 
-# Processes whose termination can crash or hang Windows. Matched by exact basename (lowercased).
-CRITICAL_PROCESSES = {
-    "system", "system idle process", "registry", "smss.exe", "csrss.exe", "wininit.exe",
-    "winlogon.exe", "services.exe", "lsass.exe", "lsm.exe", "svchost.exe", "fontdrvhost.exe",
-    "dwm.exe", "sihost.exe", "ctfmon.exe", "spoolsv.exe", "audiodg.exe",
-    "memcompression", "ntoskrnl.exe", "wudfhost.exe",
-}
+# Critical Mac services; exact case-insensitive process names.
+CRITICAL_PROCESSES = {"kernel_task", "launchd", "windowserver", "loginwindow", "securityd", "opendirectoryd"}
 
-# System TREES: the directory itself AND everything inside it is protected (deleting C:\Windows\System32
-# would break the OS). ROOT-ONLY: only the exact location is protected (don't wipe the whole drive or
-# the whole user profile), but files *inside* them are the user's to manage.
+
 def _system_trees() -> list[str]:
-    if sys.platform == "darwin":
-        # realpath also covers Apple's /etc -> /private/etc and /var -> /private/var
-        # aliases. Protect configuration, not /private/var as a whole: Mac temp
-        # directories and normal workspaces live below it.
-        paths = ("/System", "/bin", "/sbin", "/dev", "/usr", "/Library", "/etc",
-                 os.path.expanduser("~/Library/Keychains"))
-        return sorted({_canonical_path(p) for p in paths})
-    out = []
-    for env in ("SystemRoot", "windir", "ProgramFiles", "ProgramFiles(x86)", "ProgramData"):
-        v = os.environ.get(env)
-        if v:
-            out.append(os.path.normcase(os.path.abspath(v)).rstrip(os.sep))
-    return sorted(set(out))
+    paths = ("/System", "/bin", "/sbin", "/dev", "/usr", "/Library", "/etc",
+             os.path.expanduser("~/Library/Keychains"))
+    return sorted({_canonical_path(p) for p in paths})
 
 
 def _root_only() -> list[str]:
-    if sys.platform == "darwin":
-        return sorted({_canonical_path(p) for p in (os.sep, os.path.expanduser("~"),
-                       "/Users", "/Volumes", "/Applications", "/private", "/tmp",
-                       "/private/var/folders", "/private/var/tmp")})
-    out = []
-    sysdrive = os.environ.get("SystemDrive", "C:")
-    out.append(os.path.normcase(os.path.abspath(sysdrive + os.sep)))  # drive root C:\ (keep trailing sep)
-    up = os.environ.get("USERPROFILE")
-    if up:
-        out.append(os.path.normcase(os.path.abspath(up)).rstrip(os.sep))
-    return sorted(set(out))
+    return sorted({_canonical_path(p) for p in (os.sep, os.path.expanduser("~"),
+                   "/Users", "/Volumes", "/Applications", "/private", "/tmp",
+                   "/private/var/folders", "/private/var/tmp")})
 
 
 # Destructive command signatures. Substring/prefix checks on a normalized command string.

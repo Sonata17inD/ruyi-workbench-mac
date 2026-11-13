@@ -1,5 +1,5 @@
-// Mac-only: retired Windows launcher-resolution fixture (-1).
 #!/usr/bin/env node
+// Mac-only: retired Windows launcher-resolution fixture (-1).
 // ── 夹具 HOME 守卫的锁(27 号文 §11.21.7 债④) ────────────────────────────────────────
 //
 // ① 静态扫:dev-harness 下每一处 spawn-family 调用,凡 options.env 带 RUYI_HOME,就必须

@@ -1461,27 +1461,9 @@ _PDF_FONT_CACHE: dict | None = None
 
 
 def _pdf_font_candidates():
-    """(registered name, regular file, bold file or None) in preference order. Windows first (the primary
-    target; %WINDIR% respected), then the usual Linux / macOS CJK faces so a non-Windows box embeds a real
-    font instead of relying on the reader's CID substitution."""
-    win = os.environ.get("WINDIR") or os.environ.get("SystemRoot") or r"C:\Windows"
-    wf = os.path.join(win, "Fonts")
-    cands = [
-        ("MSYaHei", os.path.join(wf, "msyh.ttc"), os.path.join(wf, "msyhbd.ttc")),
-        ("SimSun", os.path.join(wf, "simsun.ttc"), None),
-    ]
-    if os.name != "nt":
-        cands += [
-            ("NotoSansCJK", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-             "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"),
-            ("WQYZenHei", "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", None),
-            ("WQYMicroHei", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", None),
-        ]
-    import sys
-    if sys.platform == "darwin":
-        cands += [("MacCJK" + str(i), regular, bold)
-                  for i, (_family, regular, bold) in enumerate(style_tokens.mac_font_candidates())]
-    return cands
+    """Mac fonts suitable for embedding into exported PDFs."""
+    return [("MacCJK" + str(i), regular, bold)
+            for i, (_family, regular, bold) in enumerate(style_tokens.mac_font_candidates())]
 
 
 def _resolve_cjk_font():

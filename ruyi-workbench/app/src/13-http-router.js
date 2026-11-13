@@ -258,7 +258,6 @@ async function handleApi(req, res, pathname) {
       exePath: exePath(),
       // v1.0-S9 exe 改名 Ruyi.exe;双名兼容探测——先探新名,再探旧名(兼容窗口:存量安装/旧 launcher,建议 v2.0 收口)。
       exePresent: fs.existsSync(path.join(externalRoot(), 'Ruyi.exe')) || fs.existsSync(path.join(externalRoot(), 'WinClaudeWorkbench.exe')),
-      isPkg: isPkg(),
       config: maskProviders(config), // F2: never emit plaintext provider api keys in the response
 
       permissionModes: PERMISSION_MODES,
@@ -2090,7 +2089,7 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   // added or removed). Invalidate once at boot so the first listSessions rebuilds from the authoritative session
   // files. One full scan, boot-only (the pre-PF2 behavior); every read after that uses the incremental index.
   await invalidateSessionIndex();
-  LAUNCH_MODE = isPkg() ? 'exe' : 'node';
+  LAUNCH_MODE = 'node';
   let config = await readConfig(); // let: autoImportClaudeCodeMcp 写回后需重绑到最新引用
   // v2 工作台记忆接管 ACC Memory：启动期一次性、幂等导入。失败只记审计且保留 ACC memory 工具，
   // 不阻断工作台；成功标记会让后续生成/桥接的 ACC 进程隐藏旧工具面。
@@ -2852,7 +2851,6 @@ async function doctor(argv) {
     node: process.version,
     platform: process.platform,
     arch: process.arch,
-    isPkg: isPkg(),
     exePath: exePath(),
     dataRoot: paths.data,
     configPath: paths.config,

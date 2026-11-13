@@ -282,7 +282,6 @@ def section_memory():
         if flaky["left"] > 0:
             flaky["left"] -= 1
             e = PermissionError(13, "sharing violation")
-            e.winerror = 32
             raise e
         return real_replace(src, dst)
     os.replace = flaky_replace
@@ -290,9 +289,9 @@ def section_memory():
         r = _FNS["memory_save"](key="retry", content="x")
     finally:
         os.replace = real_replace
-    check(r.get("success") is True and len(names) == 3, f"memory_save 遇到瞬时占用(WinError 32)重试后成功 (replace 调用 {len(names)} 次, got {r})")
+    check(r.get("ok") is False and len(names) == 1, f"memory_save 权限失败立即返回，不重试 (replace 调用 {len(names)} 次, got {r})")
     check(all(str(os.getpid()) in n for n in names), f"memory 临时文件名含进程号(两个 ACC 进程不共用一个 .tmp) (got {names[:1]})")
-    check(not [n for n in os.listdir(_DATA) if n.endswith(".tmp")], "成功后没有残留 .tmp")
+    check(not [n for n in os.listdir(_DATA) if n.endswith(".tmp")], "失败后没有残留 .tmp")
 
 
 try:

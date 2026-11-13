@@ -18,7 +18,6 @@ import time
 
 from ai_computer_control.paths import data_dir
 from ai_computer_control.server import mcp
-from ai_computer_control.tools.office_io import replace_with_retry
 
 _MAX_ENTRIES = 500
 _MAX_CONTENT_CHARS = 4000
@@ -87,7 +86,7 @@ def _save(store: dict) -> None:
     try:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(store, f, ensure_ascii=False, indent=1)
-        replace_with_retry(tmp, path)
+        os.replace(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)

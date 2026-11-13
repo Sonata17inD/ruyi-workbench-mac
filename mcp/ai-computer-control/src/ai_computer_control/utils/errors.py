@@ -72,7 +72,7 @@ _HINTS: tuple[tuple, ...] = tuple(
          "An optional dependency is missing or failed to load; call diagnostics() (optional / load_errors) to "
          "see what is available. Retrying will not help."),
         (r"filenotfounderror|no such file|file not found|文件不存在|源文件不存在|cannot find the (?:file|path)",
-         "Check the path (absolute Windows path, correct extension) with list_directory / file_info."),
+         "Check the path (absolute Mac path, correct extension) with list_directory / file_info."),
         (r"isadirectoryerror|is a directory",
          "That path is a folder, not a file; use list_directory for folders or pass a file path."),
         (r"notadirectoryerror|not a directory",

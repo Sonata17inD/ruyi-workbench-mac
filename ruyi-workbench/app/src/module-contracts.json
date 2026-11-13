@@ -98,7 +98,6 @@
         "http",
         "installRegistryPath",
         "isDirectServeInvocation",
-        "isPkg",
         "json",
         "localTurnTimeParts",
         "lstatOrNull",
@@ -691,13 +690,6 @@
           "symbol": "fsp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5789,13 +5781,6 @@
           "symbol": "fsp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13959,13 +13944,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "isDirectServeInvocation",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isPkg",
           "kinds": [
             "call"
           ]

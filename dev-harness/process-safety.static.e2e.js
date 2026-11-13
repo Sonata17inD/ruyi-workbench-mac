@@ -1,5 +1,5 @@
-// Mac-only: retired Windows launcher-resolution fixture (-1).
 #!/usr/bin/env node
+// Mac-only: retired Windows launcher-resolution fixture (-1).
 'use strict';
 // 128c(48 号文 §1)静态锁:测试框架「只杀自己的树」与 CDP「socket 关了就当场报错」。
 //

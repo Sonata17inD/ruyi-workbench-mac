@@ -52,7 +52,7 @@ function defaultConfig() {
     thinkingBudget: '',           // sets MAX_THINKING_TOKENS when non-empty
     claudeThinkingEffort: '',     // '' inherits the CLI config; otherwise passed via --effort
     betaInterleavedThinking: false, // adds --betas interleaved-thinking (probe first; may be rejected by older CLI)
-    mcpCommandMode: 'auto',       // auto | node | exe — which command the generated MCP config points at
+    mcpCommandMode: 'auto',       // Historical values are accepted; self MCP always uses Node.
     killOnDisconnect: false,      // 体验走查 #4:刷新／关窗／断网不再结束回合(待决的权限与提问留在服务端,页面回来接着等;停止走「停止」键)
     killPortOnStart: true,        // on startup, if the port is held by a STALE workbench, free it and retry
     // --- v0.4 additions (interactive engine + permission bridge) ---
@@ -3131,35 +3131,15 @@ function externalServerJs() {
 }
 
 function bundledNodeExe() {
-  const p = path.join(externalRoot(), 'runtime', 'node', process.platform === 'win32' ? 'node.exe' : 'bin/node');
-  if (fs.existsSync(p)) return p;
-  // When we are already running under node (not the pkg exe), process.execPath IS a node binary.
-  if (!isPkg()) return process.execPath;
-  return '';
+  const bundled = path.join(externalRoot(), 'runtime', 'node', 'bin', 'node');
+  return fs.existsSync(bundled) ? bundled : process.execPath;
 }
 
-// Decide which command a spawned "mcp" stdio server should use. Preferring the node runtime +
-// external server.js keeps the MCP server on the *overlaid* source, so new tools (e.g. the
-// permission bridge) work without rebuilding the baked exe. mode: auto | node | exe.
-function commandForSelfMcp(mode = 'auto') {
-  const serverJs = externalServerJs();
-  const nodeExe = bundledNodeExe();
-  const canNode = Boolean(serverJs && nodeExe);
-  if (mode === 'node' && canNode) return { command: nodeExe, args: [serverJs, 'mcp'], via: 'node' };
-  if (mode === 'exe') {
-    if (isPkg()) return { command: process.execPath, args: ['mcp'], via: 'exe' };
-    return { command: process.execPath, args: [path.resolve(__filename), 'mcp'], via: 'node' };
-  }
-  // auto: prefer node+server.js overlay, then baked exe, then this script under node.
-  if (canNode) return { command: nodeExe, args: [serverJs, 'mcp'], via: 'node' };
-  if (isPkg()) return { command: process.execPath, args: ['mcp'], via: 'exe' };
-  return { command: process.execPath, args: [path.resolve(__filename), 'mcp'], via: 'node' };
+function commandForSelfMcp() {
+  return { command: bundledNodeExe(), args: [externalServerJs() || path.resolve(__filename), 'mcp'], via: 'node' };
 }
 
-// --- v0.7d: locate the user's ai-computer-control desktop MCP (Windows control FastMCP). ---
-// A python.exe merely existing is not enough: older offline bundles can contain a raw embedded interpreter
-// without the MCP package. Verify imports once, cache the result, and prefer a Full runtime whose WinSDK
-// OCR projections really import. A core-only source environment remains a last-resort degraded fallback.
+// Verify the offline ACC interpreter and its imports before offering desktop tools.
 const DESKTOP_PYTHON_PROBE_TIMEOUT_MS = 5000;
 const DESKTOP_PYTHON_OK_CACHE_MS = 5 * 60 * 1000;
 const DESKTOP_PYTHON_MISS_CACHE_MS = 15000;
@@ -3256,53 +3236,21 @@ function writeDesktopPythonDiskEntry(cacheId, value) {
 
 function desktopPythonCandidates(root) {
   const candidates = [];
-  const seen = new Set();
-  const addPath = (command, source) => {
-    const absolute = path.resolve(String(command || ''));
-    const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
-    if (!command || seen.has(key)) return;
-    seen.add(key);
-    candidates.push({ command, args: [], source, requireExisting: true });
-  };
-  if (root && process.platform !== 'win32') {
-    addPath(path.join(root, 'runtime', 'python', 'bin', 'python3'), 'bundled-runtime');
-    addPath(path.join(root, '.venv', 'bin', 'python3'), 'repo-venv');
-    addPath(path.join(root, 'venv', 'bin', 'python3'), 'installed-venv');
-  }
-  if (root && process.platform === 'win32') {
-    // Distribution invariant: a portable Full package must use the CPython 3.12 runtime shipped beside
-    // ACC by default. Machine-local venvs/runtimes are compatibility fallbacks, never prerequisites for
-    // a package copied to a clean target computer.
-    addPath(path.join(root, 'python_embed', 'python.exe'), 'offline-embedded-runtime');
-    addPath(path.join(root, 'runtime', 'python', 'python.exe'), 'bundled-runtime');
-    addPath(path.join(root, '.venv', 'Scripts', 'python.exe'), 'repo-venv');
-    addPath(path.join(root, 'venv', 'Scripts', 'python.exe'), 'installed-venv');
-    addPath(path.join(root, 'py-embed', 'python.exe'), 'embedded-runtime');
-    addPath(path.join(root, 'python', 'python.exe'), 'repo-python');
-  }
-  // Source checkouts normally do not carry a Python runtime. Reuse the verified Full installer runtime
-  // with PYTHONPATH pointed at the checkout, so development still runs current code without silently
-  // dropping OCR just because an unrelated system Python happens to import the core ACC package.
-  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
-    const installedRoot = path.join(process.env.LOCALAPPDATA, 'ai-computer-control');
-    addPath(path.join(installedRoot, 'runtime', 'python', 'python.exe'), 'installed-full-runtime');
-    addPath(path.join(installedRoot, 'venv', 'Scripts', 'python.exe'), 'installed-full-venv');
+  if (root) {
+    for (const [parts, source] of [
+      [['runtime', 'python', 'bin', 'python3'], 'bundled-runtime'],
+      [['.venv', 'bin', 'python3'], 'repo-venv'],
+      [['venv', 'bin', 'python3'], 'installed-venv'],
+    ]) candidates.push({ command: path.resolve(root, ...parts), args: [], source, requireExisting: true });
   }
   const envPython = String(process.env.PYTHON || '').trim();
   if (envPython) candidates.push({ command: envPython, args: [], source: 'PYTHON', requireExisting: path.isAbsolute(envPython) });
-  if (process.platform === 'win32') {
-    candidates.push(
-      { command: 'python', args: [], source: 'system-path', requireExisting: false },
-      { command: 'python3', args: [], source: 'system-path', requireExisting: false },
-      { command: 'py', args: ['-3'], source: 'python-launcher', requireExisting: false },
-    );
-  } else {
-    candidates.push(
-      { command: 'python3', args: [], source: 'system-path', requireExisting: false },
-      { command: 'python', args: [], source: 'system-path', requireExisting: false },
-    );
-  }
-  return candidates;
+  for (const command of ['python3', 'python']) candidates.push({ command, args: [], source: 'system-path', requireExisting: false });
+  const seen = new Set();
+  return candidates.filter(candidate => {
+    if (seen.has(candidate.command)) return false;
+    seen.add(candidate.command); return true;
+  });
 }
 
 function probeDesktopPython(candidate, cwd, desktopEnv) {
@@ -3523,14 +3471,7 @@ function desktopMcpInstalledEnv(root) {
   return desktopEnv;
 }
 function desktopMcpInstalledPickOptions(root, options) {
-  const installedCandidates = [
-    ...(process.platform === 'darwin' ? [
-      { command: path.join(root, 'runtime', 'python', 'bin', 'python3'), args: [], source: 'installed-runtime', requireExisting: true },
-    ] : [
-      { command: path.join(root, 'runtime', 'python', 'python.exe'), args: [], source: 'installed-runtime', requireExisting: true },
-      { command: path.join(root, 'venv', 'Scripts', 'python.exe'), args: [], source: 'installed-venv', requireExisting: true },
-    ]),
-  ];
+  const installedCandidates = [{ command: path.join(root, 'runtime', 'python', 'bin', 'python3'), args: [], source: 'installed-runtime', requireExisting: true }];
   return {
     candidates: Array.isArray(options.candidates) ? options.candidates : installedCandidates,
     probe: typeof options.probe === 'function' ? options.probe : undefined,
@@ -3565,19 +3506,16 @@ function desktopMcpRootPlan() {
       steps.push({ kind: 'installed', root });
     }
     // (b) common repo locations. Bundled monorepo copies come first (release layout ships the MCP
-    // at <repo>/mcp/ai-computer-control with python_embed beside it and the app at
+    // at <repo>/mcp/ai-computer-control with the Mac Python runtime beside it and the app at
     // <repo>/ruyi-workbench/app, or flattened with app/ at the package root), so the portable runtime
     // beats both a stale user checkout and any machine-local Python on a clean distribution target.
     const repoCandidates = [
-      // In a pkg executable __dirname points into the read-only compile snapshot, while the bundled
       path.join(externalRoot(), 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', '..', 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', 'mcp', 'ai-computer-control'),
       home && path.join(home, 'Documents', 'Claude Code', 'ai-computer-control'),
       home && path.join(home, 'Documents', 'ai-computer-control'),
       home && path.join(home, 'ai-computer-control'),
-      env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'ai-computer-control'),
-      env.USERPROFILE && path.join(env.USERPROFILE, 'Documents', 'Claude Code', 'ai-computer-control'),
     ].filter(Boolean);
     for (const dir of repoCandidates) {
       if (process.platform === 'darwin' && fs.existsSync(path.join(dir, 'runtime', 'python', 'bin', 'python3'))) {
@@ -3586,12 +3524,6 @@ function desktopMcpRootPlan() {
       if (!isDesktopMcpRepo(dir)) continue;
       steps.push({ kind: 'repo', root: path.resolve(dir) });
     }
-    // (c) ACC's verified offline installer writes runtime\python; older releases used venv\Scripts.
-    const installedRoots = [
-      env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'ai-computer-control'),
-      env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'ai-computer-control'),
-    ].filter(Boolean);
-    for (const root of installedRoots) steps.push({ kind: 'installed', root });
   } catch { /* never throw */ }
   return steps;
 }
@@ -3603,14 +3535,11 @@ function desktopMcpConsoleScript() {
     const home = os.homedir();
     // (d) a console script on PATH or common install dirs (no repo checkout needed).
     const scriptDirs = [
-      env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'ai-computer-control'),
-      env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'Python', 'Scripts'),
-      env.APPDATA && path.join(env.APPDATA, 'Python', 'Scripts'),
       home && path.join(home, '.local', 'bin'),
     ].filter(Boolean);
     // Also honor PATH entries.
     const pathDirs = String(env.PATH || env.Path || '').split(path.delimiter).filter(Boolean);
-    const scriptNames = ['ai-computer-control.exe', 'ai-computer-control.cmd', 'ai-computer-control.bat', 'ai-computer-control'];
+    const scriptNames = ['ai-computer-control'];
     for (const dir of [...scriptDirs, ...pathDirs]) {
       for (const n of scriptNames) {
         const full = path.join(dir, n);

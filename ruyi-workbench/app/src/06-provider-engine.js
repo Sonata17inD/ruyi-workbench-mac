@@ -1899,14 +1899,13 @@ async function readProjectMemory(cwd) {
 // 108a:身份层之后、工具协议层之前加「运行时身份层」(产品名/版本/启动模式/安装位置/数据目录/服务地址/实例标识),
 // 只在 !identityOnly 时注入(压缩摘要调用保持廉价);字段全部为进程内恒定量,不破坏前缀缓存。
 // 108a 运行时事实装配:只读 00-boot / 01-config 的进程内恒定量(不读 LAUNCH_MODE,那是前向边),
-// 由 isPkg() 自行推导 exe/node;无时间戳、无会话 id,保证同进程两次构建逐字节相同。
 function buildRuntimeIdentityFacts() {
   const host = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.host) || '127.0.0.1';
   const port = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.port) || DEFAULT_PORT;
   return {
     appName: APP_NAME,
     version: VERSION,
-    launchMode: isPkg() ? 'exe' : 'node',
+    launchMode: 'node',
     installDir: externalRoot(),
     dataDir: dataRoot(),
     address: 'http://' + host + ':' + port,

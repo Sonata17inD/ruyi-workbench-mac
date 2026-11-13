@@ -48,12 +48,8 @@ const CONFIG_SCHEMA = 14;
 // v0.8-S0: session file schema. Bumped independently of CONFIG_SCHEMA; normalizeSession backfills.
 const SESSION_SCHEMA = 1;
 
-function isPkg() {
-  return typeof process.pkg !== 'undefined';
-}
-
 function exePath() {
-  return isPkg() ? process.execPath : process.argv[1];
+  return process.argv[1];
 }
 
 function appRoot() {
@@ -154,7 +150,7 @@ let DATA_ROOT_MIGRATION = null;
 
 
 function externalRoot() {
-  return isPkg() ? path.dirname(process.execPath) : appRoot();
+  return appRoot();
 }
 
 // A Full offline release ships one verified CPython beside ACC. ACC already starts that interpreter

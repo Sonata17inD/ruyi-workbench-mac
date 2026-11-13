@@ -107,7 +107,7 @@ class PlatformMCP(FastMCP):
 
 mcp = PlatformMCP(
     "AI Computer Control",
-    instructions="A comprehensive toolkit for AI agents to control Windows and macOS computers. "
+    instructions="A comprehensive toolkit for AI agents to control macOS computers. "
     "Provides screen capture, mouse/keyboard control, window management, "
     "file operations, browser automation, document editing, and more. "
     "Every tool returns a dict with a boolean 'ok' field. "

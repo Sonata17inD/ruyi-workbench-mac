@@ -122,7 +122,7 @@ const MediaInspection = (() => {
     if (!refresh && previous && Date.now() - previous.at < 30000 && (!previous.value.path || await io.stat(previous.value.path).catch(() => null))) return previous.value;
     let names = [];
     if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'), 'python3', 'python'];
-    if (kind === 'node') names = [!process.pkg && process.execPath, 'node'];
+    if (kind === 'node') names = [process.execPath, 'node'];
     if (kind === 'ffmpeg') names = [process.env.IMAGEIO_FFMPEG_EXE, process.env.FFMPEG_BINARY, 'ffmpeg'];
     if (kind === 'ffprobe') names = ['ffprobe'];
     if (kind === 'chrome') names = ['chrome', 'chromium', 'chromium-browser', 'msedge',

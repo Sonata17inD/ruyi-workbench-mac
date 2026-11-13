@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 91 | 3881 | 3512 | 641 | 66 | 0 | 1 |
+| 91 | 3880 | 3509 | 641 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -16,7 +16,7 @@
 | # | 模块 | 层 | provides | requires | 直接依赖 |
 |---:|---|---|---:|---:|---:|
 | 0 | `00-platform-runtime.js` | bootstrap | 3 | 0 | 0 |
-| 1 | `00-boot.js` | bootstrap | 142 | 8 | 5 |
+| 1 | `00-boot.js` | bootstrap | 141 | 8 | 5 |
 | 2 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 3 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
 | 4 | `01c-runtime-flags.js` | foundation | 37 | 0 | 0 |
@@ -29,7 +29,7 @@
 | 11 | `01h-privacy-core.js` | foundation | 1 | 1 | 1 |
 | 12 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
 | 13 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
-| 14 | `01-config.js` | foundation | 194 | 60 | 13 |
+| 14 | `01-config.js` | foundation | 194 | 59 | 13 |
 | 15 | `01k-credential-vault.js` | foundation | 1 | 8 | 4 |
 | 16 | `01l-credential-recovery.js` | foundation | 2 | 13 | 3 |
 | 17 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
@@ -55,7 +55,7 @@
 | 37 | `05b-kimi-bridge.js` | engine | 129 | 76 | 14 |
 | 38 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
 | 39 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
-| 40 | `06-provider-engine.js` | engine | 142 | 63 | 18 |
+| 40 | `06-provider-engine.js` | engine | 142 | 62 | 18 |
 | 41 | `06b-prompt-registry.js` | engine | 10 | 1 | 1 |
 | 42 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 43 | `06h-retrieval-index.js` | engine | 15 | 0 | 0 |
@@ -78,7 +78,7 @@
 | 60 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
 | 61 | `12-tool-dispatch.js` | tools | 74 | 136 | 22 |
 | 62 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
-| 63 | `13-http-router.js` | transport | 70 | 279 | 35 |
+| 63 | `13-http-router.js` | transport | 70 | 278 | 35 |
 | 64 | `13b-api-domain-routes.js` | transport | 41 | 68 | 11 |
 | 65 | `13d-core-domain-routes.js` | transport | 65 | 149 | 18 |
 | 66 | `13e-pretender-index.js` | transport | 57 | 39 | 8 |
@@ -116,7 +116,7 @@
 | `00-boot.js` | `02-session-store.js` | forward | `bumpMissionChangeSeq`, `overlayUnflushedSessionIndex`, `readSessionIndex` |
 | `00-boot.js` | `05-claude-engine.js` | forward | `CLAUDE_ENDPOINT_PRESETS` |
 | `00-boot.js` | `13e-pretender-index.js` | forward | `markPretenderIndexDirty` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `MAX_BODY_BYTES`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `apiFailure`, `copyOrdinaryJsonData`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `isPkg`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `MAX_BODY_BYTES`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `apiFailure`, `copyOrdinaryJsonData`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
 | `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId`, `isRuyiMcpServerId` |
 | `01-config.js` | `01b-route-auth.js` | backward | `ROUTE_AUTH` |
 | `01-config.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP`, `PERMISSION_MODES`, `PERMISSION_MODE_ALIASES`, `agentRoleIsUntrusted`, `normalizeAgentRole` |
@@ -238,7 +238,7 @@
 | `05c-kimi-search-policy.js` | `03-bridge-guard.js` | backward | `fileAllowedRoots`, `guardFileToolPath`, `isSensitiveDataPath`, `pathWithinRoot`, `realpathForContainment` |
 | `05d-kimi-prompt-parts.js` | `00-boot.js` | backward | `fsp`, `path` |
 | `05d-kimi-prompt-parts.js` | `03-bridge-guard.js` | backward | `guardFileToolPath`, `realpathForContainment` |
-| `06-provider-engine.js` | `00-boot.js` | backward | `APP_NAME`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `OVERLAY_ID`, `RUYI_EVENTS`, `VERSION`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `cp`, `crypto`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `isPkg`, `neutralizeFenceTag`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text`, `zlib` |
+| `06-provider-engine.js` | `00-boot.js` | backward | `APP_NAME`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `OVERLAY_ID`, `RUYI_EVENTS`, `VERSION`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `cp`, `crypto`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `neutralizeFenceTag`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text`, `zlib` |
 | `06-provider-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `06-provider-engine.js` | `01-config.js` | backward | `RUNTIME`, `atomicWriteJson`, `readConfig`, `safeSessionId` |
 | `06-provider-engine.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
@@ -420,7 +420,7 @@
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |
-| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CONFIG_SCHEMA`, `DATA_ROOT_MIGRATION`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `OVERLAY_ID`, `SKILL_ID_RE`, `URL`, `VERSION`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `buildUsageSummary`, `cp`, `crypto`, `dataRootAliases`, `decodeConsoleText`, `defaultDataRoots`, `ensureDirs`, `exePath`, `externalRoot`, `flushUsageLedgerSync`, `fs`, `fsp`, `http`, `isDirectServeInvocation`, `isPkg`, `json`, `lstatOrNull`, `makeId`, `migrateLegacyDataRoot`, `nowIso`, `os`, `path`, `pathToFileURL`, `paths`, `readline`, `recordInstallLaunch`, `safeJsonParse`, `samePathKey`, `spawnDetachedChecked`, `text`, `zlib` |
+| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CONFIG_SCHEMA`, `DATA_ROOT_MIGRATION`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `OVERLAY_ID`, `SKILL_ID_RE`, `URL`, `VERSION`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `buildUsageSummary`, `cp`, `crypto`, `dataRootAliases`, `decodeConsoleText`, `defaultDataRoots`, `ensureDirs`, `exePath`, `externalRoot`, `flushUsageLedgerSync`, `fs`, `fsp`, `http`, `isDirectServeInvocation`, `json`, `lstatOrNull`, `makeId`, `migrateLegacyDataRoot`, `nowIso`, `os`, `path`, `pathToFileURL`, `paths`, `readline`, `recordInstallLaunch`, `safeJsonParse`, `samePathKey`, `spawnDetachedChecked`, `text`, `zlib` |
 | `13-http-router.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn` |
 | `13-http-router.js` | `00b-ruyi-names.js` | backward | `LEGACY_RUYI_MCP_SERVER_IDS`, `RUYI_MCP_SERVER_ID` |
 | `13-http-router.js` | `01-config.js` | backward | `ConfigPatchHooks`, `RUNTIME`, `atomicWriteJson`, `authorizeRoute`, `autoImportClaudeCodeMcp`, `beginBootCliPathProbes`, `contentTypeFor`, `decodeClaudeCliText`, `desktopMcpDetectionPending`, `detectClaudePath`, `detectDesktopMcp`, `detectKimiPath`, `effectiveAnthropicEnv`, `ensureDesktopMcpWarm`, `externalServerJs`, `finishBootCliPathProbes`, `generateMcpConfig`, `hostAllowed`, `isLoopbackBindHost`, `mcpConfigFilePath`, `mutateConfig`, `prepareAgentCliSpawn`, `readConfig`, `readJsonBody`, `requestIsLoopback`, `safeSessionId`, `selectedAgentCli`, `send`, `sendError`, `serveStatic`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncAgentRolesToClaude`, `syncClaudeCliSettings`, `syncMcpServersToClaude`, `tokenMatches`, `tokenOk`, `waitForBootCliPathProbes` |

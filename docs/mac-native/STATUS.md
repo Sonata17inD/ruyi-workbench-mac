@@ -59,3 +59,11 @@
 - 保留提示围栏／技能 stdin 注入回归，将旧 cmd 集成件改为 Mac argv 集成件；更新 Kimi 假件为 Mac 符号链接。
 - 验证：最新完整单元 2646 通过／14 跳过／0 失败。CLI 真服务 argv 与 Agent 工作流（权限档、长角色、缺失启动器）两件 E2E 全部通过。75 静态件首次 72 通过，夹具计数和路由生成物更新后 3 件定向全通过。生成物新鲜、EOL 和 diff 空白检查通过。
 - 拼接模块 92→91，依赖边 649→641；仍有生产 SCC，不能视为模块化完成。下一包继续清理 pkg／Python／MCP 的 Windows 运行分支。
+
+## 工作包 2e：Mac 运行时发现与文档写入简化
+
+- 移除 pkg/exe 自启动回退，self MCP 始终采用 Node + server.js；删除 Windows Python／ACC 安装路径、控制台 exe/cmd/bat 扫描。
+- Office 图表／PDF 仅探测 Mac 字体；删除 Windows sharing-violation 重试函数及全部调用点，直接原子替换。错误继续保留原文件并清理临时文件；安全路径基线直接采用 Mac 系统树和根目录。
+- 验证：Python 探测 E2E（超时、后代、输出预算、缓存）通过；CLI 自动发现、真实 ACC stdio 和 MCP 配置 E2E 通过；发现缓存单元 6 项通过；Office 生成／读取 smoke 通过（读取件旧 WinError 重试断言改为立即失败后复验）。Mac shared/composed smoke 通过。真实桌面 OCR／发行 Full 闭包未计入验收。
+- 自查更正：上一包为两份带 shebang 的静态件补注释时放在了首行前，导致复验实际未运行。本包修正位置并分别确认 fixture-home／process-safety 全部通过；本次 75 静态其余 73 件通过。此前记录“3 件全通过”不应作为当时证据，以本次实际结果为准。
+- 阶段 2 仍剩混合进程收尾、浏览器／编辑器、路径与模型文案清理；未构建发行包。

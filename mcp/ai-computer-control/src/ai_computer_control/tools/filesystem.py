@@ -6,7 +6,6 @@ import datetime
 import codecs
 import unicodedata
 from ai_computer_control.server import mcp
-from ai_computer_control.tools.office_io import replace_with_retry as _replace_with_retry
 from ai_computer_control.tools.safety import protected_path_reason
 
 
@@ -240,7 +239,7 @@ def write_file(path: str, content: str, encoding: str = "utf-8", append: bool = 
                 try: os.unlink(tmp)
                 except Exception: pass
             else:
-                _replace_with_retry(tmp, path)
+                os.replace(tmp, path)
         except Exception:
             try: os.unlink(tmp)
             except Exception: pass
