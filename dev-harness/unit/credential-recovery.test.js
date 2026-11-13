@@ -160,8 +160,8 @@ test('CLI startup prints fresh-profile recovery guidance only for a locked crede
   const mainSource = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/14-main.js'), 'utf8');
   const directCli = bracedBlock(mainSource, 'if (require.main === module)'); assert.ok(directCli);
   const startupGuidance = f.CredentialRecovery.startupGuidance;
-  const guidance = startupGuidance({ code: 'credential_vault.unlock_failed', message: 'MUST-NOT-SHOW-PRIVATE-DETAIL' }, 'win32');
-  for (const phrase of ['保留原数据目录', '不要删除密钥或覆盖旧库', 'RUYI_HOME', '独立、全新的空目录', 'Start-Workbench.cmd', '先预览再确认导入', '不恢复旧聊天']) assert.ok(guidance.includes(phrase), phrase);
+  const guidance = startupGuidance({ code: 'credential_vault.unlock_failed', message: 'MUST-NOT-SHOW-PRIVATE-DETAIL' });
+  for (const phrase of ['保留原数据目录', '不要删除密钥或覆盖旧库', 'RUYI_HOME', '独立、全新的空目录', 'Mac 启动方式', '先预览再确认导入', '不恢复旧聊天']) assert.ok(guidance.includes(phrase), phrase);
   assert.equal(guidance.includes('MUST-NOT-SHOW-PRIVATE-DETAIL'), false);
   const mac = startupGuidance({ code: 'credential_vault.provider_mismatch' }, 'darwin');
   assert.ok(mac.includes('钥匙串') && mac.includes('口令') && mac.includes('RUYI_HOME') && !mac.includes('Start-Workbench.cmd'));

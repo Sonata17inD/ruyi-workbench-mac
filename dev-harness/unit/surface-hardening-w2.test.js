@@ -157,6 +157,23 @@ describe('[M] S11 secret-bearing files are owner-only', { skip: !posix && 'POSIX
     assert.equal(fs.statSync(b).mode & 0o777 & 0o600, 0o600, '没传 mode 保持原行为(属主可读写;其余位随 umask)');
     assert.deepEqual(JSON.parse(fs.readFileSync(a, 'utf8')), { k: 1 });
   });
+  it('failed publication preserves the old file and removes its temporary file', async () => {
+    const { atomicWriteJson } = loadServerInternals(['atomicWriteJson']);
+    const target = path.join(root, 'failed-publication.json');
+    fs.writeFileSync(target, '{"old":true}');
+    const rename = fs.promises.rename;
+    let calls = 0;
+    fs.promises.rename = async (from, to) => {
+      if (to !== target) return rename(from, to);
+      calls++;
+      throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
+    };
+    try { await assert.rejects(atomicWriteJson(target, { old: false }), { code: 'EACCES' }); }
+    finally { fs.promises.rename = rename; }
+    assert.equal(calls, 1);
+    assert.equal(fs.readFileSync(target, 'utf8'), '{"old":true}');
+    assert.deepEqual(fs.readdirSync(root).filter(name => name.startsWith('failed-publication.json.')), []);
+  });
   it('M2 writeConfigAtomic: config.json and config.json.prev end up 0600 even when upgrading from 0644 files', async () => {
     const { writeConfigAtomic, paths } = loadServerInternals(['writeConfigAtomic', 'paths']);
     fs.mkdirSync(path.dirname(paths.config), { recursive: true });

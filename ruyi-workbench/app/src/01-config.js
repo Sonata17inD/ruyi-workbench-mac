@@ -1644,16 +1644,8 @@ function noteSessionsDirOwnWrite(file) {
 }
 
 // ============================================================================
-// 第25波 25.1(AUTONOMY-PLAN §4):原子 JSON 写【统一入口】。此前四种手写变体各缺一角——
-// saveSession/writeConfigAtomic 无 rename 重试、saveAgentRun 的 tmp 名无随机、journalWriteIndex/
-// saveUserPlaybook 用固定 '.tmp' 名——全部收编到这里,一处修对处处对:
-//   ① 唯一 tmp 名(pid+随机):固定名下两个并发写者写同一临时文件、交错字节 → rename 出损坏 JSON;
-//   ② rename 瞬时锁重试:Windows 上并发读者/杀软/备份持目标句柄致 EPERM/EBUSY/EACCES/EEXIST,毫秒级即释,
-//      重试 8 次(15→155ms 退避)——saveAgentRun 实战验证过的参数,推广到所有 JSON 落盘;
-//   ③ 最终失败必 unlink tmp:唯一名没有"下次覆写自愈"路径,不清会无界累积孤儿;
-//   ④ value 传字符串视为已序列化(saveSession 需要同步快照语义:序列化与索引快照同一 tick)。
-//   ⑤ opts.mode(安全走查 S11):新建临时文件时的权限位(POSIX 生效,Windows 忽略)。rename 之后目标就是这个权限,
-//      所以密钥文件(config.json / runtime.json)传 0o600,只有属主可读写;不传保持原样(进程 umask,通常 0644)。
+// 原子 JSON 写入：唯一临时文件、可选私有权限，失败清理自己创建的临时文件。
+// Mac rename 原子发布；权限或路径冲突立即报错，保留旧目标。
 async function atomicWriteJson(finalPath, value, opts = {}) {
   // typeof 守卫:本函数体会被 autonomy-durability 单独抽取执行(那里没有这个钩子)。
   const noteOwn = typeof noteSessionsDirOwnWrite === 'function' ? noteSessionsDirOwnWrite : () => {};
@@ -1679,15 +1671,10 @@ async function atomicWriteJson(finalPath, value, opts = {}) {
       try { await fsp.writeFile(tmpPath, payload, Number.isInteger(opts.mode) ? { encoding: 'utf8', mode: opts.mode } : 'utf8'); }
       catch (e) { fsp.unlink(tmpPath).catch(() => {}); throw e; }
     }
-    const retries = Number.isFinite(opts.retries) ? opts.retries : 8;
-    for (let attempt = 0; ; attempt++) {
-      try { await fsp.rename(tmpPath, finalPath); return; }
-      catch (e) {
-        const transient = e && (e.code === 'EPERM' || e.code === 'EBUSY' || e.code === 'EACCES' || e.code === 'EEXIST');
-        if (transient && attempt < retries) { await new Promise(r => setTimeout(r, 15 + attempt * 20)); continue; }
-        try { await fsp.unlink(tmpPath); } catch { /* best-effort tmp cleanup */ }
-        throw e;
-      }
+    try { await fsp.rename(tmpPath, finalPath); }
+    catch (e) {
+      try { await fsp.unlink(tmpPath); } catch { /* best-effort tmp cleanup */ }
+      throw e;
     }
   } finally { noteOwn(finalPath); }
 }
