@@ -1047,7 +1047,6 @@ class McpStdioClient {
       child = ProcessRuntime.spawn(s.command, s.args, {
         cwd: this.cwd,
         env: spawnEnv,
-        windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
         ...s.opts,
       }, { kind: 'mcp', serverId: this.id });

@@ -2745,7 +2745,7 @@ function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
     const done = result => { if (!settled) { settled = true; resolve(result); } };
     let child = null;
     try {
-      child = cp.spawn(command, args, { stdio: 'ignore', windowsHide: true, timeout, ...spawnOpts });
+      child = cp.spawn(command, args, { stdio: 'ignore', timeout, ...spawnOpts });
     } catch (error) { done({ error, status: null }); return; }
     child.once('error', error => done({ error, status: null }));
     child.once('close', code => done({ error: null, status: code }));
@@ -2762,7 +2762,7 @@ function detectClaudePathUncached() {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
       const s = { command, args: ['--version'], opts: {} };
-      const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
+      const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
       const found = !ok.error && ok.status !== null;
       if (found) return command;
     } catch (error) {
@@ -2865,7 +2865,7 @@ function probeAgentCliLauncher(command) {
   if (!command) return false;
   try {
     const s = agentCliProbeSpawn(command);
-    const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
+    const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
     return !ok.error && ok.status === 0;
   } catch (error) { if (error.cleanupIncomplete) throw error; return false; }
 }
@@ -3245,7 +3245,6 @@ function probeDesktopPython(candidate, cwd, desktopEnv) {
     const result = spawnProbeSync(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
       cwd: cwd || undefined,
       env: { ...process.env, ...(desktopEnv || {}) },
-      windowsHide: true,
       timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
       encoding: 'utf8',
       maxBuffer: 64 * 1024,
@@ -3264,7 +3263,7 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
     try {
       capture = ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined, env: { ...process.env, ...(desktopEnv || {}) },
-        windowsHide: true, encoding: 'utf8', maxBuffer: 64 * 1024,
+        encoding: 'utf8', maxBuffer: 64 * 1024,
       }, { ...ProcessRuntime.currentOwner(), kind: 'desktop-python-probe' });
     } catch { return ''; }
     const { child } = capture;
@@ -3302,7 +3301,6 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
       cp.execFile(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined,
         env: { ...process.env, ...(desktopEnv || {}) },
-        windowsHide: true,
         timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
         encoding: 'utf8',
         maxBuffer: 64 * 1024,

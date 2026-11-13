@@ -10,7 +10,7 @@
 //      (128f-⑬ 的教训:同步探测会把整个服务钉住)。进程退出那一刻的收尾也走 killChildTree(发出去就算,不等它)—— 那时已经没有请求要服务了。
 //   ② 已经有人起好了就不起第二个:端口上站着的 /health 回 component 对得上 → 直接用(owned:false,退出时也不杀它)。
 //   ③ 端口被【别人】占了 → 另挑空闲端口经 portEnv 告诉组件。component 对不上的端口绝不配成端点。
-//   ④ 不经 shell、不拼接参数、不展开变量;windowsHide;stdin 忽略;stderr 只留尾巴给设置页看,不进日志正文。
+//   ④ 不经 shell、不拼接参数、不展开变量;stdin 忽略;stderr 只留尾巴给设置页看,不进日志正文。
 //   ⑤ 自动选成语音识别端点【每个组件只发生一次】(config.toolbox.seen),且只在用户还没配过语音识别时;
 //      用户后来关掉或换走,绝不再替他选回来。已经配了别的 → 只列为候选。
 //   ⑥ 自动生成的服务商 id 一律 `toolbox-<id>`,这个前缀归自动发现所有:组件被停用／卸载,条目跟着撤。
@@ -105,7 +105,7 @@ function startToolboxService(component) {
     let child = null;
     try {
       child = ProcessRuntime.spawn(component.run.command, component.run.args, {
-        cwd: component.run.cwd, shell: false, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
+        cwd: component.run.cwd, shell: false, stdio: ['ignore', 'ignore', 'pipe'],
         env: { ...process.env, PYTHONUTF8: '1', PYTHONUNBUFFERED: '1', ...component.run.env, [svc.portEnv]: String(port), RUYI_TOOLBOX_PARENT_PID: String(process.pid) },
       }, { kind: 'toolbox', componentId: component.id });
     } catch (err) {

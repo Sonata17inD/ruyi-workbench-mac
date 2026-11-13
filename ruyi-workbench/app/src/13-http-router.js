@@ -2135,7 +2135,7 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   });
   if (opts.open) {
     const opener = platformOpenSpawn(url, 'browser');
-    spawnDetachedChecked(opener.command, opener.args, { detached: true, windowsHide: true, stdio: 'ignore' })
+    spawnDetachedChecked(opener.command, opener.args, { detached: true, stdio: 'ignore' })
       .then(started => { if (!started.ok) { try { console.error(`--open: 无法自动打开浏览器(${started.error}),请手动访问 ${url}`); } catch { /* ignore */ } } });
   }
 }
@@ -2268,7 +2268,7 @@ async function discoverKimiModels(config) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: '读取 Kimi Code 模型列表超时' });
     }, 10000);
     try {
-      const options = { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
+      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
       child = supervised
         ? ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
         : cp.spawn(launch.command, launch.args, options);

@@ -56,7 +56,7 @@ async function ensureKimiServer(config) {
     const launch = prepareAgentCliSpawn('kimi', driver.path, ['web', '--port', String(port), '--no-open', '--log-level', 'warn']);
     const child = ProcessRuntime.spawn(launch.command, launch.args, {
       cwd: normalizeCwd(config.defaultWorkspace, os.homedir()), env: process.env,
-      windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
+      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
     }, { kind: 'kimi-server' });
     child.on('error', () => {});
     kimiBridgeState.child = child;
@@ -1648,7 +1648,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   const spawnArgs = nativeBashWrapper ? nativeBashWrapper.argv : args;
   let child;
   try {
-    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] },
+    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
       { kind: 'kimi-terminal', sessionId: String(params.sessionId), toolCallId: terminalId });
   } catch (error) { throw kimiAcpRequestError(-32000, `Failed to create terminal: ${error && error.message || error}`); }
   let resolveExit;
@@ -1852,7 +1852,7 @@ async function handleKimiAcpElicitation(params, context, requestMeta) {
       try {
         // 异步启动失败(ENOENT/EPERM)也要落进下面的 catch 回 -32000,而不是成为 uncaughtException 带崩服务。
         const open = buildOpenSpawn(url.href);
-        const started = await spawnDetachedChecked(open.command, open.args, { detached: true, windowsHide: false, stdio: 'ignore' });
+        const started = await spawnDetachedChecked(open.command, open.args, { detached: true, stdio: 'ignore' });
         if (!started.ok) throw new Error(started.error);
       }
       catch (error) { throw kimiAcpRequestError(-32000, `Unable to open elicitation URL: ${error && error.message || error}`); }
@@ -2505,7 +2505,7 @@ async function runKimiAcpTurnPrepared(context) {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     assertSessionExecutionOwner(session.id, executionOwner);
     if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
       { kind: 'cli', agentCliType: 'kimi', sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
     reg = {
       child, pid: child.pid, exited: false, pausePending: false, state: 'running', startedAt: Date.now(),

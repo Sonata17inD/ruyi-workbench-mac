@@ -321,7 +321,7 @@ function runKeyedChain(chains, key, work) {
 // 工作台:在飞回合、MCP 子进程、待决权限全丢,而工具先前已经回了「opened」。
 // 这里先挂 'error' 监听再 unref,并以 promise 交回启动结果:'spawn' 事件 → { ok:true },'error' → { ok:false, error }。
 // 同步抛出(参数非法)照旧同步抛给调用方,与原来 try { spawn().unref() } catch 的语义一致;成功路径的参数、
-// detached/stdio/windowsHide 全由调用方原样传入,行为不变。不关心结果的调用方可以不 await(错误已被吸收)。
+// detached/stdio 全由调用方原样传入,行为不变。不关心结果的调用方可以不 await(错误已被吸收)。
 function spawnDetachedChecked(command, args, options) {
   const child = cp.spawn(command, args || [], options);
   // LaunchServices owns the destination application's lifetime. Wait only for the

@@ -5,20 +5,9 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
   const os = osModule;
   const cp = cpModule;
   const killChildTree = killTreeFn;
-  // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):explorer.exe 起不来时不再是 uncaughtException。
+  // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):系统打开程序启动失败时不再是 uncaughtException。
   const spawnDetachedChecked = spawnDetachedFn;
-  // v1.0.1 编码修复:Windows 子进程(powershell/cmd/git/python…)在中文系统默认按 OEM 代码页(GBK/cp936)
-  // 输出,而非 UTF-8。此前 runProcess 按 UTF-8 逐块 toString → 中文全乱码(GBK 字节 c2a6c9bd… 被读成「¦ɽ」)。
-  // 修法:累积原始字节,收尾时智能解码——先按 UTF-8 解;若出现替换符(�,说明不是合法 UTF-8),退回 GBK。
-  // 我们自己以 UTF-8 输出的工具不受影响(合法 UTF-8 无替换符,原样保留),GBK 原生命令输出也能正确还原。
-  // 2026-09 起改为【按行】判定(00-boot decodeConsoleText):修前整段只要有一处不是合法 UTF-8 就整段按 GBK 解,
-  // 混排输出(git 的 UTF-8 + 系统命令的 GBK)里总有一半是乱码。
-  // 2026-10 补【源头】一层:Node 侧解码只能还原「有损但可逆」的 GBK;en-US 等非中文代码页的机器上,PowerShell 按控制台代码页
-  // (OEM 437 / ANSI 1252)编码,中文在源头就变成 `?`,信息已丢。曾有注释称 [Console]::OutputEncoding 那类 PS 方案「在无窗口
-  // spawn 下会静默失效」—— 在 en-US 机器上实测【不成立】:windowsHide 起的子进程有自己的隐藏控制台,脚本头设置后中文输出 /
-  // 文件名 / cmd /c dir / Write-Host / stderr 全部正确。所以 withQuietProgress(见下)给脚本头加 UTF-8 输出编码前导
-  // (00-boot PS_UTF8_OUTPUT_PREAMBLE,含共享控制台副作用的调查结论),Node 侧按行解码保留为兜底
-  // (中文系统上设置失败、原生命令自己写 GBK 等;源头已是 UTF-8 时被 UTF-8 优先分支正确接住)。
+  // 显式保留用户命令输出的 UTF-8／GB18030 按行解码。
   function decodeBestEffort(buf) {
     return decodeConsoleTextFn(buf);
   }
@@ -144,7 +133,6 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
           env: options.inheritEnv === false ? { ...(options.env || {}) } : { ...process.env, ...(options.env || {}) },
           owner: { ...ProcessRuntime.currentOwner(), kind: 'desktop-shell', ...options.owner },
           spawnOptions: {
-          windowsHide: true,
           shell: options.shell || false,
           // NE-3:一次性运行不给子进程一根永不关闭的 stdin 管道 —— 读 stdin / 弹提示(Read-Host、pause、input()、git commit 缺 -m)
           // 的程序会一直等到超时。'ignore' 让它们立刻读到 EOF / 得到错误;极少数要喂 stdin 的调用方传 options.stdin==='pipe'。

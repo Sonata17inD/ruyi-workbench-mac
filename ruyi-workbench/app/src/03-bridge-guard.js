@@ -935,7 +935,7 @@ function normalizeGuardPath(p) {
 // 正斜杠起头的 `//主机/共享` 只在 Windows 上当 UNC 认(POSIX 上 `//usr/lib` 就是 /usr/lib)。
 function uncHostAndPath(p, forwardSlash) {
   const s = String(p == null ? '' : p);
-  const fwd = forwardSlash === undefined ? process.platform === 'win32' : !!forwardSlash;
+  const fwd = !!forwardSlash;
   const isSep = ch => ch === '\\' || (fwd && ch === '/');
   if (s.length < 3 || !isSep(s[0]) || !isSep(s[1])) return null;
   let rest = s.slice(2);
@@ -968,7 +968,7 @@ function uncIsLocalHost(host) {
 // 返回 null(不是设备命名空间写法)/ true(本地卷)/ false(其余)。UNC 别名写法由 uncHostAndPath 先认出主机,不走这里。
 function deviceNamespaceIsLocalVolume(p, forwardSlash) {
   const s = String(p == null ? '' : p);
-  const fwd = forwardSlash === undefined ? process.platform === 'win32' : !!forwardSlash;
+  const fwd = !!forwardSlash;
   const isSep = ch => ch === '\\' || (fwd && ch === '/');
   let rest = null;
   if (s.length >= 4 && isSep(s[0]) && isSep(s[1]) && (s[2] === '?' || s[2] === '.') && isSep(s[3])) rest = s.slice(4);
@@ -1294,7 +1294,7 @@ function buildRevealSpawn(mode, absPath, platform = process.platform) {
 // target on & | && metacharacters, so `http://x&calc` ran calc.exe (command injection,实测复现). Spawning
 // explorer.exe directly (Node CreateProcess passes argv verbatim — no shell) hands the URL/path to the
 // default browser/handler and never interprets shell metacharacters. Pure (no spawn); exposed for e2e argv
-// assertions. NB: the caller must still spawn with {detached, windowsHide, stdio:'ignore'}.unref().
+// assertions. NB: the caller must still spawn with {detached, stdio:'ignore'}.unref().
 function buildOpenSpawn(target, platform = process.platform) {
   return platformOpenSpawn(target, 'open', platform);
 }
@@ -1356,7 +1356,7 @@ async function launchCodeEditor(spawnSpec) {
   }
   try {
     // 编辑器 exe 可能已卸载/被拦:ENOENT 是异步 'error',要等到 spawn/error 才知道成没成,否则调用方的失败分支永远走不到。
-    const started = await spawnDetachedChecked(spawnSpec.command, spawnSpec.args || [], { detached: true, windowsHide: true, stdio: 'ignore' });
+    const started = await spawnDetachedChecked(spawnSpec.command, spawnSpec.args || [], { detached: true, stdio: 'ignore' });
     return started.ok;
   } catch { return false; }
 }
@@ -1469,7 +1469,7 @@ async function readFilePreview(absPath, snapshot = null) {
 function existsExecutable(command) {
   if (!command) return false;
   const s = { command, args: ['--version'], opts: {} };
-  const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 6000, ...s.opts });
+  const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 6000, ...s.opts });
   if (result.error) return false;
   return result.status !== null;
 }
@@ -1502,7 +1502,7 @@ function probeGitCli() {
   if (_gitCliProbe && (now - _gitCliProbe.at) < GITCLI_CACHE_MS) return _gitCliProbe.value;
   let value = false;
   try {
-    const result = spawnProbeSync('git', ['--version'], { stdio: 'ignore', windowsHide: true, timeout: 3000 });
+    const result = spawnProbeSync('git', ['--version'], { stdio: 'ignore', timeout: 3000 });
     value = !result.error && result.status === 0;
   } catch (error) { if (error.cleanupIncomplete) throw error; value = false; }
   _gitCliProbe = { at: now, value };

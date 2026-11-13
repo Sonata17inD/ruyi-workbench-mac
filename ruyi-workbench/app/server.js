@@ -359,7 +359,7 @@ function runKeyedChain(chains, key, work) {
 // 工作台:在飞回合、MCP 子进程、待决权限全丢,而工具先前已经回了「opened」。
 // 这里先挂 'error' 监听再 unref,并以 promise 交回启动结果:'spawn' 事件 → { ok:true },'error' → { ok:false, error }。
 // 同步抛出(参数非法)照旧同步抛给调用方,与原来 try { spawn().unref() } catch 的语义一致;成功路径的参数、
-// detached/stdio/windowsHide 全由调用方原样传入,行为不变。不关心结果的调用方可以不 await(错误已被吸收)。
+// detached/stdio 全由调用方原样传入,行为不变。不关心结果的调用方可以不 await(错误已被吸收)。
 function spawnDetachedChecked(command, args, options) {
   const child = cp.spawn(command, args || [], options);
   // LaunchServices owns the destination application's lifetime. Wait only for the
@@ -2948,8 +2948,7 @@ const ProcessRuntime = (() => {
     if (typeof maxBuffer !== 'number' || maxBuffer < 0 || Number.isNaN(maxBuffer)) {
       throw Object.assign(new RangeError('maxBuffer must be a non-negative number'), { code: 'ERR_OUT_OF_RANGE' });
     }
-    const child = spawn(executable, argv, { cwd: options.cwd, env: options.env, windowsHide: options.windowsHide,
-      stdio: ['ignore', 'pipe', 'pipe'] }, owner);
+    const child = spawn(executable, argv, { cwd: options.cwd, env: options.env, stdio: ['ignore', 'pipe', 'pipe'] }, owner);
     const handle = children.get(child);
     const chunks = { stdout: [], stderr: [] };
     const sizes = { stdout: 0, stderr: 0 };
@@ -3089,8 +3088,7 @@ const ProcessRuntime = (() => {
     let raw;
     try {
       raw = childProcessModule.spawnSync(ProcessRuntimeHooks.helperPath(), ['--supervise-v2-deadline', String(timeout), command, ...argv], {
-        cwd: options.cwd, env: options.env, windowsHide: true,
-        stdio: ['ignore', ignored ? 'ignore' : 'pipe', ignored ? 'ignore' : 'pipe', 'pipe'],
+        cwd: options.cwd, env: options.env, stdio: ['ignore', ignored ? 'ignore' : 'pipe', ignored ? 'ignore' : 'pipe', 'pipe'],
         timeout: timeout ? Math.min(timeout + 4000, 2147483647) : 0, killSignal: 'SIGKILL',
         maxBuffer: ignored ? 4096 : 2 * maxBuffer + 4096,
       });
@@ -6843,7 +6841,7 @@ function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
     const done = result => { if (!settled) { settled = true; resolve(result); } };
     let child = null;
     try {
-      child = cp.spawn(command, args, { stdio: 'ignore', windowsHide: true, timeout, ...spawnOpts });
+      child = cp.spawn(command, args, { stdio: 'ignore', timeout, ...spawnOpts });
     } catch (error) { done({ error, status: null }); return; }
     child.once('error', error => done({ error, status: null }));
     child.once('close', code => done({ error: null, status: code }));
@@ -6860,7 +6858,7 @@ function detectClaudePathUncached() {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
       const s = { command, args: ['--version'], opts: {} };
-      const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
+      const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
       const found = !ok.error && ok.status !== null;
       if (found) return command;
     } catch (error) {
@@ -6963,7 +6961,7 @@ function probeAgentCliLauncher(command) {
   if (!command) return false;
   try {
     const s = agentCliProbeSpawn(command);
-    const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
+    const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
     return !ok.error && ok.status === 0;
   } catch (error) { if (error.cleanupIncomplete) throw error; return false; }
 }
@@ -7343,7 +7341,6 @@ function probeDesktopPython(candidate, cwd, desktopEnv) {
     const result = spawnProbeSync(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
       cwd: cwd || undefined,
       env: { ...process.env, ...(desktopEnv || {}) },
-      windowsHide: true,
       timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
       encoding: 'utf8',
       maxBuffer: 64 * 1024,
@@ -7362,7 +7359,7 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
     try {
       capture = ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined, env: { ...process.env, ...(desktopEnv || {}) },
-        windowsHide: true, encoding: 'utf8', maxBuffer: 64 * 1024,
+        encoding: 'utf8', maxBuffer: 64 * 1024,
       }, { ...ProcessRuntime.currentOwner(), kind: 'desktop-python-probe' });
     } catch { return ''; }
     const { child } = capture;
@@ -7400,7 +7397,6 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
       cp.execFile(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined,
         env: { ...process.env, ...(desktopEnv || {}) },
-        windowsHide: true,
         timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
         encoding: 'utf8',
         maxBuffer: 64 * 1024,
@@ -16673,7 +16669,7 @@ function normalizeGuardPath(p) {
 // 正斜杠起头的 `//主机/共享` 只在 Windows 上当 UNC 认(POSIX 上 `//usr/lib` 就是 /usr/lib)。
 function uncHostAndPath(p, forwardSlash) {
   const s = String(p == null ? '' : p);
-  const fwd = forwardSlash === undefined ? process.platform === 'win32' : !!forwardSlash;
+  const fwd = !!forwardSlash;
   const isSep = ch => ch === '\\' || (fwd && ch === '/');
   if (s.length < 3 || !isSep(s[0]) || !isSep(s[1])) return null;
   let rest = s.slice(2);
@@ -16706,7 +16702,7 @@ function uncIsLocalHost(host) {
 // 返回 null(不是设备命名空间写法)/ true(本地卷)/ false(其余)。UNC 别名写法由 uncHostAndPath 先认出主机,不走这里。
 function deviceNamespaceIsLocalVolume(p, forwardSlash) {
   const s = String(p == null ? '' : p);
-  const fwd = forwardSlash === undefined ? process.platform === 'win32' : !!forwardSlash;
+  const fwd = !!forwardSlash;
   const isSep = ch => ch === '\\' || (fwd && ch === '/');
   let rest = null;
   if (s.length >= 4 && isSep(s[0]) && isSep(s[1]) && (s[2] === '?' || s[2] === '.') && isSep(s[3])) rest = s.slice(4);
@@ -17032,7 +17028,7 @@ function buildRevealSpawn(mode, absPath, platform = process.platform) {
 // target on & | && metacharacters, so `http://x&calc` ran calc.exe (command injection,实测复现). Spawning
 // explorer.exe directly (Node CreateProcess passes argv verbatim — no shell) hands the URL/path to the
 // default browser/handler and never interprets shell metacharacters. Pure (no spawn); exposed for e2e argv
-// assertions. NB: the caller must still spawn with {detached, windowsHide, stdio:'ignore'}.unref().
+// assertions. NB: the caller must still spawn with {detached, stdio:'ignore'}.unref().
 function buildOpenSpawn(target, platform = process.platform) {
   return platformOpenSpawn(target, 'open', platform);
 }
@@ -17094,7 +17090,7 @@ async function launchCodeEditor(spawnSpec) {
   }
   try {
     // 编辑器 exe 可能已卸载/被拦:ENOENT 是异步 'error',要等到 spawn/error 才知道成没成,否则调用方的失败分支永远走不到。
-    const started = await spawnDetachedChecked(spawnSpec.command, spawnSpec.args || [], { detached: true, windowsHide: true, stdio: 'ignore' });
+    const started = await spawnDetachedChecked(spawnSpec.command, spawnSpec.args || [], { detached: true, stdio: 'ignore' });
     return started.ok;
   } catch { return false; }
 }
@@ -17207,7 +17203,7 @@ async function readFilePreview(absPath, snapshot = null) {
 function existsExecutable(command) {
   if (!command) return false;
   const s = { command, args: ['--version'], opts: {} };
-  const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 6000, ...s.opts });
+  const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 6000, ...s.opts });
   if (result.error) return false;
   return result.status !== null;
 }
@@ -17240,7 +17236,7 @@ function probeGitCli() {
   if (_gitCliProbe && (now - _gitCliProbe.at) < GITCLI_CACHE_MS) return _gitCliProbe.value;
   let value = false;
   try {
-    const result = spawnProbeSync('git', ['--version'], { stdio: 'ignore', windowsHide: true, timeout: 3000 });
+    const result = spawnProbeSync('git', ['--version'], { stdio: 'ignore', timeout: 3000 });
     value = !result.error && result.status === 0;
   } catch (error) { if (error.cleanupIncomplete) throw error; value = false; }
   _gitCliProbe = { at: now, value };
@@ -19753,7 +19749,6 @@ class McpStdioClient {
       child = ProcessRuntime.spawn(s.command, s.args, {
         cwd: this.cwd,
         env: spawnEnv,
-        windowsHide: true,
         stdio: ['pipe', 'pipe', 'pipe'],
         ...s.opts,
       }, { kind: 'mcp', serverId: this.id });
@@ -21816,20 +21811,9 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
   const os = osModule;
   const cp = cpModule;
   const killChildTree = killTreeFn;
-  // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):explorer.exe 起不来时不再是 uncaughtException。
+  // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):系统打开程序启动失败时不再是 uncaughtException。
   const spawnDetachedChecked = spawnDetachedFn;
-  // v1.0.1 编码修复:Windows 子进程(powershell/cmd/git/python…)在中文系统默认按 OEM 代码页(GBK/cp936)
-  // 输出,而非 UTF-8。此前 runProcess 按 UTF-8 逐块 toString → 中文全乱码(GBK 字节 c2a6c9bd… 被读成「¦ɽ」)。
-  // 修法:累积原始字节,收尾时智能解码——先按 UTF-8 解;若出现替换符(�,说明不是合法 UTF-8),退回 GBK。
-  // 我们自己以 UTF-8 输出的工具不受影响(合法 UTF-8 无替换符,原样保留),GBK 原生命令输出也能正确还原。
-  // 2026-09 起改为【按行】判定(00-boot decodeConsoleText):修前整段只要有一处不是合法 UTF-8 就整段按 GBK 解,
-  // 混排输出(git 的 UTF-8 + 系统命令的 GBK)里总有一半是乱码。
-  // 2026-10 补【源头】一层:Node 侧解码只能还原「有损但可逆」的 GBK;en-US 等非中文代码页的机器上,PowerShell 按控制台代码页
-  // (OEM 437 / ANSI 1252)编码,中文在源头就变成 `?`,信息已丢。曾有注释称 [Console]::OutputEncoding 那类 PS 方案「在无窗口
-  // spawn 下会静默失效」—— 在 en-US 机器上实测【不成立】:windowsHide 起的子进程有自己的隐藏控制台,脚本头设置后中文输出 /
-  // 文件名 / cmd /c dir / Write-Host / stderr 全部正确。所以 withQuietProgress(见下)给脚本头加 UTF-8 输出编码前导
-  // (00-boot PS_UTF8_OUTPUT_PREAMBLE,含共享控制台副作用的调查结论),Node 侧按行解码保留为兜底
-  // (中文系统上设置失败、原生命令自己写 GBK 等;源头已是 UTF-8 时被 UTF-8 优先分支正确接住)。
+  // 显式保留用户命令输出的 UTF-8／GB18030 按行解码。
   function decodeBestEffort(buf) {
     return decodeConsoleTextFn(buf);
   }
@@ -21955,7 +21939,6 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
           env: options.inheritEnv === false ? { ...(options.env || {}) } : { ...process.env, ...(options.env || {}) },
           owner: { ...ProcessRuntime.currentOwner(), kind: 'desktop-shell', ...options.owner },
           spawnOptions: {
-          windowsHide: true,
           shell: options.shell || false,
           // NE-3:一次性运行不给子进程一根永不关闭的 stdin 管道 —— 读 stdin / 弹提示(Read-Host、pause、input()、git commit 缺 -m)
           // 的程序会一直等到超时。'ignore' 让它们立刻读到 EOF / 得到错误;极少数要喂 stdin 的调用方传 options.stdin==='pipe'。
@@ -22150,7 +22133,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
 //      (128f-⑬ 的教训:同步探测会把整个服务钉住)。进程退出那一刻的收尾也走 killChildTree(发出去就算,不等它)—— 那时已经没有请求要服务了。
 //   ② 已经有人起好了就不起第二个:端口上站着的 /health 回 component 对得上 → 直接用(owned:false,退出时也不杀它)。
 //   ③ 端口被【别人】占了 → 另挑空闲端口经 portEnv 告诉组件。component 对不上的端口绝不配成端点。
-//   ④ 不经 shell、不拼接参数、不展开变量;windowsHide;stdin 忽略;stderr 只留尾巴给设置页看,不进日志正文。
+//   ④ 不经 shell、不拼接参数、不展开变量;stdin 忽略;stderr 只留尾巴给设置页看,不进日志正文。
 //   ⑤ 自动选成语音识别端点【每个组件只发生一次】(config.toolbox.seen),且只在用户还没配过语音识别时;
 //      用户后来关掉或换走,绝不再替他选回来。已经配了别的 → 只列为候选。
 //   ⑥ 自动生成的服务商 id 一律 `toolbox-<id>`,这个前缀归自动发现所有:组件被停用／卸载,条目跟着撤。
@@ -22245,7 +22228,7 @@ function startToolboxService(component) {
     let child = null;
     try {
       child = ProcessRuntime.spawn(component.run.command, component.run.args, {
-        cwd: component.run.cwd, shell: false, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
+        cwd: component.run.cwd, shell: false, stdio: ['ignore', 'ignore', 'pipe'],
         env: { ...process.env, PYTHONUTF8: '1', PYTHONUNBUFFERED: '1', ...component.run.env, [svc.portEnv]: String(port), RUYI_TOOLBOX_PARENT_PID: String(process.pid) },
       }, { kind: 'toolbox', componentId: component.id });
     } catch (err) {
@@ -26470,7 +26453,7 @@ async function runClaudeTurn({
   if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
   assertSessionExecutionOwner(session.id, executionOwner);
   if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-  const child = ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts },
+  const child = ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts },
     { kind: 'cli', agentCliType, sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
   // P2-3: hold a reference to the in-memory session so a mid-turn POST /api/session/skills can update
   // session.skills on the LIVE turn object (otherwise the turn's end-of-turn saveSession clobbers it).
@@ -28204,7 +28187,7 @@ async function ensureKimiServer(config) {
     const launch = prepareAgentCliSpawn('kimi', driver.path, ['web', '--port', String(port), '--no-open', '--log-level', 'warn']);
     const child = ProcessRuntime.spawn(launch.command, launch.args, {
       cwd: normalizeCwd(config.defaultWorkspace, os.homedir()), env: process.env,
-      windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
+      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
     }, { kind: 'kimi-server' });
     child.on('error', () => {});
     kimiBridgeState.child = child;
@@ -29796,7 +29779,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   const spawnArgs = nativeBashWrapper ? nativeBashWrapper.argv : args;
   let child;
   try {
-    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] },
+    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
       { kind: 'kimi-terminal', sessionId: String(params.sessionId), toolCallId: terminalId });
   } catch (error) { throw kimiAcpRequestError(-32000, `Failed to create terminal: ${error && error.message || error}`); }
   let resolveExit;
@@ -30000,7 +29983,7 @@ async function handleKimiAcpElicitation(params, context, requestMeta) {
       try {
         // 异步启动失败(ENOENT/EPERM)也要落进下面的 catch 回 -32000,而不是成为 uncaughtException 带崩服务。
         const open = buildOpenSpawn(url.href);
-        const started = await spawnDetachedChecked(open.command, open.args, { detached: true, windowsHide: false, stdio: 'ignore' });
+        const started = await spawnDetachedChecked(open.command, open.args, { detached: true, stdio: 'ignore' });
         if (!started.ok) throw new Error(started.error);
       }
       catch (error) { throw kimiAcpRequestError(-32000, `Unable to open elicitation URL: ${error && error.message || error}`); }
@@ -30653,7 +30636,7 @@ async function runKimiAcpTurnPrepared(context) {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     assertSessionExecutionOwner(session.id, executionOwner);
     if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
       { kind: 'cli', agentCliType: 'kimi', sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
     reg = {
       child, pid: child.pid, exited: false, pausePending: false, state: 'running', startedAt: Date.now(),
@@ -44211,7 +44194,7 @@ async function gitExec(cwd, args, timeout = 30000) {
     throw error;
   }
   return new Promise((resolve, reject) => {
-    cp.execFile('git', ['-C', cwd, ...args], { windowsHide: true, timeout, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+    cp.execFile('git', ['-C', cwd, ...args], { timeout, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) { err.gitStderr = String(stderr || '').trim(); reject(err); }
       else resolve(String(stdout || '').trim());
     });
@@ -44657,7 +44640,7 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   const runOnce = async () => {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     return new Promise(resolve => {
-    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
       { kind: 'cli-subagent', sessionId: parentSession.id, subagentId, agentKey });
     currentChild = child;
     let lastEventAt = Date.now();
@@ -57045,7 +57028,7 @@ async function shellStart(args, config, ctx = {}) {
   let child;
   try {
     child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
-      cwd, env: platformShellEnvironment(process.env), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+      cwd, env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
       ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
@@ -57472,7 +57455,7 @@ function normalizeGlobPatternForRoot(raw, root) {
   if (winAbs || path.isAbsolute(p)) {
     const base = path.resolve(String(root || '.'));
     // 跨平台:Windows 形绝对路径在非 Windows 宿主上 path.resolve 不认,用 win32 解析;宿主形的用宿主 path。
-    const useWin = process.platform === 'win32' || (winAbs && !path.isAbsolute(p));
+    const useWin = winAbs && !path.isAbsolute(p);
     const rel = useWin ? path.win32.relative(path.win32.resolve(base), path.win32.resolve(p)) : path.relative(base, path.resolve(p));
     if (rel && !/^\.\.(?:[\\/]|$)/.test(rel) && !path.isAbsolute(rel) && !path.win32.isAbsolute(rel)) {
       p = rel.replace(/\\/g, '/');
@@ -58506,7 +58489,7 @@ async function runRgOwned(command, argv, cwd, timeoutMs, maxBuffer, signal,
   if (signal?.aborted) throw failure('aborted');
   let capture;
   try {
-    capture = ProcessRuntime.capture(command, argv, { cwd, windowsHide: true, maxBuffer, encoding: 'utf8' },
+    capture = ProcessRuntime.capture(command, argv, { cwd, maxBuffer, encoding: 'utf8' },
       owner);
   } catch { return null; } // No child was started, so JS fallback is safe.
   const { child } = capture;
@@ -58546,7 +58529,7 @@ function rgListHighByteFiles(rg, base, filt, timeoutMs, signal) {
   return new Promise(resolve => {
     let out = '', done = false;
     const finish = v => { if (!done) { done = true; try { clearTimeout(timer); } catch {} resolve(v); } };
-    const child = cp.spawn(rg, ['--no-messages', '-l', '--crlf', ...filt, '--', '(?-u)[\\x80-\\xFF]', base], { cwd: base, windowsHide: true });
+    const child = cp.spawn(rg, ['--no-messages', '-l', '--crlf', ...filt, '--', '(?-u)[\\x80-\\xFF]', base], { cwd: base });
     const timer = setTimeout(() => { try { child.kill('SIGTERM'); } catch {} finish(null); }, timeoutMs);
     // setEncoding 走 StringDecoder:块边界切在多字节字符中间时先扣住残字节、下一块拼齐再出字(逐块 d.toString('utf8') 会把
     // 被切开的字符各变成 U+FFFD,中文路径整条损坏 —— 管道块大小由 OS 决定,长输出必现)。
@@ -58701,7 +58684,7 @@ function searchFileContentRg(root, pattern, opts = {}) {
         .then(result => { if (!result) return finish(null); stdout = result.stdout; return parseOutput(result.code); }).catch(fail);
       return;
     }
-    const child = cp.spawn(rg, args, { cwd: base, windowsHide: true });
+    const child = cp.spawn(rg, args, { cwd: base });
     timer = setTimeout(() => { try { child.kill('SIGTERM'); } catch {} finish(null); }, Number(opts.rgTimeoutMs || 10000));
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -58728,7 +58711,7 @@ async function readIfExists(file, limit = 200000) {
 // 面向非程序员:AI 替用户管版本(「帮我把这次改动存个版本」)。四个工具都走 ONE 条安全执行路径:
 //   • child_process.execFile('git', [...])   —— 无 shell,杜绝命令注入 / 旗标走私经由 shell 元字符。
 //   • 一切模型可控的路径参数(path/paths)一律置于 `--` 分隔符之后;message 用 `-m <message>` 两元素传递。
-//   • windowsHide + 超时(默认 15s,commit 30s)+ maxBuffer 上限。
+//   • 超时(默认 15s,commit 30s)+ maxBuffer 上限。
 //   • git 不存在(ENOENT) / 非仓库 / 缺身份 → 全部转「人话引导错误」,永不崩溃。
 // 两个引擎路径都注册(serve 进程 provider 循环 + `node server.js mcp` 子进程),因为这是无状态一次性命令,
 // 同 file_read/shell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
@@ -58799,7 +58782,6 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
       // 安全加固前缀(GIT_SAFE_FLAGS)必须在子命令之前;args 以 `-C <dir> <subcmd> …` 开头,故整体前置合法。
       const executionOptions = {
         cwd: cwd || process.cwd(),
-        windowsHide: true,
         maxBuffer: opts && opts.maxBuffer ? opts.maxBuffer : 24 * 1024 * 1024,
         encoding: opts && opts.encoding === 'buffer' ? 'buffer' : 'utf8',
       };
@@ -63250,7 +63232,7 @@ const FileVisualIo = (() => {
     if (signal?.aborted) return { err: Object.assign(new Error('File read cancelled'), { code: 'ABORT_ERR' }) };
     let capture;
     try {
-      capture = ProcessRuntime.capture(exe, argv, { windowsHide: true, maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
+      capture = ProcessRuntime.capture(exe, argv, { maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
         { ...ProcessRuntime.currentOwner(), kind: 'document-reader' });
     } catch (err) { return { err }; }
     const { child } = capture;
@@ -63296,7 +63278,7 @@ const FileVisualIo = (() => {
       const argv = [...pre, '-I', '-X', 'utf8', helperPath, p, JSON.stringify(options(args))];
       const res = process.platform === 'darwin' ? await runMacReader(exe, argv, signal) : await new Promise(resolve => {
         cp.execFile(exe, argv,
-          { windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024, ...(signal ? { signal } : {}) },
+          { timeout: 30000, maxBuffer: 16 * 1024 * 1024, ...(signal ? { signal } : {}) },
           (err, stdout) => resolve({ err, stdout }));
       });
       const cleanupFields = res.cleanup ? { cleanupScope: res.cleanup.scope, cleanupIncomplete: res.cleanup.incomplete === true,
@@ -63360,7 +63342,7 @@ const MediaInspection = (() => {
       };
       const timer = setTimeout(() => { timedOut = true; if (child) child.kill(); }, options.timeoutMs || 5000);
       try {
-        child = childProcess.spawn(command, argv, { windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
+        child = childProcess.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         child.stdout.on('data', b => { stdout = (stdout + b.toString()).slice(-262144); });
         child.stderr.on('data', b => {
           const fragment = b.toString();
@@ -63406,7 +63388,7 @@ const MediaInspection = (() => {
       };
       if (options.signal?.aborted) { stop('aborted'); return; }
       try {
-        child = ProcessRuntime.spawn(command, argv, { windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
+        child = ProcessRuntime.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
           { ...ProcessRuntime.currentOwner(), kind: 'media-inspection' });
         child.stdout.on('data', b => { if (!finished) stdout = (stdout + stdoutDecoder.write(b)).slice(-262144); });
         child.stderr.on('data', b => {
@@ -66171,7 +66153,7 @@ const DESKTOP_TOOL_HANDLERS = {
         const st = await fsp.stat(openTarget).catch(() => null);
         if (!(st && st.isDirectory())) {
           const r = buildRevealSpawn('select', openTarget);
-          const shown = await spawnDetachedChecked(r.command, r.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+          const shown = await spawnDetachedChecked(r.command, r.args, { detached: true, stdio: 'ignore' });
           if (!shown.ok) return { ok: false, error: `无法启动资源管理器:${shown.error}`, target };
           return { ok: true, opened: false, revealed: target, note: `.${ext || '(无扩展名)'} 不是文档/图片/音视频类文件,出于安全没有直接打开(可能会被执行),只在资源管理器里选中了它;要运行请让用户自己决定` };
         }
@@ -66182,7 +66164,7 @@ const DESKTOP_TOOL_HANDLERS = {
       // v1.4.6-S2: same cmd.exe injection fix as browser_open — direct explorer.exe spawn, no shell.
       const s = buildOpenSpawn(openTarget);
       // 启动失败(ENOENT/EPERM…)是异步 'error' 事件:等到 spawn/error 再回话,不再先报「opened」再把服务带崩。
-      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, stdio: 'ignore' });
       if (!started.ok) return { ok: false, error: `无法启动打开程序 ${s.command}:${started.error}`, target };
       if (s.mode === 'select') return { ok: true, opened: false, revealed: target };
       return { ok: true, opened: target };
@@ -66325,7 +66307,7 @@ const NETWORK_TOOL_HANDLERS = {
       }
       const s = buildBrowserOpenSpawn(handoffTarget);
       // 默认浏览器路径可能是注册表里的残留(已卸载):失败走普通工具失败,不再成为 uncaughtException。
-      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, stdio: 'ignore' });
       if (!started.ok) return { ok: false, error: `无法启动浏览器 ${s.command}:${started.error}`, target, browserMode: s.mode };
       if (s.mode === 'file-selection') return { ok: true, opened: false, revealed: target, browserMode: s.mode, preservedWorkbench: true };
       return { ok: true, opened: target, browserMode: s.mode, preservedWorkbench: s.preservesWorkbench };
@@ -71141,7 +71123,7 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   });
   if (opts.open) {
     const opener = platformOpenSpawn(url, 'browser');
-    spawnDetachedChecked(opener.command, opener.args, { detached: true, windowsHide: true, stdio: 'ignore' })
+    spawnDetachedChecked(opener.command, opener.args, { detached: true, stdio: 'ignore' })
       .then(started => { if (!started.ok) { try { console.error(`--open: 无法自动打开浏览器(${started.error}),请手动访问 ${url}`); } catch { /* ignore */ } } });
   }
 }
@@ -71274,7 +71256,7 @@ async function discoverKimiModels(config) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: '读取 Kimi Code 模型列表超时' });
     }, 10000);
     try {
-      const options = { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
+      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
       child = supervised
         ? ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
         : cp.spawn(launch.command, launch.args, options);
@@ -89001,7 +88983,7 @@ function migrationPathInside(childKey, parentKey) {
 function migrationAnalyzeValue(value, ctx, encode) {
   const s = String(value == null ? '' : value);
   if (!s || s.length > 4000) return null;
-  const parts = process.platform === 'win32' && s.includes(';') ? s.split(';') : [s];
+  const parts = [s];
   let hit = false, allTargets = true;
   const roots = new Map();
   const mapped = parts.map(part => {

@@ -240,8 +240,7 @@ const ProcessRuntime = (() => {
     if (typeof maxBuffer !== 'number' || maxBuffer < 0 || Number.isNaN(maxBuffer)) {
       throw Object.assign(new RangeError('maxBuffer must be a non-negative number'), { code: 'ERR_OUT_OF_RANGE' });
     }
-    const child = spawn(executable, argv, { cwd: options.cwd, env: options.env, windowsHide: options.windowsHide,
-      stdio: ['ignore', 'pipe', 'pipe'] }, owner);
+    const child = spawn(executable, argv, { cwd: options.cwd, env: options.env, stdio: ['ignore', 'pipe', 'pipe'] }, owner);
     const handle = children.get(child);
     const chunks = { stdout: [], stderr: [] };
     const sizes = { stdout: 0, stderr: 0 };
@@ -381,8 +380,7 @@ const ProcessRuntime = (() => {
     let raw;
     try {
       raw = childProcessModule.spawnSync(ProcessRuntimeHooks.helperPath(), ['--supervise-v2-deadline', String(timeout), command, ...argv], {
-        cwd: options.cwd, env: options.env, windowsHide: true,
-        stdio: ['ignore', ignored ? 'ignore' : 'pipe', ignored ? 'ignore' : 'pipe', 'pipe'],
+        cwd: options.cwd, env: options.env, stdio: ['ignore', ignored ? 'ignore' : 'pipe', ignored ? 'ignore' : 'pipe', 'pipe'],
         timeout: timeout ? Math.min(timeout + 4000, 2147483647) : 0, killSignal: 'SIGKILL',
         maxBuffer: ignored ? 4096 : 2 * maxBuffer + 4096,
       });

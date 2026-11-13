@@ -101,8 +101,7 @@ def envelope():
     check(len(_HINTS) >= 15, f"central hint table covers >=15 failure classes (has {len(_HINTS)})")
     samples = {
         "Window not found: Notepad": "list_windows",
-        "screen grab failed": "locked",
-        "FailSafeException: fail-safe triggered": "fail-safe",
+        "screen grab failed": "authorization",
         "PermissionError: [WinError 32] The process cannot access the file because it is being used by another process": "Close it",
         "PermissionError: [Errno 13] Permission denied": "Access denied",
         "ModuleNotFoundError: No module named 'pptx'": "diagnostics",
@@ -113,7 +112,7 @@ def envelope():
         "zipfile.BadZipFile: File is not a zip file": "valid Office",
         "Target page, context or browser has been closed": "browser_open",
         "TimeoutError: timed out": "retry",
-        "coordinates out of range": "get_screen_info",
+        "coordinates out of range": "list_monitors",
         "OSError: [Errno 28] No space left on device": "full",
     }
     bad = [k for k, want in samples.items() if want.lower() not in (hint_for(k) or "").lower()]
@@ -124,8 +123,8 @@ def envelope():
         (None, "page 9 out of range (1..3)", None),
         (None, "Sheet index out of range", None),
         (None, "tab index 3 out of range (0..1)", None),
-        (None, "x=99999 out of range for the screen", "get_screen_info"),
-        (None, "click target (9999,9999) is outside the virtual desktop (x 0..1919)", "get_screen_info"),
+        (None, "x=99999 out of range for the screen", "list_monitors"),
+        (None, "click target (9999,9999) is outside the virtual desktop (x 0..1919)", "list_monitors"),
         ("fetch", "fetch failed: Connection closed by remote host", None),
         ("browser_click", "Connection closed while waiting", "browser_open"),
         ("browser_click", "Target page, context or browser has been closed", "browser_open"),

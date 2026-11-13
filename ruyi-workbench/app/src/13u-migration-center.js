@@ -53,7 +53,7 @@ function migrationPathInside(childKey, parentKey) {
 function migrationAnalyzeValue(value, ctx, encode) {
   const s = String(value == null ? '' : value);
   if (!s || s.length > 4000) return null;
-  const parts = process.platform === 'win32' && s.includes(';') ? s.split(';') : [s];
+  const parts = [s];
   let hit = false, allTargets = true;
   const roots = new Map();
   const mapped = parts.map(part => {

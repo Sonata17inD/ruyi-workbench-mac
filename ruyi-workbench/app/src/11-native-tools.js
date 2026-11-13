@@ -509,7 +509,7 @@ async function shellStart(args, config, ctx = {}) {
   let child;
   try {
     child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
-      cwd, env: platformShellEnvironment(process.env), windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
+      cwd, env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
       ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
@@ -936,7 +936,7 @@ function normalizeGlobPatternForRoot(raw, root) {
   if (winAbs || path.isAbsolute(p)) {
     const base = path.resolve(String(root || '.'));
     // 跨平台:Windows 形绝对路径在非 Windows 宿主上 path.resolve 不认,用 win32 解析;宿主形的用宿主 path。
-    const useWin = process.platform === 'win32' || (winAbs && !path.isAbsolute(p));
+    const useWin = winAbs && !path.isAbsolute(p);
     const rel = useWin ? path.win32.relative(path.win32.resolve(base), path.win32.resolve(p)) : path.relative(base, path.resolve(p));
     if (rel && !/^\.\.(?:[\\/]|$)/.test(rel) && !path.isAbsolute(rel) && !path.win32.isAbsolute(rel)) {
       p = rel.replace(/\\/g, '/');
@@ -1970,7 +1970,7 @@ async function runRgOwned(command, argv, cwd, timeoutMs, maxBuffer, signal,
   if (signal?.aborted) throw failure('aborted');
   let capture;
   try {
-    capture = ProcessRuntime.capture(command, argv, { cwd, windowsHide: true, maxBuffer, encoding: 'utf8' },
+    capture = ProcessRuntime.capture(command, argv, { cwd, maxBuffer, encoding: 'utf8' },
       owner);
   } catch { return null; } // No child was started, so JS fallback is safe.
   const { child } = capture;
@@ -2010,7 +2010,7 @@ function rgListHighByteFiles(rg, base, filt, timeoutMs, signal) {
   return new Promise(resolve => {
     let out = '', done = false;
     const finish = v => { if (!done) { done = true; try { clearTimeout(timer); } catch {} resolve(v); } };
-    const child = cp.spawn(rg, ['--no-messages', '-l', '--crlf', ...filt, '--', '(?-u)[\\x80-\\xFF]', base], { cwd: base, windowsHide: true });
+    const child = cp.spawn(rg, ['--no-messages', '-l', '--crlf', ...filt, '--', '(?-u)[\\x80-\\xFF]', base], { cwd: base });
     const timer = setTimeout(() => { try { child.kill('SIGTERM'); } catch {} finish(null); }, timeoutMs);
     // setEncoding 走 StringDecoder:块边界切在多字节字符中间时先扣住残字节、下一块拼齐再出字(逐块 d.toString('utf8') 会把
     // 被切开的字符各变成 U+FFFD,中文路径整条损坏 —— 管道块大小由 OS 决定,长输出必现)。
@@ -2165,7 +2165,7 @@ function searchFileContentRg(root, pattern, opts = {}) {
         .then(result => { if (!result) return finish(null); stdout = result.stdout; return parseOutput(result.code); }).catch(fail);
       return;
     }
-    const child = cp.spawn(rg, args, { cwd: base, windowsHide: true });
+    const child = cp.spawn(rg, args, { cwd: base });
     timer = setTimeout(() => { try { child.kill('SIGTERM'); } catch {} finish(null); }, Number(opts.rgTimeoutMs || 10000));
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -2192,7 +2192,7 @@ async function readIfExists(file, limit = 200000) {
 // 面向非程序员:AI 替用户管版本(「帮我把这次改动存个版本」)。四个工具都走 ONE 条安全执行路径:
 //   • child_process.execFile('git', [...])   —— 无 shell,杜绝命令注入 / 旗标走私经由 shell 元字符。
 //   • 一切模型可控的路径参数(path/paths)一律置于 `--` 分隔符之后;message 用 `-m <message>` 两元素传递。
-//   • windowsHide + 超时(默认 15s,commit 30s)+ maxBuffer 上限。
+//   • 超时(默认 15s,commit 30s)+ maxBuffer 上限。
 //   • git 不存在(ENOENT) / 非仓库 / 缺身份 → 全部转「人话引导错误」,永不崩溃。
 // 两个引擎路径都注册(serve 进程 provider 循环 + `node server.js mcp` 子进程),因为这是无状态一次性命令,
 // 同 file_read/shell_run 一样自然工作 —— 不像 shell 会话那样需要 provider-only 护栏。
@@ -2263,7 +2263,6 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
       // 安全加固前缀(GIT_SAFE_FLAGS)必须在子命令之前;args 以 `-C <dir> <subcmd> …` 开头,故整体前置合法。
       const executionOptions = {
         cwd: cwd || process.cwd(),
-        windowsHide: true,
         maxBuffer: opts && opts.maxBuffer ? opts.maxBuffer : 24 * 1024 * 1024,
         encoding: opts && opts.encoding === 'buffer' ? 'buffer' : 'utf8',
       };

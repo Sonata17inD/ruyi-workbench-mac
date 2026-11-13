@@ -21,7 +21,7 @@ const MediaInspection = (() => {
       };
       const timer = setTimeout(() => { timedOut = true; if (child) child.kill(); }, options.timeoutMs || 5000);
       try {
-        child = childProcess.spawn(command, argv, { windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
+        child = childProcess.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         child.stdout.on('data', b => { stdout = (stdout + b.toString()).slice(-262144); });
         child.stderr.on('data', b => {
           const fragment = b.toString();
@@ -67,7 +67,7 @@ const MediaInspection = (() => {
       };
       if (options.signal?.aborted) { stop('aborted'); return; }
       try {
-        child = ProcessRuntime.spawn(command, argv, { windowsHide: true, shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
+        child = ProcessRuntime.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
           { ...ProcessRuntime.currentOwner(), kind: 'media-inspection' });
         child.stdout.on('data', b => { if (!finished) stdout = (stdout + stdoutDecoder.write(b)).slice(-262144); });
         child.stderr.on('data', b => {

@@ -2189,7 +2189,7 @@ async function gitExec(cwd, args, timeout = 30000) {
     throw error;
   }
   return new Promise((resolve, reject) => {
-    cp.execFile('git', ['-C', cwd, ...args], { windowsHide: true, timeout, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+    cp.execFile('git', ['-C', cwd, ...args], { timeout, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) { err.gitStderr = String(stderr || '').trim(); reject(err); }
       else resolve(String(stdout || '').trim());
     });
@@ -2635,7 +2635,7 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   const runOnce = async () => {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     return new Promise(resolve => {
-    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
       { kind: 'cli-subagent', sessionId: parentSession.id, subagentId, agentKey });
     currentChild = child;
     let lastEventAt = Date.now();

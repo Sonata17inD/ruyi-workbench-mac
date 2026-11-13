@@ -59,7 +59,7 @@ const FileVisualIo = (() => {
     if (signal?.aborted) return { err: Object.assign(new Error('File read cancelled'), { code: 'ABORT_ERR' }) };
     let capture;
     try {
-      capture = ProcessRuntime.capture(exe, argv, { windowsHide: true, maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
+      capture = ProcessRuntime.capture(exe, argv, { maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
         { ...ProcessRuntime.currentOwner(), kind: 'document-reader' });
     } catch (err) { return { err }; }
     const { child } = capture;
@@ -105,7 +105,7 @@ const FileVisualIo = (() => {
       const argv = [...pre, '-I', '-X', 'utf8', helperPath, p, JSON.stringify(options(args))];
       const res = process.platform === 'darwin' ? await runMacReader(exe, argv, signal) : await new Promise(resolve => {
         cp.execFile(exe, argv,
-          { windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024, ...(signal ? { signal } : {}) },
+          { timeout: 30000, maxBuffer: 16 * 1024 * 1024, ...(signal ? { signal } : {}) },
           (err, stdout) => resolve({ err, stdout }));
       });
       const cleanupFields = res.cleanup ? { cleanupScope: res.cleanup.scope, cleanupIncomplete: res.cleanup.incomplete === true,

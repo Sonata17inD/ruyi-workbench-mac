@@ -2537,7 +2537,7 @@ const DESKTOP_TOOL_HANDLERS = {
         const st = await fsp.stat(openTarget).catch(() => null);
         if (!(st && st.isDirectory())) {
           const r = buildRevealSpawn('select', openTarget);
-          const shown = await spawnDetachedChecked(r.command, r.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+          const shown = await spawnDetachedChecked(r.command, r.args, { detached: true, stdio: 'ignore' });
           if (!shown.ok) return { ok: false, error: `无法启动资源管理器:${shown.error}`, target };
           return { ok: true, opened: false, revealed: target, note: `.${ext || '(无扩展名)'} 不是文档/图片/音视频类文件,出于安全没有直接打开(可能会被执行),只在资源管理器里选中了它;要运行请让用户自己决定` };
         }
@@ -2548,7 +2548,7 @@ const DESKTOP_TOOL_HANDLERS = {
       // v1.4.6-S2: same cmd.exe injection fix as browser_open — direct explorer.exe spawn, no shell.
       const s = buildOpenSpawn(openTarget);
       // 启动失败(ENOENT/EPERM…)是异步 'error' 事件:等到 spawn/error 再回话,不再先报「opened」再把服务带崩。
-      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, stdio: 'ignore' });
       if (!started.ok) return { ok: false, error: `无法启动打开程序 ${s.command}:${started.error}`, target };
       if (s.mode === 'select') return { ok: true, opened: false, revealed: target };
       return { ok: true, opened: target };
@@ -2691,7 +2691,7 @@ const NETWORK_TOOL_HANDLERS = {
       }
       const s = buildBrowserOpenSpawn(handoffTarget);
       // 默认浏览器路径可能是注册表里的残留(已卸载):失败走普通工具失败,不再成为 uncaughtException。
-      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, windowsHide: true, stdio: 'ignore' });
+      const started = await spawnDetachedChecked(s.command, s.args, { detached: true, stdio: 'ignore' });
       if (!started.ok) return { ok: false, error: `无法启动浏览器 ${s.command}:${started.error}`, target, browserMode: s.mode };
       if (s.mode === 'file-selection') return { ok: true, opened: false, revealed: target, browserMode: s.mode, preservedWorkbench: true };
       return { ok: true, opened: target, browserMode: s.mode, preservedWorkbench: s.preservesWorkbench };
