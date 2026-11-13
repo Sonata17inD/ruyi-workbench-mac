@@ -172,8 +172,8 @@ try {
   const stateOff = await get('/api/steward/state', token);
   ok(stateOff.status === 200 && stateOff.json && stateOff.json.enabled === false && stateOff.json.running === false,
     '(A) 开关关:state 返回 enabled:false/running:false');
-  ok(stateOff.json && stateOff.json.counts && typeof stateOff.json.counts.byKind === 'object' && stateOff.json.pollMs === POLL_MS,
-    '(A) 开关关:state 信封含 counts.byKind 与 pollMs');
+  ok(stateOff.json && stateOff.json.counts && typeof stateOff.json.counts.byKind === 'object' && stateOff.json.pollMs === 60000,
+    '(A) 开关关:state 信封含 counts.byKind 与 60 秒一致性检查间隔');
   const inboxOff = await get('/api/steward/inbox', token);
   ok(inboxOff.status === 200 && Array.isArray(inboxOff.json.items) && inboxOff.json.items.length === 0,
     '(A) 开关关:inbox 返回空数组(读不存在的文件不建目录)');

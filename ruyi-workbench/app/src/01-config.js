@@ -412,7 +412,7 @@ function defaultConfig() {
     // 从此它归用户(以用户为准,见清洗块的「收编」一支)。管家的工作区清单与 cwd 校验把两张表合起来看。
     stewardManagedWorkspaces: [],
     // 第 116 波 116a(27 号文 §11.3):管家收件箱轮询间隔(ms),clamp [5000,120000]。
-    stewardPollMs: 5000,
+    stewardPollMs: 60000,
     // 第 121 波 K3(34 号文 §4.1/§4.2「噪音用窗口解决,不用能力解决」):任务索引的「最近 N 条」窗口。
     // 一条既不在途、今天也没动静、管家也不盯的旧线程,只有排在最近 N 条里才进索引 —— 几百条存量
     // 普通会话因此不会把左栏淹掉,但它们仍在搜索里找得到。clamp [10,200],判据单点在 06i 的
@@ -1390,10 +1390,10 @@ function normalizeConfig(raw, opts = {}) {
     if (JSON.stringify(tm) !== JSON.stringify(config.stewardThreadModels)) { config.stewardThreadModels = tm; changed = true; }
     else config.stewardThreadModels = tm;
   }
-  // 第 116 波 116a(27 号文 §11.3):管家收件箱轮询间隔(ms),非法值(非有限数)回默认 5000,clamp [5000,120000]。
+  // 第 116 波 116a(27 号文 §11.3):管家收件箱轮询间隔(ms),非法值回默认 60000;保留 UI 断连重试的 [5000,120000] 配置范围,收件箱一致性检查另设 60 秒下限。
   {
     const n = Number(config.stewardPollMs);
-    const clamped = Number.isFinite(n) ? Math.min(120000, Math.max(5000, Math.round(n))) : 5000;
+    const clamped = Number.isFinite(n) ? Math.min(120000, Math.max(5000, Math.round(n))) : 60000;
     if (clamped !== config.stewardPollMs) { config.stewardPollMs = clamped; changed = true; }
   }
   // 第 121 波 K3(34 号文 §4.1):任务索引「最近 N 条」窗口,非法值(非有限数)回默认 30,

@@ -558,11 +558,12 @@ const stewardRuntime = {
   timer: null,
   running: false,
   ticking: false,
+  wakePending: false,
   generation: 0,        // stopStewardInbox 自增;在途 tick 发现代际变了就尽快退出
   loaded: false,
   cold: true,           // 本次装载时没有可用游标 = 冷启动(只建基线,不把历史灌进箱子)
   inboxSeq: 0,
-  pollMs: 5000,
+  pollMs: 60000,
   lastTickAt: '',
   lastInboxAt: '',      // 116-4:最后一次【真的写进箱子】的时刻(lastTickAt 只说明轮询活着)
   lastMaintenanceAt: 0,
@@ -603,26 +604,32 @@ RUYI_EVENTS.subscribe((name, payload) => {
   if (String(data.by || '') !== 'user') return;   // missionAttachThread 派的那一路是【归并到事项】,不是交接
   stewardQueueThreadAdopted(data);
 });
-// 2026-10(智能自动的应答速度):待决一产生就叫醒轮询器补一拍,不再干等下一次 interval(默认 15 秒)。
-// 修前「线程停下来问 → 管家代批」的实测中位数 30 秒上下,其中轮询等待与回合去抖占了大半(45 号文 §2-quater 证据 9)。
-// 仍然只是【补拍】:收件箱的写面照旧只有 stewardTickOnce 一处(去重/合并/在场门一道不少),这里不读盘、不落盘。
-// 两拍是因为 thread.needs_you 在待决【落盘之前】就派(02 registerIntervention:内存态是执行权威源),而轮询读的
-// 投影认的是磁盘上的 .interventions.ndjson —— 第一拍通常已能看见,第二拍兜住慢盘;两拍都没赶上就回落到常规轮询。
-// 同一阵连来的待决只留最后一组定时器(先清后排),轮询器本身串行(stewardRunTick 的 ticking 闸)。
+// Lifecycle events wake the single inbox writer. A second pass covers events emitted
+// before journal persistence. Coalesce without postponing existing deadlines: a busy
+// event stream must never starve the first pass. Token/delta events do not wake it.
 const STEWARD_WAKE_DELAYS_MS = Object.freeze([400, 2500]);
+const STEWARD_WAKE_EVENTS = new Set([
+  'thread.needs_you', 'thread.state', 'thread.done', 'thread.removed',
+  'thread.created', 'background.completed',
+]);
 RUYI_EVENTS.subscribe((name, payload) => {
-  if (name !== 'thread.needs_you') return;
+  if (!STEWARD_WAKE_EVENTS.has(name)) return;
   const sid = safeSessionId(payload && payload.sessionId);
   if (!sid || sid === STEWARD_SESSION_ID) return;
   stewardScheduleWake();
 });
+function stewardConsistencyMs(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(120000, Math.max(60000, Math.round(n))) : 60000;
+}
 function stewardClearWake() {
   for (const timer of (Array.isArray(stewardRuntime.wakeTimers) ? stewardRuntime.wakeTimers : [])) clearTimeout(timer);
   stewardRuntime.wakeTimers = [];
 }
 function stewardScheduleWake() {
   if (!stewardRuntime.running) return;   // 管家关着 / 停机:没人取,不补拍
-  stewardClearWake();
+  if (stewardRuntime.ticking) stewardRuntime.wakePending = true;
+  if (stewardRuntime.wakeTimers.length) return;
   const generation = stewardRuntime.generation;
   for (const delay of STEWARD_WAKE_DELAYS_MS) {
     const timer = setTimeout(() => {
@@ -659,6 +666,7 @@ function stewardQueueThreadAdopted(data) {
     at: String((data && data.at) || nowIso()),
   });
   while (stewardRuntime.adopted.length > STEWARD_ADOPTED_QUEUE_MAX) stewardRuntime.adopted.shift();
+  stewardScheduleWake();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1356,7 +1364,7 @@ async function stewardTickOnce() {
 }
 
 async function stewardRunTick() {
-  if (stewardRuntime.ticking) return { skipped: true }; // 串行:上一轮没跑完不叠加
+  if (stewardRuntime.ticking) { stewardRuntime.wakePending = true; return { skipped: true }; }
   stewardRuntime.ticking = true;
   try {
     const result = await stewardTickOnce();
@@ -1368,6 +1376,10 @@ async function stewardRunTick() {
     return { error: stewardRuntime.lastError };
   } finally {
     stewardRuntime.ticking = false;
+    if (stewardRuntime.wakePending || stewardRuntime.carry.length) {
+      stewardRuntime.wakePending = false;
+      stewardScheduleWake();
+    }
   }
 }
 
@@ -1377,7 +1389,7 @@ async function stewardRunTick() {
 async function startStewardInbox(config) {
   const cfg = (config && typeof config === 'object') ? config : {};
   if (cfg.stewardEnabledV1 !== true) return { ok: false, running: false, enabled: false };
-  const pollMs = Math.min(120000, Math.max(5000, Math.round(Number(cfg.stewardPollMs) || 5000)));
+  const pollMs = stewardConsistencyMs(cfg.stewardPollMs);
   stewardRuntime.pollMs = pollMs;
   // 116f: start 同时解除回合队列的停机(stop 把轮询与回合一起停,start 把两者一起放开)。
   if (typeof StewardHooks.resumeRunner === 'function') { try { StewardHooks.resumeRunner(); } catch { /* 旁路 */ } }
@@ -1403,6 +1415,7 @@ function stopStewardInbox() {
   if (typeof StewardHooks.stopRunner === 'function') { try { StewardHooks.stopRunner(); } catch { /* 旁路 */ } }
   if (stewardRuntime.timer) { clearInterval(stewardRuntime.timer); stewardRuntime.timer = null; }
   stewardClearWake();
+  stewardRuntime.wakePending = false;
   stewardRuntime.running = false;
   stewardRuntime.generation += 1; // 在途 tick 看到代际变化即放弃写入
   return { ok: true, running: false };
@@ -1468,7 +1481,7 @@ async function stewardInboxState(config) {
     enabled: cfg.stewardEnabledV1 === true,
     running: stewardRuntime.running,
     inboxSeq: Math.max(inboxSeq, stewardRuntime.inboxSeq),
-    pollMs: Math.min(120000, Math.max(5000, Math.round(Number(cfg.stewardPollMs) || 5000))),
+    pollMs: stewardConsistencyMs(cfg.stewardPollMs),
     lastTickAt: stewardRuntime.lastTickAt,
     // 116-4(§11.7 第 3 项「唤醒链诚实」):前端要能分清三件事 —— 轮询活着(lastTickAt 在动)、
     // 箱子真的收到过东西(lastInboxAt)、第四源真的在工作(sourcesSeen.sessionTurns)。

@@ -274,3 +274,33 @@ describe('prompt-queue 不限时与自动收起', () => {
     assert.equal(queue.activeId(), '', '停手满 2 分钟再收');
   });
 });
+
+it('隐藏页停止对账唤醒；SSE 在线空队列休眠，恢复可见与重连各补快照', async t => {
+  const mod = await load();
+  t.mock.timers.enable({ apis: ['setTimeout', 'setInterval'] });
+  const listeners = {}, stream = {};
+  const document = fakeDoc();
+  document.addEventListener = (name, fn) => { listeners[name] = fn; };
+  let requests = 0;
+  const queue = mod.createPromptQueue({
+    api: async () => { requests++; return { pending: [] }; },
+    doc: () => document, shellMode: () => 'no-dock', t: key => key,
+  });
+  queue.bindEventStream({ isConnected: () => true, on: (name, fn) => { stream[name] = fn; } });
+  queue.start(); await Promise.resolve();
+  assert.equal(requests, 1);
+  t.mock.timers.tick(120000); await Promise.resolve();
+  assert.equal(requests, 1, 'connected idle queue has no polling');
+  document.hidden = true; listeners.visibilitychange();
+  stream['thread.needs_you'](); stream.connection({ connected: false });
+  t.mock.timers.tick(120000); await Promise.resolve();
+  assert.equal(requests, 1, 'hidden events do not arm requests');
+  document.hidden = false; listeners.visibilitychange();
+  t.mock.timers.tick(1000); await Promise.resolve();
+  assert.equal(requests, 2, 'visible snapshot');
+  stream.connection({ connected: true });
+  t.mock.timers.tick(1000); await Promise.resolve();
+  assert.equal(requests, 3, 'reconnected snapshot');
+  t.mock.timers.tick(120000); await Promise.resolve();
+  assert.equal(requests, 3, 'idle again');
+});
