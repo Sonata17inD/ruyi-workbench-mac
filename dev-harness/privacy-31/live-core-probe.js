@@ -26,8 +26,8 @@ async function main() {
   const config = JSON.parse(fs.readFileSync(configFile, 'utf8'));
   const provider = (config.providers || []).find(item => item.id === config.activeProvider);
   if (!provider || !provider.apiKey || !provider.baseUrl || !provider.model) failure('active_provider_not_supported');
-  const context = vm.createContext({ require, Buffer, URL, AbortController, setTimeout, clearTimeout });
-  vm.runInContext(load('01i-privacy-rules.js') + '\n' + load('01h-privacy-core.js') + '\n' + load('04h-provider-http.js') + '\n'
+  const context = vm.createContext({ require, Buffer, URL, AbortController, setTimeout, clearTimeout, ...require('../lib/privacy-primitives').createPrivacyPrimitives() });
+  vm.runInContext(load('04h-provider-http.js') + '\n'
     + load('04i-provider-anthropic.js') + '\n' + load('04i-provider-wire.js')
     + '\nProviderWireHooks.makeId = () => "call_" + require("node:crypto").randomBytes(8).toString("hex");'
     + '\nProviderWireHooks.redact = () => "[redacted]";'

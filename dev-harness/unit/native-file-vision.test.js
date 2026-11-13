@@ -16,7 +16,7 @@ process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 if (process.env.RUYI_NATIVE_READ_TEST_PYTHON) process.env.RUYI_BUNDLED_PYTHON = process.env.RUYI_NATIVE_READ_TEST_PYTHON;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
-const V = srv.dispatchTestHooks.VisualPipeline;
+const V = require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline();
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 fs.writeFileSync(path.join(ws, 'pic.png'), png);
 fs.writeFileSync(path.join(ws, 'renamed.dat'), png);

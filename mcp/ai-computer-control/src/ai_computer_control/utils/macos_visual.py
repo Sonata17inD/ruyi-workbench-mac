@@ -156,5 +156,5 @@ def capture_fields(image, info, max_width, format, quality):
     # Use each actual output dimension after integer rounding. Mapping is exact on both axes.
     encoded.update(scale=encoded["width"] / bounds["width"], scale_y=encoded["height"] / bounds["height"],
                    origin={"x": bounds["x"], "y": bounds["y"]},
-                   source_pixel_scale={"x": image.width / bounds["width"], "y": image.height / bounds["height"]})
+                   source_pixel_scale=info.get("source_pixel_scale", {"x": image.width / bounds["width"], "y": image.height / bounds["height"]}))
     return {**info, **encoded}

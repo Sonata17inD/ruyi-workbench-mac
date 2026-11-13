@@ -57,7 +57,7 @@ ok(/data-message-key/.test(frontend)
 'E4 消息重绘使用 keyed reconciliation，并保留滚动锚点与活动回合');
 
 // 110-3b: createTurnSegmentBuilder 已搬至 02c-turn-segments.js,改为源+目标拼接读取(正则原样保留)。
-const sessionStoreDomain = read(path.join(SRC, '02-session-store.js')) + read(path.join(SRC, '02c-turn-segments.js'));
+const sessionStoreDomain = read(path.join(SRC, '02-session-store.js')) + read(path.join(SRC, '../backend/turn-segments.cjs'));
 ok(/function createTurnSegmentBuilder\(/.test(sessionStoreDomain)
   && /const batchId = String\(evt\.batchId/.test(sessionStoreDomain)
   && /createTurnSegmentBuilder\(\)/.test(read(path.join(SRC, '05-claude-engine.js')))

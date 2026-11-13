@@ -19,16 +19,16 @@ function backend(t, kind = 'openai') {
   const session = { id: 'sess_image', turnSeq: 1, messages: [], providerHistory: [] };
   const reg = { kind, session, state: 'running', interactive: true, vision: true, steerQueue: [] };
   const regs = new Map([[session.id, reg]]), events = [], writes = [];
-  const c = vm.createContext({ require, fs, fsp, path, Buffer, Date, paths: { uploads }, activeChildren: regs, STEER_QUEUE_MAX: 3,
+  const c = vm.createContext({ createTurnSegmentBuilder: require('../../ruyi-workbench/app/backend/turn-segments.cjs').createTurnSegmentBuilder, VisualPipeline: require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline(), require, fs, fsp, path, Buffer, Date, paths: { uploads }, activeChildren: regs, STEER_QUEUE_MAX: 3,
     safeSessionId: s => /^sess_\w+$/.test(String(s)) ? s : '', nowIso: () => new Date().toISOString(),
     saveSession: async () => {}, hasPendingQuestionForSession: () => false,
     writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
   });
   const bridge = read('03-bridge-guard.js');
-  vm.runInContext(read('04-visual-pipeline.js') + '\n' + functionBlock(bridge, 'pathWithinRoot') + '\n' +
+  vm.runInContext(functionBlock(bridge, 'pathWithinRoot') + '\n' +
     functionBlock(bridge, 'buildAttachmentPrompt') + '\n' + functionBlock(read('04-permission-runtime.js'), 'sanitizeFsSegmentName') + '\n' +
     functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' + steering + '\n' +
-    functionBlock(read('07-autonomy.js'), 'drainSteerQueue') + '\n' + functionBlock(read('02c-turn-segments.js'), 'createTurnSegmentBuilder'), c);
+    functionBlock(read('07-autonomy.js'), 'drainSteerQueue'), c);
   reg.onEvent = event => events.push(event);
   reg.buildSteerAttachmentPrompt = c.buildAttachmentPrompt;
   return { c, reg, session, regs, attachment, events, writes };

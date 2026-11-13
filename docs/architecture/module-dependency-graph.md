@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 91 | 3862 | 3503 | 641 | 66 | 0 | 1 |
+| 91 | 3851 | 3495 | 638 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -26,12 +26,12 @@
 | 8 | `01n-desktop-automation.js` | foundation | 2 | 0 | 0 |
 | 9 | `01h-process-runtime.js` | foundation | 2 | 1 | 1 |
 | 10 | `01i-privacy-rules.js` | foundation | 1 | 0 | 0 |
-| 11 | `01h-privacy-core.js` | foundation | 1 | 1 | 1 |
+| 11 | `01h-privacy-core.js` | foundation | 1 | 0 | 0 |
 | 12 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
 | 13 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
-| 14 | `01-config.js` | foundation | 194 | 59 | 13 |
-| 15 | `01k-credential-vault.js` | foundation | 1 | 8 | 4 |
-| 16 | `01l-credential-recovery.js` | foundation | 2 | 13 | 3 |
+| 14 | `01-config.js` | foundation | 194 | 58 | 13 |
+| 15 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
+| 16 | `01l-credential-recovery.js` | foundation | 2 | 12 | 3 |
 | 17 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
 | 18 | `02d-session-overrides.js` | foundation | 11 | 1 | 1 |
 | 19 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
@@ -58,7 +58,7 @@
 | 40 | `06-provider-engine.js` | engine | 142 | 62 | 18 |
 | 41 | `06b-prompt-registry.js` | engine | 10 | 1 | 1 |
 | 42 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
-| 43 | `06h-retrieval-index.js` | engine | 15 | 0 | 0 |
+| 43 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 44 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 45 | `06d-memory-domain.js` | engine | 178 | 39 | 10 |
 | 46 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
@@ -100,12 +100,12 @@
 | 82 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
 | 83 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
 | 84 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 85 | `13y-external-bot-credentials.js` | transport | 1 | 7 | 3 |
+| 85 | `13y-external-bot-credentials.js` | transport | 1 | 5 | 3 |
 | 86 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
 | 87 | `13ab-privacy-api.js` | unclassified | 1 | 18 | 12 |
 | 88 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
 | 89 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 90 | `14-main.js` | entrypoint | 1 | 583 | 48 |
+| 90 | `14-main.js` | entrypoint | 1 | 581 | 46 |
 
 ## 模块边
 
@@ -116,7 +116,7 @@
 | `00-boot.js` | `02-session-store.js` | forward | `bumpMissionChangeSeq`, `overlayUnflushedSessionIndex`, `readSessionIndex` |
 | `00-boot.js` | `05-claude-engine.js` | forward | `CLAUDE_ENDPOINT_PRESETS` |
 | `00-boot.js` | `13e-pretender-index.js` | forward | `markPretenderIndexDirty` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `MAX_BODY_BYTES`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `apiFailure`, `copyOrdinaryJsonData`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `MAX_BODY_BYTES`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `apiFailure`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
 | `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId`, `isRuyiMcpServerId` |
 | `01-config.js` | `01b-route-auth.js` | backward | `ROUTE_AUTH` |
 | `01-config.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP`, `PERMISSION_MODES`, `PERMISSION_MODE_ALIASES`, `agentRoleIsUntrusted`, `normalizeAgentRole` |
@@ -130,13 +130,12 @@
 | `01-config.js` | `06-provider-engine.js` | forward | `normalizeStoragePolicy` |
 | `01-config.js` | `07-autonomy.js` | forward | `DESKTOP_MCP_SERVER_ID`, `TOOL_PACK_DESCRIPTIONS`, `accPolicyHiddenToolNames`, `claudePermissionMode`, `getAgentRoleLibrary`, `nativeToolTier` |
 | `01e-permission-modes.js` | `00b-ruyi-names.js` | backward | `canonicalRuyiMcpServerId` |
-| `01h-privacy-core.js` | `01i-privacy-rules.js` | backward | `PrivacyRuleCatalog` |
 | `01h-process-runtime.js` | `01n-desktop-automation.js` | backward | `MacDesktopAutomation` |
-| `01k-credential-vault.js` | `00-boot.js` | backward | `URL`, `fsp`, `path`, `paths` |
+| `01k-credential-vault.js` | `00-boot.js` | backward | `fsp`, `path`, `paths` |
 | `01k-credential-vault.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson` |
 | `01k-credential-vault.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01k-credential-vault.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
-| `01l-credential-recovery.js` | `00-boot.js` | backward | `URL`, `fsp`, `path`, `paths` |
+| `01l-credential-recovery.js` | `00-boot.js` | backward | `fsp`, `path`, `paths` |
 | `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `configReadCache`, `lastGoodConfig`, `mutateConfig`, `normalizeConfig`, `readConfig` |
 | `01l-credential-recovery.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01m-privacy-regex.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
@@ -701,7 +700,7 @@
 | `13w-external-bots.js` | `13y-external-bot-credentials.js` | backward | `ExternalBotCredentials` |
 | `13w-external-bots.js` | `13z-external-bot-discovery.js` | backward | `ExternalBotDiscovery` |
 | `13x-external-channel-delivery.js` | `00-boot.js` | backward | `path`, `text` |
-| `13y-external-bot-credentials.js` | `00-boot.js` | backward | `crypto`, `fsp`, `path`, `paths`, `runKeyedChain` |
+| `13y-external-bot-credentials.js` | `00-boot.js` | backward | `fsp`, `paths`, `runKeyedChain` |
 | `13y-external-bot-credentials.js` | `01-config.js` | backward | `DurableJsonStore` |
 | `13y-external-bot-credentials.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `14-main.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `EventStreamHooks`, `RUYI_EVENTS`, `apiSessionIdInvalid`, `apiSessionNotFound`, `appendUsageLedger`, `buildUsageSummary`, `createNdjsonLineFeeder`, `flushUsageLedgerSync`, `forEachUsageRow`, `hashArgs`, `neutralizeFenceTag`, `readUsageRows`, `runKeyedChain`, `spawnDetachedChecked`, `usageLedgerCacheStats` |
@@ -712,13 +711,11 @@
 | `14-main.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `14-main.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `14-main.js` | `02-session-store.js` | backward | `BRIDGED_WRITE_PATH_ARGS`, `MISSION_CONTAINER_MAX_FILES`, `buildTurnSummary`, `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `collectBridgedWriteTarget`, `collectBridgedWriteTargets`, `compactInterventionJournal`, `createMissionContainer`, `createSession`, `deleteSession`, `detectDanglingTurn`, `flushSessionIndex`, `flushSessionIndexSync`, `invalidateSessionIndex`, `isUntitledSessionTitle`, `journalGc`, `journalGcProbe`, `journalRecord`, `kindForPath`, `listMissionContainers`, `listSessions`, `loadSession`, `missionAttachThread`, `missionMergeInto`, `missionSplitThreads`, `mutateSession`, `normalizeSession`, `patchMissionContainer`, `readInterventions`, `readMissionContainer`, `readSessionHeadResilient`, `readSessionNotes`, `reconcileWorkspaceTurnBaseline`, `registerIntervention`, `repairMissionChangeTornTail`, `repairProviderHistoryPairing`, `repairProviderHistoryToolArgs`, `rewindSession`, `saveSession`, `sessionBodyPaths`, `sessionBodyPerfStats`, `sessionDisplayTitle`, `sessionMessagesDelta`, `sessionMeta`, `sessionNotesPath`, `sessionObjectIsStale`, `setSessionIndexRebuildScanHookForTest`, `transitionInterventionState`, `updateSessionMeta`, `writeSessionNotes` |
-| `14-main.js` | `02c-turn-segments.js` | backward | `createTurnSegmentBuilder` |
 | `14-main.js` | `02d-session-overrides.js` | backward | `liveSessionPermissionMode` |
 | `14-main.js` | `02e-session-engine-route.js` | backward | `configForSessionEngineRoute`, `normalizeSessionEngineRoute`, `sessionEngineRouteFromConfig` |
 | `14-main.js` | `02f-turn-effect-kinds.js` | backward | `IRREVERSIBLE_NATIVE_KIND`, `TURN_SUMMARY_COMMAND_TOOLS`, `TURN_SUMMARY_FILE_TOOLS`, `toolInvokeEnvelopeRepair`, `unwrapToolInvokeCall` |
 | `14-main.js` | `03-bridge-guard.js` | backward | `AUTOEXEC_DENYLIST`, `auditBridgedWriteCoverage`, `bridgedOfficeScriptGate`, `bridgedReadPathGate`, `buildBrowserOpenSpawn`, `buildCodeEditorSpawn`, `buildOpenSpawn`, `buildRevealSpawn`, `cwdWarning`, `guardFileToolPath`, `guardWorkspacePath`, `pathWithinAnyRoot`, `pathWithinRoot`, `providerIsLocal`, `resolveWorkspace` |
 | `14-main.js` | `04-permission-runtime.js` | backward | `MCP_COMPAT_MATRIX`, `McpHttpClient`, `McpStdioClient`, `activeChildren`, `bridgedServerUnavailableMessage`, `buildMcpConnectorInventory`, `classifyMcpError`, `clearPendingPermissions`, `collectBridgedTools`, `configureMcpFromTool`, `hasPendingPermissionForSession`, `invalidateMcpDropInCache`, `killAllMcpClients`, `killChildTree`, `makeAttachmentRecord`, `mcpChildExitResult`, `nativeClaudeAgentResultInfo`, `normalizeMcpToolResult`, `parseAgentCliEvent`, `parseClaudeTaskNotification`, `parseMcpConfigFile`, `permissionWaitMs`, `probeMcpConnector`, `redact`, `resolveBridge`, `resolveExternalMcpServers`, `safeMcpInventory`, `safeUrlForDisplay`, `scanMcpSources` |
-| `14-main.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `14-main.js` | `04h-provider-http.js` | backward | `abortableDelay`, `providerApiBase`, `providerBaseWithV1`, `providerCallIsTransient`, `providerCompletionUrl`, `providerRequestHeaders`, `providerResponsesBase`, `withTransientRetry` |
 | `14-main.js` | `04i-provider-wire.js` | backward | `PROVIDER_WIRE_PROTOCOLS`, `applyProviderReasoningEffort`, `buildResponsesInputItems`, `normalizeProviderApiStyle`, `providerReasoningEffort`, `providerWireProtocol`, `responsesHistoryWithCompleteToolPairs` |
 | `14-main.js` | `04j-voice-learn.js` | backward | `VoiceLearn` |

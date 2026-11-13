@@ -3,8 +3,8 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
 async function recoverCorruptBackup(data, name = 'config.json.corrupt') {
   const read = file => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', file), 'utf8');
-  const context = vm.createContext({ require, Buffer, TextDecoder, process, setTimeout, clearTimeout });
-  const api = vm.runInContext(read('01h-privacy-core.js') + '\n' + read('01j-local-crypto.js') + '\n({core:PrivacyCore,dpapi:LocalSecretCrypto});', context);
+  const context = vm.createContext({ require, Buffer, TextDecoder, process, setTimeout, clearTimeout, LocalSecretCrypto: require('../../ruyi-workbench/app/backend/local-crypto.cjs').createLocalSecretCrypto({ hooks: { helperPath: () => path.resolve(__dirname, '../../ruyi-workbench/runtime/macos/ruyi-keychain-helper') } }) });
+  const api = { core: require('./privacy-primitives').createPrivacyPrimitives().PrivacyCore, dpapi: context.LocalSecretCrypto };
   const backup = JSON.parse(fs.readFileSync(path.join(data, name), 'utf8'));
   const state = JSON.parse(fs.readFileSync(path.join(data, 'credential-vault-v1.json'), 'utf8'));
   const key = await api.dpapi.run('unprotect', Buffer.from(state.protectedKey, 'base64'), Buffer.from('ruyi.credential-vault.v1:' + state.instanceId));
@@ -16,8 +16,8 @@ async function createConfigRecoveryReader(data) {
   const vaultFile = path.join(data, 'credential-vault-v1.json');
   if (!fs.existsSync(vaultFile)) return { recover: value => value, close() {} };
   const read = file => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', file), 'utf8');
-  const context = vm.createContext({ require, Buffer, TextDecoder, process, setTimeout, clearTimeout });
-  const api = vm.runInContext(read('01h-privacy-core.js') + '\n' + read('01j-local-crypto.js') + '\n({core:PrivacyCore,dpapi:LocalSecretCrypto});', context);
+  const context = vm.createContext({ require, Buffer, TextDecoder, process, setTimeout, clearTimeout, LocalSecretCrypto: require('../../ruyi-workbench/app/backend/local-crypto.cjs').createLocalSecretCrypto({ hooks: { helperPath: () => path.resolve(__dirname, '../../ruyi-workbench/runtime/macos/ruyi-keychain-helper') } }) });
+  const api = { core: require('./privacy-primitives').createPrivacyPrimitives().PrivacyCore, dpapi: context.LocalSecretCrypto };
   const first = JSON.parse(fs.readFileSync(vaultFile, 'utf8'));
   const key = await api.dpapi.run('unprotect', Buffer.from(first.protectedKey, 'base64'), Buffer.from('ruyi.credential-vault.v1:' + first.instanceId));
   function recover(raw) {

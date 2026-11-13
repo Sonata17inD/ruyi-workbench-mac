@@ -1,8 +1,7 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const { constBlock } = require('./source-slice');
 const read = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-const source = read('01i-privacy-rules.js') + '\n' + read('01h-privacy-core.js') + '\n' + read('01m-privacy-regex.js') + '\n' + constBlock(read('01k-credential-vault.js'), 'CredentialVault') + '\n' + constBlock(read('01l-credential-recovery.js'), 'CredentialRecovery');
-const primitives = vm.runInNewContext(source + '\n({PrivacyCore,PrivacyRegex,CredentialVault,CredentialRecovery})', { require, Buffer, URL, structuredClone, setTimeout, clearTimeout });
+const primitives = require('./privacy-primitives').createPrivacyPrimitives();
 const clone = value => structuredClone(value);
 function fixture() {
   let state = primitives.CredentialVault.empty(), serial = 0;

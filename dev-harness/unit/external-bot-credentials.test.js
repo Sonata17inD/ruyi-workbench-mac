@@ -8,8 +8,6 @@ const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { constBlock, functionBlock } = require('../lib/source-slice');
 const readSource = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-const source = constBlock(readSource('01-config.js'), 'DurableJsonStore') + '\n' + functionBlock(readSource('00-boot.js'), 'runKeyedChain')
-  + '\n' + readSource('01j-local-crypto.js') + '\n' + readSource('13y-external-bot-credentials.js') + '\nExternalBotCredentials';
 const plain = value => JSON.parse(JSON.stringify(value));
 const connection = (patch = {}) => ({ id: 'bot_one', platform: 'qq', appId: 'app_one', tenantId: 'app_one', botUserId: '', enabled: false, ...patch });
 const coded = suffix => error => error.code === 'external_credentials.' + suffix && Number.isInteger(error.statusCode) && error.message === error.code;
@@ -46,7 +44,14 @@ function fixture({ platform = 'darwin' } = {}) {
     paths: { data: '/isolated' }, atomicWriteJson: async (_file, value) => { writes++; if (writeError) throw new Error('write failed'); disk = JSON.stringify(value); },
     setTimeout: (fn, ms) => setTimeout(fn, mode === 'timeout' ? 1 : ms), clearTimeout,
   };
-  const api = vm.runInNewContext(source, context);
+  const owned = { ...context, module: { exports: {} } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/backend/local-crypto.cjs'), 'utf8'), owned);
+  context.LocalSecretCrypto = owned.module.exports.createLocalSecretCrypto({
+    process: context.process, hooks: { helperPath: () => '/fixture/runtime/macos/ruyi-keychain-helper' },
+  });
+  context.DurableJsonStore = require('../../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
+  context.runKeyedChain = vm.runInNewContext(functionBlock(readSource('00-boot.js'), 'runKeyedChain') + '\nrunKeyedChain', context);
+  const api = require('../../ruyi-workbench/app/backend/external-bot-credentials.cjs').createExternalBotCredentials(context);
   return { api, env, calls, counts: () => ({ writes, children }), disk: () => disk, setDisk: value => { disk = value; },
     mode: value => { mode = value; }, writeError: value => { writeError = value; }, readError: value => { readError = value; } };
 }

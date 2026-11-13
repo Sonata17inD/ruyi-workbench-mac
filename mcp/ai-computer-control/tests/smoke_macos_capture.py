@@ -141,6 +141,21 @@ class CaptureTools(unittest.TestCase):
         self.assertEqual(result["height"] / result["scale_y"], 51)
         self.assertNotEqual(result["scale"], result["scale_y"])
 
+    def test_native_preview_retains_source_scale_and_forwards_requested_budget(self):
+        image, info = self.frame(size=(31, 16))
+        info["source_pixel_scale"] = {"x": 2, "y": 2}
+        with patch.object(macos, "capture", return_value=(image, info)) as capture:
+            result = self.tools.screenshot(max_width=31)
+        self.assertEqual(capture.call_args.kwargs["max_width"], 31)
+        self.assertEqual(result["source_pixel_scale"], {"x": 2, "y": 2})
+        self.assertEqual(result["width"] / result["scale"], 101)
+        self.assertEqual(result["height"] / result["scale_y"], 51)
+        with patch.object(macos, "request") as request:
+            for width in (True, -1, 1.5, 16385):
+                with self.assertRaises(macos.DesktopError):
+                    macos.capture(max_width=width)
+            request.assert_not_called()
+
     def test_invalid_regions_do_not_start_native_capture(self):
         with patch.object(macos, "capture") as capture:
             for region in ("1,2", "1,x,4,5", "0,0,0,4", "0,0,2,-4"):

@@ -83,6 +83,7 @@ test('[Q1] 收件箱落盘失败:事件不丢,下一拍照样入箱;瞬时 EBUSY
   await srv.startStewardInbox(cfg);                      // 第一拍:冷启动只建基线
   const base = inboxRows().length;
 
+  srv.stopStewardInbox(); // Isolate injected persistence faults from automatic event wakeups.
   srv.registerIntervention(s.id, 'permission', 'perm_q1_0001', { toolName: 'file_write', tier: 'edit', input: { path: 'x.txt' } });
   await sleep(200);
   const inj = failInboxAppends(['EIO']);
@@ -100,6 +101,7 @@ test('[Q1] 收件箱落盘失败:事件不丢,下一拍照样入箱;瞬时 EBUSY
   assert.equal(inboxRows().length, base + 1, '不重复入箱');
 
   // 瞬时锁:两次 EBUSY 之后放行 —— 同一拍里就落盘了(有界重试)。
+  srv.stopStewardInbox(); // Isolate injected persistence faults from automatic event wakeups.
   srv.registerIntervention(s.id, 'permission', 'perm_q1_0002', { toolName: 'file_write', tier: 'edit', input: { path: 'y.txt' } });
   await sleep(200);
   const busy = failInboxAppends(['EBUSY', 'EBUSY']);

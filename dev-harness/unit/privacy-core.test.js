@@ -6,9 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
-const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/01i-privacy-rules.js'), 'utf8') + '\n'
-  + fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/01h-privacy-core.js'), 'utf8');
-const core = vm.runInNewContext(source + '\nPrivacyCore;', { require, Buffer });
+const { PrivacyCore: core } = require('../lib/privacy-primitives').createPrivacyPrimitives();
 const plain = value => JSON.parse(JSON.stringify(value));
 const secret = 'sk-' + 'example'.repeat(5);
 const scope = options => core.createScope({ scopeId: 'session-test', detector: core.createDetector({ personal: true }), ...options });

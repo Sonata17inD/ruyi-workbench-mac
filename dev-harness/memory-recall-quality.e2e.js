@@ -40,7 +40,7 @@ function slice(source, startAnchor, endAnchor, label) {
   return source.slice(start, end);
 }
 
-const retrieval = read('06h-retrieval-index.js');
+const retrieval = require('../ruyi-workbench/app/backend/retrieval-index.cjs');
 const memoryDomain = read('06d-memory-domain.js');
 const runtimeFlags = read('01c-runtime-flags.js');
 
@@ -52,10 +52,9 @@ const rankingSlice = slice(
 );
 const flagSlice = slice(runtimeFlags, 'function memoryVectorRecallEnabled(config) {', '\n}\n', 'flag') + '\n}\n';
 
-const context = { console };
+const context = { console, ...retrieval };
 vm.runInNewContext(
   'const MEMORY_RELEVANCE_MAX = 3;\n'
-  + retrieval + '\n'
   + flagSlice + '\n'
   + rankingSlice + '\n'
   + 'this.rankRelevantMemories = rankRelevantMemories;\n'

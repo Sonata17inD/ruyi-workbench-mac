@@ -31,9 +31,9 @@ const ok = (condition, label) => {
 // 该构建器,故终点即文件末尾,切出的字节与旧哨兵 '\n// v0.8-S3/S4a:' 截出的完全相同);
 // healStalePendingSegments 仍取自 02。只改读取来源,断言与期望值一字未改。
 const store = read(path.join(SRC, '02-session-store.js'));
-const builderSrc = read(path.join(SRC, '02c-turn-segments.js'));
+const builderSrc = read(path.join(SRC, '../backend/turn-segments.cjs'));
 const builderStart = builderSrc.indexOf('function createTurnSegmentBuilder()');
-const builderEnd = builderSrc.length;
+const builderEnd = builderSrc.indexOf('module.exports =');
 ok(builderStart >= 0 && builderEnd > builderStart, 'F1 createTurnSegmentBuilder 在 session store 源码');
 
 const healStart = store.indexOf('function healStalePendingSegments(session)');
@@ -44,10 +44,10 @@ ok(healStart >= 0 && healEnd > healStart, 'F2 healStalePendingSegments 在 sessi
 const pendingPermissions = new Map();
 const pendingPlans = new Map();
 const pendingQuestions = new Map();
-const ctx = { pendingPermissions, pendingPlans, pendingQuestions };
+const ctx = { pendingPermissions, pendingPlans, pendingQuestions, ...require('../ruyi-workbench/app/backend/turn-segments.cjs') };
 // Load the builder + healStalePendingSegments together (healStalePendingSegments is standalone,
 // references the module-level Maps which we inject via context).
-const slice = builderSrc.slice(builderStart, builderEnd) + '\n' + store.slice(healStart, healEnd) +
+const slice = store.slice(healStart, healEnd) +
   '\nthis.createTurnSegmentBuilder = createTurnSegmentBuilder; this.healStalePendingSegments = healStalePendingSegments;';
 vm.runInNewContext(slice, ctx);
 

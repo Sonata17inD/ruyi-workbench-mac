@@ -1,6 +1,6 @@
 'use strict';
 // 走查 W1 #3 / #9(04-visual-pipeline):图像载荷判定与图片附件 MIME。真源码、临时 HOME、零网络;
-// VisualPipeline 经 server.js 已导出的 dispatchTestHooks 取,不增加导出面。
+// 直接引用所属视觉模块，无需装载服务或暴露顶层测试钩子。
 //   [P] looksLikeImagePayload 的非 data: 分支不再只看字符集:`{image:'bitnami/postgresql'}` 这类全小写标识符(容器镜像名等)恰好全是 base64
 //       字符集,修前被当成截图,生成非法图片块 → provider 400,还写进 providerHistory 反复 400,并抹掉原字段。现在:魔数认得出的是图;
 //       认不出时排除全小写标识符形状(镜像名按规范必须全小写)。真图(PNG/JPEG/GIF/WEBP/BMP 的 base64,含 base64url)照旧识别;
@@ -15,8 +15,8 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-visual-payload-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { VisualPipeline } = srv.dispatchTestHooks;
+const { createVisualPipeline } = require('../../ruyi-workbench/app/backend/visual-pipeline.cjs');
+const VisualPipeline = createVisualPipeline();
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40, 1)]);
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]), Buffer.from('JFIF'), Buffer.alloc(40, 2)]);

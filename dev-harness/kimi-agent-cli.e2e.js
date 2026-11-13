@@ -537,7 +537,7 @@ async function verifyKimiPermissionAlias() {
   if (previousShellPath === undefined) delete process.env.KIMI_SHELL_PATH;
   else process.env.KIMI_SHELL_PATH = previousShellPath;
   fs.rmSync(wrapperBin, { recursive: true, force: true });
-  const planBuilder = server.createTurnSegmentBuilder();
+  const planBuilder = require('../ruyi-workbench/app/backend/turn-segments.cjs').createTurnSegmentBuilder();
   planBuilder.consume({ type: 'kimi_plan_snapshot', planId: 'snapshot-e2e', markdown: '# Plan', path: 'C:\\safe\\plan.md', status: 'active', source: 'kimi-acp' });
   planBuilder.consume({ type: 'kimi_plan_snapshot', planId: 'snapshot-e2e', status: 'removed', source: 'kimi-acp' });
   const planSegments = planBuilder.snapshot().filter(segment => segment.planId === 'snapshot-e2e');

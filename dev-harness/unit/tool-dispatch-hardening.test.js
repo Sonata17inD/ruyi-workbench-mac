@@ -1,4 +1,5 @@
 'use strict';
+const VisualPipeline = require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline();
 // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A9/A10/A14/F3/NE-12)的纯逻辑与真子进程覆盖。真 server.js、临时 HOME。
 //   [N1]  tool_invoke_* 把 ctx 带进原生目标(workingDir 生效);回合摘要 / 不可逆账按真正被调用的工具名记。
 //   [N4]  allowCommandTools / allowDesktopTools 在分发点(toolCall,ctx 带 config)也拒绝,与 offer 面同一判据。
@@ -216,7 +217,7 @@ test('[N6] MCP 标准 content:全部 text 块、image 块映射、不劈 base64'
   assert.deepEqual(o.omittedBlocks, [{ type: 'resource_link', note: 'omitted', uri: 'file:///x', name: 'x' }]);
   assert.deepEqual(n({ content: [] }), { ok: true, content: [] });
   // 映射后的形状就是工具图像通道认识的形状
-  assert.equal(H.VisualPipeline.extractToolImages(only).length, 1);
+  assert.equal(VisualPipeline.extractToolImages(only).length, 1);
 });
 
 test('[N6] 多 text 块:首块是 JSON 就按结构化结果(保住 ok:false),其余块放 extraText;首块不是 JSON 才拼接', () => {
@@ -239,7 +240,7 @@ test('[N6] 多 text 块:首块是 JSON 就按结构化结果(保住 ok:false),�
 });
 
 test('[N7] 非视觉:图像字段换成一行占位', () => {
-  const V = H.VisualPipeline;
+  const V = VisualPipeline;
   const big = 'A'.repeat(40000);
   const res = { ok: true, width: 1280, height: 720, format: 'png', image_base64: big };
   const s = V.stripToolImageFields(res, 'no-vision');
@@ -255,7 +256,7 @@ test('[N7] 非视觉:图像字段换成一行占位', () => {
 });
 
 test('[F3] extractToolImages 的 mime:魔数 > format > png', () => {
-  const V = H.VisualPipeline;
+  const V = VisualPipeline;
   assert.match(V.extractToolImages({ ok: true, image: JPEG_HEAD, format: 'jpeg' })[0], /^data:image\/jpeg;base64,/);
   assert.match(V.extractToolImages({ ok: true, image: JPEG_HEAD })[0], /^data:image\/jpeg;base64,/, '没有 format 也认字节');
   assert.match(V.extractToolImages({ ok: true, image_base64: PNG_1X1, format: 'jpeg' })[0], /^data:image\/png;base64,/, '字节说了算(服务端校验的是字节)');
@@ -323,7 +324,7 @@ test('[NE-12] desktop_screenshot 的图进 image_base64,路径保留;过大不�
   assert.equal(r.image_base64, PNG_1X1);
   assert.equal(r.path, png);
   assert.deepEqual([r.width, r.height, r.format, r.image_mime], [1, 1, 'png', 'image/png']);
-  assert.equal(H.VisualPipeline.extractToolImages(r).length, 1);
+  assert.equal(VisualPipeline.extractToolImages(r).length, 1);
   // 缩略副本优先,并被清掉
   const side = png + '.vision.jpg';
   fs.writeFileSync(side, Buffer.from(JPEG_HEAD, 'base64'));

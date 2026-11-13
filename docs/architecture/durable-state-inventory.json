@@ -55,7 +55,7 @@
     {
       "id": "mac-keychain-wrapping-key",
       "pattern": "Keychain service org.ruyi.workbench.local-secrets / account wrapping-key-v1",
-      "owner": "01j-local-crypto.js",
+      "owner": "../backend/local-crypto.cjs",
       "anchor": "'macos-keychain'",
       "schema": "one 32-byte user-level wrapping key; versioned AES-GCM envelope identifies the provider and key fingerprint",
       "writePrimitive": "native SecItemAdd via bounded stdin/stdout; concurrent first creation rereads the winning item; production has no update/delete operation",
@@ -69,7 +69,7 @@
     {
       "id": "mac-serve-socket-owner",
       "pattern": "/private/tmp/ruyi-serve-v1-<uid>/<root-hash>.lock.<endpoint-hash>.owner.json",
-      "owner": "01g-server-ownership.js",
+      "owner": "../backend/server-ownership.cjs",
       "anchor": "'.owner.json'",
       "schema": "schema 1 canonical root, PID, legacy socket path and filesystem identity",
       "writePrimitive": "private O_NOFOLLOW file write under the kernel ownership lock; no replacement of the lock inode",
@@ -139,7 +139,7 @@
     {
       "id": "external-bot-credentials",
       "pattern": "<data>/external-bot-credentials.json",
-      "owner": "13y-external-bot-credentials.js",
+      "owner": "../backend/external-bot-credentials.cjs",
       "anchor": "'external-bot-credentials.json'",
       "schema": "object / schema 1 (bounded records bind full connection identity to platform-protected cipher (Windows DPAPI / Mac Keychain), present slot names and random revision)",
       "writePrimitive": "DurableJsonStore strictRead, cache:false, quarantine:false with atomic write and private vault CAS chain inside the outer connection state chain",

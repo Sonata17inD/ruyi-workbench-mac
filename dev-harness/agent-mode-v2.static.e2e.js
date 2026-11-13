@@ -87,7 +87,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(/const AGENT_RUN_TERMINAL = new Set\(\['succeeded', 'failed', 'partial', 'stopped', 'interrupted', 'cancelled'\]\);/.test(s09), '③ 09 终态集');
   ok(/if \(subagentTurnCap > 0 && subagentTotal \+ nodeCount > subagentTurnCap\)/.test(s09), '③ 09 subagentMaxPerTurn 语义平移:本回合累计节点数上限');
   ok(!/spawnDispatches|subagentFanoutMax|reservedSubagentKeys/.test(s09), '③ 09 旧 spawn 批处理旁路已删');
-  const s02c = src('02c-turn-segments.js');
+  const s02c = src('../backend/turn-segments.cjs');
   ok(/if \(seg\.background === true && \(seg\.type === 'subagent' \|\| seg\.type === 'workflow'\)\) \{\s*if \(seg\.status === 'running' \|\| seg\.status === 'paused'\) seg\.status = 'background';\s*continue;/.test(s02c), '③ 02c finalizeAll:后台段标 background 不标 cancelled');
   const s11 = src('11-native-tools.js');
   ok(/EventStreamHooks\.markAgentEnvelopeDelivered = \(session, runId\)/.test(s11) && /EventStreamHooks\.notifyAgentRunEnvelope = \(sessionId, run, envelope\)/.test(s11) && /EventStreamHooks\.drainAgentEnvelopesText = session =>/.test(s11), '③ 11 一次投递三件套(登记已读 / 完成入账 / Claude 侧文本 drain)');

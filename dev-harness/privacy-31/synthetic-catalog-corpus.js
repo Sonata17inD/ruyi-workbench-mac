@@ -59,8 +59,8 @@ function createCorpus(marker) {
 
 function checkCorpus() {
   const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), assert = require('node:assert/strict');
-  const read = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-  const api = vm.runInNewContext(read('01i-privacy-rules.js') + '\n' + read('01h-privacy-core.js') + '\n({ catalog: PrivacyRuleCatalog, core: PrivacyCore })', { require, Buffer });
+  const { PrivacyCore: core, PrivacyRuleCatalog: catalog } = require('../lib/privacy-primitives').createPrivacyPrimitives();
+  const api = { core, catalog };
   const rows = createCorpus('catalog-check-synthetic'), ids = api.catalog.list().map(rule => rule.id).sort();
   assert.equal(ids.length, 45, 'Update this full-catalog corpus when executable catalog rules change');
   assert.deepEqual(rows.map(row => row.id).sort(), Array.from(ids));

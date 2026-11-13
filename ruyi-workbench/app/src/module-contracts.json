@@ -373,15 +373,7 @@
       "provides": [
         "PrivacyCore"
       ],
-      "requires": [
-        {
-          "provider": "01i-privacy-rules.js",
-          "symbol": "PrivacyRuleCatalog",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "01m-privacy-regex.js",
@@ -627,13 +619,6 @@
           "symbol": "CONFIG_SCHEMA",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -1053,13 +1038,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
@@ -1116,13 +1094,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -6173,21 +6144,10 @@
       "file": "06h-retrieval-index.js",
       "layer": "engine",
       "provides": [
-        "RETRIEVAL_DIMS",
-        "RETRIEVAL_RRF_K",
-        "RETRIEVAL_TEXT_CAP",
-        "buildRetrievalCorpus",
-        "buildRetrievalDf",
         "createRetrievalCorpusCache",
-        "fnv1a32",
         "rankRetrievalCorpus",
         "reciprocalRankFusion",
-        "retrievalContentHash",
-        "retrievalCosine",
-        "retrievalIdf",
-        "retrievalTermCounts",
-        "retrievalTerms",
-        "retrievalVector"
+        "retrievalTerms"
       ],
       "requires": []
     },
@@ -24450,21 +24410,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -24480,7 +24426,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -25939,13 +25885,6 @@
           ]
         },
         {
-          "provider": "02c-turn-segments.js",
-          "symbol": "createTurnSegmentBuilder",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02d-session-overrides.js",
           "symbol": "liveSessionPermissionMode",
           "kinds": [
@@ -26312,13 +26251,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "scanMcpSources",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-visual-pipeline.js",
-          "symbol": "VisualPipeline",
           "kinds": [
             "read"
           ]

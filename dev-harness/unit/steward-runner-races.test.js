@@ -155,7 +155,7 @@ test('[R6] start → stop → start 交错之后 stop:没有漏掉的轮询器',
   const liveIntervals = new Set();
   const origSet = global.setInterval;
   const origClear = global.clearInterval;
-  global.setInterval = (fn, ms, ...rest) => { const h = origSet(fn, ms, ...rest); if (ms === 5000) liveIntervals.add(h); return h; };
+  global.setInterval = (fn, ms, ...rest) => { const h = origSet(fn, ms, ...rest); if (ms === 60000) liveIntervals.add(h); return h; };
   global.clearInterval = h => { liveIntervals.delete(h); return origClear(h); };
   try {
     const p1 = srv.startStewardInbox(cfg);

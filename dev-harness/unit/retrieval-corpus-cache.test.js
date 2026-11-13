@@ -11,8 +11,8 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const source = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/06h-retrieval-index.js'), 'utf8');
-const ctx = vm.createContext({});
+const source = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/retrieval-index.cjs'), 'utf8');
+const ctx = vm.createContext({ module: { exports: {} } });
 vm.runInContext(source + '\n;globalThis.__api = { buildRetrievalCorpus, createRetrievalCorpusCache, rankRetrievalCorpus, retrievalTermCounts };', ctx);
 const { buildRetrievalCorpus, createRetrievalCorpusCache, rankRetrievalCorpus } = ctx.__api;
 
@@ -59,7 +59,7 @@ test('[R2] 集合没变整份复用;改一篇只重新分词那一篇', () => {
 });
 
 test('[R3] 异步装配挂起时词表被整份重置:结果仍与现算逐位相同;并发两次异步装配也相同', async () => {
-  const actx = vm.createContext({ setImmediate });
+  const actx = vm.createContext({ setImmediate, module: { exports: {} } });
   vm.runInContext(source + '\n;globalThis.__api = { buildRetrievalCorpus, createRetrievalCorpusCache };', actx);
   const api = actx.__api;
   const r = rng(7);

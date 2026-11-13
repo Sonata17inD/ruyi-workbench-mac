@@ -28,7 +28,7 @@ def screenshot(region: str | None = None, window_title: str | None = None, max_w
             raise macos.DesktopError("invalid_args", "region must contain four integers") from None
         if len(parsed) != 4 or parsed[2] <= 0 or parsed[3] <= 0:
             raise macos.DesktopError("invalid_args", "region must contain x,y and positive width,height")
-    image, info = macos.capture(region=parsed, monitor=monitor, window_title=window_title)
+    image, info = macos.capture(region=parsed, monitor=monitor, window_title=window_title, max_width=max_width)
     return _fields(image, info, max_width, format, quality)
 
 
@@ -42,7 +42,7 @@ def screenshot_region(x: int, y: int, width: int, height: int,
     """
     if width <= 0 or height <= 0:
         raise macos.DesktopError("invalid_args", "width and height must be positive")
-    image, info = macos.capture(region=(x, y, width, height))
+    image, info = macos.capture(region=(x, y, width, height), max_width=max_width)
     return _fields(image, info, max_width, format, quality)
 
 
@@ -90,7 +90,7 @@ def window_screenshot(title_substring: str, output_path: str | None = None, max_
         reason = protected_path_reason(output_path)
         if reason and not allow_protected:
             return {"ok": False, "code": "path_protected", "error": f"refused to write: destination {reason}"}
-    image, info = macos.capture(window_title=title_substring)
+    image, info = macos.capture(window_title=title_substring, max_width=0 if output_path else max_width)
     out = _fields(image, info, 0 if output_path else max_width, format, quality)
     if output_path:
         absolute = os.path.abspath(output_path)
