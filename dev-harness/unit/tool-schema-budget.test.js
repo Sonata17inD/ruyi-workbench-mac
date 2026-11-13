@@ -138,7 +138,8 @@ test('N8-D 核心编辑工具的描述带着模型学不到的行为', () => {
   assert.match(d('file_edit'), /exactly once|once/);
   assert.match(d('file_write'), /content/);
   assert.match(d('file_write'), /""|empty/);
-  assert.match(d('script_run'), /powershell/i);
+  assert.match(d('script_run'), /bash.*Python.*Node/);
+  assert.doesNotMatch(d('script_run'), /powershell/i);
   assert.match(d('script_run'), /60000/);
   assert.match(d('file_list'), /truncated/);
   for (const n of ['file_write', 'file_edit', 'file_list', 'script_run']) assert.ok(d(n).length >= 60, `${n} 描述太短`);

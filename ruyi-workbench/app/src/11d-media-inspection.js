@@ -37,7 +37,8 @@ const MediaInspection = (() => {
   }
 
   function runMac(command, argv, options) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
+    void (async () => {
       const { StringDecoder } = require('string_decoder');
       const stdoutDecoder = new StringDecoder('utf8'), stderrDecoder = new StringDecoder('utf8');
       let stdout = '', stderr = '', child, timer, drainTimer, finished = false, timedOut = false;
@@ -67,7 +68,7 @@ const MediaInspection = (() => {
       };
       if (options.signal?.aborted) { stop('aborted'); return; }
       try {
-        child = ProcessRuntime.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
+        child = await ProcessRuntime.spawn(command, argv, { signal: options.signal, shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
           { ...ProcessRuntime.currentOwner(), kind: 'media-inspection' });
         child.stdout.on('data', b => { if (!finished) stdout = (stdout + stdoutDecoder.write(b)).slice(-262144); });
         child.stderr.on('data', b => {
@@ -89,6 +90,7 @@ const MediaInspection = (() => {
         if (options.signal?.aborted) abort();
         else child.stdin.end(options.input || '');
       } catch (error) { stop(error.code || 'process_start_failed'); }
+    })().catch(reject);
     });
   }
 

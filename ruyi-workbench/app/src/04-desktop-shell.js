@@ -99,7 +99,8 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
   }
 
   function runProcess(command, args, options = {}) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
+    void (async () => {
       const start = Date.now();
       const timeoutMs = normalizeExecTimeout(options.timeoutMs);
       const shape = options.shape === true;
@@ -127,8 +128,8 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
       const s = { command, args, opts: {} };
       let processHandle;
       try {
-        processHandle = ProcessRuntime.start({
-          executable: s.command, argv: s.args,
+        processHandle = await ProcessRuntime.start({
+          executable: s.command, argv: s.args, signal: options.signal,
           cwd: options.cwd || process.cwd(),
           env: options.inheritEnv === false ? { ...(options.env || {}) } : { ...process.env, ...(options.env || {}) },
           owner: { ...ProcessRuntime.currentOwner(), kind: 'desktop-shell', ...options.owner },
@@ -141,9 +142,9 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
           },
         });
       } catch (error) {
-        if (!error.capability) throw error;
+        if (!error.capability && error.code !== 'ABORT_ERR') throw error;
         resolve({ ok: false, code: -1, error: error.message, errorCode: error.code, capability: error.capability,
-          stdout: '', stderr: error.message, timedOut: false, interrupted: false, elapsedMs: Date.now() - start });
+          stdout: '', stderr: error.message, timedOut: false, interrupted: error.code === 'ABORT_ERR', elapsedMs: Date.now() - start });
         return;
       }
       const child = ProcessRuntime.child(processHandle);
@@ -282,12 +283,13 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
         armExitTimer();
       });
       child.on('close', code => finish(compose(code)));
+    })().catch(reject);
     });
   }
 
   async function runBash(command, cwd, timeoutMs, signal, opts = {}) {
     if (process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 执行' };
-    const capability = ProcessRuntime.helperCapability();
+    const capability = await ProcessRuntime.helperCapabilityAsync();
     if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac bash 的原生进程监督器尚未就绪', capability };
     const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'ruyi-bash-'));
     const script = path.join(directory, 'command.sh');

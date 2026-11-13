@@ -3261,7 +3261,7 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
   if (process.platform === 'darwin') {
     let capture;
     try {
-      capture = ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
+      capture = await ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined, env: { ...process.env, ...(desktopEnv || {}) },
         encoding: 'utf8', maxBuffer: 64 * 1024,
       }, { ...ProcessRuntime.currentOwner(), kind: 'desktop-python-probe' });

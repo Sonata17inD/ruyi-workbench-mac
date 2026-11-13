@@ -41,7 +41,7 @@ function heartbeat(file) {
     try {
       S.ProcessRuntimeHooks.helperPath = () => probeHelper;
       let blocked = false;
-      try { runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
+      try { await runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
       catch (error) { blocked = error.code === 'process_helper_missing'; }
       t.ok(blocked && !fs.existsSync(marker), 'missing helper blocks every managed execution without unsupervised fallback');
       const gateFailure = await S.DesktopShell.runProcess(process.execPath, ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`], { shape: true });
@@ -51,7 +51,7 @@ function heartbeat(file) {
         fs.writeFileSync(probeHelper, '#!' + process.execPath + '\nconsole.log(' + JSON.stringify(JSON.stringify(report)) + ');', { mode: 0o700 });
         const unavailable = runtime.helperCapability();
         blocked = false;
-        try { runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
+        try { await runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
         catch (error) { blocked = error.code === 'process_helper_incompatible'; }
         t.ok(!unavailable.ready && blocked && !fs.existsSync(marker), 'incompatible version/capability report blocks target before execution');
       }
@@ -78,7 +78,7 @@ function heartbeat(file) {
       const command = fault === 'primary-before-write'
         ? `const fs=require('fs');setTimeout(()=>fs.writeFileSync(${JSON.stringify(faultBeat)},'bad'),400);setTimeout(()=>process.exit(0),2000)`
         : heartbeat(faultBeat);
-      const faultHandle = runtime.start({ executable: process.execPath, argv: ['-e', command], env: fixtureChildEnv(), owner: { kind: 'helper-loss' } });
+      const faultHandle = await runtime.start({ executable: process.execPath, argv: ['-e', command], env: fixtureChildEnv(), owner: { kind: 'helper-loss' } });
       handles.push(faultHandle);
       const guardian = runtime.child(faultHandle);
       t.ok((await runtime.ready(guardian)).ok, fault + ' fixture starts under versioned guardian');
@@ -112,7 +112,7 @@ function heartbeat(file) {
     t.ok(natural.cleanupScope === 'owned-group-and-observed' && !natural.cleanupIncomplete, 'natural completion reports verified scope');
 
     const cancelBeat = path.join(root, 'cancel-beat');
-    const handle = runtime.start({ executable: process.execPath, argv: ['-e', heartbeat(cancelBeat)], env: fixtureChildEnv(), owner: { sessionId: 'fixture', toolCallId: 'cancel' } });
+    const handle = await runtime.start({ executable: process.execPath, argv: ['-e', heartbeat(cancelBeat)], env: fixtureChildEnv(), owner: { sessionId: 'fixture', toolCallId: 'cancel' } });
     handles.push(handle);
     await until(() => runtime.identity(handle) && fs.existsSync(cancelBeat));
     t.ok(Object.isFrozen(handle) && !('pid' in handle) && Object.isFrozen(runtime.identity(handle)), 'opaque handle retains immutable startup identity privately');
@@ -139,7 +139,7 @@ function heartbeat(file) {
 
     const forged = await S.DesktopShell.runProcess(process.execPath, ['-e', `console.log('noise\\n{"event":"cleanup","value":0,"detail":1}');process.exit(7)`]);
     t.ok(forged.code === 7 && forged.stdout.includes('"event":"cleanup"'), 'ordinary stdout cannot spoof private control protocol');
-    const failedStart = runtime.start({ executable: path.join(root, 'missing-ready'), env: fixtureChildEnv() });
+    const failedStart = await runtime.start({ executable: path.join(root, 'missing-ready'), env: fixtureChildEnv() });
     handles.push(failedStart);
     const readiness = await runtime.ready(runtime.child(failedStart));
     t.ok(!readiness.ok && readiness.error.code === 'ENOENT', 'execution readiness rejects missing target after supervisor spawn');
@@ -148,7 +148,7 @@ function heartbeat(file) {
 
     for (const stdio of [['ignore'], ['ignore', 'pipe', 'pipe', 'pipe']]) {
       let rejected = false;
-      try { runtime.start({ executable: process.execPath, spawnOptions: { stdio } }); } catch (error) { rejected = error instanceof TypeError; }
+      try { await runtime.start({ executable: process.execPath, spawnOptions: { stdio } }); } catch (error) { rejected = error instanceof TypeError; }
       t.ok(rejected, 'unsupported stdio layout is rejected before spawning a supervisor');
     }
     const realHelperPath = S.ProcessRuntimeHooks.helperPath;
@@ -160,7 +160,7 @@ function heartbeat(file) {
         fs.writeFileSync(fakeHelper, '#!' + process.execPath + '\n' + capabilityPrelude +
           `require('fs').writeSync(3,${JSON.stringify(frame + '\n')});setTimeout(()=>process.exit(0),100);\n`, { mode: 0o700 });
         S.ProcessRuntimeHooks.helperPath = () => fakeHelper;
-        const malformed = runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'malformed-protocol' } });
+        const malformed = await runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'malformed-protocol' } });
         handles.push(malformed);
         const result = await runtime.completion(malformed);
         t.ok(result.incomplete && result.status === 'incomplete', 'malformed private control frame is contained as incomplete cleanup');
@@ -176,7 +176,7 @@ function heartbeat(file) {
       fs.writeFileSync(fakeHelper, '#!' + process.execPath + '\n' + capabilityPrelude
         + `require('fs').writeSync(3,${JSON.stringify(frames.map(frame => JSON.stringify(frame) + '\n').join(''))});`, { mode: 0o700 });
       S.ProcessRuntimeHooks.helperPath = () => fakeHelper;
-      const delayed = runtime.start({ executable: process.execPath, env: fixtureChildEnv() });
+      const delayed = await runtime.start({ executable: process.execPath, env: fixtureChildEnv() });
       handles.push(delayed);
       const child = runtime.child(delayed);
       child.stdio[3].pause();
@@ -197,7 +197,7 @@ function heartbeat(file) {
       const incompleteDesktop = await S.DesktopShell.runProcess(process.execPath, [], { shape: true });
       t.ok(!incompleteDesktop.ok && incompleteDesktop.cleanupIncomplete && !incompleteDesktop.stderr.includes('process tree killed')
         && /尚未确认/.test(incompleteDesktop.error), 'incomplete cleanup is not reported as full tree termination');
-      const incompleteHandle = runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'incomplete-test' } });
+      const incompleteHandle = await runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'incomplete-test' } });
       handles.push(incompleteHandle);
       await runtime.completion(incompleteHandle);
       const incompleteChild = runtime.child(incompleteHandle);
@@ -316,7 +316,7 @@ rl.on('line',line=>{const m=JSON.parse(line);if(!m.id)return;
       const file = path.join(root, 'fork-burst-' + i + '.json');
       burstFiles.push(file);
       const script = `const cp=require('child_process'),fs=require('fs');const ids=[];for(let i=0;i<24;i++){const c=cp.spawn('/bin/sleep',['5'],{stdio:'ignore',detached:i%3===0});ids.push(c.pid);}fs.writeFileSync(${JSON.stringify(file)},JSON.stringify(ids));setTimeout(()=>process.exit(0),5000);`;
-      const handle = runtime.start({ executable: process.execPath, argv: ['-e', script], owner: { kind: 'fork-burst' } });
+      const handle = await runtime.start({ executable: process.execPath, argv: ['-e', script], owner: { kind: 'fork-burst' } });
       handles.push(handle); burstHandles.push(handle);
     }
     await until(() => burstFiles.every(file => fs.existsSync(file)));

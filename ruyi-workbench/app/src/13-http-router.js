@@ -2228,7 +2228,8 @@ async function discoverKimiModels(config) {
   const selected = selectedAgentCli({ ...(config || {}), agentCliType: 'kimi' });
   if (!selected.path) return Promise.resolve({ ok: false, models: fallback, discoveredCount: 0, error: '未检测到 Kimi Code CLI' });
   const launch = prepareAgentCliSpawn('kimi', selected.path, ['provider', 'list', '--json']);
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    void (async () => {
     let child;
     let stdout = '';
     let stderr = '';
@@ -2268,9 +2269,9 @@ async function discoverKimiModels(config) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: '读取 Kimi Code 模型列表超时' });
     }, 10000);
     try {
-      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
+      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts, admit: () => { if (settled) throw Object.assign(new Error('Model discovery cancelled'), { code: 'ABORT_ERR' }); } };
       child = supervised
-        ? ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
+        ? await ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
         : cp.spawn(launch.command, launch.args, options);
     } catch (error) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: `无法启动 Kimi Code CLI: ${redact(error && error.message || String(error))}` });
@@ -2314,6 +2315,7 @@ async function discoverKimiModels(config) {
       }
       finish({ ok: true, models: kimiModelList(config, discovered), discoveredCount: discovered.length });
     });
+  })().catch(reject);
   });
 }
 

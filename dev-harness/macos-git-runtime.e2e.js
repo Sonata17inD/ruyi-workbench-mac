@@ -23,7 +23,7 @@ const quote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
     runtime = S.ProcessRuntime;
     if (!fs.existsSync(S.ProcessRuntimeHooks.helperPath())) throw new Error('Build the native macOS process helper first');
     async function capture(script, options = {}) {
-      const job = runtime.capture(process.execPath, ['-e', script], {
+      const job = await runtime.capture(process.execPath, ['-e', script], {
         cwd: root, env: fixtureChildEnv(), maxBuffer: 1024, encoding: 'buffer', ...options,
       }, { kind: 'git-capture-fixture' });
       handles.push(runtime.handle(job.child));

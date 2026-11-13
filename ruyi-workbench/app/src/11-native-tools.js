@@ -477,19 +477,15 @@ async function shellStart(args, config, ctx = {}) {
   const language = args.language || 'bash';
   if (language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_start supports bash' };
   if (language === 'bash' && process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 会话' };
-  {
-    const capability = ProcessRuntime.helperCapability();
-    if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac shell 的原生进程监督器尚未就绪', capability };
-  }
   let scriptDirectory = '';
   let startingSession = null;
   const launchArgs = ['--noprofile', '--norc'];
+  if (command && (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES)) return { ok: false, code: 'command_too_long', error: 'Invalid shell command size' };
+  startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
+    sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), buf: '', baseOffset: 0, startedAt: Date.now(), lastUsedAt: Date.now() };
+  shellSessions.set(shellId, startingSession); scheduleShellReaper();
   {
     if (command) {
-      if (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES) return { ok: false, code: 'command_too_long', error: '命令不能包含 NUL，且 UTF-8 内容不得超过 1MiB' };
-      startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
-        sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), buf: '', baseOffset: 0, startedAt: Date.now(), lastUsedAt: Date.now() };
-      shellSessions.set(shellId, startingSession); scheduleShellReaper();
       try {
         scriptDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), 'ruyi-shell-'));
         const script = path.join(scriptDirectory, 'command.sh');
@@ -508,14 +504,22 @@ async function shellStart(args, config, ctx = {}) {
   }
   let child;
   try {
-    child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
-      cwd, env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
+    child = await ProcessRuntime.spawn('/bin/bash', launchArgs, {
+      cwd, signal: ctx.signal,
+      admit: () => { if (startingSession?.cancelled || (startingSession && shellSessions.get(shellId) !== startingSession)) throw Object.assign(new Error('Shell start cancelled'), { code: 'ABORT_ERR' }); },
+      env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
       ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
     if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId); scheduleShellReaper();
     if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
-    return { ok: false, error: (e && e.message) ? e.message : 'spawn failed' };
+    return { ok: false, code: e.code, ...(e.capability ? { capability: e.capability } : {}), error: e.message || 'spawn failed' };
+  }
+  if (startingSession.cancelled || shellSessions.get(shellId) !== startingSession) {
+    killChildTree(child);
+    await ProcessRuntime.waitForCleanup(child, 1500);
+    if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
+    return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
   }
   // shell_send 往一个刚关了 stdin 的子进程里写 → 异步 EPIPE 落在 stdin 的 'error' 上(try/catch 接不住),
   // 没监听者就是 uncaughtException;吸收即可,子进程状态由 exit/close 收尾。
@@ -1988,7 +1992,7 @@ async function runRgOwned(command, argv, cwd, timeoutMs, maxBuffer, signal,
   if (signal?.aborted) throw failure('aborted');
   let capture;
   try {
-    capture = ProcessRuntime.capture(command, argv, { cwd, maxBuffer, encoding: 'utf8' },
+    capture = await ProcessRuntime.capture(command, argv, { signal, cwd, maxBuffer, encoding: 'utf8' },
       owner);
   } catch { return null; } // No child was started, so JS fallback is safe.
   const { child } = capture;
@@ -2260,7 +2264,8 @@ const GIT_SAFE_FLAGS = ['-c', 'core.fsmonitor=', '-c', 'core.fsmonitorHookVersio
 // (code:null、killed:true)被 gitCommit 当成「钩子拒绝」。现在:到点 → timedOut:true,用 killChildTree 整棵树杀(128i:只认
 // 自己的子孙);树杀不掉、管道仍不关(杀树命令失败 / 极端孤儿)时,5 秒后强行收尾,不让调用方永远挂着。
 function runGit(args, cwd, timeoutMs, opts = {}) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    void (async () => {
     // 非数字(模型给 git_status 之类自造 timeoutMs:"30s")回落缺省:修前 NaN 一路传到 setTimeout,等于 1 ms 就把跑完的 git 杀掉、报「超过 0 秒」。
     const askedMs = Number(timeoutMs);
     const limitMs = Math.min(GIT_TIMEOUT_MAX_MS, Math.max(1000, Number.isFinite(askedMs) && askedMs > 0 ? askedMs : 15000));
@@ -2280,7 +2285,7 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
     try {
       // 安全加固前缀(GIT_SAFE_FLAGS)必须在子命令之前;args 以 `-C <dir> <subcmd> …` 开头,故整体前置合法。
       const executionOptions = {
-        cwd: cwd || process.cwd(),
+        signal: opts.signal, cwd: cwd || process.cwd(),
         maxBuffer: opts && opts.maxBuffer ? opts.maxBuffer : 24 * 1024 * 1024,
         encoding: opts && opts.encoding === 'buffer' ? 'buffer' : 'utf8',
       };
@@ -2289,7 +2294,7 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
         settle({ ok: !error, code, stdout: stdout || '', stderr: stderr || '', error: error || null });
       };
       if (process.platform === 'darwin') {
-        const capture = ProcessRuntime.capture('git', [...GIT_SAFE_FLAGS, ...args], executionOptions, { ...ProcessRuntime.currentOwner(), kind: 'git', ...opts.owner });
+        const capture = await ProcessRuntime.capture('git', [...GIT_SAFE_FLAGS, ...args], executionOptions, { ...ProcessRuntime.currentOwner(), kind: 'git', ...opts.owner });
         child = capture.child;
         void capture.output.then(result => complete(result.error, result.stdout, result.stderr));
       } else {
@@ -2310,7 +2315,8 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
       }, 5000);
       if (grace.unref) grace.unref();
     }, limitMs);
-  });
+  })().catch(reject);
+    });
 }
 // git 单条命令的超时上限(模型经 timeoutMs 能放宽到的最大值):钩子再慢也不该让一个工具调用挂过十分钟。
 const GIT_TIMEOUT_MAX_MS = 10 * 60 * 1000;

@@ -2634,10 +2634,10 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   // One CLI spawn attempt -> collected exit/output state. Does NOT decide retry; the loop below does.
   const runOnce = async () => {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
-    return new Promise(resolve => {
-    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    const child = await ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts, signal: ctrl?.signal },
       { kind: 'cli-subagent', sessionId: parentSession.id, subagentId, agentKey });
     currentChild = child;
+    return new Promise(resolve => {
     let lastEventAt = Date.now();
     // Idle watchdog - a wedged CLI must not hang the whole DAG run forever (per-attempt).
     const watchdog = setInterval(() => { if (!killed && Date.now() - lastEventAt > idleLimitMs) onAbort(); }, 5000);

@@ -104,7 +104,8 @@ function startToolboxService(component) {
     if (!port) { Object.assign(entry, { state: 'failed', error: 'no-free-port' }); logEvent({ kind: 'toolbox_service', action: 'fail', id: component.id, reason: 'no-free-port' }); return entry; }
     let child = null;
     try {
-      child = ProcessRuntime.spawn(component.run.command, component.run.args, {
+      child = await ProcessRuntime.spawn(component.run.command, component.run.args, {
+        admit: () => { if (entry.stopping) throw Object.assign(new Error('Service startup cancelled'), { code: 'ABORT_ERR' }); },
         cwd: component.run.cwd, shell: false, stdio: ['ignore', 'ignore', 'pipe'],
         env: { ...process.env, PYTHONUTF8: '1', PYTHONUNBUFFERED: '1', ...component.run.env, [svc.portEnv]: String(port), RUYI_TOOLBOX_PARENT_PID: String(process.pid) },
       }, { kind: 'toolbox', componentId: component.id });
@@ -113,6 +114,7 @@ function startToolboxService(component) {
       logEvent({ kind: 'toolbox_service', action: 'fail', id: component.id, reason: 'spawn' });
       return entry;
     }
+    if (entry.stopping) { toolboxKillTree(child); await ProcessRuntime.waitForCleanup(child, 1500); return entry; }
     Object.assign(entry, { state: 'starting', port, owned: true, child, pid: child.pid || 0 });
     const runtimeHandle = ProcessRuntime.handle(child);
     if (ProcessRuntime.result(child)?.scope === 'owned-group-and-observed') {

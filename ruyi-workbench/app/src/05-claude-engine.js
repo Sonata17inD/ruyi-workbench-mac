@@ -652,7 +652,7 @@ async function runClaudeTurn({
   if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
   assertSessionExecutionOwner(session.id, executionOwner);
   if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-  const child = ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts },
+  const child = await ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts, admit: () => assertSessionExecutionOwner(session.id, executionOwner) },
     { kind: 'cli', agentCliType, sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
   // P2-3: hold a reference to the in-memory session so a mid-turn POST /api/session/skills can update
   // session.skills on the LIVE turn object (otherwise the turn's end-of-turn saveSession clobbers it).

@@ -10,18 +10,19 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-ws-sep-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { loadServerInternals } = require('../lib/server-internals');
-const { normalizeConfig } = loadServerInternals(['normalizeConfig'], { testPlatform: 'win32' });
+const { normalizeConfig } = loadServerInternals(['normalizeConfig']);
 
-test('[W1] 带不带结尾分隔符是同一个常用文件夹', () => {
-  const { config } = normalizeConfig({ workspaces: [{ path: 'C:\\Users\\me\\Projects' }, { path: 'C:\\Users\\me\\Projects\\' }, { path: 'c:\\users\\me\\projects\\\\' }] });
-  assert.deepEqual(config.workspaces.map(w => w.path), ['C:\\Users\\me\\Projects']);
+test('[W1] trailing separators deduplicate without conflating differently cased Mac paths', () => {
+  const { config } = normalizeConfig({ workspaces: [
+    { path: '/Users/me/Projects' }, { path: '/Users/me/Projects/' }, { path: '/Users/me/projects//' },
+  ] });
+  assert.deepEqual(config.workspaces.map(w => w.path), ['/Users/me/Projects', '/Users/me/projects']);
 });
 
-test('[W2] 存的时候去掉结尾分隔符;盘符根与 / 保留一个', () => {
-  assert.equal(normalizeConfig({ defaultWorkspace: 'D:\\work\\' }).config.defaultWorkspace, 'D:\\work');
-  const driveRoot = process.platform === 'win32' ? path.parse(process.cwd()).root : 'E:\\';
-  const inputs = [driveRoot + '\\', '/', '/home/me/'];
-  const expected = [driveRoot, '/', '/home/me'];
+test('[W2] stored paths strip trailing separators and preserve the volume root', () => {
+  assert.equal(normalizeConfig({ defaultWorkspace: '/Users/me/work/' }).config.defaultWorkspace, '/Users/me/work');
+  const inputs = ['/', '/Users/me/', '/Volumes/Data/'];
+  const expected = ['/', '/Users/me', '/Volumes/Data'];
   const { config } = normalizeConfig({ workspaces: inputs.map(path => ({ path })), recentWorkspaces: inputs });
   assert.deepEqual(config.workspaces.map(w => w.path), expected);
   assert.deepEqual(config.recentWorkspaces, expected);

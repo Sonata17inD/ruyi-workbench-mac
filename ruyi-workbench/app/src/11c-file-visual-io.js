@@ -59,7 +59,7 @@ const FileVisualIo = (() => {
     if (signal?.aborted) return { err: Object.assign(new Error('File read cancelled'), { code: 'ABORT_ERR' }) };
     let capture;
     try {
-      capture = ProcessRuntime.capture(exe, argv, { maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
+      capture = await ProcessRuntime.capture(exe, argv, { signal, maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
         { ...ProcessRuntime.currentOwner(), kind: 'document-reader' });
     } catch (err) { return { err }; }
     const { child } = capture;

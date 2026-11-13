@@ -1044,9 +1044,10 @@ class McpStdioClient {
     this.executionContextRequired = spawnEnv.RUYI_EXECUTION_CONTEXT_REQUIRED === '1';
     let child;
     try {
-      child = ProcessRuntime.spawn(s.command, s.args, {
+      child = await ProcessRuntime.spawn(s.command, s.args, {
         cwd: this.cwd,
         env: spawnEnv,
+        admit: () => { if (this.dead) throw Object.assign(new Error('MCP startup cancelled'), { code: 'ABORT_ERR' }); },
         stdio: ['pipe', 'pipe', 'pipe'],
         ...s.opts,
       }, { kind: 'mcp', serverId: this.id });
@@ -1054,6 +1055,7 @@ class McpStdioClient {
       this.dead = true;
       throw new Error(`spawn failed: ${e && e.message ? e.message : e}`);
     }
+    if (this.dead) { killChildTree(child); await ProcessRuntime.waitForCleanup(child, 1500); throw new Error('MCP startup cancelled'); }
     this.child = child;
     this.pid = child.pid;
     // Don't let the live MCP child keep the event loop from exiting on a clean shutdown; we reap it

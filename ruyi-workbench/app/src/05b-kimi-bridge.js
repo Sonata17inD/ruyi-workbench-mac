@@ -2,7 +2,7 @@
 // operation-scoped for native compaction, and the documented wire transcript supplements ACP's usage update
 // with exact compaction/failure state. A separate ACP process is kept for the whole Ruyi turn so reverse RPC
 // (permissions/questions) and queued follow-up steering share one live native Kimi session.
-const kimiBridgeState = { child: null, port: 0, token: '', starting: null, signalHooked: false, modelWindows: new Map(), modelsAt: 0, modelsTriedAt: 0 };
+const kimiBridgeState = { child: null, port: 0, token: '', starting: null, admission: null, signalHooked: false, modelWindows: new Map(), modelsAt: 0, modelsTriedAt: 0 };
 const { fileURLToPath } = require('url');
 
 function kimiCodeHome() {
@@ -46,6 +46,8 @@ async function ensureKimiServer(config) {
     } catch { /* restart below */ }
   }
   if (kimiBridgeState.starting) return kimiBridgeState.starting;
+  const admission = new AbortController();
+  kimiBridgeState.admission = admission;
   kimiBridgeState.starting = (async () => {
     const tokenFile = path.join(kimiCodeHome(), 'server.token');
     let token = '';
@@ -54,9 +56,9 @@ async function ensureKimiServer(config) {
     if (!driver.path || !(await agentCliLauncherUsable(driver.path))) throw new Error('未检测到 Kimi Code CLI');   // 异步 + 记忆,超时不算缺失(见 01 agentCliLauncherUsable)
     const port = await freeLoopbackPort();
     const launch = prepareAgentCliSpawn('kimi', driver.path, ['web', '--port', String(port), '--no-open', '--log-level', 'warn']);
-    const child = ProcessRuntime.spawn(launch.command, launch.args, {
+    const child = await ProcessRuntime.spawn(launch.command, launch.args, {
       cwd: normalizeCwd(config.defaultWorkspace, os.homedir()), env: process.env,
-      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
+      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts, signal: admission.signal,
     }, { kind: 'kimi-server' });
     child.on('error', () => {});
     kimiBridgeState.child = child;
@@ -90,6 +92,7 @@ async function ensureKimiServer(config) {
 }
 
 async function stopKimiServer() {
+  kimiBridgeState.admission?.abort();
   const child = kimiBridgeState.child;
   kimiBridgeState.child = null; kimiBridgeState.port = 0; kimiBridgeState.token = '';
   if (!child || child.exitCode != null) return;
@@ -1648,7 +1651,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   const spawnArgs = nativeBashWrapper ? nativeBashWrapper.argv : args;
   let child;
   try {
-    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
+    child = await ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, signal: requestMeta?.signal, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
       { kind: 'kimi-terminal', sessionId: String(params.sessionId), toolCallId: terminalId });
   } catch (error) { throw kimiAcpRequestError(-32000, `Failed to create terminal: ${error && error.message || error}`); }
   let resolveExit;
@@ -2505,7 +2508,7 @@ async function runKimiAcpTurnPrepared(context) {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     assertSessionExecutionOwner(session.id, executionOwner);
     if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    child = await ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts, admit: () => assertSessionExecutionOwner(session.id, executionOwner) },
       { kind: 'cli', agentCliType: 'kimi', sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
     reg = {
       child, pid: child.pid, exited: false, pausePending: false, state: 'running', startedAt: Date.now(),

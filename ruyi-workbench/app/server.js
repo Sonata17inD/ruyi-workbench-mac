@@ -2717,17 +2717,18 @@ const ProcessRuntime = (() => {
   let helperProbe = null;
   let helperProbeInflight = null;
 
-  function helperProbeRequest() {
+  function helperProbeRequest(metadata) {
     const state = { supported: process.platform === 'darwin', installed: false, authorization: 'not_required',
       ready: false, reasonCode: 'platform.unsupported', code: 'process_helper_unavailable', escapeCoverage: 'observed-only' };
     if (!state.supported) return { state: Object.freeze(state) };
-    const helper = ProcessRuntimeHooks.helperPath();
+    const helper = metadata ? metadata.helper : ProcessRuntimeHooks.helperPath();
     let stamp;
     try {
-      const stat = filesystemModule.statSync(helper, { bigint: true });
+      if (metadata?.error) throw metadata.error;
+      const stat = metadata ? metadata.stat : filesystemModule.statSync(helper, { bigint: true });
       state.installed = stat.isFile();
       if (!state.installed) throw new Error('Helper is not a regular file');
-      filesystemModule.accessSync(helper, filesystemModule.constants.X_OK);
+      if (!metadata) filesystemModule.accessSync(helper, filesystemModule.constants.X_OK);
       stamp = [helper, stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs, stat.mode].join('|');
     } catch (error) {
       helperProbe = null;
@@ -2735,20 +2736,29 @@ const ProcessRuntime = (() => {
       state.code = error.code === 'ENOENT' ? 'process_helper_missing' : 'process_helper_unavailable';
       return { state: Object.freeze(state) };
     }
-    if (helperProbe && helperProbe.stamp === stamp && Date.now() - helperProbe.checkedAt < 1000) {
+    if (helperProbe && helperProbe.stamp === stamp) {
       return { helper, stamp, state: helperProbe.state, cached: true };
     }
     return { helper, stamp, state };
   }
 
-  function publishHelperProbe(request, probe) {
+  async function helperProbeRequestAsync() {
+    const helper = ProcessRuntimeHooks.helperPath();
+    try {
+      const stat = await filesystemModule.promises.stat(helper, { bigint: true });
+      await filesystemModule.promises.access(helper, filesystemModule.constants.X_OK);
+      return helperProbeRequest({ helper, stat });
+    } catch (error) { return helperProbeRequest({ helper, error }); }
+  }
+
+  function publishHelperProbe(request, probe, checkedRequest) {
     const { state, stamp } = request;
     let report = null;
     try { report = JSON.parse(probe.stdout); } catch { /* Invalid reports remain unavailable. */ }
     const valid = !probe.error && probe.status === 0 && report && report.protocolVersion === 3
       && report.guardian === true && report.supervise === true && report.privateFd === true && report.identityCleanup === true
       && report.escapeCoverage === 'observed-only';
-    const unchanged = helperProbeRequest().stamp === stamp;
+    const unchanged = (checkedRequest || helperProbeRequest()).stamp === stamp;
     state.ready = !!valid && unchanged;
     state.reasonCode = valid ? null : probe.error ? 'platform.dependency_unavailable' : 'platform.dependency_incompatible';
     state.code = valid ? null : probe.error ? 'process_helper_unavailable' : 'process_helper_incompatible';
@@ -2756,31 +2766,33 @@ const ProcessRuntime = (() => {
     state.deadline = !!valid && report.deadline === true;
     if (!unchanged) { state.reasonCode = 'platform.dependency_changed'; state.code = 'process_helper_unavailable'; }
     const frozen = Object.freeze(state);
-    helperProbe = state.ready ? { stamp, checkedAt: Date.now(), state: frozen } : null;
+    helperProbe = state.ready ? { stamp, state: frozen } : null;
     return frozen;
   }
 
   function helperCapability() {
     const request = helperProbeRequest();
     if (!request.stamp || request.cached) return request.state;
-    // Synchronous execution admission retains the existing start() contract.
+    // Explicit synchronous CLI/bootstrap probes only; managed admission is asynchronous.
     const probe = childProcessModule.spawnSync(request.helper, ['--capabilities'], {
       encoding: 'utf8', timeout: 1000, killSignal: 'SIGKILL', maxBuffer: 4096, stdio: ['ignore', 'pipe', 'pipe'],
     });
     return publishHelperProbe(request, probe);
   }
 
-  function helperCapabilityAsync() {
-    const request = helperProbeRequest();
+  async function helperCapabilityAsync() {
+    const request = await helperProbeRequestAsync();
     if (!request.stamp || request.cached) return Promise.resolve(request.state);
     if (helperProbeInflight && helperProbeInflight.stamp === request.stamp) return helperProbeInflight.promise;
     const pending = { stamp: request.stamp };
-    pending.promise = new Promise(resolve => {
+    pending.promise = new Promise((resolve, reject) => {
       childProcessModule.execFile(request.helper, ['--capabilities'], {
         encoding: 'utf8', timeout: 1000, killSignal: 'SIGKILL', maxBuffer: 4096,
-      }, (error, stdout) => {
+      }, async (error, stdout) => {
+        let checked;
+        try { checked = await helperProbeRequestAsync(); } catch (failure) { reject(failure); return; }
         const exited = error && typeof error.code === 'number';
-        resolve(publishHelperProbe(request, { error: exited ? null : error, stdout, status: exited ? error.code : error ? null : 0 }));
+        resolve(publishHelperProbe(request, { error: exited ? null : error, stdout, status: exited ? error.code : error ? null : 0 }, checked));
       });
     }).finally(() => { if (helperProbeInflight === pending) helperProbeInflight = null; });
     helperProbeInflight = pending;
@@ -2843,18 +2855,31 @@ const ProcessRuntime = (() => {
     return true;
   }
 
-  function start({ executable, argv = [], cwd, env, stdinMode = 'ignore', deadlineMs, owner, spawnOptions = {} }) {
+  async function start({ executable, argv = [], cwd, env, stdinMode = 'ignore', deadlineMs, owner, spawnOptions = {}, signal = spawnOptions.signal }) {
+    const abortError = () => Object.assign(new Error('Process admission cancelled'), { name: 'AbortError', code: 'ABORT_ERR', cause: signal?.reason });
+    if (signal?.aborted) throw abortError();
     const handle = Object.freeze({});
     const helper = process.platform === 'darwin' ? ProcessRuntimeHooks.helperPath() : '';
     const supervised = process.platform === 'darwin';
     if (supervised) {
-      const capability = helperCapability();
+      let cancelAdmission;
+      const cancelled = new Promise((resolve, reject) => {
+        cancelAdmission = () => reject(abortError());
+        signal?.addEventListener('abort', cancelAdmission, { once: true });
+      });
+      let capability;
+      try { capability = await Promise.race([helperCapabilityAsync(), cancelled]); }
+      finally { signal?.removeEventListener('abort', cancelAdmission); }
       if (!capability.ready) throw Object.assign(new Error('Mac process supervisor is unavailable'), { code: capability.code, capability });
     }
+    if (signal?.aborted) throw abortError();
+    spawnOptions.admit?.();
     const stdio = spawnOptions.stdio || [stdinMode, 'pipe', 'pipe'];
     const options = { ...spawnOptions, cwd, env, stdio };
     const extraStdio = options.extraStdio || [];
     delete options.extraStdio;
+    delete options.signal;
+    delete options.admit;
     if (!Array.isArray(extraStdio) || extraStdio.length > 1 || extraStdio.some(mode => mode !== 'pipe')) throw new TypeError('Unsupported private process channels');
     if (extraStdio.length && !supervised) throw new Error('Private shell channels require the native process supervisor');
     if (supervised) {
@@ -2878,9 +2903,11 @@ const ProcessRuntime = (() => {
     const entry = { child, supervised, owner: Object.freeze({ ...(owner || {}) }), identity: null, ready,
       result: { killed: [], scope: supervised ? 'owned-group-and-observed' : 'direct-child', incomplete: true,
         escapeCoverage: 'observed-only' }, completion, timer: null, finished: false, exited: false, controlEnded: !supervised };
+    const onAbort = () => { void stop(handle, signal?.reason || 'cancelled'); };
     const finish = () => {
       if (entry.finished || !entry.exited || !entry.controlEnded) return;
       entry.finished = true;
+      signal?.removeEventListener('abort', onAbort);
       resolveReady({ ok: false, error: entry.error || new Error('Process exited before execution readiness') });
       if (entry.supervised && (entry.phase !== 'done' || !entry.guardianConfirmed)) { helperProbe = null; entry.result.incomplete = true; }
       clearTimeout(entry.timer);
@@ -2935,20 +2962,22 @@ const ProcessRuntime = (() => {
       entry.timer = setTimeout(() => stop(handle, 'deadline'), deadlineMs);
       entry.timer.unref();
     }
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) onAbort();
     return handle;
   }
 
-  function spawn(executable, argv, options, owner) {
-    const handle = start({ executable, argv, cwd: options.cwd, env: options.env, spawnOptions: options, owner });
+  async function spawn(executable, argv, options, owner) {
+    const handle = await start({ executable, argv, cwd: options.cwd, env: options.env, spawnOptions: options, owner });
     return getEntry(handle).child;
   }
 
-  function capture(executable, argv, options, owner) {
+  async function capture(executable, argv, options, owner) {
     const maxBuffer = options.maxBuffer;
     if (typeof maxBuffer !== 'number' || maxBuffer < 0 || Number.isNaN(maxBuffer)) {
       throw Object.assign(new RangeError('maxBuffer must be a non-negative number'), { code: 'ERR_OUT_OF_RANGE' });
     }
-    const child = spawn(executable, argv, { cwd: options.cwd, env: options.env, stdio: ['ignore', 'pipe', 'pipe'] }, owner);
+    const child = await spawn(executable, argv, { signal: options.signal, admit: options.admit, cwd: options.cwd, env: options.env, stdio: ['ignore', 'pipe', 'pipe'] }, owner);
     const handle = children.get(child);
     const chunks = { stdout: [], stderr: [] };
     const sizes = { stdout: 0, stderr: 0 };
@@ -3044,7 +3073,7 @@ const ProcessRuntime = (() => {
     try {
       if (typeof deadlineMs !== 'number') throw Object.assign(new TypeError('timeout must be a number'), { code: 'ERR_INVALID_ARG_TYPE' });
       if (!Number.isInteger(deadlineMs) || deadlineMs < 0) throw Object.assign(new RangeError('timeout must be a non-negative integer'), { code: 'ERR_OUT_OF_RANGE' });
-      handle = start({ executable: command, argv, cwd: spawnOptions.cwd, env: spawnOptions.env,
+      handle = await start({ executable: command, argv, cwd: spawnOptions.cwd, env: spawnOptions.env,
         spawnOptions: { ...spawnOptions, timeout: undefined, stdio: 'ignore' },
         owner: { ...ownerContext.getStore(), kind: 'executable-probe' } });
     } catch (error) { return { error, status: null }; }
@@ -7357,7 +7386,7 @@ async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
   if (process.platform === 'darwin') {
     let capture;
     try {
-      capture = ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
+      capture = await ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
         cwd: cwd || undefined, env: { ...process.env, ...(desktopEnv || {}) },
         encoding: 'utf8', maxBuffer: 64 * 1024,
       }, { ...ProcessRuntime.currentOwner(), kind: 'desktop-python-probe' });
@@ -19746,9 +19775,10 @@ class McpStdioClient {
     this.executionContextRequired = spawnEnv.RUYI_EXECUTION_CONTEXT_REQUIRED === '1';
     let child;
     try {
-      child = ProcessRuntime.spawn(s.command, s.args, {
+      child = await ProcessRuntime.spawn(s.command, s.args, {
         cwd: this.cwd,
         env: spawnEnv,
+        admit: () => { if (this.dead) throw Object.assign(new Error('MCP startup cancelled'), { code: 'ABORT_ERR' }); },
         stdio: ['pipe', 'pipe', 'pipe'],
         ...s.opts,
       }, { kind: 'mcp', serverId: this.id });
@@ -19756,6 +19786,7 @@ class McpStdioClient {
       this.dead = true;
       throw new Error(`spawn failed: ${e && e.message ? e.message : e}`);
     }
+    if (this.dead) { killChildTree(child); await ProcessRuntime.waitForCleanup(child, 1500); throw new Error('MCP startup cancelled'); }
     this.child = child;
     this.pid = child.pid;
     // Don't let the live MCP child keep the event loop from exiting on a clean shutdown; we reap it
@@ -21905,7 +21936,8 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
   }
 
   function runProcess(command, args, options = {}) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
+    void (async () => {
       const start = Date.now();
       const timeoutMs = normalizeExecTimeout(options.timeoutMs);
       const shape = options.shape === true;
@@ -21933,8 +21965,8 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
       const s = { command, args, opts: {} };
       let processHandle;
       try {
-        processHandle = ProcessRuntime.start({
-          executable: s.command, argv: s.args,
+        processHandle = await ProcessRuntime.start({
+          executable: s.command, argv: s.args, signal: options.signal,
           cwd: options.cwd || process.cwd(),
           env: options.inheritEnv === false ? { ...(options.env || {}) } : { ...process.env, ...(options.env || {}) },
           owner: { ...ProcessRuntime.currentOwner(), kind: 'desktop-shell', ...options.owner },
@@ -21947,9 +21979,9 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
           },
         });
       } catch (error) {
-        if (!error.capability) throw error;
+        if (!error.capability && error.code !== 'ABORT_ERR') throw error;
         resolve({ ok: false, code: -1, error: error.message, errorCode: error.code, capability: error.capability,
-          stdout: '', stderr: error.message, timedOut: false, interrupted: false, elapsedMs: Date.now() - start });
+          stdout: '', stderr: error.message, timedOut: false, interrupted: error.code === 'ABORT_ERR', elapsedMs: Date.now() - start });
         return;
       }
       const child = ProcessRuntime.child(processHandle);
@@ -22088,12 +22120,13 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
         armExitTimer();
       });
       child.on('close', code => finish(compose(code)));
+    })().catch(reject);
     });
   }
 
   async function runBash(command, cwd, timeoutMs, signal, opts = {}) {
     if (process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 执行' };
-    const capability = ProcessRuntime.helperCapability();
+    const capability = await ProcessRuntime.helperCapabilityAsync();
     if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac bash 的原生进程监督器尚未就绪', capability };
     const directory = await fsp.mkdtemp(path.join(os.tmpdir(), 'ruyi-bash-'));
     const script = path.join(directory, 'command.sh');
@@ -22227,7 +22260,8 @@ function startToolboxService(component) {
     if (!port) { Object.assign(entry, { state: 'failed', error: 'no-free-port' }); logEvent({ kind: 'toolbox_service', action: 'fail', id: component.id, reason: 'no-free-port' }); return entry; }
     let child = null;
     try {
-      child = ProcessRuntime.spawn(component.run.command, component.run.args, {
+      child = await ProcessRuntime.spawn(component.run.command, component.run.args, {
+        admit: () => { if (entry.stopping) throw Object.assign(new Error('Service startup cancelled'), { code: 'ABORT_ERR' }); },
         cwd: component.run.cwd, shell: false, stdio: ['ignore', 'ignore', 'pipe'],
         env: { ...process.env, PYTHONUTF8: '1', PYTHONUNBUFFERED: '1', ...component.run.env, [svc.portEnv]: String(port), RUYI_TOOLBOX_PARENT_PID: String(process.pid) },
       }, { kind: 'toolbox', componentId: component.id });
@@ -22236,6 +22270,7 @@ function startToolboxService(component) {
       logEvent({ kind: 'toolbox_service', action: 'fail', id: component.id, reason: 'spawn' });
       return entry;
     }
+    if (entry.stopping) { toolboxKillTree(child); await ProcessRuntime.waitForCleanup(child, 1500); return entry; }
     Object.assign(entry, { state: 'starting', port, owned: true, child, pid: child.pid || 0 });
     const runtimeHandle = ProcessRuntime.handle(child);
     if (ProcessRuntime.result(child)?.scope === 'owned-group-and-observed') {
@@ -26453,7 +26488,7 @@ async function runClaudeTurn({
   if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
   assertSessionExecutionOwner(session.id, executionOwner);
   if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-  const child = ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts },
+  const child = await ProcessRuntime.spawn(spawnCmd, spawnArgs, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawnOpts, admit: () => assertSessionExecutionOwner(session.id, executionOwner) },
     { kind: 'cli', agentCliType, sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
   // P2-3: hold a reference to the in-memory session so a mid-turn POST /api/session/skills can update
   // session.skills on the LIVE turn object (otherwise the turn's end-of-turn saveSession clobbers it).
@@ -28133,7 +28168,7 @@ async function transcribeAudioViaProvider(provider, asrModel, { audio, contentTy
 // operation-scoped for native compaction, and the documented wire transcript supplements ACP's usage update
 // with exact compaction/failure state. A separate ACP process is kept for the whole Ruyi turn so reverse RPC
 // (permissions/questions) and queued follow-up steering share one live native Kimi session.
-const kimiBridgeState = { child: null, port: 0, token: '', starting: null, signalHooked: false, modelWindows: new Map(), modelsAt: 0, modelsTriedAt: 0 };
+const kimiBridgeState = { child: null, port: 0, token: '', starting: null, admission: null, signalHooked: false, modelWindows: new Map(), modelsAt: 0, modelsTriedAt: 0 };
 const { fileURLToPath } = require('url');
 
 function kimiCodeHome() {
@@ -28177,6 +28212,8 @@ async function ensureKimiServer(config) {
     } catch { /* restart below */ }
   }
   if (kimiBridgeState.starting) return kimiBridgeState.starting;
+  const admission = new AbortController();
+  kimiBridgeState.admission = admission;
   kimiBridgeState.starting = (async () => {
     const tokenFile = path.join(kimiCodeHome(), 'server.token');
     let token = '';
@@ -28185,9 +28222,9 @@ async function ensureKimiServer(config) {
     if (!driver.path || !(await agentCliLauncherUsable(driver.path))) throw new Error('未检测到 Kimi Code CLI');   // 异步 + 记忆,超时不算缺失(见 01 agentCliLauncherUsable)
     const port = await freeLoopbackPort();
     const launch = prepareAgentCliSpawn('kimi', driver.path, ['web', '--port', String(port), '--no-open', '--log-level', 'warn']);
-    const child = ProcessRuntime.spawn(launch.command, launch.args, {
+    const child = await ProcessRuntime.spawn(launch.command, launch.args, {
       cwd: normalizeCwd(config.defaultWorkspace, os.homedir()), env: process.env,
-      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts,
+      stdio: ['ignore', 'ignore', 'ignore'], ...launch.opts, signal: admission.signal,
     }, { kind: 'kimi-server' });
     child.on('error', () => {});
     kimiBridgeState.child = child;
@@ -28221,6 +28258,7 @@ async function ensureKimiServer(config) {
 }
 
 async function stopKimiServer() {
+  kimiBridgeState.admission?.abort();
   const child = kimiBridgeState.child;
   kimiBridgeState.child = null; kimiBridgeState.port = 0; kimiBridgeState.token = '';
   if (!child || child.exitCode != null) return;
@@ -29779,7 +29817,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   const spawnArgs = nativeBashWrapper ? nativeBashWrapper.argv : args;
   let child;
   try {
-    child = ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
+    child = await ProcessRuntime.spawn(spawnCommand, spawnArgs, { cwd, env, signal: requestMeta?.signal, shell: false, stdio: ['ignore', 'pipe', 'pipe'] },
       { kind: 'kimi-terminal', sessionId: String(params.sessionId), toolCallId: terminalId });
   } catch (error) { throw kimiAcpRequestError(-32000, `Failed to create terminal: ${error && error.message || error}`); }
   let resolveExit;
@@ -30636,7 +30674,7 @@ async function runKimiAcpTurnPrepared(context) {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
     assertSessionExecutionOwner(session.id, executionOwner);
     if (activeChildren.has(session.id)) stopSession(session.id, 'superseded');
-    child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    child = await ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts, admit: () => assertSessionExecutionOwner(session.id, executionOwner) },
       { kind: 'cli', agentCliType: 'kimi', sessionId: session.id, traceId: activeTraceId, turnSeq: session.turnSeq });
     reg = {
       child, pid: child.pid, exited: false, pausePending: false, state: 'running', startedAt: Date.now(),
@@ -44639,10 +44677,10 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   // One CLI spawn attempt -> collected exit/output state. Does NOT decide retry; the loop below does.
   const runOnce = async () => {
     if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
-    return new Promise(resolve => {
-    const child = ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts },
+    const child = await ProcessRuntime.spawn(spawn.command, spawn.args, { cwd: workingDir, env, stdio: ['pipe', 'pipe', 'pipe'], ...spawn.opts, signal: ctrl?.signal },
       { kind: 'cli-subagent', sessionId: parentSession.id, subagentId, agentKey });
     currentChild = child;
+    return new Promise(resolve => {
     let lastEventAt = Date.now();
     // Idle watchdog - a wedged CLI must not hang the whole DAG run forever (per-attempt).
     const watchdog = setInterval(() => { if (!killed && Date.now() - lastEventAt > idleLimitMs) onAbort(); }, 5000);
@@ -56996,19 +57034,15 @@ async function shellStart(args, config, ctx = {}) {
   const language = args.language || 'bash';
   if (language !== 'bash') return { ok: false, code: 'invalid_args', error: 'shell_start supports bash' };
   if (language === 'bash' && process.platform !== 'darwin') return { ok: false, code: 'bash_unavailable', error: '本机尚未启用受管 bash 会话' };
-  {
-    const capability = ProcessRuntime.helperCapability();
-    if (!capability.ready) return { ok: false, code: capability.code, error: 'Mac shell 的原生进程监督器尚未就绪', capability };
-  }
   let scriptDirectory = '';
   let startingSession = null;
   const launchArgs = ['--noprofile', '--norc'];
+  if (command && (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES)) return { ok: false, code: 'command_too_long', error: 'Invalid shell command size' };
+  startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
+    sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), buf: '', baseOffset: 0, startedAt: Date.now(), lastUsedAt: Date.now() };
+  shellSessions.set(shellId, startingSession); scheduleShellReaper();
   {
     if (command) {
-      if (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES) return { ok: false, code: 'command_too_long', error: '命令不能包含 NUL，且 UTF-8 内容不得超过 1MiB' };
-      startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
-        sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), buf: '', baseOffset: 0, startedAt: Date.now(), lastUsedAt: Date.now() };
-      shellSessions.set(shellId, startingSession); scheduleShellReaper();
       try {
         scriptDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), 'ruyi-shell-'));
         const script = path.join(scriptDirectory, 'command.sh');
@@ -57027,14 +57061,22 @@ async function shellStart(args, config, ctx = {}) {
   }
   let child;
   try {
-    child = ProcessRuntime.spawn('/bin/bash', launchArgs, {
-      cwd, env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
+    child = await ProcessRuntime.spawn('/bin/bash', launchArgs, {
+      cwd, signal: ctx.signal,
+      admit: () => { if (startingSession?.cancelled || (startingSession && shellSessions.get(shellId) !== startingSession)) throw Object.assign(new Error('Shell start cancelled'), { code: 'ABORT_ERR' }); },
+      env: platformShellEnvironment(process.env), stdio: ['pipe', 'pipe', 'pipe'],
       ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
     if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId); scheduleShellReaper();
     if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
-    return { ok: false, error: (e && e.message) ? e.message : 'spawn failed' };
+    return { ok: false, code: e.code, ...(e.capability ? { capability: e.capability } : {}), error: e.message || 'spawn failed' };
+  }
+  if (startingSession.cancelled || shellSessions.get(shellId) !== startingSession) {
+    killChildTree(child);
+    await ProcessRuntime.waitForCleanup(child, 1500);
+    if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
+    return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
   }
   // shell_send 往一个刚关了 stdin 的子进程里写 → 异步 EPIPE 落在 stdin 的 'error' 上(try/catch 接不住),
   // 没监听者就是 uncaughtException;吸收即可,子进程状态由 exit/close 收尾。
@@ -58507,7 +58549,7 @@ async function runRgOwned(command, argv, cwd, timeoutMs, maxBuffer, signal,
   if (signal?.aborted) throw failure('aborted');
   let capture;
   try {
-    capture = ProcessRuntime.capture(command, argv, { cwd, maxBuffer, encoding: 'utf8' },
+    capture = await ProcessRuntime.capture(command, argv, { signal, cwd, maxBuffer, encoding: 'utf8' },
       owner);
   } catch { return null; } // No child was started, so JS fallback is safe.
   const { child } = capture;
@@ -58779,7 +58821,8 @@ const GIT_SAFE_FLAGS = ['-c', 'core.fsmonitor=', '-c', 'core.fsmonitorHookVersio
 // (code:null、killed:true)被 gitCommit 当成「钩子拒绝」。现在:到点 → timedOut:true,用 killChildTree 整棵树杀(128i:只认
 // 自己的子孙);树杀不掉、管道仍不关(杀树命令失败 / 极端孤儿)时,5 秒后强行收尾,不让调用方永远挂着。
 function runGit(args, cwd, timeoutMs, opts = {}) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    void (async () => {
     // 非数字(模型给 git_status 之类自造 timeoutMs:"30s")回落缺省:修前 NaN 一路传到 setTimeout,等于 1 ms 就把跑完的 git 杀掉、报「超过 0 秒」。
     const askedMs = Number(timeoutMs);
     const limitMs = Math.min(GIT_TIMEOUT_MAX_MS, Math.max(1000, Number.isFinite(askedMs) && askedMs > 0 ? askedMs : 15000));
@@ -58799,7 +58842,7 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
     try {
       // 安全加固前缀(GIT_SAFE_FLAGS)必须在子命令之前;args 以 `-C <dir> <subcmd> …` 开头,故整体前置合法。
       const executionOptions = {
-        cwd: cwd || process.cwd(),
+        signal: opts.signal, cwd: cwd || process.cwd(),
         maxBuffer: opts && opts.maxBuffer ? opts.maxBuffer : 24 * 1024 * 1024,
         encoding: opts && opts.encoding === 'buffer' ? 'buffer' : 'utf8',
       };
@@ -58808,7 +58851,7 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
         settle({ ok: !error, code, stdout: stdout || '', stderr: stderr || '', error: error || null });
       };
       if (process.platform === 'darwin') {
-        const capture = ProcessRuntime.capture('git', [...GIT_SAFE_FLAGS, ...args], executionOptions, { ...ProcessRuntime.currentOwner(), kind: 'git', ...opts.owner });
+        const capture = await ProcessRuntime.capture('git', [...GIT_SAFE_FLAGS, ...args], executionOptions, { ...ProcessRuntime.currentOwner(), kind: 'git', ...opts.owner });
         child = capture.child;
         void capture.output.then(result => complete(result.error, result.stdout, result.stderr));
       } else {
@@ -58829,7 +58872,8 @@ function runGit(args, cwd, timeoutMs, opts = {}) {
       }, 5000);
       if (grace.unref) grace.unref();
     }, limitMs);
-  });
+  })().catch(reject);
+    });
 }
 // git 单条命令的超时上限(模型经 timeoutMs 能放宽到的最大值):钩子再慢也不该让一个工具调用挂过十分钟。
 const GIT_TIMEOUT_MAX_MS = 10 * 60 * 1000;
@@ -63250,7 +63294,7 @@ const FileVisualIo = (() => {
     if (signal?.aborted) return { err: Object.assign(new Error('File read cancelled'), { code: 'ABORT_ERR' }) };
     let capture;
     try {
-      capture = ProcessRuntime.capture(exe, argv, { maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
+      capture = await ProcessRuntime.capture(exe, argv, { signal, maxBuffer: 16 * 1024 * 1024, encoding: 'utf8' },
         { ...ProcessRuntime.currentOwner(), kind: 'document-reader' });
     } catch (err) { return { err }; }
     const { child } = capture;
@@ -63376,7 +63420,8 @@ const MediaInspection = (() => {
   }
 
   function runMac(command, argv, options) {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
+    void (async () => {
       const { StringDecoder } = require('string_decoder');
       const stdoutDecoder = new StringDecoder('utf8'), stderrDecoder = new StringDecoder('utf8');
       let stdout = '', stderr = '', child, timer, drainTimer, finished = false, timedOut = false;
@@ -63406,7 +63451,7 @@ const MediaInspection = (() => {
       };
       if (options.signal?.aborted) { stop('aborted'); return; }
       try {
-        child = ProcessRuntime.spawn(command, argv, { shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
+        child = await ProcessRuntime.spawn(command, argv, { signal: options.signal, shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
           { ...ProcessRuntime.currentOwner(), kind: 'media-inspection' });
         child.stdout.on('data', b => { if (!finished) stdout = (stdout + stdoutDecoder.write(b)).slice(-262144); });
         child.stderr.on('data', b => {
@@ -63428,6 +63473,7 @@ const MediaInspection = (() => {
         if (options.signal?.aborted) abort();
         else child.stdin.end(options.input || '');
       } catch (error) { stop(error.code || 'process_start_failed'); }
+    })().catch(reject);
     });
   }
 
@@ -71234,7 +71280,8 @@ async function discoverKimiModels(config) {
   const selected = selectedAgentCli({ ...(config || {}), agentCliType: 'kimi' });
   if (!selected.path) return Promise.resolve({ ok: false, models: fallback, discoveredCount: 0, error: '未检测到 Kimi Code CLI' });
   const launch = prepareAgentCliSpawn('kimi', selected.path, ['provider', 'list', '--json']);
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    void (async () => {
     let child;
     let stdout = '';
     let stderr = '';
@@ -71274,9 +71321,9 @@ async function discoverKimiModels(config) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: '读取 Kimi Code 模型列表超时' });
     }, 10000);
     try {
-      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts };
+      const options = { stdio: ['ignore', 'pipe', 'pipe'], ...launch.opts, admit: () => { if (settled) throw Object.assign(new Error('Model discovery cancelled'), { code: 'ABORT_ERR' }); } };
       child = supervised
-        ? ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
+        ? await ProcessRuntime.spawn(launch.command, launch.args, options, { ...ProcessRuntime.currentOwner(), kind: 'cli-model-discovery', cliType: 'kimi' })
         : cp.spawn(launch.command, launch.args, options);
     } catch (error) {
       finish({ ok: false, models: fallback, discoveredCount: 0, error: `无法启动 Kimi Code CLI: ${redact(error && error.message || String(error))}` });
@@ -71320,6 +71367,7 @@ async function discoverKimiModels(config) {
       }
       finish({ ok: true, models: kimiModelList(config, discovered), discoveredCount: discovered.length });
     });
+  })().catch(reject);
   });
 }
 
