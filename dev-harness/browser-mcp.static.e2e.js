@@ -42,9 +42,6 @@ ok(folderOpen.command === '/usr/bin/open' && folderOpen.preservesWorkbench,
 ok(srv.classifyToolPacks('请把浏览器目标改成我的默认浏览器').includes('integrations'),
   'browser/tool customization requests preload the integrations tool pack');
 
-const systemHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: 'system' } }, 'win32');
-ok(/Chrome for Testing/.test(systemHint) && /accessibilityLimited/.test(systemHint),
-  'system prompt forbids bundled test Chrome and explains the Direct3D UIA fallback');
 const macSystemHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: 'system' } }, 'darwin');
 ok(/only requests URL handoff/.test(macSystemHint) && /inspect diagnostics for current capture, input and AX readiness/.test(macSystemHint),
   'Mac system hint reports URL handoff and native readiness truthfully');

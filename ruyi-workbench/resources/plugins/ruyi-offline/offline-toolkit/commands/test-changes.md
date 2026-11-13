@@ -3,7 +3,7 @@ name: 验证当前改动
 description: 根据本地改动选择并运行风险相称的检查
 ---
 
-平台分支：macOS 用 shell_run 或 script_run（bash/Python/Node）跑检查，Windows 用下面 PowerShell 路径；保留同平台结果，不把未跑的 Windows 专属检查写成通过。
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # 验证当前改动
 
@@ -15,6 +15,6 @@ description: 根据本地改动选择并运行风险相称的检查
 4. 不修改产品代码；如果验证本身需要改动，先说明并等待确认。
 5. 汇总每条命令、退出状态、关键结果和未覆盖风险。
 
-上面点名的是如意工作台 MCP 工具（Claude Code 里叫 `mcp__ruyi__<名>`）；没有这些工具时用等价的 `git status --short`、`git diff`、`git diff --cached`。用 `powershell_run` 跑检查时按预计耗时调大 `timeoutMs`（默认 60 秒）。
+上面点名的是如意工作台 MCP 工具（Claude Code 里叫 `mcp__ruyi__<名>`）；没有这些工具时用等价的 `git status --short`、`git diff`、`git diff --cached`。用 `shell_run` 跑检查时按预计耗时调大 `timeoutMs`（默认 60 秒）。
 
 不要把“命令能启动”写成“功能已验证”。

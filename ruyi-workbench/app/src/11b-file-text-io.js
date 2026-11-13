@@ -495,7 +495,7 @@ const FileTextIo = (() => {
         return { ...base, code: c === 'EACCES' || c === 'EPERM' ? 'permission_or_locked' : 'locked',
           error: '文件被占用或没有写权限', hint: '文件可能被其他程序(编辑器/杀毒/索引服务)占用,或是只读文件;稍后重试,或让用户关闭占用它的程序 / 取消只读属性' };
       case 'ENOSPC': return { ...base, code: 'disk_full', error: '磁盘空间不足', hint: '目标磁盘已满;释放空间后重试(原文件未被改动)' };
-      case 'ENAMETOOLONG': return { ...base, code: 'path_too_long', error: '路径过长', hint: 'Windows 默认路径上限约 260 字符;换一个更短的目录或文件名' };
+      case 'ENAMETOOLONG': return { ...base, code: 'path_too_long', error: '路径过长', hint: '换一个更短的目录或文件名，并检查目标卷限制' };
       case 'EMFILE': case 'ENFILE': return { ...base, code: 'too_many_open_files', error: '打开的文件过多', hint: '稍后重试' };
       case 'ENOTDIR': return { ...base, code: 'not_a_directory', error: '路径中有一段不是目录', hint: '检查路径里的父级是否其实是一个文件' };
       case 'EROFS': return { ...base, code: 'read_only_fs', error: '目标位置是只读的', hint: '换一个可写位置' };

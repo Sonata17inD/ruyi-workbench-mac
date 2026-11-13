@@ -1,20 +1,16 @@
 {
   "name": "Ruyi Offline Bundle",
   "version": "0.3.0",
-  "createdFor": "Windows intranet or air-gapped Claude CLI environments",
+  "createdFor": "Apple Silicon Mac, macOS 14+, intranet or air-gapped environments",
   "contains": [
-    "Ruyi.exe when built",
-    "Node.js source fallback",
-    "static Web UI",
-    "MCP stdio server",
-    "PowerShell installer scripts",
-    "offline Claude Code plugin marketplace ruyi-offline (plugin offline-toolkit 0.3.0)",
-    "20 clean-room offline skills: code review, code simplification, commits, feature development, frontend design, browser debugging, API debugging, local docs, document and Office work, spreadsheets, structured writing, research, security, local CI, LSP setup, packaging, plugin authoring, project memory and Windows desktop control",
-    "13 offline slash-command prompts and 4 agent role prompts",
-    "16 built-in one-click playbooks",
-    "8 built-in multi-agent workflow templates and 10 node roles",
-    "Chinese and English deployment and architecture docs",
-    "config templates"
+    "AppKit/WKWebView Mac host",
+    "bundled Node runtime and zero-dependency agent server",
+    "static Web UI and MCP stdio server",
+    "Mac native automation, process and Keychain helpers",
+    "Full/Slim offline runtime variants",
+    "clean-room offline skills, commands and agent role prompts",
+    "built-in playbooks and workflow templates",
+    "configuration templates"
   ],
   "doesNotContain": [
     "Anthropic proprietary Claude CLI binaries",

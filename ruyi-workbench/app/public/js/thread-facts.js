@@ -276,7 +276,7 @@ export function stewardWaitText(wait, translate) {
 const ASK_PERMISSION_VERB_KEYS = Object.freeze({
   file_write: 'tools.verb.file_write', file_edit: 'tools.verb.file_edit', file_delete: 'tools.verb.file_delete',
   file_move: 'tools.verb.file_move', file_copy: 'tools.verb.file_copy', http_download: 'tools.verb.http_download',
-  powershell_run: 'tools.verb.exec_command', script_run: 'tools.verb.exec_command',
+  shell_run: 'tools.verb.exec_command', powershell_run: 'tools.verb.exec_command', script_run: 'tools.verb.exec_command',
 });
 export function stewardAskText(asks, translate) {
   const text = String((asks && asks.text) || '');

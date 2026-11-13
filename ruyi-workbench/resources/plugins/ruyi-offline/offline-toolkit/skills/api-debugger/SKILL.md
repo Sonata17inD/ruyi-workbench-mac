@@ -3,7 +3,7 @@ name: API 调试
 description: 不依赖云端工具，排查本地或内网 HTTP 服务
 ---
 
-Platform selection: powershell_run and curl.exe examples are Windows-only. On macOS prefer http_request; for local commands use shell_run or script_run(language="bash"/"python"/"node") and /usr/bin/curl with argument-safe quoting. Use absolute POSIX paths and a body file for JSON.
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # API Debugger
 
@@ -13,7 +13,7 @@ Workflow:
 
 1. Identify the service URL, method, headers, and body from local config or docs.
 2. Use `http_request` for simple GET/POST/PUT/PATCH/DELETE checks.
-3. Use `powershell_run` for richer tools already present on the machine, such as `curl.exe` or project scripts.
+3. Use `shell_run` for richer tools already present on the machine, such as `/usr/bin/curl` or project scripts.
 4. Correlate responses with local logs, config files, and source code.
 5. Report status code, key headers, compact response snippets, and the likely failing layer.
 

@@ -1018,13 +1018,11 @@ async function fileToolDropPhantom(jctx, tool, p, jr) {
 // Set-Content,而 Windows PowerShell 5.1 对无 BOM 文件按【系统 ANSI 代码页】读写:中文系统恰好是 GBK 勉强能用,非中文代码页
 // (en-US 的 1252)的机器上把 GBK 文件读成乱码、写回时再损坏一次。所以给可靠配方:优先 file_read / file_write(自动识别编码,
 // 或显式 encoding 参数);确需 PowerShell 时一律显式指定编码的 .NET 静态方法,不依赖任何默认编码。
-const FILE_EDIT_PS_ENCODING_TIP = '确需 PowerShell 时用显式编码,不要用 Get-Content / Set-Content(Windows PowerShell 5.1 对无 BOM 文件按系统 ANSI 代码页读写,非中文系统上会乱码):'
-  + '读 [IO.File]::ReadAllText(路径,[Text.Encoding]::GetEncoding(936)),写 [IO.File]::WriteAllText(路径,文本,[Text.Encoding]::GetEncoding(936))'
-  + '(936=GBK,其它编码换对应代码页号;要逐字节处理用 [IO.File]::ReadAllBytes / WriteAllBytes)';
+const FILE_EDIT_ENCODING_TIP = '需要脚本处理时使用 Python 的显式 encoding（如 gb18030、utf-16le），保留 BOM 与换行格式；要求其余字节完全不变时按二进制处理，不能依赖系统默认编码。';
 const FILE_EDIT_ENCODING_HINT_UNDECODABLE = '先确认文件编码:file_read 的 encoding 参数可按 utf-16le / utf-16be / gbk / latin1 指定编码来读(省略则自动识别);'
-  + '要改内容就用 file_write 带同一 encoding 整体写回,或征得用户同意后整体转存为 UTF-8(file_write 传 encoding:"utf8")。' + FILE_EDIT_PS_ENCODING_TIP;
+  + '要改内容就用 file_write 带同一 encoding 整体写回,或征得用户同意后整体转存为 UTF-8(file_write 传 encoding:"utf8")。' + FILE_EDIT_ENCODING_TIP;
 const FILE_EDIT_ENCODING_HINT_NOT_ROUNDTRIP = '这类文件按文本替换无法保证其余字节不变。先用 file_read(自动识别编码)看内容;'
-  + '要改就征得用户同意后整体转存为 UTF-8(file_write 传 encoding:"utf8")。必须保留原编码的,' + FILE_EDIT_PS_ENCODING_TIP;
+  + '要改就征得用户同意后整体转存为 UTF-8(file_write 传 encoding:"utf8")。必须保留原编码的,' + FILE_EDIT_ENCODING_TIP;
 function fileToolUnencodable(e, p, encoding, what) {
   const hint = `${what}含有 ${encoding} 无法表示的字符 ${JSON.stringify(e.char)};文件未被改动。如确需写入该字符,请显式传 encoding:"utf8" 把文件转存为 UTF-8(先征得用户同意),或换用 ${encoding} 能表示的字符`;
   return { ok: false, code: 'unencodable', error: e.message, path: p, encoding, hint };
@@ -2313,7 +2311,7 @@ async function toolRootProblem(root) {
 // 所以起进程前先确认目录在,并明说「工作目录不存在」。
 async function execCwdProblem(cwd) {
   try { if ((await fsp.stat(cwd)).isDirectory()) return null; } catch { /* fall through */ }
-  return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 使用当前对话的工作目录。' };
+  return { ok: false, error: `工作目录不存在: ${cwd}`, hint: '确认 cwd 是已存在的目录,或省略 cwd 使用当前对话的工作目录。' };
 }
 // NE-6:git_* 与 shell_run/script_run/shell_start 同一套 cwd 解析(显式 cwd → 回合工作目录 → 会话 cwd → defaultWorkspace → 家目录)。
 // 读类 git 只要解析 cwd(不做执行闸);git_commit 会跑 hooks,走 guardWorkspaceExecute。显式给了不存在的目录是错误,不再悄悄换成家目录。

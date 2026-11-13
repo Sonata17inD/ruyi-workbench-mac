@@ -157,11 +157,11 @@ const DRAFT_JSON = JSON.stringify({
     }).map(pb => pb.id);
     ok(placeholderDrift.length === 0, '① every built-in template uses exactly its declared inputs (drift: ' + placeholderDrift.join(', ') + ')');
     // 会动文件的卡片:先出清单、停下等用户明确同意;删除进回收站而不是 file_delete(大文件删了没有检查点)。
-    const mustWait = ['archive-by-content', 'batch-rename', 'clean-downloads'];
-    ok(mustWait.every(id => /等我/.test(byId.get(id).promptTemplate) && /(同意|明确指定)/.test(byId.get(id).promptTemplate)),
+    const mustWait = ['archive-by-content', 'batch-rename'];
+    ok(mustWait.every(id => /等我|等待/.test(byId.get(id).promptTemplate) && /(同意|明确指定)/.test(byId.get(id).promptTemplate)),
       '① destructive cards stop and wait for an explicit go-ahead before touching files');
-    ok(/SendToRecycleBin/.test(byId.get('clean-downloads').promptTemplate) && /不要用 file_delete/.test(byId.get('clean-downloads').promptTemplate),
-      '① clean-downloads deletes via the recycle bin, never file_delete');
+    ok(/只生成建议，不执行删除/.test(byId.get('clean-downloads').promptTemplate) && /不能用 file_delete/.test(byId.get('clean-downloads').promptTemplate),
+      '① clean-downloads stays advisory and never substitutes permanent deletion');
     ok(byId.get('clean-downloads').inputs.find(i => i.key === 'folder').required === true && byId.get('weekly-report').inputs.find(i => i.key === 'output').required === undefined,
       '① required:true survives normalization (and is only emitted where set)');
     const merge = byId.get('merge-excel');

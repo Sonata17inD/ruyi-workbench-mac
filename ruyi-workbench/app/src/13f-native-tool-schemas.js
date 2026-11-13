@@ -215,7 +215,7 @@ const MCP_TOOLS = [
   },
   {
     name: 'script_run',
-    description: 'Run bash (Mac default), PowerShell (Windows default), Python or Node. Closed stdin. Timeout 60000ms by default, 1000..1800000. Output keeps bounded head/tail.',
+    description: 'Run bash, Python or Node on Mac. Closed stdin. Timeout 60000ms by default, 1000..1800000. Output keeps bounded head/tail.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1149,8 +1149,8 @@ const MCP_TOOLS = [
         basis: { type: 'string', enum: ['user', 'activity'], description: 'user=用户陈述;activity=由已完成行动总结的经验/推断,自动保存并保留证据。' },
         text: { type: 'string', minLength: 1, description: '一句话事实,≤300 字,用第三人称陈述用户(例:「用户偏好中文输出」)。' },
         confidence: { type: 'number', minimum: 0, maximum: 1, description: '可选。置信度 0..1,默认 0.6。' },
-        scope: { type: 'string', enum: ['global', 'project'], description: '可选,user 默认 global,activity 默认 project。这条事实【管得着谁】:全局("我用 Windows""报告写中文")还是只在某一个项目里成立("这个仓用 pnpm 不用 npm")。填 project 时【项目由服务端从 sourceRef 那条线程的工作目录推出来】,你不用也不能指定路径。拿不准就别填 —— 宁可多用一条,不可凭空把它锁进某个项目。' },
-        expiresAt: { type: 'string', description: '可选。ISO 时间,过了这个点这条就不再被用上(仍留在记忆面板里,标「已过期」,不是删除)。**必须是将来的时间**:已经过去的会被拒(invalid_request),否则条目一落库就是过期的、永远用不上。**只给必然会过期的事实**——「这两周在赶 A 项目」「这个月先不接新活」写到期日;「我用 Windows」「报告写成中文」这类稳定偏好【不要】写。不确定就留空;activity 默认 30 天。' },
+        scope: { type: 'string', enum: ['global', 'project'], description: '可选,user 默认 global,activity 默认 project。这条事实【管得着谁】:全局("我用 Mac""报告写中文")还是只在某一个项目里成立("这个仓用 pnpm 不用 npm")。填 project 时【项目由服务端从 sourceRef 那条线程的工作目录推出来】,你不用也不能指定路径。拿不准就别填 —— 宁可多用一条,不可凭空把它锁进某个项目。' },
+        expiresAt: { type: 'string', description: '可选。ISO 时间,过了这个点这条就不再被用上(仍留在记忆面板里,标「已过期」,不是删除)。**必须是将来的时间**:已经过去的会被拒(invalid_request),否则条目一落库就是过期的、永远用不上。**只给必然会过期的事实**——「这两周在赶 A 项目」「这个月先不接新活」写到期日;「我用 Mac」「报告写成中文」这类稳定偏好【不要】写。不确定就留空;activity 默认 30 天。' },
         supersedesVetoed: { type: 'string', description: '可选。要盖掉的那条【被否决条目】的 id(id 在提示词的「用户否决过」清单里)。**只在用户这一回合自己明确要求重新记上时才填** —— 例:他当初说「别记我喜欢深色」,今天说「还是记着吧,我就是喜欢深色」。填对 id 时那条【原地复活】(id 不变、内容取这次的说法,不新增条目);id 不存在或那条不是被否决状态 → not_found;没填而内容又与某条被否决的几乎同句 → vetoed_duplicate。不许用它来绕过否决:用户没这么说就别填,换个说法把否决过的内容写回去同样是不行的。' },
         sourceRef: {
           type: 'object', additionalProperties: false, required: ['sessionId', 'turnSeq', 'quote'],

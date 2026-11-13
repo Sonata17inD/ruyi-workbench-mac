@@ -3,7 +3,7 @@ name: 修复失败测试
 description: 复现测试失败、定位根因、实施最小修复并回归验证
 ---
 
-平台分支：macOS 用 shell_run/script_run（bash/Python/Node）与 POSIX 路径；下面 powershell_run 说明仅用于 Windows。不要为了全绿删除平台护栏或把未执行项算通过。
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # 修复失败测试
 
@@ -15,6 +15,6 @@ description: 复现测试失败、定位根因、实施最小修复并回归验�
 4. 实施范围最小但完整的修复，不放宽断言来掩盖产品问题。
 5. 先重跑失败的那一项，再跑与改动相关的快速子集；耗时很长的全量套件先说明预计耗时，经用户同意再跑。记录命令和结果。
 
-用 `powershell_run` 跑测试时按预计耗时调大 `timeoutMs`（默认 60 秒），别把超时误判成挂起。它是如意工作台 MCP 工具（Claude Code 里叫 `mcp__ruyi__powershell_run`）；没有它时用 Bash 等价命令。
+用 `shell_run` 跑测试时按预计耗时调大 `timeoutMs`（默认 60 秒），别把超时误判成挂起。它是如意工作台 MCP 工具（Claude Code 里叫 `mcp__ruyi__shell_run`）；没有它时用 Bash 等价命令。
 
 保留用户已有改动。最后报告根因、修改、验证结果和仍未运行的检查。

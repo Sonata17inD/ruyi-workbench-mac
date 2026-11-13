@@ -3,7 +3,7 @@ name: 本地语言智能
 description: 无需下载扩展，配置或排查本地语言智能(LSP)
 ---
 
-Platform paths: Windows uses node_modules\.bin and .venv\Scripts; macOS uses node_modules/.bin and .venv/bin with POSIX absolute paths. Run server checks via shell_run/script_run on Mac; never source the user profile to find tools.
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # LSP Local Setup
 
@@ -14,7 +14,7 @@ Everything below must already be installed offline (project dependencies, a bund
 Workflow:
 
 1. Detect project languages with `project_snapshot` and `dependency_inventory`.
-2. Look for already-installed language servers under `node_modules\.bin`, `.venv\Scripts`, `vendor`, `tools`, or configured IDE paths. On Windows, npm binaries are the `.cmd` shims (e.g. `node_modules\.bin\typescript-language-server.cmd`).
+2. Look for already-installed language servers in `node_modules/.bin`, `.venv/bin`, `vendor`, `tools` and configured IDE paths. Use absolute POSIX paths.
 3. Prefer local project binaries over global binaries.
 4. Verify a server starts before configuring it: run it (or its companion CLI) with `--version`, e.g. `typescript-language-server --version`, `pyright --version`.
 5. Write editor config only when the path is known and stays valid inside the offline package; prefer project-relative paths. Example for VS Code, TypeScript (built-in support, no extension): `.vscode/settings.json` containing `{ "typescript.tsdk": "node_modules/typescript/lib" }`, then pick "Use Workspace Version" once. For a generic LSP client (Neovim, Helix, ...), set the server command to the local binary plus `--stdio`.

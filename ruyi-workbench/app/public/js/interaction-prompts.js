@@ -368,7 +368,7 @@ const TOOL_VERB_MAP = {
   code_check: 'tools.verb.code_check', acceptance_report: 'tools.verb.acceptance_report',
   file_edit: 'tools.verb.file_edit', file_write: 'tools.verb.file_write', file_delete: 'tools.verb.file_delete',
   file_move: 'tools.verb.file_move', file_copy: 'tools.verb.file_copy', archive_zip: 'tools.verb.archive_zip', archive_unzip: 'tools.verb.archive_unzip', http_download: 'tools.verb.http_download',
-  powershell_run: 'tools.verb.exec_command', script_run: 'tools.verb.exec_command',
+  shell_run: 'tools.verb.exec_command', powershell_run: 'tools.verb.exec_command', script_run: 'tools.verb.exec_command',
   desktop_screenshot: 'tools.verb.desktop_screenshot', keyboard_send_keys: 'tools.verb.keyboard_send_keys', http_request: 'tools.verb.http_request',
   git_status: 'tools.verb.git_status', git_diff: 'tools.verb.git_diff', git_log: 'tools.verb.git_log', git_commit: 'tools.verb.git_commit',
   // 128d(48 号文 §1,simple-mode.browser S5 查出):这张表当初是给【授权弹窗】写的,只收会弹窗的改/执行类工具;
@@ -477,7 +477,7 @@ function permissionPlainSummary(tool, input) {
   if (tool === 'file_edit' && i.path) return { text: t('permission.plain.edit', { file: file(i.path) }), preview: i.newText != null ? String(i.newText) : '' };
   if (tool === 'file_delete' && i.path) return { text: t('permission.plain.delete', { file: file(i.path) }), preview: '' };
   if ((tool === 'file_move' || tool === 'file_copy') && (i.from || i.to)) return { text: t(tool === 'file_move' ? 'permission.plain.move' : 'permission.plain.copy', { from: file(i.from), to: String(i.to || '') }), preview: '' };
-  if (tool === 'powershell_run' && i.command) return { text: t('permission.plain.command'), preview: String(i.command) };
+  if ((tool === 'shell_run' || tool === 'powershell_run') && i.command) return { text: t('permission.plain.command'), preview: String(i.command) };
   if (tool === 'script_run' && i.code) return { text: t('permission.plain.script', { language: String(i.language || '') }), preview: String(i.code) };
   if (tool === 'http_download' && i.url) return { text: t('permission.plain.download', { url: String(i.url), file: file(i.dest) }), preview: '' };
   if (i.path) return { text: t('permission.plain.onFile', { verb: humanizeToolName(tool), file: file(i.path) }), preview: '' };

@@ -3,7 +3,7 @@ name: Office 自动化
 description: 制作带格式的 PPT、Excel、Word 交付物：版式、图表、样式、模板与成品检查
 ---
 
-平台边界：Mac 复用文件级 Office/PDF/图表工具，不需要安装 Microsoft Office。COM 仅适用于 Windows；Mac 不用 COM 或尚未实现的桌面键鼠后端打开/控制 Office。字体按实际系统资源检查，缺字体或渲染器如实报告；终端使用 shell_run/script_run 的 bash、Python 或 Node 路径。
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # Office 成品制作
 

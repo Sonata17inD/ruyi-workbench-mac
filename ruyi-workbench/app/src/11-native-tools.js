@@ -2356,7 +2356,7 @@ function gitHumanError(res, cwd) {
   // ENOENT (or the wrapper's -1 with an ENOENT-shaped error) → git isn't installed / not on PATH.
   const err = res && res.error;
   if (err && (err.code === 'ENOENT' || /ENOENT/.test(String(err.message || '')))) {
-    return { ok: false, error: '未检测到 Git', hint: '请安装 Git for Windows(https://git-scm.com/download/win)后重试,或让 AI 用命令确认 git 是否在 PATH 上。', cwd };
+    return { ok: false, error: '未检测到 Git', hint: '请安装适用于 Mac 的 Git 或配置已有 Git 路径后重试。', cwd };
   }
   // 走查 W1·F6:超时被杀(runGit 打 timedOut)—— 说「被终止」,不要落进下面的泛化报错,更不能被 gitCommit 归因成钩子拒绝。
   if (res && res.timedOut) {
@@ -4471,7 +4471,7 @@ async function dnsResolvesToPrivate(hostname) {
 // a rich Accept string reads as a real browser and gets served. This is a header change ONLY — the SSRF
 // defense (per-hop ssrfCheck + dnsResolvesToPrivate) is untouched. Shared by web_fetch and the builtin
 // web_search HTML backends so all outbound scraping speaks the same believable dialect.
-const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 function browserHeaders(extra) {
   return Object.assign({
     'user-agent': BROWSER_UA,
@@ -5953,7 +5953,7 @@ function describeFsWriteError(e, target) {
   const code = (e && e.code) || '';
   const msg = {
     EISDIR: '目标路径是一个文件夹,不能当文件写',
-    ENAMETOOLONG: '文件名或路径太长(单个名字上限 255 个字符,Windows 整条路径通常上限约 260)',
+    ENAMETOOLONG: '文件名或路径太长(请缩短文件名或目录路径)',
     EACCES: '没有写入权限',
     EPERM: '没有写入权限(文件可能是只读,或被系统保护)',
     ENOENT: '目标路径的某一级不存在或无法创建',

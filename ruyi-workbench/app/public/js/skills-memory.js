@@ -40,7 +40,6 @@ let skillIndex = 0;
 const BUILTIN_SKILL_I18N_IDS = Object.freeze({
   'skill:api-debugger': 'apiDebugger',
   'skill:office-automation': 'officeAutomation',
-  'skill:windows-control': 'windowsControl',
   'skill:code-simplifier': 'codeSimplifier',
   'skill:frontend-design-craft': 'frontendDesignCraft',
   'skill:feature-development': 'featureDevelopment',

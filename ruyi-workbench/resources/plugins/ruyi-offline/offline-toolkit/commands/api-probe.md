@@ -4,7 +4,7 @@ description: 探测本地或内网 HTTP 接口
 argument-hint: "<url> [method]"
 ---
 
-Platform note: the curl.exe/PowerShell example below is Windows-only. On macOS use http_request or /usr/bin/curl via shell_run/script_run with a JSON body file and correctly quoted POSIX paths.
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # API Probe
 
@@ -18,9 +18,11 @@ Steps:
 4. Summarize status, headers, and a compact response excerpt.
 5. Suggest the next local log/source file to inspect.
 
-`http_request` is a Ruyi Workbench MCP tool (in Claude Code: `mcp__ruyi__http_request`). Without it, use `curl.exe` (in Windows PowerShell 5.1 plain `curl` is an alias of `Invoke-WebRequest`); put a JSON body in a file, because PowerShell 5.1 mangles inline double quotes passed to native programs (write the file with `file_write` or `[IO.File]::WriteAllText`; `Set-Content -Encoding UTF8` in 5.1 adds a BOM that some servers reject):
+`http_request` is a Ruyi MCP tool (`mcp__ruyi__http_request` in Claude Code). If absent, use /usr/bin/curl through shell_run with a JSON body file:
 
-```powershell
-curl.exe -sS -i "http://127.0.0.1:8080/health"
-curl.exe -sS -i -X POST "http://127.0.0.1:8080/api/items" -H "Content-Type: application/json" --data-binary "@body.json"
+```sh
+/usr/bin/curl -sS -i 'http://127.0.0.1:8080/health'
+/usr/bin/curl -sS -i -X POST 'http://127.0.0.1:8080/api/items' -H 'Content-Type: application/json' --data-binary '@body.json'
 ```
+
+Keep credentials out of logs and redact sensitive response fields.

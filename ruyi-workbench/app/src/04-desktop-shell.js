@@ -199,7 +199,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
           let error; let hint;
           if (extra.spawnError) {
             const cwdMissing = extra.spawnError.code === 'ENOENT' && options.cwd && !fs.existsSync(options.cwd);
-            if (cwdMissing) { error = `工作目录不存在: ${options.cwd}`; hint = '确认 cwd 是已存在的目录(Windows 用完整盘符路径),或省略 cwd 用线程工作目录'; }
+            if (cwdMissing) { error = `工作目录不存在: ${options.cwd}`; hint = '确认 cwd 是已存在的目录,或省略 cwd 用线程工作目录'; }
             else {
               error = `无法启动进程 ${command}: ${extra.spawnError.message || extra.spawnError}`;
               if (extra.spawnError.code === 'ENOENT') hint = `找不到可执行文件 ${command};确认已安装并在 PATH 上`;

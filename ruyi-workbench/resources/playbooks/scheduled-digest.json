@@ -5,10 +5,19 @@
   "desc": "到点把指定文件夹里新攒下的记录汇总成一份摘要,适合挂到定时任务上每天或每周自动跑",
   "service": "scheduled",
   "inputs": [
-    { "key": "folder", "label": "要定期汇总的文件夹", "type": "folder", "required": true },
-    { "key": "output", "label": "摘要保存文件名(.md)", "type": "text" }
+    {
+      "key": "folder",
+      "label": "要定期汇总的文件夹",
+      "type": "folder",
+      "required": true
+    },
+    {
+      "key": "output",
+      "label": "摘要保存文件名(.md)",
+      "type": "text"
+    }
   ],
-  "promptTemplate": "Mac 路径边界：先核对输入 root 的真实工作区身份；输入根和遍历中遇到的目录/文件符号链接均只记录、不进入、不读取内容、不计算目标哈希，不能用 followlinks=False 代替边界校验。\n\n平台分支：下面 PowerShell 仅用于 Windows。macOS 用 script_run(language=\"python\")，以 os.walk(followlinks=False) 列文件、os.stat 读取 st_mtime，用明确时区的 datetime.fromisoformat 把起点转换成时间戳并筛选；排除输出文件，单列权限拒绝与读取失败。路径与时间作为正确转义的 Python 数据，不拼接 shell 命令；用结构化 JSON/CSV 临时文件保存清单并分段读，不能因输出截断漏文件。\n\n请把 {folder} 里最近新攒下的记录汇总成一份摘要,写入 {output}。\n\n做法:\n1. 先定本次的时间范围:{output} 已存在时,读出它最新一期开头记下的「下次起点」,以那之后为本次范围;不存在就取最近 7 天。\n2. 用 powershell_run 跑 Get-ChildItem -LiteralPath '{folder}' -File -Recurse | Where-Object LastWriteTime -gt ([datetime]'<起点,如 2026-10-01 08:00>') | Select-Object FullName, Length, LastWriteTime | ConvertTo-Csv -NoTypeInformation(路径里有单引号时写成两个单引号),找出范围内新增或改动的文件作为本期汇总对象;{output} 自己若在这个文件夹里,把它排除在外。一个都没有就如实写「本期无新增」,不要硬凑。\n3. 逐个读懂内容,按主题归纳成几个板块,每条写清「是什么 + 要点」,并注明来自哪个文件。\n4. 只写文件里真实存在的内容,绝不编造或推测文件里没有的信息;读不了的文件如实列出。\n5. 用 Markdown 排版,本期开头写明覆盖的时间范围、文件数,以及「下次起点」(就是这次运行的时间)。{output} 已存在时,把本期加在最前面,保留以前各期,不要整份覆盖。\n\n验收标准:每条要点都能对应到具体文件;没有虚构内容;覆盖文件数与实际一致;以前各期内容还在。写完后把本期摘要也在对话里展示一份,方便快速过目。",
+  "promptTemplate": "先核对输入根目录的真实工作区身份。根目录及遍历遇到的符号链接只记录，不进入、不读取目标内容、不计算目标哈希；仅设置 followlinks=False 不能代替边界校验。权限拒绝、消失文件和读取失败单列，未读全不得声称清点完整。\n\n把 {folder} 里最近新增或更新的记录汇总到 {output}。若摘要已有「下次起点」，从该时间开始；否则取最近 7 天。使用 script_run(language=\"python\")，用 os.walk、os.lstat 和带明确时区的 datetime 筛选，排除输出文件。清单写工作区临时 JSON/CSV 后分段读，不因输出截断漏文件。\n逐个阅读并按主题归纳，每条注明来源；仅写原文件真实内容，读不了的单列。没有新增时如实说明。本期 Markdown 开头写时间范围、文件数和本次运行时间作为「下次起点」。已有摘要时把本期加在最前面，保留旧内容。验收核对来源、文件数和历史保留，并在对话展示本期摘要。",
   "requires": [],
   "engineHint": "",
   "uiMode": "both"

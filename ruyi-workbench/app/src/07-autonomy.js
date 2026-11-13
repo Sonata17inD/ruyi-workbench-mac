@@ -570,7 +570,7 @@ const TOOL_PACK_DESCRIPTIONS = Object.freeze({
   files_read: 'read, list, search and inspect workspace files',
   files_write: 'write, edit, delete, copy and move files',
   code: 'project inspection, code review and git operations',
-  shell: 'PowerShell, scripts and persistent shell sessions',
+  shell: 'Bash, Python/Node scripts and persistent shell sessions',
   web: 'web search, fetch, HTTP requests and downloads',
   desktop: 'screenshots, UI inspection and desktop control',
   office: 'Excel, Word, PowerPoint and PDF document operations',
