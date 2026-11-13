@@ -52,8 +52,10 @@ const SCHEDULER_ONTIME_SLACK_MS = 5 * 60000;
 // 默认缺省即生产行为,不进 config、不进 UI、不落盘。不带旗时下面四个函数各自回落到生产取值 ——
 // scheduler.e2e.js 的 A 组钉的就是这一条:四个旗名在整个 src/ 里【只】出现在本文件的这四个
 // process.env 读取点,且不带旗时 tickMs 读到的是生产默认 30 s、崩溃钩子一次都不触发。
+function schedulerClockFile() { return process.env.WCW_SCHEDULER_CLOCK_FILE; }
+function schedulerTickOverride() { return process.env.WCW_SCHEDULER_TICK_MS; }
 function schedulerClockNow() {
-  const file = process.env.WCW_SCHEDULER_CLOCK_FILE || '';
+  const file = schedulerClockFile() || '';
   if (!file) return Date.now();
   try {
     const value = Number(String(fs.readFileSync(file, 'utf8')).trim());
@@ -62,7 +64,7 @@ function schedulerClockNow() {
   return Date.now();
 }
 function schedulerTickMs() {
-  const raw = Number(process.env.WCW_SCHEDULER_TICK_MS);
+  const raw = Number(schedulerTickOverride());
   if (!Number.isFinite(raw)) return SCHEDULER_TICK_MS_DEFAULT;
   return Math.min(SCHEDULER_TICK_MS_MAX, Math.max(SCHEDULER_TICK_MS_MIN, Math.round(raw)));
 }
@@ -791,7 +793,7 @@ function schedulerDispatchFire(task, mode, dueMs) {
       schedulerRuntime.lastError = String((e && e.message) || e).slice(0, 400);
       try { logEvent({ kind: 'scheduler_tick_error', detail: schedulerRuntime.lastError, taskId: task.id }); } catch { /* ignore */ }
     })
-    .then(() => { schedulerRuntime.inFlightTaskIds.delete(task.id); });
+    .then(() => { schedulerRuntime.inFlightTaskIds.delete(task.id); schedulerEnsureTimer(); });
 }
 // 「立即运行」的共用口:HTTP 的 POST /:id/run-now 与管家的 steward_schedule_run_now(13t)走同一份。
 // 闸只挡【这一条任务自己】:落盘的 task.state.inFlightRunId(登记成功之后)或进程内的 inFlightTaskIds(调用前就写下,
@@ -812,7 +814,7 @@ async function schedulerRunNow(task) {
   while (schedulerRuntime.attempts.has(occurrenceKey(task.id, manualDueMs))) manualDueMs += 1;
   schedulerRuntime.inFlightTaskIds.add(task.id);
   try { return { busy: false, outcome: await schedulerFireOnce(task, 'manual', manualDueMs) }; }
-  finally { schedulerRuntime.inFlightTaskIds.delete(task.id); }
+  finally { schedulerRuntime.inFlightTaskIds.delete(task.id); schedulerEnsureTimer(); }
 }
 
 // `ticking` 只挡「同一个定时器触发两次并发 tick」的重入 —— 不再是「等全部到点任务跑完」的闸,
@@ -822,10 +824,7 @@ async function schedulerTick() {
   schedulerRuntime.ticking = true;
   const generation = schedulerRuntime.generation;
   try {
-    // hunt3:总开关是【活的】。startScheduler 只在启动时读一次 schedulerEnabledV1,修前用户在设置里把它关掉之后
-    // interval 照跑、到点照派(「关了所有定时承诺一起停」只在重启后才兑现)。每一拍先重读配置(readConfig 走
-    // 文件指纹缓存,一拍一次 stat),关着就这一拍什么都不做 —— 不派单、不动补跑队列、不写盘;interval 留着,
-    // 用户再打开时下一拍就接着走,不必重启。已经派出去的那一次照常收尾(它的回合可能已经在跑)。
+    // Recheck persisted configuration before dispatch; events cancel the scheduled wake.
     const liveConfig = await readConfig().catch(() => null);
     if (liveConfig && !schedulerEnabled(liveConfig)) return;
     if (generation !== schedulerRuntime.generation) return;
@@ -870,21 +869,31 @@ async function schedulerTick() {
     try { logEvent({ kind: 'scheduler_tick_error', detail: schedulerRuntime.lastError }); } catch { /* ignore */ }
   } finally {
     schedulerRuntime.ticking = false;
+    schedulerEnsureTimer();
   }
 }
 
-// 红线⑤:**零任务不起 interval**。任何一次任务表变化之后都要重算一次这件事 ——
-// 建第一条任务时把表从空变成非空,那一刻才该起;删掉最后一条时立刻停。
+// Wake at the next runnable occurrence. A low-frequency cap reconciles clock
+// changes; explicit fake-clock test overrides retain their deterministic tick.
 function schedulerEnsureTimer() {
+  clearTimeout(schedulerRuntime.timer);
+  schedulerRuntime.timer = null;
   if (!schedulerRuntime.enabled || !schedulerRuntime.started) return;
-  const wanted = schedulerRuntime.tasks.length > 0 || schedulerRuntime.lateQueue.length > 0;
-  if (wanted && !schedulerRuntime.timer) {
-    schedulerRuntime.timer = setInterval(() => { void schedulerTick(); }, schedulerTickMs());
-    if (schedulerRuntime.timer && typeof schedulerRuntime.timer.unref === 'function') schedulerRuntime.timer.unref();
-  } else if (!wanted && schedulerRuntime.timer) {
-    clearInterval(schedulerRuntime.timer);
-    schedulerRuntime.timer = null;
+  const now = schedulerClockNow();
+  let next = schedulerRuntime.lateQueue.length ? now : Infinity;
+  for (const task of schedulerRuntime.tasks) {
+    if (!task.state.enabled || schedulerTaskBusy(task)) continue;
+    const due = Date.parse(task.state.nextFireAt);
+    if (Number.isFinite(due)) next = Math.min(next, due);
   }
+  if (!Number.isFinite(next)) return;
+  const fakeClock = !!schedulerClockFile() || !!schedulerTickOverride();
+  const delay = fakeClock ? schedulerTickMs() : Math.min(3600000, Math.max(1, next - now));
+  schedulerRuntime.timer = setTimeout(() => {
+    schedulerRuntime.timer = null;
+    void schedulerTick();
+  }, delay);
+  schedulerRuntime.timer.unref?.();
 }
 
 // ── 生命周期 ────────────────────────────────────────────────────────────────
@@ -906,7 +915,7 @@ async function startScheduler(schedConfig) {
   schedulerRuntime.startDeferred = false;
   await schedulerRecover(rows);
   schedulerEnsureTimer();
-  // 起完就先跑一拍(不等第一个 30 s):补跑队列与「服务没开着的时候刚好到点」都该立刻见效。
+  // Recover missed work immediately, then arm the next due time.
   setImmediate(() => { void schedulerTick(); });
   try { logEvent({ kind: 'scheduler_started', tasks: schedulerRuntime.tasks.length, late: schedulerRuntime.lateQueue.length }); } catch { /* ignore */ }
   return true;
@@ -914,18 +923,18 @@ async function startScheduler(schedConfig) {
 function stopScheduler() {
   schedulerRuntime.awaitingEnable = false;
   schedulerRuntime.generation += 1;      // 在途 tick 看见代际变了就尽快退出
-  if (schedulerRuntime.timer) { clearInterval(schedulerRuntime.timer); schedulerRuntime.timer = null; }
+  if (schedulerRuntime.timer) { clearTimeout(schedulerRuntime.timer); schedulerRuntime.timer = null; }
   schedulerRuntime.started = false;
 }
-// 启动时关着、之后被打开:听 01 writeConfig 派的 'config.written'(只带开关位)。关着的那段时间这里什么都不做 ——
-// 不起 interval、不建目录、不读盘(红线⑤原样成立);打开那一刻走的就是启动那一条 startScheduler(装载、恢复、
-// 有任务才起 interval、先跑一拍)。运行中关闭时同步作废在途 tick,避免它在 await readConfig 之后拿旧的
-// 开启快照继续派单;interval 留着,再打开仍由下一拍重读配置接着走。
-// 装在模块加载期,进程生命周期内不卸(同 13i / 13r 的订阅纪律);订阅者只排一个异步启动,不回流到写路径。
+// Config events stop the deadline on disable and re-arm it immediately on enable.
+// Existing dispatched work still settles; generation invalidates pending dispatch decisions.
 RUYI_EVENTS.subscribe((name, payload) => {
   if (name !== 'config.written') return;
-  if (schedulerRuntime.started && payload && payload.schedulerEnabledV1 === false) {
+  if (schedulerRuntime.started && payload && typeof payload.schedulerEnabledV1 === 'boolean') {
     schedulerRuntime.generation += 1;
+    schedulerRuntime.enabled = payload.schedulerEnabledV1;
+    schedulerEnsureTimer();
+    if (schedulerRuntime.enabled) void schedulerTick();
     return;
   }
   if (!schedulerRuntime.awaitingEnable || schedulerRuntime.started) return;

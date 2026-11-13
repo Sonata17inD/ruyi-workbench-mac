@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 91,
-    "providedSymbols": 3857,
+    "providedSymbols": 3860,
     "requiredSymbols": 3503,
     "edges": 641,
     "forwardEdges": 66,
@@ -12291,6 +12291,7 @@
         "rgRepairNonUtf8",
         "runGit",
         "runRgOwned",
+        "scheduleShellReaper",
         "searchExplicitNames",
         "searchFileContent",
         "searchFileContentJs",
@@ -23629,6 +23630,7 @@
         "handleSchedulerApiRoutes",
         "schedulerAppendFire",
         "schedulerAskWaitMs",
+        "schedulerClockFile",
         "schedulerClockNow",
         "schedulerDayKey",
         "schedulerDir",
@@ -23663,6 +23665,7 @@
         "schedulerTasksPath",
         "schedulerTick",
         "schedulerTickMs",
+        "schedulerTickOverride",
         "schedulerTurnTimeoutMs",
         "startScheduler",
         "stopScheduler"

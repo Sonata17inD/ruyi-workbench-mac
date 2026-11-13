@@ -1,6 +1,6 @@
 // ===================================================================================================
-// v0.8-S2 — persistent PowerShell shell sessions (provider engine only).
-// A session = one long-lived `powershell -NoLogo -NoProfile` child whose stdout+stderr stream into a
+// Persistent managed bash sessions (provider engine only).
+// A session = one long-lived bash child whose stdout+stderr stream into a
 // ring buffer. State lives ONLY in the serve process Map below; the one-shot MCP child (Claude CLI
 // engine) cannot host it (RUNTIME.isMcpChild guard in toolCall), so shell_* return a guiding error there.
 // Cursor semantics = ABSOLUTE offset since session start, measured in UTF-16 code units (chunks are
@@ -393,7 +393,7 @@ async function sendMacShell(sess, args, ctx) {
   const done = new Promise(resolve => { resolveCommand = resolve; });
   sess.pendingCommand = { id: ++sess.commandSequence, resolve: resolveCommand };
   sess.lastCommandExitCode = undefined;
-  sess.lastUsedAt = Date.now();
+  sess.lastUsedAt = Date.now(); scheduleShellReaper();
   sess.child.stdin.write(String(sess.commandSequence) + '\0' + input + '\0', error => {
     if (error) {
       sess.protocolError = 'shell_input_failed';
@@ -415,7 +415,7 @@ async function sendMacShell(sess, args, ctx) {
   try { await Promise.race([done, aborted, new Promise(resolve => { timer = setTimeout(resolve, timeoutMs); })]); }
   finally { clearTimeout(timer); if (signal) signal.removeEventListener('abort', abortHandler); }
   const settled = sess.pendingCommand ? 'timeout' : sess.running ? 'completed' : 'exit';
-  sess.lastUsedAt = Date.now();
+  sess.lastUsedAt = Date.now(); scheduleShellReaper();
   const result = shellSendResult(sess, shellSliceFrom(sess, startCursor), args, settled);
   if (interrupted) return { ...result, ok: false, interrupted: true, error: 'shell 命令已取消', ...shellCleanupFields(sess) };
   if (sess.protocolError) return { ...result, ok: false, error: sess.protocolError };
@@ -431,7 +431,7 @@ async function stopMacShell(shellId, sess) {
   if (sess.cleanup.incomplete) return { ok: false, error: 'shell 子进程清理尚未确认完成', ...shellCleanupFields(sess) };
   sess.running = false;
   sess.child.stdout?.destroy(); sess.child.stderr?.destroy(); sess.child.stdio[4]?.destroy();
-  if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId);
+  if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId); scheduleShellReaper();
   return { ok: true, ...shellCleanupFields(sess) };
 }
 
@@ -489,14 +489,14 @@ async function shellStart(args, config, ctx = {}) {
       if (command.includes('\0') || Buffer.byteLength(command, 'utf8') > MAC_SHELL_COMMAND_MAX_BYTES) return { ok: false, code: 'command_too_long', error: '命令不能包含 NUL，且 UTF-8 内容不得超过 1MiB' };
       startingSession = { name, cwd, mode, platform: 'darwin', running: true, starting: true,
         sessionId: safeSessionId(ctx?.sessionId || ctx?.session?.id || ''), buf: '', baseOffset: 0, startedAt: Date.now(), lastUsedAt: Date.now() };
-      shellSessions.set(shellId, startingSession);
+      shellSessions.set(shellId, startingSession); scheduleShellReaper();
       try {
         scriptDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), 'ruyi-shell-'));
         const script = path.join(scriptDirectory, 'command.sh');
         await fsp.writeFile(script, command, { encoding: 'utf8', mode: 0o600 });
         launchArgs.push('--', script);
       } catch (error) {
-        if (shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId);
+        if (shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId); scheduleShellReaper();
         if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
         return { ok: false, error: String(error.message || error) };
       }
@@ -513,7 +513,7 @@ async function shellStart(args, config, ctx = {}) {
       ...(!command ? { extraStdio: ['pipe'] } : {}),
     }, { ...ProcessRuntime.currentOwner(), kind: 'shell', sessionId: ctx?.sessionId || ctx?.session?.id || '', shellId });
   } catch (e) {
-    if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId);
+    if (startingSession && shellSessions.get(shellId) === startingSession) shellSessions.delete(shellId); scheduleShellReaper();
     if (scriptDirectory) await fsp.rm(scriptDirectory, { recursive: true, force: true }).catch(() => {});
     return { ok: false, error: (e && e.message) ? e.message : 'spawn failed' };
   }
@@ -556,7 +556,7 @@ async function shellStart(args, config, ctx = {}) {
     if (exitTimer) { clearTimeout(exitTimer); exitTimer = null; }
     shellAppend(sess, outDecoder.end() + errDecoder.end());
     if (note) shellAppend(sess, note);
-    sess.running = false; sess.exitCode = (code === null || code === undefined ? null : code); sess.lastUsedAt = Date.now();
+    sess.running = false; sess.exitCode = (code === null || code === undefined ? null : code); sess.lastUsedAt = Date.now(); scheduleShellReaper();
     if (process.platform === 'darwin') {
       sess.cleanup = ProcessRuntime.result(child);
       void ProcessRuntime.waitForCleanup(child).then(cleanup => { sess.cleanup = cleanup; completeBackgroundJob(shellId, sess); });
@@ -588,7 +588,7 @@ async function shellStart(args, config, ctx = {}) {
   child.on('error', err => { clearTimeout(deadline); if (!spawned) sess.spawnFailed = true; shellAppend(sess, `\n[shell error] ${err && err.message ? err.message : err}\n`); sess.running = false; });
   child.on('exit', code => { exitInfoCode = code; exitAt = Date.now(); armExitTimer(); });
   child.on('close', code => finalize(code));
-  shellSessions.set(shellId, sess);
+  shellSessions.set(shellId, sess); scheduleShellReaper();
   // 等子进程真的起来(或起不来):起不来就别留一个 running:false 的空壳,直接说明原因。
   const readiness = await ProcessRuntime.ready(child);
   let spawnErr = readiness.ok ? null : readiness.error;
@@ -603,7 +603,7 @@ async function shellStart(args, config, ctx = {}) {
     clearTimeout(deadline);
     sess.spawnFailed = true;
     killChildTree(child);
-    if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId);
+    if (shellSessions.get(shellId) === sess) shellSessions.delete(shellId); scheduleShellReaper();
     return { ok: false, code: 'shell_unavailable', error: spawnErr.message };
 
   }
@@ -655,7 +655,7 @@ async function shellPoll(args, ctx) {
   const sess = shellLookup(shellId, ctx);
   // v0.8-S7 error guidance: same unknown-shellId hint as shell_send.
   if (!sess) return { ok: false, error: `未知 shellId '${shellId}'`, hint: '用 shell_list 查看现有会话,或 shell_start 新建' };
-  sess.lastUsedAt = Date.now();
+  sess.lastUsedAt = Date.now(); scheduleShellReaper();
   const cursorNum = args.cursor === undefined || args.cursor === null ? 0 : Number(args.cursor);
   const paging = Number.isFinite(cursorNum) && cursorNum > 0;
   const waitMs = Math.min(SHELL_POLL_WAIT_MAX_MS, Math.max(0, Number(args.waitMs) || 0));
@@ -665,7 +665,7 @@ async function shellPoll(args, ctx) {
     while (sess.running && shellEndOffset(sess) <= Math.max(paging ? cursorNum : 0, 0) && Date.now() < until) {
       if (signal && signal.aborted) break;
       await new Promise(r => setTimeout(r, 50));
-      sess.lastUsedAt = Date.now();
+      sess.lastUsedAt = Date.now(); scheduleShellReaper();
     }
   }
   const slice = shellSliceFrom(sess, cursorNum);
@@ -689,12 +689,12 @@ function shellKill(args, ctx) {
   const shellId = String(args.shellId || '');
   const sess = shellLookup(shellId, ctx);
   if (!sess) return { ok: false, error: `未知 shellId '${shellId}'` };
-  if (sess.starting && !sess.child) { sess.cancelled = true; shellSessions.delete(shellId); return { ok: true }; }
+  if (sess.starting && !sess.child) { sess.cancelled = true; shellSessions.delete(shellId); scheduleShellReaper(); return { ok: true }; }
   if (sess.platform === 'darwin') return stopMacShell(shellId, sess);
   sess.cancelled = true;
   try { if (sess.child && sess.child.pid) killChildTree(sess.child); } catch { /* already gone */ }
   sess.running = false;
-  shellSessions.delete(shellId);
+  shellSessions.delete(shellId); scheduleShellReaper();
   return { ok: true };
 }
 
@@ -758,15 +758,33 @@ EventStreamHooks.backgroundShells = Object.freeze({
 // Reap every live shell session (called on serve-process shutdown alongside killAllMcpClients).
 function killAllShellSessions() {
   for (const [, s] of shellSessions) { s.cancelled = true; try { if (s.child && s.child.pid) killChildTree(s.child); } catch { /* ignore */ } }
-  shellSessions.clear();
+  shellSessions.clear(); scheduleShellReaper();
 }
 
-// Idle reaper: every 60s, kill sessions untouched for >30min. .unref() so it never keeps the loop alive.
-const shellIdleReaper = setInterval(() => {
-  const cutoff = Date.now() - SHELL_IDLE_MS;
-  for (const [id, s] of shellSessions) { if (!(s.mode === 'background' && s.running) && s.lastUsedAt < cutoff) { try { shellKill({ shellId: id }); } catch { /* ignore */ } } }
-}, 60_000);
-shellIdleReaper.unref();
+// One deadline for the next eligible shell; no timer when empty or only running
+// background jobs remain. Completion makes a background job eligible again.
+let shellIdleReaper = null;
+function scheduleShellReaper() {
+  clearTimeout(shellIdleReaper);
+  shellIdleReaper = null;
+  let next = Infinity;
+  for (const session of shellSessions.values()) {
+    if (session.mode === 'background' && session.running) continue;
+    if (Number.isFinite(session.lastUsedAt)) next = Math.min(next, session.lastUsedAt + SHELL_IDLE_MS);
+  }
+  if (!Number.isFinite(next)) return;
+  shellIdleReaper = setTimeout(() => {
+    shellIdleReaper = null;
+    const cutoff = Date.now() - SHELL_IDLE_MS;
+    for (const [id, session] of shellSessions) {
+      if (!(session.mode === 'background' && session.running) && session.lastUsedAt <= cutoff) {
+        try { shellKill({ shellId: id }); } catch { /* preserve other sessions */ }
+      }
+    }
+    scheduleShellReaper();
+  }, Math.max(1, next - Date.now()));
+  shellIdleReaper.unref();
+}
 
 // v0.8-S2: the guarding stub returned when a shell_* tool runs in the one-shot MCP child (Claude CLI
 // engine). The session cannot live there; steer the model to the persistent provider engine, or to
