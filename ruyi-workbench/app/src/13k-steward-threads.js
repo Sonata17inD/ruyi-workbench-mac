@@ -60,7 +60,7 @@ function stewardCanonWorkspacePath(stewardWsPathRaw) {
 // `p.toLowerCase()`,配置层已经把两种写法当成【同一行】—— 这里再做区分大小写就比表本身还严,会出现
 // 「表里加不进第二份、传进来又被拒」的死角。非 win32 上文件系统真区分大小写,所以不折。
 function stewardFoldWorkspacePath(stewardWsPathCanon) {
-  return process.platform === 'win32' ? String(stewardWsPathCanon).toLowerCase() : String(stewardWsPathCanon);
+  return String(stewardWsPathCanon);
 }
 
 // W7:已知工作区(同步、纯读配置)。用户的常用工作区在前(顺序即优先级),如意自己开的在后(新开的在前)。

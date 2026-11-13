@@ -128,7 +128,7 @@ function journalCheckpointWarn(jr) {
 const fileToolWriteChains = new Map();
 function fileToolWriteLockKey(filePath) {
   const resolved = path.resolve(String(filePath || ''));
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  return resolved;
 }
 function withFileToolWriteLock(filePaths, signal, work) {
   // Darwin aliases include case/Unicode spellings, Data paths and hard links. A shared
@@ -2141,7 +2141,7 @@ const ARCHIVE_TOOL_HANDLERS = {
       // 2026-10 走查(R2):包内路径自相矛盾(`f` 是文件、`f/g.txt` 又要求 f 是目录)→ 落任何盘之前就整包拒绝。
       // 修前写到冲突那条才抛 EEXIST,前面已写的文件留在盘上、而且没有任何报告。
       {
-        const fk = x => (process.platform === 'win32' ? String(x).toLowerCase() : String(x));
+        const fk = x => (String(x));
         const destKey = fk(destReal);
         const fileEntries = new Map();
         const dirKeys = new Set();
@@ -2339,18 +2339,17 @@ async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
 // NE-13:python 解释器候选。Windows 全新机器上裸 `python` 常是 Microsoft Store 占位程序(退出码 9009)或根本没有,`py -3` 才是官方启动器;
 // 非 Windows 有些发行版只有 python3。找不到(ENOENT / 9009)才换下一个候选。
 async function runPythonScript(scriptPath, opts) {
-  const win = process.platform === 'win32';
-  const candidates = win ? [['python', []], ['py', ['-3']]] : [['python', []], ['python3', []]];
+  const candidates = [...new Set([process.env.RUYI_BUNDLED_PYTHON, process.env.PYTHON, 'python3', 'python'].filter(Boolean))].map(command => [command, []]);
   // NE-13:管道下 Windows 中文系统的 python 按 cp936 写 stdout / 读文件,脚本里的 ✓ → emoji 会 UnicodeEncodeError —— 强制 UTF-8。
   // PYTHONPATH 补上工作目录:脚本文件在应用目录里,修前 `import helper`(工作区里的 helper.py)找不到。
   const env = { PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8', PYTHONPATH: [opts && opts.cwd, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter) };
   let last = null;
   for (const [cmd, pre] of candidates) {
     last = await DesktopShell.runProcess(cmd, [...pre, scriptPath], { ...opts, env, shape: true });
-    const notFound = (last.code === -1 && /ENOENT/i.test(String(last.stderr || ''))) || (win && last.code === 9009);
+    const notFound = (last.code === -1 && /ENOENT/i.test(String(last.stderr || '')));
     if (!notFound) return last;
   }
-  return { ...last, error: '未找到可用的 Python 解释器', hint: '可改用 language:"powershell" 或 "node",或请用户安装 Python(python.org)后重试' };
+  return { ...last, error: '未找到可用的 Python 解释器', hint: '可改用 language:"bash" 或 "node",或请用户安装 Python(python.org)后重试' };
 }
 
 const SHELL_TOOL_HANDLERS = {

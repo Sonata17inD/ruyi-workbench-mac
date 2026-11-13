@@ -278,18 +278,7 @@ async function resolveWorkspace({ name, children, selectedPath }, config) {
   // PF3 fix: a timed-out root enumeration marks the result truncated (its children weren't discovered — the
   // candidate set is incomplete, not authoritative).
   const addChildren = r => { if (r.timedOut) truncated = true; for (const d of r.dirs) pushCand(d); };
-  if (process.platform === 'win32') {
-    for (let c = 65; c <= 90; c++) {
-      if (overBudget()) { truncated = true; break; }
-      const root = String.fromCharCode(c) + ':\\';
-      // No existsSync pre-check: the timed readdir returns [] for a non-existent OR unreachable drive without blocking.
-      addChildren(await listChildDirs(root));
-      if (candidates.length >= WORKSPACE_CANDIDATE_CAP) { truncated = true; break; }
-    }
-  } else {
-    // non-Windows: use filesystem root's one level as the drive-equivalent (keeps the code path exercisable).
-    addChildren(await listChildDirs('/'));
-  }
+  addChildren(await listChildDirs('/'));
   // (b) home dir and its first level.
   const home = os.homedir();
   pushCand(home);
@@ -1315,74 +1304,6 @@ function buildOpenSpawn(target, platform = process.platform) {
 // blindly asking ShellExecute to "open" model-written code can execute it. Resolve the file association, but
 // only accept a known editor/IDE executable; otherwise fall back to another editor already chosen as the
 // default for a common code/text extension, then to a conservative installed-editor probe.
-const CODE_EDITOR_ASSOCIATION_EXTS = ['.py', '.md', '.json', '.html', '.css', '.ts', '.tsx', '.jsx', '.java', '.cpp'];
-const CODE_EDITOR_KINDS = Object.freeze({
-  vscode: new Set(['code.exe', 'code - insiders.exe', 'code-insiders.exe', 'cursor.exe', 'windsurf.exe', 'vscodium.exe', 'codium.exe']),
-  visualStudio: new Set(['devenv.exe']),
-  jetbrains: new Set([
-    'idea.exe', 'idea64.exe', 'webstorm.exe', 'webstorm64.exe', 'pycharm.exe', 'pycharm64.exe',
-    'clion.exe', 'clion64.exe', 'rider.exe', 'rider64.exe', 'goland.exe', 'goland64.exe',
-    'rubymine.exe', 'rubymine64.exe', 'phpstorm.exe', 'phpstorm64.exe', 'datagrip.exe', 'datagrip64.exe',
-    'studio.exe', 'studio64.exe',
-  ]),
-  editor: new Set(['notepad++.exe', 'sublime_text.exe', 'notepad.exe']),
-});
-
-function executableFromAssociationCommand(command) {
-  const value = String(command || '').trim();
-  const match = value.match(/^\s*"([^"]+\.exe)"|^\s*([^\s]+\.exe)/i);
-  const executable = match ? String(match[1] || match[2] || '') : '';
-  return executable.replace(/%([^%]+)%/g, (_, name) => process.env[name] || process.env[String(name).toUpperCase()] || `%${name}%`);
-}
-
-function classifyCodeEditorExecutable(executable) {
-  const command = String(executable || '').trim();
-  const base = path.win32.basename(command).toLowerCase();
-  if (!command || !base) return null;
-  for (const [kind, names] of Object.entries(CODE_EDITOR_KINDS)) {
-    if (names.has(base)) return { command, kind, label: codeEditorLabel(base) };
-  }
-  return null;
-}
-
-function codeEditorLabel(baseName) {
-  const base = String(baseName || '').toLowerCase();
-  if (base === 'cursor.exe') return 'Cursor';
-  if (base === 'windsurf.exe') return 'Windsurf';
-  if (base === 'vscodium.exe' || base === 'codium.exe') return 'VSCodium';
-  if (base === 'code.exe' || base === 'code - insiders.exe' || base === 'code-insiders.exe') return 'Visual Studio Code';
-  if (base === 'devenv.exe') return 'Visual Studio';
-  if (base === 'notepad++.exe') return 'Notepad++';
-  if (base === 'sublime_text.exe') return 'Sublime Text';
-  if (base === 'notepad.exe') return 'Notepad';
-  if (CODE_EDITOR_KINDS.jetbrains.has(base)) return 'JetBrains IDE';
-  return path.basename(String(baseName || '')) || '本机编辑器';
-}
-
-function windowsFileAssociationExecutable(filePath) {
-  if (process.platform !== 'win32') return '';
-  const ext = path.extname(String(filePath || '')).toLowerCase();
-  if (!ext) return '';
-  const userChoice = windowsRegistryString(`HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\${ext}\\UserChoice`, 'ProgId');
-  const classId = userChoice || windowsRegistryString(`HKCR\\${ext}`, null);
-  if (!classId) return '';
-  return executableFromAssociationCommand(windowsRegistryString(`HKCR\\${classId}\\shell\\open\\command`, null));
-}
-
-function installedCodeEditorCandidates() {
-  const local = process.env.LOCALAPPDATA || '';
-  const programFiles = process.env.ProgramFiles || '';
-  const programFilesX86 = process.env['ProgramFiles(x86)'] || '';
-  return [
-    local && path.join(local, 'Programs', 'Microsoft VS Code', 'Code.exe'),
-    local && path.join(local, 'Programs', 'Microsoft VS Code Insiders', 'Code - Insiders.exe'),
-    local && path.join(local, 'Programs', 'Cursor', 'Cursor.exe'),
-    local && path.join(local, 'Programs', 'Windsurf', 'Windsurf.exe'),
-    programFiles && path.join(programFiles, 'Microsoft VS Code', 'Code.exe'),
-    programFilesX86 && path.join(programFilesX86, 'Microsoft VS Code', 'Code.exe'),
-  ].filter(Boolean);
-}
-
 function resolvePreferredCodeEditor(filePath) {
   // Test-only seam: route e2e can assert argv/materialized snapshots without opening a real desktop app.
   if (process.env.RUYI_TEST_HOOKS === '1' && process.env.RUYI_TEST_CODE_EDITOR) {
@@ -1401,18 +1322,6 @@ function resolvePreferredCodeEditor(filePath) {
     const application = '/System/Applications/TextEdit.app';
     if (fs.existsSync(application)) return { command: '/usr/bin/open', application, kind: 'mac-app', label: 'TextEdit', source: 'system-fallback' };
     return null;
-  }
-  const direct = classifyCodeEditorExecutable(windowsFileAssociationExecutable(filePath));
-  if (direct && fs.existsSync(direct.command)) return { ...direct, source: 'file-association' };
-  const targetExt = path.extname(String(filePath || '')).toLowerCase();
-  for (const ext of CODE_EDITOR_ASSOCIATION_EXTS) {
-    if (ext === targetExt) continue;
-    const associated = classifyCodeEditorExecutable(windowsFileAssociationExecutable(`code${ext}`));
-    if (associated && fs.existsSync(associated.command)) return { ...associated, source: 'preferred-association' };
-  }
-  for (const candidate of installedCodeEditorCandidates()) {
-    const editor = classifyCodeEditorExecutable(candidate);
-    if (editor && fs.existsSync(editor.command)) return { ...editor, source: 'installed-fallback' };
   }
   return null;
 }
@@ -1436,8 +1345,6 @@ function buildCodeEditorSpawn(editor, action, beforePath, afterPath) {
   const before = String(beforePath || ''), after = String(afterPath || '');
   if (!before || !after) return { ok: false, error: 'Diff 两侧文件路径不完整' };
   if (editor.kind === 'vscode') return { ok: true, command: editor.command, args: ['--reuse-window', '--diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
-  if (editor.kind === 'visualStudio') return { ok: true, command: editor.command, args: ['/Diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
-  if (editor.kind === 'jetbrains') return { ok: true, command: editor.command, args: ['diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
   return { ok: true, command: editor.command, args: [current], mode: 'open', editor: editor.label, source: editor.source, diffUnsupported: true };
 }
 
@@ -1502,43 +1409,16 @@ async function materializeCheckpointEditorDiff(sessionId, entry, currentPath) {
 // Browser navigation has an extra invariant beyond shell-safety: never reuse the current Workbench tab.
 // For web pages, resolve the user's default HTTP handler and pass its documented new-tab switch. Local folders
 // intentionally retain the Explorer behavior used by the "open data directory" UI action.
-let _defaultBrowserExecutable;
-function windowsRegistryString(key, valueName) {
-  if (process.platform !== 'win32') return '';
-  try {
-    const args = ['query', key, valueName == null ? '/ve' : '/v', ...(valueName == null ? [] : [valueName])];
-    const result = cp.spawnSync('reg.exe', args, { encoding: 'utf8', windowsHide: true, timeout: 1500 });
-    if (result.status !== 0) return '';
-    const line = String(result.stdout || '').split(/\r?\n/).find(s => /\sREG_(?:EXPAND_)?SZ\s/.test(s));
-    return line ? String(line).replace(/^.*?\sREG_(?:EXPAND_)?SZ\s+/, '').trim() : '';
-  } catch { return ''; }
-}
-function defaultBrowserExecutable() {
-  if (_defaultBrowserExecutable !== undefined) return _defaultBrowserExecutable;
-  _defaultBrowserExecutable = '';
-  if (process.platform !== 'win32') return _defaultBrowserExecutable;
-  const progId = windowsRegistryString('HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice', 'ProgId');
-  if (!progId) return _defaultBrowserExecutable;
-  const command = windowsRegistryString(`HKCR\\${progId}\\shell\\open\\command`, null);
-  const match = command.match(/^\s*"([^"]+\.exe)"|^\s*([^\s]+\.exe)/i);
-  const executable = match && (match[1] || match[2]);
-  if (executable && fs.existsSync(executable)) _defaultBrowserExecutable = executable;
-  return _defaultBrowserExecutable;
-}
 function isBrowserDocumentTarget(target) {
   const value = String(target || '').trim();
   return /^(https?:|file:)/i.test(value) || /\.html?$/i.test(value);
 }
-function buildBrowserOpenSpawn(target, browserExecutable = defaultBrowserExecutable(), platform = process.platform) {
-  const value = String(target || '');
-  if (!isBrowserDocumentTarget(value) || !browserExecutable) {
-    const spec = buildOpenSpawn(value, platform);
-    return { ...spec, mode: spec.mode === 'select' ? 'file-selection' : platform === 'darwin' ? 'system-default' : 'shell-association',
-      preservesWorkbench: platform === 'darwin' && isBrowserDocumentTarget(value) ? null : true };
-  }
-  const tabFlag = /firefox/i.test(path.basename(browserExecutable)) ? '-new-tab' : '--new-tab';
-  return { command: browserExecutable, args: [tabFlag, value], mode: 'new-tab', preservesWorkbench: true };
+function buildBrowserOpenSpawn(target) {
+  const spec = buildOpenSpawn(String(target || ''));
+  return { ...spec, mode: spec.mode === 'select' ? 'file-selection' : 'system-default',
+    preservesWorkbench: isBrowserDocumentTarget(target) ? null : true };
 }
+
 const PREVIEW_TEXT_EXTS = new Set(['md', 'markdown', 'csv', 'txt', 'html', 'htm', 'json', 'js', 'ts', 'jsx', 'tsx', 'py', 'css', 'xml', 'yaml', 'yml', 'ini', 'log', 'sh', 'ps1', 'bat', 'cmd', 'toml', 'c', 'h', 'cpp', 'java', 'go', 'rs', 'rb', 'php', 'sql', 'tex']);
 const PREVIEW_TEXT_MAX = 1 * 1024 * 1024;   // 1MB text cap (spec)
 const PREVIEW_IMAGE_MAX = 5 * 1024 * 1024;  // 5MB image cap (spec)

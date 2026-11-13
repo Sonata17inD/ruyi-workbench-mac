@@ -478,7 +478,7 @@ function isKimiAcpPlanFilePath(rawPath, context) {
 function kimiAcpSamePath(left, right) {
   const a = path.resolve(String(left || ''));
   const b = path.resolve(String(right || ''));
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  return a === b;
 }
 
 // The synchronous shape check above describes lexical paths for offline callers. The actual ACP
@@ -1219,7 +1219,7 @@ function consumeKimiAcpApproval(context, kind, input) {
     }
     let sameValue = Boolean(granted && wanted && granted === wanted);
     if (kind === 'write' && granted && wanted) {
-      sameValue = process.platform === 'win32' ? granted.toLowerCase() === wanted.toLowerCase() : granted === wanted;
+      sameValue = granted === wanted;
     }
     if (kind === 'terminal') {
       if (nativeWrapper) {
@@ -1267,9 +1267,6 @@ function kimiAcpEffectiveCwd(rawCwd, context) {
     || process.cwd();
   let value = String(rawCwd || '').trim() || String(base || '').trim();
   if (!value) return '';
-  if (process.platform === 'win32' && /^\/[A-Za-z](?:\/|$)/.test(value)) {
-    value = value[1].toUpperCase() + ':' + value.slice(2).replaceAll('/', '\\');
-  }
   if (!path.isAbsolute(value)) value = path.resolve(base, value);
   return path.isAbsolute(value) ? path.resolve(value) : '';
 }
@@ -1278,31 +1275,7 @@ function kimiAcpNativeShellQuote(value) {
   return "'" + String(value).replaceAll("'", "'\\''") + "'";
 }
 
-function kimiAcpNativeWindowsPathToPosixPath(rawPath) {
-  const value = String(rawPath);
-  if (value.startsWith('\\\\')) return value.replaceAll('\\', '/');
-  const driveMatch = /^([A-Za-z]):(?:[\\/]|$)/.exec(value);
-  if (driveMatch !== null) {
-    const drive = driveMatch[1].toLowerCase();
-    const rest = value.slice(2).replaceAll('\\', '/');
-    return '/' + drive + (rest.startsWith('/') ? rest : '/' + rest);
-  }
-  return value.replaceAll('\\', '/');
-}
-
-function kimiAcpNativeBashWrapperCwdTexts(cwd) {
-  const raw = String(cwd);
-  if (process.platform !== 'win32') return [raw];
-  const slash = raw.replaceAll('\\', '/');
-  const values = [kimiAcpNativeWindowsPathToPosixPath(raw)];
-  const drive = /^([A-Za-z]):(?:\/|$)/.exec(slash);
-  if (drive) values.push(slash);
-  else {
-    const msysDrive = /^\/([A-Za-z])(?:\/|$)/.exec(slash);
-    if (msysDrive) values.push(msysDrive[1].toUpperCase() + ':' + (slash.slice(2) || '/'));
-  }
-  return [...new Set(values)];
-}
+function kimiAcpNativeBashWrapperCwdTexts(cwd) { return [String(cwd)]; }
 
 function kimiAcpNativeBashWrapperTexts(command, cwd) {
   return kimiAcpNativeBashWrapperCwdTexts(cwd).map(cwdText =>
@@ -1350,7 +1323,7 @@ function kimiAcpNativeBashRootPairs(context) {
     try { lexical = path.resolve(raw); } catch { continue; }
     let canonical = lexical;
     try { canonical = fs.realpathSync(lexical); } catch { /* root may not exist yet */ }
-    const key = process.platform === 'win32' ? lexical.toLowerCase() + '\0' + canonical.toLowerCase() : lexical + '\0' + canonical;
+    const key = lexical + '\0' + canonical;
     if (seen.has(key)) continue;
     seen.add(key);
     pairs.push({ lexical, canonical });
@@ -1376,26 +1349,6 @@ function kimiAcpTrustedNativeBashPath(canonical, context, rawPath) {
   if (!canonical) return false;
   if (kimiAcpNativeBashPathExcluded(rawPath, canonical, context)) return false;
   const name = path.basename(canonical).toLowerCase();
-  if (process.platform === 'win32') {
-    if (name !== 'bash.exe') return false;
-    const normalized = canonical.replaceAll('/', '\\').toLowerCase();
-    const standard = [
-      'c:\\program files\\git\\bin\\bash.exe',
-      'c:\\program files\\git\\usr\\bin\\bash.exe',
-      'c:\\program files (x86)\\git\\bin\\bash.exe',
-      'c:\\program files (x86)\\git\\usr\\bin\\bash.exe',
-    ];
-    for (const root of [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean)) {
-      standard.push(path.join(root, 'Git', 'bin', 'bash.exe').toLowerCase());
-      standard.push(path.join(root, 'Git', 'usr', 'bin', 'bash.exe').toLowerCase());
-    }
-    const localAppData = String(process.env.LOCALAPPDATA || '').trim();
-    if (localAppData) standard.push(path.join(localAppData, 'Programs', 'Git', 'bin', 'bash.exe').toLowerCase());
-    if (standard.some(candidate => candidate === normalized)) return true;
-    const configured = String(process.env.KIMI_SHELL_PATH || '').trim();
-    const configuredCanonical = configured && kimiAcpCanonicalExecutable(configured);
-    return Boolean(configuredCanonical && kimiAcpSamePath(configuredCanonical, canonical));
-  }
   if (name !== 'bash') return false;
   const standard = ['/bin/bash', '/usr/bin/bash', '/usr/local/bin/bash'];
   const configured = String(process.env.KIMI_SHELL_PATH || '').trim();
@@ -1651,7 +1604,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
       cwd = classified.cwd;
     } else if (classified && classified.reason
       && (command === 'rg' || command.toLowerCase() === 'rg'
-        || (path.isAbsolute(command) && path.basename(command).toLowerCase() === (process.platform === 'win32' ? 'rg.exe' : 'rg')))) {
+        || (path.isAbsolute(command) && path.basename(command).toLowerCase() === ('rg')))) {
       context.onEvent({ type: 'stderr', text: `[Kimi ACP 搜索策略] ${redact(String(classified.reason))}` });
     }
   }

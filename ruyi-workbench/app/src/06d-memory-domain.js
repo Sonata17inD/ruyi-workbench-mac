@@ -47,7 +47,7 @@ function memoryGlobalDir() { return path.join(paths.memory, 'global'); }
 // 规范化先例(fileAllowedRoots 的 win 去重),防 C:\\Foo 与 c:\\foo 分裂成两个项目组。
 function projectKeyForCwd(cwd) {
   let p = path.resolve(String(cwd || ''));
-  if (process.platform === 'win32') p = p.toLowerCase();
+
   return crypto.createHash('sha256').update(p, 'utf8').digest('hex').slice(0, 16);
 }
 function memoryProjectDir(cwd) { return path.join(paths.memory, 'project', projectKeyForCwd(cwd)); }
@@ -2633,4 +2633,3 @@ async function resolveEnabledMemoryEntries(session, cwd, onSourceMismatch, query
   const result = await resolveMemoryPreflight(session, cwd, query || '', onSourceMismatch);
   return [...(result.coreEntries || []), ...(result.entries || [])];
 }
-

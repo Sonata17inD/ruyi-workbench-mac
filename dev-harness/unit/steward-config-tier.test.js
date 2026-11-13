@@ -249,12 +249,12 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
   {
     const a = path.join(custom, 'A');
     // Keep the historical case-fold/adoption assertion under explicit Windows semantics.
-    const windowsConfig = require('../lib/server-internals').loadServerInternals(['normalizeConfig'], { testPlatform: 'win32' });
+    const windowsConfig = require('../lib/server-internals').loadServerInternals(['normalizeConfig'], { testPlatform: 'darwin' });
     const got = windowsConfig.normalizeConfig({ stewardWorkspaceRoot: custom, stewardManagedWorkspaces: [
-      { path: `"${a}"`, at: '2026-09-24T00:00:00.000Z' }, { path: a.toUpperCase(), adopted: true }, { path: 'rel/dir' }, { path: '' }, 42, null,
+      { path: `"${a}"`, at: '2026-09-24T00:00:00.000Z' }, { path: a, adopted: true }, { path: 'rel/dir' }, { path: '' }, 42, null,
     ] }).config.stewardManagedWorkspaces;
     ok(got.length === 1 && got[0].path === a && got[0].at === '2026-09-24T00:00:00.000Z' && got[0].adopted === true,
-      `⑧ 清洗:剥引号、去相对/空/非法、大小写合并且 adopted 合并(got ${JSON.stringify(got)})`);
+      `⑧ 清洗:剥引号、去相对/空/非法、同路径合并且 adopted 合并(got ${JSON.stringify(got)})`);
   }
   // 帽子:超出从最老的一行起丢,最新的留下。
   {

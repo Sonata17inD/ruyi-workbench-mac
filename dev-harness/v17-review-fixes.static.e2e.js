@@ -42,10 +42,7 @@ ok(/prevSyncedModel/.test(server), 'S2: 上次同步值追踪(prevSyncedModel)')
 ok(!/else delete settings\.model;/.test(server), 'S2: 无条件 else delete settings.model 绝迹');
 ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(server), 'S2: 仅权属可证时才删除');
 
-// ── S3: freeStalePort 命令行取证 ────────────────────────────────────────────
-ok(/function processCommandLine\(pid\)/.test(server), 'S3: processCommandLine 取证助手存在');
-ok(server.includes("why = 'image:node+cmdline'"), 'S3: node.exe 需命令行佐证(image:node+cmdline)');
-ok(!/why = 'image:node';/.test(server), 'S3: 裸 image:node 处死分支绝迹');
+ok(!server.includes('function freeStalePort(') && server.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
 
 // ── S4: desktop_screenshot 输出路径写闸 ─────────────────────────────────────
 ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(server), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');

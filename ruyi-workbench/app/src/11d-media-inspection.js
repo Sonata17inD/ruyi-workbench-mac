@@ -102,7 +102,7 @@ const MediaInspection = (() => {
     for (const name of names.filter(Boolean)) {
       if (nodePath.isAbsolute(name)) { if ((await io.stat(name).catch(() => null))?.isFile()) found.push(name); continue; }
       for (const dir of String(process.env.PATH || '').split(nodePath.delimiter).filter(Boolean)) {
-        for (const suffix of process.platform === 'win32' ? ['.exe', ''] : ['']) {
+        for (const suffix of ['']) {
           const candidate = nodePath.join(dir, name + suffix);
           if ((await io.stat(candidate).catch(() => null))?.isFile()) found.push(candidate);
         }
@@ -121,7 +121,7 @@ const MediaInspection = (() => {
     const previous = cache.get(key);
     if (!refresh && previous && Date.now() - previous.at < 30000 && (!previous.value.path || await io.stat(previous.value.path).catch(() => null))) return previous.value;
     let names = [];
-    if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'), 'python3', 'python'];
+    if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, 'bin/python'), 'python3', 'python'];
     if (kind === 'node') names = [process.execPath, 'node'];
     if (kind === 'ffmpeg') names = [process.env.IMAGEIO_FFMPEG_EXE, process.env.FFMPEG_BINARY, 'ffmpeg'];
     if (kind === 'ffprobe') names = ['ffprobe'];
@@ -145,12 +145,11 @@ const MediaInspection = (() => {
     if (kind === 'ffprobe' && !executablePaths.length) {
       const ffmpeg = await locate('ffmpeg', refresh, signal);
       if (ffmpeg.code) return ffmpeg;
-      if (ffmpeg.available) executablePaths = await candidates([nodePath.join(nodePath.dirname(ffmpeg.path), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe')]);
+      if (ffmpeg.available) executablePaths = await candidates([nodePath.join(nodePath.dirname(ffmpeg.path), 'ffprobe')]);
     }
     let value = { available: false, path: null, version: null };
     for (const candidate of executablePaths.slice(0, 8)) {
       // Chrome --version can launch a visible browser on Windows; existence is reported honestly.
-      if (kind === 'chrome' && process.platform === 'win32') { value = { available: true, path: candidate, version: null, verification: 'file_exists' }; break; }
       const r = await run(candidate, [kind === 'ffmpeg' || kind === 'ffprobe' ? '-version' : '--version'], { signal });
       if (r.cleanupIncomplete || ['aborted', 'process_output_incomplete'].includes(r.errorCode) || /^process_helper_/.test(r.errorCode || '')) return { available: false, path: null, version: null,
         code: r.cleanupIncomplete ? 'process_cleanup_incomplete' : r.errorCode, ...cleanupFields(r) };

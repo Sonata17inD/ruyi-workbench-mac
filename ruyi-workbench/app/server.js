@@ -24,9 +24,7 @@ function platformOpenSpawn(target, mode = 'open', platform = process.platform) {
     const selected = mode === 'select' || bundle;
     return { command: '/usr/bin/open', args: [...(selected ? ['-R'] : []), '--', value], mode: selected ? 'select' : mode };
   }
-  if (mode === 'browser') return { command: 'cmd.exe', args: ['/c', 'start', '', value] };
-  // Keep the existing Windows/Linux fallback contract until other desktop backends are implemented.
-  return { command: 'explorer.exe', args: [mode === 'select' ? '/select,' + value : value] };
+  throw Object.assign(new Error('Mac desktop is required'), { code: 'platform_unsupported' });
 }
 
 // Non-interactive bash still reads BASH_ENV and imports exported functions/options.
@@ -141,7 +139,7 @@ function dataRoot() {
 function dataRootAliases() {
   const root = dataRoot();
   if (_dataRootMemo && _dataRootMemo.root === root && Array.isArray(_dataRootMemo.aliases)) return _dataRootMemo.aliases;
-  const norm = p => (process.platform === 'win32' ? String(p).toLowerCase() : String(p));
+  const norm = p => (String(p));
   let rootReal = '';
   try { rootReal = norm(fs.realpathSync(root)); } catch { return []; }
   const { next, legacy } = defaultDataRoots();
@@ -199,15 +197,13 @@ function externalRoot() {
 // system Python that cannot import openpyxl/winsdk. Expose the bundled interpreter process-wide so
 // native provider tools, Claude CLI children, PowerShell tasks, and direct Ruyi.exe launches agree.
 function exposeBundledPythonRuntime() {
-  if (!['win32', 'darwin'].includes(process.platform)) return '';
-  const pythonDir = process.platform === 'darwin'
-    ? path.join(externalRoot(), 'mcp', 'ai-computer-control', 'runtime', 'python', 'bin')
-    : path.join(externalRoot(), 'mcp', 'ai-computer-control', 'python_embed');
-  const pythonExe = path.join(pythonDir, process.platform === 'darwin' ? 'python3' : 'python.exe');
+  if (process.platform !== 'darwin') return '';
+  const pythonDir = path.join(externalRoot(), 'mcp', 'ai-computer-control', 'runtime', 'python', 'bin');
+  const pythonExe = path.join(pythonDir, 'python3');
   try { if (!fs.existsSync(pythonExe)) return ''; } catch { return ''; }
   const currentPath = String(process.env.PATH || process.env.Path || '');
   const pathDirs = currentPath.split(path.delimiter).filter(Boolean);
-  const normalized = dir => process.platform === 'win32' ? path.resolve(dir).toLowerCase() : path.resolve(dir);
+  const normalized = dir => path.resolve(dir);
   if (!pathDirs.some(dir => normalized(dir) === normalized(pythonDir))) {
     process.env.PATH = [pythonDir, ...pathDirs].join(path.delimiter);
   }
@@ -243,7 +239,7 @@ function ruyiVendorBinDir() {
   } catch { return ''; }
 }
 function samePathEntry(a, b) {
-  const norm = p => { const r = path.resolve(String(p || '').trim().replace(/^"|"$/g, '')); return process.platform === 'win32' ? r.toLowerCase() : r; };
+  const norm = p => { const r = path.resolve(String(p || '').trim().replace(/^"|"$/g, '')); return r; };
   try { return norm(a) === norm(b); } catch { return false; }
 }
 const RUYI_PATH_BEFORE_VENDOR = String(process.env.PATH || process.env.Path || '');
@@ -1523,8 +1519,8 @@ function tildePath(p) {
   const s = String(p || '');
   const home = os.homedir();
   if (!home || !s) return s;
-  const a = process.platform === 'win32' ? s.toLowerCase() : s;
-  const h = process.platform === 'win32' ? home.toLowerCase() : home;
+  const a = s;
+  const h = home;
   if (a === h) return '~';
   if (a.startsWith(h) && (s[home.length] === '\\' || s[home.length] === '/')) return '~' + s.slice(home.length).replace(/\\/g, '/');
   return s;
@@ -1533,8 +1529,8 @@ function tildePath(p) {
 // 路径比较键:resolve + 去尾分隔符;Windows 下大小写不敏感。
 function samePathKey(p) {
   let s = path.resolve(String(p || ''));
-  if (process.platform === 'win32') s = s.toLowerCase();
-  return s.length > 3 ? s.replace(process.platform === 'win32' ? /[\\/]+$/ : /\/+$/, '') : s;
+
+  return s.length > 3 ? s.replace(/\/+$/, '') : s;
 }
 
 // 如意包根标记:<root>/app/server.js 是文件,且 <root>/package.json 的 name 是 ruyi-workbench 或
@@ -2331,22 +2327,15 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
         real = primary;
       }
       const joined = pathModule.join(real, ...missing);
-      return { canonical: process.platform === 'win32' ? joined.toLowerCase() : joined, legacy, missing: missing.length > 0 };
+      return { canonical: joined, legacy, missing: missing.length > 0 };
     }
   }
   async function canonicalRoot(root) { return (await resolveRoot(root)).canonical; }
-  function endpointFor(canonical, platform = process.platform, nodeVersion = process.versions.node) {
+  function endpointFor(canonical, platform = process.platform) {
+    if (platform !== 'darwin') throw ownershipError('PLATFORM_UNSUPPORTED', 'Ruyi requires macOS.');
     const digest = cryptoModule.createHash('sha256').update(canonical).digest('hex');
-    if (platform === 'win32') return '\\\\.\\pipe\\ruyi-serve-' + digest;
-    if (platform === 'darwin') {
-      const uid = typeof process.getuid === 'function' ? process.getuid() : 'unknown';
-      return pathModule.posix.join('/private/tmp', 'ruyi-serve-v1-' + uid, digest.slice(0, 32) + '.lock');
-    }
-    const [major, minor] = nodeVersion.split('.').map(Number);
-    if (platform === 'linux' && (major > 20 || (major === 20 && minor >= 8))) return '\0ruyi-serve-' + digest;
-    // Portable fallback, also for Linux 20.0–20.7: normal close unlinks our socket.
-    // A crash can leave a socket file. Never unlink an unknown owner's endpoint automatically.
-    return pathModule.join(osModule.tmpdir(), 'ruyi-serve-' + digest.slice(0, 32) + '.sock');
+    const uid = typeof process.getuid === 'function' ? process.getuid() : 'unknown';
+    return pathModule.posix.join('/private/tmp', 'ruyi-serve-v1-' + uid, digest.slice(0, 32) + '.lock');
   }
   function legacyEndpointFor(canonical) {
     const digest = cryptoModule.createHash('sha256').update(canonical).digest('hex');
@@ -4720,7 +4709,7 @@ function normalizeWorkspacePathString(value) {
 //     「不在如意那张表里」的行,所以收编过的行下一次读配置不会再被挪走(否则两条迁移会来回拉锯)。
 function stewardManagedWorkspaceKey(value) {
   const normalized = String(value == null ? '' : value).replace(/[\\/]+/g, '/').replace(/\/+$/, '');
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  return normalized;
 }
 function normalizeStewardManagedWorkspaces(config, wsRows) {
   const rawList = Array.isArray(config.stewardManagedWorkspaces) ? config.stewardManagedWorkspaces : [];
@@ -5370,7 +5359,7 @@ function normalizeConfig(raw, opts = {}) {
       const s = normalizeWorkspacePathString(w);
       if (!s) continue;
       // Preserve the stored spelling on Windows, where resolving '/' depends on the current drive.
-      const key = process.platform === 'win32' ? s.toLowerCase() : samePathKey(s);
+      const key = samePathKey(s);
       if (seen.has(key)) continue;
       seen.add(key);
       clean.push(s);
@@ -5417,7 +5406,7 @@ function normalizeConfig(raw, opts = {}) {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
       const p = normalizeWorkspacePathString(raw.path);
       if (!p) return;
-      const key = process.platform === 'win32' ? p.toLowerCase() : samePathKey(p);
+      const key = samePathKey(p);
       if (seen.has(key)) return;
       seen.add(key);
       const entry = { path: p, read: raw.read !== false, write: raw.write !== false, execute: raw.execute !== false };
@@ -14351,7 +14340,7 @@ function workspaceBaselineBudgetOnly(root, budgetMs, startedAt) {
 
 function workspaceBaselinePathKey(filePath) {
   const resolved = path.resolve(String(filePath || ''));
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  return resolved;
 }
 
 function workspaceBaselineIsCodePath(filePath) {
@@ -14550,7 +14539,7 @@ async function workspaceBaselineGitCheckoutCrlf(baseline, rel, blob) {
   if (eol === 'lf') return false;
   if (autocrlf === 'true') return true;
   if (autocrlf === 'input') return false;
-  return coreEol === 'crlf' || ((coreEol === '' || coreEol === 'native') && process.platform === 'win32');
+  return coreEol === 'crlf';
 }
 
 function workspaceBaselineLfToCrlf(buf) {
@@ -16067,18 +16056,7 @@ async function resolveWorkspace({ name, children, selectedPath }, config) {
   // PF3 fix: a timed-out root enumeration marks the result truncated (its children weren't discovered — the
   // candidate set is incomplete, not authoritative).
   const addChildren = r => { if (r.timedOut) truncated = true; for (const d of r.dirs) pushCand(d); };
-  if (process.platform === 'win32') {
-    for (let c = 65; c <= 90; c++) {
-      if (overBudget()) { truncated = true; break; }
-      const root = String.fromCharCode(c) + ':\\';
-      // No existsSync pre-check: the timed readdir returns [] for a non-existent OR unreachable drive without blocking.
-      addChildren(await listChildDirs(root));
-      if (candidates.length >= WORKSPACE_CANDIDATE_CAP) { truncated = true; break; }
-    }
-  } else {
-    // non-Windows: use filesystem root's one level as the drive-equivalent (keeps the code path exercisable).
-    addChildren(await listChildDirs('/'));
-  }
+  addChildren(await listChildDirs('/'));
   // (b) home dir and its first level.
   const home = os.homedir();
   pushCand(home);
@@ -17104,74 +17082,6 @@ function buildOpenSpawn(target, platform = process.platform) {
 // blindly asking ShellExecute to "open" model-written code can execute it. Resolve the file association, but
 // only accept a known editor/IDE executable; otherwise fall back to another editor already chosen as the
 // default for a common code/text extension, then to a conservative installed-editor probe.
-const CODE_EDITOR_ASSOCIATION_EXTS = ['.py', '.md', '.json', '.html', '.css', '.ts', '.tsx', '.jsx', '.java', '.cpp'];
-const CODE_EDITOR_KINDS = Object.freeze({
-  vscode: new Set(['code.exe', 'code - insiders.exe', 'code-insiders.exe', 'cursor.exe', 'windsurf.exe', 'vscodium.exe', 'codium.exe']),
-  visualStudio: new Set(['devenv.exe']),
-  jetbrains: new Set([
-    'idea.exe', 'idea64.exe', 'webstorm.exe', 'webstorm64.exe', 'pycharm.exe', 'pycharm64.exe',
-    'clion.exe', 'clion64.exe', 'rider.exe', 'rider64.exe', 'goland.exe', 'goland64.exe',
-    'rubymine.exe', 'rubymine64.exe', 'phpstorm.exe', 'phpstorm64.exe', 'datagrip.exe', 'datagrip64.exe',
-    'studio.exe', 'studio64.exe',
-  ]),
-  editor: new Set(['notepad++.exe', 'sublime_text.exe', 'notepad.exe']),
-});
-
-function executableFromAssociationCommand(command) {
-  const value = String(command || '').trim();
-  const match = value.match(/^\s*"([^"]+\.exe)"|^\s*([^\s]+\.exe)/i);
-  const executable = match ? String(match[1] || match[2] || '') : '';
-  return executable.replace(/%([^%]+)%/g, (_, name) => process.env[name] || process.env[String(name).toUpperCase()] || `%${name}%`);
-}
-
-function classifyCodeEditorExecutable(executable) {
-  const command = String(executable || '').trim();
-  const base = path.win32.basename(command).toLowerCase();
-  if (!command || !base) return null;
-  for (const [kind, names] of Object.entries(CODE_EDITOR_KINDS)) {
-    if (names.has(base)) return { command, kind, label: codeEditorLabel(base) };
-  }
-  return null;
-}
-
-function codeEditorLabel(baseName) {
-  const base = String(baseName || '').toLowerCase();
-  if (base === 'cursor.exe') return 'Cursor';
-  if (base === 'windsurf.exe') return 'Windsurf';
-  if (base === 'vscodium.exe' || base === 'codium.exe') return 'VSCodium';
-  if (base === 'code.exe' || base === 'code - insiders.exe' || base === 'code-insiders.exe') return 'Visual Studio Code';
-  if (base === 'devenv.exe') return 'Visual Studio';
-  if (base === 'notepad++.exe') return 'Notepad++';
-  if (base === 'sublime_text.exe') return 'Sublime Text';
-  if (base === 'notepad.exe') return 'Notepad';
-  if (CODE_EDITOR_KINDS.jetbrains.has(base)) return 'JetBrains IDE';
-  return path.basename(String(baseName || '')) || '本机编辑器';
-}
-
-function windowsFileAssociationExecutable(filePath) {
-  if (process.platform !== 'win32') return '';
-  const ext = path.extname(String(filePath || '')).toLowerCase();
-  if (!ext) return '';
-  const userChoice = windowsRegistryString(`HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\${ext}\\UserChoice`, 'ProgId');
-  const classId = userChoice || windowsRegistryString(`HKCR\\${ext}`, null);
-  if (!classId) return '';
-  return executableFromAssociationCommand(windowsRegistryString(`HKCR\\${classId}\\shell\\open\\command`, null));
-}
-
-function installedCodeEditorCandidates() {
-  const local = process.env.LOCALAPPDATA || '';
-  const programFiles = process.env.ProgramFiles || '';
-  const programFilesX86 = process.env['ProgramFiles(x86)'] || '';
-  return [
-    local && path.join(local, 'Programs', 'Microsoft VS Code', 'Code.exe'),
-    local && path.join(local, 'Programs', 'Microsoft VS Code Insiders', 'Code - Insiders.exe'),
-    local && path.join(local, 'Programs', 'Cursor', 'Cursor.exe'),
-    local && path.join(local, 'Programs', 'Windsurf', 'Windsurf.exe'),
-    programFiles && path.join(programFiles, 'Microsoft VS Code', 'Code.exe'),
-    programFilesX86 && path.join(programFilesX86, 'Microsoft VS Code', 'Code.exe'),
-  ].filter(Boolean);
-}
-
 function resolvePreferredCodeEditor(filePath) {
   // Test-only seam: route e2e can assert argv/materialized snapshots without opening a real desktop app.
   if (process.env.RUYI_TEST_HOOKS === '1' && process.env.RUYI_TEST_CODE_EDITOR) {
@@ -17190,18 +17100,6 @@ function resolvePreferredCodeEditor(filePath) {
     const application = '/System/Applications/TextEdit.app';
     if (fs.existsSync(application)) return { command: '/usr/bin/open', application, kind: 'mac-app', label: 'TextEdit', source: 'system-fallback' };
     return null;
-  }
-  const direct = classifyCodeEditorExecutable(windowsFileAssociationExecutable(filePath));
-  if (direct && fs.existsSync(direct.command)) return { ...direct, source: 'file-association' };
-  const targetExt = path.extname(String(filePath || '')).toLowerCase();
-  for (const ext of CODE_EDITOR_ASSOCIATION_EXTS) {
-    if (ext === targetExt) continue;
-    const associated = classifyCodeEditorExecutable(windowsFileAssociationExecutable(`code${ext}`));
-    if (associated && fs.existsSync(associated.command)) return { ...associated, source: 'preferred-association' };
-  }
-  for (const candidate of installedCodeEditorCandidates()) {
-    const editor = classifyCodeEditorExecutable(candidate);
-    if (editor && fs.existsSync(editor.command)) return { ...editor, source: 'installed-fallback' };
   }
   return null;
 }
@@ -17225,8 +17123,6 @@ function buildCodeEditorSpawn(editor, action, beforePath, afterPath) {
   const before = String(beforePath || ''), after = String(afterPath || '');
   if (!before || !after) return { ok: false, error: 'Diff 两侧文件路径不完整' };
   if (editor.kind === 'vscode') return { ok: true, command: editor.command, args: ['--reuse-window', '--diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
-  if (editor.kind === 'visualStudio') return { ok: true, command: editor.command, args: ['/Diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
-  if (editor.kind === 'jetbrains') return { ok: true, command: editor.command, args: ['diff', before, after], mode: 'diff', editor: editor.label, source: editor.source };
   return { ok: true, command: editor.command, args: [current], mode: 'open', editor: editor.label, source: editor.source, diffUnsupported: true };
 }
 
@@ -17291,43 +17187,16 @@ async function materializeCheckpointEditorDiff(sessionId, entry, currentPath) {
 // Browser navigation has an extra invariant beyond shell-safety: never reuse the current Workbench tab.
 // For web pages, resolve the user's default HTTP handler and pass its documented new-tab switch. Local folders
 // intentionally retain the Explorer behavior used by the "open data directory" UI action.
-let _defaultBrowserExecutable;
-function windowsRegistryString(key, valueName) {
-  if (process.platform !== 'win32') return '';
-  try {
-    const args = ['query', key, valueName == null ? '/ve' : '/v', ...(valueName == null ? [] : [valueName])];
-    const result = cp.spawnSync('reg.exe', args, { encoding: 'utf8', windowsHide: true, timeout: 1500 });
-    if (result.status !== 0) return '';
-    const line = String(result.stdout || '').split(/\r?\n/).find(s => /\sREG_(?:EXPAND_)?SZ\s/.test(s));
-    return line ? String(line).replace(/^.*?\sREG_(?:EXPAND_)?SZ\s+/, '').trim() : '';
-  } catch { return ''; }
-}
-function defaultBrowserExecutable() {
-  if (_defaultBrowserExecutable !== undefined) return _defaultBrowserExecutable;
-  _defaultBrowserExecutable = '';
-  if (process.platform !== 'win32') return _defaultBrowserExecutable;
-  const progId = windowsRegistryString('HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice', 'ProgId');
-  if (!progId) return _defaultBrowserExecutable;
-  const command = windowsRegistryString(`HKCR\\${progId}\\shell\\open\\command`, null);
-  const match = command.match(/^\s*"([^"]+\.exe)"|^\s*([^\s]+\.exe)/i);
-  const executable = match && (match[1] || match[2]);
-  if (executable && fs.existsSync(executable)) _defaultBrowserExecutable = executable;
-  return _defaultBrowserExecutable;
-}
 function isBrowserDocumentTarget(target) {
   const value = String(target || '').trim();
   return /^(https?:|file:)/i.test(value) || /\.html?$/i.test(value);
 }
-function buildBrowserOpenSpawn(target, browserExecutable = defaultBrowserExecutable(), platform = process.platform) {
-  const value = String(target || '');
-  if (!isBrowserDocumentTarget(value) || !browserExecutable) {
-    const spec = buildOpenSpawn(value, platform);
-    return { ...spec, mode: spec.mode === 'select' ? 'file-selection' : platform === 'darwin' ? 'system-default' : 'shell-association',
-      preservesWorkbench: platform === 'darwin' && isBrowserDocumentTarget(value) ? null : true };
-  }
-  const tabFlag = /firefox/i.test(path.basename(browserExecutable)) ? '-new-tab' : '--new-tab';
-  return { command: browserExecutable, args: [tabFlag, value], mode: 'new-tab', preservesWorkbench: true };
+function buildBrowserOpenSpawn(target) {
+  const spec = buildOpenSpawn(String(target || ''));
+  return { ...spec, mode: spec.mode === 'select' ? 'file-selection' : 'system-default',
+    preservesWorkbench: isBrowserDocumentTarget(target) ? null : true };
 }
+
 const PREVIEW_TEXT_EXTS = new Set(['md', 'markdown', 'csv', 'txt', 'html', 'htm', 'json', 'js', 'ts', 'jsx', 'tsx', 'py', 'css', 'xml', 'yaml', 'yml', 'ini', 'log', 'sh', 'ps1', 'bat', 'cmd', 'toml', 'c', 'h', 'cpp', 'java', 'go', 'rs', 'rb', 'php', 'sql', 'tex']);
 const PREVIEW_TEXT_MAX = 1 * 1024 * 1024;   // 1MB text cap (spec)
 const PREVIEW_IMAGE_MAX = 5 * 1024 * 1024;  // 5MB image cap (spec)
@@ -19263,68 +19132,6 @@ const pendingPlans = new Map(); // planId -> { resolve, sessionId, timer }
 // loopback 的 /api/permission/request)拿不到 driverAuto,故用此集判定。runClaudeTurn 的 driverAuto 回合进出维护。纯内存。
 const driverAutoSessions = new Set();
 
-// ── 128i(48 号文 §1):收尸只认自己的子孙 ────────────────────────────────────────────────────────────
-// 修前是 `taskkill /PID <pid> /T /F`:/T 按 ParentProcessId 认子孙,而 Windows 的父号在父进程死后【不更新】、进程号
-// 又复用得很勤 —— 用户机器上常有父进程早已不在的长命进程(explorer.exe、各种托盘程序),我们要杀的进程若恰好
-// 拿到了它们那个过期父号,/T 会不会把它们一起带走,没能取证排除(128c:3 万次 spawn 逼不出撞号)。测试框架里
-// 按父号认子孙的自造收尸器真杀过用户的 Ollama(107 波 F8)。所以不赌 /T:
-//   · 子孙只认【创建时间不早于父进程】的 —— 撞号的陌生人一定比我们要杀的根更老,按构造排除;
-//   · 动手前逐个按启动时间(FILETIME)再核一次,快照到动手之间号若被复用,对不上就不杀;
-//   · conhost.exe 不杀(它随最后一个客户端自己走;先杀它会把同控制台上的孙子连带杀掉);深的先杀,根最先。
-// 整段逻辑写成一段 PowerShell,用 -EncodedCommand 传(不经任何引号转义),分离启动、不等它 —— 与修前 taskkill 一样
-// 是「发出去就算」:服务正在退出时调到这里,收尸也照样跑完(Node 里做异步快照的话,进程一退就没下文了;而
-// libuv 的子进程 job 允许孙辈静默脱离,shell 会话里用户起的命令不会随服务一起死)。
-// dry 模式(__TABLE__ 给一张合成进程表、只打计划不动手)供单测钉「撞号的陌生人不算子孙」这个真机上逼不出来的形状。
-const OWN_TREE_KILL_PS = [
-  "$ErrorActionPreference = 'SilentlyContinue'",
-  '$rootId = [int]__ROOT__',
-  '$dry = __DRY__',
-  "$tableJson = '__TABLE__'",
-  // PowerShell 5.1:@(ConvertFrom-Json '[…]') 得到的是「一个元素、里面装着整个数组」—— 必须显式展开(128i 单测 P1 逮到)。
-  'if ($tableJson) { $all = @((ConvertFrom-Json $tableJson) | ForEach-Object { $_ }) } else {',
-  '  $all = @(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,Name | Where-Object { $_.CreationDate } | ForEach-Object {',
-  '    [pscustomobject]@{ ProcessId = [int]$_.ProcessId; ParentProcessId = [int]$_.ParentProcessId; Created = [int64]$_.CreationDate.ToFileTimeUtc(); Name = [string]$_.Name } })',
-  '}',
-  '$root = $all | Where-Object { [int]$_.ProcessId -eq $rootId } | Select-Object -First 1',
-  "if (-not $root) { 'ROOT-GONE'; exit 0 }",
-  '$tree = New-Object System.Collections.ArrayList',
-  '$seen = @{}; $seen[[int]$root.ProcessId] = $true',
-  '$queue = New-Object System.Collections.Queue; $queue.Enqueue($root)',
-  'while ($queue.Count -gt 0) {',
-  '  $cur = $queue.Dequeue()',
-  '  foreach ($p in $all) {',
-  '    if ($seen.ContainsKey([int]$p.ProcessId)) { continue }',
-  '    if ([int]$p.ParentProcessId -ne [int]$cur.ProcessId) { continue }',
-  '    if ([int64]$p.Created -lt [int64]$cur.Created) { continue }',
-  '    $seen[[int]$p.ProcessId] = $true; [void]$tree.Add($p); $queue.Enqueue($p)',
-  '  }',
-  '}',
-  '$tree.Reverse()',
-  "$targets = @($root) + @($tree | Where-Object { [string]$_.Name -ne 'conhost.exe' })",
-  "if ($dry) { foreach ($t in $targets) { 'PLAN ' + $t.ProcessId }; exit 0 }",
-  'foreach ($t in $targets) {',
-  '  $g = Get-Process -Id ([int]$t.ProcessId)',
-  "  if ($g -and [math]::Abs($g.StartTime.ToFileTimeUtc() - [int64]$t.Created) -lt 10000) { Stop-Process -Id ([int]$t.ProcessId) -Force; 'KILLED ' + $t.ProcessId }",
-  '}',
-].join('\n');
-function ownTreeKillCommand(pid, { dry = false, table = null } = {}) {
-  const tableJson = table ? JSON.stringify(table).replace(/'/g, "''") : '';
-  const script = OWN_TREE_KILL_PS
-    .replace('__ROOT__', String(Math.trunc(Number(pid)) || 0))
-    .replace('__DRY__', dry ? '$true' : '$false')
-    .replace('__TABLE__', () => tableJson);
-  return ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
-}
-// 等它跑完(拿回 PLAN／KILLED 行):freeStalePort 要等旧实例真没了再重试监听;单测走 dry 模式。
-function killOwnProcessTree(pid, opts = {}) {
-  return new Promise(resolve => {
-    if (!pid) return resolve({ lines: [] });
-    if (process.platform !== 'win32') { try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ } return resolve({ lines: [] }); }
-    cp.execFile('powershell.exe', ownTreeKillCommand(pid, opts), { windowsHide: true, timeout: 20000, maxBuffer: 1024 * 1024 }, (err, stdout) => {
-      resolve({ lines: String(stdout || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean), error: err ? String(err.message || err) : '' });
-    });
-  });
-}
 function killPosixChildTree(pid, ownedChild) {
   if (process.platform === 'darwin') {
     if (!(ownedChild instanceof cp.ChildProcess) || ownedChild.pid !== Number(pid)) {
@@ -19352,48 +19159,8 @@ function killPosixChildTree(pid, ownedChild) {
     }
     return { killed, ...(validCounts ? exits : {}), scope: 'observed-tree', incomplete };
   }
-  // hunt2-engines#11:POSIX 修前只杀根 —— CLI 的 Bash 工具、MCP 子进程、ACP 终端拉起的孙辈全成孤儿,回合停了它们还在跑。
-  // Linux 按 Windows 那一支同一条判据认子孙(dev-harness/lib/kill-own-tree.js 同款):从 /proc 快照里按父号往下找,
-  // 只认启动时刻不早于父亲的(父号过期撞号的陌生进程比「父亲」还老,按构造排除);**先快照再杀根**(根一死子孙就被
-  // 过继给 init,父号对不上了),杀每个子孙前再核一次启动时刻,号被复用就不杀。其他没有 /proc 的平台仍只杀根，macOS 由上方原生 helper 处理。
-  const readStat = id => {
-    try {
-      const stat = fs.readFileSync(`/proc/${id}/stat`, 'utf8');
-      const tail = stat.slice(stat.lastIndexOf(')') + 2).split(' ');   // tail[1]=ppid(第 4 列) tail[19]=starttime(第 22 列)
-      return { pid: Number(id), ppid: Number(tail[1]), created: BigInt(tail[19]) };
-    } catch { return null; }
-  };
-  const descendants = [];
-  if (process.platform === 'linux') {
-    let table = [];
-    try { table = fs.readdirSync('/proc').filter(n => /^\d+$/.test(n)).map(readStat).filter(Boolean); } catch { table = []; }
-    const rootRow = table.find(r => r.pid === Number(pid));
-    const queue = rootRow ? [rootRow] : [];
-    const seen = new Set(queue.map(r => r.pid));
-    while (queue.length) {
-      const parent = queue.shift();
-      for (const r of table) {
-        if (seen.has(r.pid) || r.ppid !== parent.pid || r.created < parent.created) continue;
-        seen.add(r.pid);
-        descendants.push(r);
-        queue.push(r);
-      }
-    }
-  }
-  try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
-  for (const d of descendants.reverse()) {
-    const now = readStat(d.pid);
-    if (!now || now.created !== d.created) continue;
-    try { process.kill(d.pid, 'SIGKILL'); } catch { /* already gone */ }
-  }
+  return { killed: [], scope: 'unknown', incomplete: true, skipped: 'platform-unsupported' };
 }
-// 发出去就算(修前的调用形状,14 处调用点零改动):不等它。怎么「发出去」是 128i 取证定的:
-//   · Node 的 detached(DETACHED_PROCESS,没有控制台)起 powershell.exe:退出码 0、**脚本一行都没跑**(实测 3/3);
-//   · 直接 spawn(不 detached)能跑,但它在本进程的 libuv job 里 —— 服务收尸完马上退出时,job 一关它也被杀,
-//     收尸做不完(修前 taskkill 约 80 ms、多半抢得赢;这段 PowerShell 要约 0.5 s);
-//   · 经 `cmd /c start "" /b powershell …`:PowerShell 成了 cmd 的孩子,libuv 的 job 允许孙辈静默脱离 ⇒ 父进程先退也照样
-//     跑完(实测父进程 150 ms 退出、脚本 1.5 s 后照写,2/2)。-EncodedCommand 的参数只含 [A-Za-z0-9+/=],cmd 里没有注入面。
-// cmd 的命令行上限 8191 字符;超了(不会,这里留着防以后脚本变长)就退回直接 spawn。
 function killChildTree(pid) {
   const ownedChild = pid instanceof cp.ChildProcess ? pid : null;
   const supervised = ownedChild && ProcessRuntime.stopChild(ownedChild);
@@ -19403,18 +19170,7 @@ function killChildTree(pid) {
   }
   if (ownedChild) pid = ownedChild.pid;
   if (!pid) return;
-  if (process.platform !== 'win32') return killPosixChildTree(pid, ownedChild);
-  try {
-    const args = ownTreeKillCommand(pid);
-    const inner = `start "" /b powershell.exe ${args.join(' ')}`;
-    const child = inner.length < 7800
-      ? cp.spawn('cmd.exe', ['/d', '/s', '/c', `"${inner}"`], { windowsHide: true, stdio: 'ignore', windowsVerbatimArguments: true })
-      : cp.spawn('powershell.exe', args, { windowsHide: true, stdio: 'ignore' });
-    child.on('error', () => { try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ } });
-    child.unref();
-  } catch {
-    try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ }
-  }
+  return killPosixChildTree(pid, ownedChild);
 }
 
 ProcessRuntimeHooks.helperPath = () => path.join(externalRoot(), 'runtime', 'macos', 'ruyi-process-helper');
@@ -22015,7 +21771,7 @@ function sameClaudeResumeCwd(a, b) {
   if (!a || !b) return true; // unknown legacy binding: let the ledger/runtime fallback decide
   const left = path.resolve(String(a)).replace(/[\\/]+$/, '');
   const right = path.resolve(String(b)).replace(/[\\/]+$/, '');
-  return process.platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right;
+  return left === right;
 }
 function lastSuccessfulClaudeModel(messages) {
   const arr = Array.isArray(messages) ? messages : [];
@@ -28910,7 +28666,7 @@ function isKimiAcpPlanFilePath(rawPath, context) {
 function kimiAcpSamePath(left, right) {
   const a = path.resolve(String(left || ''));
   const b = path.resolve(String(right || ''));
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  return a === b;
 }
 
 // The synchronous shape check above describes lexical paths for offline callers. The actual ACP
@@ -29651,7 +29407,7 @@ function consumeKimiAcpApproval(context, kind, input) {
     }
     let sameValue = Boolean(granted && wanted && granted === wanted);
     if (kind === 'write' && granted && wanted) {
-      sameValue = process.platform === 'win32' ? granted.toLowerCase() === wanted.toLowerCase() : granted === wanted;
+      sameValue = granted === wanted;
     }
     if (kind === 'terminal') {
       if (nativeWrapper) {
@@ -29699,9 +29455,6 @@ function kimiAcpEffectiveCwd(rawCwd, context) {
     || process.cwd();
   let value = String(rawCwd || '').trim() || String(base || '').trim();
   if (!value) return '';
-  if (process.platform === 'win32' && /^\/[A-Za-z](?:\/|$)/.test(value)) {
-    value = value[1].toUpperCase() + ':' + value.slice(2).replaceAll('/', '\\');
-  }
   if (!path.isAbsolute(value)) value = path.resolve(base, value);
   return path.isAbsolute(value) ? path.resolve(value) : '';
 }
@@ -29710,31 +29463,7 @@ function kimiAcpNativeShellQuote(value) {
   return "'" + String(value).replaceAll("'", "'\\''") + "'";
 }
 
-function kimiAcpNativeWindowsPathToPosixPath(rawPath) {
-  const value = String(rawPath);
-  if (value.startsWith('\\\\')) return value.replaceAll('\\', '/');
-  const driveMatch = /^([A-Za-z]):(?:[\\/]|$)/.exec(value);
-  if (driveMatch !== null) {
-    const drive = driveMatch[1].toLowerCase();
-    const rest = value.slice(2).replaceAll('\\', '/');
-    return '/' + drive + (rest.startsWith('/') ? rest : '/' + rest);
-  }
-  return value.replaceAll('\\', '/');
-}
-
-function kimiAcpNativeBashWrapperCwdTexts(cwd) {
-  const raw = String(cwd);
-  if (process.platform !== 'win32') return [raw];
-  const slash = raw.replaceAll('\\', '/');
-  const values = [kimiAcpNativeWindowsPathToPosixPath(raw)];
-  const drive = /^([A-Za-z]):(?:\/|$)/.exec(slash);
-  if (drive) values.push(slash);
-  else {
-    const msysDrive = /^\/([A-Za-z])(?:\/|$)/.exec(slash);
-    if (msysDrive) values.push(msysDrive[1].toUpperCase() + ':' + (slash.slice(2) || '/'));
-  }
-  return [...new Set(values)];
-}
+function kimiAcpNativeBashWrapperCwdTexts(cwd) { return [String(cwd)]; }
 
 function kimiAcpNativeBashWrapperTexts(command, cwd) {
   return kimiAcpNativeBashWrapperCwdTexts(cwd).map(cwdText =>
@@ -29782,7 +29511,7 @@ function kimiAcpNativeBashRootPairs(context) {
     try { lexical = path.resolve(raw); } catch { continue; }
     let canonical = lexical;
     try { canonical = fs.realpathSync(lexical); } catch { /* root may not exist yet */ }
-    const key = process.platform === 'win32' ? lexical.toLowerCase() + '\0' + canonical.toLowerCase() : lexical + '\0' + canonical;
+    const key = lexical + '\0' + canonical;
     if (seen.has(key)) continue;
     seen.add(key);
     pairs.push({ lexical, canonical });
@@ -29808,26 +29537,6 @@ function kimiAcpTrustedNativeBashPath(canonical, context, rawPath) {
   if (!canonical) return false;
   if (kimiAcpNativeBashPathExcluded(rawPath, canonical, context)) return false;
   const name = path.basename(canonical).toLowerCase();
-  if (process.platform === 'win32') {
-    if (name !== 'bash.exe') return false;
-    const normalized = canonical.replaceAll('/', '\\').toLowerCase();
-    const standard = [
-      'c:\\program files\\git\\bin\\bash.exe',
-      'c:\\program files\\git\\usr\\bin\\bash.exe',
-      'c:\\program files (x86)\\git\\bin\\bash.exe',
-      'c:\\program files (x86)\\git\\usr\\bin\\bash.exe',
-    ];
-    for (const root of [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter(Boolean)) {
-      standard.push(path.join(root, 'Git', 'bin', 'bash.exe').toLowerCase());
-      standard.push(path.join(root, 'Git', 'usr', 'bin', 'bash.exe').toLowerCase());
-    }
-    const localAppData = String(process.env.LOCALAPPDATA || '').trim();
-    if (localAppData) standard.push(path.join(localAppData, 'Programs', 'Git', 'bin', 'bash.exe').toLowerCase());
-    if (standard.some(candidate => candidate === normalized)) return true;
-    const configured = String(process.env.KIMI_SHELL_PATH || '').trim();
-    const configuredCanonical = configured && kimiAcpCanonicalExecutable(configured);
-    return Boolean(configuredCanonical && kimiAcpSamePath(configuredCanonical, canonical));
-  }
   if (name !== 'bash') return false;
   const standard = ['/bin/bash', '/usr/bin/bash', '/usr/local/bin/bash'];
   const configured = String(process.env.KIMI_SHELL_PATH || '').trim();
@@ -30083,7 +29792,7 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
       cwd = classified.cwd;
     } else if (classified && classified.reason
       && (command === 'rg' || command.toLowerCase() === 'rg'
-        || (path.isAbsolute(command) && path.basename(command).toLowerCase() === (process.platform === 'win32' ? 'rg.exe' : 'rg')))) {
+        || (path.isAbsolute(command) && path.basename(command).toLowerCase() === ('rg')))) {
       context.onEvent({ type: 'stderr', text: `[Kimi ACP 搜索策略] ${redact(String(classified.reason))}` });
     }
   }
@@ -31487,7 +31196,7 @@ function kimiAcpSearchIsObject(value) {
 function kimiAcpSearchPathEqual(left, right) {
   const a = path.resolve(String(left || ''));
   const b = path.resolve(String(right || ''));
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  return a === b;
 }
 
 function kimiAcpSearchWithin(target, root) {
@@ -31499,12 +31208,12 @@ function kimiAcpSearchWithin(target, root) {
 }
 
 function kimiAcpSearchRgName() {
-  return process.platform === 'win32' ? 'rg.exe' : 'rg';
+  return 'rg';
 }
 
 function kimiAcpSearchIsRgName(raw) {
   const name = path.basename(String(raw || ''));
-  return process.platform === 'win32' ? name.toLowerCase() === 'rg.exe' : name === 'rg';
+  return name === 'rg';
 }
 
 function kimiAcpSearchValidateText(value, label, maxLength, allowEmpty = false) {
@@ -31591,7 +31300,7 @@ async function kimiAcpSearchRealFile(rawPath) {
   if (!stat || !stat.isFile()) return null;
   // A Unix rg must be executable. Windows executable permission is represented by the .exe suffix and not
   // by the POSIX mode bits exposed by Node, so the platform-specific check stays deliberately small.
-  if (process.platform !== 'win32' && typeof stat.mode === 'number' && (stat.mode & 0o111) === 0) return null;
+  if (typeof stat.mode === 'number' && (stat.mode & 0o111) === 0) return null;
   return path.resolve(canonical);
 }
 
@@ -31624,7 +31333,7 @@ async function kimiAcpSearchDeniedRoots(context) {
   for (const raw of roots) {
     const canonical = await kimiAcpSearchCanonicalRoot(raw);
     if (!canonical) continue;
-    const key = process.platform === 'win32' ? canonical.toLowerCase() : canonical;
+    const key = canonical;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(canonical);
@@ -31684,7 +31393,7 @@ async function kimiAcpSearchPathRgCandidates() {
     const dir = String(rawDir || '').trim().replace(/^"|"$/g, '');
     if (!dir || !path.isAbsolute(dir)) continue;
     const candidate = path.join(dir, kimiAcpSearchRgName());
-    const key = process.platform === 'win32' ? path.resolve(candidate).toLowerCase() : path.resolve(candidate);
+    const key = path.resolve(candidate);
     if (seen.has(key)) continue;
     seen.add(key);
     let stat;
@@ -32515,8 +32224,8 @@ function markNetworkOnline() {
 // { present, toolCount, optional:{ocr,uia,cv2,playwright} }. Absence/failure → present:false + all-false.
 async function probeDesktopMcp(config) {
   const out = { present: false, toolCount: 0, optional: { ocr: false, uia: false, cv2: false, playwright: false },
-    desktopAutomation: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
-    ocr: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
+    desktopAutomation: { supported: false, installed: false, authorization: 'unknown', ready: null },
+    ocr: { supported: false, installed: false, authorization: 'unknown', ready: null },
     browser: { mode: String(config?.browserAutomation?.mode || 'system'), supported: false, installed: false, runtimeInstalled: null, ready: false } };
   const projectMac = require('./backend/mac-capabilities.cjs').projectMacCapabilities;
   if (process.platform === 'darwin') Object.assign(out, projectMac(null));
@@ -32886,22 +32595,20 @@ function collectChildProcessInfo() {
   return out;
 }
 async function sampleProcessRss(pids) {
-  if (process.platform !== 'win32' || !pids.length) return {};
+  const ids = [...new Set(pids.map(Number).filter(pid => Number.isSafeInteger(pid) && pid > 0))];
+  if (!ids.length) return {};
   try {
-    // 128f-⑬:execFileSync → 异步 execFile(tasklist 本机数百毫秒;同步那一发期间整个服务不答话)。
-    const out = await new Promise((resolve, reject) => {
-      cp.execFile('tasklist', ['/fo', 'csv', '/nh'], { encoding: 'utf8', timeout: 5000, windowsHide: true }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    const output = await new Promise((resolve, reject) => {
+      cp.execFile('/bin/ps', ['-o', 'pid=,rss=', '-p', ids.join(',')], { encoding: 'utf8', timeout: 5000 },
+        (error, stdout) => error ? reject(error) : resolve(stdout));
     });
-    const want = new Set(pids.map(String));
-    const rss = {};
-    for (const line of String(out).split('\n')) {
-      const cols = line.trim().replace(/^"|"$/g, '').split('","');
-      if (cols.length < 5 || !want.has(cols[1])) continue;
-      const kb = Number(cols[cols.length - 1].replace(/[^0-9]/g, ''));
-      if (Number.isFinite(kb)) rss[cols[1]] = kb * 1024;
+    const rss = {}, allowed = new Set(ids);
+    for (const line of String(output).split('\n')) {
+      const match = /^\s*(\d+)\s+(\d+)\s*$/.exec(line);
+      if (match && allowed.has(Number(match[1]))) rss[match[1]] = Number(match[2]) * 1024;
     }
     return rss;
-  } catch { return {}; } // tasklist 不可用/超时 → RSS 缺省 null,不硬失败
+  } catch { return {}; }
 }
 async function buildMetricsPayload(config) {
   const storage = await collectStorageStats(config);
@@ -38264,7 +37971,7 @@ function memoryGlobalDir() { return path.join(paths.memory, 'global'); }
 // 规范化先例(fileAllowedRoots 的 win 去重),防 C:\\Foo 与 c:\\foo 分裂成两个项目组。
 function projectKeyForCwd(cwd) {
   let p = path.resolve(String(cwd || ''));
-  if (process.platform === 'win32') p = p.toLowerCase();
+
   return crypto.createHash('sha256').update(p, 'utf8').digest('hex').slice(0, 16);
 }
 function memoryProjectDir(cwd) { return path.join(paths.memory, 'project', projectKeyForCwd(cwd)); }
@@ -40851,7 +40558,6 @@ async function resolveEnabledMemoryEntries(session, cwd, onSourceMismatch, query
   return [...(result.coreEntries || []), ...(result.entries || [])];
 }
 
-
 // 第26波b: buildMissionPromptSection(mission, engine) —— <mission-ledger> 围栏,注入目标/里程碑进度/约束,
 // 让模型每回合都知道「整体目标是什么、还差哪几步」。fits-or-drop 语义(≤1200,超则整段丢,防截断毁闭合围栏);
 // 伪造围栏中和(同 memory/skill fence);内容为「当前任务状态」参考,不得覆盖守则。两引擎共用(对称)。
@@ -41318,7 +41024,7 @@ function normalizeAgentResource(value, cwd) {
   if (!['file', 'office', 'workspace'].includes(type)) return null;
   target = canonicalResourcePath(target || cwd, cwd);
   if (!target) return null;
-  const folded = process.platform === 'win32' ? target.toLowerCase() : target;
+  const folded = target;
   return { type, target, folded, mode, key: `${type}:${folded}`, label: `${type}:${target}` };
 }
 function normalizeAgentResources(values, cwd) {
@@ -57861,7 +57567,7 @@ function binaryReadHint(p) {
 // 修前每进程第一次都 spawnSync 一发 rg --version,把事件循环钉住。
 let _rgProbe;            // undefined = 没探过;否则 { path, source, shell } 或 null
 let _rgProbeInflight = null;
-function rgExeName() { return process.platform === 'win32' ? 'rg.exe' : 'rg'; }
+function rgExeName() { return 'rg'; }
 function rgProbeCandidates() {
   const out = [];
   const override = String(process.env.RUYI_RG_PATH || '').trim();
@@ -58086,7 +57792,7 @@ function explicitSegmentsOfRegex(src) {
     .split('/').map(x => x.trim()).filter(x => /^[\w.-]+$/.test(x));
 }
 function buildIgnoreMatcher(opts = {}) {
-  const fold = s => (process.platform === 'win32' ? String(s).toLowerCase() : String(s));
+  const fold = s => (String(s));
   const base = opts.includeIgnored === true ? HARD_IGNORE_DIRS : (opts.browse === true ? BROWSE_IGNORE_DIRS : DEFAULT_IGNORE_DIRS);
   const extra = Array.isArray(opts.ignoreDirs) ? opts.ignoreDirs : [];
   const allow = new Set((Array.isArray(opts.allowDirs) ? opts.allowDirs : []).map(x => fold(String(x || '').trim())).filter(Boolean));
@@ -58154,7 +57860,7 @@ async function walkFiles(root, opts = {}) {
   let deferred = [];
   let patternTimedOut = false;
   const ignore = buildIgnoreMatcher(opts);
-  const foldName = n => (process.platform === 'win32' ? String(n).toLowerCase() : String(n));
+  const foldName = n => (String(n));
   const skipHidden = opts.skipHidden === true;
   const allowHidden = new Set((Array.isArray(opts.allowHidden) ? opts.allowHidden : []).map(foldName));
   const toSlash = r => (path.sep === '/' ? r : r.split(path.sep).join('/'));
@@ -58703,7 +58409,7 @@ async function discoverPrunedDirs(root, opts, names) {
   const found = [];
   const base = path.resolve(root || process.cwd());
   const queue = [{ dir: base, rel: '', depth: 0, hiddenOk: false }];
-  const allowH = new Set(names.allowHidden.map(x => (process.platform === 'win32' ? x.toLowerCase() : x)));
+  const allowH = new Set(names.allowHidden.map(x => (x)));
   let reads = 0;
   const maxDepth = Math.min(searchMaxDepth(opts) || 6, 6);
   for (let qi = 0; qi < queue.length && reads < 2000 && found.length < 12; qi += 1) {
@@ -58717,7 +58423,7 @@ async function discoverPrunedDirs(root, opts, names) {
       if (!e.isDirectory()) continue;
       let ok = hiddenOk;
       if (!hiddenOk && opts.includeHidden !== true && e.name.charCodeAt(0) === 46) {
-        if (!allowH.has(process.platform === 'win32' ? e.name.toLowerCase() : e.name)) continue;
+        if (!allowH.has(e.name)) continue;
         ok = true;
       }
       const r = rel ? rel + '/' + e.name : e.name;
@@ -58935,14 +58641,14 @@ function searchFileContentRg(root, pattern, opts = {}) {
   const args = ['--json', '--no-messages', '--crlf'];
   const filt = [];
   if (opts.includeHidden === true || names.allowHidden.length) filt.push('--hidden');
-  const defaultNames = new Set(DEFAULT_IGNORE_DIRS.filter(x => !x.includes('/')).map(x => (process.platform === 'win32' ? x.toLowerCase() : x)));
-  const namedIgnored = names.allowDirs.some(x => defaultNames.has(process.platform === 'win32' ? String(x).toLowerCase() : String(x)));
+  const defaultNames = new Set(DEFAULT_IGNORE_DIRS.filter(x => !x.includes('/')).map(x => (x)));
+  const namedIgnored = names.allowDirs.some(x => defaultNames.has(String(x)));
   if (opts.includeIgnored === true || namedIgnored) filt.push('--no-ignore');
   if (opts.ignoreCase !== false) args.push('-i');
   if (ctx > 0) { args.push('-C', String(ctx)); }
   // rg 的 -g 区分大小写(Windows 也是),而忽略清单在 Windows 上是小写化、不分大小写剪的(Build/、用户的 ignoreDirs:['Vendor'])。
   // 所以 win32 上排除类 glob 走 --iglob(不分大小写);调用方自己的 glob 仍用 -g,原样不动。
-  const exclFlag = process.platform === 'win32' ? '--iglob' : '-g';
+  const exclFlag = '-g';
   if (opts.glob) { filt.push('-g', String(opts.glob)); }
   for (const g of ignoreGlobsForRg(opts, names.allowDirs)) filt.push(exclFlag, g);
   for (const g of sensitiveGlobsForRg(base)) filt.push(exclFlag, g);
@@ -62515,7 +62221,7 @@ async function zipCollectEntries(rootPaths, opts = {}) {
   const ignore = buildIgnoreMatcher({ includeIgnored: opts.includeIgnored === true, ignoreDirs: opts.ignoreDirs });
   // 2026-10 走查(R2):① skipPaths(dest 自己)不入包 —— 修前 dest 落在被打包的目录里,第二次打包就把上一次的 zip 也装进去(越滚越大);
   // ② 符号链接仍不入包,但计数上报(skippedLinks),不再静默;③ 同名顶层输入的包内名字去重(见 zipTopLevelNames)。
-  const foldP = x => (process.platform === 'win32' ? String(x).toLowerCase() : String(x));
+  const foldP = x => (String(x));
   const skipSet = new Set((Array.isArray(opts.skipPaths) ? opts.skipPaths : []).map(x => foldP(path.resolve(String(x)))));
   entries.skippedLinks = 0;
   entries.skippedDest = false;
@@ -63332,7 +63038,7 @@ const FileTextIo = (() => {
         }
         throw error;
       }
-      if (st && process.platform !== 'win32') {
+      if (st) {
         try { await nodeFsp.chmod(tmp, st.mode & 0o7777); } catch { /* preserve mode best-effort */ }
       }
       const retries = Number.isFinite(opts.retries) ? opts.retries : 8;
@@ -63626,7 +63332,7 @@ const FileVisualIo = (() => {
     if (st.size > MAX_FILE_BYTES) return { ok: false, code: 'file_too_large', error: 'Document exceeds 50MB; split it before reading.', path: p };
     const candidates = [];
     if (process.env.RUYI_BUNDLED_PYTHON) candidates.push([process.env.RUYI_BUNDLED_PYTHON, []]);
-    candidates.push(['python', []], process.platform === 'win32' ? ['py', ['-3']] : ['python3', []]);
+    candidates.push(['python', []], ['python3', []]);
     for (const [exe, pre] of candidates) {
       const argv = [...pre, '-I', '-X', 'utf8', helperPath, p, JSON.stringify(options(args))];
       const res = process.platform === 'darwin' ? await runMacReader(exe, argv, signal) : await new Promise(resolve => {
@@ -63776,7 +63482,7 @@ const MediaInspection = (() => {
     for (const name of names.filter(Boolean)) {
       if (nodePath.isAbsolute(name)) { if ((await io.stat(name).catch(() => null))?.isFile()) found.push(name); continue; }
       for (const dir of String(process.env.PATH || '').split(nodePath.delimiter).filter(Boolean)) {
-        for (const suffix of process.platform === 'win32' ? ['.exe', ''] : ['']) {
+        for (const suffix of ['']) {
           const candidate = nodePath.join(dir, name + suffix);
           if ((await io.stat(candidate).catch(() => null))?.isFile()) found.push(candidate);
         }
@@ -63795,7 +63501,7 @@ const MediaInspection = (() => {
     const previous = cache.get(key);
     if (!refresh && previous && Date.now() - previous.at < 30000 && (!previous.value.path || await io.stat(previous.value.path).catch(() => null))) return previous.value;
     let names = [];
-    if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python'), 'python3', 'python'];
+    if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, 'bin/python'), 'python3', 'python'];
     if (kind === 'node') names = [process.execPath, 'node'];
     if (kind === 'ffmpeg') names = [process.env.IMAGEIO_FFMPEG_EXE, process.env.FFMPEG_BINARY, 'ffmpeg'];
     if (kind === 'ffprobe') names = ['ffprobe'];
@@ -63819,12 +63525,11 @@ const MediaInspection = (() => {
     if (kind === 'ffprobe' && !executablePaths.length) {
       const ffmpeg = await locate('ffmpeg', refresh, signal);
       if (ffmpeg.code) return ffmpeg;
-      if (ffmpeg.available) executablePaths = await candidates([nodePath.join(nodePath.dirname(ffmpeg.path), process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe')]);
+      if (ffmpeg.available) executablePaths = await candidates([nodePath.join(nodePath.dirname(ffmpeg.path), 'ffprobe')]);
     }
     let value = { available: false, path: null, version: null };
     for (const candidate of executablePaths.slice(0, 8)) {
       // Chrome --version can launch a visible browser on Windows; existence is reported honestly.
-      if (kind === 'chrome' && process.platform === 'win32') { value = { available: true, path: candidate, version: null, verification: 'file_exists' }; break; }
       const r = await run(candidate, [kind === 'ffmpeg' || kind === 'ffprobe' ? '-version' : '--version'], { signal });
       if (r.cleanupIncomplete || ['aborted', 'process_output_incomplete'].includes(r.errorCode) || /^process_helper_/.test(r.errorCode || '')) return { available: false, path: null, version: null,
         code: r.cleanupIncomplete ? 'process_cleanup_incomplete' : r.errorCode, ...cleanupFields(r) };
@@ -64098,7 +63803,7 @@ function journalCheckpointWarn(jr) {
 const fileToolWriteChains = new Map();
 function fileToolWriteLockKey(filePath) {
   const resolved = path.resolve(String(filePath || ''));
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  return resolved;
 }
 function withFileToolWriteLock(filePaths, signal, work) {
   // Darwin aliases include case/Unicode spellings, Data paths and hard links. A shared
@@ -66111,7 +65816,7 @@ const ARCHIVE_TOOL_HANDLERS = {
       // 2026-10 走查(R2):包内路径自相矛盾(`f` 是文件、`f/g.txt` 又要求 f 是目录)→ 落任何盘之前就整包拒绝。
       // 修前写到冲突那条才抛 EEXIST,前面已写的文件留在盘上、而且没有任何报告。
       {
-        const fk = x => (process.platform === 'win32' ? String(x).toLowerCase() : String(x));
+        const fk = x => (String(x));
         const destKey = fk(destReal);
         const fileEntries = new Map();
         const dirKeys = new Set();
@@ -66309,18 +66014,17 @@ async function resolveGitToolCwd(args, ctx, { exec = false } = {}) {
 // NE-13:python 解释器候选。Windows 全新机器上裸 `python` 常是 Microsoft Store 占位程序(退出码 9009)或根本没有,`py -3` 才是官方启动器;
 // 非 Windows 有些发行版只有 python3。找不到(ENOENT / 9009)才换下一个候选。
 async function runPythonScript(scriptPath, opts) {
-  const win = process.platform === 'win32';
-  const candidates = win ? [['python', []], ['py', ['-3']]] : [['python', []], ['python3', []]];
+  const candidates = [...new Set([process.env.RUYI_BUNDLED_PYTHON, process.env.PYTHON, 'python3', 'python'].filter(Boolean))].map(command => [command, []]);
   // NE-13:管道下 Windows 中文系统的 python 按 cp936 写 stdout / 读文件,脚本里的 ✓ → emoji 会 UnicodeEncodeError —— 强制 UTF-8。
   // PYTHONPATH 补上工作目录:脚本文件在应用目录里,修前 `import helper`(工作区里的 helper.py)找不到。
   const env = { PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8', PYTHONPATH: [opts && opts.cwd, process.env.PYTHONPATH].filter(Boolean).join(path.delimiter) };
   let last = null;
   for (const [cmd, pre] of candidates) {
     last = await DesktopShell.runProcess(cmd, [...pre, scriptPath], { ...opts, env, shape: true });
-    const notFound = (last.code === -1 && /ENOENT/i.test(String(last.stderr || ''))) || (win && last.code === 9009);
+    const notFound = (last.code === -1 && /ENOENT/i.test(String(last.stderr || '')));
     if (!notFound) return last;
   }
-  return { ...last, error: '未找到可用的 Python 解释器', hint: '可改用 language:"powershell" 或 "node",或请用户安装 Python(python.org)后重试' };
+  return { ...last, error: '未找到可用的 Python 解释器', hint: '可改用 language:"bash" 或 "node",或请用户安装 Python(python.org)后重试' };
 }
 
 const SHELL_TOOL_HANDLERS = {
@@ -70671,7 +70375,7 @@ async function handleApi(req, res, pathname) {
   // in the turn (bounded to 12). Unlike office_open this never hands source files to an arbitrary association:
   // resolvePreferredCodeEditor accepts only known editors/IDEs, preventing `.js` -> WScript execution.
   if (req.method === 'POST' && pathname === '/api/checkpoints/open-external') {
-    if (!['win32', 'darwin'].includes(process.platform)) return send(res, apiFailure('editor.platform_unsupported', {}, '仅支持 Windows 和 macOS', 400));
+    if (process.platform !== 'darwin') return send(res, apiFailure('editor.platform_unsupported', {}, '仅支持 macOS', 400));
     const body = await readJsonBody(req);
     const sessionId = safeSessionId(body && body.sessionId);
     const turnSeq = Number(body && body.turnSeq);
@@ -70820,7 +70524,7 @@ async function handleApi(req, res, pathname) {
     if (!OPEN_PATH_TARGETS.includes(target)) {
       return send(res, apiFailure('openPath.target_unknown', {}, '只能打开如意自己的几个固定位置,不接受任意路径', 400));
     }
-    if (process.platform !== 'win32' && process.platform !== 'darwin') return send(res, json({ ok: false, error: '仅支持 Windows 和 macOS' }));
+    if (process.platform !== 'darwin') return send(res, json({ ok: false, error: '仅支持 macOS' }));
     const sessionId = safeSessionId(body && body.sessionId);
     const session = sessionId ? await loadSession(sessionId) : null;
     const dir = openPathTargetDir(target, session);
@@ -70918,7 +70622,7 @@ async function handleApi(req, res, pathname) {
   // 与 /api/file/preview 同一护栏), 文件必须存在。执行绝不走 shell(命令注入面), 用 cp.spawn('explorer.exe',…,
   // Windows 使用前台助手，macOS 使用 /usr/bin/open；两者沿用 token 鉴权和路径护栏。
   if (req.method === 'POST' && pathname === '/api/file/reveal') {
-    if (process.platform !== 'win32' && process.platform !== 'darwin') return send(res, json({ ok: false, error: '仅支持 Windows 和 macOS' }));
+    if (process.platform !== 'darwin') return send(res, json({ ok: false, error: '仅支持 macOS' }));
     const body = await readJsonBody(req);
     const mode = (body && body.mode === 'select') ? 'select' : 'open';
     const rawPath = body && typeof body.path === 'string' ? body.path : '';
@@ -71104,138 +70808,6 @@ async function handleApi(req, res, pathname) {
 // --- startup port fallback: if the port is held by a STALE workbench, free it and retry ---
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// PIDs LISTENING on `port` (any local interface). Parses `netstat -ano`. Returns [] on any error.
-function pidsOnPort(port) {
-  return new Promise(resolve => {
-    cp.execFile('netstat', ['-ano'], { windowsHide: true, timeout: 5000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
-      if (err || !stdout) return resolve([]);
-      const suffix = ':' + port;
-      const pids = new Set();
-      for (const line of stdout.split(/\r?\n/)) {
-        if (!/\bLISTENING\b/i.test(line)) continue;
-        const parts = line.trim().split(/\s+/);
-        if (parts.length < 5) continue;
-        if (!String(parts[1]).endsWith(suffix)) continue; // local address column ends with :port
-        const pid = parseInt(parts[parts.length - 1], 10);
-        if (Number.isInteger(pid) && pid > 0) pids.add(pid);
-      }
-      resolve([...pids]);
-    });
-  });
-}
-function processImage(pid) {
-  return new Promise(resolve => {
-    cp.execFile('tasklist', ['/FI', `PID eq ${pid}`, '/FO', 'CSV', '/NH'], { windowsHide: true, timeout: 5000 }, (err, stdout) => {
-      const m = !err && stdout ? /^"([^"]+)"/.exec(stdout.trim()) : null;
-      resolve(m ? m[1] : '');
-    });
-  });
-}
-// 第36波(v1.7): 命令行取证 —— node.exe 镜像名单独不足以证明"这是我们的 stale workbench"(见 freeStalePort
-// 的 image:node 分支)。返回 CommandLine+ExecutablePath 的小写合并串供证据匹配,拿不到返回 ''。pid 是 netstat
-// 解析出的整数,execFile 直调无 shell,无注入面;CIM 首次查询较慢,给 8s。
-function processCommandLine(pid) {
-  return new Promise(resolve => {
-    const ps = `$p = Get-CimInstance Win32_Process -Filter "ProcessId=${pid}"; if ($p) { $p.CommandLine; $p.ExecutablePath }`;
-    // 按行判 UTF-8 / GBK:工作台装在中文路径下时,命令行里的中文按 UTF-8 解是乱码,取证就对不上自己。
-    cp.execFile('powershell.exe', ['-NoLogo', '-NoProfile', '-Command', ps], { windowsHide: true, timeout: 8000, encoding: 'buffer' }, (err, stdout) => {
-      resolve(err || !stdout || !stdout.length ? '' : decodeConsoleText(stdout).toLowerCase());
-    });
-  });
-}
-// 128i:占端口的旧工作台连同它自己的子孙一起收 —— 走 04 的 killOwnProcessTree(按创建时间认子孙、动手前核启动时间),
-// 不再用 taskkill /T(父号过期撞号时会带走别人的树)。等它跑完再回:调用方紧接着要重试监听。
-async function killPid(pid) {
-  await killOwnProcessTree(pid);
-}
-function probeHealth(port, host) {
-  return new Promise(resolve => {
-    const req = http.get({ host, port, path: '/health', timeout: 900 }, res => {
-      let body = '';
-      res.setEncoding('utf8');   // app 字段是中文品牌名:按 Buffer 拼接遇到跨块的多字节字符会损坏
-      res.on('data', c => { body += c; if (body.length > 65536) req.destroy(); });
-      res.on('end', () => resolve(safeJsonParse(body, null)));
-    });
-    req.on('error', () => resolve(null));
-    req.on('timeout', () => { req.destroy(); resolve(null); });
-  });
-}
-// /health 的回包像不像工作台。修前判据是 `app === APP_NAME || overlayId || version`,而 /health 从不带 app,
-// 于是退化成「有 version 字段就算」—— 本机别的服务(任何回 {version:…} 的 /health)占了端口会被当成陈旧工作台杀掉。
-// 现在 /health 带 app: APP_NAME(见 startServerInner);识别口径:
-//   · app 等于本应用名;或有 overlayId(每个进程一个的重启证明,别的服务不会有);
-//   · 旧版工作台的 /health 没有 app:只认「version 同时带着工作台 /health 的另外两个特征字段(launchMode + uptimeSec)」,
-//     单有 version 不够。旧版若连这个形状都不满足,下面还有 runtime.json 的 pid / 镜像名 / 命令行三道证据兜底。
-function healthLooksLikeWorkbench(health) {
-  if (!health || typeof health !== 'object') return false;
-  if (health.app === APP_NAME) return true;
-  if (typeof health.overlayId === 'string' && health.overlayId) return true;
-  return typeof health.version === 'string' && !!health.version
-    && typeof health.launchMode === 'string' && Number.isFinite(health.uptimeSec);
-}
-// 端口被占时,只在「占着它的正是【本数据目录】登记的那个实例」时才接管(结束它再原端口重来);除此之外一律不动、顺延到下一个端口。
-// 安全走查(端口接管):修前对「任何像如意的占用者」都动手 —— /health 像工作台、或镜像名是 Ruyi / node + server.js,就杀。
-// 两份不同安装目录(或不同数据目录)的如意先后启动,后者会把前者连同它正在跑的回合一起结束。现在的唯一凭据是
-// 本数据目录 runtime.json 里记的 pid:那是本数据目录上一次启动写下的「我是谁」,pid 对上才说明它是自己的陈旧实例。
-// 别的数据目录的实例、别的安装里的如意、别人的服务,pid 都对不上 → blocked,调用方顺延端口。
-// 纯函数(不碰进程、不碰盘),单测直调:入参是已取好的证据,返回 { ours:boolean, why?, reason? }。
-//   · pid 必须等于 runtime.json 的 pid;runtime.json 记了端口的话,必须就是这个端口(登记的实例本不在这个端口上 = 号被别人撞了);
-//   · /health 在应答且带 overlayId、runtime.json 也记了 overlayId 时必须一致(pid 被回收给另一个如意进程时 overlayId 不同);
-//   · 取得到镜像名时必须像工作台:Ruyi / WinClaudeWorkbench 直接认,node 须命令行里有 server.js(取不到命令行不加否决),其余一律不认。
-function portHolderTakeoverVerdict({ pid, port, runtime, health, image, commandLine }) {
-  if (!runtime || !Number.isInteger(runtime.pid) || runtime.pid <= 0 || runtime.pid !== pid) return { ours: false, reason: 'not-recorded-pid' };
-  if (Number.isInteger(runtime.port) && runtime.port !== port) return { ours: false, reason: 'recorded-on-other-port' };
-  if (healthLooksLikeWorkbench(health) && typeof health.overlayId === 'string' && health.overlayId
-    && typeof runtime.overlayId === 'string' && runtime.overlayId && health.overlayId !== runtime.overlayId) {
-    return { ours: false, reason: 'overlay-mismatch' };
-  }
-  let why = null;
-  const img = String(image || '');
-  if (!img) why = 'runtime.json';
-  else if (/Ruyi|WinClaudeWorkbench/i.test(img)) why = 'runtime.json+image:' + img; // v1.0-S9 exe 改名 Ruyi.exe;双名兼容(旧构建/存量进程仍可能名 WinClaudeWorkbench)
-  else if (/^node(\.exe)?$/i.test(img)) {
-    // 第36波(v1.7)起 node.exe 镜像名【不是】充分证据:登记 pid 只是前提,这里再核命令行,防「pid 被回收给一个无关的 node 服务」。
-    const evidence = String(commandLine || '').toLowerCase();
-    if (evidence && !/server\.js/.test(evidence)) return { ours: false, reason: 'node-not-workbench' };
-    if (evidence) why = 'image:node+cmdline';
-    else why = 'runtime.json';
-  }
-  else return { ours: false, reason: 'foreign-image' };
-  return { ours: true, why };
-}
-async function readOwnRuntimeRecord() {
-  try {
-    const rt = safeJsonParse(await fsp.readFile(path.join(paths.data, 'runtime.json'), 'utf8'), null);
-    return rt && typeof rt === 'object' && !Array.isArray(rt) ? rt : null;
-  } catch { return null; /* 没有上一次的 runtime.json:没有可接管的自己人 */ }
-}
-// 返回 { ok:true, killed:[…] } 或 { ok:false, blocked:{ pid, image, reason, workbench } }(blocked = 占用者不是自己人,没动它)。
-// deps 只给单测换桩(netstat / tasklist / CIM / taskkill 在 Linux 上都不存在)。
-async function freeStalePort(port, host, deps = {}) {
-  const d = { pidsOnPort, probeHealth, processImage, processCommandLine, killPid, readOwnRuntimeRecord, ...deps };
-  const pids = await d.pidsOnPort(port);
-  if (!pids.length) return { ok: true, killed: [] }; // maybe TIME_WAIT with no live listener — retry handles it
-  const health = await d.probeHealth(port, host);
-  const runtime = await d.readOwnRuntimeRecord();
-  // 两遍走:先给每个占用者下判决,有一个不是自己人就整体放弃、谁也不杀(不会杀了自己人的一半、再因为别人占着而失败);都是自己人才动手。
-  const verdicts = [];
-  for (const pid of pids) {
-    if (pid === process.pid) continue; // never kill self
-    const image = await d.processImage(pid);
-    // 只有「登记的就是它」且镜像是 node 时才花那一发 CIM(8s 上限)取命令行。
-    const commandLine = runtime && pid === runtime.pid && /^node(\.exe)?$/i.test(String(image || '')) ? await d.processCommandLine(pid) : '';
-    const verdict = portHolderTakeoverVerdict({ pid, port, runtime, health, image, commandLine });
-    if (!verdict.ours) return { ok: false, blocked: { pid, image: image || '(unknown)', reason: verdict.reason, workbench: healthLooksLikeWorkbench(health) } };
-    verdicts.push({ pid, why: verdict.why });
-  }
-  const killed = [];
-  for (const { pid, why } of verdicts) {
-    await d.killPid(pid);
-    killed.push({ pid, why });
-    console.log(`[port] :${port} held by this data dir's stale instance — killed PID ${pid} (${why})`);
-  }
-  return { ok: true, killed };
-}
 // One listen attempt on an explicit port. Extracted from listenWithFallback so the 118c fallback scan can
 // reuse it. A failed listen leaves the server unbound, so calling it again on another port is legal.
 function listenOnce(server, port, host) {
@@ -72074,14 +71646,10 @@ async function installIntegration() {
   await ensureDirs();
   const config = await readConfig();
   const mcpPath = await generateMcpConfig();
-  const installer = path.join(externalRoot(), 'resources', 'scripts', 'install-workbench.ps1');
   console.log(`${APP_NAME} integration`);
   console.log(`Data root: ${paths.data}`);
   console.log(`MCP config: ${mcpPath}`);
   console.log(`Claude CLI: ${config.claudePath || '(not configured)'}`);
-  if (fs.existsSync(installer)) {
-    console.log(`Run installer script: powershell -ExecutionPolicy Bypass -File "${installer}"`);
-  }
   if (config.claudePath && existsExecutable(config.claudePath)) {
     // 3.0:先移除旧 id 的登记(win-claude-workbench;没有就报错,忽略),再按新 id 'ruyi' 登记 —— 否则 Claude Code 里
     // 同一个工作台 MCP 会以两个名字各起一个子进程。
@@ -78827,13 +78395,13 @@ function stewardDeliveryFiles(summary, cwd) {
   for (const row of [...(Array.isArray(summary.artifacts) ? summary.artifacts : []), ...(Array.isArray(summary.filesChanged) ? summary.filesChanged : [])]) {
     if (!row || typeof row.path !== 'string' || !row.path.trim()) continue;
     const absolute = path.resolve(cwd || '', row.path);
-    const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+    const key = absolute;
     pathsByKey.set(key, { path: absolute, name: path.win32.basename(absolute), kind: kindForPath(absolute) });
   }
   return [...pathsByKey.values()];
 }
 function stewardDeliveryReferencedFiles(session, summary, text) {
-  const keyFor = value => process.platform === 'win32' ? value.toLowerCase() : value;
+  const keyFor = value => value;
   const files = new Map(stewardDeliveryFiles(summary, session.cwd).map(file => [keyFor(file.path), file]));
   // 只接受本任务此前执行记录中已有的产物，且本轮原文用行内代码或 Markdown 链接明确引用路径。
   // 不扫描任意路径、不把用户文字或导入摘要变成本机产物证据，也不凭文件同名猜测。
@@ -79042,7 +78610,7 @@ function stewardCanonWorkspacePath(stewardWsPathRaw) {
 // `p.toLowerCase()`,配置层已经把两种写法当成【同一行】—— 这里再做区分大小写就比表本身还严,会出现
 // 「表里加不进第二份、传进来又被拒」的死角。非 win32 上文件系统真区分大小写,所以不折。
 function stewardFoldWorkspacePath(stewardWsPathCanon) {
-  return process.platform === 'win32' ? String(stewardWsPathCanon).toLowerCase() : String(stewardWsPathCanon);
+  return String(stewardWsPathCanon);
 }
 
 // W7:已知工作区(同步、纯读配置)。用户的常用工作区在前(顺序即优先级),如意自己开的在后(新开的在前)。
@@ -83391,7 +82959,7 @@ function stewardArbiterCwdKey(cwd) {
   // 两条线程并发改。同步版是刻意的:锁键要在 entry 构造时(同步段内)就定下来,不能为它引入一次 await
   // (那正是 P0-5 那条 TOCTOU 的来源)。目录还没建出来 / 没权限就退回 resolve 后的路径。
   try { abs = (fs.realpathSync.native || fs.realpathSync)(abs); } catch { /* ENOENT / EPERM:用 resolve 结果 */ }
-  const folded = process.platform === 'win32' ? abs.toLowerCase() : abs;
+  const folded = abs;
   return crypto.createHash('sha1').update(folded).digest('hex').slice(0, 12);
 }
 
@@ -90404,15 +89972,7 @@ async function migrationSendToRecycleBin(root) {
     if (!r.ok || result?.ok !== true || !path.isAbsolute(result.trashedPath || '') || fs.existsSync(root)) return { error: 'recycle-failed' };
     return { via: 'macos-trash', trashedPath: result.trashedPath };
   }
-  if (process.platform !== 'win32') return { error: 'unsupported-platform' };
-  // 目标路径经环境变量传入,脚本是纯 ASCII 常量 —— 零拼接、零注入。只移进回收站(SendToRecycleBin),不做永久删除。
-  const script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName Microsoft.VisualBasic; "
-    + '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($env:RUYI_RECYCLE_TARGET, '
-    + '[Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs, [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)';
-  const r = await DesktopShell.runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-    { env: { RUYI_RECYCLE_TARGET: root }, timeoutMs: 180000 });
-  if (fs.existsSync(root)) return { error: 'recycle-failed', detail: String((r && (r.stderr || r.stdout)) || '').trim().slice(0, 400) };
-  return { via: 'recycle-bin' };
+  return { error: 'unsupported-platform' };
 }
 async function migrationRecycle(body) {
   return migrationSerial(async () => {
@@ -92693,7 +92253,6 @@ module.exports = {
   buildMcpConnectorInventory,
   safeUrlForDisplay, // 55a:远程 URL 展示脱敏 - exposed for e2e 直测
   killChildTree, // 128i:发出去就算的那一支(14 处调用点的旧形状)—— exposed for unit/kill-own-process-tree.test.js [R2]
-  killOwnProcessTree, // 128i:收尸只认自己的子孙 —— exposed for unit/kill-own-process-tree.test.js(dry 模式钉判据、真进程钉收尸)
   killAllMcpClients, // 55a:e2e 直测探针后清理 spawn 的 fake-mcp 子进程(避免 unref 子进程泄漏)
   normalizeConfig, CONFIG_MIGRATIONS, // 架构还债批 2 B1:一次性 schema 迁移表(unit/config-migrations.test.js 钉顺序与金样)
   // 128a:读-改-写整条环 exposed for unit/config-explicit-keys.test.js(真读盘、真写盘,临时 HOME)。
@@ -93050,8 +92609,6 @@ module.exports = {
   guardWorkspacePath,
   buildRevealSpawn,
   // Native code-editor handoff + exact turn baselines — exposed for offline regression tests.
-  executableFromAssociationCommand,
-  classifyCodeEditorExecutable,
   buildCodeEditorSpawn,
   captureWorkspaceTurnBaseline,
   reconcileWorkspaceTurnBaseline,

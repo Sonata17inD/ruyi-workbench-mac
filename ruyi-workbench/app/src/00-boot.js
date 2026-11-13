@@ -101,7 +101,7 @@ function dataRoot() {
 function dataRootAliases() {
   const root = dataRoot();
   if (_dataRootMemo && _dataRootMemo.root === root && Array.isArray(_dataRootMemo.aliases)) return _dataRootMemo.aliases;
-  const norm = p => (process.platform === 'win32' ? String(p).toLowerCase() : String(p));
+  const norm = p => (String(p));
   let rootReal = '';
   try { rootReal = norm(fs.realpathSync(root)); } catch { return []; }
   const { next, legacy } = defaultDataRoots();
@@ -159,15 +159,13 @@ function externalRoot() {
 // system Python that cannot import openpyxl/winsdk. Expose the bundled interpreter process-wide so
 // native provider tools, Claude CLI children, PowerShell tasks, and direct Ruyi.exe launches agree.
 function exposeBundledPythonRuntime() {
-  if (!['win32', 'darwin'].includes(process.platform)) return '';
-  const pythonDir = process.platform === 'darwin'
-    ? path.join(externalRoot(), 'mcp', 'ai-computer-control', 'runtime', 'python', 'bin')
-    : path.join(externalRoot(), 'mcp', 'ai-computer-control', 'python_embed');
-  const pythonExe = path.join(pythonDir, process.platform === 'darwin' ? 'python3' : 'python.exe');
+  if (process.platform !== 'darwin') return '';
+  const pythonDir = path.join(externalRoot(), 'mcp', 'ai-computer-control', 'runtime', 'python', 'bin');
+  const pythonExe = path.join(pythonDir, 'python3');
   try { if (!fs.existsSync(pythonExe)) return ''; } catch { return ''; }
   const currentPath = String(process.env.PATH || process.env.Path || '');
   const pathDirs = currentPath.split(path.delimiter).filter(Boolean);
-  const normalized = dir => process.platform === 'win32' ? path.resolve(dir).toLowerCase() : path.resolve(dir);
+  const normalized = dir => path.resolve(dir);
   if (!pathDirs.some(dir => normalized(dir) === normalized(pythonDir))) {
     process.env.PATH = [pythonDir, ...pathDirs].join(path.delimiter);
   }
@@ -203,7 +201,7 @@ function ruyiVendorBinDir() {
   } catch { return ''; }
 }
 function samePathEntry(a, b) {
-  const norm = p => { const r = path.resolve(String(p || '').trim().replace(/^"|"$/g, '')); return process.platform === 'win32' ? r.toLowerCase() : r; };
+  const norm = p => { const r = path.resolve(String(p || '').trim().replace(/^"|"$/g, '')); return r; };
   try { return norm(a) === norm(b); } catch { return false; }
 }
 const RUYI_PATH_BEFORE_VENDOR = String(process.env.PATH || process.env.Path || '');
@@ -1483,8 +1481,8 @@ function tildePath(p) {
   const s = String(p || '');
   const home = os.homedir();
   if (!home || !s) return s;
-  const a = process.platform === 'win32' ? s.toLowerCase() : s;
-  const h = process.platform === 'win32' ? home.toLowerCase() : home;
+  const a = s;
+  const h = home;
   if (a === h) return '~';
   if (a.startsWith(h) && (s[home.length] === '\\' || s[home.length] === '/')) return '~' + s.slice(home.length).replace(/\\/g, '/');
   return s;
@@ -1493,8 +1491,8 @@ function tildePath(p) {
 // 路径比较键:resolve + 去尾分隔符;Windows 下大小写不敏感。
 function samePathKey(p) {
   let s = path.resolve(String(p || ''));
-  if (process.platform === 'win32') s = s.toLowerCase();
-  return s.length > 3 ? s.replace(process.platform === 'win32' ? /[\\/]+$/ : /\/+$/, '') : s;
+
+  return s.length > 3 ? s.replace(/\/+$/, '') : s;
 }
 
 // 如意包根标记:<root>/app/server.js 是文件,且 <root>/package.json 的 name 是 ruyi-workbench 或

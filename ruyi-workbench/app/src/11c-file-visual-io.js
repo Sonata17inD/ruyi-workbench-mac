@@ -100,7 +100,7 @@ const FileVisualIo = (() => {
     if (st.size > MAX_FILE_BYTES) return { ok: false, code: 'file_too_large', error: 'Document exceeds 50MB; split it before reading.', path: p };
     const candidates = [];
     if (process.env.RUYI_BUNDLED_PYTHON) candidates.push([process.env.RUYI_BUNDLED_PYTHON, []]);
-    candidates.push(['python', []], process.platform === 'win32' ? ['py', ['-3']] : ['python3', []]);
+    candidates.push(['python', []], ['python3', []]);
     for (const [exe, pre] of candidates) {
       const argv = [...pre, '-I', '-X', 'utf8', helperPath, p, JSON.stringify(options(args))];
       const res = process.platform === 'darwin' ? await runMacReader(exe, argv, signal) : await new Promise(resolve => {

@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 91,
-    "providedSymbols": 3880,
-    "requiredSymbols": 3509,
+    "providedSymbols": 3857,
+    "requiredSymbols": 3503,
     "edges": 641,
     "forwardEdges": 66,
     "duplicateProvides": 0,
@@ -2349,8 +2349,6 @@
         "BRIDGED_SCRIPT_TOOLS",
         "BRIDGED_WRITE_AUDIT_EXEMPT",
         "BRIDGED_WRITE_NAME_PATTERN",
-        "CODE_EDITOR_ASSOCIATION_EXTS",
-        "CODE_EDITOR_KINDS",
         "EXTERNAL_DIFF_CACHE_TTL_MS",
         "GITCLI_CACHE_MS",
         "MAC_MANAGED_ROOTS",
@@ -2381,7 +2379,6 @@
         "WRITE_PROTECTED_DATA_FILES",
         "WriteBoundaryHooks",
         "_dataRootReal",
-        "_defaultBrowserExecutable",
         "_gitCliProbe",
         "_homeRealCache",
         "auditBridgedWriteCoverage",
@@ -2393,14 +2390,10 @@
         "buildDeliveryRevisionPrompt",
         "buildOpenSpawn",
         "buildRevealSpawn",
-        "classifyCodeEditorExecutable",
         "cleanupExternalDiffCache",
-        "codeEditorLabel",
         "cwdWarning",
-        "defaultBrowserExecutable",
         "deviceNamespaceIsLocalVolume",
         "ensureDataRootReal",
-        "executableFromAssociationCommand",
         "existsExecutable",
         "existsExecutableAsync",
         "fileAllowedRoots",
@@ -2408,7 +2401,6 @@
         "guardWorkspaceExecute",
         "guardWorkspacePath",
         "homeRealpathSync",
-        "installedCodeEditorCandidates",
         "isAutoLoadedLaunchConfigPath",
         "isBrowserDocumentTarget",
         "isMacManagedPath",
@@ -2453,8 +2445,6 @@
         "userHomePersistenceHit",
         "userHomePersistenceTargets",
         "wideWriteModeEnabled",
-        "windowsFileAssociationExecutable",
-        "windowsRegistryString",
         "workspaceWriteRoots"
       ],
       "requires": [
@@ -2463,13 +2453,6 @@
           "symbol": "agentCliHomes",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -2736,7 +2719,6 @@
         "McpHttpClient",
         "McpStdioClient",
         "NATIVE_CLAUDE_AGENT_RESULT_MAX_CHARS",
-        "OWN_TREE_KILL_PS",
         "PROMPT_DEADLINE_HORIZON_MS",
         "PROMPT_WAIT_UNLIMITED_MS",
         "PermissionWaitHooks",
@@ -2799,7 +2781,6 @@
         "isSensitiveUrlParamName",
         "killAllMcpClients",
         "killChildTree",
-        "killOwnProcessTree",
         "killPosixChildTree",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
@@ -2833,7 +2814,6 @@
         "normalizeQuestionContext",
         "normalizeUserQuestions",
         "notifyActiveChildTaps",
-        "ownTreeKillCommand",
         "parseAgentCliEvent",
         "parseClaudeEvent",
         "parseClaudeTaskNotification",
@@ -4840,7 +4820,6 @@
         "kimiAcpNativeBashWrapperMatches",
         "kimiAcpNativeBashWrapperTexts",
         "kimiAcpNativeShellQuote",
-        "kimiAcpNativeWindowsPathToPosixPath",
         "kimiAcpNormalizedToolName",
         "kimiAcpNoteConfigActual",
         "kimiAcpObjectInput",
@@ -13876,14 +13855,11 @@
         "doctorHumanLines",
         "doctorLocaleCatalog",
         "fetchProxyModels",
-        "freeStalePort",
         "getProxyModelsCache",
         "handleApi",
-        "healthLooksLikeWorkbench",
         "helpDocTitle",
         "helpDocsDir",
         "installIntegration",
-        "killPid",
         "kimiModelList",
         "latestLogFile",
         "listenOnNextFreePort",
@@ -13893,13 +13869,7 @@
         "offlineModelList",
         "openPathTargetDir",
         "parseArgs",
-        "pidsOnPort",
-        "portHolderTakeoverVerdict",
-        "probeHealth",
-        "processCommandLine",
-        "processImage",
         "proxyModelsCacheMemo",
-        "readOwnRuntimeRecord",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
         "resolveNodeModel",
@@ -13984,13 +13954,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "dataRootAliases",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeConsoleText",
           "kinds": [
             "call"
           ]
@@ -14915,13 +14878,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killOwnProcessTree",
           "kinds": [
             "call"
           ]
@@ -26297,21 +26253,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "classifyCodeEditorExecutable",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "executableFromAssociationCommand",
           "kinds": [
             "read"
           ]
@@ -26431,13 +26373,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killOwnProcessTree",
           "kinds": [
             "read"
           ]
@@ -29942,7 +29877,6 @@
       "symbols": [
         "URL",
         "agentCliHomes",
-        "cp",
         "crypto",
         "dataRoot",
         "dataRootAliases",
@@ -33041,7 +32975,6 @@
         "cp",
         "crypto",
         "dataRootAliases",
-        "decodeConsoleText",
         "defaultDataRoots",
         "ensureDirs",
         "exePath",
@@ -33272,7 +33205,6 @@
         "activeChildren",
         "killAllMcpClients",
         "killChildTree",
-        "killOwnProcessTree",
         "logEvent",
         "makeAttachmentRecord",
         "redact",
@@ -36694,9 +36626,7 @@
         "buildCodeEditorSpawn",
         "buildOpenSpawn",
         "buildRevealSpawn",
-        "classifyCodeEditorExecutable",
         "cwdWarning",
-        "executableFromAssociationCommand",
         "guardFileToolPath",
         "guardWorkspacePath",
         "pathWithinAnyRoot",
@@ -36724,7 +36654,6 @@
         "invalidateMcpDropInCache",
         "killAllMcpClients",
         "killChildTree",
-        "killOwnProcessTree",
         "makeAttachmentRecord",
         "mcpChildExitResult",
         "nativeClaudeAgentResultInfo",

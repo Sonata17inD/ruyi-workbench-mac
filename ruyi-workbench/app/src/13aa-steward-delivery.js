@@ -9,13 +9,13 @@ function stewardDeliveryFiles(summary, cwd) {
   for (const row of [...(Array.isArray(summary.artifacts) ? summary.artifacts : []), ...(Array.isArray(summary.filesChanged) ? summary.filesChanged : [])]) {
     if (!row || typeof row.path !== 'string' || !row.path.trim()) continue;
     const absolute = path.resolve(cwd || '', row.path);
-    const key = process.platform === 'win32' ? absolute.toLowerCase() : absolute;
+    const key = absolute;
     pathsByKey.set(key, { path: absolute, name: path.win32.basename(absolute), kind: kindForPath(absolute) });
   }
   return [...pathsByKey.values()];
 }
 function stewardDeliveryReferencedFiles(session, summary, text) {
-  const keyFor = value => process.platform === 'win32' ? value.toLowerCase() : value;
+  const keyFor = value => value;
   const files = new Map(stewardDeliveryFiles(summary, session.cwd).map(file => [keyFor(file.path), file]));
   // 只接受本任务此前执行记录中已有的产物，且本轮原文用行内代码或 Markdown 链接明确引用路径。
   // 不扫描任意路径、不把用户文字或导入摘要变成本机产物证据，也不凭文件同名猜测。

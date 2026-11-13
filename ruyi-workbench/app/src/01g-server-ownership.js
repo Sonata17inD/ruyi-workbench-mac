@@ -36,22 +36,15 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
         real = primary;
       }
       const joined = pathModule.join(real, ...missing);
-      return { canonical: process.platform === 'win32' ? joined.toLowerCase() : joined, legacy, missing: missing.length > 0 };
+      return { canonical: joined, legacy, missing: missing.length > 0 };
     }
   }
   async function canonicalRoot(root) { return (await resolveRoot(root)).canonical; }
-  function endpointFor(canonical, platform = process.platform, nodeVersion = process.versions.node) {
+  function endpointFor(canonical, platform = process.platform) {
+    if (platform !== 'darwin') throw ownershipError('PLATFORM_UNSUPPORTED', 'Ruyi requires macOS.');
     const digest = cryptoModule.createHash('sha256').update(canonical).digest('hex');
-    if (platform === 'win32') return '\\\\.\\pipe\\ruyi-serve-' + digest;
-    if (platform === 'darwin') {
-      const uid = typeof process.getuid === 'function' ? process.getuid() : 'unknown';
-      return pathModule.posix.join('/private/tmp', 'ruyi-serve-v1-' + uid, digest.slice(0, 32) + '.lock');
-    }
-    const [major, minor] = nodeVersion.split('.').map(Number);
-    if (platform === 'linux' && (major > 20 || (major === 20 && minor >= 8))) return '\0ruyi-serve-' + digest;
-    // Portable fallback, also for Linux 20.0–20.7: normal close unlinks our socket.
-    // A crash can leave a socket file. Never unlink an unknown owner's endpoint automatically.
-    return pathModule.join(osModule.tmpdir(), 'ruyi-serve-' + digest.slice(0, 32) + '.sock');
+    const uid = typeof process.getuid === 'function' ? process.getuid() : 'unknown';
+    return pathModule.posix.join('/private/tmp', 'ruyi-serve-v1-' + uid, digest.slice(0, 32) + '.lock');
   }
   function legacyEndpointFor(canonical) {
     const digest = cryptoModule.createHash('sha256').update(canonical).digest('hex');

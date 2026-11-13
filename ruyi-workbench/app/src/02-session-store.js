@@ -4608,7 +4608,7 @@ function workspaceBaselineBudgetOnly(root, budgetMs, startedAt) {
 
 function workspaceBaselinePathKey(filePath) {
   const resolved = path.resolve(String(filePath || ''));
-  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  return resolved;
 }
 
 function workspaceBaselineIsCodePath(filePath) {
@@ -4807,7 +4807,7 @@ async function workspaceBaselineGitCheckoutCrlf(baseline, rel, blob) {
   if (eol === 'lf') return false;
   if (autocrlf === 'true') return true;
   if (autocrlf === 'input') return false;
-  return coreEol === 'crlf' || ((coreEol === '' || coreEol === 'native') && process.platform === 'win32');
+  return coreEol === 'crlf';
 }
 
 function workspaceBaselineLfToCrlf(buf) {

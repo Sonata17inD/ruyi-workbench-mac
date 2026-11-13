@@ -45,10 +45,7 @@ test('canonical roots collapse junctions and missing leaves without creating dir
 });
 
 test('protocol selection retains Node 20.0 and non-Linux POSIX compatibility', () => {
-  assert.match(ownership.endpointFor('root', 'win32', '20.0.0'), /^\\\\\.\\pipe\\ruyi-serve-/);
-  assert.equal(ownership.endpointFor('root', 'linux', '20.8.0')[0], '\0');
-  assert.equal(ownership.endpointFor('root', 'linux', '24.0.0')[0], '\0');
-  assert.match(ownership.endpointFor('root', 'linux', '20.7.0'), /\.sock$/);
+  assert.throws(() => ownership.endpointFor('root', 'win32'), /macOS/);
   assert.match(ownership.endpointFor('root', 'darwin', '24.0.0'), /^\/private\/tmp\/ruyi-serve-v1-\w+\/[a-f0-9]{32}\.lock$/);
   assert.match(ownership.legacyEndpointFor('root'), /\.sock$/);
 });

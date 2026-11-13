@@ -981,15 +981,7 @@ async function migrationSendToRecycleBin(root) {
     if (!r.ok || result?.ok !== true || !path.isAbsolute(result.trashedPath || '') || fs.existsSync(root)) return { error: 'recycle-failed' };
     return { via: 'macos-trash', trashedPath: result.trashedPath };
   }
-  if (process.platform !== 'win32') return { error: 'unsupported-platform' };
-  // 目标路径经环境变量传入,脚本是纯 ASCII 常量 —— 零拼接、零注入。只移进回收站(SendToRecycleBin),不做永久删除。
-  const script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName Microsoft.VisualBasic; "
-    + '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($env:RUYI_RECYCLE_TARGET, '
-    + '[Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs, [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin)';
-  const r = await DesktopShell.runProcess('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-    { env: { RUYI_RECYCLE_TARGET: root }, timeoutMs: 180000 });
-  if (fs.existsSync(root)) return { error: 'recycle-failed', detail: String((r && (r.stderr || r.stdout)) || '').trim().slice(0, 400) };
-  return { via: 'recycle-bin' };
+  return { error: 'unsupported-platform' };
 }
 async function migrationRecycle(body) {
   return migrationSerial(async () => {

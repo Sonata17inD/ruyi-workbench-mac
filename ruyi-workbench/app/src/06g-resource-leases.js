@@ -46,7 +46,7 @@ function normalizeAgentResource(value, cwd) {
   if (!['file', 'office', 'workspace'].includes(type)) return null;
   target = canonicalResourcePath(target || cwd, cwd);
   if (!target) return null;
-  const folded = process.platform === 'win32' ? target.toLowerCase() : target;
+  const folded = target;
   return { type, target, folded, mode, key: `${type}:${folded}`, label: `${type}:${target}` };
 }
 function normalizeAgentResources(values, cwd) {

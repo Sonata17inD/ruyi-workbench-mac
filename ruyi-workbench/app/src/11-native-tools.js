@@ -990,7 +990,7 @@ function binaryReadHint(p) {
 // 修前每进程第一次都 spawnSync 一发 rg --version,把事件循环钉住。
 let _rgProbe;            // undefined = 没探过;否则 { path, source, shell } 或 null
 let _rgProbeInflight = null;
-function rgExeName() { return process.platform === 'win32' ? 'rg.exe' : 'rg'; }
+function rgExeName() { return 'rg'; }
 function rgProbeCandidates() {
   const out = [];
   const override = String(process.env.RUYI_RG_PATH || '').trim();
@@ -1215,7 +1215,7 @@ function explicitSegmentsOfRegex(src) {
     .split('/').map(x => x.trim()).filter(x => /^[\w.-]+$/.test(x));
 }
 function buildIgnoreMatcher(opts = {}) {
-  const fold = s => (process.platform === 'win32' ? String(s).toLowerCase() : String(s));
+  const fold = s => (String(s));
   const base = opts.includeIgnored === true ? HARD_IGNORE_DIRS : (opts.browse === true ? BROWSE_IGNORE_DIRS : DEFAULT_IGNORE_DIRS);
   const extra = Array.isArray(opts.ignoreDirs) ? opts.ignoreDirs : [];
   const allow = new Set((Array.isArray(opts.allowDirs) ? opts.allowDirs : []).map(x => fold(String(x || '').trim())).filter(Boolean));
@@ -1283,7 +1283,7 @@ async function walkFiles(root, opts = {}) {
   let deferred = [];
   let patternTimedOut = false;
   const ignore = buildIgnoreMatcher(opts);
-  const foldName = n => (process.platform === 'win32' ? String(n).toLowerCase() : String(n));
+  const foldName = n => (String(n));
   const skipHidden = opts.skipHidden === true;
   const allowHidden = new Set((Array.isArray(opts.allowHidden) ? opts.allowHidden : []).map(foldName));
   const toSlash = r => (path.sep === '/' ? r : r.split(path.sep).join('/'));
@@ -1832,7 +1832,7 @@ async function discoverPrunedDirs(root, opts, names) {
   const found = [];
   const base = path.resolve(root || process.cwd());
   const queue = [{ dir: base, rel: '', depth: 0, hiddenOk: false }];
-  const allowH = new Set(names.allowHidden.map(x => (process.platform === 'win32' ? x.toLowerCase() : x)));
+  const allowH = new Set(names.allowHidden.map(x => (x)));
   let reads = 0;
   const maxDepth = Math.min(searchMaxDepth(opts) || 6, 6);
   for (let qi = 0; qi < queue.length && reads < 2000 && found.length < 12; qi += 1) {
@@ -1846,7 +1846,7 @@ async function discoverPrunedDirs(root, opts, names) {
       if (!e.isDirectory()) continue;
       let ok = hiddenOk;
       if (!hiddenOk && opts.includeHidden !== true && e.name.charCodeAt(0) === 46) {
-        if (!allowH.has(process.platform === 'win32' ? e.name.toLowerCase() : e.name)) continue;
+        if (!allowH.has(e.name)) continue;
         ok = true;
       }
       const r = rel ? rel + '/' + e.name : e.name;
@@ -2064,14 +2064,14 @@ function searchFileContentRg(root, pattern, opts = {}) {
   const args = ['--json', '--no-messages', '--crlf'];
   const filt = [];
   if (opts.includeHidden === true || names.allowHidden.length) filt.push('--hidden');
-  const defaultNames = new Set(DEFAULT_IGNORE_DIRS.filter(x => !x.includes('/')).map(x => (process.platform === 'win32' ? x.toLowerCase() : x)));
-  const namedIgnored = names.allowDirs.some(x => defaultNames.has(process.platform === 'win32' ? String(x).toLowerCase() : String(x)));
+  const defaultNames = new Set(DEFAULT_IGNORE_DIRS.filter(x => !x.includes('/')).map(x => (x)));
+  const namedIgnored = names.allowDirs.some(x => defaultNames.has(String(x)));
   if (opts.includeIgnored === true || namedIgnored) filt.push('--no-ignore');
   if (opts.ignoreCase !== false) args.push('-i');
   if (ctx > 0) { args.push('-C', String(ctx)); }
   // rg 的 -g 区分大小写(Windows 也是),而忽略清单在 Windows 上是小写化、不分大小写剪的(Build/、用户的 ignoreDirs:['Vendor'])。
   // 所以 win32 上排除类 glob 走 --iglob(不分大小写);调用方自己的 glob 仍用 -g,原样不动。
-  const exclFlag = process.platform === 'win32' ? '--iglob' : '-g';
+  const exclFlag = '-g';
   if (opts.glob) { filt.push('-g', String(opts.glob)); }
   for (const g of ignoreGlobsForRg(opts, names.allowDirs)) filt.push(exclFlag, g);
   for (const g of sensitiveGlobsForRg(base)) filt.push(exclFlag, g);
@@ -5644,7 +5644,7 @@ async function zipCollectEntries(rootPaths, opts = {}) {
   const ignore = buildIgnoreMatcher({ includeIgnored: opts.includeIgnored === true, ignoreDirs: opts.ignoreDirs });
   // 2026-10 走查(R2):① skipPaths(dest 自己)不入包 —— 修前 dest 落在被打包的目录里,第二次打包就把上一次的 zip 也装进去(越滚越大);
   // ② 符号链接仍不入包,但计数上报(skippedLinks),不再静默;③ 同名顶层输入的包内名字去重(见 zipTopLevelNames)。
-  const foldP = x => (process.platform === 'win32' ? String(x).toLowerCase() : String(x));
+  const foldP = x => (String(x));
   const skipSet = new Set((Array.isArray(opts.skipPaths) ? opts.skipPaths : []).map(x => foldP(path.resolve(String(x)))));
   entries.skippedLinks = 0;
   entries.skippedDest = false;

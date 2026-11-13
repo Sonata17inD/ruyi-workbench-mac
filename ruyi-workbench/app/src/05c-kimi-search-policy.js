@@ -56,7 +56,7 @@ function kimiAcpSearchIsObject(value) {
 function kimiAcpSearchPathEqual(left, right) {
   const a = path.resolve(String(left || ''));
   const b = path.resolve(String(right || ''));
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  return a === b;
 }
 
 function kimiAcpSearchWithin(target, root) {
@@ -68,12 +68,12 @@ function kimiAcpSearchWithin(target, root) {
 }
 
 function kimiAcpSearchRgName() {
-  return process.platform === 'win32' ? 'rg.exe' : 'rg';
+  return 'rg';
 }
 
 function kimiAcpSearchIsRgName(raw) {
   const name = path.basename(String(raw || ''));
-  return process.platform === 'win32' ? name.toLowerCase() === 'rg.exe' : name === 'rg';
+  return name === 'rg';
 }
 
 function kimiAcpSearchValidateText(value, label, maxLength, allowEmpty = false) {
@@ -160,7 +160,7 @@ async function kimiAcpSearchRealFile(rawPath) {
   if (!stat || !stat.isFile()) return null;
   // A Unix rg must be executable. Windows executable permission is represented by the .exe suffix and not
   // by the POSIX mode bits exposed by Node, so the platform-specific check stays deliberately small.
-  if (process.platform !== 'win32' && typeof stat.mode === 'number' && (stat.mode & 0o111) === 0) return null;
+  if (typeof stat.mode === 'number' && (stat.mode & 0o111) === 0) return null;
   return path.resolve(canonical);
 }
 
@@ -193,7 +193,7 @@ async function kimiAcpSearchDeniedRoots(context) {
   for (const raw of roots) {
     const canonical = await kimiAcpSearchCanonicalRoot(raw);
     if (!canonical) continue;
-    const key = process.platform === 'win32' ? canonical.toLowerCase() : canonical;
+    const key = canonical;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(canonical);
@@ -253,7 +253,7 @@ async function kimiAcpSearchPathRgCandidates() {
     const dir = String(rawDir || '').trim().replace(/^"|"$/g, '');
     if (!dir || !path.isAbsolute(dir)) continue;
     const candidate = path.join(dir, kimiAcpSearchRgName());
-    const key = process.platform === 'win32' ? path.resolve(candidate).toLowerCase() : path.resolve(candidate);
+    const key = path.resolve(candidate);
     if (seen.has(key)) continue;
     seen.add(key);
     let stat;

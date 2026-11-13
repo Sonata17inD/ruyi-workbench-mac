@@ -24,9 +24,7 @@ function platformOpenSpawn(target, mode = 'open', platform = process.platform) {
     const selected = mode === 'select' || bundle;
     return { command: '/usr/bin/open', args: [...(selected ? ['-R'] : []), '--', value], mode: selected ? 'select' : mode };
   }
-  if (mode === 'browser') return { command: 'cmd.exe', args: ['/c', 'start', '', value] };
-  // Keep the existing Windows/Linux fallback contract until other desktop backends are implemented.
-  return { command: 'explorer.exe', args: [mode === 'select' ? '/select,' + value : value] };
+  throw Object.assign(new Error('Mac desktop is required'), { code: 'platform_unsupported' });
 }
 
 // Non-interactive bash still reads BASH_ENV and imports exported functions/options.

@@ -58,15 +58,11 @@ async function waitHealth(port) { // 117q:预算 50×120ms=6s 小于本机冷启
 try {
   // Pure safety/argv contracts: a script host is never accepted as an editor; supported IDEs receive each
   // path as a distinct argv element (no cmd.exe / shell string).
-  ok(srv.executableFromAssociationCommand('"C:\\Program Files\\Editor\\Code.exe" "%1"') === 'C:\\Program Files\\Editor\\Code.exe',
-    'association command extracts the executable without evaluating placeholders');
-  ok(srv.classifyCodeEditorExecutable('C:\\Windows\\System32\\WScript.exe') === null,
-    'WScript file association is rejected');
-  const editor = srv.classifyCodeEditorExecutable('C:\\Apps\\Cursor\\Cursor.exe');
-  const spawnSpec = srv.buildCodeEditorSpawn({ ...editor, source: 'unit' }, 'diff', 'C:\\before a.py', 'C:\\after & b.py');
-  ok(spawnSpec.ok && spawnSpec.mode === 'diff' && spawnSpec.args[0] === '--reuse-window'
-    && spawnSpec.args[2] === 'C:\\before a.py' && spawnSpec.args[3] === 'C:\\after & b.py',
-  'VS Code family diff uses a shell-free argv array');
+  const editor = { command: '/usr/bin/open', application: '/Applications/Cursor.app', kind: 'mac-vscode', label: 'Cursor' };
+  const spawnSpec = srv.buildCodeEditorSpawn({ ...editor, source: 'unit' }, 'diff', '/tmp/before a.py', '/tmp/after & b.py');
+  ok(spawnSpec.ok && spawnSpec.mode === 'diff' && spawnSpec.args.includes('--diff')
+    && spawnSpec.args.at(-2) === '/tmp/before a.py' && spawnSpec.args.at(-1) === '/tmp/after & b.py',
+    'Mac editor diff preserves paths as distinct arguments');
   const changesUi = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'artifact-changes.js'), 'utf8');
   const zh = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
   const en = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'en-US.json'), 'utf8'));

@@ -231,8 +231,8 @@ function markNetworkOnline() {
 // { present, toolCount, optional:{ocr,uia,cv2,playwright} }. Absence/failure → present:false + all-false.
 async function probeDesktopMcp(config) {
   const out = { present: false, toolCount: 0, optional: { ocr: false, uia: false, cv2: false, playwright: false },
-    desktopAutomation: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
-    ocr: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
+    desktopAutomation: { supported: false, installed: false, authorization: 'unknown', ready: null },
+    ocr: { supported: false, installed: false, authorization: 'unknown', ready: null },
     browser: { mode: String(config?.browserAutomation?.mode || 'system'), supported: false, installed: false, runtimeInstalled: null, ready: false } };
   const projectMac = require('./backend/mac-capabilities.cjs').projectMacCapabilities;
   if (process.platform === 'darwin') Object.assign(out, projectMac(null));
@@ -602,22 +602,20 @@ function collectChildProcessInfo() {
   return out;
 }
 async function sampleProcessRss(pids) {
-  if (process.platform !== 'win32' || !pids.length) return {};
+  const ids = [...new Set(pids.map(Number).filter(pid => Number.isSafeInteger(pid) && pid > 0))];
+  if (!ids.length) return {};
   try {
-    // 128f-⑬:execFileSync → 异步 execFile(tasklist 本机数百毫秒;同步那一发期间整个服务不答话)。
-    const out = await new Promise((resolve, reject) => {
-      cp.execFile('tasklist', ['/fo', 'csv', '/nh'], { encoding: 'utf8', timeout: 5000, windowsHide: true }, (err, stdout) => (err ? reject(err) : resolve(stdout)));
+    const output = await new Promise((resolve, reject) => {
+      cp.execFile('/bin/ps', ['-o', 'pid=,rss=', '-p', ids.join(',')], { encoding: 'utf8', timeout: 5000 },
+        (error, stdout) => error ? reject(error) : resolve(stdout));
     });
-    const want = new Set(pids.map(String));
-    const rss = {};
-    for (const line of String(out).split('\n')) {
-      const cols = line.trim().replace(/^"|"$/g, '').split('","');
-      if (cols.length < 5 || !want.has(cols[1])) continue;
-      const kb = Number(cols[cols.length - 1].replace(/[^0-9]/g, ''));
-      if (Number.isFinite(kb)) rss[cols[1]] = kb * 1024;
+    const rss = {}, allowed = new Set(ids);
+    for (const line of String(output).split('\n')) {
+      const match = /^\s*(\d+)\s+(\d+)\s*$/.exec(line);
+      if (match && allowed.has(Number(match[1]))) rss[match[1]] = Number(match[2]) * 1024;
     }
     return rss;
-  } catch { return {}; } // tasklist 不可用/超时 → RSS 缺省 null,不硬失败
+  } catch { return {}; }
 }
 async function buildMetricsPayload(config) {
   const storage = await collectStorageStats(config);

@@ -97,11 +97,11 @@ ok(unguarded.length === 0, `② 每个 CDP 客户端的 send() 在 socket.send �
   ok(srcFiles.length >= 50 && prodOffenders.length === 0,
     `④ 产品 src/ 里零 taskkill /T 调用(扫了 ${srcFiles.length} 个模块;命中 ${prodOffenders.length}${prodOffenders.length ? ':' + prodOffenders.join(' ') : ''})`);
   const pr = fs.readFileSync(path.join(SRC, '04-permission-runtime.js'), 'utf8');
-  ok(/\[int64\]\$p\.Created -lt \[int64\]\$cur\.Created/.test(pr), '④ OWN_TREE_KILL_PS 认子孙核创建时间(撞号的陌生人比父亲还老 ⇒ 跳过)');
-  ok(/'conhost\.exe'/.test(pr) && /Stop-Process/.test(pr) && /StartTime\.ToFileTimeUtc\(\)/.test(pr), '④ OWN_TREE_KILL_PS 不杀 conhost、动手前核启动时间');
-  ok(/function killChildTree\(pid\)[\s\S]{0,1600}ownTreeKillCommand\(pid\)/.test(pr), '④ killChildTree 走 ownTreeKillCommand');
+  ok(pr.includes('ProcessRuntime.stopChild(ownedChild)'), 'managed children use their supervisor');
+  ok(pr.includes('process-handle-required') && pr.includes('--terminate-child-tree'), 'fallback cleanup requires a ChildProcess handle and native helper');
+  ok(!pr.includes('powershell.exe') && !pr.includes('ownTreeKillCommand'), 'Windows termination runtime is absent');
   const router = fs.readFileSync(path.join(SRC, '13-http-router.js'), 'utf8');
-  ok(/async function killPid\(pid\) \{\s*await killOwnProcessTree\(pid\);/.test(router), '④ freeStalePort 的 killPid 走 killOwnProcessTree');
+  ok(!router.includes('function freeStalePort('), 'port takeover dead code is absent');
 }
 
 console.log(`PROCESS SAFETY STATIC E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);

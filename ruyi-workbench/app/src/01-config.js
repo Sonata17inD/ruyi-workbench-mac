@@ -589,7 +589,7 @@ function normalizeWorkspacePathString(value) {
 //     「不在如意那张表里」的行,所以收编过的行下一次读配置不会再被挪走(否则两条迁移会来回拉锯)。
 function stewardManagedWorkspaceKey(value) {
   const normalized = String(value == null ? '' : value).replace(/[\\/]+/g, '/').replace(/\/+$/, '');
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  return normalized;
 }
 function normalizeStewardManagedWorkspaces(config, wsRows) {
   const rawList = Array.isArray(config.stewardManagedWorkspaces) ? config.stewardManagedWorkspaces : [];
@@ -1239,7 +1239,7 @@ function normalizeConfig(raw, opts = {}) {
       const s = normalizeWorkspacePathString(w);
       if (!s) continue;
       // Preserve the stored spelling on Windows, where resolving '/' depends on the current drive.
-      const key = process.platform === 'win32' ? s.toLowerCase() : samePathKey(s);
+      const key = samePathKey(s);
       if (seen.has(key)) continue;
       seen.add(key);
       clean.push(s);
@@ -1286,7 +1286,7 @@ function normalizeConfig(raw, opts = {}) {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return;
       const p = normalizeWorkspacePathString(raw.path);
       if (!p) return;
-      const key = process.platform === 'win32' ? p.toLowerCase() : samePathKey(p);
+      const key = samePathKey(p);
       if (seen.has(key)) return;
       seen.add(key);
       const entry = { path: p, read: raw.read !== false, write: raw.write !== false, execute: raw.execute !== false };

@@ -440,7 +440,7 @@ const FileTextIo = (() => {
         }
         throw error;
       }
-      if (st && process.platform !== 'win32') {
+      if (st) {
         try { await nodeFsp.chmod(tmp, st.mode & 0o7777); } catch { /* preserve mode best-effort */ }
       }
       const retries = Number.isFinite(opts.retries) ? opts.retries : 8;

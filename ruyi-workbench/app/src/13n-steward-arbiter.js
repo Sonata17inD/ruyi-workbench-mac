@@ -111,7 +111,7 @@ function stewardArbiterCwdKey(cwd) {
   // 两条线程并发改。同步版是刻意的:锁键要在 entry 构造时(同步段内)就定下来,不能为它引入一次 await
   // (那正是 P0-5 那条 TOCTOU 的来源)。目录还没建出来 / 没权限就退回 resolve 后的路径。
   try { abs = (fs.realpathSync.native || fs.realpathSync)(abs); } catch { /* ENOENT / EPERM:用 resolve 结果 */ }
-  const folded = process.platform === 'win32' ? abs.toLowerCase() : abs;
+  const folded = abs;
   return crypto.createHash('sha1').update(folded).digest('hex').slice(0, 12);
 }
 
