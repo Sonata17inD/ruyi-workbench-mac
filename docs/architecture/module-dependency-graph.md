@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 93 | 3917 | 3560 | 656 | 67 | 0 | 1 |
+| 92 | 3906 | 3545 | 652 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -79,35 +79,34 @@
 | 61 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
 | 62 | `12-tool-dispatch.js` | tools | 74 | 142 | 24 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
-| 64 | `13-http-router.js` | transport | 70 | 280 | 36 |
+| 64 | `13-http-router.js` | transport | 70 | 279 | 35 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 11 |
-| 66 | `13c-overlay-routes.js` | transport | 11 | 14 | 3 |
-| 67 | `13d-core-domain-routes.js` | transport | 65 | 149 | 18 |
-| 68 | `13e-pretender-index.js` | transport | 57 | 39 | 8 |
-| 69 | `13i-steward-inbox.js` | transport | 88 | 29 | 8 |
-| 70 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
-| 71 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
-| 72 | `13k-steward-threads.js` | transport | 60 | 127 | 17 |
-| 73 | `13l-steward-ops.js` | transport | 54 | 129 | 21 |
-| 74 | `13g-steward.js` | transport | 20 | 74 | 12 |
-| 75 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
-| 76 | `13n-steward-arbiter.js` | transport | 42 | 21 | 6 |
-| 77 | `13o-steward-runner-prompt.js` | transport | 22 | 66 | 16 |
-| 78 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
-| 79 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 20 |
-| 80 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
-| 81 | `13r-event-stream.js` | transport | 25 | 18 | 6 |
-| 82 | `13s-scheduler.js` | transport | 53 | 38 | 9 |
-| 83 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
-| 84 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
-| 85 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
-| 86 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 87 | `13y-external-bot-credentials.js` | transport | 1 | 7 | 3 |
-| 88 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 89 | `13ab-privacy-api.js` | unclassified | 1 | 18 | 12 |
-| 90 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
-| 91 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 92 | `14-main.js` | entrypoint | 1 | 591 | 49 |
+| 66 | `13d-core-domain-routes.js` | transport | 65 | 149 | 18 |
+| 67 | `13e-pretender-index.js` | transport | 57 | 39 | 8 |
+| 68 | `13i-steward-inbox.js` | transport | 88 | 29 | 8 |
+| 69 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
+| 70 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
+| 71 | `13k-steward-threads.js` | transport | 60 | 127 | 17 |
+| 72 | `13l-steward-ops.js` | transport | 54 | 129 | 21 |
+| 73 | `13g-steward.js` | transport | 20 | 74 | 12 |
+| 74 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
+| 75 | `13n-steward-arbiter.js` | transport | 42 | 21 | 6 |
+| 76 | `13o-steward-runner-prompt.js` | transport | 22 | 66 | 16 |
+| 77 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
+| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 20 |
+| 79 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
+| 80 | `13r-event-stream.js` | transport | 25 | 18 | 6 |
+| 81 | `13s-scheduler.js` | transport | 53 | 38 | 9 |
+| 82 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
+| 83 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
+| 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
+| 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
+| 86 | `13y-external-bot-credentials.js` | transport | 1 | 7 | 3 |
+| 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
+| 88 | `13ab-privacy-api.js` | unclassified | 1 | 18 | 12 |
+| 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
+| 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
+| 91 | `14-main.js` | entrypoint | 1 | 591 | 49 |
 
 ## 模块边
 
@@ -463,7 +462,6 @@
 | `13-http-router.js` | `10-context-governance.js` | backward | `agentConversationContextMeta`, `cachedContextLength`, `configuredConversationWindow`, `contextWindowFromTable`, `learnedWindowCap`, `resolveContextWindow`, `runAgentExternalCompact`, `runProviderCompactTracked`, `scheduleAgentWakesAtBoot`, `streamChat`, `truncateToolResult` |
 | `13-http-router.js` | `11-native-tools.js` | backward | `killAllShellSessions`, `probeRgAsync` |
 | `13-http-router.js` | `13b-api-domain-routes.js` | forward | `handleAudioApiRoutes`, `handleCheckpointApiRoutes`, `handleMcpApiRoutes`, `handleSteerApiRoute`, `maybeCompressImageAttachment`, `maybeOcrImageAttachment`, `maybeTranscribeAudioAttachment` |
-| `13-http-router.js` | `13c-overlay-routes.js` | forward | `handleOverlayApiRoutes` |
 | `13-http-router.js` | `13d-core-domain-routes.js` | forward | `handleAgentRunApiRoutes`, `handleInterventionApiRoutes`, `handleMissionsApiRoutes`, `handleSessionApiRoutes` |
 | `13-http-router.js` | `13e-pretender-index.js` | forward | `warmPretenderProjectionIndex` |
 | `13-http-router.js` | `13f-native-tool-schemas.js` | backward | `MCP_TOOLS` |
@@ -505,9 +503,6 @@
 | `13b-api-domain-routes.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider`, `asrFixMessages`, `asrFixModeOf`, `asrFixSanity`, `maskExternalMcpServerForDisplay`, `providerFixCompletion`, `resolveAsrFixProvider`, `resolveAsrProvider`, `resolveAsrStreamProvider`, `sanitizeExternalMcpServer`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor`, `voiceLexiconRead`, `voiceLexiconUpdate` |
 | `13b-api-domain-routes.js` | `06-provider-engine.js` | backward | `normalizeStoragePolicy`, `storageSweep` |
 | `13b-api-domain-routes.js` | `07-autonomy.js` | backward | `STEER_QUEUE_MAX`, `activeAgentRuns` |
-| `13c-overlay-routes.js` | `00-boot.js` | backward | `apiFailure`, `cp`, `crypto`, `dataRoot`, `decodeConsoleText`, `externalRoot`, `fs`, `fsp`, `json`, `path` |
-| `13c-overlay-routes.js` | `01-config.js` | backward | `readJsonBody`, `send`, `tokenOk` |
-| `13c-overlay-routes.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `13d-core-domain-routes.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `URL`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `crypto`, `dataRootAliases`, `fsp`, `json`, `makeId`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeDecodeURIComponent`, `safeJsonParse`, `text` |
 | `13d-core-domain-routes.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `13d-core-domain-routes.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig`, `readJsonBody`, `safeSessionId`, `send`, `sessionPath`, `tokenMatches`, `tokenOk` |
@@ -772,7 +767,7 @@
 
 ## 强连通分量
 
-1. `00-boot.js` ↔ `01-config.js` ↔ `02-session-store.js` ↔ `03-bridge-guard.js` ↔ `04-desktop-shell.js` ↔ `04-permission-runtime.js` ↔ `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `05c-kimi-search-policy.js` ↔ `05d-kimi-prompt-parts.js` ↔ `06-provider-engine.js` ↔ `06b-prompt-registry.js` ↔ `06c-agent-loop-hooks.js` ↔ `06d-memory-domain.js` ↔ `06e-mission-domain.js` ↔ `06f-autonomy-grants.js` ↔ `06g-resource-leases.js` ↔ `07-autonomy.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `09b-replan-ledger.js` ↔ `09d-token-estimation.js` ↔ `10-context-governance.js` ↔ `11-native-tools.js` ↔ `13-http-router.js` ↔ `13b-api-domain-routes.js` ↔ `13c-overlay-routes.js` ↔ `13d-core-domain-routes.js` ↔ `13e-pretender-index.js` ↔ `13f-native-tool-schemas.js` ↔ `13s-scheduler.js`
+1. `00-boot.js` ↔ `01-config.js` ↔ `02-session-store.js` ↔ `03-bridge-guard.js` ↔ `04-desktop-shell.js` ↔ `04-permission-runtime.js` ↔ `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `05c-kimi-search-policy.js` ↔ `05d-kimi-prompt-parts.js` ↔ `06-provider-engine.js` ↔ `06b-prompt-registry.js` ↔ `06c-agent-loop-hooks.js` ↔ `06d-memory-domain.js` ↔ `06e-mission-domain.js` ↔ `06f-autonomy-grants.js` ↔ `06g-resource-leases.js` ↔ `07-autonomy.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `09b-replan-ledger.js` ↔ `09d-token-estimation.js` ↔ `10-context-governance.js` ↔ `11-native-tools.js` ↔ `13-http-router.js` ↔ `13b-api-domain-routes.js` ↔ `13d-core-domain-routes.js` ↔ `13e-pretender-index.js` ↔ `13f-native-tool-schemas.js` ↔ `13s-scheduler.js`
 
 ## 维护规则
 

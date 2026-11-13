@@ -1,13 +1,12 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-12T06:46:46.453Z",
+  "generatedAt": "2026-11-13T08:17:18.248Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/src/01b-route-auth.js",
     "routers": [
       "ruyi-workbench/app/src/13-http-router.js",
       "ruyi-workbench/app/src/13b-api-domain-routes.js",
-      "ruyi-workbench/app/src/13c-overlay-routes.js",
       "ruyi-workbench/app/src/13d-core-domain-routes.js",
       "ruyi-workbench/app/src/13e-pretender-index.js",
       "ruyi-workbench/app/src/13g-steward.js",
@@ -19,10 +18,10 @@
     ]
   },
   "summary": {
-    "routeAuthEntries": 161,
-    "decisionPoints": 175,
+    "routeAuthEntries": 157,
+    "decisionPoints": 171,
     "byKind": {
-      "exact": 152,
+      "exact": 148,
       "prefix": 11,
       "regex": 12
     },
@@ -815,30 +814,6 @@
     },
     {
       "m": "POST",
-      "p": "/api/overlay/precheck",
-      "auth": "token",
-      "prefix": false
-    },
-    {
-      "m": "POST",
-      "p": "/api/overlay/apply",
-      "auth": "token",
-      "prefix": false
-    },
-    {
-      "m": "GET",
-      "p": "/api/overlay/status",
-      "auth": "token",
-      "prefix": false
-    },
-    {
-      "m": "POST",
-      "p": "/api/overlay/rollback",
-      "auth": "token",
-      "prefix": false
-    },
-    {
-      "m": "POST",
       "p": "/api/steward/start",
       "auth": "token",
       "prefix": false
@@ -1036,7 +1011,6 @@
         "dev-harness\\macos-platform-templates.e2e.js",
         "dev-harness\\net-token-replay.static.e2e.js",
         "dev-harness\\onboarding.e2e.js",
-        "dev-harness\\overlay-update-core.e2e.js",
         "dev-harness\\session-search.e2e.js",
         "dev-harness\\surface-hardening-w2.e2e.js",
         "dev-harness\\token-bootstrap-csp.e2e.js",
@@ -1328,7 +1302,6 @@
       "auth": "token",
       "coveredBy": [
         "dev-harness\\macos-desktop-bridge.e2e.js",
-        "dev-harness\\overlay-update-gui.static.e2e.js",
         "dev-harness\\settings-wave1.browser.e2e.js"
       ]
     },
@@ -3549,76 +3522,6 @@
         "dev-harness\\unit\\voice-learn-front.test.js",
         "dev-harness\\voice-learn.browser.e2e.js",
         "dev-harness\\voice-learn.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/overlay/precheck",
-      "file": "13c-overlay-routes.js",
-      "handler": "handleOverlayApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "overlay",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\overlay-update-core.e2e.js",
-        "dev-harness\\overlay-update-gui.static.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/overlay/apply",
-      "file": "13c-overlay-routes.js",
-      "handler": "handleOverlayApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "overlay",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\overlay-update-core.e2e.js",
-        "dev-harness\\overlay-update-gui.static.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/overlay/status",
-      "file": "13c-overlay-routes.js",
-      "handler": "handleOverlayApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "overlay",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\macos-overlay-boundary.e2e.js",
-        "dev-harness\\overlay-update-core.e2e.js",
-        "dev-harness\\overlay-update-gui.static.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/overlay/rollback",
-      "file": "13c-overlay-routes.js",
-      "handler": "handleOverlayApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "overlay",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\overlay-update-core.e2e.js",
-        "dev-harness\\overlay-update-gui.static.e2e.js",
-        "dev-harness\\settings-wave1.browser.e2e.js"
       ]
     },
     {
@@ -6210,11 +6113,6 @@
       "file": "13-http-router.js",
       "handler": "handleApi",
       "target": "handleAudioApiRoutes"
-    },
-    {
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "target": "handleOverlayApiRoutes"
     },
     {
       "file": "13-http-router.js",

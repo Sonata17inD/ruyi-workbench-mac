@@ -179,10 +179,6 @@ const ROUTE_AUTH = [
   { m: 'POST', p: '/api/storage/clean', auth: 'token' },
   { m: 'GET', p: '/api/metrics', auth: 'token' },
   // 第53波 EC-B(53b): overlay 离线更新 -- 破坏性档(同 checkpoints/rollback),token 级把门。
-  { m: 'POST', p: '/api/overlay/precheck', auth: 'token' },
-  { m: 'POST', p: '/api/overlay/apply', auth: 'token' },
-  { m: 'GET', p: '/api/overlay/status', auth: 'token' },
-  { m: 'POST', p: '/api/overlay/rollback', auth: 'token' },
   // 第116波116b(27号文§11.3): 管家收件箱。start/stop 是控制面(起停后台轮询),state/inbox 返回跨会话
   // 的待决与失败摘要 —— 内容敏感度同 /api/audit 与 /api/missions 的写面,一律 token 级(不给 token-browser)。
   { m: 'POST', p: '/api/steward/start', auth: 'token' },

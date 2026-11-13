@@ -186,19 +186,18 @@ function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
 //     _tool_map,含 run_command / launch_application)—— 只随桌面闸关,它就是命令族的后门;只随命令闸关,反过来也一样。
 const DESKTOP_MCP_SERVER_ID = 'ai-computer-control';
 const ACC_POLICY_TOOL_FAMILIES = Object.freeze({
-  command: Object.freeze(['run_command', 'launch_application', 'kill_process']),
+  command: Object.freeze(['run_command', 'launch_application', ]),
   desktop: Object.freeze([
-    'screenshot', 'screenshot_region', 'get_screen_info', 'find_on_screen',                                    // screen
+    'screenshot', 'screenshot_region', 'get_screen_info', // screen
     'window_screenshot',                                                                                       // capture
     'mouse_click', 'mouse_move', 'mouse_drag', 'mouse_scroll', 'scroll_at', 'get_mouse_position',              // mouse
-    'type_text', 'press_key', 'hotkey', 'input_sequence', 'key_down', 'key_up',                                                  // keyboard
+    'type_text', 'press_key', 'hotkey', 'input_sequence', // keyboard
     'list_windows', 'get_active_window', 'focus_window', 'resize_window', 'move_window',                       // window
-    'minimize_window', 'maximize_window', 'close_window', 'set_window_topmost',
-    'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
+    'minimize_window', 'maximize_window', 'close_window', 'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
     'find_template', 'find_all_templates', 'vision_click', 'wait_for_image',                                   // vision
     'ocr_screen', 'ocr_click', 'ocr_find_text',                                                                // ocr(只收读屏的)
-    'wait_for_pixel',                                                                                          // sync
-    'get_pixel_color', 'wait_for_window', 'wait_for_window_idle', 'list_monitors', 'get_dpi_info',             // desktop_extra
+    // sync
+    'list_monitors', 'get_dpi_info',             // desktop_extra
     'observe', 'act_and_verify',                                                                               // observe / act_and_verify
     'record_start', 'record_stop', 'macro_list',                                                               // record
     'get_clipboard', 'set_clipboard', 'get_clipboard_image', 'set_clipboard_image',                            // clipboard

@@ -35,9 +35,9 @@ const helpViewerSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'help-viewer.js'),
 const dispatchSrc = fs.readFileSync(path.join(SRC, '12-tool-dispatch.js'), 'utf8');
 const routerSrc = fs.readFileSync(path.join(SRC, '13-http-router.js'), 'utf8');
 const mainSrc = fs.readFileSync(path.join(SRC, '14-main.js'), 'utf8');
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const toolPaneCss = fs.readFileSync(path.join(PUBLIC, 'css', 'components', 'tool-pane.css'), 'utf8');
 const primitivesCss = fs.readFileSync(path.join(PUBLIC, 'css', 'components', 'chat-primitives.css'), 'utf8');
 const layoutCss = fs.readFileSync(path.join(PUBLIC, 'css', 'layout.css'), 'utf8');

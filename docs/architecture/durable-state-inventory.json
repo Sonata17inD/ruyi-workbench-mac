@@ -2,10 +2,10 @@
   "schema": 1,
   "generatedBy": "dev-harness/durable-state-inventory.js",
   "scope": "workbench-managed JSON, JSONL/NDJSON and ownership sidecars plus consumed external state",
-  "count": 72,
+  "count": 71,
   "lifecycleCounts": {
     "dedicated-exemption": 23,
-    "external-exemption": 10,
+    "external-exemption": 9,
     "regenerable-exemption": 7,
     "shared-lifecycle": 32
   },
@@ -863,20 +863,6 @@
       "recovery": "refetch providers",
       "lifecycle": "regenerable-exemption",
       "exemptionReason": "derived cache; shared atomic write"
-    },
-    {
-      "id": "overlay-state",
-      "pattern": "<install>/.overlay-applied.json + .overlay-audit.jsonl",
-      "owner": "13c-overlay-routes.js",
-      "anchor": "'.overlay-applied.json'",
-      "schema": "PowerShell applicator protocol",
-      "writePrimitive": "external script atomic/append",
-      "corruption": "applicator rollback/audit",
-      "capacity": "release history",
-      "cache": "none",
-      "recovery": "overlay rollback",
-      "lifecycle": "external-exemption",
-      "exemptionReason": "owned by separately tested overlay applicator"
     },
     {
       "id": "steward-inbox",

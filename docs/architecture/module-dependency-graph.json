@@ -3,11 +3,11 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 93,
-    "providedSymbols": 3917,
-    "requiredSymbols": 3560,
-    "edges": 656,
-    "forwardEdges": 67,
+    "modules": 92,
+    "providedSymbols": 3906,
+    "requiredSymbols": 3545,
+    "edges": 652,
+    "forwardEdges": 66,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -16057,13 +16057,6 @@
           ]
         },
         {
-          "provider": "13c-overlay-routes.js",
-          "symbol": "handleOverlayApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "13d-core-domain-routes.js",
           "symbol": "handleAgentRunApiRoutes",
           "kinds": [
@@ -16656,127 +16649,8 @@
       ]
     },
     {
-      "file": "13c-overlay-routes.js",
-      "order": 66,
-      "layer": "transport",
-      "note": "第53波 EC-B(53b):overlay 离线更新 API 编排层(precheck/apply/rollback/status,编排 Manage-Overlay.ps1 受测核心)",
-      "provides": [
-        "OVERLAY_PS1",
-        "OVERLAY_PS1_TIMEOUT",
-        "OVERLAY_TOOL_DIR",
-        "cacheOverlayPs1",
-        "extractOverlayZip",
-        "findOverlayRoot",
-        "handleOverlayApiRoutes",
-        "readOverlayStatusDirect",
-        "runOverlayPs1",
-        "stripBom",
-        "tryParseJson"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeConsoleText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "externalRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "tokenOk",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        }
-      ]
-    },
-    {
       "file": "13d-core-domain-routes.js",
-      "order": 67,
+      "order": 66,
       "layer": "transport",
       "note": "第65波 EC-D 收口:session CRUD、question/permission/plan 干预、Agent Run 查询/事件/控制三组后端域路由",
       "provides": [
@@ -17894,7 +17768,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 68,
+      "order": 67,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -18234,7 +18108,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 69,
+      "order": 68,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -18535,7 +18409,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 70,
+      "order": 69,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -18786,7 +18660,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 71,
+      "order": 70,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -19023,7 +18897,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 72,
+      "order": 71,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -19982,7 +19856,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 73,
+      "order": 72,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -20949,7 +20823,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 74,
+      "order": 73,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -21504,7 +21378,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 75,
+      "order": 74,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -21675,7 +21549,7 @@
     },
     {
       "file": "13n-steward-arbiter.js",
-      "order": 76,
+      "order": 75,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):116h 线程间仲裁 —— 并发位/同 cwd 写锁/预算/可解释排队/饥饿提升(零行为搬家自 13h)",
       "provides": [
@@ -21874,7 +21748,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 77,
+      "order": 76,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -22368,7 +22242,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 78,
+      "order": 77,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -22854,7 +22728,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 79,
+      "order": 78,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -23512,7 +23386,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 80,
+      "order": 79,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -23873,7 +23747,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 81,
+      "order": 80,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -24034,7 +23908,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 82,
+      "order": 81,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -24363,7 +24237,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 83,
+      "order": 82,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -24669,7 +24543,7 @@
     },
     {
       "file": "13u-migration-center.js",
-      "order": 84,
+      "order": 83,
       "layer": "transport",
       "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环",
       "provides": [
@@ -24986,7 +24860,7 @@
     },
     {
       "file": "13v-external-channel-protocols.js",
-      "order": 85,
+      "order": 84,
       "layer": "transport",
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
       "provides": [
@@ -25018,7 +24892,7 @@
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "order": 86,
+      "order": 85,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -25043,7 +24917,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 87,
+      "order": 86,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -25103,7 +24977,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 88,
+      "order": 87,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -25113,7 +24987,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 89,
+      "order": 88,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -25250,7 +25124,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 90,
+      "order": 89,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -25488,7 +25362,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 91,
+      "order": 90,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -25653,7 +25527,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 92,
+      "order": 91,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -34024,14 +33898,6 @@
     },
     {
       "from": "13-http-router.js",
-      "to": "13c-overlay-routes.js",
-      "symbols": [
-        "handleOverlayApiRoutes"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "13-http-router.js",
       "to": "13d-core-domain-routes.js",
       "symbols": [
         "handleAgentRunApiRoutes",
@@ -34462,41 +34328,6 @@
       "symbols": [
         "STEER_QUEUE_MAX",
         "activeAgentRuns"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13c-overlay-routes.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "apiFailure",
-        "cp",
-        "crypto",
-        "dataRoot",
-        "decodeConsoleText",
-        "externalRoot",
-        "fs",
-        "fsp",
-        "json",
-        "path"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13c-overlay-routes.js",
-      "to": "01-config.js",
-      "symbols": [
-        "readJsonBody",
-        "send",
-        "tokenOk"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13c-overlay-routes.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
       ],
       "direction": "backward"
     },
@@ -37985,7 +37816,6 @@
       "11-native-tools.js",
       "13-http-router.js",
       "13b-api-domain-routes.js",
-      "13c-overlay-routes.js",
       "13d-core-domain-routes.js",
       "13e-pretender-index.js",
       "13f-native-tool-schemas.js",
@@ -38174,7 +38004,6 @@
     "13-http-router.js->10-context-governance.js",
     "13-http-router.js->11-native-tools.js",
     "13-http-router.js->13b-api-domain-routes.js",
-    "13-http-router.js->13c-overlay-routes.js",
     "13-http-router.js->13d-core-domain-routes.js",
     "13-http-router.js->13e-pretender-index.js",
     "13-http-router.js->13f-native-tool-schemas.js",
@@ -38186,9 +38015,6 @@
     "13b-api-domain-routes.js->05-claude-engine.js",
     "13b-api-domain-routes.js->06-provider-engine.js",
     "13b-api-domain-routes.js->07-autonomy.js",
-    "13c-overlay-routes.js->00-boot.js",
-    "13c-overlay-routes.js->01-config.js",
-    "13c-overlay-routes.js->04-permission-runtime.js",
     "13d-core-domain-routes.js->00-boot.js",
     "13d-core-domain-routes.js->01-config.js",
     "13d-core-domain-routes.js->02-session-store.js",
@@ -38278,7 +38104,6 @@
     "09-workflow.js->13-http-router.js",
     "09d-token-estimation.js->10-context-governance.js",
     "13-http-router.js->13b-api-domain-routes.js",
-    "13-http-router.js->13c-overlay-routes.js",
     "13-http-router.js->13d-core-domain-routes.js",
     "13-http-router.js->13e-pretender-index.js",
     "13-http-router.js->13s-scheduler.js",

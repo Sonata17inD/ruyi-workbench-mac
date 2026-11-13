@@ -175,15 +175,15 @@ test('[P5] playbook_read:不可用如实说原因、不给步骤;野参数列在
 });
 
 test('[S1] skill_list:内置 + 用户层,enabled 与会话启用口径一致,已启用排前', async () => {
-  const r = await call('skill_list', { limit: 100 }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const r = await call('skill_list', { limit: 100 }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(r.ok, true);
   assert.ok(r.total >= 21, `20 个内置 + 1 个用户层(got ${r.total})`);
   const byId = Object.fromEntries(r.skills.map(s => [s.id, s]));
-  assert.equal(byId['windows-control'].enabled, true);
-  assert.equal(byId['windows-control'].source, 'builtin');
+  assert.equal(byId['browser-debug'].enabled, true);
+  assert.equal(byId['browser-debug'].source, 'builtin');
   assert.equal(byId['api-debugger'].enabled, false);
   assert.equal(byId['u-evil-skill'].source, 'user');
-  assert.equal(r.skills[0].id, 'windows-control', '已启用的排最前');
+  assert.equal(r.skills[0].id, 'browser-debug', '已启用的排最前');
   assert.equal(r.enabledCount, 1);
   assert.doesNotMatch(JSON.stringify(r), /[<>]/, '作者文本里的尖括号一律中和');
   assert.ok(!JSON.stringify(r).includes(root.replace(/\\/g, '\\\\')) && !/"dir"/.test(JSON.stringify(r)), '不泄漏技能目录路径');
@@ -191,8 +191,8 @@ test('[S1] skill_list:内置 + 用户层,enabled 与会话启用口径一致,已
 });
 
 test('[S2] skill_list:来源锁不一致不算已启用;有界与 query 过滤;无会话也能列', async () => {
-  const mismatch = await call('skill_list', { limit: 100 }, { skills: [{ id: 'windows-control', source: 'project' }] });
-  assert.equal(mismatch.skills.find(s => s.id === 'windows-control').enabled, false, '启用时锁定 project 而现在解析成 builtin = 已被调包,不算启用');
+  const mismatch = await call('skill_list', { limit: 100 }, { skills: [{ id: 'browser-debug', source: 'project' }] });
+  assert.equal(mismatch.skills.find(s => s.id === 'browser-debug').enabled, false, '启用时锁定 project 而现在解析成 builtin = 已被调包,不算启用');
   const capped = await call('skill_list', { limit: 3 });
   assert.equal(capped.shown, 3);
   assert.equal(capped.truncated, true);
@@ -205,9 +205,9 @@ test('[S2] skill_list:来源锁不一致不算已启用;有界与 query 过滤;�
 });
 
 test('[S3] skill_read 语义不变:没启用的技能读不了(skill_list 只列、不放开)', async () => {
-  const r = await call('skill_read', { id: 'api-debugger' }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const r = await call('skill_read', { id: 'api-debugger' }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(r.ok, false);
   assert.match(r.error, /未启用|不存在/);
-  const ok = await call('skill_read', { id: 'windows-control' }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const ok = await call('skill_read', { id: 'browser-debug' }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(ok.ok, true);
 });

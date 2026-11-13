@@ -94,10 +94,6 @@ test('[E4] 接线:runProcess、shell 会话、覆盖包、进程取证都走按�
   assert.match(shell, /if \(!isMacShell\) return createConsoleLineDecoder\(\)/, 'PowerShell 会话继续按行判编码');
   assert.match(shell, /new StringDecoder\('utf8'\)/, 'Mac bash 使用即时 UTF-8 流解码');
   assert.match(functionBlock(readSrcFile('11-native-tools.js'), 'shellSend'), /shellInputForPowerShell\(/);
-  const overlay = readSrcFile('13c-overlay-routes.js');
-  assert.match(functionBlock(overlay, 'extractOverlayZip'), /-EncodedCommand/);
-  assert.match(functionBlock(overlay, 'extractOverlayZip'), /'-ExecutionPolicy', 'Bypass'/, '解压子进程可加载 Archive 脚本模块');
-  assert.match(functionBlock(overlay, 'runOverlayPs1'), /decodeConsoleText\(/);
   assert.match(functionBlock(readSrcFile('13-http-router.js'), 'processCommandLine'), /decodeConsoleText\(stdout\)/);
 });
 

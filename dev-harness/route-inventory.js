@@ -39,7 +39,6 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 const ROUTER_FILES = [
   '13-http-router.js',
   '13b-api-domain-routes.js',
-  '13c-overlay-routes.js',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
   // 第 116 波 116b:管家 /api/steward/* 域路由(13g 拼接顺序在 13 之后,经 StewardHooks 延迟绑定挂接)。
@@ -82,7 +81,6 @@ const DOMAIN_BY_HANDLER = [
   ['handleMcpApiRoutes', 'mcp'],
   ['handleCheckpointApiRoutes', 'checkpoint-storage'],
   ['handleSteerApiRoute', 'steer'],
-  ['handleOverlayApiRoutes', 'overlay'],
   ['handleSessionApiRoutes', 'session'],
   ['handleMissionsApiRoutes', 'mission'],
   ['handleInterventionApiRoutes', 'intervention'],
@@ -96,7 +94,6 @@ const DOMAIN_BY_HANDLER = [
 const DOMAIN_BY_FILE = {
   '13-http-router.js': 'core-inline',
   '13b-api-domain-routes.js': 'mcp/checkpoint-storage/steer',
-  '13c-overlay-routes.js': 'overlay',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
   '13g-steward.js': 'steward',

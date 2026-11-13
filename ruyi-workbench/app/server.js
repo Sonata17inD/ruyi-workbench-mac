@@ -1839,10 +1839,6 @@ const ROUTE_AUTH = [
   { m: 'POST', p: '/api/storage/clean', auth: 'token' },
   { m: 'GET', p: '/api/metrics', auth: 'token' },
   // 第53波 EC-B(53b): overlay 离线更新 -- 破坏性档(同 checkpoints/rollback),token 级把门。
-  { m: 'POST', p: '/api/overlay/precheck', auth: 'token' },
-  { m: 'POST', p: '/api/overlay/apply', auth: 'token' },
-  { m: 'GET', p: '/api/overlay/status', auth: 'token' },
-  { m: 'POST', p: '/api/overlay/rollback', auth: 'token' },
   // 第116波116b(27号文§11.3): 管家收件箱。start/stop 是控制面(起停后台轮询),state/inbox 返回跨会话
   // 的待决与失败摘要 —— 内容敏感度同 /api/audit 与 /api/missions 的写面,一律 token 级(不给 token-browser)。
   { m: 'POST', p: '/api/steward/start', auth: 'token' },
@@ -43294,19 +43290,18 @@ function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
 //     _tool_map,含 run_command / launch_application)—— 只随桌面闸关,它就是命令族的后门;只随命令闸关,反过来也一样。
 const DESKTOP_MCP_SERVER_ID = 'ai-computer-control';
 const ACC_POLICY_TOOL_FAMILIES = Object.freeze({
-  command: Object.freeze(['run_command', 'launch_application', 'kill_process']),
+  command: Object.freeze(['run_command', 'launch_application', ]),
   desktop: Object.freeze([
-    'screenshot', 'screenshot_region', 'get_screen_info', 'find_on_screen',                                    // screen
+    'screenshot', 'screenshot_region', 'get_screen_info', // screen
     'window_screenshot',                                                                                       // capture
     'mouse_click', 'mouse_move', 'mouse_drag', 'mouse_scroll', 'scroll_at', 'get_mouse_position',              // mouse
-    'type_text', 'press_key', 'hotkey', 'input_sequence', 'key_down', 'key_up',                                                  // keyboard
+    'type_text', 'press_key', 'hotkey', 'input_sequence', // keyboard
     'list_windows', 'get_active_window', 'focus_window', 'resize_window', 'move_window',                       // window
-    'minimize_window', 'maximize_window', 'close_window', 'set_window_topmost',
-    'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
+    'minimize_window', 'maximize_window', 'close_window', 'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
     'find_template', 'find_all_templates', 'vision_click', 'wait_for_image',                                   // vision
     'ocr_screen', 'ocr_click', 'ocr_find_text',                                                                // ocr(只收读屏的)
-    'wait_for_pixel',                                                                                          // sync
-    'get_pixel_color', 'wait_for_window', 'wait_for_window_idle', 'list_monitors', 'get_dpi_info',             // desktop_extra
+    // sync
+    'list_monitors', 'get_dpi_info',             // desktop_extra
     'observe', 'act_and_verify',                                                                               // observe / act_and_verify
     'record_start', 'record_stop', 'macro_list',                                                               // record
     'get_clipboard', 'set_clipboard', 'get_clipboard_image', 'set_clipboard_image',                            // clipboard
@@ -71978,7 +71973,6 @@ async function handleApi(req, res, pathname) {
   // 127-114b: audio 域路由(/api/audio/transcribe)同住 13b-api-domain-routes.js —— 13→13b 既有边,零新边。
   await handleAudioApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // 第53波 EC-B(53b): overlay 离线更新域路由抽至 13c-overlay-routes.js(precheck/apply/rollback/status,编排 Manage-Overlay.ps1)。
-  await handleOverlayApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // 第116波116b(27号文§11.3): 管家 /api/steward/* 域路由住 13g-steward.js(拼接顺序在本文件【之后】)。
   // 直接写函数名会成为新的前向边,故经 06i 的延迟绑定命名空间挂接(13 → 06i 是后向边);13g 加载时
   // Object.assign(StewardHooks, {...}) 填充实现,未填充(理论上不可能)时本行是无操作。
@@ -74254,210 +74248,6 @@ async function handleAudioTranscribe(req, res) {
     ...(result.outLanguage ? { language: result.outLanguage } : {}),
     durationMs: result.durationMs, providerId: result.providerId, model: result.model, estimated: result.estimated,
   }));
-}
-
-// 第53波 EC-B 安全更新中心(53b):overlay 离线更新 API 编排层。
-//
-// 不复制第二套更新实现 -- 只编排 tools/Manage-Overlay.ps1 这一份受测核心(precheck/apply/rollback/verify/audit)。
-// 路由(全 token 级,同 checkpoints/rollback 破坏性档):
-//   POST /api/overlay/precheck  { zipPath }                  解压 + precheck(写入前全检),返回预览
-//   POST /api/overlay/apply      { zipPath, force? }          解压 + apply(PS1 内联 precheck 后才写入)
-//   GET  /api/overlay/status                                  当前版本/备份/审计尾(直接读文件,无需 PS1)
-//   POST /api/overlay/rollback                                回滚到最近备份(需缓存 PS1)
-//
-// 安全纪律:
-//   - zipPath 必须绝对路径 + .zip 后缀 + 存在;解压到 dataRoot/overlay-tool/extract-<rand>/(工作区内)
-//   - 解压用 PowerShell Expand-Archive(零依赖;PS5.1+ 自身有 zip-slip 防护),precheck 再校验 manifest 条目路径
-//   - PS1 从解压包内取(包自带 Manage-Overlay.ps1),缓存到 dataRoot/overlay-tool/ 供后续 rollback/audit
-//   - 不在前端拼写启动命令;logEvent 审计每个动作
-// 共享作用域拼接(同 13b):readJsonBody/send/json/tokenOk/logEvent/externalRoot/dataRoot/fs/fsp/path/crypto/cp 均在 bundle 作用域。
-
-const OVERLAY_TOOL_DIR = () => path.join(dataRoot(), 'overlay-tool');
-const OVERLAY_PS1 = () => path.join(OVERLAY_TOOL_DIR(), 'Manage-Overlay.ps1');
-const OVERLAY_PS1_TIMEOUT = 300000; // 5min(apply 含 backup+copy+verify;run_command 类对齐桥 650s 但 overlay 更可控)
-
-// 解压 zip 到 destDir(PowerShell Expand-Archive,零依赖)。返回 {ok, error?}。
-async function extractOverlayZip(zipPath, destDir) {
-  try {
-    await fsp.mkdir(destDir, { recursive: true });
-    // 单引号转义(PS 单引号字符串内 '' 表示一个 ');-Force 覆盖。
-    const qs = s => String(s).replace(/'/g, "''");
-    const ps = "try { Expand-Archive -LiteralPath '" + qs(zipPath) + "' -DestinationPath '" + qs(destDir) + "' -Force -ErrorAction Stop; 'OK' } catch { 'ERR:' + $_.Exception.Message }";
-    // 128f-⑬:execFileSync → 异步 execFile。修前解压一个覆盖包(最长 120 s)期间整个服务不答话 —— 更新中心自己的进度、
-    // 其它面的请求与推送全部排队(同文件下方 runOverlayPs1 早就因为同一个理由改成了异步,见对抗审查 F4)。
-    // -EncodedCommand(UTF-16LE Base64)而不是 -Command:无控制台起的 powershell.exe 解析 -Command 里的中文会在输入阶段
-    // 就坏掉(04-desktop-shell runPowerShell 头注的实测),覆盖包放在中文路径下就解不出来。输出按行判 UTF-8 / GBK。
-    const out = await new Promise((resolve, reject) => {
-      cp.execFile('powershell', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')], { encoding: 'buffer', timeout: 120000, maxBuffer: 16 * 1024 * 1024, windowsHide: true }, (err, stdout) => (err ? reject(err) : resolve(decodeConsoleText(stdout))));
-    });
-    const trimmed = String(out || '').trim();
-    if (trimmed.startsWith('ERR:')) return { ok: false, error: trimmed.slice(4) };
-    return { ok: true };
-  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
-}
-
-// 在解压目录里找 overlay 根(含 Manage-Overlay.ps1 + payload/update-manifest.json)。深度 ≤2(根或一层子目录)。
-async function findOverlayRoot(extractedDir) {
-  const candidates = [extractedDir];
-  try {
-    for (const e of await fsp.readdir(extractedDir, { withFileTypes: true })) {
-      if (e.isDirectory()) candidates.push(path.join(extractedDir, e.name));
-    }
-  } catch { /* ignore */ }
-  for (const c of candidates) {
-    const ps1 = path.join(c, 'Manage-Overlay.ps1');
-    const mani = path.join(c, 'payload', 'update-manifest.json');
-    if (fs.existsSync(ps1) && fs.existsSync(mani)) return c;
-  }
-  return null;
-}
-
-// 调用 PS1,捕获 stdout(期待 -Json 单对象输出),切片解析。返回 {ok, json?, raw?, error?}。
-// 对抗审查 F4:用 cp.execFile(异步)非 execFileSync -- 后者阻塞 Node 事件循环最长 5min,apply 期间全服务挂起。
-// 路由处 await。PS1 非 0 退出(precheck 失败/apply 拒绝)仍向 stdout 写 JSON 再 exit 1,故从 stdout 取。
-function runOverlayPs1(ps1Path, action, overlayRoot, target, extraArgs) {
-  const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ps1Path, '-Action', action, '-Json'];
-  if (overlayRoot) args.push('-OverlayRoot', overlayRoot);
-  if (target) args.push('-Target', target);
-  if (Array.isArray(extraArgs)) args.push(...extraArgs);
-  return new Promise(resolve => {
-    // 输出按行判 UTF-8 / GBK(00-boot decodeConsoleText):中文 Windows 上 PS1 的 JSON 里带中文路径 / 报错时是 GBK。
-    cp.execFile('powershell', args, { encoding: 'buffer', timeout: OVERLAY_PS1_TIMEOUT, maxBuffer: 16 * 1024 * 1024 }, (err, stdoutBuf, stderrBuf) => {
-      const stdout = decodeConsoleText(stdoutBuf || (err && err.stdout) || Buffer.alloc(0));
-      const stderr = decodeConsoleText(stderrBuf || Buffer.alloc(0));
-      const so = String(stdout || '');
-      const j = tryParseJson(so);
-      if (j) return resolve({ ok: true, json: j, raw: so });
-      if (err && !so) return resolve({ ok: false, error: String(err.message || err), stderr: String(stderr || ''), raw: '' });
-      if (err) return resolve({ ok: false, error: String(err.message || err), stderr: String(stderr || ''), raw: so });
-      resolve({ ok: false, error: 'non-JSON output from PS1', raw: so });
-    });
-  });
-}
-
-// 从可能含杂质的 stdout 中切首个 {...} 解析(PS1 -Json 应只输出单对象,但防御性切片)。
-function tryParseJson(raw) {
-  const trimmed = String(raw || '').trim();
-  if (!trimmed) return null;
-  const start = trimmed.indexOf('{');
-  const end = trimmed.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try { return JSON.parse(trimmed.slice(start, end + 1)); } catch { return null; }
-}
-
-// 缓存 PS1(从解压包内拷到 dataRoot/overlay-tool/,供后续 rollback/audit)。best-effort。
-async function cacheOverlayPs1(overlayRoot) {
-  try {
-    await fsp.mkdir(OVERLAY_TOOL_DIR(), { recursive: true });
-    await fsp.copyFile(path.join(overlayRoot, 'Manage-Overlay.ps1'), OVERLAY_PS1());
-    return true;
-  } catch { return false; }
-}
-
-// 读部署根的 overlay 状态(直接读文件,无需 PS1;status 路由用,无 PS1 缓存也能工作)。
-// 注意:PS1 用 Set-Content/Add-Content -Encoding UTF8 写文件(PS5.1 带BOM),Node JSON.parse 遇BOM会抛;
-// 故读后剥 BOM(﻿)。update-manifest.json 由 gen-manifest.js 写(无BOM),不受影响。
-function stripBom(s) { return String(s || '').replace(/^﻿/, ''); }
-async function readOverlayStatusDirect(target) {
-  const status = { current: null, backups: [], audit: [] };
-  const appliedPath = path.join(target, '.overlay-applied.json');
-  if (fs.existsSync(appliedPath)) {
-    try { status.current = JSON.parse(stripBom(await fsp.readFile(appliedPath, 'utf8'))); } catch { /* ignore */ }
-  }
-  const backupsDir = path.join(target, '.overlay-backups');
-  if (fs.existsSync(backupsDir)) {
-    try {
-      const entries = await fsp.readdir(backupsDir, { withFileTypes: true });
-      for (const e of entries) {
-        if (e.isDirectory()) {
-          let fileCount = 0;
-          try { const walk = dir => fsp.readdir(dir, { withFileTypes: true }).then(es => Promise.all(es.map(x => x.isDirectory() ? walk(path.join(dir, x.name)) : Promise.resolve(fileCount++)))); await walk(path.join(backupsDir, e.name)); } catch { /* ignore */ }
-          status.backups.push({ name: e.name, fileCount, createdAt: e.mtimeMs || null });
-        }
-      }
-      status.backups.sort((a, b) => String(b.name).localeCompare(String(a.name)));
-    } catch { /* ignore */ }
-  }
-  const auditLog = path.join(target, '.overlay-audit.jsonl');
-  if (fs.existsSync(auditLog)) {
-    try {
-      const lines = stripBom(await fsp.readFile(auditLog, 'utf8')).split(/\r?\n/).filter(x => x.trim());
-      const tail = lines.slice(-50);
-      for (const line of tail) { try { status.audit.push(JSON.parse(line)); } catch { /* ignore */ } }
-    } catch { /* ignore */ }
-  }
-  return status;
-}
-
-async function handleOverlayApiRoutes(req, res, pathname) {
-  if (process.platform === 'darwin' && req.method === 'POST'
-    && ['/api/overlay/precheck', '/api/overlay/apply', '/api/overlay/rollback'].includes(pathname)) {
-    return send(res, apiFailure('overlay.platform_unsupported', {}, 'macOS 不支持此 Windows overlay 更新方式。', 501));
-  }
-  // POST /api/overlay/precheck { zipPath } -- 解压 + precheck(写入前全检),返回预览。
-  if (req.method === 'POST' && pathname === '/api/overlay/precheck') {
-    const body = await readJsonBody(req);
-    const zipPath = body && typeof body.zipPath === 'string' ? body.zipPath.trim() : '';
-    if (!zipPath || !path.isAbsolute(zipPath)) return send(res, json({ ok: false, error: '请提供 overlay zip 包的绝对路径' }, 400));
-    if (!zipPath.toLowerCase().endsWith('.zip') || !fs.existsSync(zipPath)) return send(res, json({ ok: false, error: 'zip 包不存在或不是 .zip 文件' }, 400));
-    const extractDir = path.join(OVERLAY_TOOL_DIR(), 'extract-' + Date.now() + '-' + crypto.randomBytes(3).toString('hex'));
-    const ext = await extractOverlayZip(zipPath, extractDir);
-    if (!ext.ok) { await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {}); return send(res, json({ ok: false, error: '解压失败: ' + ext.error }, 500)); }
-    const overlayRoot = await findOverlayRoot(extractDir);
-    if (!overlayRoot) { await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {}); return send(res, json({ ok: false, error: '解压后未找到 overlay 包(缺 Manage-Overlay.ps1 + payload/update-manifest.json)' }, 400)); }
-    await cacheOverlayPs1(overlayRoot);
-    const target = externalRoot();
-    const r = await runOverlayPs1(OVERLAY_PS1(), 'precheck', overlayRoot, target, []);
-    await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {});
-    logEvent({ kind: 'overlay_precheck', ok: !!(r.ok && r.json && r.json.ok), version: r.json && r.json.version });
-    if (!r.ok || !r.json) return send(res, json({ ok: false, error: (r && r.error) || 'PS1 调用失败', raw: r && r.raw }, 500));
-    return send(res, json(r.json));
-  }
-
-  // POST /api/overlay/apply { zipPath, force? } -- 解压 + apply(PS1 内联 precheck 后才写入)。
-  if (req.method === 'POST' && pathname === '/api/overlay/apply') {
-    const body = await readJsonBody(req);
-    const zipPath = body && typeof body.zipPath === 'string' ? body.zipPath.trim() : '';
-    const force = !!(body && body.force);
-    if (!zipPath || !path.isAbsolute(zipPath)) return send(res, json({ ok: false, error: '请提供 overlay zip 包的绝对路径' }, 400));
-    if (!zipPath.toLowerCase().endsWith('.zip') || !fs.existsSync(zipPath)) return send(res, json({ ok: false, error: 'zip 包不存在或不是 .zip 文件' }, 400));
-    const extractDir = path.join(OVERLAY_TOOL_DIR(), 'extract-' + Date.now() + '-' + crypto.randomBytes(3).toString('hex'));
-    const ext = await extractOverlayZip(zipPath, extractDir);
-    if (!ext.ok) { await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {}); return send(res, json({ ok: false, error: '解压失败: ' + ext.error }, 500)); }
-    const overlayRoot = await findOverlayRoot(extractDir);
-    if (!overlayRoot) { await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {}); return send(res, json({ ok: false, error: '解压后未找到 overlay 包' }, 400)); }
-    await cacheOverlayPs1(overlayRoot);
-    const target = externalRoot();
-    const r = await runOverlayPs1(OVERLAY_PS1(), 'apply', overlayRoot, target, force ? ['-Force'] : []);
-    await fsp.rm(extractDir, { recursive: true, force: true }).catch(() => {});
-    logEvent({ kind: 'overlay_apply', ok: !!(r.ok && r.json && r.json.ok), version: r.json && r.json.version, force });
-    if (!r.ok || !r.json) return send(res, json({ ok: false, error: (r && r.error) || 'PS1 调用失败', raw: r && r.raw }, 500));
-    return send(res, json(r.json));
-  }
-
-  // GET /api/overlay/status -- 当前版本/备份/审计尾(直接读文件,无需 PS1)。GET 须 handler 内自查 token(同 /api/audit 纪律)。
-  if (req.method === 'GET' && pathname === '/api/overlay/status') {
-    if (!tokenOk(req)) return send(res, json({ ok: false, error: 'missing or invalid workbench token' }, 403));
-    if (process.platform === 'darwin') return send(res, json({ ok: true, supported: false, platform: process.platform,
-      code: 'overlay.platform_unsupported', current: null, backups: [], audit: [] }));
-    try {
-      const status = await readOverlayStatusDirect(externalRoot());
-      return send(res, json({ ok: true, supported: true, platform: process.platform, ...status }));
-    } catch (e) {
-      return send(res, json({ ok: false, error: String(e && e.message || e) }, 500));
-    }
-  }
-
-  // POST /api/overlay/rollback -- 回滚到最近备份(需缓存 PS1;无则提示预检或 CLI 救援)。
-  if (req.method === 'POST' && pathname === '/api/overlay/rollback') {
-    if (!fs.existsSync(OVERLAY_PS1())) return send(res, json({ ok: false, error: '未缓存 overlay 工具;请先对一个 overlay 包执行预检,或用 Manage-Overlay.cmd rollback 作为救援路径' }, 409));
-    const target = externalRoot();
-    // -Force:API 跑在服务内,PS1 rollback 默认拒(服务在跑);-Force 跳过端口拒,文件覆写后 restart 加载恢复的旧文件(同 apply 语义)。
-    const r = await runOverlayPs1(OVERLAY_PS1(), 'rollback', null, target, ['-Force']);
-    logEvent({ kind: 'overlay_rollback', ok: !!(r.ok && r.json && r.json.ok) });
-    if (!r.ok || !r.json) return send(res, json({ ok: false, error: (r && r.error) || 'PS1 调用失败', raw: r && r.raw }, 500));
-    return send(res, json(r.json));
-  }
 }
 
 // ── 113b: 会话内容搜索 ────────────────────────────────────────────────────────────────────────

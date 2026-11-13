@@ -102,18 +102,17 @@ describe('S-12 deliverableCache 只缓存瘦身后的事实', () => {
   });
 });
 
-describe('S-09 桌面壳通知有前端发送方', () => {
-  it('quiet-card.js 在桌面壳里发 chrome.webview.postMessage({ ruyiNotification:{ title, body } })，且仍保留浏览器 Notification 回落', () => {
+describe('Mac native notification contract', () => {
+  it('frontend sends native fields and preserves browser fallback', () => {
     const quiet = read(path.join(JS, 'quiet-card.js'));
-    assert.match(quiet, /bridge\.postMessage\(\{ ruyiNotification: \{ id: entry\.key, title, body \} \}\)/);
-    assert.match(quiet, /globalThis\.__ruyiDesktop === 1 && bridge && typeof bridge\.postMessage === 'function'/);
-    assert.match(quiet, /new notificationApi\(title, \{ body, tag: entry\.key \}\)/);
+    assert.ok(quiet.includes('sendHostNotification({ id: entry.key, title, body })'));
+    assert.ok(quiet.includes('new notificationApi(title, { body, tag: entry.key })'));
+    assert.ok(!quiet.includes('chrome.webview'));
   });
-  it('宿主 RuyiDesktop.cs 读的正是 ruyiNotification 下的 title／body', () => {
-    const host = read(path.join(ROOT, 'ruyi-workbench', 'desktop', 'RuyiDesktop.cs'));
-    assert.match(host, /TryGetValue\("ruyiNotification"/);
-    assert.match(host, /TryGetValue\("title"/);
-    assert.match(host, /TryGetValue\("body"/);
+  it('Mac host validates fields and uses the native notification center', () => {
+    const host = read(path.join(ROOT, 'ruyi-workbench', 'desktop-macos', 'MacHostBridge.swift'));
+    assert.ok(host.includes('Set(params.keys) == ["id", "title", "body"]'));
+    assert.ok(host.includes('UNUserNotificationCenter.current().add('));
   });
 });
 

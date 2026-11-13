@@ -44,9 +44,9 @@ const viewerSrc = read(PUBLIC, 'js', 'help-viewer.js');
 const wizardSrc = read(PUBLIC, 'js', 'onboarding-wizard.js');
 const sessionSrc = read(PUBLIC, 'js', 'session-experience.js');
 const providerSrc = read(PUBLIC, 'js', 'provider-settings.js');
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const onboardingCss = read(PUBLIC, 'css', 'components', 'onboarding.css');
 const locales = {
   'zh-CN': readJson(path.join(PUBLIC, 'locales', 'zh-CN.json')),

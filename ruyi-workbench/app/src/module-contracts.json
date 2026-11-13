@@ -15917,13 +15917,6 @@
           ]
         },
         {
-          "provider": "13c-overlay-routes.js",
-          "symbol": "handleOverlayApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "13d-core-domain-routes.js",
           "symbol": "handleAgentRunApiRoutes",
           "kinds": [
@@ -16509,123 +16502,6 @@
           "symbol": "STEER_QUEUE_MAX",
           "kinds": [
             "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13c-overlay-routes.js",
-      "layer": "transport",
-      "provides": [
-        "OVERLAY_PS1",
-        "OVERLAY_PS1_TIMEOUT",
-        "OVERLAY_TOOL_DIR",
-        "cacheOverlayPs1",
-        "extractOverlayZip",
-        "findOverlayRoot",
-        "handleOverlayApiRoutes",
-        "readOverlayStatusDirect",
-        "runOverlayPs1",
-        "stripBom",
-        "tryParseJson"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeConsoleText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "externalRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "tokenOk",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         }
       ]

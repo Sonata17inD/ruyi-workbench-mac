@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 175(精确 152 / 前缀 11 / 正则 12),ROUTE_AUTH 161 条,生成于 2026-11-12T06:46:46.453Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-13T08:17:18.248Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -42,7 +42,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/bootstrap` | exact | open | 13-http-router.js · `handleApi` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 22 件 |
+| POST | `/api/bootstrap` | exact | open | 13-http-router.js · `handleApi` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 21 件 |
 | GET | `/api/status` | exact | open | 13-http-router.js · `handleApi` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 82 件 |
 | GET | `/api/capabilities` | exact | open | 13-http-router.js · `handleApi` | capabilities.e2e.js, macos-capability-popover.browser.e2e.js, macos-capture-host.e2e.js 等 7 件 |
 | GET | `/api/playbooks` | exact | token-browser | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, macos-platform-templates.e2e.js, meta-guard.e2e.js 等 8 件 |
@@ -53,7 +53,7 @@
 | POST | `/api/workspace/resolve` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, workspace-resolve.e2e.js |
 | POST | `/api/pick-folder` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, onboarding-workspace.browser.e2e.js, settings-wave1.browser.e2e.js 等 5 件 |
 | POST | `/api/workspace/dedicated` | exact | token | 13-http-router.js · `handleApi` | onboarding-workspace.browser.e2e.js |
-| POST | `/api/pick-file` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, overlay-update-gui.static.e2e.js, settings-wave1.browser.e2e.js |
+| POST | `/api/pick-file` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, settings-wave1.browser.e2e.js |
 | GET | `/api/models` | exact | open | 13-http-router.js · `handleApi` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 7 件 |
 | POST | `/api/config` | exact | token | 13-http-router.js · `handleApi` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 68 件 |
 | GET | `/api/agent-roles` | exact | token-browser | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
@@ -192,15 +192,6 @@
 | POST | `/api/missions/:missionId/split` | regex | token self | 13d-core-domain-routes.js · `handleMissionsApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
 | GET | `/api/missions/:missionId` | regex | token-browser self | 13d-core-domain-routes.js · `handleMissionsApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
 
-## overlay(4)
-
-| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
-|---|---|---|---|---|---|
-| POST | `/api/overlay/precheck` | exact | token | 13c-overlay-routes.js · `handleOverlayApiRoutes` | overlay-update-core.e2e.js, overlay-update-gui.static.e2e.js |
-| POST | `/api/overlay/apply` | exact | token | 13c-overlay-routes.js · `handleOverlayApiRoutes` | overlay-update-core.e2e.js, overlay-update-gui.static.e2e.js |
-| GET | `/api/overlay/status` | exact | token self | 13c-overlay-routes.js · `handleOverlayApiRoutes` | macos-overlay-boundary.e2e.js, overlay-update-core.e2e.js, overlay-update-gui.static.e2e.js |
-| POST | `/api/overlay/rollback` | exact | token | 13c-overlay-routes.js · `handleOverlayApiRoutes` | overlay-update-core.e2e.js, overlay-update-gui.static.e2e.js, settings-wave1.browser.e2e.js |
-
 ## scheduler(6)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -265,6 +256,5 @@
 - 13-http-router.js · `handleApi` → `handleCheckpointApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSteerApiRoute`
 - 13-http-router.js · `handleApi` → `handleAudioApiRoutes`
-- 13-http-router.js · `handleApi` → `handleOverlayApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSchedulerApiRoutes`
 - 13b-api-domain-routes.js · `handleMcpApiRoutes` → `handleMigrationApiRoutes`

@@ -28,7 +28,7 @@ const REPO = path.resolve(__dirname, '..', '..');
 const WB = path.join(REPO, 'ruyi-workbench');
 const MARKET = path.join(WB, 'resources', 'plugins', 'ruyi-offline');
 const srv = require(path.join(WB, 'app', 'server.js'));
-const overlay = require(path.join(WB, 'tools', 'build-overlay.js'));
+const overlay = require(path.join(WB, 'tools', 'macos-runtime-files.js'));
 
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 // 只认本插件用到的 YAML 子集:--- 包住的若干行,key: value 单行标量,或 key: 后跟缩进的 "- item" 列表。
@@ -129,7 +129,7 @@ test('[D] 技能与命令的 frontmatter 齐全', () => {
 });
 
 test('[E] 插件目录里的每个文件都在覆盖包载荷里', () => {
-  const payload = new Set(overlay.PAYLOAD_FILES);
+  const payload = new Set(overlay.filesFor('workbench'));
   const files = walk(MARKET).map(f => path.relative(WB, f).split(path.sep).join('/'));
   assert.ok(files.length >= 30, `插件目录可遍历(实得 ${files.length} 个文件)`);
   const missing = files.filter(f => !payload.has(f));

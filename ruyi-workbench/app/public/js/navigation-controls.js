@@ -62,7 +62,6 @@ export function createNavigationControlsDomain({
   toggleUiMode = () => {},
   focusFirstInteractive = () => null,
   loadAgentRoles = async () => {},
-  refreshOverlayStatus = async () => {},
   refreshMcpOps = async () => {},
   updateShellPolling = () => {},
   loadFileTree = async () => {},
@@ -1000,7 +999,6 @@ function switchSettingsTab(name, force) {
   if (name === 'storage') openStorageTab();   // 2026-10：占用／清理／保留策略从体检页搬到「存储与数据」
   // 技能与模板页的三段是 open() 首次拉到数据后才挂上的 —— 挂完再重建一次锚点条，首次进页也有段内跳转。
   if (name === 'skills') Promise.resolve(openSettingsSkills()).then(() => { if (state._settingsTab === 'skills') buildSettingsJumpList('stab-skills'); }).catch(() => {});
-  if (name === 'update') refreshOverlayStatus();
   if (name === 'integrations') refreshMcpOps(false); // 55c:打开页签先取清单(不 probe);「全部重测」按钮才 probe=1。W6:连接器清单并进了「集成与 MCP」
 }
 

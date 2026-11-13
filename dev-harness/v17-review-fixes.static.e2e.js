@@ -62,21 +62,11 @@ ok(!/maxItems: 32/.test(server), 'S6: schema maxItems:32 绝迹');
 ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(server), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');
 
 // ── S8: ACC 侧修复(静态)─────────────────────────────────────────────────────
-const accCapture = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'capture.py'), 'utf8');
-const accClip = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'desktop_extra.py'), 'utf8');
 const accAudit = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'audit.py'), 'utf8');
 const accFs = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'filesystem.py'), 'utf8');
-const accApp = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'application.py'), 'utf8');
-const accOcr = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'ocr.py'), 'utf8');
-const updateBat = fs.readFileSync(path.join(ACC, 'installer', 'update.bat'), 'utf8');
-ok(/protected_path_reason\(output_path\)/.test(accCapture), 'S8: window_screenshot 输出路径 protected 护栏');
-ok(/protected_path_reason\(save_path\)/.test(accClip), 'S8: get_clipboard_image 保存路径 protected 护栏');
-ok(/_SECRET_VALUE_PATTERNS/.test(accAudit) && /_scrub_value/.test(accAudit), 'S8: audit 值级脱敏在');
-ok(/open\(path, "rb"\)/.test(accFs), 'S8: read_file 二进制读(真字节预算)');
-ok(!/f\.read\(max_bytes\)/.test(accFs), 'S8: read_file 字符读旧实现绝迹');
-ok(/wait_timeout: float = 120\.0/.test(accApp), 'S8: launch_application 独立 wait_timeout');
-ok(!/"ok": True, "found": True, "error"/.test(accOcr), 'S8: ocr_click nth 越界自矛盾包络绝迹');
-ok(updateBat.includes('runtime\\python\\python.exe') && updateBat.includes('venv\\Scripts\\python.exe'), 'S8: update.bat 双布局探测');
+ok(/_SECRET_VALUE_PATTERNS/.test(accAudit) && /_scrub_value/.test(accAudit), 'S8: audit values remain redacted');
+ok(/open\(path, "rb"\)/.test(accFs), 'S8: file reads use byte budgets');
+// Native capture, clipboard paths and OCR are covered by the Mac protocol suites.
 
 // ── S9: 端口审计在 + capabilities 毕业 ──────────────────────────────────────
 // 第46波46a: 实现抽至 lib/port-audit.js 真身(runner 与 unit 同源);锁改为"run-all require 真身
