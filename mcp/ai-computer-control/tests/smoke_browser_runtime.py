@@ -44,7 +44,7 @@ class BrowserRuntime(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(b._playwright)
             if sys.platform == "darwin":
                 self.assertEqual(result["control"], "system-handoff")
-                self.assertIn("not implemented", result["hint"])
+                self.assertIn("Inspect diagnostics", result["hint"])
 
     async def test_cdp_closes_all_owned_pages_but_not_the_selected_user_page(self):
         b = self.browser
@@ -90,7 +90,7 @@ class BrowserRuntime(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(b._browser)
         self.assertIsNone(b._playwright)
 
-    async def test_installed_mac_browser_detection_retains_windows_resolver(self):
+    async def test_installed_mac_browser_detection(self):
         b = self.browser
         # sys.platform is simulated; os.path still follows the test host. Match
         # the resolver's path construction on Windows as well as on macOS.
@@ -98,9 +98,6 @@ class BrowserRuntime(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, {"ACC_BROWSER_EXECUTABLE": ""}), patch.object(b.sys, "platform", "darwin"), \
              patch.object(b.os.path, "isfile", side_effect=lambda p: p == mac), patch.object(b.os, "access", return_value=True):
             self.assertEqual(b._managed_executable("managed"), mac)
-        with patch.dict(os.environ, {"ACC_BROWSER_EXECUTABLE": ""}), patch.object(b.sys, "platform", "win32"), \
-             patch.object(b, "_windows_default_browser_executable", return_value="C:/fixture/chrome.exe"):
-            self.assertEqual(b._managed_executable("managed"), "C:/fixture/chrome.exe")
 
     async def test_actual_launcher_is_gone_when_launch_request_is_cancelled(self):
         b = self.browser

@@ -86,10 +86,9 @@ class AXTools(unittest.TestCase):
             status["axSupported"] = False
             self.assertFalse(self.macos.capability()["axReady"])
 
-    def test_platform_replacement_preserves_windows_uia_module(self):
-        self.assertEqual(self.server._platform_modules(["uia"]), ["macos_ax"])
-        with patch.object(self.server.sys, "platform", "win32"), patch.object(self.server, "_UNSUPPORTED_MODULES", {}):
-            self.assertEqual(self.server._platform_modules(["uia"]), ["uia"])
+    def test_ax_toolset_registers_native_backend_directly(self):
+        self.assertEqual(self.server._TOOLSET_MODULES["uia"], ["macos_ax"])
+        self.assertFalse(hasattr(self.server, "_platform_modules"))
 
     def test_diagnostics_separates_native_backend_from_optional_windows_package(self):
         status = {"supported": True, "installed": True, "axSupported": True, "axReady": False,

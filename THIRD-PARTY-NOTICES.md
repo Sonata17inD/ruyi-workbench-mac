@@ -102,9 +102,7 @@ ACC 是独立打包的桌面控制 MCP。其运行时依赖在 `mcp/ai-computer-
 | 依赖 | 典型许可 | 用途 |
 |---|---|---|
 | mcp[cli] | MIT | MCP 协议实现 |
-| pyautogui | BSD-3-Clause | 键鼠自动化 |
 | Pillow | MIT-CMU(HPND) | 图像处理 |
-| pywin32 | PSF-2.0 | Windows API |
 | psutil | BSD-3-Clause | 进程/系统信息 |
 | playwright | Apache-2.0 | 浏览器自动化(顶层 import 已守护降级) |
 | python-docx | MIT | Word 读写 |
@@ -112,19 +110,12 @@ ACC 是独立打包的桌面控制 MCP。其运行时依赖在 `mcp/ai-computer-
 | pdfplumber | MIT | PDF 文本抽取 |
 | pyperclip | BSD-3-Clause | 剪贴板 |
 | reportlab | BSD(见上游 LICENSE) | PDF 导出(`write_pdf`,可选降级) |
-| uiautomation | Apache-2.0 | UI Automation 无障碍树(可选降级) |
-| comtypes | MIT | COM 绑定(uiautomation 运行时依赖) |
-| winsdk | MIT | Windows.Media.Ocr 离线 OCR(可选降级) |
 | opencv-python-headless | Apache-2.0(wrapper;OpenCV 本体 Apache-2.0) | 多尺度模板匹配(可选降级) |
 | numpy | BSD-3-Clause | 数值计算 |
 | python-pptx | MIT | PowerPoint 生成(`write_pptx`,可选降级) |
 | matplotlib | PSF-based(matplotlib 许可,BSD 兼容) | 图表出图(`chart_image`,可选降级) |
 | XlsxWriter | BSD-2-Clause | Excel 写入(python-pptx 相关链路的传递依赖) |
 | lxml | BSD-3-Clause | XML 处理(python-docx / python-pptx 的传递依赖) |
-
-> **pynput(LGPL-3.0)** —— 用于宏录制(`record_start` / `record_stop`,缺失时相关工具优雅降级)。
-> 本仓库**仅以依赖名引用 pynput,不在仓库内分发其任何代码**;用户经 `pip` / PyPI 自行获取,其源码可从 PyPI 及上游获得。
-> 以依赖形式动态链接使用 LGPL 库时,义务主要落在**分发其二进制/wheels 的发行方**;本仓库不承载其 wheels。
 
 > 上表为便于审阅的概览;确切版本与许可条款以实际安装的 wheels 元数据(`*.dist-info/METADATA`、`LICENSE`)为准。
 

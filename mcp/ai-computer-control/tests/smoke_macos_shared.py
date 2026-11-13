@@ -57,11 +57,27 @@ class MacShared(unittest.TestCase):
         self.assertEqual("mouse_click" in names, d["capabilities"]["desktop.capture"].get("inputReady", False))
         self.assertEqual("ui_inspect" in names, d["capabilities"]["desktop.capture"].get("axReady", False))
         self.assertEqual(names, {t.name for t in asyncio.run(s.mcp.list_tools())})
-        # Pure registration selection retains all Windows groups. No Windows backend
-        # is imported or executed by this assertion.
-        with patch.object(s, "_UNSUPPORTED_MODULES", {}), patch.object(s.sys,"platform","win32"):
-            self.assertIn("screen", s._active_modules())
-            self.assertIn("ocr", s._active_modules())
+        self.assertNotIn("screen", s._active_modules())
+        self.assertIn("macos_ocr", s._active_modules())
+
+    def test_shared_file_encodings_and_shell_results(self):
+        import codecs
+        import shlex
+        from ai_computer_control.tools.filesystem import _decode_text
+        from ai_computer_control.tools.shell import run_command
+        text = "中文𠀀\r\n第二行"
+        for raw in (text.encode("gb18030"), text.encode("utf-16"),
+                    codecs.BOM_UTF8 + text.encode("utf-8")):
+            self.assertEqual(_decode_text(raw, None)[0], text)
+        script = "import sys;print('中文');print('failure detail',file=sys.stderr);sys.exit(7)"
+        result = run_command(shlex.quote(sys.executable) + " -c " + shlex.quote(script))
+        self.assertEqual(result["return_code"], 7)
+        self.assertFalse(result["ok"])
+        self.assertIn("中文", result["stdout"])
+        self.assertIn("failure detail", result["stderr"])
+        result = run_command("/bin/sleep 10", timeout=1)
+        self.assertTrue(result["timed_out"])
+        self.assertFalse(result["ok"])
 
     def test_explicit_toolsets_select_implemented_mac_backends(self):
         with patch.dict(os.environ, {"ACC_TOOLSETS": "desktop,uia,ocr,office,browser"}):
