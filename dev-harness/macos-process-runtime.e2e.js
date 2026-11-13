@@ -327,7 +327,7 @@ rl.on('line',line=>{const m=JSON.parse(line);if(!m.id)return;
     for (const handle of burstHandles) runtime.stop(handle, 'fork-burst-complete');
     const burstResults = await Promise.all(burstHandles.map(handle => runtime.completion(handle)));
     const afterBurst = snapshotProcessTable();
-    t.ok(burstResults.every(result => !result.incomplete), 'concurrent identity synchronization and cleanup remain complete');
+    t.ok(burstResults.every(result => !result.incomplete), 'concurrent identity synchronization and cleanup remain complete: ' + JSON.stringify(burstResults));
     t.ok(observedBurst.every(expected => !afterBurst.some(row => row.pid === expected.pid && row.created === expected.created)),
       'all observed fork-burst descendants, including detached children, have exited');
 

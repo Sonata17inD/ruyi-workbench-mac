@@ -108,6 +108,20 @@ static uint64_t monotonic_milliseconds(void) {
     return (uint64_t)now.tv_sec * 1000 + (uint64_t)now.tv_nsec / 1000000;
 }
 
+// libproc may report SZOMB before waitpid can collect the final exit status.
+// Cleanup confirmation and child reaping are distinct operations. Wait only for
+// this direct child, with a bounded deadline; never fabricate an exit result.
+static bool reap_child(pid_t child, int *status, uint64_t deadline) {
+    for (;;) {
+        pid_t waited = waitpid(child, status, WNOHANG);
+        if (waited == child) return true;
+        if (waited < 0 && errno != EINTR) return false;
+        uint64_t now = monotonic_milliseconds();
+        if (interrupted || !now || now >= deadline) return false;
+        usleep(1000);
+    }
+}
+
 static size_t confirm_exits(const ProcessRow *rows, size_t length) {
     uint64_t started = monotonic_milliseconds();
     size_t terminated = 0, already_exited = 0, unconfirmed = length;
@@ -458,10 +472,7 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     CleanupResult cleanup = cleanup_supervised(known, &length, &anchor, complete);
     complete = cleanup.complete;
     size_t unconfirmed = cleanup.unconfirmed, terminated = cleanup.terminated, already_exited = cleanup.already_exited;
-    if (!exited) {
-        pid_t waited = waitpid(child, &status, WNOHANG);
-        exited = waited == child;
-    }
+    if (!exited) exited = reap_child(child, &status, monotonic_milliseconds() + 500);
     if (!exited || unconfirmed || interrupted) complete = false;
     char cleanup_message[240];
     int cleanup_size = snprintf(cleanup_message, sizeof(cleanup_message),
@@ -552,7 +563,7 @@ static int supervise_guarded(int control_fd, char **command, int extra_fds, uint
     }
     if (!eof && !receive_identities(identities[0], known, &length, &sequence, &eof)) complete = false;
     CleanupResult cleanup = cleanup_supervised(known, &length, &anchor, complete);
-    if (!exited) exited = waitpid(primary, &status, WNOHANG) == primary;
+    if (!exited) exited = reap_child(primary, &status, monotonic_milliseconds() + 500);
     char report[240];
     int report_size = snprintf(report, sizeof(report),
         "{\"event\":\"guardian-cleanup\",\"value\":%zu,\"detail\":%d,\"terminated\":%zu,\"alreadyExited\":%zu,\"observed\":%zu}\n",

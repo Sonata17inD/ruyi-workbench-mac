@@ -67,10 +67,15 @@ int main(void) {
     puts("CHECK identity channel backpressure fails closed");
     close(identities[0]); close(identities[1]);
 
+    int exit_status = 0;
+    if (reap_child(child, &exit_status, monotonic_milliseconds() + 5)) failures++;
+    puts("CHECK live direct child reaping respects its deadline");
     (void)signal_verified(&row, SIGKILL);
     row.termination_requested = true;
     if (confirm_exits(&row, 1) != 0) failures++;
     puts("CHECK termination is confirmed before reporting completion");
-    waitpid(child, NULL, 0);
+    if (!reap_child(child, &exit_status, monotonic_milliseconds() + 500)
+        || !WIFSIGNALED(exit_status) || WTERMSIG(exit_status) != SIGKILL) failures++;
+    puts("CHECK terminated child is reaped before emitting its exit status");
     return failures ? 1 : 0;
 }
