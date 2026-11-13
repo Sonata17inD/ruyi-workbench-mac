@@ -14,8 +14,6 @@
 //   buildArgs(ctx)            async 回合主参数(续接/--add-dir/额外参数之外的全部;可能落盘 MCP 配置)
 //   resumeArgs(nativeSessionId)     续接原生会话的参数
 //   extraArgs(config)               用户配置的额外 CLI 参数(排在尾部参数最后)
-//   prepareSpawn(command, args)     起子进程的最终 { command, args, opts }(.cmd 走 cmd.exe、npm 入口直启等)
-//   cmdLineBudget(command)          整行命令长度预算(0 = 不设防,提示词不走命令行时就是 0)
 //   appendSystemPromptFlag          追加系统提示的命令行旗标;'' = 改走 stdin 的 <ruyi-agent-cli-instructions> 段
 //   runPreparedTurn(context)        null | 自有传输层接管本回合(Kimi = ACP,见 05b);fake 缝下不接管
 //   buildAgentDefinitions(cwd, config, budget)  async 原生子代理角色定义 { definitions, roles, omitted }
@@ -57,7 +55,6 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
         // envelopes. Route questions through our MCP tool instead of Claude's terminal-only native prompt.
         if (interactive) args.push('--disallowedTools', 'AskUserQuestion');
       }
-      // cmd8191 防线: --agents 的推送延后到 runClaudeTurn 的「预算核算与降级阶梯」——角色定义吃 append 之后的剩余预算。
       // v1.4.3: 'auto' mode uses the CLI's built-in risk classifier, no workbench bridge needed.
       if (config.permissionBridge && config.permissionMode !== 'bypass' && config.permissionMode !== 'auto') {
         // permission-prompt-tool 名派生自 MCP server id,须与之一致(RUYI_MCP_CLI_TOOL_PREFIX)。
@@ -79,9 +76,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     },
     resumeArgs: nativeSessionId => ['--resume', nativeSessionId],
     extraArgs: config => (Array.isArray(config.extraClaudeArgs) ? config.extraClaudeArgs : []),
-    // Route the real CLI through cmd.exe when it's a .cmd/.bat (fixes "spawn EINVAL" on modern Node).
     prepareSpawn: (command, args) => prepareAgentCliSpawn('claude', command, args),
-    cmdLineBudget: command => cmdLineBudgetFor(command),
     appendSystemPromptFlag: '--append-system-prompt',
     runPreparedTurn: null,
     buildAgentDefinitions: (workingDir, config, budget) => buildClaudeAgentDefinitions(workingDir, config, budget),
@@ -164,7 +159,6 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     extraArgs: () => [],
     prepareSpawn: (command, args) => prepareAgentCliSpawn('kimi', command, args),
     // ACP carries the prompt over stdin as JSON-RPC, so Windows' command-line ceiling is irrelevant to Kimi.
-    cmdLineBudget: () => 0,
     appendSystemPromptFlag: '',
     runPreparedTurn: context => runKimiAcpTurnPrepared(context),
     buildAgentDefinitions: async () => ({ definitions: {}, roles: [], omitted: [] }),
@@ -386,7 +380,6 @@ async function runClaudeTurn({
   // 本条消息的记忆检索结果:回执,稍后(记忆段)再把相关记忆索引接在它后面 —— 都随每条消息变化,所以走每回合信封(turnMemoryEnvelope),
   // 不进按 hash 去重的稳定索引(#10)。用 let 并沿用这个名字,是因为 kimi-prompt-parts 把下面那段信封装配抽出来单独执行,只认这个变量。
   let memoryTurnCheck = buildMemoryCheckPrompt(memoryPreflight.status, config);
-  // cmd8191 防线: 先把与 append/agents 无关的尾部参数(tailArgs)全部定下来,才能精确核算整行剩余预算。
   // (就是原来跟在 append 块后面的 --resume / --add-dir / extraClaudeArgs,内容不变,仅提前收集、最后统一 push。)
   const tailArgs = [];
   if (config.autoResumeClaudeSessions && session.claudeSessionId) {
@@ -410,33 +403,12 @@ async function runClaudeTurn({
   }
   tailArgs.push(...adapter.extraArgs(config));
 
-  // cmd8191 防线: 整行预算核算。fake 缝(node 直启)不受 cmd 限制,除非 WCW_CLAUDE_CMDLINE_BUDGET 测试缝强制。
-  // 阶梯顺序: ① append 先拿预算(块内 fits-or-drop 自然兑现 用户append>技能>记忆>账本>编排>语言政策);
-  // ② --agents 角色定义吃 append 之后的剩余(子代理编排是增强,用户提示与技能是核心诉求);
-  // ③ 组装后整行复核(引号翻倍等二阶效应的最终闸口)仍超 → 砍 --agents → 围栏安全裁 append → 告警但绝不硬失败。
-  const preflightLaunch = fakeClaude
-    ? { command: process.execPath, args: [fakeClaude], opts: {} }
-    : adapter.prepareSpawn(claude, []);
-  const guardCmd = preflightLaunch.command;
-  const guardPrefixArgs = preflightLaunch.args;
-  // 提示词不走命令行的 CLI(Kimi ACP 走 stdin JSON-RPC)预算为 0 = 不设防。
-  const guardBudget = adapter.cmdLineBudget(guardCmd);
-  const cmdlineGuard = { budget: guardBudget, degraded: [], lineLen: 0 };
-  const FLAG_APPEND_ALLOWANCE = '--append-system-prompt'.length + 1 + CMD_LINE_QUOTE_MARGIN;
-  const FLAG_AGENTS_ALLOWANCE = '--agents'.length + 1 + CMD_LINE_QUOTE_MARGIN;
-  const fixedLen = guardBudget > 0 ? spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args, ...tailArgs]) : 0;
-  let appendLimit = 8000;
-  if (guardBudget > 0) {
-    appendLimit = Math.min(8000, guardBudget - fixedLen - FLAG_APPEND_ALLOWANCE);
-    if (appendLimit < 200) { appendLimit = 0; cmdlineGuard.degraded.push('append-skipped'); }
-    else if (appendLimit < 8000) cmdlineGuard.degraded.push(`append-trimmed-to-${appendLimit}`);
-  }
+  const appendLimit = 8000;
   // v1.4.3: --append-system-prompt
   // v1.4.3: --append-system-prompt。v1 技能体系: Claude 引擎不注入 provider 系统层(CLI 自建 prompt)。
   // 第35波 P2 修订渠道分工: 「稳定索引段」(技能索引/记忆索引/编排+模型提示)改走 stdin 消息流一次性注入
   // (下方 indexSecs → <workbench-context> 块,内容 hash 去重)——不再每轮占命令行、预算耗尽时也不再整段丢失
   // (索引已在原生 transcript 中);--append-system-prompt 只留 用户append + 账本digest(逐轮易变) + 政策尾。
-  // cmd8191 防线: appendLimit 由上方整行预算核算动态给出(≤8000)——索引段移走后此处压力大幅下降,
   // 剩余段按 用户append>账本>语言政策 的顺序自然降级。
   let appendSys = '';
   const indexSecs = []; // P2: 稳定索引段收集器(stdin 注入,不进命令行)
@@ -466,7 +438,6 @@ async function runClaudeTurn({
     // fenceSafeSlice、启动守卫③的 append-final-trim)一律【从尾部】切,前缀里的东西不会被静默剪掉。
     // 预算实测:中文 +95 字符、英文 +395(四层本身 461 / 1333),而 sectionLimit 最紧的团队模式下仍有
     // 5143 —— 顶不破 8000 那道闸。真顶破时是整段 append 被跳过(appendLimit<200),那条路径有 stderr
-    // 事件 + logEvent(cmdline_guard) + meta.cmdlineGuard 三处告知,不会静默消失。
     // 不做 identityOnly 门控:CLI 这一路【没有】identityOnly 这个概念 —— 它自建 prompt,从不调
     // buildStableSystemPrompt;全仓 identityOnly=true 只有 06:997 与 10:1263 两个 provider 侧摘要调用,
     // capabilities.e2e 的身份泄漏守卫查的也是 provider 侧那条 system 首段,与本行无关。
@@ -495,7 +466,6 @@ async function runClaudeTurn({
       appendSys += `${appendSys ? '\n\n' : ''}${buildBrowserAutomationHint(config)}`;
     }
     if (config.includeWorkbenchMcp) appendSys += `${appendSys ? '\n\n' : ''}${buildToolCustomizationHint(config)}`;
-    // cmd8191 配套: 先为末尾政策段(语言政策+团队提示)预留房间,append 内剩余内容(用户 append + 账本 digest)只在
     // sectionLimit 内竞争。预留后 appendSys ≤ sectionLimit ⇒ 末尾政策追加时绝不再切内容段。
     // (第35波 P2 起技能/记忆/编排索引已改道 stdin,不再参与此处的预算竞争。)
     const policyRoom = appendLimit > 0 ? appendTurnPolicies('', config, agentTeam, appendLimit, true, promptTaskContext).length + 2 : 0;
@@ -509,7 +479,6 @@ async function runClaudeTurn({
           (id, was, now) => { try { onEvent({ type: 'stderr', text: `[技能] 技能 ${id} 来源已变化(启用时为 ${was || '未知'},现为 ${now || '未知'}),已暂停注入,请在技能库重新启用。` }); } catch { /* 通知失败不阻断 */ } }
         ).catch(() => []);
         const skillSec = buildSkillsPromptSection(skillEntries, 'claude', config);
-        // 第35波 P2: 技能索引改走 stdin(indexSecs),不再经 cmd.exe 命令行 —— 无需 %/! 全角中和,原文注入保真。
         if (skillSec) indexSecs.push(skillSec);
       } catch { /* 技能注入绝不可阻断回合 */ }
     }
@@ -633,52 +602,11 @@ async function runClaudeTurn({
     });
   }
 
-  // cmd8191 防线②: --agents 角色定义吃 append 之后的剩余预算(角色库顺序确定性取舍,放不下的进 omitted 上报)。
-  let agentsBudget = 6000;
-  if (guardBudget > 0) {
-    const appendArgLen = appendSys ? quoteWinArg(appendSys).length + FLAG_APPEND_ALLOWANCE : 0;
-    agentsBudget = Math.max(0, Math.min(6000, guardBudget - fixedLen - appendArgLen - FLAG_AGENTS_ALLOWANCE));
-  }
+  const agentsBudget = 6000;
   const claudeAgentLibrary = await adapter.buildAgentDefinitions(workingDir, config, agentsBudget);
   if (Object.keys(claudeAgentLibrary.definitions).length) args.push('--agents', JSON.stringify(claudeAgentLibrary.definitions));
-  else if (claudeAgentLibrary.omitted.length) cmdlineGuard.degraded.push('agents-dropped');
   args.push(...tailArgs);
   // The prompt goes over stdin (interactive envelope / adapter.promptViaStdin below). Kimi branched into ACP above.
-
-  // cmd8191 防线③: 整行复核 —— 任何情况下绝不让整行越过预算(引号翻倍等二阶效应的最终闸口)。
-  if (guardBudget > 0) {
-    let lineLen = spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args]);
-    for (let g = 0; g < 6 && lineLen > guardBudget; g++) {
-      const ai = args.indexOf('--agents');
-      if (ai >= 0) { args.splice(ai, 2); if (!cmdlineGuard.degraded.includes('agents-dropped')) cmdlineGuard.degraded.push('agents-dropped'); }
-      else if (adapter.appendSystemPromptFlag) {
-        const pi = args.indexOf(adapter.appendSystemPromptFlag);
-        if (pi < 0) break;
-        const over = lineLen - guardBudget;
-        const trimmed = fenceSafeSlice(args[pi + 1], Math.max(0, String(args[pi + 1]).length - over - CMD_LINE_QUOTE_MARGIN));
-        if (trimmed && trimmed !== args[pi + 1]) { args[pi + 1] = trimmed; cmdlineGuard.degraded.push('append-final-trim'); }
-        else { args.splice(pi, 2); cmdlineGuard.degraded.push('append-dropped'); }
-      } else {
-        const pi = args.lastIndexOf('-p');
-        if (pi < 0 || typeof args[pi + 1] !== 'string') break;
-        const over = lineLen - guardBudget;
-        const prompt = args[pi + 1];
-        const keep = Math.max(1000, prompt.length - over - CMD_LINE_QUOTE_MARGIN - 80);
-        if (keep >= prompt.length) break;
-        args[pi + 1] = `[较早的恢复上下文因 Windows 命令行长度限制已省略]\n${prompt.slice(-keep)}`;
-        cmdlineGuard.degraded.push('prompt-head-trimmed');
-      }
-      lineLen = spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args]);
-    }
-    cmdlineGuard.lineLen = lineLen;
-    if (lineLen > guardBudget) cmdlineGuard.degraded.push('base-args-too-long');
-    if (cmdlineGuard.degraded.length) {
-      const isCmd = isBatchLauncher(guardCmd) || cmdLineBudgetSeam();
-      const note = `[启动守卫] ${agentCliLabel} CLI 命令行超预算(预算 ${guardBudget} 字符${isCmd ? `,cmd.exe 上限 ${CMD_EXE_LINE_LIMIT}` : ''}),已自动降级:${cmdlineGuard.degraded.join(' → ')}。可减少启用技能/缩短自定义系统提示,或改用原生可执行文件。`;
-      try { onEvent({ type: 'stderr', text: note }); } catch { /* 通知失败不阻断 */ }
-      logEvent({ kind: 'cmdline_guard', sessionId: session.id, budget: guardBudget, lineLen, degraded: cmdlineGuard.degraded });
-    }
-  }
 
   // 子进程环境由适配器给(Claude:effectiveAnthropicEnv 叠第三方端点/模型 + MAX_THINKING_TOKENS;Kimi:process.env)。
   const env = adapter.buildEnv(config, { RUYI_HOME: paths.data }); // 数据根交给 CLI/MCP 子进程(3.0 起只写 RUYI_HOME)
@@ -707,7 +635,7 @@ async function runClaudeTurn({
     if (args[i - 1] === '-p' || args[i - 1] === '--prompt') return `[prompt ${String(arg).length} chars]`;
     return redact(arg);
   });
-  onEvent({ type: 'meta', command: fakeClaude ? `node ${path.basename(fakeClaude)} (fake)` : claude, args: metaArgs, cwd: workingDir, model: config.model || '(default)', thinkingEffort: adapter.thinkingEffortLabel(config), permissionMode: config.permissionMode, historyRecoveryInjected, indexInjected: Boolean(indexInjection), indexHash: indexPayloadHash || undefined, memoryCheck: memoryPreflight.status, resumeResetReason: resumeResetReason || undefined, resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt), agentRoles: claudeAgentLibrary.roles.map(r => ({ id: r.id, label: r.label, source: r.source })), agentRolesOmitted: claudeAgentLibrary.omitted, agentDriver: `${agentCliType}-native`, agentCliType, agentCliLabel, experimental: Boolean(cliDriver.experimental), cwdWarning: cwdWarn || undefined, cmdlineGuard: cmdlineGuard.degraded.length ? { budget: cmdlineGuard.budget, lineLen: cmdlineGuard.lineLen, degraded: cmdlineGuard.degraded } : undefined, envBrief: envBrief ? envBrief.fingerprint : undefined });
+  onEvent({ type: 'meta', command: fakeClaude ? `node ${path.basename(fakeClaude)} (fake)` : claude, args: metaArgs, cwd: workingDir, model: config.model || '(default)', thinkingEffort: adapter.thinkingEffortLabel(config), permissionMode: config.permissionMode, historyRecoveryInjected, indexInjected: Boolean(indexInjection), indexHash: indexPayloadHash || undefined, memoryCheck: memoryPreflight.status, resumeResetReason: resumeResetReason || undefined, resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt), agentRoles: claudeAgentLibrary.roles.map(r => ({ id: r.id, label: r.label, source: r.source })), agentRolesOmitted: claudeAgentLibrary.omitted, agentDriver: `${agentCliType}-native`, agentCliType, agentCliLabel, experimental: Boolean(cliDriver.experimental), cwdWarning: cwdWarn || undefined, envBrief: envBrief ? envBrief.fingerprint : undefined });
   logEvent({ kind: 'turn_start', traceId: activeTraceId, sessionId: session.id, turnSeq: session.turnSeq, engine: 'claude', model: config.model || 'default', promptPack: PROMPT_PACK_VERSION, promptPolicies: { softwareEngineering: softwareEngineeringTaskProfile(promptTaskContext) }, memoryCheck: memoryPreflight.status, promptLen: fullPrompt.length, attachments: (attachments || []).length, fake: Boolean(fakeClaude), resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt) });
 
   await fsp.mkdir(workingDir, { recursive: true }).catch(() => {});
@@ -1096,11 +1024,7 @@ async function runClaudeTurn({
     clearPendingQuestions(session.id, 'turn ended');
   }
 
-  // cmd8191 防线(诊断兜底): 预算哨兵应已拦截一切超限;若仍见到 cmd 的「命令行太长。」(哨兵与真实 cmd 行为
-  // 漂移的信号),给用户可操作的明确指引而不是一句裸 stderr,并落审计日志供溯源。
   const stderrTrimmed = stderrText.trim();
-  const cmdLineOverflow = /命令行太长|command line is too long/i.test(stderrTrimmed);
-  if (cmdLineOverflow) logEvent({ kind: 'cmdline_overflow_escaped', sessionId: session.id, budget: cmdlineGuard.budget, lineLen: cmdlineGuard.lineLen });
   // Reactive fallback for legacy/unknown bindings and externally moved/deleted transcripts. Retry the
   // SAME logical turn once without --resume: the user message/turnSeq were already persisted above, so the
   // retry skips that mutation and reuses the pre-turn recovery history instead of duplicating the prompt.
@@ -1124,15 +1048,13 @@ async function runClaudeTurn({
   }
   // 第35波 P2: 进程根本没启动(spawn error 或 cmd 拒绝执行)→ prompt 未送达,原生 transcript 不含本轮注入的索引
   // → 清注入 hash,下轮(同内容也会)重注。abort/watchdog 杀不在此列:prompt 已写入 stdin,transcript 已含索引。
-  if ((exit.code === -1 && exit.error) || cmdLineOverflow) session.injectedIndexHash = null;
+  if (exit.code === -1 && exit.error) session.injectedIndexHash = null;
   // 回合后向 CLI 取权威用量(Kimi:stream-json 结果帧没有用量,见适配器),拿到就替换流内用量。
   if (adapter.syncPostTurnUsage) {
     const postTurnUsage = await adapter.syncPostTurnUsage(session, config, onEvent).catch(() => null);
     if (postTurnUsage) usage = postTurnUsage;
   }
-  const finalText = assistantText.trim() || (stdoutNoise.trim()) || (stderrTrimmed ? (cmdLineOverflow
-    ? `[启动守卫] ${agentCliLabel} CLI 未能启动:Windows 命令行超过长度限制。临时规避:减少启用的技能、缩短自定义系统提示,或改用原生可执行文件。\n原始错误:${redact(stderrTrimmed)}`
-    : `${agentCliLabel} CLI wrote only stderr:\n${redact(stderrTrimmed)}`) : '');
+  const finalText = assistantText.trim() || stdoutNoise.trim() || (stderrTrimmed ? `${agentCliLabel} CLI wrote only stderr:\n${redact(stderrTrimmed)}` : '');
   // v0.8-S3/S4a: turn_summary from the CLI turn's tool records + this turn's checkpoint journal. Workbench
   // file_* tools (run in the MCP child) checkpointed their `before` to dataRoot/checkpoints/<sid>/ — read
   // those index rows by turnSeq for accurate op + revertible:true. The CLI's native Edit/Write/Bash never

@@ -242,12 +242,6 @@ module.exports = {
   applyProviderReasoningEffort,
   buildClaudeCliEnv,
   decodeClaudeCliText,
-  // cmd8191 防线 — exposed for e2e unit assertions (长度核算与 batchSafeSpawn 同构性、围栏安全截断、降级阶梯)。
-  quoteWinArg,
-  batchSafeSpawn,
-  spawnCmdLineLength,
-  cmdLineBudgetFor,
-  resolveClaudeLauncher, // P1: npm shim → 真身 claude.exe 解析 — exposed for e2e unit assertions
   // v1.9 数据管家 — exposed for e2e direct unit assertions(保留策略归一/统计/sweep/归档读取回退)。
   normalizeStoragePolicy,
   collectStorageStats,

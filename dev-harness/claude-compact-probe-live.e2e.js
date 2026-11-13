@@ -52,8 +52,8 @@ function filler(targetTokens, tag) {
 
 (async () => {
   console.log('CLAUDE COMPACT PROBE (LIVE · 一次性 · 真实 token 消耗 ≈$0.2-0.3)');
-  const exe = srv.resolveClaudeLauncher('claude.cmd');
-  if (!/claude\.exe$/i.test(exe) || !fs.existsSync(exe)) { console.log('SKIP: 未安装 claude CLI'); return; }
+  const exe = (await srv.readConfig()).claudePath;
+  if (!exe || (exe.includes('/') && !fs.existsSync(exe))) { console.log('SKIP: 未安装 claude CLI'); return; }
   const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-probe-'));
   const findings = {};
 

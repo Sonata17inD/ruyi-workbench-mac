@@ -15,7 +15,6 @@
 //   id / label / pathKey / detectedKey / streaming / interactive / mcp   数据(经 /api/status 的 agentCliDrivers 原样下发)
 //   installCandidates({ env, home, join, platform })   默认安装位置候选(按序探测;Claude 有自己的启动器解析,为空)
 //   detectPath(cliHost)                      自动探测到的启动器路径('' = 没找到)
-//   prepareSpawn(cliHost, command, argv)     起子进程的 { command, args, opts }(.cmd 走 cmd.exe、npm 垫片改 Node 直启……)
 //   syncMcpManifest(cliHost, config) async   把如意的 MCP 清单推进这家 CLI 自己的用户配置(走命令行参数的 CLI 给空操作)
 // 函数成员在 JSON 里自然消失,所以 /api/status 下发的形状与只有数据成员时逐字节相同 —— 钩子一律是函数,
 // 不用 null 表示「没有这一步」(null 会出现在下发的 JSON 里)。
@@ -25,38 +24,27 @@ const AGENT_CLI_TYPES = Object.freeze({
     id: 'claude', label: 'Claude Code', pathKey: 'claudePath', detectedKey: 'detectedClaudePath', streaming: true, interactive: true, mcp: 'argument',
     installCandidates: () => [],
     detectPath: cliHost => cliHost.detectClaudePath(),
-    // Route the real CLI through cmd.exe when it's a .cmd/.bat (fixes "spawn EINVAL" on modern Node).
-    prepareSpawn: (cliHost, command, argv) => batchSafeSpawn(command, argv),
+    prepareSpawn: (cliHost, command, argv) => ({ command, args: argv, opts: {} }),
     // Claude 每回合经 --mcp-config 拿如意的 MCP 配置(05 适配器 buildArgs),没有用户配置文件要推。
     syncMcpManifest: async () => {},
   }),
   kimi: Object.freeze({
     id: 'kimi', label: 'Kimi Code', pathKey: 'kimiPath', detectedKey: 'detectedKimiPath', streaming: true, interactive: true, mcp: 'user-config',
     installCandidates({ env, home, join, platform = process.platform }) {
-      if (platform === 'darwin') return [
+      return [
         env.KIMI_CLI_PATH, 'kimi',
         home && join(home, '.local', 'bin', 'kimi'),
         '/opt/homebrew/bin/kimi', '/usr/local/bin/kimi',
       ].filter(Boolean);
-      const npmDir = home && join(home, 'AppData', 'Roaming', 'npm');
-      return [
-        env.KIMI_CLI_PATH, 'kimi.cmd', 'kimi.exe', 'kimi',
-        npmDir && join(npmDir, 'kimi.cmd'),
-        home && join(home, '.local', 'bin', 'kimi.exe'),
-        home && join(home, '.local', 'bin', 'kimi'),
-      ].filter(Boolean);
+
     },
     detectPath: cliHost => cliHost.detectFromInstallCandidates('kimi'),
     prepareSpawn(cliHost, command, argv) {
-      // npm's shim goes through cmd.exe (8191-char ceiling). Resolve its deterministic package-relative entry
       // and launch with Node directly, matching the Claude shim escape hatch's intent. This also handles
-      // PowerShell's `kimi.ps1` shim, so a saved terminal launcher behaves the same as `kimi.cmd`.
       const entry = cliHost.resolveKimiNpmEntry(command);
       const nodeExe = cliHost.bundledNodeExe();
-      // In a packaged release process.execPath is Ruyi.exe, not Node. The offline packages deliberately ship
-      // runtime/node/node.exe; use that runtime so the same direct-entry launch works in both source and ZIP builds.
       if (entry && nodeExe) return { command: nodeExe, args: [entry, ...argv], opts: {} };
-      return batchSafeSpawn(command, argv);
+      return ({ command, args: argv, opts: {} });
     },
     syncMcpManifest: (cliHost, config) => cliHost.syncMcpServersToKimi(config),
   }),

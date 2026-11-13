@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3901 | 3535 | 649 | 66 | 0 | 1 |
+| 91 | 3881 | 3512 | 641 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -20,93 +20,92 @@
 | 2 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 3 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
 | 4 | `01c-runtime-flags.js` | foundation | 37 | 0 | 0 |
-| 5 | `01d-win-cmdline.js` | foundation | 13 | 0 | 0 |
-| 6 | `01e-permission-modes.js` | foundation | 18 | 1 | 1 |
-| 7 | `01f-agent-cli-types.js` | foundation | 4 | 1 | 1 |
-| 8 | `01g-server-ownership.js` | foundation | 1 | 0 | 0 |
-| 9 | `01n-desktop-automation.js` | foundation | 2 | 0 | 0 |
-| 10 | `01h-process-runtime.js` | foundation | 2 | 1 | 1 |
-| 11 | `01i-privacy-rules.js` | foundation | 1 | 0 | 0 |
-| 12 | `01h-privacy-core.js` | foundation | 1 | 1 | 1 |
-| 13 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
-| 14 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
-| 15 | `01-config.js` | foundation | 201 | 62 | 14 |
-| 16 | `01k-credential-vault.js` | foundation | 1 | 8 | 4 |
-| 17 | `01l-credential-recovery.js` | foundation | 2 | 13 | 3 |
-| 18 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
-| 19 | `02d-session-overrides.js` | foundation | 11 | 1 | 1 |
-| 20 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
-| 21 | `02f-turn-effect-kinds.js` | foundation | 19 | 0 | 0 |
-| 22 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
-| 23 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
-| 24 | `02-session-store.js` | foundation | 348 | 78 | 17 |
-| 25 | `03-bridge-guard.js` | foundation | 112 | 32 | 8 |
-| 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
-| 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 28 | `04-permission-runtime.js` | foundation | 168 | 46 | 10 |
-| 29 | `04-desktop-shell.js` | foundation | 1 | 13 | 5 |
-| 30 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
-| 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
-| 32 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
-| 33 | `04i-provider-wire.js` | foundation | 37 | 17 | 2 |
-| 34 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
-| 35 | `04j-voice-lexicon.js` | foundation | 1 | 0 | 0 |
-| 36 | `04j-voice-learn.js` | foundation | 1 | 2 | 2 |
-| 37 | `05-claude-engine.js` | engine | 76 | 142 | 26 |
-| 38 | `05b-kimi-bridge.js` | engine | 129 | 76 | 14 |
-| 39 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
-| 40 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
-| 41 | `06-provider-engine.js` | engine | 142 | 63 | 18 |
-| 42 | `06b-prompt-registry.js` | engine | 10 | 1 | 1 |
-| 43 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
-| 44 | `06h-retrieval-index.js` | engine | 15 | 0 | 0 |
-| 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 46 | `06d-memory-domain.js` | engine | 178 | 39 | 10 |
-| 47 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
-| 48 | `06f-autonomy-grants.js` | engine | 25 | 12 | 5 |
-| 49 | `06g-resource-leases.js` | engine | 21 | 5 | 3 |
-| 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
-| 51 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
-| 52 | `07-autonomy.js` | orchestration | 156 | 86 | 21 |
-| 53 | `08-agent-runs.js` | orchestration | 127 | 119 | 22 |
-| 54 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
-| 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
-| 56 | `09-workflow.js` | orchestration | 32 | 271 | 28 |
-| 57 | `10-context-governance.js` | orchestration | 228 | 106 | 20 |
-| 58 | `11-native-tools.js` | tools | 148 | 49 | 9 |
-| 59 | `11b-file-text-io.js` | tools | 1 | 2 | 1 |
-| 60 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
-| 61 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
-| 62 | `12-tool-dispatch.js` | tools | 74 | 136 | 22 |
-| 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
-| 64 | `13-http-router.js` | transport | 70 | 279 | 35 |
-| 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 11 |
-| 66 | `13d-core-domain-routes.js` | transport | 65 | 149 | 18 |
-| 67 | `13e-pretender-index.js` | transport | 57 | 39 | 8 |
-| 68 | `13i-steward-inbox.js` | transport | 88 | 29 | 8 |
-| 69 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
-| 70 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
-| 71 | `13k-steward-threads.js` | transport | 60 | 127 | 17 |
-| 72 | `13l-steward-ops.js` | transport | 54 | 129 | 21 |
-| 73 | `13g-steward.js` | transport | 20 | 74 | 12 |
-| 74 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
-| 75 | `13n-steward-arbiter.js` | transport | 42 | 21 | 6 |
-| 76 | `13o-steward-runner-prompt.js` | transport | 22 | 66 | 16 |
-| 77 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
-| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 20 |
-| 79 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
-| 80 | `13r-event-stream.js` | transport | 25 | 18 | 6 |
-| 81 | `13s-scheduler.js` | transport | 53 | 38 | 9 |
-| 82 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
-| 83 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
-| 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
-| 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 86 | `13y-external-bot-credentials.js` | transport | 1 | 7 | 3 |
-| 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 88 | `13ab-privacy-api.js` | unclassified | 1 | 18 | 12 |
-| 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
-| 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 91 | `14-main.js` | entrypoint | 1 | 591 | 49 |
+| 5 | `01e-permission-modes.js` | foundation | 18 | 1 | 1 |
+| 6 | `01f-agent-cli-types.js` | foundation | 4 | 0 | 0 |
+| 7 | `01g-server-ownership.js` | foundation | 1 | 0 | 0 |
+| 8 | `01n-desktop-automation.js` | foundation | 2 | 0 | 0 |
+| 9 | `01h-process-runtime.js` | foundation | 2 | 1 | 1 |
+| 10 | `01i-privacy-rules.js` | foundation | 1 | 0 | 0 |
+| 11 | `01h-privacy-core.js` | foundation | 1 | 1 | 1 |
+| 12 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
+| 13 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
+| 14 | `01-config.js` | foundation | 194 | 60 | 13 |
+| 15 | `01k-credential-vault.js` | foundation | 1 | 8 | 4 |
+| 16 | `01l-credential-recovery.js` | foundation | 2 | 13 | 3 |
+| 17 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
+| 18 | `02d-session-overrides.js` | foundation | 11 | 1 | 1 |
+| 19 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
+| 20 | `02f-turn-effect-kinds.js` | foundation | 19 | 0 | 0 |
+| 21 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
+| 22 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
+| 23 | `02-session-store.js` | foundation | 348 | 78 | 17 |
+| 24 | `03-bridge-guard.js` | foundation | 112 | 30 | 7 |
+| 25 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
+| 26 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
+| 27 | `04-permission-runtime.js` | foundation | 168 | 45 | 9 |
+| 28 | `04-desktop-shell.js` | foundation | 1 | 12 | 4 |
+| 29 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
+| 30 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
+| 31 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
+| 32 | `04i-provider-wire.js` | foundation | 37 | 17 | 2 |
+| 33 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
+| 34 | `04j-voice-lexicon.js` | foundation | 1 | 0 | 0 |
+| 35 | `04j-voice-learn.js` | foundation | 1 | 2 | 2 |
+| 36 | `05-claude-engine.js` | engine | 76 | 134 | 25 |
+| 37 | `05b-kimi-bridge.js` | engine | 129 | 76 | 14 |
+| 38 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
+| 39 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
+| 40 | `06-provider-engine.js` | engine | 142 | 63 | 18 |
+| 41 | `06b-prompt-registry.js` | engine | 10 | 1 | 1 |
+| 42 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
+| 43 | `06h-retrieval-index.js` | engine | 15 | 0 | 0 |
+| 44 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
+| 45 | `06d-memory-domain.js` | engine | 178 | 39 | 10 |
+| 46 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
+| 47 | `06f-autonomy-grants.js` | engine | 25 | 12 | 5 |
+| 48 | `06g-resource-leases.js` | engine | 21 | 5 | 3 |
+| 49 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
+| 50 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
+| 51 | `07-autonomy.js` | orchestration | 156 | 83 | 20 |
+| 52 | `08-agent-runs.js` | orchestration | 127 | 119 | 22 |
+| 53 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
+| 54 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
+| 55 | `09-workflow.js` | orchestration | 32 | 271 | 28 |
+| 56 | `10-context-governance.js` | orchestration | 228 | 106 | 20 |
+| 57 | `11-native-tools.js` | tools | 148 | 49 | 9 |
+| 58 | `11b-file-text-io.js` | tools | 1 | 2 | 1 |
+| 59 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
+| 60 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
+| 61 | `12-tool-dispatch.js` | tools | 74 | 136 | 22 |
+| 62 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
+| 63 | `13-http-router.js` | transport | 70 | 279 | 35 |
+| 64 | `13b-api-domain-routes.js` | transport | 41 | 68 | 11 |
+| 65 | `13d-core-domain-routes.js` | transport | 65 | 149 | 18 |
+| 66 | `13e-pretender-index.js` | transport | 57 | 39 | 8 |
+| 67 | `13i-steward-inbox.js` | transport | 88 | 29 | 8 |
+| 68 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
+| 69 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
+| 70 | `13k-steward-threads.js` | transport | 60 | 127 | 17 |
+| 71 | `13l-steward-ops.js` | transport | 54 | 129 | 21 |
+| 72 | `13g-steward.js` | transport | 20 | 74 | 12 |
+| 73 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
+| 74 | `13n-steward-arbiter.js` | transport | 42 | 21 | 6 |
+| 75 | `13o-steward-runner-prompt.js` | transport | 22 | 66 | 16 |
+| 76 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
+| 77 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 20 |
+| 78 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
+| 79 | `13r-event-stream.js` | transport | 25 | 18 | 6 |
+| 80 | `13s-scheduler.js` | transport | 53 | 38 | 9 |
+| 81 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
+| 82 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
+| 83 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
+| 84 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
+| 85 | `13y-external-bot-credentials.js` | transport | 1 | 7 | 3 |
+| 86 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
+| 87 | `13ab-privacy-api.js` | unclassified | 1 | 18 | 12 |
+| 88 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
+| 89 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
+| 90 | `14-main.js` | entrypoint | 1 | 586 | 48 |
 
 ## 模块边
 
@@ -120,7 +119,6 @@
 | `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `MAX_BODY_BYTES`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `apiFailure`, `copyOrdinaryJsonData`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `isPkg`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
 | `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId`, `isRuyiMcpServerId` |
 | `01-config.js` | `01b-route-auth.js` | backward | `ROUTE_AUTH` |
-| `01-config.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn`, `isBatchLauncher` |
 | `01-config.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP`, `PERMISSION_MODES`, `PERMISSION_MODE_ALIASES`, `agentRoleIsUntrusted`, `normalizeAgentRole` |
 | `01-config.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `AGENT_CLI_TYPES`, `isAgentCliType`, `normalizeAgentCliType` |
 | `01-config.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
@@ -132,7 +130,6 @@
 | `01-config.js` | `06-provider-engine.js` | forward | `normalizeStoragePolicy` |
 | `01-config.js` | `07-autonomy.js` | forward | `DESKTOP_MCP_SERVER_ID`, `TOOL_PACK_DESCRIPTIONS`, `accPolicyHiddenToolNames`, `claudePermissionMode`, `getAgentRoleLibrary`, `nativeToolTier` |
 | `01e-permission-modes.js` | `00b-ruyi-names.js` | backward | `canonicalRuyiMcpServerId` |
-| `01f-agent-cli-types.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn` |
 | `01h-privacy-core.js` | `01i-privacy-rules.js` | backward | `PrivacyRuleCatalog` |
 | `01h-process-runtime.js` | `01n-desktop-automation.js` | backward | `MacDesktopAutomation` |
 | `01k-credential-vault.js` | `00-boot.js` | backward | `URL`, `fsp`, `path`, `paths` |
@@ -169,7 +166,6 @@
 | `03-bridge-guard.js` | `00-boot.js` | backward | `URL`, `agentCliHomes`, `cp`, `crypto`, `dataRoot`, `dataRootAliases`, `decodeTextFileBytes`, `externalRoot`, `fs`, `fsp`, `os`, `path`, `samePathKey`, `spawnDetachedChecked`, `zlib` |
 | `03-bridge-guard.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn` |
 | `03-bridge-guard.js` | `01-config.js` | backward | `readConfig`, `spawnProbeAsync`, `spawnProbeSync` |
-| `03-bridge-guard.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn`, `isBatchLauncher` |
 | `03-bridge-guard.js` | `02-session-store.js` | backward | `BRIDGED_WRITE_PATH_ARGS`, `collectBridgedWriteTargets`, `journalDir`, `journalRecord`, `journalSessionCtx`, `kindForPath` |
 | `03-bridge-guard.js` | `02f-turn-effect-kinds.js` | backward | `unprefixedBridgedName` |
 | `03-bridge-guard.js` | `04-permission-runtime.js` | forward | `logEvent`, `mcpDropInDirs`, `toolboxComponentsDir` |
@@ -178,13 +174,11 @@
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
 | `04-desktop-shell.js` | `00-boot.js` | backward | `cp`, `decodeConsoleText`, `fs`, `fsp`, `os`, `path`, `spawnDetachedChecked`, `text` |
 | `04-desktop-shell.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn`, `platformShellEnvironment` |
-| `04-desktop-shell.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn` |
 | `04-desktop-shell.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04-desktop-shell.js` | `04-permission-runtime.js` | backward | `killChildTree` |
 | `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `copyOrdinaryJsonData`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `http`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
 | `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `bridgedEnvKeyStripped`, `detectDesktopMcp`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `mutateConfig`, `readConfig`, `selectedAgentCli` |
-| `04-permission-runtime.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `ProcessRuntimeHooks` |
 | `04-permission-runtime.js` | `02-session-store.js` | backward | `registerIntervention`, `settleIntervention` |
 | `04-permission-runtime.js` | `05-claude-engine.js` | forward | `collectDisplayUrlRestores`, `maskKey`, `mcpArgsForDisplay`, `restoreExternalMcpServerSecrets`, `sanitizeExternalMcpServer` |
@@ -204,7 +198,6 @@
 | `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `URL`, `appendUsageLedger`, `claudeCostFields`, `computeProviderCost`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `crypto`, `fsp`, `normalizePricing`, `nowIso`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text` |
 | `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `05-claude-engine.js` | `01-config.js` | backward | `DurableJsonStore`, `agentCliLauncherUsable`, `buildUserEnvelope`, `decodeClaudeCliText`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi`, `writeToChild` |
-| `05-claude-engine.js` | `01d-win-cmdline.js` | backward | `CMD_EXE_LINE_LIMIT`, `CMD_LINE_QUOTE_MARGIN`, `cmdLineBudgetFor`, `cmdLineBudgetSeam`, `isBatchLauncher`, `quoteWinArg`, `spawnCmdLineLength` |
 | `05-claude-engine.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP` |
 | `05-claude-engine.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
 | `05-claude-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
@@ -219,7 +212,7 @@
 | `05-claude-engine.js` | `04i-provider-wire.js` | backward | `normalizeProviderApiStyle`, `providerReasoningEffort`, `providerWireProtocol` |
 | `05-claude-engine.js` | `04j-voice-lexicon.js` | backward | `VoiceLexicon` |
 | `05-claude-engine.js` | `05b-kimi-bridge.js` | forward | `applyKimiStatusToSession`, `kimiContextWindow`, `kimiSessionStatus`, `kimiUsageFromStatus`, `maybeAutoCompactAgentSession`, `runKimiAcpTurnPrepared`, `runKimiCompact`, `syncKimiSessionUsage`, `syncKimiTurnPreferences`, `watchKimiWire` |
-| `05-claude-engine.js` | `06-provider-engine.js` | forward | `appendMemorySection`, `appendTurnPolicies`, `buildBrowserAutomationHint`, `buildPlaybookIndexSection`, `buildPromptTaskContext`, `buildSkillsPromptSection`, `buildToolCustomizationHint`, `engineTranscriptCwd`, `evalPlaybookAvailability`, `fenceSafeSlice`, `getCapabilities`, `loadAllPlaybooks`, `peekCapabilities`, `resolveEngineEnvBrief`, `softwareEngineeringTaskProfile` |
+| `05-claude-engine.js` | `06-provider-engine.js` | forward | `appendMemorySection`, `appendTurnPolicies`, `buildBrowserAutomationHint`, `buildPlaybookIndexSection`, `buildPromptTaskContext`, `buildSkillsPromptSection`, `buildToolCustomizationHint`, `engineTranscriptCwd`, `evalPlaybookAvailability`, `getCapabilities`, `loadAllPlaybooks`, `peekCapabilities`, `resolveEngineEnvBrief`, `softwareEngineeringTaskProfile` |
 | `05-claude-engine.js` | `06b-prompt-registry.js` | forward | `PROMPT_PACK_VERSION`, `getPromptPack` |
 | `05-claude-engine.js` | `06c-agent-loop-hooks.js` | forward | `AgentLoopHooks` |
 | `05-claude-engine.js` | `06d-memory-domain.js` | forward | `buildMemoryCheckPrompt`, `buildMemoryConflictMap`, `buildMemoryPromptSection`, `filterMemoryForNativeCli`, `memoryGlobalDir`, `memoryProjectDir`, `resolveMemoryPreflight` |
@@ -301,7 +294,6 @@
 | `07-autonomy.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `TOOL_TIER_RANK`, `URL`, `apiFailure`, `appendUsageLedger`, `claudeCostFields`, `cp`, `createNdjsonLineFeeder`, `crypto`, `fsp`, `makeId`, `nowIso`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text` |
 | `07-autonomy.js` | `01-config.js` | backward | `atomicWriteJson`, `buildUserEnvelope`, `decodeClaudeCliText`, `detectClaudePath`, `effectiveAnthropicEnv`, `generateAgentNodeMcpConfig`, `readConfig`, `safeSessionId` |
 | `07-autonomy.js` | `01c-runtime-flags.js` | backward | `appendOnlyToolSchemasEnabled`, `observationRecallEnabled` |
-| `07-autonomy.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn`, `cmdLineBudgetFor`, `spawnCmdLineLength` |
 | `07-autonomy.js` | `01e-permission-modes.js` | backward | `BUILTIN_AGENT_ROLES`, `CLAUDE_PERMISSION_MODE_MAP`, `annotateAgentRoleEffective`, `clampAgentRoleToParent`, `mergeAgentRole`, `normalizeAgentRole` |
 | `07-autonomy.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `07-autonomy.js` | `02-session-store.js` | backward | `BRIDGED_WRITE_PATH_ARGS`, `loadSession`, `registerIntervention`, `repairProviderHistoryPairing`, `repairProviderHistoryToolArgs`, `saveSession`, `settleIntervention` |
@@ -713,10 +705,9 @@
 | `13y-external-bot-credentials.js` | `01-config.js` | backward | `DurableJsonStore` |
 | `13y-external-bot-credentials.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `14-main.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `EventStreamHooks`, `RUYI_EVENTS`, `apiSessionIdInvalid`, `apiSessionNotFound`, `appendUsageLedger`, `buildUsageSummary`, `createNdjsonLineFeeder`, `flushUsageLedgerSync`, `forEachUsageRow`, `hashArgs`, `neutralizeFenceTag`, `readUsageRows`, `runKeyedChain`, `spawnDetachedChecked`, `usageLedgerCacheStats` |
-| `14-main.js` | `01-config.js` | backward | `CONFIG_MIGRATIONS`, `DurableJsonStore`, `autoImportClaudeCodeMcp`, `buildClaudeCliEnv`, `decodeClaudeCliText`, `defaultConfig`, `desktopMcpFromInstalledRoot`, `desktopPythonCandidates`, `detectDesktopMcp`, `detectDesktopMcpAsync`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `generateSessionMcpConfig`, `mutateConfig`, `normalizeConfig`, `pickPython`, `pickPythonAsync`, `prepareAgentCliSpawn`, `probeAgentCliLauncher`, `readConfig`, `readFileTail`, `resolveClaudeLauncher`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncMcpServersToKimi` |
+| `14-main.js` | `01-config.js` | backward | `CONFIG_MIGRATIONS`, `DurableJsonStore`, `autoImportClaudeCodeMcp`, `buildClaudeCliEnv`, `decodeClaudeCliText`, `defaultConfig`, `desktopMcpFromInstalledRoot`, `desktopPythonCandidates`, `detectDesktopMcp`, `detectDesktopMcpAsync`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `generateSessionMcpConfig`, `mutateConfig`, `normalizeConfig`, `pickPython`, `pickPythonAsync`, `prepareAgentCliSpawn`, `probeAgentCliLauncher`, `readConfig`, `readFileTail`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncMcpServersToKimi` |
 | `14-main.js` | `01b-route-auth.js` | backward | `ROUTE_AUTH` |
 | `14-main.js` | `01c-runtime-flags.js` | backward | `appendOnlyToolSchemasEnabled`, `budgetGuardDecision`, `budgetGuardEnabled`, `budgetGuardTurnTokens`, `budgetGuardWarnRatio`, `estimateBucketsEnabled`, `evaporateBudgetBoundaryEnabled`, `execResultCacheEnabled`, `execResultCacheMaxEntries`, `historyReadDedupEnabled`, `reseedReattachFilesEnabled`, `reseedTailUnitsEnabled`, `sessionNotesEnabled`, `sessionNotesInjectEnabled`, `sessionNotesMergeEnabled`, `summaryEntityCheckEnabled`, `summaryFactTableCap`, `summaryFactTableEnabled`, `summaryPromptI18nEnabled`, `summaryRefineEnabled`, `summarySingleShotEnabled`, `toolByteBudgetShadowBytes`, `toolTimeBudgetEnabled`, `toolTimeBudgetHardMs`, `toolTimeBudgetShadowEnabled`, `toolTimeBudgetWarnMs`, `volatileTailLayoutEnabled` |
-| `14-main.js` | `01d-win-cmdline.js` | backward | `batchSafeSpawn`, `cmdLineBudgetFor`, `quoteWinArg`, `spawnCmdLineLength` |
 | `14-main.js` | `01e-permission-modes.js` | backward | `BUILTIN_AGENT_ROLES`, `PERMISSION_MODES`, `PERMISSION_MODES_REQUIRING_CONFIRM`, `normalizeAgentRole`, `resolvePermissionMode` |
 | `14-main.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `14-main.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |

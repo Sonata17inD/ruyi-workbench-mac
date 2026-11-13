@@ -2608,30 +2608,7 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   const mcpConfigPath = (tier === 'exec' && !grant.capped) ? await generateAgentNodeMcpConfig(subagentId, config.mcpCommandMode, roleMcpServers) : '';
   if (mcpConfigPath) args.push('--mcp-config', mcpConfigPath);
 
-  // cmd8191 防线(子代理): 子代理 args 小(无技能索引),但自定义 role.claudeTools/超长路径仍可能顶爆 cmd 上限。
-  // 降级阶梯: ① 先把角色提示挪进首条用户消息,仍超再丢整条 --append-system-prompt(语言政策) ② 非 plan 模式丢 --allowed-tools
-  // (bypass/auto 下它不是硬安全边界——bypass 跳过一切许可,见上方分级注释;plan 模式与按档收紧的 dontAsk 下它就是授权,不丢)
-  // ③ 仍超 → 明确报错(分类器把「命令行太长。」列为 definitive,不会无谓重试 3 次)。
-  {
-    const guardCmd = fakeClaude ? process.execPath : claude;
-    const guardBudget = cmdLineBudgetFor(guardCmd);
-    if (guardBudget > 0 && spawnCmdLineLength(guardCmd, args) > guardBudget) {
-      const pi = args.indexOf('--append-system-prompt');
-      // ①a 先只把角色提示挪进首条用户消息(角色提示可长达 8000 字,是最常见的超预算原因),语言 / 工程政策留在 argv;
-      // ①b 仍超才整条丢掉(修前一步就整条丢,语言政策跟着没了)。
-      if (pi >= 0 && roleBrief) { args[pi + 1] = appendResponseLanguagePolicy('', config, 0, task); roleBriefInTask = true; }
-      if (pi >= 0 && spawnCmdLineLength(guardCmd, args) > guardBudget) args.splice(pi, 2);
-      if (spawnCmdLineLength(guardCmd, args) > guardBudget && effMode !== 'plan' && !grant.capped) {
-        const ti = args.indexOf('--allowed-tools');
-        if (ti >= 0) args.splice(ti, 2);
-      }
-      if (spawnCmdLineLength(guardCmd, args) > guardBudget) {
-        return { ok: false, error: `Claude CLI 命令行超预算(${guardBudget} 字符):角色工具清单/路径过长,请精简该角色的 claudeTools 或缩短工作目录路径`, iters: 0, toolCalls: 0 };
-      }
-    }
-  }
-
-  const spawn = fakeClaude ? { command: process.execPath, args: [fakeClaude, ...args], opts: {} } : batchSafeSpawn(claude, args);
+  const spawn = fakeClaude ? { command: process.execPath, args: [fakeClaude, ...args], opts: {} } : { command: claude, args, opts: {} };
   const env = effectiveAnthropicEnv(config);
   if (fakeClaude) env.WCW_FAKE_INTERACTIVE = '1';
 

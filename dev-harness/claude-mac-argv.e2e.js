@@ -1,13 +1,5 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E (cmd8191 防线): 技能索引/角色定义把 Claude CLI 命令行顶过 cmd.exe 8191 字符上限 → 「命令行太长。」
-// 事故的回归测试。三层:
-//   (A) 单元(require server.js): spawnCmdLineLength 与 batchSafeSpawn 的真实构造【严格同构】;cmdLineBudgetFor
-//       的启动器分档;fenceSafeSlice / shrinkFencedSection / clampAppendWithSkills / appendTurnPolicies 的围栏安全;
-//       classifyClaudeSubagentFailure 把「命令行太长。」列为 definitive(不无谓重试)。
-//   (B) 集成(WCW_CLAUDE_CMDLINE_BUDGET 测试缝 + fake-claude argv 捕获): 对抗配置(长用户 append + 4 技能 +
-//       团队模式政策压力)下 —— 回合正常完成;整行(按 cmd 公式重建)≤ 预算;append 以用户 MARKER 开头、以
-//       </response-language-policy> 收尾;所有围栏开闭配对(无悬空开标签);降级经 stderr 事件与 meta.cmdlineGuard 告知。
-//   (C) 对照(无测试缝): 同样配置不触发任何降级 —— 哨兵不改变预算内行为(append 完整、--agents 在、无守卫事件)。
+// Mac CLI: direct argv, intact prompt fences, and stdin skill injection.
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
@@ -74,11 +66,6 @@ async function startServer(port, extraEnv) {
 }
 async function stopServer(wb) { if (wb && wb.pid) { try { killOwnTree(wb); } catch { /* ignore */ } } await sleep(300); }
 // 与服务端 spawnCmdLineLength 的 cmd 公式严格同构(测试缝开启时服务端对 node 直启也用此公式)。
-function cmdLineOf(argvAfterFake) {
-  const comspec = process.env.ComSpec || 'cmd.exe';
-  const line = '"' + [process.execPath, ...argvAfterFake].map(srv.quoteWinArg).join(' ') + '"';
-  return `${comspec} /d /s /c ${line}`.length;
-}
 function fenceBalance(text) {
   // 返回开闭不配对的标签清单;空数组 = 所有围栏配对(无悬空开标签)
   const names = new Set();
@@ -99,30 +86,6 @@ function fenceBalance(text) {
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   try {
     // ============================== (A) 单元层 ==============================
-    // A1: spawnCmdLineLength 与 batchSafeSpawn 的真实构造严格同构 —— 预算核算的就是 cmd 实际收到的那一行。
-    const sampleArgs = ['-p', '--output-format', 'stream-json', '--append-system-prompt', '含 空格与"引号"与中文'.repeat(30), '--add-dir', 'C:\\some dir\\x'];
-    const windowsSpawn = process.platform === 'win32' ? srv : require('./lib/server-internals').loadServerInternals(
-      ['batchSafeSpawn', 'spawnCmdLineLength'], { testPlatform: 'win32' });
-    const s = windowsSpawn.batchSafeSpawn('C:\\npm\\claude.cmd', sampleArgs);
-    const realLine = `${s.command} ${s.args.join(' ')}`;
-    ok(windowsSpawn.spawnCmdLineLength('C:\\npm\\claude.cmd', sampleArgs) === realLine.length, '(A1) Windows公式与batchSafeSpawn命令行长度严格同构 (' + realLine.length + ')');
-    if (process.platform !== 'win32') {
-      const native = srv.batchSafeSpawn(process.execPath, sampleArgs);
-      ok(native.command === process.execPath && native.args === sampleArgs && !native.opts.windowsVerbatimArguments,
-        '(A1 Mac) executable and argv pass through without cmd wrapping');
-    }
-    // A2: 预算分档 —— .cmd → 7900;直启 → 32000;测试缝覆盖;非 Windows → 0。
-    const seamEnv = process.env.WCW_CLAUDE_CMDLINE_BUDGET;
-    delete process.env.WCW_CLAUDE_CMDLINE_BUDGET;
-    if (process.platform === 'win32') {
-      ok(srv.cmdLineBudgetFor('C:\\npm\\claude.cmd') === 7900, '(A2a) .cmd 启动器预算 7900');
-      ok(srv.cmdLineBudgetFor('C:\\npm\\claude.exe') === 32000, '(A2b) 直启预算 32000');
-    } else {
-      ok(srv.cmdLineBudgetFor('claude') === 0, '(A2ab) 非 Windows 不设防(0)');
-    }
-    process.env.WCW_CLAUDE_CMDLINE_BUDGET = '2600';
-    ok(srv.cmdLineBudgetFor('whatever') === 2600, '(A2c) 测试缝强制预算 2600');
-    if (seamEnv == null) delete process.env.WCW_CLAUDE_CMDLINE_BUDGET; else process.env.WCW_CLAUDE_CMDLINE_BUDGET = seamEnv;
     // A3: fenceSafeSlice —— 切点落在围栏内时回退到开标签之前,不留悬空围栏。
     const fenced = '用户文本\n\n头部\n<skill-index>\n- a\n- b\n</skill-index>\n\n尾';
     const cutInside = fenced.indexOf('- b');
@@ -155,36 +118,6 @@ function fenceBalance(text) {
     ok(srv.normalizeConfig({ configSchema: 8, engineMode: 'legacy' }).config.engineMode === 'interactive', '(A9a) schema 8 legacy 一次性迁移到 interactive');
     ok(srv.normalizeConfig({ configSchema: 9, engineMode: 'legacy' }).config.engineMode === 'legacy', '(A9b) schema 9 用户显式 legacy 选择保持不变');
 
-    // ============================== (B) 集成层(测试缝强制预算) ==============================
-    try { fs.rmSync(ARGV_CAP, { force: true }); } catch { /* ignore */ }
-    const A = await startServer(PORT_A, { WCW_CLAUDE_CMDLINE_BUDGET: String(BUDGET) });
-    wbA = A.wb;
-    ok(!!A.h, '(B0) 带缝工作台 listening :' + PORT_A);
-    const sessA = (await postJson(PORT_A, '/api/sessions', { cwd: CWD })).body.session;
-    await postJson(PORT_A, '/api/session/skills', { sessionId: sessA.id, skills: ['guard-skill-0', 'guard-skill-1', 'guard-skill-2', 'guard-skill-3'] });
-    const evts = await postStream(PORT_A, { sessionId: sessA.id, message: 'hello guard', cwd: CWD, agentTeam: true });
-    const result = evts.find(e => e.type === 'result');
-    ok(result && result.ok === true, '(B1) 对抗配置下回合正常完成(不硬失败)');
-    let argv = [];
-    for (let i = 0; i < 20 && !fs.existsSync(ARGV_CAP); i++) await sleep(100);
-    try { argv = JSON.parse(fs.readFileSync(ARGV_CAP, 'utf8')); } catch { /* left empty */ }
-    const lineLen = cmdLineOf(argv);
-    ok(lineLen <= BUDGET, '(B2) 重建 cmd 整行长度 ' + lineLen + ' ≤ 预算 ' + BUDGET);
-    const effortIdx = argv.indexOf('--effort');
-    ok(effortIdx >= 0 && argv[effortIdx + 1] === 'xhigh', '(B2b) 前端配置的 thinking effort 经 --effort xhigh 到达 Claude CLI');
-    const ai = argv.indexOf('--append-system-prompt');
-    ok(ai >= 0, '(B3) --append-system-prompt 仍在');
-    const appendVal = ai >= 0 ? String(argv[ai + 1] || '') : '';
-    ok(appendVal.startsWith(MARKER), '(B4) 用户 append 是最前段(最高优先级存活)');
-    ok(appendVal.endsWith('</response-language-policy>'), '(B5) 语言政策段恒完整在末尾');
-    ok(fenceBalance(appendVal).length === 0, '(B6) append 内所有围栏开闭配对 ' + JSON.stringify(fenceBalance(appendVal)));
-    const guardStderr = evts.find(e => e.type === 'stderr' && /启动守卫/.test(e.text || ''));
-    ok(!!guardStderr, '(B7) 降级经 stderr 事件告知用户 — ' + (guardStderr ? String(guardStderr.text).slice(0, 80) : '(无)'));
-    const meta = evts.find(e => e.type === 'meta');
-    ok(meta && meta.cmdlineGuard && Array.isArray(meta.cmdlineGuard.degraded) && meta.cmdlineGuard.degraded.length > 0, '(B8) meta.cmdlineGuard 携带降级明细 — ' + JSON.stringify(meta && meta.cmdlineGuard && meta.cmdlineGuard.degraded));
-    ok(argv.indexOf('--agents') < 0 || (() => { try { JSON.parse(argv[argv.indexOf('--agents') + 1]); return true; } catch { return false; } })(), '(B9) --agents 要么被降级裁剪,要么 JSON 完好可解析');
-    await stopServer(wbA); wbA = null;
-
     // ============================== (C) 对照层(无测试缝 → 不降级) ==============================
     try { fs.rmSync(ARGV_CAP, { force: true }); } catch { /* ignore */ }
     try { fs.rmSync(STDIN_CAP, { force: true }); } catch { /* ignore */ }
@@ -213,7 +146,7 @@ function fenceBalance(text) {
   finally {
     await stopServer(wbA); await stopServer(wbB);
     fs.rmSync(HOME, { recursive: true, force: true });
-    console.log('\nCLAUDE-CMDLINE-GUARD E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));
+    console.log('\nCLAUDE-MAC-ARGV E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));
     process.exitCode = fail ? 1 : 0;
   }
 })();

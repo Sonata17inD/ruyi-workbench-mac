@@ -657,7 +657,6 @@ const CONFIG_EXPLICIT_KEY_MAX = 400;
 // claudePath 的「用户给的值」:normalizeConfig 会把 npm shim 解析成真身 exe(下面 P1 那段),而落盘与「是否被改过」
 // 都必须按用户给的原值判 —— 否则真身路径被写进盘,exe 以后消失时就回落不了 shim。Symbol 键:JSON 永不序列化它,
 // 对象展开({ ...current })会带上它。
-const CONFIG_GIVEN_CLAUDE_PATH = Symbol('configGivenClaudePath');
 function configCanonicalJson(value) {
   if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -670,9 +669,7 @@ function configExplicitKeysOf(raw) {
   const list = raw && typeof raw === 'object' && Array.isArray(raw.configExplicitKeysV1) ? raw.configExplicitKeysV1 : [];
   return new Set(list.filter(k => typeof k === 'string' && k && k.length <= 120 && !CONFIG_BOOKKEEPING_KEYS.includes(k)));
 }
-// 「这个键此刻的值」—— 判是否被改过、以及落盘时用。唯一的特例是 claudePath(见 CONFIG_GIVEN_CLAUDE_PATH)。
 function configComparableValue(config, key) {
-  if (key === 'claudePath' && typeof config[CONFIG_GIVEN_CLAUDE_PATH] === 'string') return config[CONFIG_GIVEN_CLAUDE_PATH];
   return config[key];
 }
 // 落盘投影:唯一的写口(readConfig 的迁移回写、writeConfig)都写它。
@@ -819,17 +816,6 @@ function normalizeConfig(raw, opts = {}) {
   // have already retained their explicit enabled state before normalization reaches here.
   if (config.privacyModeV1 !== 'off' && config.credentialEncryptionV1 !== true && config.privacyPolicyRecoveryRequiredV1 !== true) {
     config.privacyPolicyRecoveryRequiredV1 = true; changed = true;
-  }
-  // P1(cmd8191 根治): npm shim(claude.cmd)→ 真身 claude.exe 的运行时解析(见 resolveClaudeLauncher)。
-  // 收拢在这一个咽喉点 = 全部消费方(runClaudeTurn/子代理/mcp add-json/doctor)一致受益。不置 changed:
-  // 解析是纯运行时升级,配置里保留用户原值,exe 消失时下一次解析自动回落 shim。结果 memoize,热路径零探测。
-  // 128a:传进来的若是一份已经解析过的内存视图(它带着 CONFIG_GIVEN_CLAUDE_PATH),且 claudePath 没被改过
-  // (仍等于原值的解析结果),原值沿用那份;否则 claudePath 本身就是新的原值。
-  {
-    const carried = raw && typeof raw === 'object' ? raw[CONFIG_GIVEN_CLAUDE_PATH] : undefined;
-    const given = typeof carried === 'string' && config.claudePath === resolveClaudeLauncher(carried) ? carried : config.claudePath;
-    config[CONFIG_GIVEN_CLAUDE_PATH] = given;
-    config.claudePath = resolveClaudeLauncher(given);
   }
   if (!isAgentCliType(config.agentCliType)) {
     config.agentCliType = AGENT_CLI_DEFAULT_TYPE;
@@ -2072,10 +2058,8 @@ async function ensureDirsForConfigRead() {
 //   · 戳要在读盘【之前】取:取戳与读之间文件被换掉,存下的是「旧戳 + 新内容」,下次戳对不上 → 只会多读一次;反过来取会
 //     存成「新戳 + 旧内容」= 陈旧命中。
 //   · 归一化的输出里还有【运行时输入】不在文件里:detectClaudePath/detectKimiPath 的探测结果(60 s 过期后台重探)、
-//     resolveClaudeLauncher 的解析结果(Windows 上 claude.cmd → claude.exe)。命中时重取这三样,与填缓存时不一致就当未命中
 //     (顺带保住「每次读配置都会碰一下探测记忆、过期则触发后台重探」这个旧副作用)。
 //   · 调用方会就地改返回值(mutateConfig 的 mutator 就是),所以缓存里只放一份没人拿过的快照,每次命中给一份深拷贝
-//     (structuredClone + 手补 Symbol 键 CONFIG_GIVEN_CLAUDE_PATH,structuredClone 不带 Symbol)。拷贝失败一律当未命中。
 //   · 只缓存「干净读」:读盘成功、JSON 合法、不是从 .prev 恢复、归一化没有要回写的迁移(changed=false)。降级/恢复/迁移
 //     路径全部照旧走完整流程(它们有写盘或降级状态副作用)。
 const CONFIG_CACHE_MIN_AGE_MS = 2500;
@@ -2090,7 +2074,6 @@ async function configFileStamp() {
 }
 function cloneConfigSnapshot(config) {
   const copy = structuredClone(config);
-  copy[CONFIG_GIVEN_CLAUDE_PATH] = config[CONFIG_GIVEN_CLAUDE_PATH];
   return copy;
 }
 function configReadCacheLookup(stamp) {
@@ -2098,7 +2081,6 @@ function configReadCacheLookup(stamp) {
   if (!cache || !stamp || cache.key !== stamp.key) return null;
   try {
     if (detectClaudePath() !== cache.claudeProbe || detectKimiPath() !== cache.kimiProbe) return null;
-    if (resolveClaudeLauncher(cache.snapshot[CONFIG_GIVEN_CLAUDE_PATH]) !== cache.snapshot.claudePath) return null;
     return cloneConfigSnapshot(cache.snapshot);
   } catch { configReadCache = null; return null; }
 }
@@ -2281,7 +2263,6 @@ function mutateConfig(mutator, options = {}) {
     const current = await readConfig();
     // 128a:mutator 可以就地改 current,所以「改之前」必须先深拷一份(Symbol 键 structuredClone 不带,手补)。
     const before = structuredClone(current);
-    before[CONFIG_GIVEN_CLAUDE_PATH] = current[CONFIG_GIVEN_CLAUDE_PATH];
     const decision = await mutator(current);
     const d = (decision && typeof decision === 'object') ? decision : {};
     if (Object.prototype.hasOwnProperty.call(d, 'abort')) return { ok: false, config: current, value: d.abort };
@@ -2696,7 +2677,6 @@ async function kimiMcpManagedIds() {
   } catch { return new Set(); }
 }
 // 别的 CLI 里登记的「如意自己」(权限桥 / MCP 入口):命令或参数指向某个如意包的 app/server.js,或命令就是
-// Ruyi.exe。导进来等于如意连自己,一律跳过。
 function looksLikeRuyiSelfMcp(raw) {
   const parts = [raw && raw.command, ...((raw && Array.isArray(raw.args)) ? raw.args : [])].map(x => String(x || '').trim());
   for (const p of parts) {
@@ -2726,113 +2706,11 @@ function classifyAgentMcpCandidate(raw, origin, view, managedKimi) {
   return { status: 'importable', reason: '' };
 }
 
-// 架构还债批 3·B: .cmd/.bat 包装(batchSafeSpawn)与 cmd8191 整行预算抽至 01d-win-cmdline.js。
 
 // ============================================================================
-// P1(cmd8191 根治): npm 版 Claude Code 的 claude.cmd 只是 4 行 shim —— 内容即转发到同目录
-// node_modules/@anthropic-ai/claude-code/bin/claude.exe(真身,Bun 单文件原生二进制)。经 cmd.exe
-// 启动有 8191 字符整行硬上限(技能索引事故根因);直启 exe 走 CreateProcess(32767,4 倍余量),
-// 且 %VAR%/! 延迟展开被 cmd 吃掉、cmd 层 GBK 错误面、taskkill 多一层遗孤窗口整类消失(实测:
-// 事故规模 11K append 直启逐字回传 %USERPROFILE%/!DELAYED! 未展开;同参 cmd 包装 25ms 内复现
-// 「命令行太长。」)。凡是要 spawn 的 claude 启动器,若指向可解析的 npm shim 就换成真身 exe;
-// 解析不出(老布局/非 npm 安装/探测失败)原样返回 —— 行为逐字节不变,纯升级。cmdLineBudgetFor
-// 按扩展名分档,解析到 .exe 后整行预算自动 7900 → 32000,cmdlineGuard 降级阶梯自然近乎不再触发。
-// 运行时解析,调用方不改写持久化配置:配置里仍是 claude.cmd,exe 消失时下次解析自动回落 shim,
-// 不留死配置。结果按启动器字符串 memoize(与 detectClaudePath 同 TTL),normalizeConfig 热路径零探测。
-const CLAUDE_NPM_EXE_REL = path.join('node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
-let _launcherResolveCache = new Map(); // launcher 字符串 → { at, value }
-// 定位 shim 同目录下的真身 claude.exe(纯文件系统,不起进程):含目录分隔符的按路径 resolve;裸名字(claude.cmd)
-// 沿 PATH 逐目录找。找不到返回空串。
-function claudeShimExeFor(p) {
-  let shim = '';
-  if (/[\\/]/.test(p) || path.isAbsolute(p)) {
-    shim = path.resolve(p);
-  } else {
-    for (const dir of String(process.env.PATH || '').split(path.delimiter)) {
-      if (!dir) continue;
-      const cand = path.join(dir, p);
-      if (fs.existsSync(cand)) { shim = cand; break; }
-    }
-  }
-  if (!shim || !fs.existsSync(shim)) return '';
-  const exe = path.join(path.dirname(shim), CLAUDE_NPM_EXE_REL);
-  return fs.existsSync(exe) ? exe : '';
-}
-function rememberClaudeLauncher(p, value) {
-  if (_launcherResolveCache.size > 32) _launcherResolveCache = new Map(); // 防无界(实际路径集合极小)
-  _launcherResolveCache.set(p, { at: Date.now(), value });
-}
-function resolveClaudeLauncher(launcher) {
-  const p = String(launcher || '').trim();
-  if (!p || process.platform !== 'win32' || !isBatchLauncher(p)) return launcher;
-  const hit = _launcherResolveCache.get(p);
-  if (hit) {
-    // 128f-⑬:过期【不再当场重探】—— normalizeConfig 在每一次 readConfig 里都走到这里,当场 spawnSync 就是把整个
-    // 服务钉住一发「claude.exe --version」。先答上一次的结果,后台重探,探完换上(见 detectClaudePath 头注)。
-    if ((Date.now() - hit.at) >= CLAUDEPATH_CACHE_MS) refreshInBackground('launcher:' + p, () => resolveClaudeLauncherAsync(launcher, { force: true }));
-    return hit.value;
-  }
-  if (bootCliPathProbes?.beforeListen) {
-    // Preserve the configured launcher until its real executable check completes.
-    // This is only a boot view; post-listen config reads wait for the async check.
-    rememberClaudeLauncher(p, launcher);
-    queueBootCliPathProbe(() => resolveClaudeLauncherAsync(launcher, { force: true }));
-    return launcher;
-  }
-  let value = launcher; // 默认:原样返回(解析不出 = 保持现状)
-  try {
-    const exe = claudeShimExeFor(p);
-    if (exe) {
-      // 真身探测:--version 能跑通才接管(防半截 npm 安装留下坏 exe);失败保持 shim 回退。
-      const ok = cp.spawnSync(exe, ['--version'], { stdio: 'ignore', windowsHide: true, timeout: 4000 });
-      if (!ok.error && ok.status !== null) value = exe;
-    }
-  } catch { /* 解析失败 = 保持原启动器 */ }
-  rememberClaudeLauncher(p, value);
-  return value;
-}
-// 同一件事的异步版(后台重探用):判据逐字相同,只是「--version」那一发不占事件循环。
-async function resolveClaudeLauncherAsync(launcher, { force = false } = {}) {
-  const p = String(launcher || '').trim();
-  if (!p || process.platform !== 'win32' || !isBatchLauncher(p)) return launcher;
-  const hit = _launcherResolveCache.get(p);
-  if (hit && !force && (Date.now() - hit.at) < CLAUDEPATH_CACHE_MS) return hit.value;
-  const generation = _cliProbeGeneration;
-  let value = launcher;
-  try {
-    const exe = claudeShimExeFor(p);
-    if (exe) {
-      const ok = await spawnProbeAsync(exe, ['--version']);
-      if (!ok.error && ok.status !== null) value = exe;
-    }
-  } catch { /* 同上 */ }
-  if (generation === _cliProbeGeneration) rememberClaudeLauncher(p, value);
-  return value;
-}
-
 function claudeInstallCandidates() {
   const home = os.homedir();
-  const env = process.env;
-  if (process.platform === 'darwin') return [
-    path.join(home, '.local', 'bin', 'claude'),
-    path.join(home, '.claude', 'local', 'claude'),
-    '/opt/homebrew/bin/claude', '/usr/local/bin/claude',
-  ];
-  const dirs = [
-    env.APPDATA && path.join(env.APPDATA, 'npm'),
-    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'claude'),
-    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'claude-code'),
-    env.ProgramFiles && path.join(env.ProgramFiles, 'Claude'),
-    env.ProgramFiles && path.join(env.ProgramFiles, 'nodejs'),
-    home && path.join(home, '.claude', 'local'),
-    home && path.join(home, 'AppData', 'Roaming', 'npm'),
-  ].filter(Boolean);
-  const names = ['claude.cmd', 'claude.exe', 'claude.bat', 'claude'];
-  const out = [];
-  for (const dir of dirs) {
-    for (const n of names) out.push(path.join(dir, n));
-  }
-  return out;
+  return [path.join(home, '.local', 'bin', 'claude'), path.join(home, '.claude', 'local', 'claude'), '/opt/homebrew/bin/claude', '/usr/local/bin/claude'];
 }
 
 // v1.0-S7 (perf): detectClaudePath spawnSync-probes for `claude` (up to several launches, each with a 4s
@@ -2841,7 +2719,6 @@ function claudeInstallCandidates() {
 // config read thereafter. The RESULT is stable within a process run, so memoize it. This collapses the
 // startup cost to a single probe and makes all later readConfig() calls probe-free. A short TTL lets a
 // long-lived server re-detect a claude installed after boot without ever re-probing on the hot path.
-// (baseline S7: ~27ms/call on this machine where claude.cmd resolves; the worst case — a hung claude.cmd —
 // would otherwise cost up to ~4s PER readConfig; memoization bounds it to once per TTL window.)
 //
 // 128f-⑬(mission-index-scale (e)/(f) 取证时 CPU 剖面挖出来的;用户 2026-09-19「删除线程没有及时的界面反馈」那一刻
@@ -2889,7 +2766,7 @@ function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
 }
 function claudeProbeCandidates() {
   // 先 PATH 上的裸名(快、常见),再常见安装位置(必须真的存在才探)。
-  const names = process.platform === 'darwin' ? ['claude'] : ['claude.cmd', 'claude.exe', 'claude'];
+  const names = ['claude'];
   const onPath = [process.env.CLAUDE_CLI_PATH, ...names].filter(Boolean).map(command => ({ command, mustExist: false }));
   return [...onPath, ...claudeInstallCandidates().map(command => ({ command, mustExist: true }))];
 }
@@ -2897,13 +2774,10 @@ function detectClaudePathUncached() {
   for (const { command, mustExist } of claudeProbeCandidates()) {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
-      const s = batchSafeSpawn(command, ['--version']);
+      const s = { command, args: ['--version'], opts: {} };
       const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
-      // 61-C6:批处理启动器(claude.cmd)经 cmd.exe 探,没装时 cmd 也有退出码(1 / 9009)—— 修前「有退出码就算探到」,
-      // 没装 Claude Code 的机器也报「Claude Code: claude.cmd」。批处理要求退出码 0;直启的 exe 仍是有退出码即可。
-      const found = !ok.error && ok.status !== null && (!isBatchLauncher(command) || ok.status === 0);
-      // P1: shim(claude.cmd)命中时优先解析出真身 claude.exe(绕过 cmd.exe 8191 上限);解析不出原样返回。
-      if (found) return resolveClaudeLauncher(command);
+      const found = !ok.error && ok.status !== null;
+      if (found) return command;
     } catch (error) {
       if (error.cleanupIncomplete) throw error;
       // keep scanning
@@ -2915,11 +2789,11 @@ async function detectClaudePathUncachedAsync() {
   for (const { command, mustExist } of claudeProbeCandidates()) {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
-      const s = batchSafeSpawn(command, ['--version']);
+      const s = { command, args: ['--version'], opts: {} };
       const ok = await spawnProbeAsync(s.command, s.args, s.opts);
       if (ok.cleanupIncomplete) throw Object.assign(ok.error, { cleanupIncomplete: true });
       // 判据与同步版逐字相同(61-C6:批处理启动器要求退出码 0)。
-      if (!ok.error && ok.status !== null && (!isBatchLauncher(command) || ok.status === 0)) return await resolveClaudeLauncherAsync(command);
+      if (!ok.error && ok.status !== null) return command;
     } catch (error) {
       if (error.cleanupIncomplete) throw error;
       // keep scanning
@@ -2998,7 +2872,7 @@ function agentCliProbeSpawn(command) {
   const kimiEntry = isScript ? '' : resolveKimiNpmEntry(command);
   const nodeExe = kimiEntry ? bundledNodeExe() : '';
   return isScript ? { command: process.execPath, args: [command, '--version'], opts: {} }
-    : (kimiEntry && nodeExe ? { command: nodeExe, args: [kimiEntry, '--version'], opts: {} } : batchSafeSpawn(command, ['--version']));
+    : (kimiEntry && nodeExe ? { command: nodeExe, args: [kimiEntry, '--version'], opts: {} } : { command, args: ['--version'], opts: {} });
 }
 function probeAgentCliLauncher(command) {
   if (!command) return false;
@@ -3073,33 +2947,19 @@ function selectedAgentCli(config) {
 }
 function resolveKimiNpmEntry(command) {
   const raw = String(command || '').trim();
-  if (!/(?:^|[\\/])kimi(?:\.(?:cmd|ps1))?$/i.test(raw)) return '';
-  let shim = raw;
-  if (!path.isAbsolute(shim) && !/[\\/]/.test(shim)) {
-    const names = [...new Set([shim, 'kimi.cmd', 'kimi.ps1'])];
-    outer: for (const rawDir of String(process.env.PATH || '').split(path.delimiter)) {
-      const dir = rawDir.trim().replace(/^"|"$/g, '');
-      if (!dir) continue;
-      for (const name of names) {
-        const candidate = path.join(dir, name);
-        if (fs.existsSync(candidate)) { shim = candidate; break outer; }
-      }
-    }
+  if (!/(?:^|\/)kimi$/.test(raw)) return '';
+  const candidates = path.isAbsolute(raw) || raw.includes('/') ? [path.resolve(raw)]
+    : String(process.env.PATH || '').split(path.delimiter).filter(Boolean).map(dir => path.join(dir, raw));
+  for (const launcher of candidates) {
+    try {
+      const entry = fs.realpathSync(launcher);
+      if (entry.endsWith('/@moonshot-ai/kimi-code/dist/main.mjs')) return entry;
+      if (fs.existsSync(launcher)) return '';
+    } catch { /* Try the next PATH entry. */ }
   }
-  const dir = path.dirname(path.resolve(shim));
-  const entries = [
-    path.resolve(dir, '..', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs'),
-    path.resolve(dir, 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs'),
-  ];
-  if (process.platform !== 'win32') {
-    const globalEntry = path.resolve(dir, '..', 'lib', 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
-    // POSIX npm uses a bin/kimi symlink. A nearby stale package must not replace a native launcher.
-    try { if (fs.realpathSync(shim) === fs.realpathSync(globalEntry)) entries.push(globalEntry); }
-    catch { /* No matching npm symlink; keep the original launcher. */ }
-  }
-  return entries.find(candidate => fs.existsSync(candidate)) || '';
+  return '';
 }
-// 未登记的类型同 selectedAgentCli 口径归到 claude(即 batchSafeSpawn)。
+
 function prepareAgentCliSpawn(type, command, args) {
   const argv = Array.isArray(args) ? args : [];
   return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
@@ -3710,7 +3570,6 @@ function desktopMcpRootPlan() {
     // beats both a stale user checkout and any machine-local Python on a clean distribution target.
     const repoCandidates = [
       // In a pkg executable __dirname points into the read-only compile snapshot, while the bundled
-      // MCP lives beside Ruyi.exe. externalRoot() resolves that real release directory.
       path.join(externalRoot(), 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', '..', 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', 'mcp', 'ai-computer-control'),

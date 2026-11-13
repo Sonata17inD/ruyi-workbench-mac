@@ -1,11 +1,10 @@
-const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, killTreeFn, batchSpawnFn, spawnDetachedFn, decodeConsoleTextFn) => {
+const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, killTreeFn, spawnDetachedFn, decodeConsoleTextFn) => {
   const fs = fsModule;
   const fsp = fspModule;
   const path = pathModule;
   const os = osModule;
   const cp = cpModule;
   const killChildTree = killTreeFn;
-  const batchSafeSpawn = batchSpawnFn;
   // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):explorer.exe 起不来时不再是 uncaughtException。
   const spawnDetachedChecked = spawnDetachedFn;
   // v1.0.1 编码修复:Windows 子进程(powershell/cmd/git/python…)在中文系统默认按 OEM 代码页(GBK/cp936)
@@ -136,7 +135,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
         return { head: condenseTerminalText(decodeBestEffort(st.head)), tail: condenseTerminalText(rawText(st)), gapBytes: st.dropped - st.head.length };
       };
       // Transparently wrap .cmd/.bat targets (e.g. claude.cmd) so they don't throw "spawn EINVAL".
-      const s = options.shell ? { command, args, opts: {} } : batchSafeSpawn(command, args);
+      const s = { command, args, opts: {} };
       let processHandle;
       try {
         processHandle = ProcessRuntime.start({
@@ -326,4 +325,4 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
     return { ok: false, code: 'host_required', error: '请在 Mac 应用中选择文件，或粘贴完整路径' };
   }
   return Object.freeze({ decodeBestEffort, runProcess, runBash, revealInFinder, pickFolder, pickFile });
-})(fs, fsp, path, os, cp, killChildTree, batchSafeSpawn, spawnDetachedChecked, decodeConsoleText);
+})(fs, fsp, path, os, cp, killChildTree, spawnDetachedChecked, decodeConsoleText);

@@ -60,24 +60,18 @@ test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据�
 test('[R] 装机候选与起进程钩子金样', () => {
   const join = (...parts) => parts.join('/');
   assert.deepEqual(AGENT_CLI_TYPES.claude.installCandidates({ env: {}, home: '/h', join }), [], 'Claude 有自己的启动器解析');
-  assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: { KIMI_CLI_PATH: 'X:/k/kimi.exe' }, home: '/h', join, platform: 'win32' }), [
-    'X:/k/kimi.exe', 'kimi.cmd', 'kimi.exe', 'kimi', '/h/AppData/Roaming/npm/kimi.cmd', '/h/.local/bin/kimi.exe', '/h/.local/bin/kimi',
-  ]);
-  assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: {}, home: '', join, platform: 'win32' }), ['kimi.cmd', 'kimi.exe', 'kimi'], '没有 HOME 时只剩裸命令');
   assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: { KIMI_CLI_PATH: '/custom/kimi' }, home: '/h', join, platform: 'darwin' }), [
     '/custom/kimi', 'kimi', '/h/.local/bin/kimi', '/opt/homebrew/bin/kimi', '/usr/local/bin/kimi',
   ], 'Mac uses native user and Homebrew launchers without Windows shims');
   const argv = ['-p', 'x y'];
   for (const command of ['C:\\tools\\tool.exe', 'C:\\npm\\claude.cmd', 'X:\\tools\\kimi.exe', 'kimi-not-a-shim']) {
-    const batch = srv.batchSafeSpawn(command, argv);
+    const batch = { command, args: argv, opts: {} };
     assert.deepEqual(srv.prepareAgentCliSpawn('claude', command, argv), batch, `claude 起进程 = batchSafeSpawn(${command})`);
     for (const garbage of INPUTS.filter(v => !['claude', 'kimi'].includes(v)).concat(PROTOTYPE_NAMES)) {
       assert.deepEqual(srv.prepareAgentCliSpawn(garbage, command, argv), batch, `未登记类型 ${String(garbage)} 按 claude 起进程`);
     }
   }
-  // 找不到 npm 入口时 Kimi 与 Claude 一样走 batchSafeSpawn;非数组参数按空数组。
-  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', 'X:\\tools\\kimi.exe', ['acp']), srv.batchSafeSpawn('X:\\tools\\kimi.exe', ['acp']));
-  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', 'X:\\tools\\kimi.exe', 'acp'), srv.batchSafeSpawn('X:\\tools\\kimi.exe', []));
+  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', '/custom/kimi', 'acp'), { command: '/custom/kimi', args: [], opts: {} });
 });
 
 test('[N] CLI 类型归一:对输入表与修前逐项相同', () => {

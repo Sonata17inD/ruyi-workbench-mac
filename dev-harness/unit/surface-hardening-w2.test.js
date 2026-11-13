@@ -203,48 +203,6 @@ describe('[I] S10 imported sessions', () => {
   });
 });
 
-describe('[W] W5 cmd.exe meta characters in dynamic text arguments', () => {
-  const withPlatform = (value, fn) => {
-    const orig = Object.getOwnPropertyDescriptor(process, 'platform');
-    Object.defineProperty(process, 'platform', { value });
-    try { return fn(); } finally { Object.defineProperty(process, 'platform', orig); }
-  };
-  it('W1 neutralizeCmdTextArgs only rewrites the value after a dynamic-text flag', () => {
-    const { neutralizeCmdTextArgs, neutralizeCmdMetaChars } = loadServerInternals(['neutralizeCmdTextArgs', 'neutralizeCmdMetaChars']);
-    assert.equal(neutralizeCmdMetaChars('100%! %CMDCMDLINE:~-1%&calc&'), '100％！ ％CMDCMDLINE:~-1％&calc&');
-    const agents = JSON.stringify({ evil: { description: 'x %CMDCMDLINE:~-1%&calc&', prompt: 'hi! "q" \\ %PATH%' } });
-    const args = ['-p', '--append-system-prompt', 'a%b!c', '--agents', agents, '--allowed-tools', 'Read,Bash(echo %X%)', '--model', 'm%1', '--add-dir', 'C:\\100%\\proj!', '--mcp-config', 'C:\\a%b\\m.json', '--append-system-prompt=k%v!'];
-    const out = neutralizeCmdTextArgs(args);
-    assert.equal(out[2], 'a％b！c');
-    assert.ok(!/[%!]/.test(out[4]), out[4]);
-    assert.deepEqual(JSON.parse(out[4]), { evil: { description: 'x ％CMDCMDLINE:~-1％&calc&', prompt: 'hi！ "q" \\ ％PATH％' } }, 'JSON 结构完好,只有文本里的 % ! 换了字');
-    assert.equal(out[6], 'Read,Bash(echo ％X％)');
-    assert.equal(out[8], 'm％1');
-    assert.equal(out[10], 'C:\\100%\\proj!', '路径类实参必须保真');
-    assert.equal(out[12], 'C:\\a%b\\m.json');
-    assert.equal(out[13], '--append-system-prompt=k％v！', '--flag=value 形态也处理');
-    assert.equal(args[2], 'a%b!c', '不改入参数组');
-  });
-  it('W2 batchSafeSpawn on a .cmd launcher leaves no expandable % or ! from dynamic text in the cmd.exe line', () => {
-    const { batchSafeSpawn } = loadServerInternals(['batchSafeSpawn']);
-    const agents = JSON.stringify({ r: { description: 'd %CMDCMDLINE:~-1%&calc&', prompt: 'p !X! %Y%' } });
-    const spawn = withPlatform('win32', () => batchSafeSpawn('C:\\npm\\claude.cmd', ['-p', '--append-system-prompt', 'user append 100% done!', '--agents', agents, '--add-dir', 'C:\\work dir']));
-    assert.equal(spawn.opts.windowsVerbatimArguments, true);
-    const line = spawn.args[3];
-    assert.ok(!/[%!]/.test(line), '整行里没有 % 或 !: ' + line);
-    assert.ok(line.includes('％CMDCMDLINE') && line.includes('100％ done！'), line);
-    assert.ok(line.includes('"C:\\work dir"'), '路径照常加引号');
-  });
-  it('W3 non-batch launchers and non-Windows hosts are untouched', () => {
-    const { batchSafeSpawn } = loadServerInternals(['batchSafeSpawn']);
-    const args = ['--append-system-prompt', '100%!'];
-    const exe = withPlatform('win32', () => batchSafeSpawn('C:\\claude\\claude.exe', args));
-    assert.deepEqual(exe.args, args, '直启 exe 不经 cmd,原文保真');
-    const lin = withPlatform('linux', () => batchSafeSpawn('claude.cmd', args));
-    assert.deepEqual(lin.args, args);
-  });
-});
-
 describe('[P] port takeover is bound to this data dir', () => {
   const PORT = 18123;
   const writeRuntime = (paths, rec) => { fs.mkdirSync(paths.data, { recursive: true }); fs.writeFileSync(path.join(paths.data, 'runtime.json'), JSON.stringify(rec)); };

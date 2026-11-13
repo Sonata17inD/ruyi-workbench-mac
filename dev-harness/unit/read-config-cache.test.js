@@ -74,7 +74,6 @@ describe('readConfig 读缓存', () => {
     assert.ok(configReads > readsBefore, '戳变了应当真读盘');
     assert.deepStrictEqual(hit, miss);
     const symsHit = Object.getOwnPropertySymbols(hit);
-    assert.ok(symsHit.length >= 1, '归一化结果带 CONFIG_GIVEN_CLAUDE_PATH 这个 Symbol 键');
     assert.deepStrictEqual(symsHit.map(s => hit[s]), Object.getOwnPropertySymbols(miss).map(s => miss[s]));
     ageFile(60);
     await srv.readConfig();   // 重新填上缓存

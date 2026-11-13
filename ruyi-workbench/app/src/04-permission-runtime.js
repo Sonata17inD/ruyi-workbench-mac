@@ -1152,7 +1152,7 @@ class McpStdioClient {
   async start() {
     if (this.started) return;
     this.started = true;
-    const s = batchSafeSpawn(this.command, this.args);   // transparently wrap .cmd/.bat
+    const s = { command: this.command, args: this.args, opts: {} };   // transparently wrap .cmd/.bat
     const spawnEnv = DesktopExecutionHooks.clientEnvironment(this.id, bridgedServerSpawnEnv(process.env, this.env), this);
     this.executionContextRequired = spawnEnv.RUYI_EXECUTION_CONTEXT_REQUIRED === '1';
     let child;

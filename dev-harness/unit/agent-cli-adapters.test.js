@@ -37,7 +37,7 @@ const plain = v => JSON.parse(JSON.stringify(v));   // 解析结果里的 undefi
 
 const INTERFACE = {
   id: 'string', interactive: 'function', slashCommandVerbatim: 'boolean', buildArgs: 'function', resumeArgs: 'function',
-  extraArgs: 'function', prepareSpawn: 'function', cmdLineBudget: 'function', appendSystemPromptFlag: 'string',
+  extraArgs: 'function', prepareSpawn: 'function', appendSystemPromptFlag: 'string',
   runPreparedTurn: 'optional', buildAgentDefinitions: 'function', buildEnv: 'function', beforeSpawn: 'optional',
   thinkingEffortLabel: 'function', watchSideChannel: 'function', promptViaStdin: 'boolean', isNativeAgentTool: 'function',
   parseEvent: 'function', isResumeMissingError: 'function', syncPostTurnUsage: 'optional', recordTurnUsage: 'function',
@@ -119,15 +119,6 @@ test('[A] Kimi buildArgs 为空;续接/额外参数/追加系统提示/命令行
   assert.deepEqual(kimi.extraArgs({ extraClaudeArgs: ['--foo'] }), []);
   assert.equal(claude.appendSystemPromptFlag, '--append-system-prompt');
   assert.equal(kimi.appendSystemPromptFlag, '', 'Kimi 的追加系统提示改走 stdin <ruyi-agent-cli-instructions> 段');
-  for (const cmd of ['C:\\npm\\claude.cmd', 'C:\\tools\\claude.exe', 'claude']) {
-    assert.equal(claude.cmdLineBudget(cmd), srv.cmdLineBudgetFor(cmd), `Claude 预算 = cmdLineBudgetFor(${cmd})`);
-    assert.equal(kimi.cmdLineBudget(cmd), 0, 'Kimi(ACP 走 stdin)不设防');
-  }
-  process.env.WCW_CLAUDE_CMDLINE_BUDGET = '2600';
-  try {
-    assert.equal(claude.cmdLineBudget('whatever'), 2600, '测试缝强制预算对 Claude 生效');
-    assert.equal(kimi.cmdLineBudget('whatever'), 0, '测试缝不改 Kimi 的不设防');
-  } finally { delete process.env.WCW_CLAUDE_CMDLINE_BUDGET; }
   const args = ['-p', 'x y'];
   assert.deepEqual(claude.prepareSpawn('C:\\tools\\claude.exe', args), { command: 'C:\\tools\\claude.exe', args, opts: {} });
   assert.deepEqual(claude.prepareSpawn('C:\\npm\\claude.cmd', args), srv.prepareAgentCliSpawn('claude', 'C:\\npm\\claude.cmd', args));

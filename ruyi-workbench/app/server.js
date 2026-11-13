@@ -2091,106 +2091,6 @@ function memoryFixedSelectionMax(config) { return memoryLimit(config, 'memoryFix
 function memoryIndexCharCap(config) { return memoryLimit(config, 'memoryIndexCharCapV1', 500, 100000, 6000); }
 
 
-// 01d-win-cmdline.js - 架构还债批 3·B: 从 01-config.js 搬出的 Windows 命令行包装与整行长度预算(batchSafeSpawn / cmd8191 防线;搬家时零行为变更,其后 quoteWinArg 补了 CRT 层反斜杠转义)。
-// Node >=18.20/20.12/22/24 refuse to spawn a .cmd/.bat with shell:false and throw "spawn EINVAL"
-// (CVE-2024-27980). The intranet `claude` is almost always claude.cmd, so route batch launchers
-// through cmd.exe with verbatim, manually-quoted args (the cross-spawn-proven pattern).
-function isBatchLauncher(command) {
-  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(String(command || ''));
-}
-// 一个实参要过【两层】解析,两层都得对(只顾一层是历史上的两类事故):
-//   ① cmd.exe(/d /s /c "整行" 与 .cmd 垫片里的 %*):只认 `"` 切换引号态 —— 引号态里 ^ & | < > ( ) 都是字面量。
-//      所以每个 `"` 必须成对地出现(写成 `""`,一进一出,引号态不被带歪),元字符才始终被护在引号里。
-//   ② 目标进程的 C 运行时(Node/Python/MSVCRT 2008+ 同规则):按 `2N 个反斜杠 + "` → N 个反斜杠并翻转引号态、
-//      `2N+1 个反斜杠 + "` → N 个反斜杠 + 字面 `"`;引号态内的 `""` → 一个字面 `"`;其余反斜杠原样。
-// 只做 `"`→`""` 过得了 ① 却过不了 ②:参数里本来就有「反斜杠 + 引号」(JSON.stringify 的 `\"`,--agents 里角色 prompt
-// 带双引号时必现)时,`\""` 在 ② 眼里是「转义引号 + 一个落单引号」—— 落单的那个把引号态关掉,后面的空格把参数劈开;
-// 含空格且以 `\` 结尾的路径(`C:\My Docs\`)同理,收尾的 `\"` 被当成转义引号吞掉。修法按 ② 的规则补反斜杠:
-// 每个 `"` 前面那一串反斜杠、以及结尾引号前面那一串反斜杠都加倍;`"` 仍写成 `""`(① 不变)。
-// %、! 在 cmd 里即使在引号内也会展开,这里没有通用的转义,保持原状(只在判据里触发加引号)。
-// 动态文本实参里的 % ! 由下面的 neutralizeCmdTextArgs 在 batchSafeSpawn 里先换成全角(安全走查 W5)。
-function quoteWinArg(a) {
-  a = String(a);
-  if (a === '') return '""';
-  if (!/[\s"^&|<>()%!]/.test(a)) return a;
-  let out = '"', backslashes = 0;   // 逐字符一遍过(反斜杠串先攒着,看到后一个字符再定怎么写),不用回溯正则
-  for (const ch of a) {
-    if (ch === '\\') { backslashes++; continue; }
-    out += ch === '"' ? '\\'.repeat(backslashes * 2) + '""' : '\\'.repeat(backslashes) + ch;
-    backslashes = 0;
-  }
-  return out + '\\'.repeat(backslashes * 2) + '"';
-}
-// 安全走查 W5:%、! 在 cmd.exe 里【即使在双引号内】也会展开(%VAR%、%CMDCMDLINE%、延迟展开的 !VAR!),quoteWinArg 无从转义。
-// 展开结果里可以带出一个裸 `"`,把引号态翻掉,后面的 & | 就成了命令分隔符 —— 即 `%CMDCMDLINE:~-1%&calc&` 一类的注入。
-// 经 .cmd 垫片起 CLI 时,命令行上那些【给模型看的动态文本】(项目角色的 prompt / description 经 --agents JSON、用户 append 与
-// 技能/记忆/账本摘要经 --append-system-prompt、角色的工具清单与模型名)里的 % 与 ! 换成全角 ％ ！:它们只是提示/名字文本,换字无害,
-// 换完 cmd 眼里就没有可展开的字符了。路径类实参(--add-dir / --mcp-config / --resume …)必须保真,不在此列。
-// 只处理「值紧跟在这些旗标后面」的形态(`--flag value` 与 `--flag=value`);其余实参原样不动。纯函数,返回新数组。
-const CMD_TEXT_VALUE_FLAGS = new Set([
-  '--append-system-prompt', '--system-prompt', '--agents', '--prompt',
-  '--allowed-tools', '--allowedTools', '--disallowed-tools', '--disallowedTools', '--tools', '--model', '--effort',
-]);
-function neutralizeCmdMetaChars(value) {
-  return String(value).replace(/%/g, '％').replace(/!/g, '！');
-}
-function neutralizeCmdTextArgs(args) {
-  const out = Array.isArray(args) ? args.slice() : [];
-  for (let i = 0; i < out.length; i++) {
-    const a = out[i];
-    if (typeof a !== 'string') continue;
-    if (CMD_TEXT_VALUE_FLAGS.has(a)) {
-      if (i + 1 < out.length && typeof out[i + 1] === 'string') { out[i + 1] = neutralizeCmdMetaChars(out[i + 1]); i += 1; }
-      continue;
-    }
-    const eq = a.indexOf('=');
-    if (eq > 2 && a.startsWith('--') && CMD_TEXT_VALUE_FLAGS.has(a.slice(0, eq))) out[i] = a.slice(0, eq + 1) + neutralizeCmdMetaChars(a.slice(eq + 1));
-  }
-  return out;
-}
-// Returns { command, args, opts } ready for cp.spawn/spawnSync — transparently wrapping .cmd/.bat.
-function batchSafeSpawn(command, args) {
-  if (!isBatchLauncher(command)) return { command, args, opts: {} };
-  const comspec = process.env.ComSpec || 'cmd.exe';
-  const line = '"' + [command, ...neutralizeCmdTextArgs(args)].map(quoteWinArg).join(' ') + '"'; // outer quotes stripped by /s
-  return { command: comspec, args: ['/d', '/s', '/c', line], opts: { windowsVerbatimArguments: true } };
-}
-
-// ============================================================================
-// cmd8191 防线(技能索引把 Claude CLI 命令行顶爆事故的根治): Windows 上 .cmd/.bat 启动器(claude.cmd)经
-// cmd.exe /d /s /c 执行,cmd 对整条命令行有 8191 字符硬上限 —— 超限直接报「命令行太长。」退出码 1,claude
-// 进程根本没启动。历史上 --append-system-prompt 钳 8000、--agents 钳 6000,两个各自合理的局部钳制相加
-// (14000)远超整行预算 —— 局部钳制 ≠ 全局不变量。这里的防线把不变量收拢到一个汇合点:组装完 args 后用与
-// batchSafeSpawn【严格同构】的构造核算整行长度,超限走确定性降级阶梯(见 runClaudeTurn 组装段)。
-const CMD_EXE_LINE_LIMIT = 8191;          // cmd.exe /c 命令行硬上限(文档值)
-const CMD_LINE_SAFE_BUDGET = 7900;        // 整行(含 comspec 路径与 /d /s /c 前缀)安全预算,留本地化/引号余量
-const DIRECT_SPAWN_LINE_BUDGET = 32000;   // 直启(.exe/node)走 CreateProcess,上限 32767
-const CMD_LINE_QUOTE_MARGIN = 48;         // quoteWinArg 引号翻倍等二阶效应的预留
-// Off-by-default 测试缝: 强制预算值并让长度核算一律走 cmd 公式(即使启动器不是 .cmd)——e2e 借此在
-// WCW_FAKE_CLAUDE(node 直启)下精确演练降级阶梯,无需真实 cmd.exe。
-function cmdLineBudgetSeam() {
-  const v = Number(process.env.WCW_CLAUDE_CMDLINE_BUDGET);
-  return Number.isFinite(v) && v > 200 ? Math.floor(v) : 0;
-}
-// 本次 spawn 适用的整行字符预算;0 = 不设防(非 Windows: execve 上限 ~2MB,无 cmd 路径,保持行为逐字节不变)。
-function cmdLineBudgetFor(command) {
-  const seam = cmdLineBudgetSeam();
-  if (seam) return Math.min(seam, CMD_EXE_LINE_LIMIT);
-  if (process.platform !== 'win32') return 0;
-  return isBatchLauncher(command) ? CMD_LINE_SAFE_BUDGET : DIRECT_SPAWN_LINE_BUDGET;
-}
-// 与 batchSafeSpawn 的行构造严格同构(改 batchSafeSpawn 必须同步改这里;e2e 有断言)。核算的就是 cmd.exe
-// 实际解析的那一整行: "<comspec>" /d /s /c "<quoted join>"。测试缝开启时一律走 cmd 公式(模拟包装)。
-function spawnCmdLineLength(command, args) {
-  if (isBatchLauncher(command) || cmdLineBudgetSeam()) {
-    const comspec = process.env.ComSpec || 'cmd.exe';
-    const line = '"' + [command, ...neutralizeCmdTextArgs(args)].map(quoteWinArg).join(' ') + '"';
-    return `${comspec} /d /s /c ${line}`.length;
-  }
-  // 直启粗估(Node 自行 quoting): 只用于 32K 量级的宽松判断,无需精确。
-  return String(command).length + args.reduce((n, a) => n + String(a).length + 3, 1);
-}
-
 // 01e-permission-modes.js - 架构还债批 3·B: 从 01-config.js 搬出的权限档表、三层权限解析与 Agent 角色归一(纯搬家,零行为变更)。
 const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'bypass'];
 const AGENT_ROLE_PERMISSION_MODES = ['inherit', 'default', 'acceptEdits', 'dontAsk', 'bypass', 'plan', 'auto'];
@@ -2352,7 +2252,6 @@ function mergeAgentRole(base, override, source) {
 //   id / label / pathKey / detectedKey / streaming / interactive / mcp   数据(经 /api/status 的 agentCliDrivers 原样下发)
 //   installCandidates({ env, home, join, platform })   默认安装位置候选(按序探测;Claude 有自己的启动器解析,为空)
 //   detectPath(cliHost)                      自动探测到的启动器路径('' = 没找到)
-//   prepareSpawn(cliHost, command, argv)     起子进程的 { command, args, opts }(.cmd 走 cmd.exe、npm 垫片改 Node 直启……)
 //   syncMcpManifest(cliHost, config) async   把如意的 MCP 清单推进这家 CLI 自己的用户配置(走命令行参数的 CLI 给空操作)
 // 函数成员在 JSON 里自然消失,所以 /api/status 下发的形状与只有数据成员时逐字节相同 —— 钩子一律是函数,
 // 不用 null 表示「没有这一步」(null 会出现在下发的 JSON 里)。
@@ -2362,38 +2261,27 @@ const AGENT_CLI_TYPES = Object.freeze({
     id: 'claude', label: 'Claude Code', pathKey: 'claudePath', detectedKey: 'detectedClaudePath', streaming: true, interactive: true, mcp: 'argument',
     installCandidates: () => [],
     detectPath: cliHost => cliHost.detectClaudePath(),
-    // Route the real CLI through cmd.exe when it's a .cmd/.bat (fixes "spawn EINVAL" on modern Node).
-    prepareSpawn: (cliHost, command, argv) => batchSafeSpawn(command, argv),
+    prepareSpawn: (cliHost, command, argv) => ({ command, args: argv, opts: {} }),
     // Claude 每回合经 --mcp-config 拿如意的 MCP 配置(05 适配器 buildArgs),没有用户配置文件要推。
     syncMcpManifest: async () => {},
   }),
   kimi: Object.freeze({
     id: 'kimi', label: 'Kimi Code', pathKey: 'kimiPath', detectedKey: 'detectedKimiPath', streaming: true, interactive: true, mcp: 'user-config',
     installCandidates({ env, home, join, platform = process.platform }) {
-      if (platform === 'darwin') return [
+      return [
         env.KIMI_CLI_PATH, 'kimi',
         home && join(home, '.local', 'bin', 'kimi'),
         '/opt/homebrew/bin/kimi', '/usr/local/bin/kimi',
       ].filter(Boolean);
-      const npmDir = home && join(home, 'AppData', 'Roaming', 'npm');
-      return [
-        env.KIMI_CLI_PATH, 'kimi.cmd', 'kimi.exe', 'kimi',
-        npmDir && join(npmDir, 'kimi.cmd'),
-        home && join(home, '.local', 'bin', 'kimi.exe'),
-        home && join(home, '.local', 'bin', 'kimi'),
-      ].filter(Boolean);
+
     },
     detectPath: cliHost => cliHost.detectFromInstallCandidates('kimi'),
     prepareSpawn(cliHost, command, argv) {
-      // npm's shim goes through cmd.exe (8191-char ceiling). Resolve its deterministic package-relative entry
       // and launch with Node directly, matching the Claude shim escape hatch's intent. This also handles
-      // PowerShell's `kimi.ps1` shim, so a saved terminal launcher behaves the same as `kimi.cmd`.
       const entry = cliHost.resolveKimiNpmEntry(command);
       const nodeExe = cliHost.bundledNodeExe();
-      // In a packaged release process.execPath is Ruyi.exe, not Node. The offline packages deliberately ship
-      // runtime/node/node.exe; use that runtime so the same direct-entry launch works in both source and ZIP builds.
       if (entry && nodeExe) return { command: nodeExe, args: [entry, ...argv], opts: {} };
-      return batchSafeSpawn(command, argv);
+      return ({ command, args: argv, opts: {} });
     },
     syncMcpManifest: (cliHost, config) => cliHost.syncMcpServersToKimi(config),
   }),
@@ -4904,7 +4792,6 @@ const CONFIG_EXPLICIT_KEY_MAX = 400;
 // claudePath 的「用户给的值」:normalizeConfig 会把 npm shim 解析成真身 exe(下面 P1 那段),而落盘与「是否被改过」
 // 都必须按用户给的原值判 —— 否则真身路径被写进盘,exe 以后消失时就回落不了 shim。Symbol 键:JSON 永不序列化它,
 // 对象展开({ ...current })会带上它。
-const CONFIG_GIVEN_CLAUDE_PATH = Symbol('configGivenClaudePath');
 function configCanonicalJson(value) {
   if (value === undefined) return 'undefined';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
@@ -4917,9 +4804,7 @@ function configExplicitKeysOf(raw) {
   const list = raw && typeof raw === 'object' && Array.isArray(raw.configExplicitKeysV1) ? raw.configExplicitKeysV1 : [];
   return new Set(list.filter(k => typeof k === 'string' && k && k.length <= 120 && !CONFIG_BOOKKEEPING_KEYS.includes(k)));
 }
-// 「这个键此刻的值」—— 判是否被改过、以及落盘时用。唯一的特例是 claudePath(见 CONFIG_GIVEN_CLAUDE_PATH)。
 function configComparableValue(config, key) {
-  if (key === 'claudePath' && typeof config[CONFIG_GIVEN_CLAUDE_PATH] === 'string') return config[CONFIG_GIVEN_CLAUDE_PATH];
   return config[key];
 }
 // 落盘投影:唯一的写口(readConfig 的迁移回写、writeConfig)都写它。
@@ -5066,17 +4951,6 @@ function normalizeConfig(raw, opts = {}) {
   // have already retained their explicit enabled state before normalization reaches here.
   if (config.privacyModeV1 !== 'off' && config.credentialEncryptionV1 !== true && config.privacyPolicyRecoveryRequiredV1 !== true) {
     config.privacyPolicyRecoveryRequiredV1 = true; changed = true;
-  }
-  // P1(cmd8191 根治): npm shim(claude.cmd)→ 真身 claude.exe 的运行时解析(见 resolveClaudeLauncher)。
-  // 收拢在这一个咽喉点 = 全部消费方(runClaudeTurn/子代理/mcp add-json/doctor)一致受益。不置 changed:
-  // 解析是纯运行时升级,配置里保留用户原值,exe 消失时下一次解析自动回落 shim。结果 memoize,热路径零探测。
-  // 128a:传进来的若是一份已经解析过的内存视图(它带着 CONFIG_GIVEN_CLAUDE_PATH),且 claudePath 没被改过
-  // (仍等于原值的解析结果),原值沿用那份;否则 claudePath 本身就是新的原值。
-  {
-    const carried = raw && typeof raw === 'object' ? raw[CONFIG_GIVEN_CLAUDE_PATH] : undefined;
-    const given = typeof carried === 'string' && config.claudePath === resolveClaudeLauncher(carried) ? carried : config.claudePath;
-    config[CONFIG_GIVEN_CLAUDE_PATH] = given;
-    config.claudePath = resolveClaudeLauncher(given);
   }
   if (!isAgentCliType(config.agentCliType)) {
     config.agentCliType = AGENT_CLI_DEFAULT_TYPE;
@@ -6319,10 +6193,8 @@ async function ensureDirsForConfigRead() {
 //   · 戳要在读盘【之前】取:取戳与读之间文件被换掉,存下的是「旧戳 + 新内容」,下次戳对不上 → 只会多读一次;反过来取会
 //     存成「新戳 + 旧内容」= 陈旧命中。
 //   · 归一化的输出里还有【运行时输入】不在文件里:detectClaudePath/detectKimiPath 的探测结果(60 s 过期后台重探)、
-//     resolveClaudeLauncher 的解析结果(Windows 上 claude.cmd → claude.exe)。命中时重取这三样,与填缓存时不一致就当未命中
 //     (顺带保住「每次读配置都会碰一下探测记忆、过期则触发后台重探」这个旧副作用)。
 //   · 调用方会就地改返回值(mutateConfig 的 mutator 就是),所以缓存里只放一份没人拿过的快照,每次命中给一份深拷贝
-//     (structuredClone + 手补 Symbol 键 CONFIG_GIVEN_CLAUDE_PATH,structuredClone 不带 Symbol)。拷贝失败一律当未命中。
 //   · 只缓存「干净读」:读盘成功、JSON 合法、不是从 .prev 恢复、归一化没有要回写的迁移(changed=false)。降级/恢复/迁移
 //     路径全部照旧走完整流程(它们有写盘或降级状态副作用)。
 const CONFIG_CACHE_MIN_AGE_MS = 2500;
@@ -6337,7 +6209,6 @@ async function configFileStamp() {
 }
 function cloneConfigSnapshot(config) {
   const copy = structuredClone(config);
-  copy[CONFIG_GIVEN_CLAUDE_PATH] = config[CONFIG_GIVEN_CLAUDE_PATH];
   return copy;
 }
 function configReadCacheLookup(stamp) {
@@ -6345,7 +6216,6 @@ function configReadCacheLookup(stamp) {
   if (!cache || !stamp || cache.key !== stamp.key) return null;
   try {
     if (detectClaudePath() !== cache.claudeProbe || detectKimiPath() !== cache.kimiProbe) return null;
-    if (resolveClaudeLauncher(cache.snapshot[CONFIG_GIVEN_CLAUDE_PATH]) !== cache.snapshot.claudePath) return null;
     return cloneConfigSnapshot(cache.snapshot);
   } catch { configReadCache = null; return null; }
 }
@@ -6528,7 +6398,6 @@ function mutateConfig(mutator, options = {}) {
     const current = await readConfig();
     // 128a:mutator 可以就地改 current,所以「改之前」必须先深拷一份(Symbol 键 structuredClone 不带,手补)。
     const before = structuredClone(current);
-    before[CONFIG_GIVEN_CLAUDE_PATH] = current[CONFIG_GIVEN_CLAUDE_PATH];
     const decision = await mutator(current);
     const d = (decision && typeof decision === 'object') ? decision : {};
     if (Object.prototype.hasOwnProperty.call(d, 'abort')) return { ok: false, config: current, value: d.abort };
@@ -6943,7 +6812,6 @@ async function kimiMcpManagedIds() {
   } catch { return new Set(); }
 }
 // 别的 CLI 里登记的「如意自己」(权限桥 / MCP 入口):命令或参数指向某个如意包的 app/server.js,或命令就是
-// Ruyi.exe。导进来等于如意连自己,一律跳过。
 function looksLikeRuyiSelfMcp(raw) {
   const parts = [raw && raw.command, ...((raw && Array.isArray(raw.args)) ? raw.args : [])].map(x => String(x || '').trim());
   for (const p of parts) {
@@ -6973,113 +6841,11 @@ function classifyAgentMcpCandidate(raw, origin, view, managedKimi) {
   return { status: 'importable', reason: '' };
 }
 
-// 架构还债批 3·B: .cmd/.bat 包装(batchSafeSpawn)与 cmd8191 整行预算抽至 01d-win-cmdline.js。
 
 // ============================================================================
-// P1(cmd8191 根治): npm 版 Claude Code 的 claude.cmd 只是 4 行 shim —— 内容即转发到同目录
-// node_modules/@anthropic-ai/claude-code/bin/claude.exe(真身,Bun 单文件原生二进制)。经 cmd.exe
-// 启动有 8191 字符整行硬上限(技能索引事故根因);直启 exe 走 CreateProcess(32767,4 倍余量),
-// 且 %VAR%/! 延迟展开被 cmd 吃掉、cmd 层 GBK 错误面、taskkill 多一层遗孤窗口整类消失(实测:
-// 事故规模 11K append 直启逐字回传 %USERPROFILE%/!DELAYED! 未展开;同参 cmd 包装 25ms 内复现
-// 「命令行太长。」)。凡是要 spawn 的 claude 启动器,若指向可解析的 npm shim 就换成真身 exe;
-// 解析不出(老布局/非 npm 安装/探测失败)原样返回 —— 行为逐字节不变,纯升级。cmdLineBudgetFor
-// 按扩展名分档,解析到 .exe 后整行预算自动 7900 → 32000,cmdlineGuard 降级阶梯自然近乎不再触发。
-// 运行时解析,调用方不改写持久化配置:配置里仍是 claude.cmd,exe 消失时下次解析自动回落 shim,
-// 不留死配置。结果按启动器字符串 memoize(与 detectClaudePath 同 TTL),normalizeConfig 热路径零探测。
-const CLAUDE_NPM_EXE_REL = path.join('node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
-let _launcherResolveCache = new Map(); // launcher 字符串 → { at, value }
-// 定位 shim 同目录下的真身 claude.exe(纯文件系统,不起进程):含目录分隔符的按路径 resolve;裸名字(claude.cmd)
-// 沿 PATH 逐目录找。找不到返回空串。
-function claudeShimExeFor(p) {
-  let shim = '';
-  if (/[\\/]/.test(p) || path.isAbsolute(p)) {
-    shim = path.resolve(p);
-  } else {
-    for (const dir of String(process.env.PATH || '').split(path.delimiter)) {
-      if (!dir) continue;
-      const cand = path.join(dir, p);
-      if (fs.existsSync(cand)) { shim = cand; break; }
-    }
-  }
-  if (!shim || !fs.existsSync(shim)) return '';
-  const exe = path.join(path.dirname(shim), CLAUDE_NPM_EXE_REL);
-  return fs.existsSync(exe) ? exe : '';
-}
-function rememberClaudeLauncher(p, value) {
-  if (_launcherResolveCache.size > 32) _launcherResolveCache = new Map(); // 防无界(实际路径集合极小)
-  _launcherResolveCache.set(p, { at: Date.now(), value });
-}
-function resolveClaudeLauncher(launcher) {
-  const p = String(launcher || '').trim();
-  if (!p || process.platform !== 'win32' || !isBatchLauncher(p)) return launcher;
-  const hit = _launcherResolveCache.get(p);
-  if (hit) {
-    // 128f-⑬:过期【不再当场重探】—— normalizeConfig 在每一次 readConfig 里都走到这里,当场 spawnSync 就是把整个
-    // 服务钉住一发「claude.exe --version」。先答上一次的结果,后台重探,探完换上(见 detectClaudePath 头注)。
-    if ((Date.now() - hit.at) >= CLAUDEPATH_CACHE_MS) refreshInBackground('launcher:' + p, () => resolveClaudeLauncherAsync(launcher, { force: true }));
-    return hit.value;
-  }
-  if (bootCliPathProbes?.beforeListen) {
-    // Preserve the configured launcher until its real executable check completes.
-    // This is only a boot view; post-listen config reads wait for the async check.
-    rememberClaudeLauncher(p, launcher);
-    queueBootCliPathProbe(() => resolveClaudeLauncherAsync(launcher, { force: true }));
-    return launcher;
-  }
-  let value = launcher; // 默认:原样返回(解析不出 = 保持现状)
-  try {
-    const exe = claudeShimExeFor(p);
-    if (exe) {
-      // 真身探测:--version 能跑通才接管(防半截 npm 安装留下坏 exe);失败保持 shim 回退。
-      const ok = cp.spawnSync(exe, ['--version'], { stdio: 'ignore', windowsHide: true, timeout: 4000 });
-      if (!ok.error && ok.status !== null) value = exe;
-    }
-  } catch { /* 解析失败 = 保持原启动器 */ }
-  rememberClaudeLauncher(p, value);
-  return value;
-}
-// 同一件事的异步版(后台重探用):判据逐字相同,只是「--version」那一发不占事件循环。
-async function resolveClaudeLauncherAsync(launcher, { force = false } = {}) {
-  const p = String(launcher || '').trim();
-  if (!p || process.platform !== 'win32' || !isBatchLauncher(p)) return launcher;
-  const hit = _launcherResolveCache.get(p);
-  if (hit && !force && (Date.now() - hit.at) < CLAUDEPATH_CACHE_MS) return hit.value;
-  const generation = _cliProbeGeneration;
-  let value = launcher;
-  try {
-    const exe = claudeShimExeFor(p);
-    if (exe) {
-      const ok = await spawnProbeAsync(exe, ['--version']);
-      if (!ok.error && ok.status !== null) value = exe;
-    }
-  } catch { /* 同上 */ }
-  if (generation === _cliProbeGeneration) rememberClaudeLauncher(p, value);
-  return value;
-}
-
 function claudeInstallCandidates() {
   const home = os.homedir();
-  const env = process.env;
-  if (process.platform === 'darwin') return [
-    path.join(home, '.local', 'bin', 'claude'),
-    path.join(home, '.claude', 'local', 'claude'),
-    '/opt/homebrew/bin/claude', '/usr/local/bin/claude',
-  ];
-  const dirs = [
-    env.APPDATA && path.join(env.APPDATA, 'npm'),
-    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'claude'),
-    env.LOCALAPPDATA && path.join(env.LOCALAPPDATA, 'Programs', 'claude-code'),
-    env.ProgramFiles && path.join(env.ProgramFiles, 'Claude'),
-    env.ProgramFiles && path.join(env.ProgramFiles, 'nodejs'),
-    home && path.join(home, '.claude', 'local'),
-    home && path.join(home, 'AppData', 'Roaming', 'npm'),
-  ].filter(Boolean);
-  const names = ['claude.cmd', 'claude.exe', 'claude.bat', 'claude'];
-  const out = [];
-  for (const dir of dirs) {
-    for (const n of names) out.push(path.join(dir, n));
-  }
-  return out;
+  return [path.join(home, '.local', 'bin', 'claude'), path.join(home, '.claude', 'local', 'claude'), '/opt/homebrew/bin/claude', '/usr/local/bin/claude'];
 }
 
 // v1.0-S7 (perf): detectClaudePath spawnSync-probes for `claude` (up to several launches, each with a 4s
@@ -7088,7 +6854,6 @@ function claudeInstallCandidates() {
 // config read thereafter. The RESULT is stable within a process run, so memoize it. This collapses the
 // startup cost to a single probe and makes all later readConfig() calls probe-free. A short TTL lets a
 // long-lived server re-detect a claude installed after boot without ever re-probing on the hot path.
-// (baseline S7: ~27ms/call on this machine where claude.cmd resolves; the worst case — a hung claude.cmd —
 // would otherwise cost up to ~4s PER readConfig; memoization bounds it to once per TTL window.)
 //
 // 128f-⑬(mission-index-scale (e)/(f) 取证时 CPU 剖面挖出来的;用户 2026-09-19「删除线程没有及时的界面反馈」那一刻
@@ -7136,7 +6901,7 @@ function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
 }
 function claudeProbeCandidates() {
   // 先 PATH 上的裸名(快、常见),再常见安装位置(必须真的存在才探)。
-  const names = process.platform === 'darwin' ? ['claude'] : ['claude.cmd', 'claude.exe', 'claude'];
+  const names = ['claude'];
   const onPath = [process.env.CLAUDE_CLI_PATH, ...names].filter(Boolean).map(command => ({ command, mustExist: false }));
   return [...onPath, ...claudeInstallCandidates().map(command => ({ command, mustExist: true }))];
 }
@@ -7144,13 +6909,10 @@ function detectClaudePathUncached() {
   for (const { command, mustExist } of claudeProbeCandidates()) {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
-      const s = batchSafeSpawn(command, ['--version']);
+      const s = { command, args: ['--version'], opts: {} };
       const ok = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 4000, ...s.opts });
-      // 61-C6:批处理启动器(claude.cmd)经 cmd.exe 探,没装时 cmd 也有退出码(1 / 9009)—— 修前「有退出码就算探到」,
-      // 没装 Claude Code 的机器也报「Claude Code: claude.cmd」。批处理要求退出码 0;直启的 exe 仍是有退出码即可。
-      const found = !ok.error && ok.status !== null && (!isBatchLauncher(command) || ok.status === 0);
-      // P1: shim(claude.cmd)命中时优先解析出真身 claude.exe(绕过 cmd.exe 8191 上限);解析不出原样返回。
-      if (found) return resolveClaudeLauncher(command);
+      const found = !ok.error && ok.status !== null;
+      if (found) return command;
     } catch (error) {
       if (error.cleanupIncomplete) throw error;
       // keep scanning
@@ -7162,11 +6924,11 @@ async function detectClaudePathUncachedAsync() {
   for (const { command, mustExist } of claudeProbeCandidates()) {
     try {
       if (mustExist && !fs.existsSync(command)) continue;
-      const s = batchSafeSpawn(command, ['--version']);
+      const s = { command, args: ['--version'], opts: {} };
       const ok = await spawnProbeAsync(s.command, s.args, s.opts);
       if (ok.cleanupIncomplete) throw Object.assign(ok.error, { cleanupIncomplete: true });
       // 判据与同步版逐字相同(61-C6:批处理启动器要求退出码 0)。
-      if (!ok.error && ok.status !== null && (!isBatchLauncher(command) || ok.status === 0)) return await resolveClaudeLauncherAsync(command);
+      if (!ok.error && ok.status !== null) return command;
     } catch (error) {
       if (error.cleanupIncomplete) throw error;
       // keep scanning
@@ -7245,7 +7007,7 @@ function agentCliProbeSpawn(command) {
   const kimiEntry = isScript ? '' : resolveKimiNpmEntry(command);
   const nodeExe = kimiEntry ? bundledNodeExe() : '';
   return isScript ? { command: process.execPath, args: [command, '--version'], opts: {} }
-    : (kimiEntry && nodeExe ? { command: nodeExe, args: [kimiEntry, '--version'], opts: {} } : batchSafeSpawn(command, ['--version']));
+    : (kimiEntry && nodeExe ? { command: nodeExe, args: [kimiEntry, '--version'], opts: {} } : { command, args: ['--version'], opts: {} });
 }
 function probeAgentCliLauncher(command) {
   if (!command) return false;
@@ -7320,33 +7082,19 @@ function selectedAgentCli(config) {
 }
 function resolveKimiNpmEntry(command) {
   const raw = String(command || '').trim();
-  if (!/(?:^|[\\/])kimi(?:\.(?:cmd|ps1))?$/i.test(raw)) return '';
-  let shim = raw;
-  if (!path.isAbsolute(shim) && !/[\\/]/.test(shim)) {
-    const names = [...new Set([shim, 'kimi.cmd', 'kimi.ps1'])];
-    outer: for (const rawDir of String(process.env.PATH || '').split(path.delimiter)) {
-      const dir = rawDir.trim().replace(/^"|"$/g, '');
-      if (!dir) continue;
-      for (const name of names) {
-        const candidate = path.join(dir, name);
-        if (fs.existsSync(candidate)) { shim = candidate; break outer; }
-      }
-    }
+  if (!/(?:^|\/)kimi$/.test(raw)) return '';
+  const candidates = path.isAbsolute(raw) || raw.includes('/') ? [path.resolve(raw)]
+    : String(process.env.PATH || '').split(path.delimiter).filter(Boolean).map(dir => path.join(dir, raw));
+  for (const launcher of candidates) {
+    try {
+      const entry = fs.realpathSync(launcher);
+      if (entry.endsWith('/@moonshot-ai/kimi-code/dist/main.mjs')) return entry;
+      if (fs.existsSync(launcher)) return '';
+    } catch { /* Try the next PATH entry. */ }
   }
-  const dir = path.dirname(path.resolve(shim));
-  const entries = [
-    path.resolve(dir, '..', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs'),
-    path.resolve(dir, 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs'),
-  ];
-  if (process.platform !== 'win32') {
-    const globalEntry = path.resolve(dir, '..', 'lib', 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
-    // POSIX npm uses a bin/kimi symlink. A nearby stale package must not replace a native launcher.
-    try { if (fs.realpathSync(shim) === fs.realpathSync(globalEntry)) entries.push(globalEntry); }
-    catch { /* No matching npm symlink; keep the original launcher. */ }
-  }
-  return entries.find(candidate => fs.existsSync(candidate)) || '';
+  return '';
 }
-// 未登记的类型同 selectedAgentCli 口径归到 claude(即 batchSafeSpawn)。
+
 function prepareAgentCliSpawn(type, command, args) {
   const argv = Array.isArray(args) ? args : [];
   return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
@@ -7957,7 +7705,6 @@ function desktopMcpRootPlan() {
     // beats both a stale user checkout and any machine-local Python on a clean distribution target.
     const repoCandidates = [
       // In a pkg executable __dirname points into the read-only compile snapshot, while the bundled
-      // MCP lives beside Ruyi.exe. externalRoot() resolves that real release directory.
       path.join(externalRoot(), 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', '..', 'mcp', 'ai-computer-control'),
       path.join(__dirname, '..', 'mcp', 'ai-computer-control'),
@@ -17705,22 +17452,19 @@ async function readFilePreview(absPath, snapshot = null) {
 
 function existsExecutable(command) {
   if (!command) return false;
-  const s = batchSafeSpawn(command, ['--version']);
+  const s = { command, args: ['--version'], opts: {} };
   const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', windowsHide: true, timeout: 6000, ...s.opts });
   if (result.error) return false;
-  return !(isBatchLauncher(command) && result.status !== 0);   // 61-C6:判据同下方异步版(批处理启动器要求退出码 0)
+  return result.status !== null;
 }
 // 128f-⑬:同一个判据的异步版。服务在跑的时候(请求路径、回合入口、能力矩阵刷新)一律用它 —— 同步那一发会把整个
 // 服务钉住一次 CLI 冷启动(node 起一个进程,几百毫秒到秒级),期间所有请求与推送一起等。同步版只留给启动期与 CLI 子命令。
 async function existsExecutableAsync(command) {
   if (!command) return false;
-  const s = batchSafeSpawn(command, ['--version']);
+  const s = { command, args: ['--version'], opts: {} };
   const result = await spawnProbeAsync(s.command, s.args, s.opts, 6000);
   if (result.error) return false;
-  // 61-C6:.cmd/.bat 启动器经 cmd.exe /c 探测 —— cmd 自己总能起来(spawn 不报错),目标不存在时它回 1/9009 并打印
-  // 「系统找不到指定的路径」。修前只看 spawn 有没有报错,配了个不存在的 claude.cmd 也判「可执行」,真起节点时才报出
-  // 那句看不懂的 cmd 错误。批处理启动器要求退出码 0(真 CLI 的 --version 都回 0);直启的可执行文件仍只看 spawn。
-  if (isBatchLauncher(command) && result.status !== 0) return false;
+
   return true;
 }
 
@@ -20360,7 +20104,7 @@ class McpStdioClient {
   async start() {
     if (this.started) return;
     this.started = true;
-    const s = batchSafeSpawn(this.command, this.args);   // transparently wrap .cmd/.bat
+    const s = { command: this.command, args: this.args, opts: {} };   // transparently wrap .cmd/.bat
     const spawnEnv = DesktopExecutionHooks.clientEnvironment(this.id, bridgedServerSpawnEnv(process.env, this.env), this);
     this.executionContextRequired = spawnEnv.RUYI_EXECUTION_CONTEXT_REQUIRED === '1';
     let child;
@@ -22424,14 +22168,13 @@ function claudeProviderTailSince(messages) {
   return lastClaudeIdx >= 0 ? arr.slice(lastClaudeIdx + 1) : arr;
 }
 
-const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, killTreeFn, batchSpawnFn, spawnDetachedFn, decodeConsoleTextFn) => {
+const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, killTreeFn, spawnDetachedFn, decodeConsoleTextFn) => {
   const fs = fsModule;
   const fsp = fspModule;
   const path = pathModule;
   const os = osModule;
   const cp = cpModule;
   const killChildTree = killTreeFn;
-  const batchSafeSpawn = batchSpawnFn;
   // 分离式启动带 'error' 监听(见 00-boot spawnDetachedChecked):explorer.exe 起不来时不再是 uncaughtException。
   const spawnDetachedChecked = spawnDetachedFn;
   // v1.0.1 编码修复:Windows 子进程(powershell/cmd/git/python…)在中文系统默认按 OEM 代码页(GBK/cp936)
@@ -22562,7 +22305,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
         return { head: condenseTerminalText(decodeBestEffort(st.head)), tail: condenseTerminalText(rawText(st)), gapBytes: st.dropped - st.head.length };
       };
       // Transparently wrap .cmd/.bat targets (e.g. claude.cmd) so they don't throw "spawn EINVAL".
-      const s = options.shell ? { command, args, opts: {} } : batchSafeSpawn(command, args);
+      const s = { command, args, opts: {} };
       let processHandle;
       try {
         processHandle = ProcessRuntime.start({
@@ -22752,7 +22495,7 @@ const DesktopShell = ((fsModule, fspModule, pathModule, osModule, cpModule, kill
     return { ok: false, code: 'host_required', error: '请在 Mac 应用中选择文件，或粘贴完整路径' };
   }
   return Object.freeze({ decodeBestEffort, runProcess, runBash, revealInFinder, pickFolder, pickFile });
-})(fs, fsp, path, os, cp, killChildTree, batchSafeSpawn, spawnDetachedChecked, decodeConsoleText);
+})(fs, fsp, path, os, cp, killChildTree, spawnDetachedChecked, decodeConsoleText);
 
 // ── 04f · ruyi-toolbox 服务类组件:拉起、探活、接成能力端点、回收 ─────────────────────────────────────────
 // 用户 2026-09-21:「如意启动时自动探测本机上是否有这个 asr shim,有的话自动拉起并自动配置好,开箱即用」,
@@ -26448,8 +26191,6 @@ const VoiceLearn = (() => {
 //   buildArgs(ctx)            async 回合主参数(续接/--add-dir/额外参数之外的全部;可能落盘 MCP 配置)
 //   resumeArgs(nativeSessionId)     续接原生会话的参数
 //   extraArgs(config)               用户配置的额外 CLI 参数(排在尾部参数最后)
-//   prepareSpawn(command, args)     起子进程的最终 { command, args, opts }(.cmd 走 cmd.exe、npm 入口直启等)
-//   cmdLineBudget(command)          整行命令长度预算(0 = 不设防,提示词不走命令行时就是 0)
 //   appendSystemPromptFlag          追加系统提示的命令行旗标;'' = 改走 stdin 的 <ruyi-agent-cli-instructions> 段
 //   runPreparedTurn(context)        null | 自有传输层接管本回合(Kimi = ACP,见 05b);fake 缝下不接管
 //   buildAgentDefinitions(cwd, config, budget)  async 原生子代理角色定义 { definitions, roles, omitted }
@@ -26491,7 +26232,6 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
         // envelopes. Route questions through our MCP tool instead of Claude's terminal-only native prompt.
         if (interactive) args.push('--disallowedTools', 'AskUserQuestion');
       }
-      // cmd8191 防线: --agents 的推送延后到 runClaudeTurn 的「预算核算与降级阶梯」——角色定义吃 append 之后的剩余预算。
       // v1.4.3: 'auto' mode uses the CLI's built-in risk classifier, no workbench bridge needed.
       if (config.permissionBridge && config.permissionMode !== 'bypass' && config.permissionMode !== 'auto') {
         // permission-prompt-tool 名派生自 MCP server id,须与之一致(RUYI_MCP_CLI_TOOL_PREFIX)。
@@ -26513,9 +26253,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     },
     resumeArgs: nativeSessionId => ['--resume', nativeSessionId],
     extraArgs: config => (Array.isArray(config.extraClaudeArgs) ? config.extraClaudeArgs : []),
-    // Route the real CLI through cmd.exe when it's a .cmd/.bat (fixes "spawn EINVAL" on modern Node).
     prepareSpawn: (command, args) => prepareAgentCliSpawn('claude', command, args),
-    cmdLineBudget: command => cmdLineBudgetFor(command),
     appendSystemPromptFlag: '--append-system-prompt',
     runPreparedTurn: null,
     buildAgentDefinitions: (workingDir, config, budget) => buildClaudeAgentDefinitions(workingDir, config, budget),
@@ -26598,7 +26336,6 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     extraArgs: () => [],
     prepareSpawn: (command, args) => prepareAgentCliSpawn('kimi', command, args),
     // ACP carries the prompt over stdin as JSON-RPC, so Windows' command-line ceiling is irrelevant to Kimi.
-    cmdLineBudget: () => 0,
     appendSystemPromptFlag: '',
     runPreparedTurn: context => runKimiAcpTurnPrepared(context),
     buildAgentDefinitions: async () => ({ definitions: {}, roles: [], omitted: [] }),
@@ -26820,7 +26557,6 @@ async function runClaudeTurn({
   // 本条消息的记忆检索结果:回执,稍后(记忆段)再把相关记忆索引接在它后面 —— 都随每条消息变化,所以走每回合信封(turnMemoryEnvelope),
   // 不进按 hash 去重的稳定索引(#10)。用 let 并沿用这个名字,是因为 kimi-prompt-parts 把下面那段信封装配抽出来单独执行,只认这个变量。
   let memoryTurnCheck = buildMemoryCheckPrompt(memoryPreflight.status, config);
-  // cmd8191 防线: 先把与 append/agents 无关的尾部参数(tailArgs)全部定下来,才能精确核算整行剩余预算。
   // (就是原来跟在 append 块后面的 --resume / --add-dir / extraClaudeArgs,内容不变,仅提前收集、最后统一 push。)
   const tailArgs = [];
   if (config.autoResumeClaudeSessions && session.claudeSessionId) {
@@ -26844,33 +26580,12 @@ async function runClaudeTurn({
   }
   tailArgs.push(...adapter.extraArgs(config));
 
-  // cmd8191 防线: 整行预算核算。fake 缝(node 直启)不受 cmd 限制,除非 WCW_CLAUDE_CMDLINE_BUDGET 测试缝强制。
-  // 阶梯顺序: ① append 先拿预算(块内 fits-or-drop 自然兑现 用户append>技能>记忆>账本>编排>语言政策);
-  // ② --agents 角色定义吃 append 之后的剩余(子代理编排是增强,用户提示与技能是核心诉求);
-  // ③ 组装后整行复核(引号翻倍等二阶效应的最终闸口)仍超 → 砍 --agents → 围栏安全裁 append → 告警但绝不硬失败。
-  const preflightLaunch = fakeClaude
-    ? { command: process.execPath, args: [fakeClaude], opts: {} }
-    : adapter.prepareSpawn(claude, []);
-  const guardCmd = preflightLaunch.command;
-  const guardPrefixArgs = preflightLaunch.args;
-  // 提示词不走命令行的 CLI(Kimi ACP 走 stdin JSON-RPC)预算为 0 = 不设防。
-  const guardBudget = adapter.cmdLineBudget(guardCmd);
-  const cmdlineGuard = { budget: guardBudget, degraded: [], lineLen: 0 };
-  const FLAG_APPEND_ALLOWANCE = '--append-system-prompt'.length + 1 + CMD_LINE_QUOTE_MARGIN;
-  const FLAG_AGENTS_ALLOWANCE = '--agents'.length + 1 + CMD_LINE_QUOTE_MARGIN;
-  const fixedLen = guardBudget > 0 ? spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args, ...tailArgs]) : 0;
-  let appendLimit = 8000;
-  if (guardBudget > 0) {
-    appendLimit = Math.min(8000, guardBudget - fixedLen - FLAG_APPEND_ALLOWANCE);
-    if (appendLimit < 200) { appendLimit = 0; cmdlineGuard.degraded.push('append-skipped'); }
-    else if (appendLimit < 8000) cmdlineGuard.degraded.push(`append-trimmed-to-${appendLimit}`);
-  }
+  const appendLimit = 8000;
   // v1.4.3: --append-system-prompt
   // v1.4.3: --append-system-prompt。v1 技能体系: Claude 引擎不注入 provider 系统层(CLI 自建 prompt)。
   // 第35波 P2 修订渠道分工: 「稳定索引段」(技能索引/记忆索引/编排+模型提示)改走 stdin 消息流一次性注入
   // (下方 indexSecs → <workbench-context> 块,内容 hash 去重)——不再每轮占命令行、预算耗尽时也不再整段丢失
   // (索引已在原生 transcript 中);--append-system-prompt 只留 用户append + 账本digest(逐轮易变) + 政策尾。
-  // cmd8191 防线: appendLimit 由上方整行预算核算动态给出(≤8000)——索引段移走后此处压力大幅下降,
   // 剩余段按 用户append>账本>语言政策 的顺序自然降级。
   let appendSys = '';
   const indexSecs = []; // P2: 稳定索引段收集器(stdin 注入,不进命令行)
@@ -26900,7 +26615,6 @@ async function runClaudeTurn({
     // fenceSafeSlice、启动守卫③的 append-final-trim)一律【从尾部】切,前缀里的东西不会被静默剪掉。
     // 预算实测:中文 +95 字符、英文 +395(四层本身 461 / 1333),而 sectionLimit 最紧的团队模式下仍有
     // 5143 —— 顶不破 8000 那道闸。真顶破时是整段 append 被跳过(appendLimit<200),那条路径有 stderr
-    // 事件 + logEvent(cmdline_guard) + meta.cmdlineGuard 三处告知,不会静默消失。
     // 不做 identityOnly 门控:CLI 这一路【没有】identityOnly 这个概念 —— 它自建 prompt,从不调
     // buildStableSystemPrompt;全仓 identityOnly=true 只有 06:997 与 10:1263 两个 provider 侧摘要调用,
     // capabilities.e2e 的身份泄漏守卫查的也是 provider 侧那条 system 首段,与本行无关。
@@ -26929,7 +26643,6 @@ async function runClaudeTurn({
       appendSys += `${appendSys ? '\n\n' : ''}${buildBrowserAutomationHint(config)}`;
     }
     if (config.includeWorkbenchMcp) appendSys += `${appendSys ? '\n\n' : ''}${buildToolCustomizationHint(config)}`;
-    // cmd8191 配套: 先为末尾政策段(语言政策+团队提示)预留房间,append 内剩余内容(用户 append + 账本 digest)只在
     // sectionLimit 内竞争。预留后 appendSys ≤ sectionLimit ⇒ 末尾政策追加时绝不再切内容段。
     // (第35波 P2 起技能/记忆/编排索引已改道 stdin,不再参与此处的预算竞争。)
     const policyRoom = appendLimit > 0 ? appendTurnPolicies('', config, agentTeam, appendLimit, true, promptTaskContext).length + 2 : 0;
@@ -26943,7 +26656,6 @@ async function runClaudeTurn({
           (id, was, now) => { try { onEvent({ type: 'stderr', text: `[技能] 技能 ${id} 来源已变化(启用时为 ${was || '未知'},现为 ${now || '未知'}),已暂停注入,请在技能库重新启用。` }); } catch { /* 通知失败不阻断 */ } }
         ).catch(() => []);
         const skillSec = buildSkillsPromptSection(skillEntries, 'claude', config);
-        // 第35波 P2: 技能索引改走 stdin(indexSecs),不再经 cmd.exe 命令行 —— 无需 %/! 全角中和,原文注入保真。
         if (skillSec) indexSecs.push(skillSec);
       } catch { /* 技能注入绝不可阻断回合 */ }
     }
@@ -27067,52 +26779,11 @@ async function runClaudeTurn({
     });
   }
 
-  // cmd8191 防线②: --agents 角色定义吃 append 之后的剩余预算(角色库顺序确定性取舍,放不下的进 omitted 上报)。
-  let agentsBudget = 6000;
-  if (guardBudget > 0) {
-    const appendArgLen = appendSys ? quoteWinArg(appendSys).length + FLAG_APPEND_ALLOWANCE : 0;
-    agentsBudget = Math.max(0, Math.min(6000, guardBudget - fixedLen - appendArgLen - FLAG_AGENTS_ALLOWANCE));
-  }
+  const agentsBudget = 6000;
   const claudeAgentLibrary = await adapter.buildAgentDefinitions(workingDir, config, agentsBudget);
   if (Object.keys(claudeAgentLibrary.definitions).length) args.push('--agents', JSON.stringify(claudeAgentLibrary.definitions));
-  else if (claudeAgentLibrary.omitted.length) cmdlineGuard.degraded.push('agents-dropped');
   args.push(...tailArgs);
   // The prompt goes over stdin (interactive envelope / adapter.promptViaStdin below). Kimi branched into ACP above.
-
-  // cmd8191 防线③: 整行复核 —— 任何情况下绝不让整行越过预算(引号翻倍等二阶效应的最终闸口)。
-  if (guardBudget > 0) {
-    let lineLen = spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args]);
-    for (let g = 0; g < 6 && lineLen > guardBudget; g++) {
-      const ai = args.indexOf('--agents');
-      if (ai >= 0) { args.splice(ai, 2); if (!cmdlineGuard.degraded.includes('agents-dropped')) cmdlineGuard.degraded.push('agents-dropped'); }
-      else if (adapter.appendSystemPromptFlag) {
-        const pi = args.indexOf(adapter.appendSystemPromptFlag);
-        if (pi < 0) break;
-        const over = lineLen - guardBudget;
-        const trimmed = fenceSafeSlice(args[pi + 1], Math.max(0, String(args[pi + 1]).length - over - CMD_LINE_QUOTE_MARGIN));
-        if (trimmed && trimmed !== args[pi + 1]) { args[pi + 1] = trimmed; cmdlineGuard.degraded.push('append-final-trim'); }
-        else { args.splice(pi, 2); cmdlineGuard.degraded.push('append-dropped'); }
-      } else {
-        const pi = args.lastIndexOf('-p');
-        if (pi < 0 || typeof args[pi + 1] !== 'string') break;
-        const over = lineLen - guardBudget;
-        const prompt = args[pi + 1];
-        const keep = Math.max(1000, prompt.length - over - CMD_LINE_QUOTE_MARGIN - 80);
-        if (keep >= prompt.length) break;
-        args[pi + 1] = `[较早的恢复上下文因 Windows 命令行长度限制已省略]\n${prompt.slice(-keep)}`;
-        cmdlineGuard.degraded.push('prompt-head-trimmed');
-      }
-      lineLen = spawnCmdLineLength(guardCmd, [...guardPrefixArgs, ...args]);
-    }
-    cmdlineGuard.lineLen = lineLen;
-    if (lineLen > guardBudget) cmdlineGuard.degraded.push('base-args-too-long');
-    if (cmdlineGuard.degraded.length) {
-      const isCmd = isBatchLauncher(guardCmd) || cmdLineBudgetSeam();
-      const note = `[启动守卫] ${agentCliLabel} CLI 命令行超预算(预算 ${guardBudget} 字符${isCmd ? `,cmd.exe 上限 ${CMD_EXE_LINE_LIMIT}` : ''}),已自动降级:${cmdlineGuard.degraded.join(' → ')}。可减少启用技能/缩短自定义系统提示,或改用原生可执行文件。`;
-      try { onEvent({ type: 'stderr', text: note }); } catch { /* 通知失败不阻断 */ }
-      logEvent({ kind: 'cmdline_guard', sessionId: session.id, budget: guardBudget, lineLen, degraded: cmdlineGuard.degraded });
-    }
-  }
 
   // 子进程环境由适配器给(Claude:effectiveAnthropicEnv 叠第三方端点/模型 + MAX_THINKING_TOKENS;Kimi:process.env)。
   const env = adapter.buildEnv(config, { RUYI_HOME: paths.data }); // 数据根交给 CLI/MCP 子进程(3.0 起只写 RUYI_HOME)
@@ -27141,7 +26812,7 @@ async function runClaudeTurn({
     if (args[i - 1] === '-p' || args[i - 1] === '--prompt') return `[prompt ${String(arg).length} chars]`;
     return redact(arg);
   });
-  onEvent({ type: 'meta', command: fakeClaude ? `node ${path.basename(fakeClaude)} (fake)` : claude, args: metaArgs, cwd: workingDir, model: config.model || '(default)', thinkingEffort: adapter.thinkingEffortLabel(config), permissionMode: config.permissionMode, historyRecoveryInjected, indexInjected: Boolean(indexInjection), indexHash: indexPayloadHash || undefined, memoryCheck: memoryPreflight.status, resumeResetReason: resumeResetReason || undefined, resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt), agentRoles: claudeAgentLibrary.roles.map(r => ({ id: r.id, label: r.label, source: r.source })), agentRolesOmitted: claudeAgentLibrary.omitted, agentDriver: `${agentCliType}-native`, agentCliType, agentCliLabel, experimental: Boolean(cliDriver.experimental), cwdWarning: cwdWarn || undefined, cmdlineGuard: cmdlineGuard.degraded.length ? { budget: cmdlineGuard.budget, lineLen: cmdlineGuard.lineLen, degraded: cmdlineGuard.degraded } : undefined, envBrief: envBrief ? envBrief.fingerprint : undefined });
+  onEvent({ type: 'meta', command: fakeClaude ? `node ${path.basename(fakeClaude)} (fake)` : claude, args: metaArgs, cwd: workingDir, model: config.model || '(default)', thinkingEffort: adapter.thinkingEffortLabel(config), permissionMode: config.permissionMode, historyRecoveryInjected, indexInjected: Boolean(indexInjection), indexHash: indexPayloadHash || undefined, memoryCheck: memoryPreflight.status, resumeResetReason: resumeResetReason || undefined, resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt), agentRoles: claudeAgentLibrary.roles.map(r => ({ id: r.id, label: r.label, source: r.source })), agentRolesOmitted: claudeAgentLibrary.omitted, agentDriver: `${agentCliType}-native`, agentCliType, agentCliLabel, experimental: Boolean(cliDriver.experimental), cwdWarning: cwdWarn || undefined, envBrief: envBrief ? envBrief.fingerprint : undefined });
   logEvent({ kind: 'turn_start', traceId: activeTraceId, sessionId: session.id, turnSeq: session.turnSeq, engine: 'claude', model: config.model || 'default', promptPack: PROMPT_PACK_VERSION, promptPolicies: { softwareEngineering: softwareEngineeringTaskProfile(promptTaskContext) }, memoryCheck: memoryPreflight.status, promptLen: fullPrompt.length, attachments: (attachments || []).length, fake: Boolean(fakeClaude), resumeRecoveryAttempt: Boolean(_resumeRecoveryAttempt) });
 
   await fsp.mkdir(workingDir, { recursive: true }).catch(() => {});
@@ -27530,11 +27201,7 @@ async function runClaudeTurn({
     clearPendingQuestions(session.id, 'turn ended');
   }
 
-  // cmd8191 防线(诊断兜底): 预算哨兵应已拦截一切超限;若仍见到 cmd 的「命令行太长。」(哨兵与真实 cmd 行为
-  // 漂移的信号),给用户可操作的明确指引而不是一句裸 stderr,并落审计日志供溯源。
   const stderrTrimmed = stderrText.trim();
-  const cmdLineOverflow = /命令行太长|command line is too long/i.test(stderrTrimmed);
-  if (cmdLineOverflow) logEvent({ kind: 'cmdline_overflow_escaped', sessionId: session.id, budget: cmdlineGuard.budget, lineLen: cmdlineGuard.lineLen });
   // Reactive fallback for legacy/unknown bindings and externally moved/deleted transcripts. Retry the
   // SAME logical turn once without --resume: the user message/turnSeq were already persisted above, so the
   // retry skips that mutation and reuses the pre-turn recovery history instead of duplicating the prompt.
@@ -27558,15 +27225,13 @@ async function runClaudeTurn({
   }
   // 第35波 P2: 进程根本没启动(spawn error 或 cmd 拒绝执行)→ prompt 未送达,原生 transcript 不含本轮注入的索引
   // → 清注入 hash,下轮(同内容也会)重注。abort/watchdog 杀不在此列:prompt 已写入 stdin,transcript 已含索引。
-  if ((exit.code === -1 && exit.error) || cmdLineOverflow) session.injectedIndexHash = null;
+  if (exit.code === -1 && exit.error) session.injectedIndexHash = null;
   // 回合后向 CLI 取权威用量(Kimi:stream-json 结果帧没有用量,见适配器),拿到就替换流内用量。
   if (adapter.syncPostTurnUsage) {
     const postTurnUsage = await adapter.syncPostTurnUsage(session, config, onEvent).catch(() => null);
     if (postTurnUsage) usage = postTurnUsage;
   }
-  const finalText = assistantText.trim() || (stdoutNoise.trim()) || (stderrTrimmed ? (cmdLineOverflow
-    ? `[启动守卫] ${agentCliLabel} CLI 未能启动:Windows 命令行超过长度限制。临时规避:减少启用的技能、缩短自定义系统提示,或改用原生可执行文件。\n原始错误:${redact(stderrTrimmed)}`
-    : `${agentCliLabel} CLI wrote only stderr:\n${redact(stderrTrimmed)}`) : '');
+  const finalText = assistantText.trim() || stdoutNoise.trim() || (stderrTrimmed ? `${agentCliLabel} CLI wrote only stderr:\n${redact(stderrTrimmed)}` : '');
   // v0.8-S3/S4a: turn_summary from the CLI turn's tool records + this turn's checkpoint journal. Workbench
   // file_* tools (run in the MCP child) checkpointed their `before` to dataRoot/checkpoints/<sid>/ — read
   // those index rows by turnSeq for accurate op + revertible:true. The CLI's native Edit/Write/Bash never
@@ -45376,30 +45041,7 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
   const mcpConfigPath = (tier === 'exec' && !grant.capped) ? await generateAgentNodeMcpConfig(subagentId, config.mcpCommandMode, roleMcpServers) : '';
   if (mcpConfigPath) args.push('--mcp-config', mcpConfigPath);
 
-  // cmd8191 防线(子代理): 子代理 args 小(无技能索引),但自定义 role.claudeTools/超长路径仍可能顶爆 cmd 上限。
-  // 降级阶梯: ① 先把角色提示挪进首条用户消息,仍超再丢整条 --append-system-prompt(语言政策) ② 非 plan 模式丢 --allowed-tools
-  // (bypass/auto 下它不是硬安全边界——bypass 跳过一切许可,见上方分级注释;plan 模式与按档收紧的 dontAsk 下它就是授权,不丢)
-  // ③ 仍超 → 明确报错(分类器把「命令行太长。」列为 definitive,不会无谓重试 3 次)。
-  {
-    const guardCmd = fakeClaude ? process.execPath : claude;
-    const guardBudget = cmdLineBudgetFor(guardCmd);
-    if (guardBudget > 0 && spawnCmdLineLength(guardCmd, args) > guardBudget) {
-      const pi = args.indexOf('--append-system-prompt');
-      // ①a 先只把角色提示挪进首条用户消息(角色提示可长达 8000 字,是最常见的超预算原因),语言 / 工程政策留在 argv;
-      // ①b 仍超才整条丢掉(修前一步就整条丢,语言政策跟着没了)。
-      if (pi >= 0 && roleBrief) { args[pi + 1] = appendResponseLanguagePolicy('', config, 0, task); roleBriefInTask = true; }
-      if (pi >= 0 && spawnCmdLineLength(guardCmd, args) > guardBudget) args.splice(pi, 2);
-      if (spawnCmdLineLength(guardCmd, args) > guardBudget && effMode !== 'plan' && !grant.capped) {
-        const ti = args.indexOf('--allowed-tools');
-        if (ti >= 0) args.splice(ti, 2);
-      }
-      if (spawnCmdLineLength(guardCmd, args) > guardBudget) {
-        return { ok: false, error: `Claude CLI 命令行超预算(${guardBudget} 字符):角色工具清单/路径过长,请精简该角色的 claudeTools 或缩短工作目录路径`, iters: 0, toolCalls: 0 };
-      }
-    }
-  }
-
-  const spawn = fakeClaude ? { command: process.execPath, args: [fakeClaude, ...args], opts: {} } : batchSafeSpawn(claude, args);
+  const spawn = fakeClaude ? { command: process.execPath, args: [fakeClaude, ...args], opts: {} } : { command: claude, args, opts: {} };
   const env = effectiveAnthropicEnv(config);
   if (fakeClaude) env.WCW_FAKE_INTERACTIVE = '1';
 
@@ -93146,12 +92788,6 @@ module.exports = {
   applyProviderReasoningEffort,
   buildClaudeCliEnv,
   decodeClaudeCliText,
-  // cmd8191 防线 — exposed for e2e unit assertions (长度核算与 batchSafeSpawn 同构性、围栏安全截断、降级阶梯)。
-  quoteWinArg,
-  batchSafeSpawn,
-  spawnCmdLineLength,
-  cmdLineBudgetFor,
-  resolveClaudeLauncher, // P1: npm shim → 真身 claude.exe 解析 — exposed for e2e unit assertions
   // v1.9 数据管家 — exposed for e2e direct unit assertions(保留策略归一/统计/sweep/归档读取回退)。
   normalizeStoragePolicy,
   collectStorageStats,
