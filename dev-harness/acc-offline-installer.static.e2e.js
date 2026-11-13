@@ -114,11 +114,10 @@ ok(/^pandas>=2\.2\.0$/m.test(requirements) && /^pypdf>=5\.0\.0$/m.test(requireme
    /^PyPDF2>=3\.0\.1$/m.test(requirements) && /^requests>=2\.31\.0$/m.test(requirements) &&
    /^beautifulsoup4>=4\.12\.0$/m.test(requirements),
   'Full offline requirements include common data, PDF, HTTP, and HTML parsing libraries');
-ok(/-IncludeAcc\s+-Variant full/.test(packageJson.scripts['package:offline']) &&
-   /-IncludeAcc\s+-Variant full/.test(packageJson.scripts['package:offline:full']) &&
-   /-IncludeAcc\s+-BuildAccOffline\s+-Variant full/.test(packageJson.scripts['package:offline:full:fresh']) &&
-   /-Variant slim/.test(packageJson.scripts['package:offline:slim']),
-  'default offline packaging means Full, with explicit fresh-Full and Slim commands');
+ok(packageJson.scripts['package:offline'] === 'node tools/package-macos-offline.js --variant full' &&
+   packageJson.scripts['package:offline:full'] === packageJson.scripts['package:offline'] &&
+   packageJson.scripts['package:offline:slim'] === 'node tools/package-macos-offline.js --variant slim',
+  'default offline packaging targets Mac Full, with explicit Slim');
 ok(/__RUYI_ACC_FULL__/.test(configRuntime) && /installed-full-runtime/.test(configRuntime) &&
    /offline-embedded-runtime/.test(configRuntime) && /capability === 'full'/.test(configRuntime),
   'desktop MCP autodetection prefers bundled then installed WinSDK-capable runtimes over core-only system Python');

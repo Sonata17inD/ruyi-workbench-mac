@@ -1,0 +1,10 @@
+  ✔ 相邻的日常写照旧放行(不误伤) (41.287959ms)
+✔ 走查 W1·F2 · 子模块 / 链接工作树的 git 目录里的 hooks 与 config 同样写拒 (119.889542ms)
+ℹ tests 2671
+ℹ suites 192
+ℹ pass 2653
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 18
+ℹ todo 0
+ℹ duration_ms 133754.865792

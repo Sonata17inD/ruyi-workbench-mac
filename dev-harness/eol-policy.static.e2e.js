@@ -2,7 +2,7 @@
 
 // Repository EOL policy gate. Git's index normalizes text, so `git status` alone can hide an externally
 // written CRLF or mixed-EOL worktree file. Inspect the actual bytes of every tracked text file instead.
-const childProcess = require('child_process');
+const { trackedEol } = require('./lib/git-eol');
 const fs = require('fs');
 const path = require('path');
 
@@ -19,10 +19,6 @@ for (const ext of ['cmd', 'bat', 'ps1']) {
   ok(new RegExp('^\\*\\.' + ext + '\\s+text\\s+eol=crlf\\s*$', 'm').test(attrs), '*.' + ext + ' remains an explicit CRLF exception');
 }
 
-function parseEolLine(line) {
-  const match = /^i\/(?<index>\S+)\s+w\/(?<worktree>\S+)\s+attr\/(?<attr>\S+)(?:\s+eol=(?<eol>\S+))?\s+(?<file>.+)$/.exec(line);
-  return match ? { index: match.groups.index, worktree: match.groups.worktree, attr: match.groups.attr, eol: match.groups.eol || '', file: match.groups.file } : null;
-}
 function byteEolKind(buffer) {
   let crlf = 0, loneLf = 0, loneCr = 0;
   for (let i = 0; i < buffer.length; i += 1) {
@@ -37,12 +33,11 @@ function byteEolKind(buffer) {
   return 'mixed';
 }
 
-const rows = childProcess.execFileSync('git', ['ls-files', '--eol'], { cwd: ROOT, encoding: 'utf8' })
-  .split(/\r?\n/).filter(Boolean).map(parseEolLine).filter(Boolean);
+(async () => {
 const violations = [];
 let checked = 0;
-for (const row of rows) {
-  if (row.attr === '-text') continue;
+for await (const row of trackedEol(ROOT)) {
+  if (!row.worktree || row.attr === '-text') continue;
   if (row.eol !== 'lf' && row.eol !== 'crlf') {
     violations.push(row.file + ' has no explicit EOL attribute (' + row.attr + ')');
     continue;
@@ -56,3 +51,4 @@ ok(violations.length === 0, 'all ' + checked + ' tracked text files match their 
 
 if (failed) process.exit(1);
 console.log('EOL POLICY STATIC E2E: ALL PASS');
+})().catch(error => { console.error(error); process.exitCode = 1; });

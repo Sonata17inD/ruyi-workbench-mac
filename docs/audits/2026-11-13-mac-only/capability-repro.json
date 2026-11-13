@@ -1,0 +1,49 @@
+{
+  "method": "Synthetic registered Mac tools and granted/ready native diagnostics fed through unchanged production probe and template availability evaluator; no OS permission requests",
+  "desktopMcp": {
+    "present": true,
+    "toolCount": 5,
+    "optional": {
+      "ocr": true,
+      "uia": true,
+      "cv2": false,
+      "playwright": false
+    },
+    "desktopAutomation": {
+      "supported": false,
+      "installed": true,
+      "authorization": "unknown",
+      "ready": null
+    },
+    "ocr": {
+      "supported": false,
+      "installed": true,
+      "authorization": "unknown",
+      "ready": null
+    },
+    "browser": {
+      "mode": "system",
+      "supported": false,
+      "installed": false,
+      "runtimeInstalled": null,
+      "ready": false
+    }
+  },
+  "desktopTemplate": {
+    "available": false,
+    "unavailableReason": "当前平台尚未实现桌面操控后端",
+    "missingCaps": [
+      "desktopAutomation"
+    ],
+    "status": "unavailable"
+  },
+  "ocrTemplate": {
+    "available": false,
+    "unavailableReason": "当前平台尚未实现 OCR 后端",
+    "missingCaps": [
+      "ocr"
+    ],
+    "status": "unavailable"
+  },
+  "browserHint": "Browser target: system (macOS). browser_open only requests URL handoff; navigation is not verified and the user browser is not DOM-attached. Mac desktop screenshot, UIA, OCR and keyboard automation are not implemented. Do not offer to fill forms through that path. For DOM work, ask the user to configure managed/custom/CDP/bundled and prepare its local runtime. Never navigate or close the Ruyi Workbench tab; never change the browser target without the user asking."
+}

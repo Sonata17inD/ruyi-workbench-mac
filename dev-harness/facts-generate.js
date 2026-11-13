@@ -47,7 +47,7 @@ function computeStatic() {
 
 // ACC 工具数:唯一权威来源 = 活注册表(FastMCP list_tools)。需要本机 venv;不在则保留旧值。
 function probeAccTools() {
-  const venvPy = path.join(ROOT, 'mcp', 'ai-computer-control', '.venv', 'Scripts', 'python.exe');
+  const venvPy = path.join(ROOT, 'mcp', 'ai-computer-control', '.venv', 'bin', 'python');
   if (!fs.existsSync(venvPy)) return null;
   const r = cp.spawnSync(venvPy, ['-X', 'utf8', '-c',
     "import sys; sys.path.insert(0, r'mcp/ai-computer-control/src'); import ai_computer_control.server as s; print(len(s.mcp._tool_manager.list_tools()))"],

@@ -2,9 +2,9 @@ name: e2e
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
-    branches: [master]
+    branches: [master, main]
 
 # 第49波49e (E4): 最小权限 —— 全 workflow 只读 contents,job 按需再放宽。
 permissions:
@@ -12,13 +12,12 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: windows-latest
+    runs-on: macos-15
     steps:
       # 第49波49e (E4): action 钉 SHA(防供应链劫持 tag 漂移),注释保留版本标签便于审计。
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          # 第36波(v1.7): 版本轴对齐 —— 打包(build:exe)与本地开发均为 node24,CI 此前钉 20。
           # 语法门也依赖 >=22 的 --check ESM 自动探测(app/public 是 ES Module)。
           node-version: '24'
       - name: Syntax gate (node --check)
@@ -29,20 +28,17 @@ jobs:
       - name: Build freshness (artifact == concat(src))
         working-directory: ${{ github.workspace }}
         run: node ruyi-workbench/app/build.js --check
-      # Fail early on the real Windows credential IPC path before the long serial suite.
-      - name: Windows credential IPC smoke
-        working-directory: ${{ github.workspace }}
-        run: node dev-harness/external-bot-credentials.e2e.js
-      # 第46波46a: unit 快通道(node:test,秒级)—— run-all 内也会跑,此处单独一步求最早反馈。
-      - name: Unit tests (node --test)
-        working-directory: ${{ github.workspace }}
-        run: node --test "dev-harness/unit/*.test.js"
-      # 第46波46b: run-all 自带失败重试一次 + [flaky] 标记。
-      # 注:hosted Windows runner 仅 2 vCPU,串行是刻意选择(并行实测会被静默杀进程,见第38波);
-      # 本地开发机可用 --parallel 4,全量反馈 ~25min -> 个位数分钟。
-      - name: Run e2e suite
-        working-directory: ${{ github.workspace }}
-        run: node dev-harness/run-all.js
+      - name: Build native process helper
+        run: node ruyi-workbench/tools/build-macos-process-helper.js
+      - name: Engineering checks (unit and static once)
+        run: node dev-harness/run-all.js --fast
+      - name: Mac native contracts
+        run: |
+          node dev-harness/macos-process-runtime.e2e.js
+          node dev-harness/macos-file-policy.e2e.js
+          node dev-harness/macos-agent-cli-discovery.e2e.js
+          node dev-harness/macos-keychain.e2e.js
+          node dev-harness/macos-capability-projection.e2e.js
       - name: Upload failure log on failure
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -56,7 +52,7 @@ jobs:
   # 第46波46d (E6): ACC smoke 统一入口进 CI。tests/run_all.py 是 stdlib 零依赖 runner,
   # --ci 只跑无显示依赖的协议/注册面件(registry/stdio/async_contracts/toolsets/descriptions)。
   acc-smoke:
-    runs-on: windows-latest
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -64,13 +60,12 @@ jobs:
           python-version: '3.12'
       - name: Install ACC (editable)
         working-directory: ${{ github.workspace }}/mcp/ai-computer-control
-        run: python -m pip install -e . --quiet
+        run: python -m pip install -e ".[browser,pptx,charts,vision,pdf-export]" --quiet
       - name: ACC smoke (CI subset)
         working-directory: ${{ github.workspace }}/mcp/ai-computer-control
         run: python -X utf8 tests/run_all.py --ci
       # 第46波46f (D1): facts.json 的 accTools 与活注册表对账(无 venv 环境下静态 e2e 只能验形状,
       # 活对账由本步承担)。
-      # 用 python 当 shell:原先 pwsh 里的内联 `python -c "…"` 会把 f-string 的 {…} 当 ScriptBlock 拒掉,Python 根本没跑。
       - name: facts.json accTools reconciliation
         working-directory: ${{ github.workspace }}
         shell: python
@@ -84,43 +79,3 @@ jobs:
           facts = json.load(open('facts.json', encoding='utf-8'))
           assert facts['accTools'] == live, f"facts.accTools({facts['accTools']}) != live registry({live}) — 跑 node dev-harness/facts-generate.js 刷新"
           print('accTools reconciled:', live)
-
-  # 第49波49e (E4): ubuntu 静态+进程内件 job —— Windows 是主战场,但纯静态/进程内检查
-  # 不该绑死在 Windows runner:Linux 跑一遍既防"悄悄写了 Windows-only 假设进静态件",
-  # 又给一个免费的双平台信号。只放确认平台无关的件(语法/产物新鲜度/unit/提示词快照)。
-  linux-static:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '24'
-      - name: Syntax gate (node --check)
-        working-directory: ${{ github.workspace }}
-        run: node dev-harness/syntax-gate.js
-      - name: Build freshness (artifact == concat(src))
-        working-directory: ${{ github.workspace }}
-        run: node ruyi-workbench/app/build.js --check
-      - name: Unit tests (node --test)
-        working-directory: ${{ github.workspace }}
-        run: node --test "dev-harness/unit/*.test.js"
-      - name: In-process static pieces (platform-free subset)
-        working-directory: ${{ github.workspace }}
-        run: |
-          node dev-harness/prompt-snapshot.static.e2e.js
-
-  # 第49波49e (E4): release-dryrun 打包验证 —— build-overlay 全装配 + manifest sha256 对账
-  # + pkg 打包冒烟(Ruyi.exe serve /health)。不发布任何东西,纯验证发行链路可用。
-  release-dryrun:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '24'
-      - name: Install pkg toolchain (ruyi-workbench)
-        working-directory: ${{ github.workspace }}/ruyi-workbench
-        run: npm ci --no-audit --no-fund
-      - name: Release dry-run (overlay + manifest + pkg smoke)
-        working-directory: ${{ github.workspace }}
-        run: node dev-harness/release-dryrun.js --pkg

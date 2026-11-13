@@ -49,8 +49,8 @@ const systemHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: '
 ok(/Chrome for Testing/.test(systemHint) && /accessibilityLimited/.test(systemHint),
   'system prompt forbids bundled test Chrome and explains the Direct3D UIA fallback');
 const macSystemHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: 'system' } }, 'darwin');
-ok(/only requests URL handoff/.test(macSystemHint) && /not implemented/.test(macSystemHint),
-  'Mac system hint reports URL handoff and unavailable desktop automation truthfully');
+ok(/only requests URL handoff/.test(macSystemHint) && /inspect diagnostics for current capture, input and AX readiness/.test(macSystemHint),
+  'Mac system hint reports URL handoff and native readiness truthfully');
 // 108b: 文案迁入 06b registry 并双语化; 本断言锁的是英文包原文,故显式选 en-US(断言语义/文字未改)。
 const customizationHint = srv.buildToolCustomizationHint({ locale: 'en-US' });
 ok(/explicitly asks/.test(customizationHint) && /mcp_list/.test(customizationHint) && /permission/.test(customizationHint),

@@ -15,6 +15,7 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', '.venv', '__pycache__
 
 // vendor/ 是第三方资产(marked/highlight),非一手代码,不在本门范围(它坏了有 e2e 兜底,语义无从断言)。
 const SCOPES = [
+  { dir: 'ruyi-workbench/app/backend', depth: 2 },
   { dir: 'ruyi-workbench/app', depth: 1 },          // server.js
   { dir: 'ruyi-workbench/app/public', depth: 2 },   // app.js + js/*.js(跳过 vendor/)
   { dir: 'ruyi-workbench/tools', depth: 1 },        // build-overlay / gen-manifest / fake-claude
@@ -30,7 +31,7 @@ function collect() {
         if (depth > 0 && !SKIP_DIRS.has(ent.name) && ent.name !== 'vendor') walk(full, depth - 1);
         continue;
       }
-      if (ent.name.endsWith('.js')) out.push(full);
+      if (/\.(?:cjs|mjs|js)$/.test(ent.name)) out.push(full);
     }
   };
   for (const s of SCOPES) walk(path.join(ROOT, s.dir), s.depth);

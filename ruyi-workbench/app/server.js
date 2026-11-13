@@ -33267,6 +33267,8 @@ async function probeDesktopMcp(config) {
     desktopAutomation: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
     ocr: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
     browser: { mode: String(config?.browserAutomation?.mode || 'system'), supported: false, installed: false, runtimeInstalled: null, ready: false } };
+  const projectMac = require('./backend/mac-capabilities.cjs').projectMacCapabilities;
+  if (process.platform === 'darwin') Object.assign(out, projectMac(null));
   try {
     const bridged = await collectBridgedTools(config);
     const accEntry = resolveExternalMcpServers(config).find(s => s.id === 'ai-computer-control');
@@ -33282,7 +33284,7 @@ async function probeDesktopMcp(config) {
     }).length;
     out.present = out.toolCount > 0;
     const has = name => !!bridged.route[`${prefix}__${name}`];
-    out.desktopAutomation.installed = has('get_active_window') && has('type_text') && has('screenshot');
+    if (process.platform !== 'darwin') out.desktopAutomation.installed = has('get_active_window') && has('type_text') && has('screenshot');
     // Tool registration proves an implemented backend, not current OS focus/authorization.
     // Find the bridged diagnostics tool name (serverId__diagnostics) for the ACC server, if listed.
     const diagName = `${prefix}__diagnostics`;
@@ -33302,6 +33304,7 @@ async function probeDesktopMcp(config) {
     };
     out.optional = { ocr: pick('ocr'), uia: pick('uia'), cv2: pick('cv2'), playwright: pick('playwright') };
     out.ocr.installed = has('ocr_image') && out.optional.ocr;
+    if (process.platform === 'darwin') Object.assign(out, projectMac(diag, has));
     if (has('browser_backend_status') && !DesktopExecutionHooks.enabled()) {
       out.browser = { ...out.browser, supported: out.browser.mode !== 'system', installed: out.optional.playwright };
       try {
@@ -34697,7 +34700,7 @@ function buildResponseLanguagePolicy(config) {
 function buildBrowserAutomationHint(config, platform = process.platform) {
   const browser = (config && config.browserAutomation) || {};
   const mode = String(browser.mode || 'system');
-  if (platform === 'darwin' && mode === 'system') return 'Browser target: system (macOS). browser_open only requests URL handoff; navigation is not verified and the user browser is not DOM-attached. Mac desktop screenshot, UIA, OCR and keyboard automation are not implemented. Do not offer to fill forms through that path. For DOM work, ask the user to configure managed/custom/CDP/bundled and prepare its local runtime. Never navigate or close the Ruyi Workbench tab; never change the browser target without the user asking.';
+  if (platform === 'darwin' && mode === 'system') return 'Browser target: system (macOS). browser_open only requests URL handoff; navigation is not verified and the user browser is not DOM-attached. For desktop interaction, inspect diagnostics for current capture, input and AX readiness and verify the target browser window. Local-image OCR does not require screen recording permission. URL handoff alone does not establish desktop readiness. For DOM work, ask the user to configure managed/custom/CDP/bundled and prepare its local runtime. Never navigate or close the Ruyi Workbench tab; never change the browser target without the user asking.';
   if (mode === 'system') return 'Browser target: system (default). Open URLs in a new tab/window of the user\'s configured browser/session; never navigate, close, or reuse the Ruyi Workbench tab. Then continue through desktop screenshots and UIA/OCR/keyboard tools. Do not call browser_click/browser_type/DOM tools because the user browser is not Playwright-attached. A Direct3D/hardware-accelerated page may expose only browser chrome to UIA: when ui_inspect/ui_find reports accessibilityLimited, or no page content is visible, do not retry UIA; switch once to OCR/screenshot coordinates and verify the result. Do not launch bundled Chrome for Testing.';
   if (mode === 'cdp') return `Browser target: CDP (${String(browser.cdpUrl || 'http://127.0.0.1:9222')}). Reuse the attached user browser when available; inspect tabs before opening another one.`;
   if (mode === 'managed') return 'Browser target: managed installed browser. Use the user\'s configured Chromium-family browser executable through Playwright; this may open a separate automation window. Reuse its current tab unless the user asks for a new tab.';
@@ -35546,7 +35549,7 @@ const PROMPT_ZH = {
 
   // [操控规程层] - deskPresent && !identityOnly
   desktop: {
-    sharedMac: 'Mac 的 ai-computer-control 连接只证明已注册共享文件、Office 与浏览器工具，不表示桌面截图、键鼠、UIA 或 OCR 已实现。用 diagnostics 和 browser_backend_status 检查实际依赖与连接；installed/runtimeInstalled 不等于 ready。文档生成后读回验证，不能声称已在桌面应用内操作。',
+    sharedMac: 'Mac 的 ai-computer-control 提供共享文件、Office、浏览器及原生桌面能力。使用 diagnostics 分别核验截图、输入、AX、本地图片 OCR 与屏幕 OCR 的 ready 和授权状态；本地图片 OCR 不要求录屏权限。browser_backend_status 核验 DOM 连接，installed/runtimeInstalled 不等于 ready。操作前核对目标窗口，文档生成后读回验证，不将文件生成描述为桌面操作。',
     vision: '桌面操控(视觉路径):按「截图 -> 观察元素 -> 操作(点击/输入) -> wait_for_window_idle -> 再截图验证结果」的循环推进,每一步都要用截图确认上一步真的生效了才继续。优先用 observe 一次拿到截图+可交互元素+OCR 文本,减少往返。坐标以返回的归一化/缩放比例为准。',
     text: '桌面操控(文本路径):你没有视觉,不能依赖「看」截图。用 ocr_find_text 或 ui_find 定位目标、拿到坐标 -> 用坐标执行操作 -> wait_for_window_idle -> 再用 ocr 复核结果文本,确认这一步生效了再进行下一步。一切以元素/OCR 文本为准,不要假设屏幕上有什么。',
     office: 'Office 产出规程：先按任务读取 office-automation 技能；需要数据分析/文档改写时再读 spreadsheet-analysis/document-workflow。先确定读者、用途、数据来源与版式，再生成可编辑文件。常规 Excel 用 write_excel → excel_beautify → excel_chart；PPT 用 write_pptx（数字用 stats、明细用 table、图表用 chart_image+image、每页一结论）；Word/PDF 用 write_document/write_pdf。用户模板、复杂图文、可编辑 PPT 图表或多表模型超出现成工具时，允许 script_run 调用本机已有 python-pptx/PptxGenJS、python-docx/docxtpl/docx、openpyxl/XlsxWriter/ExcelJS；先探测依赖，沿用统一字体配色，保存到新文件，不假装脚本受工具检查点保护。交付前重新读回并核对内容/公式/页数，有渲染器时逐页检查中文、溢出、对齐和图表单位；缺渲染器须说明未完成视觉校验。写入公式不代表已计算，不把生成成功等同于质量验收通过。',
@@ -35934,7 +35937,7 @@ const PROMPT_EN = {
   },
 
   desktop: {
-    sharedMac: 'On macOS, ai-computer-control registers shared file, Office and browser tools; its connection does not establish desktop screenshots, input, UIA or OCR support. Inspect diagnostics and browser_backend_status. installed/runtimeInstalled do not mean ready. Read generated documents back; do not claim to have operated a desktop application.',
+    sharedMac: 'On macOS, ai-computer-control provides shared files, Office, browser and native desktop tools. Inspect diagnostics separately for capture, input, AX, local-image OCR and screen OCR readiness and authorization. Local-image OCR does not require screen recording permission. Inspect browser_backend_status for DOM attachment; installed/runtimeInstalled do not mean ready. Verify the target window before actions and read generated documents back without claiming desktop interaction.',
     vision: 'Desktop control (vision path): advance by the loop "screenshot -> observe elements -> act (click/type) -> wait_for_window_idle -> screenshot again to verify". Use observe to get screenshot + interactive elements + OCR text in one round-trip to reduce back-and-forth. Coordinates follow the returned normalized/scale ratio.',
     text: 'Desktop control (text path): you have no vision and cannot "see" screenshots. Use ocr_find_text or ui_find to locate the target and get coordinates -> act by coordinates -> wait_for_window_idle -> re-check the result text with ocr, confirm the step took effect before proceeding. Rely on element/OCR text; do not assume what is on screen.',
     office: 'Office output: read office-automation first, and spreadsheet-analysis/document-workflow when relevant. Establish audience, purpose, sources and layout before creating editable files. Standard Excel: write_excel → excel_beautify → excel_chart; PPT: write_pptx (stats for metrics, table for details, chart_image+image for charts, one conclusion per slide); Word/PDF: write_document/write_pdf. For user templates, complex layouts, editable PPT charts or multi-sheet models, script_run may use installed python-pptx/PptxGenJS, python-docx/docxtpl/docx, openpyxl/XlsxWriter/ExcelJS. Probe dependencies first, retain consistent fonts/colors, save a new file, and do not claim script outputs have automatic checkpoints. Reopen outputs to verify content/formulas/page counts; render and inspect every page when a renderer is available. Disclose missing visual verification. Writing formulas is not calculating them, and a successful save is not quality acceptance.',

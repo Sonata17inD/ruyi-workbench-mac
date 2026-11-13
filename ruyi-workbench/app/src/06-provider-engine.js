@@ -235,6 +235,8 @@ async function probeDesktopMcp(config) {
     desktopAutomation: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
     ocr: { supported: process.platform === 'win32', installed: false, authorization: 'unknown', ready: null },
     browser: { mode: String(config?.browserAutomation?.mode || 'system'), supported: false, installed: false, runtimeInstalled: null, ready: false } };
+  const projectMac = require('./backend/mac-capabilities.cjs').projectMacCapabilities;
+  if (process.platform === 'darwin') Object.assign(out, projectMac(null));
   try {
     const bridged = await collectBridgedTools(config);
     const accEntry = resolveExternalMcpServers(config).find(s => s.id === 'ai-computer-control');
@@ -250,7 +252,7 @@ async function probeDesktopMcp(config) {
     }).length;
     out.present = out.toolCount > 0;
     const has = name => !!bridged.route[`${prefix}__${name}`];
-    out.desktopAutomation.installed = has('get_active_window') && has('type_text') && has('screenshot');
+    if (process.platform !== 'darwin') out.desktopAutomation.installed = has('get_active_window') && has('type_text') && has('screenshot');
     // Tool registration proves an implemented backend, not current OS focus/authorization.
     // Find the bridged diagnostics tool name (serverId__diagnostics) for the ACC server, if listed.
     const diagName = `${prefix}__diagnostics`;
@@ -270,6 +272,7 @@ async function probeDesktopMcp(config) {
     };
     out.optional = { ocr: pick('ocr'), uia: pick('uia'), cv2: pick('cv2'), playwright: pick('playwright') };
     out.ocr.installed = has('ocr_image') && out.optional.ocr;
+    if (process.platform === 'darwin') Object.assign(out, projectMac(diag, has));
     if (has('browser_backend_status') && !DesktopExecutionHooks.enabled()) {
       out.browser = { ...out.browser, supported: out.browser.mode !== 'system', installed: out.optional.playwright };
       try {
@@ -1665,7 +1668,7 @@ function buildResponseLanguagePolicy(config) {
 function buildBrowserAutomationHint(config, platform = process.platform) {
   const browser = (config && config.browserAutomation) || {};
   const mode = String(browser.mode || 'system');
-  if (platform === 'darwin' && mode === 'system') return 'Browser target: system (macOS). browser_open only requests URL handoff; navigation is not verified and the user browser is not DOM-attached. Mac desktop screenshot, UIA, OCR and keyboard automation are not implemented. Do not offer to fill forms through that path. For DOM work, ask the user to configure managed/custom/CDP/bundled and prepare its local runtime. Never navigate or close the Ruyi Workbench tab; never change the browser target without the user asking.';
+  if (platform === 'darwin' && mode === 'system') return 'Browser target: system (macOS). browser_open only requests URL handoff; navigation is not verified and the user browser is not DOM-attached. For desktop interaction, inspect diagnostics for current capture, input and AX readiness and verify the target browser window. Local-image OCR does not require screen recording permission. URL handoff alone does not establish desktop readiness. For DOM work, ask the user to configure managed/custom/CDP/bundled and prepare its local runtime. Never navigate or close the Ruyi Workbench tab; never change the browser target without the user asking.';
   if (mode === 'system') return 'Browser target: system (default). Open URLs in a new tab/window of the user\'s configured browser/session; never navigate, close, or reuse the Ruyi Workbench tab. Then continue through desktop screenshots and UIA/OCR/keyboard tools. Do not call browser_click/browser_type/DOM tools because the user browser is not Playwright-attached. A Direct3D/hardware-accelerated page may expose only browser chrome to UIA: when ui_inspect/ui_find reports accessibilityLimited, or no page content is visible, do not retry UIA; switch once to OCR/screenshot coordinates and verify the result. Do not launch bundled Chrome for Testing.';
   if (mode === 'cdp') return `Browser target: CDP (${String(browser.cdpUrl || 'http://127.0.0.1:9222')}). Reuse the attached user browser when available; inspect tabs before opening another one.`;
   if (mode === 'managed') return 'Browser target: managed installed browser. Use the user\'s configured Chromium-family browser executable through Playwright; this may open a separate automation window. Reuse its current tab unless the user asks for a new tab.';

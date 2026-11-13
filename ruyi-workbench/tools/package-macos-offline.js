@@ -48,6 +48,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     buildMacDesktop(bundle, { bundled: true });
     fs.mkdirSync(path.join(workbench, 'app'), { recursive: true });
     for (const file of ['server.js']) fs.copyFileSync(path.join(root, 'app', file), path.join(workbench, 'app', file));
+    copyTree(path.join(root, 'app/backend'), path.join(workbench, 'app/backend'));
     copyTree(path.join(root, 'app/public'), path.join(workbench, 'app/public'));
     for (const directory of ['resources', 'config', 'docs']) copyTree(path.join(root, directory), path.join(workbench, directory));
     fs.mkdirSync(path.join(workbench, 'desktop-macos'));

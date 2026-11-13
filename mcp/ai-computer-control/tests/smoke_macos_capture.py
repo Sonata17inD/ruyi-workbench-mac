@@ -50,6 +50,13 @@ class NativeIPC(unittest.TestCase):
                 macos.request({"op": "status"})
             self.assertEqual(caught.exception.code, "capture_failed")
 
+    def test_failed_status_is_unknown_not_missing(self):
+        self.reply({"ok": True, "protocolVersion": 2})
+        state = macos.capability()
+        self.assertTrue(state["installed"])
+        self.assertFalse(state["queryReady"])
+        self.assertIsNone(state["ready"])
+
     def test_permission_lock_and_query_capabilities_remain_distinct(self):
         for granted, locked in ((False, False), (True, True), (True, False)):
             self.reply({"ok": True, "protocolVersion": 1, "authorization": "granted" if granted else "denied",

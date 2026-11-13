@@ -58,8 +58,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     'missing capability snapshot is not upgraded to an implemented desktop backend');
   const macHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: 'system' } }, 'darwin');
   const winHint = srv.buildBrowserAutomationHint({ browserAutomation: { mode: 'system' } }, 'win32');
-  ok(/only requests URL handoff/.test(macHint) && /not implemented/.test(macHint) && /accessibilityLimited/.test(winHint),
-    'platform hints preserve Windows fallback and explain the Mac handoff boundary');
+  ok(/only requests URL handoff/.test(macHint) && /current capture, input and AX readiness/.test(macHint) && /accessibilityLimited/.test(winHint),
+    'platform hints explain current readiness and URL handoff boundaries');
   if (process.platform === 'darwin') for (const locale of ['zh-CN', 'en-US']) {
     const config = srv.normalizeConfig({ locale, browserAutomation: { mode: 'system' } }).config;
     const text = srv.buildVolatileParts({}, [{ function: { name: 'office_open' } }], { desktopMcp: { present: true, toolCount: 43 } }, config);

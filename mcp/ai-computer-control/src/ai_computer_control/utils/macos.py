@@ -216,6 +216,9 @@ def capability():
             "permission_denied" if status.get("authorization") != "granted" else "display_unavailable")
         return out
     except (OSError, DesktopError) as error:
+        out["queryReady"] = False
+        if out["installed"]:
+            out["ready"] = None
         out["reasonCode"] = getattr(error, "code", "dependency_missing")
         return out
 

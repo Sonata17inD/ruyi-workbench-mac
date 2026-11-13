@@ -705,7 +705,19 @@ function buildCapabilityPopoverContent() {
   const dm = caps.desktopMcp || {};
   wrap.appendChild(item(t(macShared ? 'capability.sharedMcp' : 'capability.desktopMcp'), dm.present ? tCount('capability.connected', dm.toolCount || 0) : t('capability.notConnected'), dm.present ? 'ok' : 'muted'));
   if (macShared) {
-    wrap.appendChild(item(t('capability.desktopControl'), t('capability.macDesktopUnsupported'), 'muted'));
+    for (const [key, label] of [['capture', 'capability.capture'], ['input', 'capability.input'],
+      ['accessibility', 'capability.accessibility'], ['ocr', 'capability.localOcr'], ['screenOcr', 'capability.screenOcr']]) {
+      const capability = dm[key];
+      const unknown = _capFailed || !capability || capability.ready == null;
+      const value = _capPending ? 'capability.checking' : unknown ? 'capability.network.unknown'
+        : capability.ready ? 'capability.available' : capability.installed === false ? 'capability.missing'
+          : capability.reasonCode === 'session_locked' ? 'capability.sessionLocked'
+            : capability.reasonCode === 'permission_denied' ? 'capability.permissionDenied' : 'capability.unavailable';
+      const row = item(t(label), t(value), !_capPending && !unknown && capability.ready ? 'ok' : 'muted');
+      row.dataset.capability = key;
+      row.dataset.reasonCode = capability?.reasonCode || '';
+      wrap.appendChild(row);
+    }
     const browser = dm.browser || {};
     const ready = !_capPending && !_capFailed && browser.ready === true;
     const value = _capPending ? 'capability.checking' : _capFailed ? 'capability.network.unknown'
