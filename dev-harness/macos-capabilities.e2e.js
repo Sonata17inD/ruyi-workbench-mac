@@ -37,9 +37,10 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     for (const name of ['powershell_run', 'keyboard_send_keys']) {
       t.ok(!readyNames.includes(name), name + ' is not offered on Mac even with command and desktop settings enabled');
-      const rejected = await S.toolCall(name, {}, { config });
-      t.ok(!rejected.ok && rejected.code === 'tool-disabled' && rejected.error.includes('platform.unsupported'),
-        name + ' stale direct invocation is rejected before reaching its Windows handler');
+      let rejected = false;
+      try { await S.toolCall(name, {}, { config }); }
+      catch (error) { rejected = /Unknown tool/.test(error.message); }
+      t.ok(rejected, name + ' stale direct invocation is rejected as a retired tool');
     }
     t.ok(!readyNames.includes('desktop_screenshot'), 'capture is not offered without the Mac capture helper');
     const noCapture = await S.toolCall('desktop_screenshot',{}, {config});
@@ -70,7 +71,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
         && display.hint === catalog['health.item.process-supervisor.hint.bad'], 'health UI uses localized supervisor state in ' + locale);
     }
     const count = path.join(root, 'probe-count');
-    const report = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+    const report = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
     const quote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
     // Keep the measured delay in the helper body. Node-shebang startup can exhaust the fixed probe
     // deadline before that body executes on this Mac, obscuring the asynchronous I/O contract.

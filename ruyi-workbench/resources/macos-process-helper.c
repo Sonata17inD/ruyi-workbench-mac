@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <fcntl.h>
-#include <poll.h>
+#include <sys/event.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 
@@ -312,7 +312,55 @@ static CleanupResult cleanup_supervised(ProcessRow *known, size_t *known_length,
         .unconfirmed = unconfirmed, .terminated = terminated, .already_exited = already_exited };
 }
 
-static int supervise(int control_fd, char **command, int extra_fds, const ProcessRow *guardian, uint64_t deadline_ms) {
+// Identity records travel only over an inherited private pipe closed in the target.
+// Writes fit within PIPE_BUF and are atomic; backpressure fails closed rather than
+// silently losing a descendant. The guardian never discovers descendants while healthy.
+typedef struct { uint32_t sequence; ProcessRow row; } IdentityRecord;
+
+static bool watch_fd(int queue, int fd, bool once) {
+    struct kevent change;
+    EV_SET(&change, fd, EVFILT_READ, EV_ADD | EV_ENABLE | (once ? EV_ONESHOT : 0), 0, 0, NULL);
+    return kevent(queue, &change, 1, NULL, 0, NULL) == 0;
+}
+
+static bool watch_process(int queue, const ProcessRow *row, bool changes) {
+    struct kevent change;
+    EV_SET(&change, row->pid, EVFILT_PROC, EV_ADD | EV_ENABLE | EV_CLEAR,
+        NOTE_EXIT | (changes ? NOTE_FORK | NOTE_EXEC : 0), 0, NULL);
+    if (kevent(queue, &change, 1, NULL, 0, NULL) == 0) return true;
+    return errno == ESRCH && identity_exited(row);
+}
+
+static bool publish_identities(int queue, int sync_fd, ProcessRow *known, size_t length, size_t *published) {
+    while (*published < length) {
+        IdentityRecord record = { .sequence = (uint32_t)*published + 1, .row = known[*published] };
+        if (write(sync_fd, &record, sizeof(record)) != sizeof(record)) return false;
+        if (!watch_process(queue, &known[*published], true)) return false;
+        (*published)++;
+    }
+    return true;
+}
+
+static bool receive_identities(int fd, ProcessRow *known, size_t *length, uint32_t *sequence, bool *eof) {
+    for (;;) {
+        IdentityRecord record;
+        ssize_t size = read(fd, &record, sizeof(record));
+        if (size == 0) { *eof = true; return true; }
+        if (size < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return true;
+        if (size < 0 && errno == EINTR) continue;
+        if (size != sizeof(record) || record.sequence != *sequence + 1
+            || record.row.pid <= 1 || !record.row.created || *length == MAX_ROWS) return false;
+        *sequence = record.sequence;
+        if (!contains_identity(known, *length, &record.row)) known[(*length)++] = record.row;
+    }
+}
+
+static int event_wait(int queue, struct kevent *events, uint64_t wait_ms, bool bounded) {
+    struct timespec timeout = { .tv_sec = (time_t)(wait_ms / 1000), .tv_nsec = (long)(wait_ms % 1000) * 1000000 };
+    return kevent(queue, NULL, 0, events, 16, bounded ? &timeout : NULL);
+}
+
+static int supervise(int control_fd, char **command, int extra_fds, const ProcessRow *guardian, uint64_t deadline_ms, int sync_fd) {
     uint64_t started = monotonic_milliseconds();
     if (deadline_ms && !started) return 125;
     struct stat control_stat;
@@ -323,12 +371,10 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     }
     int flags = fcntl(control_fd, F_GETFL);
     if (flags < 0 || fcntl(control_fd, F_SETFL, flags | O_NONBLOCK) != 0) return 125;
-    ProcessRow anchor;
-    if (guardian) anchor = *guardian;
-    else {
-        if (setsid() < 0) { supervisor_report(control_fd, "error", errno, 0); return 125; }
-        if (!read_process(getpid(), &anchor)) return 125;
-    }
+    int queue = kqueue();
+    if (queue < 0 || !watch_fd(queue, control_fd, false)) return 125;
+    if (!guardian || !watch_process(queue, guardian, false)) return 125;
+    ProcessRow anchor = *guardian;
     ProcessRow *known = calloc(MAX_ROWS, sizeof(*known));
     if (!known) return 125;
     int exec_status[2];
@@ -341,7 +387,7 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     pid_t child = fork();
     if (child < 0) { close(admission[0]); close(admission[1]); close(exec_status[0]); close(exec_status[1]); free(known); return 125; }
     if (child == 0) {
-        close(control_fd); close(exec_status[0]); close(admission[1]);
+        close(control_fd); close(queue); close(sync_fd); close(exec_status[0]); close(admission[1]);
         char admitted;
         if (read(admission[0], &admitted, 1) != 1) _exit(125);
         close(admission[0]);
@@ -357,7 +403,9 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     size_t length = 0;
     bool complete = read_process(child, &known[0]);
     if (complete) length = 1;
-    if (complete) (void)write(admission[1], "1", 1);
+    size_t published = 0;
+    if (complete) complete = publish_identities(queue, sync_fd, known, length, &published);
+    if (complete) complete = write(admission[1], "1", 1) == 1;
     close(admission[1]);
     // The supervisor must not retain stdio pipes after its executable closes them.
     close(STDIN_FILENO); close(STDOUT_FILENO); close(STDERR_FILENO);
@@ -373,24 +421,39 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     }
     bool exited = false;
     int status = 0;
-    while (!interrupted) {
-        if (!collect_supervised(known, &length, &anchor, false)) complete = false;
+    uint64_t burst_until = monotonic_milliseconds() + 200;
+    uint64_t next_scan = 0;
+    while (complete && !interrupted) {
+        uint64_t now = monotonic_milliseconds();
+        if (!now) { complete = false; break; }
+        if (now >= next_scan) {
+            if (!collect_supervised(known, &length, &anchor, false)
+                || !publish_identities(queue, sync_fd, known, length, &published)) { complete = false; break; }
+            next_scan = now + (now < burst_until ? 20 : 1000);
+        }
         pid_t waited = waitpid(child, &status, WNOHANG);
         if (waited == child) { exited = true; break; }
         if (waited < 0 && errno != EINTR) { complete = false; break; }
-        uint64_t now = monotonic_milliseconds();
-        if (deadline_ms && (!now || now - started >= deadline_ms)) {
-            if (!now) complete = false;
+        if (deadline_ms && now - started >= deadline_ms) {
             supervisor_report(control_fd, "deadline", 1, 0);
             break;
         }
-        struct pollfd control = { .fd = control_fd, .events = POLLIN };
-        int ready = poll(&control, 1, 20);
-        if (ready > 0) {
-            char buffer[32];
-            ssize_t count = read(control_fd, buffer, sizeof(buffer));
-            if (count >= 0 || (errno != EAGAIN && errno != EINTR)) break;
-        } else if (ready < 0 && errno != EINTR) { complete = false; break; }
+        uint64_t wait_ms = next_scan > now ? next_scan - now : 0;
+        if (deadline_ms && started + deadline_ms - now < wait_ms) wait_ms = started + deadline_ms - now;
+        struct kevent events[16];
+        int count = event_wait(queue, events, wait_ms, true);
+        if (count < 0) { if (errno == EINTR) continue; complete = false; break; }
+        bool cancelled = false;
+        for (int i = 0; i < count; i++) {
+            if (events[i].flags & EV_ERROR) { complete = false; break; }
+            if (events[i].filter == EVFILT_READ) { cancelled = true; break; }
+            if (events[i].filter == EVFILT_PROC) {
+                if ((pid_t)events[i].ident == guardian->pid) { complete = false; break; }
+                next_scan = 0;
+                burst_until = monotonic_milliseconds() + 200;
+            }
+        }
+        if (cancelled) break;
     }
     CleanupResult cleanup = cleanup_supervised(known, &length, &anchor, complete);
     complete = cleanup.complete;
@@ -408,6 +471,8 @@ static int supervise(int control_fd, char **command, int extra_fds, const Proces
     supervisor_report(control_fd, "exit", exited && WIFEXITED(status) ? WEXITSTATUS(status) : -1,
         exited && WIFSIGNALED(status) ? WTERMSIG(status) : 0);
     free(known);
+    close(queue);
+    close(sync_fd);
     close(control_fd);
     if (exited && WIFSIGNALED(status)) {
         int term_signal = WTERMSIG(status);
@@ -430,33 +495,62 @@ static int supervise_guarded(int control_fd, char **command, int extra_fds, uint
     if (!read_process(getpid(), &anchor)) return 125;
     ProcessRow *known = calloc(MAX_ROWS, sizeof(*known));
     if (!known) return 125;
-    pid_t primary = fork();
-    if (primary < 0) { free(known); return 125; }
-    if (primary == 0) {
-        free(known);
-        return supervise(control_fd, command, extra_fds, &anchor, deadline_ms);
+    int identities[2];
+    if (pipe(identities) != 0) { free(known); return 125; }
+    for (int i = 0; i < 2; i++) {
+        int flags = fcntl(identities[i], F_GETFL);
+        if (flags < 0 || fcntl(identities[i], F_SETFL, flags | O_NONBLOCK) != 0
+            || fcntl(identities[i], F_SETFD, FD_CLOEXEC) != 0) {
+            close(identities[0]); close(identities[1]); free(known); return 125;
+        }
     }
+    pid_t primary = fork();
+    if (primary < 0) { close(identities[0]); close(identities[1]); free(known); return 125; }
+    if (primary == 0) {
+        free(known); close(identities[0]);
+        return supervise(control_fd, command, extra_fds, &anchor, deadline_ms, identities[1]);
+    }
+    close(identities[1]);
     close(STDIN_FILENO); close(STDOUT_FILENO); close(STDERR_FILENO);
     for (int i = 0; i < extra_fds; i++) close(4 + i);
     // Only the primary reads owner cancellation. Retaining the write endpoint keeps
     // Node's completion pending until the guardian's own cleanup has finished.
     size_t length = 0;
-    bool complete = true, exited = false;
+    bool complete = read_process(primary, &known[0]), exited = false, eof = false;
+    if (complete) length = 1;
+    int queue = kqueue();
+    if (queue < 0 || !complete || !watch_process(queue, &known[0], false)
+        || !watch_fd(queue, identities[0], false) || !watch_fd(queue, control_fd, true)) complete = false;
+    uint32_t sequence = 0;
+    uint64_t recover_at = deadline_ms ? started + deadline_ms + 1500 : 0;
     int status = 0;
-    while (!interrupted) {
-        if (!collect_supervised(known, &length, &anchor, false)) complete = false;
+    while (complete && !interrupted) {
+        if (!eof && !receive_identities(identities[0], known, &length, &sequence, &eof)) { complete = false; break; }
+        if (eof) {
+            struct kevent remove;
+            EV_SET(&remove, identities[0], EVFILT_READ, EV_DELETE, 0, 0, NULL);
+            (void)kevent(queue, &remove, 1, NULL, 0, NULL);
+        }
         pid_t waited = waitpid(primary, &status, WNOHANG);
         if (waited == primary) { exited = true; break; }
         if (waited < 0 && errno != EINTR) { complete = false; break; }
-        // Give primary cleanup a bounded grace period, then recover even if it is
-        // stopped or blocked in the exec handshake. Missing primary frames remain visible.
         uint64_t now = monotonic_milliseconds();
-        if (deadline_ms && (!now || now - started >= deadline_ms + 1500)) {
-            if (!now) complete = false;
-            break;
+        if (!now) { complete = false; break; }
+        if (recover_at && now >= recover_at) break;
+        struct kevent events[16];
+        int count = event_wait(queue, events, recover_at ? recover_at - now : 0, recover_at != 0);
+        if (count < 0) { if (errno == EINTR) continue; complete = false; break; }
+        for (int i = 0; i < count; i++) {
+            if (events[i].flags & EV_ERROR) { complete = false; break; }
+            if (events[i].filter == EVFILT_READ && (int)events[i].ident == control_fd) {
+                // Do not consume the owner's cancellation. Give the primary bounded
+                // cleanup time, then recover even when it is frozen or blocked in exec.
+                uint64_t grace = monotonic_milliseconds() + 1500;
+                if (!recover_at || grace < recover_at) recover_at = grace;
+            }
         }
-        usleep(20000);
     }
+    if (!eof && !receive_identities(identities[0], known, &length, &sequence, &eof)) complete = false;
     CleanupResult cleanup = cleanup_supervised(known, &length, &anchor, complete);
     if (!exited) exited = waitpid(primary, &status, WNOHANG) == primary;
     char report[240];
@@ -465,6 +559,8 @@ static int supervise_guarded(int control_fd, char **command, int extra_fds, uint
         cleanup.unconfirmed, cleanup.complete && exited ? 1 : 0, cleanup.terminated, cleanup.already_exited, length);
     if (report_size > 0 && report_size < (int)sizeof(report)) (void)write(control_fd, report, (size_t)report_size);
     free(known);
+    close(queue);
+    close(identities[0]);
     close(control_fd);
     if (exited && WIFSIGNALED(status)) {
         int term_signal = WTERMSIG(status);
@@ -479,9 +575,9 @@ int main(int argc, char **argv) {
     signal(SIGTERM, on_interrupt);
     signal(SIGINT, on_interrupt);
     signal(SIGPIPE, on_interrupt);
-    if (argc >= 3 && strcmp(argv[1], "--supervise-v2") == 0) return supervise_guarded(3, &argv[2], 0, 0);
-    if (argc >= 4 && strcmp(argv[1], "--supervise-v2-with-fds") == 0 && strcmp(argv[2], "1") == 0) return supervise_guarded(3, &argv[3], 1, 0);
-    if (argc >= 4 && strcmp(argv[1], "--supervise-v2-deadline") == 0) {
+    if (argc >= 3 && strcmp(argv[1], "--supervise-v3") == 0) return supervise_guarded(3, &argv[2], 0, 0);
+    if (argc >= 4 && strcmp(argv[1], "--supervise-v3-with-fds") == 0 && strcmp(argv[2], "1") == 0) return supervise_guarded(3, &argv[3], 1, 0);
+    if (argc >= 4 && strcmp(argv[1], "--supervise-v3-deadline") == 0) {
         char *end = NULL;
         errno = 0;
         unsigned long deadline = strtoul(argv[2], &end, 10);
@@ -491,13 +587,9 @@ int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "--capabilities") == 0) {
         ProcessRow self;
         if (!read_process(getpid(), &self) || !self.created) return 4;
-        puts("{\"protocolVersion\":2,\"guardian\":true,\"supervise\":true,\"privateFd\":true,\"identityCleanup\":true,\"deadline\":true,\"escapeCoverage\":\"observed-only\"}");
+        puts("{\"protocolVersion\":3,\"guardian\":true,\"supervise\":true,\"privateFd\":true,\"identityCleanup\":true,\"deadline\":true,\"escapeCoverage\":\"observed-only\"}");
         return 0;
     }
-    if (argc >= 3 && strcmp(argv[1], "--supervise-v1") == 0) return supervise(3, &argv[2], 0, NULL, 0);
-    if (argc >= 4 && strcmp(argv[1], "--supervise-v1-with-fds") == 0 && strcmp(argv[2], "1") == 0) return supervise(3, &argv[3], 1, NULL, 0);
-    if (argc >= 3 && strcmp(argv[1], "--supervise") == 0) return supervise(3, &argv[2], 0, NULL, 0);
-    if (argc >= 4 && strcmp(argv[1], "--supervise-with-fds") == 0 && strcmp(argv[2], "1") == 0) return supervise(3, &argv[3], 1, NULL, 0);
     puts("RUYI-PROCESS-V1");
     if (argc == 2 && strcmp(argv[1], "--snapshot") == 0) {
         size_t length = 0;

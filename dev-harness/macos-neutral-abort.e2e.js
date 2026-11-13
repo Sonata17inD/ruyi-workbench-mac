@@ -233,8 +233,8 @@ async function cleanupFaultRemnants() {
     });
     const native = topology.find(row => row.command === helper + ' --input-session');
     const pythonRow = native && topology.find(row => row.pid === native.ppid && /ai_computer_control.server/.test(row.command));
-    const primary = pythonRow && topology.find(row => row.pid === pythonRow.ppid && /--supervise-v2/.test(row.command));
-    const guardian = primary && topology.find(row => row.pid === primary.ppid && /--supervise-v2/.test(row.command));
+    const primary = pythonRow && topology.find(row => row.pid === pythonRow.ppid && /--supervise-v3/.test(row.command));
+    const guardian = primary && topology.find(row => row.pid === primary.ppid && /--supervise-v3/.test(row.command));
     check(rows[0].pid === birth.pid && rows[0].created === birth.created && !rows.some(row => row.pid === receiver.pid)
       && guardian?.ppid === birth.pid && [native, pythonRow, primary, guardian].every(row => row && row.pgid === guardian.pid && row.sid === guardian.pid)
       && ready.pgid !== guardian.pgid, 'birth-verified root guardian primary ACC native chain excludes external receiver from supervised group');

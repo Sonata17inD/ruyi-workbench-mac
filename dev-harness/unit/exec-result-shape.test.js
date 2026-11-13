@@ -124,7 +124,7 @@ test('[S4] 主进程退出后,占着输出管道的脱离孙进程不拖住工�
     const isolated = loadServerInternals(['toolCall', 'ProcessRuntimeHooks']);
     holderFile = path.join(root, 'pipe-holder.json');
     const helper = path.join(root, 'retained-pipe-helper');
-    const capability = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+    const capability = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
     const frames = [{ event: 'started', value: 123, created: '1' }, { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 },
       { event: 'exit', value: 0, detail: 0 }, { event: 'guardian-cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 0, observed: 0 }];
     const holder = `require('fs').writeFileSync(${JSON.stringify(holderFile)},JSON.stringify({pid:process.pid}));setTimeout(()=>process.exit(0),2500);`;

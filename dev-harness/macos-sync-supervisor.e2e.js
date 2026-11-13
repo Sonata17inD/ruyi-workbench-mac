@@ -11,7 +11,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-sync-supervisor-'));
 const helper = path.resolve(__dirname, '../ruyi-workbench/runtime/macos/ruyi-process-helper');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 function run(deadline, source, extra = {}) {
-  const result = cp.spawnSync(helper, ['--supervise-v2-deadline', String(deadline), process.execPath, '-e', source], {
+  const result = cp.spawnSync(helper, ['--supervise-v3-deadline', String(deadline), process.execPath, '-e', source], {
     stdio: ['ignore', 'pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout: 5000, maxBuffer: 1024 * 1024, ...extra,
   });
   const frames = String(result.output?.[3] || '').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
@@ -59,7 +59,7 @@ function confirmed(frames) {
       const invalid = run(value, `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`);
       t.ok(invalid.status === 2 && !fs.existsSync(marker), 'invalid deadline rejects before target execution: ' + JSON.stringify(value));
     }
-    const missing = cp.spawnSync(helper, ['--supervise-v2-deadline', '1000', path.join(root, 'missing')], { stdio: ['ignore', 'pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout: 3000 });
+    const missing = cp.spawnSync(helper, ['--supervise-v3-deadline', '1000', path.join(root, 'missing')], { stdio: ['ignore', 'pipe', 'pipe', 'pipe'], encoding: 'utf8', timeout: 3000 });
     const frames = String(missing.output[3]).trim().split('\n').map(line => JSON.parse(line));
     t.ok(missing.status === 127 && frames.some(f => f.event === 'error' && f.value === 2) && confirmed(frames), 'failed target exec still confirms cleanup and reports errno');
   } catch (error) { t.fail(error.stack || String(error)); }

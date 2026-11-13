@@ -2745,14 +2745,14 @@ const ProcessRuntime = (() => {
     const { state, stamp } = request;
     let report = null;
     try { report = JSON.parse(probe.stdout); } catch { /* Invalid reports remain unavailable. */ }
-    const valid = !probe.error && probe.status === 0 && report && report.protocolVersion === 2
+    const valid = !probe.error && probe.status === 0 && report && report.protocolVersion === 3
       && report.guardian === true && report.supervise === true && report.privateFd === true && report.identityCleanup === true
       && report.escapeCoverage === 'observed-only';
     const unchanged = helperProbeRequest().stamp === stamp;
     state.ready = !!valid && unchanged;
     state.reasonCode = valid ? null : probe.error ? 'platform.dependency_unavailable' : 'platform.dependency_incompatible';
     state.code = valid ? null : probe.error ? 'process_helper_unavailable' : 'process_helper_incompatible';
-    state.protocolVersion = valid ? 2 : null;
+    state.protocolVersion = valid ? 3 : null;
     state.deadline = !!valid && report.deadline === true;
     if (!unchanged) { state.reasonCode = 'platform.dependency_changed'; state.code = 'process_helper_unavailable'; }
     const frozen = Object.freeze(state);
@@ -2869,7 +2869,7 @@ const ProcessRuntime = (() => {
       options.detached = false; // The native supervisor establishes its own session before fork.
       options.stdio = [...streams, 'pipe', ...extraStdio];
     }
-    const supervisorArgs = extraStdio.length ? ['--supervise-v2-with-fds', String(extraStdio.length), executable, ...argv] : ['--supervise-v2', executable, ...argv];
+    const supervisorArgs = extraStdio.length ? ['--supervise-v3-with-fds', String(extraStdio.length), executable, ...argv] : ['--supervise-v3', executable, ...argv];
     const child = childProcessModule.spawn(supervised ? helper : executable, supervised ? supervisorArgs : argv, options);
     let resolveReady;
     const ready = new Promise(resolve => { resolveReady = resolve; });
@@ -3087,7 +3087,7 @@ const ProcessRuntime = (() => {
     const ignored = options.stdio === 'ignore';
     let raw;
     try {
-      raw = childProcessModule.spawnSync(ProcessRuntimeHooks.helperPath(), ['--supervise-v2-deadline', String(timeout), command, ...argv], {
+      raw = childProcessModule.spawnSync(ProcessRuntimeHooks.helperPath(), ['--supervise-v3-deadline', String(timeout), command, ...argv], {
         cwd: options.cwd, env: options.env, stdio: ['ignore', ignored ? 'ignore' : 'pipe', ignored ? 'ignore' : 'pipe', 'pipe'],
         timeout: timeout ? Math.min(timeout + 4000, 2147483647) : 0, killSignal: 'SIGKILL',
         maxBuffer: ignored ? 4096 : 2 * maxBuffer + 4096,

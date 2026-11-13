@@ -10,7 +10,7 @@ const { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('MACOS GIT RUNTIME');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-git-runtime-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-const capabilityReport = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+const capabilityReport = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
 const capabilityPrelude = `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilityReport))});process.exit(0);}`;
 const handles = [];
 let runtime;

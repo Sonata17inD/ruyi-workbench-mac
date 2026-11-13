@@ -1,0 +1,32 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "protocol": "v2",
+  "helperSha256": "8998ee7f93944d10f60065660096d98a487cd4b9c4434f3158259ba96f3260c3",
+  "seconds": 10,
+  "runs": [
+    {
+      "cpuSeconds": 1.503819,
+      "wallSeconds": 10.052038832975086,
+      "maxRssBytes": 2572288,
+      "voluntaryContextSwitches": 1,
+      "involuntaryContextSwitches": 1798
+    },
+    {
+      "cpuSeconds": 1.4876569999999998,
+      "wallSeconds": 10.056403499969747,
+      "maxRssBytes": 2572288,
+      "voluntaryContextSwitches": 1,
+      "involuntaryContextSwitches": 1783
+    },
+    {
+      "cpuSeconds": 1.4449440000000005,
+      "wallSeconds": 10.041920792020392,
+      "maxRssBytes": 2588672,
+      "voluntaryContextSwitches": 2,
+      "involuntaryContextSwitches": 1883
+    }
+  ],
+  "medianCpuSeconds": 1.4876569999999998,
+  "limits": "Context switches are not hardware wakeups. maxrss is cumulative waited-child maximum. No power/battery claim."
+}

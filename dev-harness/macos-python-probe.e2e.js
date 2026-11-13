@@ -49,7 +49,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       S.ProcessRuntimeHooks.helperPath = () => path.join(root, 'missing-helper');
       t.ok(await probe() === '', 'missing supervisor refuses import execution');
       const helper = path.join(root, 'incomplete-helper');
-      const capabilities = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+      const capabilities = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
       const frames = [{ event: 'started', value: 123, created: '1' }, { event: 'cleanup', value: 1, detail: 0, terminated: 0, alreadyExited: 0, observed: 1 }, { event: 'exit', value: 0, detail: 0 }, { event: 'guardian-cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 0, observed: 0 }];
       const fake = extra => '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}${extra}require('fs').writeSync(3,${JSON.stringify(frames.map(f=>JSON.stringify(f)+'\n').join(''))});process.stdout.write('__RUYI_ACC_FULL__');process.exit(0);`;
       fs.writeFileSync(helper, fake(''), { mode: 0o700 }); S.ProcessRuntimeHooks.helperPath = () => helper;

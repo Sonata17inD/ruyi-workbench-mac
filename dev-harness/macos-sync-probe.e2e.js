@@ -57,7 +57,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       t.ok(S.probeRgInfoSync()?.path === cli, 'restored supervisor permits cold rg discovery without restarting');
 
       const helper = path.join(root, 'fixture-helper');
-      const capabilities = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, deadline: true, escapeCoverage: 'observed-only' };
+      const capabilities = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, deadline: true, escapeCoverage: 'observed-only' };
       const frames = [{ event: 'started', value: 123, created: '1' }, { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 }, { event: 'exit', value: 0, detail: 0 }, { event: 'guardian-cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 0, observed: 0 }];
       const fake = (messages, extra = '', suffix = '') => fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}${extra}require('fs').writeSync(3,${JSON.stringify(messages.map(f=>JSON.stringify(f)+'\n').join('')+suffix)});console.log('__RUYI_ACC_FULL__');process.exit(0);`, { mode: 0o700 });
       fake(frames); S.ProcessRuntimeHooks.helperPath = () => helper;
