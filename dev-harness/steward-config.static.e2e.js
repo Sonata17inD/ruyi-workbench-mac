@@ -35,7 +35,7 @@ const configSrc = fs.readFileSync(path.join(SRC, '01-config.js'), 'utf8');
 ok(/stewardEnabledV1:\s*true,/.test(configSrc), '默认值: stewardEnabledV1=true(121 波 K0 从 false 翻转)');
 ok(/stewardProviderId:\s*'',/.test(configSrc), "默认值: stewardProviderId=''");
 ok(/stewardModel:\s*'',/.test(configSrc), "默认值: stewardModel=''(在 stewardProviderId 之后,与 subagent 写法对齐)");
-ok(/stewardPollMs:\s*5000,/.test(configSrc), '默认值: stewardPollMs=5000');
+ok(/stewardPollMs:\s*60000,/.test(configSrc), '默认值: stewardPollMs=60000');
 // 117m-A1 重钉(用户第六轮走查⑦):默认值 12 → 30。12 是 116a 拍脑袋的保守值,真机上被「代批风暴」
 // 15 分钟吃光(11 条 steward_decision),于是用户那两句「还在正常运转吗」撞上熔断。重钉的同时补两条
 // 【更强】的伴随断言:默认表与 sanitize 兜底必须是同一个数(B10b),且 clamp 区间一字未动(下面 clampChecks)。
@@ -90,7 +90,7 @@ ok(/\['visit', '24h', 'forever'\]\.includes\(config\.stewardConversationRetentio
 
 // 数字键 clamp 上下限字面量(逐个断言,防止有意/无意漂移;含 Math.round(n) 嵌套括号,按实际写法逐字匹配)。
 const clampChecks = [
-  { label: 'stewardPollMs clamp [5000,120000]', re: /Math\.min\(120000, Math\.max\(5000, Math\.round\(n\)\)\) : 5000;/ },
+  { label: 'stewardPollMs clamp [5000,120000]', re: /Math\.min\(120000, Math\.max\(5000, Math\.round\(n\)\)\) : 60000;/ },
   { label: 'stewardMaxTurnsPerHour clamp [1,120]', re: /Math\.min\(120, Math\.max\(1, Math\.round\(n\)\)\) : 30;/ }, // 117m-A1:区间 [1,120] 一字未动,只有兜底默认 12→30
   { label: 'stewardMaxCostPerDay clamp [0,1000]', re: /Math\.min\(1000, Math\.max\(0, n\)\) : 5;/ },
   { label: 'stewardContextBudgetTokens clamp [16000,2000000]', re: /Math\.min\(2000000, Math\.max\(16000, Math\.round\(n\)\)\) : 200000;/ },
@@ -189,7 +189,7 @@ process.env.WIN_CLAUDE_WORKBENCH_HOME = tmpHome;
 const srv = require(path.join(APP, 'server.js'));
 
 // 3.1 走测反馈：缺省与非法值采用新默认；用户已明确保存的旧预算和不限预算保持原样。
-const preferredDefaults = { stewardPollMs: 5000, stewardMaxCostPerDay: 5, stewardGlobalMaxCostPerDay: 50 };
+const preferredDefaults = { stewardPollMs: 60000, stewardMaxCostPerDay: 5, stewardGlobalMaxCostPerDay: 50 };
 const freshConfig = srv.normalizeConfig(null).config;
 const invalidConfig = srv.normalizeConfig({ ...srv.defaultConfig(), stewardPollMs: 'bad', stewardMaxCostPerDay: 'bad', stewardGlobalMaxCostPerDay: 'bad' }).config;
 for (const [key, value] of Object.entries(preferredDefaults)) {

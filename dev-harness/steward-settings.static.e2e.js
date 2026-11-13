@@ -267,8 +267,7 @@ ok(count(settingsCode, /setInterval\(/g) === 0 && count(settingsCode, /setTimeou
   'D3 设置页零计时器（不轮询；停机态由壳层那一处已有的 setInterval 喂进来）');
 ok(count(settingsCode, /\.download = /g) === 1 && /anchor\.download = 'steward-memory\.json';/.test(settings),
   'D4 全模块恰好一处 `<a download>`，且只用于记忆导出');
-ok(count(stewardShell, /setInterval\(/g) === 1,
-  'D5 steward-shell.js 仍然全文件恰好一处 setInterval（117b 的 C2a 未被 117e 稀释）');
+ok(!/setInterval\(/.test(stewardShell), 'D5 壳层无固定 interval');
 ok(count(stewardShell, /\bapi\(/g) === 1,
   'D6 steward-shell.js 仍然全文件恰好一处 api() 调用（117a 的 C3a 未被稀释；settings 拿到的是注入的引用）');
 // 结构化 error 绝不 String() 直落（与 117e 第 0 步给 conversation 立的同一条纪律）。

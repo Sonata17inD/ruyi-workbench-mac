@@ -301,8 +301,7 @@ ok(count(conversation, /setTimeout\(/g) === 1
 ok(count(composer, /setTimeout\(/g) === 1 && count(composer, /clearTimeout\(/g) === 1,
   'I3 steward-composer.js 恰好一处 setTimeout（预判去抖）与一处 clearTimeout');
 ok(count(composer, /setInterval\(/g) === 0, 'I4 steward-composer.js 零 setInterval');
-ok(count(stewardShell, /setInterval\(/g) === 1,
-  'I5 steward-shell.js 仍然全文件恰好一处 setInterval（117b 的 C2a 未被 117c 稀释）');
+ok(!/setInterval\(/.test(stewardShell), 'I5 壳层无固定 interval');
 ok(/function startUndoCountdown\(btn, onExpire\) \{\s*stopUndoCountdown\(\);/.test(conversation)
   && /undoTimer = setInterval\(/.test(conversation)
   && /stopUndoCountdown\(\);\s*onExpire\(\);/.test(conversation),

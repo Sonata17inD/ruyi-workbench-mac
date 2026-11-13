@@ -79,6 +79,7 @@ ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(stewardShell),
 // （来源：117c／117d 交付，27 号文 §5 117c／117d 行）。
 const importLines = [...stewardShell.matchAll(/^import .*$/gm)].map(match => match[0]);
 ok(JSON.stringify(importLines) === JSON.stringify([
+  "import { createDeadlinePoll } from './deadline-poll.js';",
   "import { derivePresence, presenceLabelKey } from './steward-presence.js';",
   "import { createStewardConversation } from './steward-conversation.js';",
   "import { createStewardComposer } from './steward-composer.js';",
@@ -118,7 +119,7 @@ ok(JSON.stringify(importLines) === JSON.stringify([
   // 本域内相对路径、零第三方库、零裸包名（反向验证过：往 steward-shell.js 里加一条 `import x from 'lodash';` 立刻真红）。
   // 轮询生命周期收编（前端架构债第一批）重钉：白名单第八条再多带一个名字 createPollLifecycle —— 三处手写的
   // pollTimer ＋ start/stop/syncPolling 收进 steward-chips.js 那一份，壳层仍从【同一条】import 取。形态不变。
-  "import { stewardEscapeStack, byId, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS as POLL_DUE_SLACK_MS, createPollLifecycle } from './steward-chips.js';   // 117j UX-F3：Esc 逐层的唯一监听点；33 号文 §4：轮询常量（下限/默认/容差）也只有那一份；121-K2b：事件流连着时的兜底节拍同源；轮询生命周期（启停／门控）同一份",
+  "import { stewardEscapeStack, byId, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS as POLL_DUE_SLACK_MS } from './steward-chips.js';   // 117j UX-F3：Esc 逐层的唯一监听点；33 号文 §4：轮询常量（下限/默认/容差）也只有那一份；121-K2b：事件流连着时的兜底节拍同源；轮询生命周期（启停／门控）同一份",
   // 33 号文 §4 重钉（117 波交付）：白名单加第九条 —— 视角模式本机偏好的那一枚键。原来
   // steward-shell.js 自带一份 byId 与两个 'wcw.shellMode' 字面量，与那份定义逐字重复；现在两样都
   // 只留一份定义（byId 归上一条 steward-chips.js）。
@@ -173,26 +174,18 @@ ok(!/nudge/.test(stewardPresenceSrc),
 // ─── F 定时器只在 isStewardMode() 门控内(重钉锚点，与 steward-shell.static.e2e.js C2/C3 呼应) ───
 const setIntervalSites = (stewardShell.match(/setInterval\(/g) || []).length;
 const clearIntervalSites = (stewardShell.match(/clearInterval\(/g) || []).length;
-ok(setIntervalSites === 1 && clearIntervalSites === 1,
-  'F1 全文件恰好一处 setInterval、一处 clearInterval');
+ok((stewardShell.match(/setInterval\(/g) || []).length === 0, 'F1 壳层没有固定 interval');
 // 轮询生命周期收编（前端架构债第一批）重钉 F2／F3／F4：pollTimer ＋ startPolling／stopPolling 收进
 // steward-chips.js 的 createPollLifecycle（壳层／看板／抽屉同一份）。钉的事不变：setInterval 住在起表
 // 那一处且起表前先拉一次；clearInterval 住在停表那一处、停表把句柄归零（每次 start 都有对应的 stop
 // 可清）；唯一入口 syncPolling 的门控第一件事是 isStewardMode()。
 const chipsSrcF = read('js/steward-chips.js');
-ok(/const polling = createPollLifecycle\(\{\s*shouldRun: [^\n]*,\s*onStart: pollStewardState,\s*arm: \(\) => setInterval\(/.test(stewardShell)
-  && /function start\(\) \{\s*if \(timer\) return;\s*if \(onStart\) onStart\(\);\s*timer = arm\(\);\s*\}/.test(chipsSrcF),
-  'F2 setInterval 住在起表那一处（createPollLifecycle 的 arm；工厂 start() 幂等、先 onStart 再 arm）');
-ok(/disarm: timer => clearInterval\(timer\),/.test(stewardShell)
-  && /function stop\(\) \{\s*if \(!timer\) return;\s*disarm\(timer\);\s*timer = 0;\s*\}/.test(chipsSrcF),
-  'F3 clearInterval 住在停表那一处（disarm；工厂 stop() 幂等且归零，每次 start 都有对应的 stop 可清）');
+ok(stewardShell.includes('createDeadlinePoll({'), 'F2 壳层使用共享期限调度器');
+ok(stewardShell.includes('if (streamConnected && !stewardPollFast()) return Infinity;'), 'F3 在线空闲时不安排唤醒');
 ok(/function syncPolling\(\) \{\s*polling\.sync\(\);\s*\}/.test(stewardShell)
-  && /shouldRun: \(\) => isStewardMode\(\)/.test(stewardShell)
-  && /function sync\(\) \{\s*if \(shouldRun\(\)\) start\(\);\s*else stop\(\);\s*\}/.test(chipsSrcF),
+  && /shouldRun: \(\) => isStewardMode\(\)/.test(stewardShell),
   'F4 唯一入口 syncPolling 第一件事就是 isStewardMode() 判定（门控 shouldRun 打头即 isStewardMode()）');
-ok(/new MutationObserver\(syncPolling\)/.test(stewardShell)
-  && /addEventListener\('visibilitychange', syncPolling\)/.test(stewardShell),
-  'F5 syncPolling 由 data-shell-mode 属性变化(MutationObserver)与页面可见性(visibilitychange)两路触发');
+ok(stewardShell.includes('new MutationObserver(syncPolling)') && stewardShell.includes("addEventListener('visibilitychange', () =>"), 'F5 模式变化和可见性变化都重算期限，恢复可见补快照');
 
 // ─── G i18n：presence 七键中英对称，且不提前暴露内部代号 ──────────────────────────
 const presenceKeysZh = STEWARD_PRESENCE_STATES.map(state => `stewardShell.presence.${state}`);

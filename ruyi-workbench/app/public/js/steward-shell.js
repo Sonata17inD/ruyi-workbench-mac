@@ -1,4 +1,5 @@
 'use strict';
+import { createDeadlinePoll } from './deadline-poll.js';
 
 import { derivePresence, presenceLabelKey } from './steward-presence.js';
 import { createStewardConversation } from './steward-conversation.js';
@@ -10,41 +11,12 @@ import { createThreadHead } from './thread-head.js';
 import { createQuietCard } from './quiet-card.js';
 import { createStewardDecisions } from './steward-decisions.js';
 import { toast } from './util.js';   // 123-M2：安静卡「稍后」建不成那条 reminder 时的一句提示
-import { stewardEscapeStack, byId, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS as POLL_DUE_SLACK_MS, createPollLifecycle } from './steward-chips.js';   // 117j UX-F3：Esc 逐层的唯一监听点；33 号文 §4：轮询常量（下限/默认/容差）也只有那一份；121-K2b：事件流连着时的兜底节拍同源；轮询生命周期（启停／门控）同一份
+import { stewardEscapeStack, byId, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS as POLL_DUE_SLACK_MS } from './steward-chips.js';   // 117j UX-F3：Esc 逐层的唯一监听点；33 号文 §4：轮询常量（下限/默认/容差）也只有那一份；121-K2b：事件流连着时的兜底节拍同源；轮询生命周期（启停／门控）同一份
 // 33 号文 §4「`steward-shell.js:92,105,108`」：壳模式本机偏好只有一份定义，byId 只有
 // steward-chips.js 那一份 —— 本文件两者都不再自带。121-K1（34 号文 §8.2）：那份定义随交办台退役
 // 从 preview-shell.js 搬到叶子 js/shell-mode.js，本文件只改 import 来源，取法一个字未变。
 import { SHELL_MODE_STORAGE_KEY } from './shell-mode.js';
 
-// 第117波 117a/117b/117c：管家壳（管家视角 steward）的模式与容器骨架 + avatar 状态派生
-// + 对话区与递话（后两者的实现住 steward-conversation.js / steward-composer.js，本文件只做组装与
-// 依赖注入 —— 组合根 app.js 因此净增 0 行，D45 余量未动）。
-//
-// 范式：一个注入依赖的工厂、一份冻结导出、零 innerHTML。
-// 边界（117a 定的，117b 仍然遵守）：
-//   · 只负责「能不能进管家壳」「进不去时怎么体面地回经典」「avatar 现在是什么态」，不做对话／递话／
-//     抽屉／看板（117c–h）。
-//   · `data-shell-mode` 是唯一状态源；本文件写它的地方只有 recoverStewardShell 这一处 fail-closed 回退，
-//     正常进入由 shell-mode.js 的 applyShellMode 单点写入。
-//
-// fail-closed 三分支（recoverStewardShell）：
-//   ① 管家开关关（`state.config.stewardEnabledV1 !== true`）；
-//   ② 容器或四个空位缺失（骨架没上线／被裁剪的离线包）；
-//   ③ 模块依赖缺失（组合根没把 applyShellMode／t 注进来）。
-// `canEnterSteward()` 只看 ①②（③ 在依赖缺失时根本走不到准入判断，见工厂开头的早退）。
-//
-// 117b 新增的唯一后台活动——avatar 的 GET /api/steward/state 轮询——受严格的模式门控（27 号文 §3.4
-// 红线「开关关时零后台活动」的延伸：这里收紧成「非管家模式时零后台活动」）：
-//   · 本文件只有一处 setInterval（交给 createPollLifecycle 的 arm）与一处 clearInterval（disarm），
-//     两者只经 syncPolling() 调用，而 syncPolling() 的门控（shouldRun）第一件事永远是 isStewardMode()
-//     判定 —— 判定为否就停表，不会有任何计时器存活。
-//   · syncPolling() 的触发点：①MutationObserver 盯着 documentElement 的 data-shell-mode 属性
-//     （谁改的都算——select、「回到经典」按钮、fail-closed 回退、未来任何新入口，零遗漏）；
-//     ②document 的 visibilitychange（标签页隐藏即暂停，见回来即恢复，若仍在管家模式）；
-//     ③bindStewardShell() 绑定完的那一刻（覆盖「页面直接以 data-shell-mode=steward 启动」这个
-//     MutationObserver 观察不到的初始态）。
-//   · MutationObserver 本身不是 setInterval/setTimeout，不在「零 timer」的字面禁令内，且哪怕它在非
-//     管家模式下常驻，callback 触发时的第一动作也是关计时器，不产生任何轮询或请求。
 
 export const STEWARD_SHELL_SLOT_IDS = Object.freeze([
   'stewardHeader',
@@ -53,11 +25,6 @@ export const STEWARD_SHELL_SLOT_IDS = Object.freeze([
   'stewardStatus',
 ]);
 
-// 管家状态轮询周期：跟 01-config.js 的 stewardPollMs 校验同一 clamp 下限(5000)，上限交给后端
-// (config 已经 clamp 过一次，这里只防「配置还没到达/被清空」时退回 15000 默认值)。
-// 33 号文 §4「轮询常量收进叶子」：这三个值原来与 steward-board / steward-drawer 两处逐字相同，
-// 现在只有 steward-chips.js 一个来源，从上面那条已有的 import 取。本地名字一个没改 —— 锁钉的是
-// 起表那一处（createPollLifecycle 的 arm）、pollStewardTick 的函数体与 clamp 写法，这一项收的是值不是名字。
 
 // 骨架齐备 = 同级容器在，且四个空位都在。纯 DOM 判定，无副作用，测试与 UI 共用同一口径。
 export function stewardShellDomReady(doc = globalThis.document) {
@@ -238,13 +205,6 @@ export function createStewardShellDomain({
     return renderPresence();
   }
 
-  // 117l-B2 ①（用户第五轮走查 1「线程返回信息给管家时，最好给 avatar 一个小动效」）：
-  // 「点一下」是一次性视觉信号，不是第八个状态 —— 线程回报时管家多半仍是 idle，presenceInputs
-  // 一个字都不该被它写脏（derivePresence 是纯投影，掺一个 nudge 字段进去就等于给它加了记忆）。
-  // 所以另开这一个显式口子，与 renderPresence 里 .pulse/.shake 那套一次性类同一条纪律。
-  // 【零计时器】：类由 animationend 自己摘 —— steward-avatar.css 保证 .is-nudged 一定有动画在播
-  // （reduced-motion 下也留着光环，正是为了这个事件一定回来），本文件的 setInterval／setTimeout
-  // 计数因此一个没变（steward-avatar.static F1 与 steward-shell.static C2a 都盯着）。
   function nudgeAvatar() {
     const avatar = byId('stewardAvatar');
     if (!avatar) return false;
@@ -280,32 +240,26 @@ export function createStewardShellDomain({
   // 写「需要你的线程数」那个字段 —— steward-avatar.static I3 钉着它在壳层里只有「声明／取值／喂给 presence」三处）。
   // 只在看板【真的取到过行】之后才跟：挂在 onRowsChanged 上，进壳那一刻看板还没取回行时不会拿一个空的 0 冲掉到访快照。
   function syncPresenceFromBoard() {
-    try { return setPresenceInputs(board.presenceCounts()); } catch { return presenceState; }
+    try { const result = setPresenceInputs(board.presenceCounts()); syncPolling(); return result; } catch { return presenceState; }
   }
   function stewardPollFast() {
     if (!isStewardMode() || (globalThis.document && globalThis.document.hidden)) return false;
     if (presenceInputs.inflight) return true;
     try { return board.hasRunningThread() === true; } catch { return false; }
   }
-  // 表按下限走，真要不要拉由这一拍自己判（与 steward-drawer.js／steward-board.js 逐字同一条纪律：
-  // 动态换表会多一处 clearInterval 或多一个 start/stop 调用点，撞上 steward-avatar.static 的 F1/F3）。
-  // 121-K2b：事件流连着的时候这条轮询只是【兜底心跳】—— 真正让 avatar 跟上的是 steward.say 推送
-  // （见下面的 bindEventStream）。所以连接时 due 统一 30 s，断开时才回到今天那两档（5 s／配置）。
-  // 表（setInterval 的周期）一个字没动，与 117j W2-4 同一条纪律：换表要么多一处 clearInterval、
-  // 要么多一个 start/stop 调用点，两者都会撞上 steward-shell.static C2a／steward-avatar.static F1。
   function pollStewardTick() {
     const due = streamConnected ? STEWARD_POLL_MS_CONNECTED : (stewardPollFast() ? STEWARD_POLL_MS_MIN : pollIntervalMs());
     if (Date.now() - lastStateAt < due - POLL_DUE_SLACK_MS) return;
-    pollStewardState();
+    return pollStewardState();
   }
 
   function pollStewardState() {
     if (typeof api !== 'function') return;
     const generation = conversation.conversationGeneration();
-    Promise.resolve(api('/api/steward/state')).then(response => {
+    return Promise.resolve(api('/api/steward/state')).then(response => {
       if (generation !== conversation.conversationGeneration() || conversation.resetInProgress()) return;
       if (!response || typeof response !== 'object') return;
-      lastStateAt = Date.now();   // 117j W2-4：节拍水位。落在这里而不是函数头 —— C3b 逐字钉住了函数头那两行。
+      lastStateAt = Date.now(); syncPolling();   // 117j W2-4：节拍水位。落在这里而不是函数头 —— C3b 逐字钉住了函数头那两行。
       const lastReply = (response.lastReply && typeof response.lastReply === 'object') ? response.lastReply : null;
       setPresenceInputs({
         stopped: response.stopped === true,
@@ -329,7 +283,7 @@ export function createStewardShellDomain({
         // 光环跟着头像走）。用户自己发的那条回复走的是 sendToSteward，压根不进这个分支。
         if (isStewardMode() && (lastReply.trigger === 'external' || (!firstSeen && lastReply.trigger === 'inbox'))) { nudgeAvatar(); void conversation.appendSince(''); }
       }
-    }).catch(() => { lastStateAt = Date.now(); /* 状态面不因单次轮询失败整条消失，下一轮再试（失败也推水位，否则每一拍都重试） */ });
+    }).catch(() => { lastStateAt = Date.now(); /* 下一次期限重试 */ }).finally(() => { lastStateAt = Date.now(); syncPolling(); });
   }
 
   function pollIntervalMs() {
@@ -343,20 +297,21 @@ export function createStewardShellDomain({
   // 连接状态只改 due（见 pollStewardTick），不改启停条件：syncPolling 的三重门控一个字没动。
   function bindEventStream() {
     if (!eventStream || typeof eventStream.on !== 'function') return false;
-    eventStream.on('connection', payload => { streamConnected = Boolean(payload && payload.connected); });
+    eventStream.on('connection', payload => { streamConnected = Boolean(payload && payload.connected); syncPolling(); if (isStewardMode() && !globalThis.document?.hidden) void pollStewardState(); });
     streamConnected = typeof eventStream.isConnected === 'function' ? eventStream.isConnected() === true : false;
-    eventStream.on('steward.say', () => { if (isStewardMode()) pollStewardState(); });
+    eventStream.on('steward.say', () => { if (isStewardMode() && !globalThis.document?.hidden) void pollStewardState().finally(syncPolling); });
     quietCard.bind(eventStream); // 121-K6a：安静卡订阅 inbox.appended（§4.3），零新请求路
     return true;
   }
 
-  // 起表那一刻先当场拉一次（onStart），再按 5 s 下限起表；幂等启停与门控由 steward-chips.js 的
-  // createPollLifecycle 统一实现（看板／抽屉同一份），计时器本身仍只在这里起、在这里清。
-  const polling = createPollLifecycle({
+  const polling = createDeadlinePoll({
     shouldRun: () => isStewardMode() && !(globalThis.document && globalThis.document.hidden),
-    onStart: pollStewardState,
-    arm: () => setInterval(pollStewardTick, STEWARD_POLL_MS_MIN),
-    disarm: timer => clearInterval(timer),
+    delay: () => {
+      if (streamConnected && !stewardPollFast()) return Infinity;
+      const due = streamConnected ? STEWARD_POLL_MS_CONNECTED : (stewardPollFast() ? STEWARD_POLL_MS_MIN : pollIntervalMs());
+      return Math.max(1, due - (Date.now() - lastStateAt));
+    },
+    tick: pollStewardTick,
   });
   // 唯一入口：轮询该开该关只由这一个判定决定——管家模式 且 页面可见。本文件别处一律不直接调
   // polling.start/polling.stop，只调 syncPolling（源码正则锚，见 dev-harness/steward-avatar.static.e2e.js）。
@@ -379,7 +334,10 @@ export function createStewardShellDomain({
       new MutationObserver(syncPolling)
         .observe(globalThis.document.documentElement, { attributes: true, attributeFilter: ['data-shell-mode'] });
     }
-    if (globalThis.document) globalThis.document.addEventListener('visibilitychange', syncPolling);
+    if (globalThis.document) globalThis.document.addEventListener('visibilitychange', () => {
+      syncPolling();
+      if (isStewardMode() && !globalThis.document.hidden) void pollStewardState();
+    });
     // U16 走查：运行时切语言（不刷新页面）时，「空闲」这类五态人话字面量是 renderPresence() 在
     // 上一次状态变化那一刻算好焊死的，presenceInputs 没变就再也不会重算 —— 于是停在旧语言。
     // i18n.js 的 setLocale 在 applyTranslations() 之后派一发全局 i18n:change（§ i18n.js 头注），
@@ -433,10 +391,6 @@ export function createStewardShellDomain({
     return 'classic';
   }
 
-  // ── 117c：对话区与递话 ────────────────────────────────────────────────────────
-  // 两个子域在本文件内组装并注入依赖(api/t/state/presence/isStewardMode)，组合根 app.js 一行不加。
-  // 计时器分工(与 C2a「本文件恰好一处 setInterval」互不干扰)：撤回倒计时住 steward-conversation.js，
-  // 预判去抖住 steward-composer.js，本文件仍然只有 avatar 状态轮询这一个 setInterval。
   const presenceApi = Object.freeze({ derive: derivePresence, set: setPresenceInputs, current: () => presenceState });
   const conversation = createStewardConversation({
     api, state, t, presence: presenceApi, isStewardMode,
@@ -462,8 +416,6 @@ export function createStewardShellDomain({
   // 真在建好之前被调到会抛 TDZ,composer 那一侧 try/catch 当「没有焦点」)。
   const composer = createStewardComposer({ api, state, t, isStewardMode, conversation,
     focusThreadId: () => (drawer && typeof drawer.currentSessionId === 'function' ? drawer.currentSessionId() : '') });
-  // 117d：线程抽屉。它自己持有轮询与模式观察者（本文件的 C2a「恰好一处 setInterval」不受影响 ——
-  // 抽屉那一处住在 steward-drawer.js 里，与 avatar 轮询各自独立门控）。
   const drawer = createStewardDrawer({ api, state, t, isStewardMode, applyShellMode, openSession });
   const decisions = createStewardDecisions({ api, t, isStewardMode, eventStream, openThread: id => openInWorkbench(id) });
   // 117e：设置页「管家」页签 + 头部的盾牌与停机键。它是【唯一】写全局 permissionMode 与管家配置的

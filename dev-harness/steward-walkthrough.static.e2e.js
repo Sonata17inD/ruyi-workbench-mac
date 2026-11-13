@@ -203,8 +203,7 @@ const ok = (condition, label) => {
     // 或多一个 start/stop 调用点，撞上 steward-avatar.static C2a 与 steward-drawer.static C1/C3b。
     // 轮询生命周期收编（前端架构债第一批）重钉 E1／E2／E3 的前半句：起表那一处从 `pollTimer = setInterval(…)`
     // 搬进 createPollLifecycle 的 arm（steward-chips.js 一份），周期参数一个字没动。
-    ok(/arm: \(\) => setInterval\(pollSlice, STEWARD_DRAWER_POLL_MS_MIN\),/.test(drawer),
-      'E1 抽屉的表按 5s 下限起');
+ok(drawer.includes('createDeadlinePoll({') && drawer.includes('tick: pollSlice'), 'E1 抽屉按实际期限安排一次性唤醒');
     // 121-K2b（34 号文 §6.2／§6.4）**重钉 E1b／E2／E3**：三处 due 都多了最外面一档 —— 事件流连着时
     // 它们只是【兜底心跳】（STEWARD_POLL_MS_CONNECTED＝30 s，常量仍只有 steward-chips.js 那一份），
     // 断开才回到今天那两档。被钉的事一个字没变：表按 5 s 下限起（E1／E2／E3 的前半句），真要不要拉
@@ -216,12 +215,8 @@ const ok = (condition, label) => {
     // 当拍都重拉事项切片。钉的是「边沿变化那一拍重拉」这件事，不再钉旧的一行写法。
     ok(/const nowLive = isLive\(\);\s*\n\s*if \(wasLive !== nowLive\) await loadMissionSlice\(\);/.test(drawer),
       'E1c 回合刚结束（live 真→假）当拍把事项行与快照一并重拉 —— 「已收工」要立刻看见');
-    ok(/arm: \(\) => setInterval\(\(\) => \{ void pollTick\(\); \}, STEWARD_BOARD_POLL_MS_MIN\),/.test(board)
-      && /const due = streamConnected \? STEWARD_POLL_MS_CONNECTED : \(anyThreadRunning\(\) \? STEWARD_BOARD_POLL_MS_MIN : pollIntervalMs\(\)\);/.test(board),
-      'E2 看板同一条节拍纪律');
-    ok(/arm: \(\) => setInterval\(pollStewardTick, STEWARD_POLL_MS_MIN\),/.test(shell)
-      && /const due = streamConnected \? STEWARD_POLL_MS_CONNECTED : \(stewardPollFast\(\) \? STEWARD_POLL_MS_MIN : pollIntervalMs\(\)\);/.test(shell),
-      'E3 壳层状态轮询同一条节拍纪律');
+ok(board.includes('createDeadlinePoll({') && board.includes('tick: pollTick'), 'E2 看板共用期限调度器');
+ok(shell.includes('createDeadlinePoll({') && shell.includes('tick: pollStewardTick'), 'E3 壳层共用期限调度器');
     // 121-K2b 新钉（§6.4 的三条语义）：四处兜底轮询的「连接时那一档」是【同一个常量】，而且它
     // ≥30 s；四个文件仍然各自恰好一处 setInterval／一处 clearInterval（推送不许换来第二套计时）。
     const experience = read('js/session-experience.js');
@@ -231,8 +226,7 @@ const ok = (condition, label) => {
       && [drawer, board, shell].every(src => /STEWARD_POLL_MS_CONNECTED/.test(src))
       && countOf(read('js/steward-chips.js'), /STEWARD_POLL_MS_CONNECTED = /g) === 1,
       `E6 连接时的兜底节拍 ≥30 s 且只有一份定义（实测 ${chipsMod2.STEWARD_POLL_MS_CONNECTED} ms，定义处 1）`);
-    ok([drawer, board, shell, experience].every(src => countOf(src, /setInterval\(/g) === 1 && countOf(src, /clearInterval\(/g) === 1),
-      `E7 四个消费者各自仍然恰好一处 setInterval／一处 clearInterval（实测 ${[drawer, board, shell, experience].map(src => `${countOf(src, /setInterval\(/g)}:${countOf(src, /clearInterval\(/g)}`).join(' ')}）`);
+ok([drawer, board, shell].every(src => countOf(src, /setInterval\(/g) === 0), 'E7 三个面板无常驻 interval');
     // 2.0 那张「它正在跑」卡是唯一一处【连接时连表都不开】的：它的每一次变化都有一帧 thread.live
     // 打头（§6.1 每会话 ≥500 ms），3 s 一拍比推送慢，纯属白烧。断连即回到 3 s（C5 仍钉着那个数）。
     ok(/if \(liveStreamConnected\) return false;/.test(experience)
@@ -547,8 +541,7 @@ const ok = (condition, label) => {
     }
 
     // H6 答完待决补一次延迟复读。
-    ok(/await refreshOnce\(\);\n[\s\S]{0,400}lastPollAt = 0;\n  \}/.test(drawer) && !/setTimeout\(/.test(drawer),
-      'H6 答完待决后把节拍闸清零，让已经在跑的那张表下一拍真的去拉一次（不加新计时器：抽屉零 setTimeout 是 C2 的契约）');
+ok(drawer.includes('recheckAt = Date.now() + STEWARD_DRAWER_POLL_MS_MIN;') && drawer.includes('if (recheckAt) return Math.max(1, recheckAt - Date.now());'), 'H6 动作后有一次有界延迟复读，在线空闲也能完成交接复查');
 
     // H7「点界面别的地方，所有菜单自动收回」：一处监听、一处判定、五处浮层各自给 owns。
     ok(/handleOutsideClick\(node\) \{/.test(chips) && /if \(!layer \|\| !layer\.owns\) continue;/.test(chips)

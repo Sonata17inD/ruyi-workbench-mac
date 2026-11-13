@@ -61,6 +61,7 @@ test('[D] 旁边没有 src/ 时(= Ruyi.exe 的处境)摘要提示词的实际行
   const lone = path.join(root, 'app');
   fs.mkdirSync(lone);
   fs.copyFileSync(path.join(app, 'server.js'), path.join(lone, 'server.js'));
+  fs.cpSync(path.join(app, 'backend'), path.join(lone, 'backend'), { recursive: true });
   process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'home');
   assert.equal(fs.existsSync(path.join(lone, 'src', 'context-governance-rules.json')), false, '前提:拷贝旁边确实没有 src/');
   const srv = require(path.join(lone, 'server.js'));

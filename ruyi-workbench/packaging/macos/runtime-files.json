@@ -1,7 +1,10 @@
 {
   "schemaVersion": 1,
   "workbench": [
+    "app/backend/desktop-automation.cjs",
+    "app/backend/local-crypto.cjs",
     "app/backend/mac-capabilities.cjs",
+    "app/backend/process-runtime.cjs",
     "app/public/app.js",
     "app/public/css/base.css",
     "app/public/css/components/chat-composer.css",
@@ -45,6 +48,7 @@
     "app/public/js/chat-stream-runtime.js",
     "app/public/js/composer-voice.js",
     "app/public/js/confirm-panel.js",
+    "app/public/js/deadline-poll.js",
     "app/public/js/event-stream.js",
     "app/public/js/external-bot-setup.js",
     "app/public/js/external-bots.js",

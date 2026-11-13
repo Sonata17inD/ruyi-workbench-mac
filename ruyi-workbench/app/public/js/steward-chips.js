@@ -1,20 +1,6 @@
 'use strict';
 import { providerModels, agentModels } from './model-catalog.js';
 
-// 第117波 117d：快切 chip（权限／模型／引擎）。
-//
-// §8.6「每条线程一个『权限』chip，在看板行、抽屉、2.0 视窗顶栏三处是【同一控件】」——所以它住在
-// 自己的模块里，而不是抽屉里：117d 抽屉、117g 的 2.0 顶栏、117h 的看板行各自 mount 一份实例，
-// 读同一份数据、走同一条 PATCH，改哪里都是改会话本身（没有第二套状态）。
-//
-// 边界：
-//   · 本模块是【唯一】改线程 permissionMode / engineRoute 的地方（抽屉不自己实现 PATCH）；
-//   · 零 innerHTML（全部 createElement + textContent）；零 setInterval / setTimeout —— chip 不轮询，
-//     数据由宿主（抽屉的刷新循环）用 setSession() 喂进来；
-//   · 切「全自动」必须先出二次确认（§8.6 五条人话），确认后才带 confirm:true 发出；服务端
-//     （13d PATCH /api/sessions/:id）还有同一道门，UI 弹没弹过窗它不信。
-//   · 模型／引擎的候选来源【复用经典壳那一份】：Claude 侧是 state.status.models，provider 侧是
-//     state.config.providers[].models（navigation-controls.js 的模型菜单读的就是这两处），不另写一份。
 
 // ── 117j UX-F3/F4（§8.8 键盘可达）：Esc 逐层 ────────────────────────────────────────────
 // 修前的两个毛病：
@@ -307,57 +293,11 @@ export function writeNote(id, text) {
   return target;
 }
 
-// 33 号文 §4「轮询常量收进叶子」：管家三处轮询（壳层状态、看板、抽屉）各写了一份同一组字面量 ——
-// 下限 5000（与 01-config 的 stewardPollMs 同一 clamp）、容差 250（setInterval 会比标称早几毫秒
-// 回来，不留容差就会整整推迟一拍）、默认 5000（配置还没到达时的兜底）。三者都以 chips.js 为既有
-// 依赖，收进来不新增任何模块依赖边。三处的【本地名字】刻意保留（STEWARD_DRAWER_POLL_MS_MIN 等）：
-// 三把逐字锁钉的是 pollStewardTick／pollSlice／pollTick 的函数体、起表那一处与 clamp 写法，
-// 改名等于把锁全钉红；这一项收的是【值】不是名字 —— 本模块是这组数字的唯一来源。
 export const STEWARD_POLL_MS_MIN = 5000;
 export const STEWARD_POLL_MS_DEFAULT = 5000;
 export const STEWARD_POLL_DUE_SLACK_MS = 250;
-// 121-K2b（34 号文 §6.2「三条轮询保留为兜底」）：事件流连着的时候，轮询不再是「怎么知道事情变了」
-// 的路 —— 它只是【兜底心跳】（推送漏了、环补不上、ETag 口径与推送不同步时的自愈）。所以连接正常
-// 时四处统一降到 30 s，断开时各自恢复今天的节奏（5 s 下限 / config.stewardPollMs）。
-// 这个数只有这一份：四个消费者（壳层／看板／抽屉／2.0 在途卡）都从本叶子 import，不各写一遍。
-// 表（setInterval 的周期）一个字没动 —— 变的只是每一拍自己判「该不该拉」的那个 due。
 export const STEWARD_POLL_MS_CONNECTED = 30000;
 
-// 轮询生命周期（壳层状态／看板／抽屉三处共用）：三个模块原来各手写一份逐字同形的
-// `let pollTimer = 0` ＋ startPolling／stopPolling／syncPolling —— 幂等启停、唯一门控、停表后归零。
-// 收成这一份之后，三处的差异只剩真正不同的那几样，各自当参数传进来：
-//   · shouldRun —— 门控（壳层／看板：管家模式 && 页面可见；抽屉多一条「抽屉开着」）；
-//   · onStart   —— 起表那一刻要不要先拉一次（只有壳层要：pollStewardState 当场一次，再起表）；
-//   · arm／disarm —— 表本身。**计时器仍由调用方起**：setInterval／clearInterval 各自在三个模块里恰好
-//     一处（F1／C1／C2a 那几把锁钉的纪律不变），本模块照旧零 setInterval／setTimeout（chip 不轮询）。
-// 节拍（due、事件流连着时的 30 s 兜底、容差）不在这里：那是每一拍 tick 自己判的，三处的判据与水位
-// 各不相同（壳层回包才推水位、抽屉拉之前就推），所以留在各自模块里原样不动。
-export function createPollLifecycle({ shouldRun, arm, disarm, onStart = null }) {
-  let timer = 0;
-  function stop() {
-    if (!timer) return;
-    disarm(timer);
-    timer = 0;
-  }
-  function start() {
-    if (timer) return;
-    if (onStart) onStart();
-    timer = arm();
-  }
-  function sync() {
-    if (shouldRun()) start();
-    else stop();
-  }
-  return Object.freeze({ start, stop, sync, isRunning: () => Boolean(timer) });
-}
-
-// 33 号文 §4「Enter/isComposing 守卫 ×3 抽 bindEnterToSubmit」：管家壳里「回车发送」的规矩原本在
-// 三处各写一遍（composer 一处、抽屉底部输入框与问答框各一处），三份逐字同形。这里收成一处判据：
-//   · Enter 且不按 Shift（Shift+Enter 在文本框里换行）；
-//   · 且 **不在输入法组合中**（event.isComposing）—— 这是中文优先的产品里最要紧的一条：中文用户
-//     选候选词按的那一下回车，绝不能把半句话发出去（117m-A6 用一次真事故换来的）。
-// isSubmitEnter 是那条纯判据；bindEnterToSubmit 是它的「整框接线」形态（抽屉两次用）。composer 的
-// keydown 还兼管 Esc 与 Tab，所以它读判据、不换监听器 —— 判据仍然只有一份。
 export function isSubmitEnter(event) {
   return Boolean(event) && event.key === 'Enter' && !event.shiftKey && !event.isComposing;
 }

@@ -260,13 +260,8 @@ def run_command_output():
 
 def lazy_imports():
     print("== ⑤ 重依赖惰性导入 ==")
-    # playwright / reportlab are this surface's; matplotlib / pptx (Office modules) and cv2 (vision; pyautogui's
-    # pyscreeze imports cv2 eagerly anyway) are made lazy by their owners — reported here, not enforced.
-    heavy = [m for m in ("playwright", "reportlab") if m in sys.modules]
-    check(not heavy, f"server import 不再加载 {heavy or 'playwright/reportlab'}")
-    late = [m for m in ("matplotlib", "pptx", "cv2") if m in sys.modules]
-    if late:
-        print(f"  [info] 仍在 import 时加载: {late} (各模块 owner 负责惰性化)")
+    heavy = [m for m in ("playwright", "reportlab", "cv2", "numpy") if m in sys.modules]
+    check(not heavy, f"server import leaves optional native libraries unloaded: {heavy}")
     import importlib.util as iu
     import ai_computer_control.tools.browser as browser
     check(browser._AVAILABLE == (iu.find_spec("playwright") is not None),

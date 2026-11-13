@@ -706,8 +706,8 @@ try {
     `D3 断连后管家视角的 /api/missions 回到 config.stewardPollMs=${POLL_MS} 那一档：${Math.round((Date.now() - denseStart) / 1000)} s 里 ${densePolls} 拍（≥3；连着时同样长度的窗口只有 ${quietPolls} 拍）`);
   const timersNow = await cdp.evaluate(`window.__ruyiLiveIntervals()`);
   const stewardTables = (Array.isArray(timersNow) ? timersNow : []).filter(ms => ms === STEWARD_TICK_MS).length;
-  ok(stewardTables >= 1 && stewardTables <= 3,
-    `D4 兜底期间表仍然只有各模块自己那一处（壳层／看板／抽屉，最多 3 张 ${STEWARD_TICK_MS}ms 表；实测 ${JSON.stringify(timersNow)}）`);
+  ok(stewardTables === 0,
+    `D4 断连恢复使用一次性期限，无 ${STEWARD_TICK_MS}ms interval；实测 ${JSON.stringify(timersNow)}）`);
 } catch (error) {
   fail += 1;
   console.log('FAIL 夹具异常: ' + (error && error.message ? error.message : String(error)));
