@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 91 | 3829 | 3495 | 638 | 66 | 0 | 1 |
+| 91 | 3824 | 3492 | 636 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -56,7 +56,7 @@
 | 38 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
 | 39 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
 | 40 | `06-provider-engine.js` | engine | 142 | 62 | 18 |
-| 41 | `06b-prompt-registry.js` | engine | 10 | 1 | 1 |
+| 41 | `06b-prompt-registry.js` | engine | 5 | 0 | 0 |
 | 42 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 43 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 44 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
@@ -73,7 +73,7 @@
 | 55 | `09-workflow.js` | orchestration | 32 | 271 | 28 |
 | 56 | `10-context-governance.js` | orchestration | 228 | 106 | 20 |
 | 57 | `11-native-tools.js` | tools | 149 | 49 | 9 |
-| 58 | `11b-file-text-io.js` | tools | 1 | 2 | 1 |
+| 58 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 59 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
 | 60 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
 | 61 | `12-tool-dispatch.js` | tools | 74 | 136 | 22 |
@@ -255,7 +255,6 @@
 | `06-provider-engine.js` | `06e-mission-domain.js` | forward | `buildMissionPromptSection` |
 | `06-provider-engine.js` | `07-autonomy.js` | forward | `toolPackForName` |
 | `06-provider-engine.js` | `11-native-tools.js` | forward | `probeRgAsync` |
-| `06b-prompt-registry.js` | `00-boot.js` | backward | `text` |
 | `06c-agent-loop-hooks.js` | `00-boot.js` | backward | `makeId` |
 | `06c-agent-loop-hooks.js` | `04-permission-runtime.js` | backward | `logEvent`, `redact` |
 | `06d-memory-domain.js` | `00-boot.js` | backward | `SKILL_ID_RE`, `agentCliHomes`, `apiFailure`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `fsp`, `json`, `makeId`, `neutralizeFenceTag`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text`, `tildePath` |
@@ -392,7 +391,6 @@
 | `11-native-tools.js` | `04-permission-runtime.js` | backward | `activeChildren`, `killChildTree`, `logEvent`, `redact` |
 | `11-native-tools.js` | `06-provider-engine.js` | backward | `markNetworkOnline`, `networkAnchors`, `probeAny` |
 | `11-native-tools.js` | `07-autonomy.js` | backward | `AgentWorktreeHooks`, `MAIL_TEXT_MAX`, `activeAgentRuns`, `neutralizeInjectedPrefixes` |
-| `11b-file-text-io.js` | `00-boot.js` | backward | `cp`, `text` |
 | `11c-file-visual-io.js` | `00-boot.js` | backward | `cp`, `paths` |
 | `11c-file-visual-io.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `11d-media-inspection.js` | `00-boot.js` | backward | `StringDecoder` |
@@ -752,7 +750,7 @@
 
 ## 强连通分量
 
-1. `00-boot.js` ↔ `01-config.js` ↔ `02-session-store.js` ↔ `03-bridge-guard.js` ↔ `04-desktop-shell.js` ↔ `04-permission-runtime.js` ↔ `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `05c-kimi-search-policy.js` ↔ `05d-kimi-prompt-parts.js` ↔ `06-provider-engine.js` ↔ `06b-prompt-registry.js` ↔ `06c-agent-loop-hooks.js` ↔ `06d-memory-domain.js` ↔ `06e-mission-domain.js` ↔ `06f-autonomy-grants.js` ↔ `06g-resource-leases.js` ↔ `07-autonomy.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `09b-replan-ledger.js` ↔ `09d-token-estimation.js` ↔ `10-context-governance.js` ↔ `11-native-tools.js` ↔ `13-http-router.js` ↔ `13b-api-domain-routes.js` ↔ `13d-core-domain-routes.js` ↔ `13e-pretender-index.js` ↔ `13f-native-tool-schemas.js` ↔ `13s-scheduler.js`
+1. `00-boot.js` ↔ `01-config.js` ↔ `02-session-store.js` ↔ `03-bridge-guard.js` ↔ `04-desktop-shell.js` ↔ `04-permission-runtime.js` ↔ `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `05c-kimi-search-policy.js` ↔ `05d-kimi-prompt-parts.js` ↔ `06-provider-engine.js` ↔ `06c-agent-loop-hooks.js` ↔ `06d-memory-domain.js` ↔ `06e-mission-domain.js` ↔ `06f-autonomy-grants.js` ↔ `06g-resource-leases.js` ↔ `07-autonomy.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `09b-replan-ledger.js` ↔ `09d-token-estimation.js` ↔ `10-context-governance.js` ↔ `11-native-tools.js` ↔ `13-http-router.js` ↔ `13b-api-domain-routes.js` ↔ `13d-core-domain-routes.js` ↔ `13e-pretender-index.js` ↔ `13f-native-tool-schemas.js` ↔ `13s-scheduler.js`
 
 ## 维护规则
 

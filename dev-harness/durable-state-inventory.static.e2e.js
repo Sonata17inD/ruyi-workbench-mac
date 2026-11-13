@@ -31,7 +31,9 @@ try {
   // background-jobs/<sessionId>.json(child close 同步事件内串行写,已在 durable-state-inventory.js 登记)。
   // 工具集优化批 F11:11b 的 atomicWriteFile 给【用户文件】做同目录 tmp+rename(名字带 pid+随机后缀,不是固定 tmp,
   // 也不是工作台自有的 JSON 状态,故不进清册),计数 5 -> 6。
-  ok((server.match(/\+ '\.tmp'/g) || []).length === 6, 'no undeclared fixed-tmp JSON writer remains');
+  const backendDir = path.join(ROOT, 'ruyi-workbench', 'app', 'backend');
+  const runtimeSource = server + fs.readdirSync(backendDir).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backendDir, name), 'utf8')).join('\n');
+  ok((runtimeSource.match(/\+ '\.tmp'/g) || []).length === 6, 'no undeclared fixed-tmp JSON writer remains');
 } catch (error) { console.error(error.stack || error); failures++; }
 
 if (failures) process.exitCode = 1;

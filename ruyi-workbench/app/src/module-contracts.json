@@ -6089,26 +6089,13 @@
       "file": "06b-prompt-registry.js",
       "layer": "engine",
       "provides": [
-        "MEMORY_PRECEDENCE_EN",
-        "MEMORY_PRECEDENCE_ZH",
         "PROMPT_EN",
         "PROMPT_PACK_VERSION",
         "PROMPT_ZH",
-        "REVERT_NOTICE_PATHS_MAX",
-        "REVERT_NOTICE_TURNS_MAX",
         "getPromptPack",
-        "revertNoticeNames",
         "revertNoticeTurns"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "06c-agent-loop-hooks.js",
@@ -12520,22 +12507,7 @@
       "provides": [
         "FileTextIo"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "11c-file-visual-io.js",

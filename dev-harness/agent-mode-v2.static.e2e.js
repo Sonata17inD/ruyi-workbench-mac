@@ -150,7 +150,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ⑧ 提示词
 {
-  const s06b = src('06b-prompt-registry.js');
+  const s06b = src('../backend/prompt-registry.cjs');
   ok(!/spawn_agent/.test(s06b), '⑧ 06b 不再提 spawn_agent');
   ok(/orchestrate_agents\(\{task, background:true\}\)/.test(s06b) && /agent_result\(\{runId, nodeId\?\}\)/.test(s06b), '⑧ 06b asyncWork 讲 background:true 与 agent_result');
   const s09 = src('09-workflow.js');

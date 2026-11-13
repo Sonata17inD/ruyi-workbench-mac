@@ -199,7 +199,7 @@ const PRECEDENCE_MARK = '用户在本次对话里明确提出的要求，优先�
 {
   // 机械锁:四个入口【共用一个常量】。加第五个入口而忘了接这一句 -> 这里数不上,红。
   // 判据钉「引用次数」而不是「字出现过」:把常量改成各写一遍,数也会变。
-  const pack = fs.readFileSync(path.join(SRC, '06b-prompt-registry.js'), 'utf8');
+  const pack = fs.readFileSync(path.join(SRC, '../backend/prompt-registry.cjs'), 'utf8');
   const defsZh = (pack.match(/^const MEMORY_PRECEDENCE_ZH = /gm) || []).length;
   const defsEn = (pack.match(/^const MEMORY_PRECEDENCE_EN = /gm) || []).length;
   ok(defsZh === 1 && defsEn === 1, `B7 中英各恰好【一处】定义(实得 ${defsZh}/${defsEn};两处定义 = 又开始各写各的)`);

@@ -26,7 +26,7 @@ const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 
 const manifest = JSON.parse(read('manifest.json'));
 const src06 = read('06-provider-engine.js');
-const src06b = read('06b-prompt-registry.js');
+const src06b = read('../backend/prompt-registry.cjs');
 const src06i = read('../backend/steward-core.cjs');
 const src06k = read('06k-config-patch.js'); // 架构还债批 2 B2:applyConfigPatch(消费 StewardHooks.arbiterRefresh)从 13 搬到这里
 const src09 = read('09-workflow.js');

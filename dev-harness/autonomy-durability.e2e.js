@@ -117,7 +117,9 @@ function capturesContaining(dir, needle) {
     // ⑥工具集优化批 F11:11b-file-text-io 的 atomicWriteFile —— 给【用户文件】(file_write/file_edit)做同目录
     // tmp+rename,tmp 名带 pid+随机后缀(非固定名),不是工作台自有的 JSON 状态,不适用 atomicWriteJson。
     // 任何人新增第 7 处手写 tmp 写点 → 此断言红,逼着走 atomicWriteJson 或登记专用协议。
-    const tmpSites = (src.match(/\+ '\.tmp'/g) || []).length;
+    const backendDir = path.join(WB, 'app', 'backend');
+    const runtimeSource = src + fs.readdirSync(backendDir).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backendDir, name), 'utf8')).join('\n');
+    const tmpSites = (runtimeSource.match(/\+ '\.tmp'/g) || []).length;
     ok(tmpSites === 6, 'B 手写 tmp 写点=6(白名单豁免;实 ' + tmpSites + ')');
     ok(!/dest \+ '\.' \+ process\.pid \+ '\.tmp'/.test(src), 'B saveAgentRun 旧 pid-only tmp 模式已清零');
     ok(/AGENT_RUN_PERSIST_DEGRADED_AFTER = 3/.test(src) && /AGENT_RUN_PERSIST_PAUSE_AFTER = 8/.test(src), 'B 持久化退化阈值常量在(3/8)');

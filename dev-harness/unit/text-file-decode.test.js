@@ -22,7 +22,7 @@ const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'
 after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { /* ignore */ } try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ } });
 
 // 11b 是零出边的叶子模块:单独求值就能拿到 FileTextIo(只需要 require)。
-const FileTextIo = vm.runInNewContext(fs.readFileSync(path.join(SRC, '11b-file-text-io.js'), 'utf8') + '\nFileTextIo', { require, Buffer, TextDecoder, process, console });
+const { FileTextIo } = require('../../ruyi-workbench/app/backend/file-text-io.cjs');
 // 00-boot 里 decodeTextFileBytes 是一个自包含函数:从源码切出来单独求值,用来直测 complete=false(附件路径只会传 true)。
 const bootSrc = fs.readFileSync(path.join(SRC, '00-boot.js'), 'utf8');
 const fnStart = bootSrc.indexOf('function decodeTextFileBytes(');

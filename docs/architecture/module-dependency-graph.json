@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 91,
-    "providedSymbols": 3829,
-    "requiredSymbols": 3495,
-    "edges": 638,
+    "providedSymbols": 3824,
+    "requiredSymbols": 3492,
+    "edges": 636,
     "forwardEdges": 66,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -6183,26 +6183,13 @@
       "layer": "engine",
       "note": "第51波51c-b(04 Phase B):提示词外置 i18n registry(PROMPT_PACK_VERSION + PROMPT_ZH 中文包,Phase1 中文版骨架)",
       "provides": [
-        "MEMORY_PRECEDENCE_EN",
-        "MEMORY_PRECEDENCE_ZH",
         "PROMPT_EN",
         "PROMPT_PACK_VERSION",
         "PROMPT_ZH",
-        "REVERT_NOTICE_PATHS_MAX",
-        "REVERT_NOTICE_TURNS_MAX",
         "getPromptPack",
-        "revertNoticeNames",
         "revertNoticeTurns"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "06c-agent-loop-hooks.js",
@@ -12648,22 +12635,7 @@
       "provides": [
         "FileTextIo"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "11c-file-visual-io.js",
@@ -30837,14 +30809,6 @@
       "direction": "forward"
     },
     {
-      "from": "06b-prompt-registry.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "text"
-      ],
-      "direction": "backward"
-    },
-    {
       "from": "06c-agent-loop-hooks.js",
       "to": "00-boot.js",
       "symbols": [
@@ -32522,15 +32486,6 @@
         "MAIL_TEXT_MAX",
         "activeAgentRuns",
         "neutralizeInjectedPrefixes"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "11b-file-text-io.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "cp",
-        "text"
       ],
       "direction": "backward"
     },
@@ -37213,7 +37168,6 @@
       "05c-kimi-search-policy.js",
       "05d-kimi-prompt-parts.js",
       "06-provider-engine.js",
-      "06b-prompt-registry.js",
       "06c-agent-loop-hooks.js",
       "06d-memory-domain.js",
       "06e-mission-domain.js",
@@ -37252,7 +37206,6 @@
     "02-session-store.js->04-desktop-shell.js",
     "02-session-store.js->04-permission-runtime.js",
     "02-session-store.js->06-provider-engine.js",
-    "02-session-store.js->06b-prompt-registry.js",
     "02-session-store.js->06f-autonomy-grants.js",
     "02-session-store.js->07-autonomy.js",
     "02-session-store.js->08-agent-runs.js",
@@ -37279,7 +37232,6 @@
     "05-claude-engine.js->04-permission-runtime.js",
     "05-claude-engine.js->05b-kimi-bridge.js",
     "05-claude-engine.js->06-provider-engine.js",
-    "05-claude-engine.js->06b-prompt-registry.js",
     "05-claude-engine.js->06c-agent-loop-hooks.js",
     "05-claude-engine.js->06d-memory-domain.js",
     "05-claude-engine.js->06e-mission-domain.js",
@@ -37308,12 +37260,10 @@
     "06-provider-engine.js->03-bridge-guard.js",
     "06-provider-engine.js->04-permission-runtime.js",
     "06-provider-engine.js->05-claude-engine.js",
-    "06-provider-engine.js->06b-prompt-registry.js",
     "06-provider-engine.js->06d-memory-domain.js",
     "06-provider-engine.js->06e-mission-domain.js",
     "06-provider-engine.js->07-autonomy.js",
     "06-provider-engine.js->11-native-tools.js",
-    "06b-prompt-registry.js->00-boot.js",
     "06c-agent-loop-hooks.js->00-boot.js",
     "06c-agent-loop-hooks.js->04-permission-runtime.js",
     "06d-memory-domain.js->00-boot.js",
@@ -37323,12 +37273,10 @@
     "06d-memory-domain.js->04-permission-runtime.js",
     "06d-memory-domain.js->05-claude-engine.js",
     "06d-memory-domain.js->06-provider-engine.js",
-    "06d-memory-domain.js->06b-prompt-registry.js",
     "06e-mission-domain.js->00-boot.js",
     "06e-mission-domain.js->02-session-store.js",
     "06e-mission-domain.js->03-bridge-guard.js",
     "06e-mission-domain.js->04-permission-runtime.js",
-    "06e-mission-domain.js->06b-prompt-registry.js",
     "06f-autonomy-grants.js->00-boot.js",
     "06f-autonomy-grants.js->03-bridge-guard.js",
     "06f-autonomy-grants.js->04-permission-runtime.js",
@@ -37368,7 +37316,6 @@
     "09-workflow.js->04-permission-runtime.js",
     "09-workflow.js->05-claude-engine.js",
     "09-workflow.js->06-provider-engine.js",
-    "09-workflow.js->06b-prompt-registry.js",
     "09-workflow.js->06c-agent-loop-hooks.js",
     "09-workflow.js->06d-memory-domain.js",
     "09-workflow.js->06f-autonomy-grants.js",
