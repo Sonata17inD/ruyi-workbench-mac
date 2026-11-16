@@ -29,6 +29,7 @@
     "app/backend/scheduler-core.cjs",
     "app/backend/server-ownership.cjs",
     "app/backend/steward-core.cjs",
+    "app/backend/session-bodies.cjs",
     "app/backend/session-executions.cjs",
     "app/backend/storage-stat.cjs",
     "app/backend/turn-segments.cjs",
