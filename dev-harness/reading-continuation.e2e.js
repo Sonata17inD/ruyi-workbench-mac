@@ -1,4 +1,5 @@
 'use strict';
+const { extractMainText } = require('../ruyi-workbench/app/backend/html-content.cjs');
 // Offline continuation through the actual model budget, native wrappers, and CLI MCP.
 require('./lib/self-isolate-home.js');
 const fs = require('fs'), os = require('os'), path = require('path'), http = require('http'), cp = require('child_process'), crypto = require('crypto');
@@ -59,7 +60,7 @@ let mcp;
 try {
   server = http.createServer((req, res) => { hits++; res.writeHead(200, { 'content-type': req.url === '/oversize' || req.url === '/escaped' ? 'text/plain; charset=utf-8' : 'text/html; charset=utf-8' }); res.end(req.url === '/oversize' ? truncatedSource : req.url === '/escaped' ? escapedBody : html); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); url = `http://127.0.0.1:${server.address().port}/page`;
-  const expected = srv.extractMainText(html, { baseUrl: url }).text;
+  const expected = extractMainText(html, { baseUrl: url }).text;
   ok(expected.length > 400000, 'fixture exceeds the former 400K cache boundary');
   fake = await startFakeProvider({ handler(req) {
     if (!req.stream) return textFrames('done');

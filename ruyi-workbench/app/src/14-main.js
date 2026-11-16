@@ -587,15 +587,12 @@ module.exports = {
   AUTOEXEC_DENYLIST,
   // v0.9-S9: web_search / web_fetch — SSRF guard + main-text extraction + cache (exposed for e2e direct units).
   ssrfCheck,
-  extractMainText,
   webCachePath,
   readWebCache,
   writeWebCache,
   webFetch,
   webSearch,
   // v1.1-W1a (T1/T2/T3): fetch error classification + multi-target probe + builtin HTML search — exposed for e2e units.
-  classifyFetchError,
-  webFetchFailMessage,
   // v1.1-W2 (T1): zero-dep ZIP codec + download dest guard — exposed for tools-v3 e2e direct units.
   crc32,
   zipWrite,
@@ -604,8 +601,6 @@ module.exports = {
   guardDownloadDest,
   probeAny,
   networkAnchors,
-  parseBingHtml,
-  parseBaiduHtml,
   // Resource-aware DAG scheduler primitives (pure normalization/conflict checks plus lease integration tests).
   normalizeAgentResource,
   normalizeAgentResources,

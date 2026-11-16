@@ -1,4 +1,5 @@
 'use strict';
+const { parseBingHtml, parseBaiduHtml } = require('../../ruyi-workbench/app/backend/html-content.cjs');
 // 内置免费搜索(searchBackend.type = 'builtin':Bing CN 为主、百度补充)的结果质量。夹具按两家真实页面的结构写
 // (标题块、点击跟踪链接、广告位、自家聚合卡片、带高亮词的摘要、人机验证页),全部走本机假服务器,不外连。
 //   [Q1] Bing:只认 b_algo 里 <h2> 的链接;ck/a 跳转链接解出原网址;广告、Bing 自家页面、没有标题的块不收;
@@ -57,7 +58,7 @@ test('[Q1] Bing:标题链接、跳转解码、广告与噪声不收、摘要干�
     '<li class="b_algo b_adTop"><h2><a href="https://ads.example/top">顶部广告</a></h2><p class="b_adSlug">广告</p></li>',
     bingAlgo('第二条真结果', 'https://example.com/second', '第二条摘要', { slug: false }),
   ], BING_TAIL);
-  const out = srv.parseBingHtml(html, 10);
+  const out = parseBingHtml(html, 10);
   assert.deepEqual(out.map(r => r.url), ['https://nodejs.org/api/fs.html', 'https://example.com/second'], '只留两条真结果,跳转链接解成原网址');
   assert.equal(out[0].title, 'Node.js fs.rename EXDEV 跨盘报错');
   assert.equal(out[0].snippet, '跨设备 rename 会报 EXDEV,需要先复制再删除。', '摘要去掉「网页」角标、不带深链与 CSS / JS');
@@ -68,7 +69,7 @@ test('[Q2] 百度:聚合卡片与广告不收、mu 真实网址、摘要不截�
   const html = BAIDU_JUNK
     + baiduResult('Node.js <em>fs.rename</em> 报 EXDEV 怎么办', 'https://blog.example.cn/post/1', '原因是跨分区,<em>rename</em> 不能跨设备,改用 <em>copyFile</em> 加 unlink 即可解决。')
     + baiduResult('没有 mu 的结果', 'https://ignored.example', '只有跳转链接', { mu: false, id: 2 });
-  const out = srv.parseBaiduHtml(html, 10);
+  const out = parseBaiduHtml(html, 10);
   assert.equal(out.length, 2, `只留两条自然结果(${JSON.stringify(out.map(r => r.title))})`);
   assert.equal(out[0].url, 'https://blog.example.cn/post/1', '网址取 mu 属性里的真实网址');
   assert.match(out[0].snippet, /跨分区,rename 不能跨设备,改用 copyFile 加 unlink 即可解决/, `摘要完整(${out[0].snippet})`);
@@ -132,4 +133,54 @@ test('[Q5] 人机验证页:如实说明,不说「没有结果」', async () => {
   assert.equal(r.blocked, true);
   assert.match(r.note, /人机验证/);
   assert.match(r.note, /设置→搜索后端/);
+});
+
+test('内置搜索取消后不启动请求、分页或备用引擎', async () => {
+  const { createWebTools } = require('../../ruyi-workbench/app/backend/web-tools.cjs');
+  const web = createWebTools({ cacheDirectory: root, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
+  for (const preAborted of [true, false]) {
+    const controller = new AbortController();
+    let requests = 0;
+    const server = http.createServer((req, res) => {
+      requests++;
+      controller.abort();
+      res.end('<html><body>No results</body></html>');
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
+    try {
+      if (preAborted) controller.abort();
+      const result = await web.webSearch({ query: 'cancel me', timeoutMs: 500 },
+        { searchBackend: { type: 'builtin', baseUrl, baiduBaseUrl: baseUrl } }, { signal: controller.signal });
+      assert.equal(result.ok, false);
+      assert.equal(result.failClass, 'aborted');
+      assert.equal(requests, preAborted ? 0 : 1);
+    } finally {
+      server.closeAllConnections();
+      await new Promise(resolve => server.close(resolve));
+    }
+  }
+});
+
+test('搜索后端失败后，内置回退沿用取消信号且不再问备用引擎', async () => {
+  const { createWebTools } = require('../../ruyi-workbench/app/backend/web-tools.cjs');
+  const web = createWebTools({ cacheDirectory: root, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
+  const controller = new AbortController();
+  const seen = [];
+  const server = http.createServer((req, res) => {
+    seen.push(req.method);
+    if (req.method === 'POST') { res.writeHead(503); res.end('{}'); }
+    else { controller.abort(); res.end('<html>No results</html>'); }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const result = await web.webSearch({ query: 'fallback cancel', timeoutMs: 500 },
+      { searchBackend: { type: 'tavily', baseUrl, builtinBaseUrl: baseUrl, baiduBaseUrl: baseUrl, fallbackToBuiltin: true } }, { signal: controller.signal });
+    assert.equal(result.failClass, 'aborted');
+    assert.deepEqual(seen, ['POST', 'GET']);
+  } finally {
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
 });

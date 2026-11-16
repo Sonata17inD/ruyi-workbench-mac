@@ -677,7 +677,7 @@ const STEWARD_TOOL_HANDLERS = {
 const { FILE_TOOL_HANDLERS, ARCHIVE_TOOL_HANDLERS, fileToolBeforeForCheckpoint, fileToolPrivacySourceOptions, fileToolFsFailure, guardedWalkRoot, respellWalkPaths, toolRootProblem } = require('./backend/file-tools.cjs').createFileTools({
   paths: { fileToolWorkspaceDir, resolveFileToolPath, resolveFileToolRoot, guardFileToolPath, pathWithinRoot, isSensitiveDataPath, isSensitiveHardlinkAlias, sensitiveFileIdentities },
   checkpoints: { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx },
-  source: { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, READ_PAGE_JSON_BUDGET, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews },
+  source: { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews },
   search: { assertSearchExecution, classifyListPattern, explicitAllowDirs, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint, levenshtein },
   archive: { zipCollectEntries },
   runtime: { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall: (...args) => toolCall(...args) },

@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3610,
-    "requiredSymbols": 3514,
+    "providedSymbols": 3556,
+    "requiredSymbols": 3508,
     "edges": 659,
     "forwardEdges": 67,
     "duplicateProvides": 0,
@@ -11641,7 +11641,6 @@
         "BINARY_READ_OFFICE",
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
-        "BROWSER_UA",
         "BROWSE_IGNORE_DIRS",
         "CODE_SYMBOL_SUFFIXES",
         "DATA_PROFILE_JSON_FULL_BYTES",
@@ -11666,22 +11665,15 @@
         "GIT_TIMEOUT_MAX_MS",
         "GIT_UNTRACKED_LIST_MAX",
         "HARD_IGNORE_DIRS",
-        "HTML_BLOCK_TAGS",
-        "HTML_DROP_ROLES",
-        "HTML_DROP_TAGS",
-        "HTML_MAX_LINKS",
-        "HTML_VOID_TAGS",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
         "NativeSourceHooks",
         "PATH_MATCH_WORKER_SRC",
         "PROFILE_CELL_MAX_CHARS",
         "PROFILE_DELIMITER_NAMES",
-        "READ_PAGE_JSON_BUDGET",
         "REGEX_SCAN_MAX_MS",
         "REGEX_SCAN_WORKER_SRC",
         "RG_REPAIR_MAX_FILES",
-        "SEARCH_CJK_RE",
         "SEARCH_DEFAULT_MAX_FILE_BYTES",
         "SEARCH_JS_DEFAULT_MAX_FILES",
         "SEARCH_MAX_FILE_BYTES_CEILING",
@@ -11706,10 +11698,6 @@
         "WALK_PATTERN_BATCH",
         "WALK_PATTERN_BUDGET_MS",
         "WALK_PATTERN_MAX_CHARS",
-        "WEB_CACHE_HARD_MAX_ENTRIES",
-        "WEB_FETCH_DEFAULT_CHARS",
-        "WEB_FETCH_MAX_CHARS",
-        "WEB_FETCH_PAGE_TTL_MS",
         "_rgProbe",
         "_rgProbeInflight",
         "adaptiveCatalogForMcp",
@@ -11723,12 +11711,7 @@
         "binaryReadHint",
         "bindMacShellProtocol",
         "boundedReadPage",
-        "browserHeaders",
         "buildIgnoreMatcher",
-        "builtinSearch",
-        "charsetFromContentType",
-        "classifyFetchError",
-        "classifyFetchedBody",
         "classifyListPattern",
         "claudeMdAudit",
         "closeSearchWorker",
@@ -11744,25 +11727,17 @@
         "debugHypTrimTests",
         "debugHypWarnings",
         "debugHypothesis",
-        "decodeBingRedirect",
-        "decodeEntities",
-        "decodeHtmlBody",
         "decodeProfileText",
-        "deepseekWebRequest",
         "dependencyInventory",
         "describeFsWriteError",
-        "destroyBodyDecoders",
         "detectProfileDelimiter",
         "discoverPrunedDirs",
-        "dnsResolvesToPrivate",
         "docsSearch",
         "downloadFileNameFrom",
         "escapeRegexLiteral",
-        "evictWebCacheOverCap",
         "explicitAllowDirs",
         "explicitSegmentsOfGlob",
         "explicitSegmentsOfRegex",
-        "extractMainText",
         "findExternalAssetHost",
         "frontendAudit",
         "genShellId",
@@ -11782,15 +11757,6 @@
         "guardDownloadDest",
         "hasRg",
         "hasRgAsync",
-        "htmlAttr",
-        "htmlBlocksByClass",
-        "htmlClassTokens",
-        "htmlElementInner",
-        "htmlFragmentToText",
-        "htmlRenderTokens",
-        "htmlResolveLink",
-        "htmlTagAttr",
-        "htmlTokenize",
         "httpGetGuarded",
         "httpRequest",
         "ignoreGlobsForRg",
@@ -11799,23 +11765,17 @@
         "isBinaryReadPath",
         "isHighSurrogate",
         "isLowSurrogate",
-        "isStrictUtf8",
         "judgeSecretValue",
         "killAllShellSessions",
         "levenshtein",
         "macShellSendChains",
         "markAgentMessageDelivered",
         "maybeGroup",
-        "mergeSearchResults",
         "normalizeGlobPatternForRoot",
         "normalizeProfileDelimiter",
         "normalizeSearchPattern",
         "numericStats",
-        "openHttpRequest",
-        "parseBaiduHtml",
-        "parseBingHtml",
         "parseCsv",
-        "parseProxyUrl",
         "patternMayMatchNonAscii",
         "peekRgProbe",
         "persistBackgroundJob",
@@ -11837,8 +11797,6 @@
         "profileGb18030Decoder",
         "profileJsonArrayHead",
         "profileJsonColumns",
-        "proxyForUrl",
-        "proxyNoProxyMatches",
         "prunedDirsHint",
         "readBackgroundJobs",
         "readIfExists",
@@ -11847,7 +11805,6 @@
         "regexBacktrackBounded",
         "regexScanFilesBounded",
         "resolveGitCwd",
-        "responseBodyStream",
         "rgExeName",
         "rgListHighByteFiles",
         "rgProbeCandidates",
@@ -11855,21 +11812,13 @@
         "rgRepairNonUtf8",
         "runGit",
         "runRgOwned",
-        "safeFromCodePoint",
         "scheduleShellReaper",
-        "searchBackendNeverFallsBack",
         "searchExplicitNames",
-        "searchFailFromResponse",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
         "searchMaxDepth",
         "searchMaxFileBytes",
-        "searchPageBlocked",
-        "searchParseJsonResponse",
-        "searchQueryTerms",
-        "searchResultKey",
-        "searchSnippetText",
         "sendMacShell",
         "sensitiveGlobsForRg",
         "sessionBackgroundShellRows",
@@ -11895,7 +11844,6 @@
         "shellVisibleTo",
         "ssrfCheck",
         "stopMacShell",
-        "stripHtmlNoise",
         "summarizeGitStatus",
         "symbolCi",
         "symbolLanguageDefPatterns",
@@ -11908,9 +11856,7 @@
         "webCachePath",
         "webFetch",
         "webFetchFailMessage",
-        "webFetchPageLinks",
         "webSearch",
-        "webSearchViaBackend",
         "writeBackgroundJobRows",
         "writeWebCache",
         "zipCollectEntries",
@@ -12056,7 +12002,6 @@
           "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12078,7 +12023,7 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12256,7 +12201,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "markNetworkOnline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13650,13 +13595,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "prunedDirsHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "READ_PAGE_JSON_BUDGET",
           "kinds": [
             "read"
           ]
@@ -28710,13 +28648,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "classifyFetchError",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "crc32",
           "kinds": [
             "read"
@@ -28724,28 +28655,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "extractMainText",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "guardDownloadDest",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "parseBaiduHtml",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "parseBingHtml",
           "kinds": [
             "read"
           ]
@@ -28788,13 +28698,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "webFetch",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "webFetchFailMessage",
           "kinds": [
             "read"
           ]
@@ -32836,7 +32739,6 @@
       "to": "11-native-tools.js",
       "symbols": [
         "NativeSourceHooks",
-        "READ_PAGE_JSON_BUDGET",
         "adaptiveCatalogForMcp",
         "assertSearchExecution",
         "binaryReadHint",
@@ -37197,19 +37099,14 @@
       "to": "11-native-tools.js",
       "symbols": [
         "adaptiveCatalogForMcp",
-        "classifyFetchError",
         "crc32",
-        "extractMainText",
         "guardDownloadDest",
-        "parseBaiduHtml",
-        "parseBingHtml",
         "peekRgProbe",
         "probeRgAsync",
         "readWebCache",
         "ssrfCheck",
         "webCachePath",
         "webFetch",
-        "webFetchFailMessage",
         "webSearch",
         "writeWebCache",
         "zipReadCentralDir",

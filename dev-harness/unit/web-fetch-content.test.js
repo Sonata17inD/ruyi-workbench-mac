@@ -1,4 +1,5 @@
 'use strict';
+const { extractMainText } = require('../../ruyi-workbench/app/backend/html-content.cjs');
 // web_fetch 的字符集 / 类型闸 / 正文抽取 / 翻页 / 缓存(审计 NE-8、NE-9)。夹具按真实页面的形状内联写(文档站有大菜单与页脚,
 // 老政企站是 GBK + 一个 <form> 包住整页),全部走本机假服务器,不外连。
 //   [C1] GBK:Content-Type 的 charset、<meta http-equiv>、什么都没声明(猜 GB18030),另有 Big5 / Shift_JIS
@@ -142,7 +143,7 @@ const DOC_PAGE = `<!DOCTYPE html><html><head><title>API Guide</title><meta chars
 </body></html>`;
 
 test('[C3] 文档站:文章在最前、菜单侧栏页脚被丢、<pre> 原样、链接编号', () => {
-  const r = srv.extractMainText(DOC_PAGE, { baseUrl: 'https://docs.example.org/guide/start' });
+  const r = extractMainText(DOC_PAGE, { baseUrl: 'https://docs.example.org/guide/start' });
   assert.equal(r.title, 'API Guide');
   assert.ok(r.text.startsWith('# Install'), `文章在最前:${JSON.stringify(r.text.slice(0, 40))}`);
   assert.ok(!/Menu item|Copyright|zh\b|Go\b/.test(r.text), '菜单 / 页脚 / select / button 都不在');
@@ -159,7 +160,7 @@ test('[C3] 文档站:文章在最前、菜单侧栏页脚被丢、<pre> 原样�
 });
 
 test('[C3] 旧调用(不带 opts)照常返回 {title,text},相对链接无 baseUrl 时不编号', () => {
-  const r = srv.extractMainText('<html><head><title>T</title></head><body><p>Hello <a href="/rel">rel</a> <a href="http://abs.example/x">abs</a></p></body></html>');
+  const r = extractMainText('<html><head><title>T</title></head><body><p>Hello <a href="/rel">rel</a> <a href="http://abs.example/x">abs</a></p></body></html>');
   assert.equal(r.title, 'T');
   assert.equal(r.text, 'Hello rel abs [1]');
   assert.deepEqual(r.links, [{ n: 1, url: 'http://abs.example/x' }]);
@@ -167,19 +168,19 @@ test('[C3] 旧调用(不带 opts)照常返回 {title,text},相对链接无 baseU
 
 // ── [C4] ────────────────────────────────────────────────────────────────────────────────────────────────
 test('[C4] <form> 包住整页(ASP.NET WebForms)不丢内容', () => {
-  const r = srv.extractMainText('<html><body><form id="aspnetForm" action="x"><div class="c"><h2>关于开展年度检查的通知</h2><p>各单位:请于本月底前完成。</p></div><input type="hidden" value="v"></form></body></html>');
+  const r = extractMainText('<html><body><form id="aspnetForm" action="x"><div class="c"><h2>关于开展年度检查的通知</h2><p>各单位:请于本月底前完成。</p></div><input type="hidden" value="v"></form></body></html>');
   assert.match(r.text, /关于开展年度检查的通知/);
   assert.match(r.text, /各单位:请于本月底前完成/);
 });
 
 test('[C4] 没有关闭的 <nav> 不吞掉后文', () => {
-  const r = srv.extractMainText('<html><body><nav><a href="/x">home</a><div><p>Real content that must survive the sloppy markup.</p></div></body></html>');
+  const r = extractMainText('<html><body><nav><a href="/x">home</a><div><p>Real content that must survive the sloppy markup.</p></div></body></html>');
   assert.match(r.text, /Real content that must survive/);
 });
 
 test('[C4] article 里的 header(题头带标题)保留,article 外的 header / footer 丢', () => {
   const body = 'Body text of the article. '.repeat(12);
-  const r = srv.extractMainText(`<html><body><header><p>SITE BANNER</p></header><article><header><h1>Post Title</h1><p>2026-09-01</p></header><p>${body}</p><footer>share links</footer></article><footer>SITE FOOTER</footer></body></html>`);
+  const r = extractMainText(`<html><body><header><p>SITE BANNER</p></header><article><header><h1>Post Title</h1><p>2026-09-01</p></header><p>${body}</p><footer>share links</footer></article><footer>SITE FOOTER</footer></body></html>`);
   assert.match(r.text, /Post Title/);
   assert.match(r.text, /2026-09-01/);
   assert.ok(!/SITE BANNER|SITE FOOTER/.test(r.text));
@@ -187,7 +188,7 @@ test('[C4] article 里的 header(题头带标题)保留,article 外的 header / 
 
 test('[C4] <main> 太短就退回整页;role=navigation 的容器丢弃', () => {
   const long = 'Real page text paragraph. '.repeat(10);
-  const r = srv.extractMainText(`<html><body><div role="navigation"><p>NAVBOX</p></div><main><p>tiny</p></main><div><p>${long}</p></div></body></html>`);
+  const r = extractMainText(`<html><body><div role="navigation"><p>NAVBOX</p></div><main><p>tiny</p></main><div><p>${long}</p></div></body></html>`);
   assert.match(r.text, /Real page text paragraph/);
   assert.ok(!/NAVBOX/.test(r.text));
 });
@@ -210,7 +211,7 @@ test('[C5] 缓存存完整文本;maxChars / offset 翻页;离线读缓存与翻�
   const s = http.createServer((req, res) => { hits++; res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html); });
   await new Promise(r => s.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${s.address().port}/long`;
-  const full = srv.extractMainText(html, { baseUrl: url }).text;
+  const full = extractMainText(html, { baseUrl: url }).text;
   assert.ok(full.length > 5000);
 
   const a = await srv.webFetch({ url, maxChars: 500 });

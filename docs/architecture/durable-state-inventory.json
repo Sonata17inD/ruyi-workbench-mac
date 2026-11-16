@@ -825,7 +825,7 @@
     {
       "id": "web-cache",
       "pattern": "<data>/webcache/<sha256>.json",
-      "owner": "11-native-tools.js",
+      "owner": "../backend/web-tools.cjs",
       "anchor": "webCachePath",
       "schema": "object / domain fields",
       "writePrimitive": "atomicWriteJson",

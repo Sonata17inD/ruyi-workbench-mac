@@ -286,7 +286,11 @@
     "app/backend/playbooks.cjs",
     "app/backend/network-policy.cjs",
     "app/backend/http-body.cjs",
-    "app/backend/http-transport.cjs"
+    "app/backend/http-transport.cjs",
+    "app/backend/html-content.cjs",
+    "app/backend/text-pages.cjs",
+    "app/backend/http-request.cjs",
+    "app/backend/web-tools.cjs"
   ],
   "acc": [
     "LICENSE",
