@@ -56,9 +56,7 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
 //        或在其 handler 内自查 tokenOk。防「新增返回密钥/内容/路径的路由却忘了鉴权」--本波 P1 #1 + 第33波 3 个 GET 泄露正是此类失守。 ──
 {
   // 截取 ROUTE_AUTH 表区块(从 const ROUTE_AUTH = [ 到 ];),敏感路由须在此被点名分类。
-  const tStart = src.indexOf('const ROUTE_AUTH = [');
-  const tEnd = src.indexOf('];', tStart);
-  const table = tStart >= 0 && tEnd > tStart ? src.slice(tStart, tEnd) : '';
+  const table = fs.readFileSync(path.join(WB, 'app/backend/http-route-policy.cjs'), 'utf8');
   ok(!!table, 'D ROUTE_AUTH 表区块可定位');
   // 敏感路由:返回密钥/完整会话/文件内容/项目路径/审计/角色/工作流/剧本,或修改敏感状态。每条须出现在表文本内。
   const SENSITIVE = [
@@ -77,7 +75,8 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   ok(/m: 'GET', p: '\/api\/agent-workflows', auth: 'token-browser'/.test(table), 'D agent-workflows GET 标 token-browser(第33波收紧)');
   ok(/m: 'GET', p: '\/api\/playbooks', auth: 'token-browser'/.test(table), 'D playbooks GET 标 token-browser(第33波收紧)');
   // deny-by-default:authorizeRoute 未匹配路由返回拒绝。
-  ok(/function authorizeRoute\(req, method, pathname\)/.test(src) && /return 'route not authorized'/.test(src), 'D authorizeRoute deny-by-default 未匹配路由拒绝');
+  const { authorizeRoute } = require('../ruyi-workbench/app/backend/http-authorization.cjs').createHttpAuthorization({ port: 8765, token: 'test' });
+  ok(authorizeRoute({ headers: { host: '127.0.0.1:8765', 'x-wcw-token': 'test' } }, 'POST', '/api/unknown-route') === 'route not authorized', 'D authorizeRoute deny-by-default 未匹配路由拒绝');
 }
 
 // ── E) 两引擎能力对称:orchestrate_agents 的模板/意图提示必须【两个引擎都注入】。历史上 Claude 引擎从不告知有哪些

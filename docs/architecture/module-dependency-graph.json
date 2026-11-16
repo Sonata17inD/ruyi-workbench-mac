@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3633,
-    "requiredSymbols": 3480,
-    "edges": 654,
+    "providedSymbols": 3634,
+    "requiredSymbols": 3479,
+    "edges": 653,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -472,6 +472,7 @@
         "DESKTOP_PYTHON_OK_CACHE_MS",
         "DESKTOP_PYTHON_PROBE_TIMEOUT_MS",
         "DurableJsonStore",
+        "HttpAuthorization",
         "RESERVED_SESSION_FILE_IDS",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
@@ -841,13 +842,6 @@
         {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01b-route-auth.js",
-          "symbol": "ROUTE_AUTH",
           "kinds": [
             "read"
           ]
@@ -29047,14 +29041,6 @@
         "RUYI_MCP_SERVER_ID",
         "canonicalRuyiMcpServerId",
         "isRuyiMcpServerId"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "01-config.js",
-      "to": "01b-route-auth.js",
-      "symbols": [
-        "ROUTE_AUTH"
       ],
       "direction": "backward"
     },

@@ -251,7 +251,7 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
     ok(!!logBlock && logBlock.includes("error: 'logs.read_failed', maxLines: LOG_TAIL_MAX_LINES")
       && !/detail:/.test(logBlock) && logBlock.includes("kind: 'logs_tail_failed'"),
       '⑦ 读失败只回机器码,e.message(含绝对路径)只进结构化日志,不回前端');
-    const authSrc = fs.readFileSync(path.join(WB, 'app', 'src', '01b-route-auth.js'), 'utf8');
+    const authSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
     ok(authSrc.includes("{ m: 'POST', p: '/api/open-path', auth: 'token' }")
       && authSrc.includes("{ m: 'GET', p: '/api/logs/tail', auth: 'token' }"),
       '⑦ 两条路由都在 ROUTE_AUTH 表里登记为 token 级');

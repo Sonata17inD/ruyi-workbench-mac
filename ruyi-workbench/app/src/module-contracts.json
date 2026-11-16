@@ -430,6 +430,7 @@
         "DESKTOP_PYTHON_OK_CACHE_MS",
         "DESKTOP_PYTHON_PROBE_TIMEOUT_MS",
         "DurableJsonStore",
+        "HttpAuthorization",
         "RESERVED_SESSION_FILE_IDS",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
@@ -799,13 +800,6 @@
         {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01b-route-auth.js",
-          "symbol": "ROUTE_AUTH",
           "kinds": [
             "read"
           ]

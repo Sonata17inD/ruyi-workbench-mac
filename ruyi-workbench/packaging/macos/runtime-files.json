@@ -236,7 +236,9 @@
     "resources/plugins/ruyi-offline/offline-toolkit/skills/spreadsheet-analysis/SKILL.md",
     "resources/plugins/ruyi-offline/offline-toolkit/skills/structured-writing/SKILL.md",
     "app/backend/tool-policy.cjs",
-    "app/backend/workflow-scheduler.cjs"
+    "app/backend/workflow-scheduler.cjs",
+    "app/backend/http-authorization.cjs",
+    "app/backend/http-route-policy.cjs"
   ],
   "acc": [
     "LICENSE",

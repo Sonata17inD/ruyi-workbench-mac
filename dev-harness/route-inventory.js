@@ -54,7 +54,7 @@ const ROUTER_FILES = [
   '13w-external-bots.js',
   '13ab-privacy-api.js',
 ];
-const ROUTE_AUTH_FILE = '01b-route-auth.js';
+const ROUTE_AUTH_FILE = '../backend/http-route-policy.cjs';
 
 // 正则路由的代表路径(鉴权首配模拟用):key = 正则源码原文,value = 具体化样例路径。
 // 新增正则路由而不登记样例 -> 生成器直接报错,指路此处。
@@ -374,7 +374,7 @@ function computeInventory(opts = {}) {
     schema: 1,
     _comment: '第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。',
     generatedAt: new Date().toISOString(),
-    sources: { routeAuth: 'ruyi-workbench/app/src/' + ROUTE_AUTH_FILE, routers: ROUTER_FILES.map(f => path.posix.normalize('ruyi-workbench/app/src/' + f)) },
+    sources: { routeAuth: path.posix.normalize('ruyi-workbench/app/src/' + ROUTE_AUTH_FILE), routers: ROUTER_FILES.map(f => path.posix.normalize('ruyi-workbench/app/src/' + f)) },
     summary: {
       routeAuthEntries: routeAuth.length,
       decisionPoints: allPoints.length,

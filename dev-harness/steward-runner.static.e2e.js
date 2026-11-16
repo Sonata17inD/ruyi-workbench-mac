@@ -52,7 +52,7 @@ const src13h = read('13h-steward-runner.js');
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-steward-runner-prompt.js',
   '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
-const src01b = read('01b-route-auth.js');
+const src01b = read('../backend/http-route-policy.cjs');
 
 /* ═════════════ ① 模块落点 ═════════════ */
 {

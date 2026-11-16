@@ -46,7 +46,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const s13 = src('13-http-router.js');
   ok(!/if \(t\.name === 'spawn_agent'\) return false;/.test(s13), '① 13 MCP tools/list 不再需要过滤 spawn_agent');
   ok(/pathname === '\/api\/agent-workflow\/wait'\) return agentWorkflowLoopbackRoute\(req, res, 'wait'\)/.test(s13) && /pathname === '\/api\/agent-workflow\/result'\) return agentWorkflowLoopbackRoute\(req, res, 'result'\)/.test(s13) && /async function agentWorkflowLoopbackRoute\(req, res, kind\)/.test(s13), '① 13 有 wait/result 回环路由(MCP 子进程用)');
-  ok(/\{ m: 'POST', p: '\/api\/agent-workflow\/wait', auth: 'body-token' \}/.test(src('01b-route-auth.js')) && /\{ m: 'POST', p: '\/api\/agent-workflow\/result', auth: 'body-token' \}/.test(src('01b-route-auth.js')), '① 01b 两条回环路由登记 body-token 门(同 launch)');
+  ok(/\{ m: 'POST', p: '\/api\/agent-workflow\/wait', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')) && /\{ m: 'POST', p: '\/api\/agent-workflow\/result', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')), '① 01b 两条回环路由登记 body-token 门(同 launch)');
   const s12 = src('12-tool-dispatch.js');
   ok(/function agentToolLoopback\(route, payload\)/.test(s12) && /'\/api\/agent-workflow\/wait'/.test(s12) && /'\/api\/agent-workflow\/result'/.test(s12) && /envelope: true/.test(s12), '① 12 MCP 子进程:launch(envelope:true)/wait/result 三路回环');
   ok(/spawn_agent 已并入 orchestrate_agents/.test(s12), '① 12 旧 spawn_agent:MCP 子进程翻译成单节点、直调清晰拒绝');

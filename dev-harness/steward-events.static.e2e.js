@@ -192,7 +192,7 @@ function typeExpressionLiterals(text) {
   const main = read('14-main.js');
   ok(/startStewardInbox\(await readConfig\(\)\)/.test(main), 'D5 14-main 在 startServer 返回后调用 startStewardInbox(config)');
 
-  const auth = read('01b-route-auth.js');
+  const auth = read('../backend/http-route-policy.cjs');
   for (const p of ['/api/steward/start', '/api/steward/stop', '/api/steward/state', '/api/steward/inbox']) {
     ok(new RegExp(`p: '${p.replace(/\//g, '\\/')}', auth: 'token' \\}`).test(auth), `D5 ROUTE_AUTH ${p} = token 级`);
   }
