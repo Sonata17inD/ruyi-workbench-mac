@@ -93,15 +93,14 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P1 #2: isSensitiveDataPath 抽出实跑(含对抗轮补漏: runtime.json + realpath 对称) ----
   {
-    const fnM = src.match(/function isSensitiveDataPath\(p\) \{[\s\S]*?\n\}/);
-    const pwM = src.match(/function pathWithinRoot\(target, root\) \{[\s\S]*?\n\}/);
-    ok(!!(fnM && pwM), 'P1#2 isSensitiveDataPath + pathWithinRoot 可抽取');
-    if (fnM && pwM) {
-      const D = path.join('C:', 'data');
-      // isSensitiveDataPath 依赖 dataRoot()、dataRootAliases()(3.0 迁移后旧目录名的联接)、_dataRootReal(module let)、
-      // pathWithinRoot、path —— 注入/本地声明。
-      const make = new Function('path', 'dataRoot', 'dataRootAliases', 'let _dataRootReal = null;\n' + pwM[0] + '\n' + fnM[0] + '\nreturn isSensitiveDataPath;');
-      const sens = make(path, () => D, () => []);
+    const { createSensitivePaths } = require('../ruyi-workbench/app/backend/sensitive-paths.cjs');
+    {
+      const D = path.join(os.tmpdir(), 'audit-sensitive-data');
+      const make = (root, aliases = [], real = null) => createSensitivePaths({
+        dataRoot: () => root, dataRootAliases: () => aliases, realDataRoot: () => real,
+        pathWithinRoot: mod.pathWithinRoot,
+      }).isSensitiveDataPath;
+      const sens = make(D);
       ok(sens(path.join(D, 'config.json')) === true, 'P1#2 config.json(明文 provider 密钥)拒');
       ok(sens(path.join(D, 'runtime.json')) === true, 'P1#2 runtime.json(明文 WCW_TOKEN)拒 ← 对抗轮补漏');
       ok(sens(path.join(D, 'sessions', 's1.json')) === true, 'P1#2 sessions/ 完整 transcript 拒');
@@ -110,14 +109,13 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
       ok(sens(path.join(D, 'uploads', 'u.png')) === false, 'P1#2 uploads/ 产物 允许(不误伤合法读)');
       ok(sens(path.join(D, 'checkpoints', 'c.gz')) === false, 'P1#2 checkpoints/ 内容 允许');
       // realpath 对称: 注入一个把 junction 根 L 解析到真实根 D 的 _dataRootReal,验证以真实根表达的敏感文件仍被命中。
-      const L = path.join('C:', 'link');
-      const make2 = new Function('path', 'dataRoot', 'dataRootAliases', 'let _dataRootReal = ' + JSON.stringify(D) + ';\n' + pwM[0] + '\n' + fnM[0] + '\nreturn isSensitiveDataPath;');
-      const sens2 = make2(path, () => L, () => []); // 词法根=L(junction),realpath 根=D
+      const L = path.join(os.tmpdir(), 'audit-sensitive-link');
+      const sens2 = make(L, [], D);
       ok(sens2(path.join(D, 'config.json')) === true, 'P1#2 junction 部署: 以 realpath 后根表达的 config.json 仍拒 ← 对抗轮补漏');
       ok(sens2(path.join(L, 'config.json')) === true, 'P1#2 junction 部署: 以词法根表达的 config.json 仍拒(双根前缀)');
       // 3.0 数据目录改名:旧目录名 ~/.win-claude-workbench 是指回新目录的联接(dataRootAliases),经它的词法路径同样拒。
-      const A = path.join('C:', 'legacy-alias');
-      const sens3 = make(path, () => D, () => [A]);
+      const A = path.join(os.tmpdir(), 'audit-sensitive-legacy');
+      const sens3 = make(D, [A]);
       ok(sens3(path.join(A, 'config.json')) === true && sens3(path.join(A, 'sessions', 's.json')) === true, 'P1#2 3.0 改名: 经旧目录名联接(dataRootAliases)的词法路径同样拒');
       ok(sens3(path.join(A, 'uploads', 'u.png')) === false, 'P1#2 3.0 改名: 经旧目录名的 uploads/ 产物照样允许');
     }
@@ -125,7 +123,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P2 #5: runProcess 超时杀进程树 + 单次结算门 ----
   {
-    const slice = require('./lib/source-slice').functionBlock(src, 'runProcess');
+    const slice = require('./lib/source-slice').functionBlock(fs.readFileSync(path.join(WB, 'app/backend/desktop-shell.cjs'), 'utf8'), 'runProcess');
     ok(/cleanup = killChildTree\(child\)/.test(slice), 'P2#5 超时把实际child对象交给按出生身份核验的整树清理,不再只杀直接子进程');
     ok(/let settled = false/.test(slice) && /if \(settled\) return/.test(slice), 'P2#5 单次结算门 finish() 防重复 resolve(close/error/超时兜底共用)');
     ok(/killGraceTimer = setTimeout/.test(slice), 'P2#5 超时后设二次硬兜底(整树杀后 close 仍不触发也不悬挂 promise)');
@@ -149,7 +147,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   {
     // v1.9 存储 v2 后 saveSession 显著变长(头构建+prevbody 防线),窗口 1400 → 6000;锁定的不变量本身不变。
     // 代码走查 C2(旧副本补齐:写链内先把盘上多出来的消息补进旧副本再写)又加了约 430 字,头写落在 6320 处,窗口 6000 → 8000。
-    const ss = require('./lib/source-slice').functionBlock(src, 'saveSession');
+    const ss = require('./lib/source-slice').functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
     // hunt2-P7 在写链里加了「只在当前 config 可解析时才刷新 .prev」的注释与判断,固定 600 字窗口够不着委托行 → 改按函数切。
     const wc = src.includes('let configWriteChain') ? require('./lib/source-slice').functionBlock(src, 'writeConfigAtomic') : '';
     ok(/atomicWriteJson\(finalPath, payload\)/.test(ss) && /sessionWriteChains/.test(ss), 'P2#8 saveSession 委托 atomicWriteJson + per-id 写链(对抗轮:防重试窗口旧覆新)');

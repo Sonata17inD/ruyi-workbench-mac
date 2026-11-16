@@ -53,34 +53,6 @@ const { walkFiles, walkDepthHint, walkEnvelopeEntries, walkTruncationHint } = re
 
 const { privacySourceActive, privacySourceMark, privacySourceLineOffsets, privacySourceLine, privacySourceFragment, privacyReadTextWindow, privacyProjectSearch, readIfExists, sourceViewOf } = require('./backend/privacy-sources.cjs').createPrivacySources({ PrivacyGateway });
 
-function sensitiveGlobsForRg(base) {
-  const globs = [];
-  if (path.sep === '/') {
-    for (const directory of ['/private/tmp', '/tmp', '/System/Volumes/Data/private/tmp', '/System/Volumes/Data/tmp']) {
-      const relative = path.relative(base, directory);
-      if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
-        globs.push('!/' + (relative ? relative + '/' : '') + 'ruyi-serve-v1-[0-9]*/');
-      }
-    }
-  }
-  try {
-    // 安全走查 S7:名单与 03 的 isSensitiveDataPath 内的那份一致(unit/unc-and-traversal-gates.test.js 逐名比对);根要把【realpath 后的数据根】也算进来 ——
-    // 遍历根已换成 guardFileToolPath 给的 realpath,词法数据根与它不一定同一拼法(联接 / 短名 / 大小写),只认词法会让 !glob 落空。
-    const roots = [...new Set([dataRoot(), ...(_dataRootReal ? [_dataRootReal] : []), ...dataRootAliases()])];
-    for (const r of roots) {
-      for (const n of ['config.json', 'runtime.json', 'sessions', 'memory', 'usage', 'logs', 'generated', 'agent-runs', 'steward', 'missions', 'scheduler', 'migrations', 'engine-transcripts.json', 'credential-vault-v1.json', 'credential-import-v1.json', 'privacy-scopes', 'external-bot-credentials.json', 'external-bots', 'desktop']) {
-        const rel = path.relative(base, path.join(r, n));
-        if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) globs.push('!/' + rel.split(path.sep).join('/'));
-      }
-      const relRoot = path.relative(base, r);
-      if (relRoot && !relRoot.startsWith('..') && !path.isAbsolute(relRoot)) globs.push('!/' + relRoot.split(path.sep).join('/') + '/config.json*');
-      if (relRoot && !relRoot.startsWith('..') && !path.isAbsolute(relRoot)) globs.push('!/' + relRoot.split(path.sep).join('/') + '/external-bot-credentials.json*');
-      if (relRoot && !relRoot.startsWith('..') && !path.isAbsolute(relRoot)) globs.push('!/' + relRoot.split(path.sep).join('/') + '/credential-vault-v1.json*');
-    }
-  } catch { /* 取不到数据根 → 只剩结果层过滤 */ }
-  return globs;
-}
-
 const { searchFileContent, regexScanFilesBounded, searchMaxFileBytes, explicitAllowDirs, prunedDirsHint, searchFileContentJs, searchFileContentRg } = require('./backend/content-search.cjs').createContentSearch({
   ProcessRuntime, walkFiles, sensitiveGlobsForRg,
   probe: { hasRgAsync: () => hasRgAsync(), probeRg: () => probeRg() },

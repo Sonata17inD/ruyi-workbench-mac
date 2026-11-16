@@ -2011,7 +2011,6 @@
         "READDIR_TIMEOUT",
         "REALPATH_LINK_DEPTH_MAX",
         "REVEAL_OPEN_SAFE_EXTS",
-        "SENSITIVE_HARDLINK_FILES",
         "STAT_TIMEOUT",
         "UNC_DENIED_ERROR",
         "USER_HOME_PERSISTENCE_DIRS",
@@ -2085,6 +2084,7 @@
         "resolveWorkspace",
         "sameFileIdentity",
         "sensitiveFileIdentities",
+        "sensitiveGlobsForRg",
         "statTimed",
         "stripWin32VerbatimPrefix",
         "uncHostAndPath",
@@ -2113,14 +2113,16 @@
           "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "dataRootAliases",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -11548,7 +11550,6 @@
         "searchFileContentJs",
         "searchFileContentRg",
         "searchMaxFileBytes",
-        "sensitiveGlobsForRg",
         "shellKill",
         "shellList",
         "shellMcpChildGuard",
@@ -11577,20 +11578,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRootAliases",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
           "kinds": [
             "read"
@@ -11599,13 +11586,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -11703,13 +11683,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "_dataRootReal",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
             "read"
@@ -11746,6 +11719,13 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "sensitiveFileIdentities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "sensitiveGlobsForRg",
           "kinds": [
             "read"
           ]
