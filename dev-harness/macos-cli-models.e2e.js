@@ -16,7 +16,7 @@ let runtime;
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP Mac model probe supervision requires macOS'); return; }
-    const S = loadServerInternals(['discoverKimiModels', 'agentCliAdapter', 'ProcessRuntime', 'ProcessRuntimeHooks'], { withEval: true });
+    const S = loadServerInternals(['selectedAgentCli', 'prepareAgentCliSpawn', 'redact', 'safeJsonParse', 'discoverKimiModels', 'agentCliAdapter', 'ProcessRuntime', 'ProcessRuntimeHooks'], { withEval: true });
     runtime = S.ProcessRuntime;
     // The explicitly configured fake CLI is the probe target; avoid ambient CLI locator probes.
     S.__eval('detectAgentCliPath = () => ""');
@@ -60,10 +60,10 @@ let runtime;
     t.ok(!timedOut.ok && timedOut.timedOut && !timedOut.cleanupIncomplete && fs.statSync(beat).size === timeoutSize,
       'real ten-second timeout confirms cleanup and stops further descendant writes');
     writeCli('process.stdout.write(Buffer.alloc(1024*1024+1,120));setTimeout(()=>process.exit(0),15000);');
-    S.__eval('globalThis.__modelProbeKill = killChildTree; killChildTree = () => { throw new Error("synthetic stop failure"); };');
-    let stopFailure;
-    try { stopFailure = await S.discoverKimiModels(config); }
-    finally { S.__eval('killChildTree = globalThis.__modelProbeKill; delete globalThis.__modelProbeKill;'); }
+    const failingCleanup = require('../ruyi-workbench/app/backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
+      ...S, killChildTree: () => { throw new Error('synthetic stop failure'); },
+    });
+    const stopFailure = await failingCleanup.discoverKimiModels(config);
     t.ok(!stopFailure.ok && stopFailure.cleanupIncomplete && stopFailure.error.includes('清理尚未确认'),
       'a throwing cleanup implementation still settles the probe as incomplete');
     const stopFailureChild = children.filter(child => runtime.handle(child)).at(-1);

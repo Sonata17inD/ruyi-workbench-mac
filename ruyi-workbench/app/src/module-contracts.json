@@ -13234,13 +13234,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -13558,13 +13551,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "decodeClaudeCliText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "desktopMcpDetectionPending",
           "kinds": [
             "call"
@@ -13658,7 +13644,7 @@
           "provider": "01-config.js",
           "symbol": "prepareAgentCliSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13694,7 +13680,8 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14172,7 +14159,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14193,7 +14180,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

@@ -5,7 +5,7 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3549,
-    "requiredSymbols": 3444,
+    "requiredSymbols": 3442,
     "edges": 645,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -13374,13 +13374,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -13698,13 +13691,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "decodeClaudeCliText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "desktopMcpDetectionPending",
           "kinds": [
             "call"
@@ -13798,7 +13784,7 @@
           "provider": "01-config.js",
           "symbol": "prepareAgentCliSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13834,7 +13820,8 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14312,7 +14299,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14333,7 +14320,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -32228,7 +32216,6 @@
         "apiSessionNotFound",
         "buildUsageSummary",
         "contentTypeFor",
-        "cp",
         "crypto",
         "dataRootAliases",
         "defaultDataRoots",
@@ -32287,7 +32274,6 @@
         "authorizeRoute",
         "autoImportClaudeCodeMcp",
         "beginBootCliPathProbes",
-        "decodeClaudeCliText",
         "desktopMcpDetectionPending",
         "detectClaudePath",
         "detectDesktopMcp",
