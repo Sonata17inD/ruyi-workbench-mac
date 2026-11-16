@@ -614,3 +614,9 @@
 - 直接红测复现并修复：回合已结算仍保留三分钟 fallback 计时器；延后保存失败仍发 thread.state／thread.adopted。现在 race 结束即清计时器，保存失败写 session_meta_deferred_failed 审计，不发成功交接事件。强制超时仍沿原语义保存并审计，单独测试通过。
 - 29 项定向单元通过；增补的超时测试连同两项直接回归共 3 项通过。真实标题摘要、新线程引擎默认 E2E 通过。管家护栏首次 4 处失败：两处旧源码位置锁、两处续跑分级调用已迁出的全局函数。迁移静态检查并将续跑明确接到 AgentRecovery 后，完整护栏 E2E 全通过。
 - 93 模块边界／白名单、依赖图、会话保存清册、EOL、facts、构建一致性与 diff 通过。共享宿主 65027 行，旧核心 SCC 与最终发行验收未完成；无重复备份／打包。
+
+## 工作包 4bo：回合摘要与副作用分类
+
+- turn-effect-kinds 统一工具副作用分类与不可逆操作元数据；turn-summary 独立拥有产物分类、复合工具结果解析及回合摘要构建。session-model 直接消费分类模块，测试直接引用所属模块，删除三个测试专用宿主导出。
+- 定向单元首轮 34 项通过，缩减导出后受影响 20 项通过；compound-effect-audit、mission-result E2E 通过。artifacts 首次因旧 Windows 启动断言失败，改为 Mac literal argv、脚本／应用降级为 Finder 选择，并删除无效 win.ini 检查和 PowerShell 清窗分支；完整 artifacts E2E 复验通过。真实 HTTP 交接由隔离捕获夹具验证，不打开 Finder。
+- 95 模块边界／白名单、依赖图、EOL、构建一致性及 diff 通过。共享宿主 64683 行；旧共享核心 29 成员 SCC 尚存，未将独立模块无环误计为整体架构完成。无重复备份／打包。

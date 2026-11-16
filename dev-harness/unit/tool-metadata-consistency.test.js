@@ -15,7 +15,8 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-tool-meta-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { TOOL_HANDLERS, NATIVE_TOOL_TIER, IRREVERSIBLE_NATIVE_KIND, TURN_SUMMARY_FILE_TOOLS, TURN_SUMMARY_COMMAND_TOOLS } = srv;
+const { TOOL_HANDLERS, NATIVE_TOOL_TIER } = srv;
+const { IRREVERSIBLE_NATIVE_KIND, TURN_SUMMARY_FILE_TOOLS, TURN_SUMMARY_COMMAND_TOOLS } = require('../../ruyi-workbench/app/backend/turn-effect-kinds.cjs');
 const handlers = Object.keys(TOOL_HANDLERS);
 const tierOf = name => NATIVE_TOOL_TIER[name];
 

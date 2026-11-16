@@ -7,9 +7,8 @@ for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA']) process.en
 process.env.RUYI_HOME = path.join(root, 'data');
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 const { loadServerInternals } = require('../lib/server-internals');
-const { projectBridgedIrreversible: project, buildTurnSummary: summary, foldTurnSummaries: fold, boundToolResultForDisplay: bound } = loadServerInternals([
-  'projectBridgedIrreversible', 'buildTurnSummary', 'foldTurnSummaries', 'boundToolResultForDisplay',
-]);
+const { projectBridgedIrreversible: project, buildTurnSummary: summary } = require('../../ruyi-workbench/app/backend/turn-summary.cjs');
+const { foldTurnSummaries: fold, boundToolResultForDisplay: bound } = loadServerInternals(['foldTurnSummaries', 'boundToolResultForDisplay']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const prefix = 'ai_computer_control__';
 const call = (tool, result, input = {}) => ({ id: 'call_owned', name: prefix + tool, input, result });

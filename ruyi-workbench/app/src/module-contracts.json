@@ -1183,22 +1183,8 @@
       "file": "02f-turn-effect-kinds.js",
       "layer": "foundation",
       "provides": [
-        "ARTIFACT_BRIDGED_WRITE_NAMES",
-        "ARTIFACT_BRIDGED_WRITE_PREFIXES",
-        "ARTIFACT_OUTPUT_PATH_KEYS",
-        "CLAUDE_IRREVERSIBLE_KIND",
-        "IRREVERSIBLE_BRIDGED_KIND",
-        "IRREVERSIBLE_LEDGER_MAX",
-        "IRREVERSIBLE_NATIVE_KIND",
-        "TURN_SUMMARY_COMMAND_TOOLS",
-        "TURN_SUMMARY_FILE_TOOLS",
-        "TURN_SUMMARY_KNOWN_TOOLS",
-        "irreversibleDetail",
-        "irreversibleToolKind",
-        "isBridgedWriteTool",
         "normalizeToolInvokeArgs",
         "toolInvokeEnvelopeRepair",
-        "toolInvokeInnerEnvelope",
         "unprefixedBridgedName",
         "unwrapToolInvokeCall"
       ],
@@ -1317,12 +1303,9 @@
       "file": "02-session-store.js",
       "layer": "foundation",
       "provides": [
-        "ARTIFACT_IMG_EXTS",
         "BRIDGED_WRITE_PATH_ARGS",
         "IMPORTED_MESSAGE_ROLE_MAX",
         "INTERVENTION_TERMINAL",
-        "IRREVERSIBLE_COMPOUND_TOOLS",
-        "IRREVERSIBLE_RESULT_TEXT_MAX",
         "JOURNAL_KEEP_TURNS",
         "JOURNAL_MAX_BEFORE_BYTES",
         "MISSION_CHANGE_TYPES",
@@ -1357,7 +1340,6 @@
         "applyMissionUpdate",
         "applySessionTitleOverride",
         "archiveMissionResult",
-        "asResultObject",
         "boundedChangeText",
         "bridgedWriteRelativePathArg",
         "buildMissionAcceptanceProjection",
@@ -1394,9 +1376,6 @@
         "interventionFilePath",
         "interventionJournalWorthCompacting",
         "invalidateSessionIndex",
-        "irreversibleEntryMetadata",
-        "irreversibleReportedState",
-        "irreversibleResultObject",
         "isProviderToolArgsObject",
         "isUntitledSessionTitle",
         "journalBytesAdjust",
@@ -1537,13 +1516,6 @@
         "writeSessionNotes"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
@@ -1886,77 +1858,7 @@
         },
         {
           "provider": "02f-turn-effect-kinds.js",
-          "symbol": "ARTIFACT_OUTPUT_PATH_KEYS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "IRREVERSIBLE_BRIDGED_KIND",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "IRREVERSIBLE_LEDGER_MAX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "irreversibleDetail",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "irreversibleToolKind",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "isBridgedWriteTool",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "TURN_SUMMARY_COMMAND_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "TURN_SUMMARY_FILE_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "TURN_SUMMARY_KNOWN_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
           "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "unwrapToolInvokeCall",
           "kinds": [
             "call"
           ]
@@ -25123,28 +25025,7 @@
         },
         {
           "provider": "02f-turn-effect-kinds.js",
-          "symbol": "IRREVERSIBLE_NATIVE_KIND",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
           "symbol": "toolInvokeEnvelopeRepair",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "TURN_SUMMARY_COMMAND_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "TURN_SUMMARY_FILE_TOOLS",
           "kinds": [
             "read"
           ]

@@ -56,6 +56,8 @@
     "app/backend/session-index.cjs",
     "app/backend/session-metadata.cjs",
     "app/backend/session-meta-updates.cjs",
+    "app/backend/turn-effect-kinds.cjs",
+    "app/backend/turn-summary.cjs",
     "app/backend/intervention-journal.cjs",
     "app/backend/session-deletion.cjs",
     "app/backend/session-model.cjs",

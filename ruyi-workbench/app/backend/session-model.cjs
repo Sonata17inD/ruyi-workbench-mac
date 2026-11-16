@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { irreversibleEntryMetadata } = require('./turn-effect-kinds.cjs');
 // Session and mission data rules: no disk I/O or execution lifecycle dependencies.
 function createSessionModel({ SESSION_SCHEMA, SKILL_ID_RE, MEMORY_FIXED_SELECTION_HARD_MAX, inferSessionEngineRoute, nowIso }) {
 function normalizeSession(raw) {
@@ -468,15 +469,7 @@ function followupAcceptanceCriterion(prompt, followup = true) {
     : (followup ? 'The follow-up result fully addresses the new request with a verifiable deliverable, fact, or check result' : 'The final result fully addresses the task goal with a verifiable deliverable, fact, or check result');
 }
 
-function irreversibleEntryMetadata(row) {
-  const out = {};
-  if (row?.effectStatus === 'reported' || row?.effectStatus === 'unknown') out.effectStatus = row.effectStatus;
-  for (const key of ['callId', 'callIdHash', 'parentTool', 'reason', 'outcome']) {
-    if (typeof row?.[key] === 'string') out[key] = row[key].slice(0, key === 'parentTool' ? 200 : 120);
-  }
-  if (Number.isInteger(row?.step) && row.step >= 0 && row.step < 200) out.step = row.step;
-  return out;
-}
-return { normalizeSession, normalizeMetaToolArgs, normalizeTodoItems, normalizeMissionCheck, recordMissionCheckResult, normalizeMission, applyMissionUpdate, missionProgressDigest, missionContainerAcceptanceStamp, buildMissionAcceptanceProjection, foldTurnSummaries, followupAcceptanceCriterion, irreversibleEntryMetadata, MISSION_MAX_MILESTONES, MISSION_MAX_TEXT, MISSION_DEFAULT_MAX_TURNS, MISSION_STALL_LIMIT };
+
+return { normalizeSession, normalizeMetaToolArgs, normalizeTodoItems, normalizeMissionCheck, recordMissionCheckResult, normalizeMission, applyMissionUpdate, missionProgressDigest, missionContainerAcceptanceStamp, buildMissionAcceptanceProjection, foldTurnSummaries, followupAcceptanceCriterion, MISSION_MAX_MILESTONES, MISSION_MAX_TEXT, MISSION_DEFAULT_MAX_TURNS, MISSION_STALL_LIMIT };
 }
 module.exports = { createSessionModel };
