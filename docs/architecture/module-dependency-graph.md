@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3814 | 3493 | 656 | 62 | 0 | 1 |
+| 92 | 3808 | 3491 | 656 | 62 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -43,7 +43,7 @@
 | 25 | `03-bridge-guard.js` | foundation | 102 | 29 | 7 |
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 28 | `04-permission-runtime.js` | foundation | 158 | 50 | 10 |
+| 28 | `04-permission-runtime.js` | foundation | 152 | 48 | 10 |
 | 29 | `04-desktop-shell.js` | foundation | 1 | 12 | 4 |
 | 30 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
 | 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
@@ -175,7 +175,7 @@
 | `04-desktop-shell.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn`, `platformShellEnvironment` |
 | `04-desktop-shell.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04-desktop-shell.js` | `04-permission-runtime.js` | backward | `killChildTree` |
-| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `copyOrdinaryJsonData`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `http`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text` |
+| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
 | `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `bridgedEnvKeyStripped`, `detectDesktopMcp`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `mutateConfig`, `readConfig`, `selectedAgentCli` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `ProcessRuntimeHooks` |

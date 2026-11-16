@@ -2611,8 +2611,6 @@
         "MCP_DROPIN_MAX",
         "MCP_DROPIN_SHADOW_WARNING",
         "MCP_FAILURE_COOLDOWN_MS",
-        "MCP_STDIO_LINE_MAX_CHARS",
-        "MCP_TOOLS_LIST_MAX_PAGES",
         "McpHttpClient",
         "McpStdioClient",
         "NATIVE_CLAUDE_AGENT_RESULT_MAX_CHARS",
@@ -2685,7 +2683,6 @@
         "logStreamDay",
         "makeAttachmentRecord",
         "maskUrlQueryCredentials",
-        "mcpBridgeError",
         "mcpCallToolParams",
         "mcpChildExitResult",
         "mcpClientFailures",
@@ -2696,12 +2693,9 @@
         "mcpConnectorMutateError",
         "mcpDropInDirs",
         "mcpEntryFingerprint",
-        "mcpListAllTools",
         "mcpRuntimeCommon",
-        "mcpServerRequestReply",
         "mcpShortHash",
         "mcpStartingClients",
-        "mcpStartupRpcMs",
         "mcpToolAllowed",
         "mutateMcpConnector",
         "nativeClaudeAgentResultInfo",
@@ -2751,13 +2745,6 @@
         "validateBrowserTargetPatch"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "cp",
@@ -2830,13 +2817,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "http",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -2881,7 +2861,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -2930,7 +2911,7 @@
           "provider": "01-config.js",
           "symbol": "bridgedEnvKeyStripped",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
