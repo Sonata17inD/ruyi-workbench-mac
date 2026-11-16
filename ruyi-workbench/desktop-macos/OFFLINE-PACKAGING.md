@@ -26,7 +26,7 @@ python3.14 ruyi-workbench/tools/prepare-macos-offline-assets.py \
   --cache /path/to/download-cache --output /path/to/macos-assets --download
 ```
 
-下载地址、版本和 SHA256 固定在 `MACOS-PORTING/dependencies/macos-offline-arm64.assets.json`。Node/Python/ripgrep 来自上游归档；Python 附带依赖的原始许可来自对应 standalone full 构建；Chrome for Testing 使用 Playwright 对应修订。每个 PyPI wheel 固定下载 URL 与 hash。去掉 `--download` 时只读已有缓存，缺项或损坏立即失败，不联网补齐。准备器解压后，离线构建器还会核对完整组件目录摘要。
+下载地址、版本和 SHA256 固定在 `ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json`。Node/Python/ripgrep 来自上游归档；Python 附带依赖的原始许可来自对应 standalone full 构建；Chrome for Testing 使用 Playwright 对应修订。每个 PyPI wheel 固定下载 URL 与 hash。去掉 `--download` 时只读已有缓存，缺项或损坏立即失败，不联网补齐。准备器解压后，离线构建器还会核对完整组件目录摘要。
 
 2. 将准备好的资产带到构建 Mac，在无公网条件下构建：
 

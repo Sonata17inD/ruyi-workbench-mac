@@ -13,7 +13,7 @@ const { buildMacTrashHelper } = require('./build-macos-trash-helper');
 const { buildMacAutomationHelper } = require('./build-macos-automation-helper');
 const root = path.resolve(__dirname, '..');
 const repo = path.dirname(root);
-const lockFile = path.join(repo, 'MACOS-PORTING/dependencies/macos-offline-arm64.assets.json');
+const lockFile = path.join(repo, 'ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json');
 
 function writeJson(file, value) { fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n'); }
 function buildMacOffline({ assets, output, variant = 'full' }) {
@@ -29,7 +29,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   // Also bind new implementation files, before their first commit.
   sourceFiles.push(...run('/usr/bin/git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd: repo }).split('\0').filter(Boolean));
   const sourceFingerprint = Object.fromEntries(sourceFiles.filter(file => (file.startsWith('ruyi-workbench/')
-    || file.startsWith('mcp/ai-computer-control/') || file.startsWith('MACOS-PORTING/dependencies/')
+    || file.startsWith('mcp/ai-computer-control/')
     || ['LICENSE', 'THIRD-PARTY-NOTICES.md'].includes(file))
     && fs.existsSync(path.join(repo, file)) && fs.statSync(path.join(repo, file)).isFile()).sort().map(file => [file, sha256(path.join(repo, file))]));
   fs.mkdirSync(path.dirname(output), { recursive: true });

@@ -66,7 +66,7 @@ def unzip(file, destination):
 
 def prepare(arguments):
     repo = Path(__file__).resolve().parents[2]
-    lock = json.loads((repo / 'MACOS-PORTING/dependencies/macos-offline-arm64.assets.json').read_text())
+    lock = json.loads((repo / 'ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json').read_text())
     cache = Path(arguments.cache).resolve()
     output = Path(arguments.output).resolve()
     if output.exists():

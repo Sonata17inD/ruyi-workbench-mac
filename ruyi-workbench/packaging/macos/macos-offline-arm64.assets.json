@@ -5,7 +5,7 @@
   "minimumSystemTarget": "14.0",
   "minimumSystemRuntimeVerified": false,
   "chromiumRevision": "1248",
-  "requirements": "MACOS-PORTING/dependencies/requirements-macos-arm64-cp312-full.lock.txt",
+  "requirements": "ruyi-workbench/packaging/macos/requirements-macos-arm64-cp312-full.lock.txt",
   "requirementsSha256": "02d01b26456efbb7025ffac0a1af301acb1e008a00cb4cd222cdab93d7daef64",
   "components": [
     {
