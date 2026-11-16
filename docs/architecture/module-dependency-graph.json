@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3642,
+    "providedSymbols": 3638,
     "requiredSymbols": 3482,
     "edges": 654,
     "forwardEdges": 61,
@@ -7988,8 +7988,6 @@
         "C3_HIGH_RISK_GATE",
         "CLAUDE_EXEC_TOOLS",
         "CLAUDE_WRITE_TOOLS",
-        "EVIDENCE_CATALOG_MAX_BYTES",
-        "EVIDENCE_CATALOG_MAX_ITEMS",
         "EVIDENCE_REFS_MAX_ITEMS",
         "NODE_SUMMARY_MAX",
         "NODE_WRITE_FAMILY",
@@ -8034,12 +8032,10 @@
         "evalWaitCondition",
         "evaluateNodeToolEvidence",
         "evaluateWorkflowCondition",
-        "evidenceDedup",
         "findingHandledItems",
         "flushAgentRunEvents",
         "formatNodeEvidencePrompt",
         "getAgentWorkflows",
-        "getEvidenceSet",
         "indexNodeEvidence",
         "listAgentRunDigests",
         "listAgentRuns",
@@ -8473,7 +8469,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
