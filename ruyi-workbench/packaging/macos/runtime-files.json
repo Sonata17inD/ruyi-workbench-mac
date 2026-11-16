@@ -11,6 +11,7 @@
     "app/backend/credential-recovery.cjs",
     "app/backend/credential-vault.cjs",
     "app/backend/desktop-automation.cjs",
+    "app/backend/desktop-shell.cjs",
     "app/backend/durable-json-store.cjs",
     "app/backend/engine-transcripts.cjs",
     "app/backend/event-stream.cjs",

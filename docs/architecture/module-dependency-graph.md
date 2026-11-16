@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3588 | 3460 | 646 | 61 | 0 | 1 |
+| 92 | 3588 | 3453 | 646 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -44,7 +44,7 @@
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 28 | `04-permission-runtime.js` | foundation | 152 | 48 | 10 |
-| 29 | `04-desktop-shell.js` | foundation | 1 | 12 | 4 |
+| 29 | `04-desktop-shell.js` | foundation | 1 | 5 | 4 |
 | 30 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
 | 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 32 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
@@ -168,7 +168,7 @@
 | `03-bridge-guard.js` | `05-claude-engine.js` | forward | `activeOpenAiProvider` |
 | `03a-privacy-gateway.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
-| `04-desktop-shell.js` | `00-boot.js` | backward | `cp`, `decodeConsoleText`, `fs`, `fsp`, `os`, `path`, `spawnDetachedChecked`, `text` |
+| `04-desktop-shell.js` | `00-boot.js` | backward | `spawnDetachedChecked` |
 | `04-desktop-shell.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn`, `platformShellEnvironment` |
 | `04-desktop-shell.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04-desktop-shell.js` | `04-permission-runtime.js` | backward | `killChildTree` |

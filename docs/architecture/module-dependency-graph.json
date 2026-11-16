@@ -5,7 +5,7 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3588,
-    "requiredSymbols": 3460,
+    "requiredSymbols": 3453,
     "edges": 646,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -3017,57 +3017,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeConsoleText",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -3076,14 +3026,14 @@
           "provider": "00-platform-runtime.js",
           "symbol": "platformOpenSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-platform-runtime.js",
           "symbol": "platformShellEnvironment",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3097,7 +3047,6 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call",
             "read"
           ]
         }
@@ -29405,14 +29354,7 @@
       "from": "04-desktop-shell.js",
       "to": "00-boot.js",
       "symbols": [
-        "cp",
-        "decodeConsoleText",
-        "fs",
-        "fsp",
-        "os",
-        "path",
-        "spawnDetachedChecked",
-        "text"
+        "spawnDetachedChecked"
       ],
       "direction": "backward"
     },
