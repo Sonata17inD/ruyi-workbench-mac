@@ -1433,19 +1433,14 @@
         "getSessionBodyState",
         "getSessionTitleOverride",
         "healStalePendingSegments",
-        "interventionAppendCounts",
         "interventionFilePath",
         "interventionJournalWorthCompacting",
-        "interventionRecordCache",
-        "interventionTransitionLocks",
-        "interventionWriteChains",
         "invalidateSessionIndex",
         "irreversibleEntryMetadata",
         "irreversibleReportedState",
         "irreversibleResultObject",
         "isProviderToolArgsObject",
         "isUntitledSessionTitle",
-        "ivCacheKey",
         "journalBytesAdjust",
         "journalDir",
         "journalDropEntries",
@@ -2090,7 +2085,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "listAgentRuns",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

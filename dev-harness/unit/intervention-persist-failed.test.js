@@ -15,11 +15,21 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-persist-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const srv = require('../lib/server-internals').loadServerInternals(['createSession', 'registerIntervention', 'transitionInterventionState', 'readInterventions', 'markInterruptedInterventions', 'mapInterventionTransitionFailure']);
-const { createSession, registerIntervention, transitionInterventionState, readInterventions } = srv;
+const { mapInterventionTransitionFailure } = require('../lib/server-internals').loadServerInternals(['mapInterventionTransitionFailure']);
+const srv = require('../../ruyi-workbench/app/backend/intervention-journal.cjs').createInterventionJournal({
+  paths: { sessions: root }, nowIso: () => new Date().toISOString(), events: { emit() {} }, logEvent() {},
+  runKeyedChain: async (chains, key, work) => {
+    const next = (chains.get(key) || Promise.resolve()).catch(() => {}).then(work);
+    chains.set(key, next);
+    try { return await next; } finally { if (chains.get(key) === next) chains.delete(key); }
+  },
+  atomicWriteJson: (file, data) => fsp.writeFile(file, data),
+  repairTornTail: async () => {}, recordChange: async () => {}, listAgentRuns: async () => [],
+});
+const { registerIntervention, transitionInterventionState, readInterventions } = srv;
 
 async function pendingIv(tag) {
-  const s = await createSession({ title: 't', cwd: root });
+  const s = { id: 'sess_' + tag };
   const ivId = 'perm_' + tag;
   registerIntervention(s.id, 'permission', ivId, { toolName: 'file_write' });
   for (let i = 0; i < 50 && !(await readInterventions(s.id)).some(x => x.id === ivId); i++) await new Promise(r => setTimeout(r, 10));
@@ -85,7 +95,7 @@ test('[P3] terminal write failure reports an uncertain outcome without claiming 
   assert.equal(result.ok, false);
   assert.equal(result.reason, 'terminal_persist_failed');
   assert.equal(result.status, 'applying');
-  const response = srv.mapInterventionTransitionFailure(result);
+  const response = mapInterventionTransitionFailure(result);
   assert.equal(response.status, 503);
   assert.equal(response.body.error.code, 'intervention.terminal_persist_failed');
   assert.equal(response.body.error.params.outcomeUnknown, true);

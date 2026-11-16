@@ -36,6 +36,7 @@
     "app/backend/session-executions.cjs",
     "app/backend/session-index.cjs",
     "app/backend/session-metadata.cjs",
+    "app/backend/intervention-journal.cjs",
     "app/backend/session-deletion.cjs",
     "app/backend/session-model.cjs",
     "app/backend/session-persistence.cjs",

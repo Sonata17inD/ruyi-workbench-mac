@@ -185,7 +185,7 @@ fsp.stat = async (p, ...rest) => {
   //       翻红 —— 断言的对错直接绑定在真实源码文本上,不是绑定在这个测试自己另写的一份复现逻辑上。
   {
     const bodySrc = (() => {
-      const localSrc = readServerSource();
+      const localSrc = fs.readFileSync(path.join(WB, 'app/backend/intervention-journal.cjs'), 'utf8');
       const fnMatch = localSrc.match(/^function appendIntervention\(sessionId, record\) \{[\s\S]*?\n\}\n/m);
       if (!fnMatch) return null;
       const bodyMatch = fnMatch[0].match(/\.then\(async \(\) => \{([\s\S]*?)\}\)\.catch\(\(\) => \{\}\);/);

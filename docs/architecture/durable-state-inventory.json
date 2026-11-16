@@ -349,7 +349,7 @@
     {
       "id": "session-interventions",
       "pattern": "<data>/sessions/<id>.interventions.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/intervention-journal.cjs",
       "anchor": ".interventions.ndjson",
       "schema": "NDJSON command journal",
       "writePrimitive": "serialized append + compaction",
