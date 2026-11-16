@@ -16,7 +16,9 @@ const codeLines = text => text.split('\n').map(l => l.replace(/\/\/.*$/, ''));
 
 // ① 普查:各模块 saveSession( 的调用个数(128b 之后)。
 const CENSUS = {
-  '02-session-store.js': 10,     // 回合外的存储层自身:updateSessionMeta ×2、loadSession 自愈 ×2、v1 回退、createSession、撤回、mutateSession、任务控制;
+  '../backend/session-rewind.cjs': 1, // 撤回成功的严格提交。
+  '../backend/session-transactions.cjs': 2, // 读改写与回合收尾的共享提交出口。
+  '02-session-store.js': 7,     // 回合外的存储层自身:updateSessionMeta ×2、loadSession 自愈 ×2、v1 回退、createSession、撤回、mutateSession、任务控制;
                                  // + saveTurnFinalSession(三个引擎回合收尾那一存的共用出口,带回合代数闸 —— 被更新的回合顶替过就丢,审计 t4)
   '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
@@ -33,7 +35,7 @@ const CENSUS = {
   '13s-scheduler.js': 1,         // 定时触发建会话
 };
 const actual = {};
-for (const n of fs.readdirSync(SRC).filter(x => x.endsWith('.js')).sort()) {
+for (const n of fs.readdirSync(SRC).filter(x => x.endsWith('.js')).concat(fs.readdirSync(path.join(SRC, '../backend')).filter(x => x.endsWith('.cjs')).map(x => '../backend/' + x)).sort()) {
   let c = 0;
   for (const code of codeLines(read(n))) {
     if (/function saveSession\(/.test(code)) continue;
@@ -84,7 +86,7 @@ for (const [label, body, needsExpectGen] of sites) {
 }
 
 // ③ 原语本身:存盘带 throwIfStale、expectGen 不一致就不写。
-const mutate = fnBody('02-session-store.js', 'async function mutateSession(');
+const mutate = fnBody('../backend/session-transactions.cjs', 'async function mutateSession(');
 ok(/throwIfStale:\s*true/.test(mutate) && /expectGen/.test(mutate) && /session\.rewound_during_write|sessionRewoundError/.test(mutate),
   '③ mutateSession 存盘带 throwIfStale、expectGen 不一致即抛 session.rewound_during_write');
 
