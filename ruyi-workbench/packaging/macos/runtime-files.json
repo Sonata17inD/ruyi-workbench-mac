@@ -20,6 +20,7 @@
     "app/backend/mission-store.cjs",
     "app/backend/mission-changes.cjs",
     "app/backend/resource-leases.cjs",
+    "app/backend/agent-quality.cjs",
     "app/backend/agent-results.cjs",
     "app/backend/agent-run-store.cjs",
     "app/backend/autonomy-grants.cjs",
