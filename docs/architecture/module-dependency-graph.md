@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3606 | 3474 | 652 | 61 | 0 | 1 |
+| 92 | 3600 | 3473 | 651 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -21,7 +21,7 @@
 | 3 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 4 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
 | 5 | `01c-runtime-flags.js` | foundation | 37 | 0 | 0 |
-| 6 | `01e-permission-modes.js` | foundation | 18 | 1 | 1 |
+| 6 | `01e-permission-modes.js` | foundation | 12 | 0 | 0 |
 | 7 | `01f-agent-cli-types.js` | foundation | 4 | 0 | 0 |
 | 8 | `01g-server-ownership.js` | foundation | 1 | 0 | 0 |
 | 9 | `01n-desktop-automation.js` | foundation | 2 | 0 | 0 |
@@ -129,7 +129,6 @@
 | `01-config.js` | `05-claude-engine.js` | forward | `configSecretValueOrCleared`, `configUrlOrCleared`, `sanitizeExternalMcpServer`, `sanitizeProvider` |
 | `01-config.js` | `06-provider-engine.js` | forward | `normalizeStoragePolicy` |
 | `01-config.js` | `07-autonomy.js` | forward | `DESKTOP_MCP_SERVER_ID`, `TOOL_PACK_DESCRIPTIONS`, `accPolicyHiddenToolNames`, `claudePermissionMode`, `getAgentRoleLibrary`, `nativeToolTier` |
-| `01e-permission-modes.js` | `00b-ruyi-names.js` | backward | `canonicalRuyiMcpServerId` |
 | `01h-process-runtime.js` | `01n-desktop-automation.js` | backward | `MacDesktopAutomation` |
 | `01k-credential-vault.js` | `00-boot.js` | backward | `fsp`, `path`, `paths` |
 | `01k-credential-vault.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson` |

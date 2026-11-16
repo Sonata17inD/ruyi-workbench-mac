@@ -21,30 +21,31 @@ process.env.RUYI_HOME = root;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
+const policy = require(path.join(app, 'backend/agent-role-policy.cjs'));
 // agent-roles.js 的依赖链(state.js)在模块顶层写一次 window.state 兼容层;给它一个 window 别名即可,不引入 DOM。
 const loadRoles = () => { if (!globalThis.window) globalThis.window = globalThis; return import(pathToFileURL(path.join(app, 'public', 'js', 'agent-roles.js')).href); };
 
 test('[S] 全局覆盖里的空颜色不抹内置角色的颜色', async () => {
   // 修前设置页存盘带出的形状:没改颜色,只改了描述;normalizeAgentRole 把缺失的 color 收成 ''
-  const saved = srv.normalizeAgentRole({ id: 'explorer', description: '改过的描述' }, { source: 'global' });
+  const saved = policy.normalizeAgentRole({ id: 'explorer', description: '改过的描述' }, { source: 'global' });
   assert.equal(saved.color, '', '前提:覆盖条目的 color 是空串');
   const lib = await srv.getAgentRoleLibrary(root, { agentRoleOverrides: [saved] });
   const explorer = lib.find(r => r.id === 'explorer');
   assert.equal(explorer.description, '改过的描述', '覆盖的其它字段照常生效');
   assert.equal(explorer.color, 'blue', '空颜色让位给内置色');
   // 其余内置角色的颜色一个不丢
-  const builtins = srv.BUILTIN_AGENT_ROLES.map(r => srv.normalizeAgentRole(r, { source: 'builtin', builtin: true }));
+  const builtins = policy.BUILTIN_AGENT_ROLES.map(r => policy.normalizeAgentRole(r, { source: 'builtin', builtin: true }));
   assert.ok(builtins.length >= 10 && builtins.every(r => r.color), '前提:内置角色都有颜色');
-  const overrides = builtins.map(r => srv.normalizeAgentRole({ id: r.id, label: 'X' }, { source: 'global' }));
+  const overrides = builtins.map(r => policy.normalizeAgentRole({ id: r.id, label: 'X' }, { source: 'global' }));
   const all = await srv.getAgentRoleLibrary(root, { agentRoleOverrides: overrides });
   for (const r of builtins) assert.equal(all.find(x => x.id === r.id).color, r.color, `${r.id} 的颜色`);
 });
 
 test('[S] 非空的覆盖颜色照常生效;自定义角色的颜色按自己的来', async () => {
   const lib = await srv.getAgentRoleLibrary(root, { agentRoleOverrides: [
-    srv.normalizeAgentRole({ id: 'explorer', color: 'red' }, { source: 'global' }),
-    srv.normalizeAgentRole({ id: 'my-role', color: 'teal' }, { source: 'global' }),
-    srv.normalizeAgentRole({ id: 'plain-role' }, { source: 'global' }),
+    policy.normalizeAgentRole({ id: 'explorer', color: 'red' }, { source: 'global' }),
+    policy.normalizeAgentRole({ id: 'my-role', color: 'teal' }, { source: 'global' }),
+    policy.normalizeAgentRole({ id: 'plain-role' }, { source: 'global' }),
   ] });
   assert.equal(lib.find(r => r.id === 'explorer').color, 'red');
   assert.equal(lib.find(r => r.id === 'my-role').color, 'teal');
@@ -54,7 +55,7 @@ test('[S] 非空的覆盖颜色照常生效;自定义角色的颜色按自己的
 test('[S] 让位只给内置色:自定义角色在项目层把颜色清空就是清空', async () => {
   const cwd = fs.mkdtempSync(path.join(root, 'proj-'));
   await srv.saveProjectAgentRoles(cwd, [{ id: 'my-role', label: 'Mine', color: '' }, { id: 'explorer', label: 'E', color: '' }]);
-  const lib = await srv.getAgentRoleLibrary(cwd, { agentRoleOverrides: [srv.normalizeAgentRole({ id: 'my-role', color: 'teal' }, { source: 'global' })] });
+  const lib = await srv.getAgentRoleLibrary(cwd, { agentRoleOverrides: [policy.normalizeAgentRole({ id: 'my-role', color: 'teal' }, { source: 'global' })] });
   assert.equal(lib.find(r => r.id === 'my-role').color, '', '自定义角色:项目层的空颜色是用户的选择');
   assert.equal(lib.find(r => r.id === 'explorer').color, 'blue', '内置角色:空颜色仍让位给内置色');
 });
@@ -73,7 +74,7 @@ test('[C] 读卡把颜色原样带回', async () => {
   assert.deepEqual(row.claudeTools, ['Read', 'Grep']);
   assert.equal(row.builtin, true);
   // 读出来的草稿原样送去服务端清洗 → 颜色保住
-  assert.equal(srv.normalizeAgentRole(row, { source: 'global' }).color, 'green');
+  assert.equal(policy.normalizeAgentRole(row, { source: 'global' }).color, 'green');
 });
 
 test('[M] 前端草稿合并:空颜色让位给内置色,非空覆盖照常生效', async () => {
@@ -93,7 +94,7 @@ test('[P] 前端候选 = tokens.css 的 --role-* 全集;色块只放行合法名
   assert.deepEqual([...AGENT_ROLE_COLORS].sort(), [...tokens].sort());
   assert.ok(Object.isFrozen(AGENT_ROLE_COLORS));
   // 内置角色用到的颜色都在候选里
-  for (const r of srv.BUILTIN_AGENT_ROLES) assert.ok(AGENT_ROLE_COLORS.includes(r.color), `${r.id}:${r.color}`);
+  for (const r of policy.BUILTIN_AGENT_ROLES) assert.ok(AGENT_ROLE_COLORS.includes(r.color), `${r.id}:${r.color}`);
   assert.equal(roleColorCss('blue'), 'var(--role-blue, var(--muted))');
   assert.equal(roleColorCss(''), 'transparent');
   assert.equal(roleColorCss('x); background:url(//e'), 'transparent', '带括号分号的值不进 style');

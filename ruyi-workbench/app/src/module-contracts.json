@@ -292,18 +292,12 @@
       "file": "01e-permission-modes.js",
       "layer": "foundation",
       "provides": [
-        "AGENT_ROLE_MODE_RANK",
-        "AGENT_ROLE_MODE_TIER_CEILING",
-        "AGENT_ROLE_PERMISSION_MODES",
-        "AGENT_ROLE_TIER_ORDER",
-        "AGENT_ROLE_UNTRUSTED_SOURCES",
         "BUILTIN_AGENT_ROLES",
         "CLAUDE_PERMISSION_MODE_MAP",
         "PERMISSION_MODES",
         "PERMISSION_MODES_REQUIRING_CONFIRM",
         "PERMISSION_MODE_ALIASES",
         "agentRoleIsUntrusted",
-        "agentRoleParentMode",
         "annotateAgentRoleEffective",
         "clampAgentRoleToParent",
         "mergeAgentRole",
@@ -311,15 +305,7 @@
         "permissionModeFrom",
         "resolvePermissionMode"
       ],
-      "requires": [
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "canonicalRuyiMcpServerId",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "01f-agent-cli-types.js",

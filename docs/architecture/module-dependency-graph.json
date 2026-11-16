@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3606,
-    "requiredSymbols": 3474,
-    "edges": 652,
+    "providedSymbols": 3600,
+    "requiredSymbols": 3473,
+    "edges": 651,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -316,18 +316,12 @@
       "layer": "foundation",
       "note": "架构还债批 3·B: 从 01-config.js 搬出权限档表/三层权限解析/内置 Agent 角色与归一(PERMISSION_MODES/AGENT_ROLE_PERMISSION_MODES/CLAUDE_PERMISSION_MODE_MAP/PERMISSION_MODE_ALIASES/PERMISSION_MODES_REQUIRING_CONFIRM/permissionModeFrom/resolvePermissionMode/BUILTIN_AGENT_ROLES/normalizeAgentRole/mergeAgentRole;纯函数零出边,不进任何环;纯搬家,零行为变更)",
       "provides": [
-        "AGENT_ROLE_MODE_RANK",
-        "AGENT_ROLE_MODE_TIER_CEILING",
-        "AGENT_ROLE_PERMISSION_MODES",
-        "AGENT_ROLE_TIER_ORDER",
-        "AGENT_ROLE_UNTRUSTED_SOURCES",
         "BUILTIN_AGENT_ROLES",
         "CLAUDE_PERMISSION_MODE_MAP",
         "PERMISSION_MODES",
         "PERMISSION_MODES_REQUIRING_CONFIRM",
         "PERMISSION_MODE_ALIASES",
         "agentRoleIsUntrusted",
-        "agentRoleParentMode",
         "annotateAgentRoleEffective",
         "clampAgentRoleToParent",
         "mergeAgentRole",
@@ -335,15 +329,7 @@
         "permissionModeFrom",
         "resolvePermissionMode"
       ],
-      "requires": [
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "canonicalRuyiMcpServerId",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "01f-agent-cli-types.js",
@@ -29089,14 +29075,6 @@
         "nativeToolTier"
       ],
       "direction": "forward"
-    },
-    {
-      "from": "01e-permission-modes.js",
-      "to": "00b-ruyi-names.js",
-      "symbols": [
-        "canonicalRuyiMcpServerId"
-      ],
-      "direction": "backward"
     },
     {
       "from": "01h-process-runtime.js",

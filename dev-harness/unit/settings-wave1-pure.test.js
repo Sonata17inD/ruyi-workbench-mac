@@ -10,7 +10,7 @@ const { pathToFileURL } = require('url');
 
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const loadJs = name => { if (!globalThis.window) globalThis.window = globalThis; return import(pathToFileURL(path.join(app, 'public', 'js', name)).href); };
-const { BUILTIN_AGENT_ROLES, normalizeAgentRole } = require(path.join(app, 'server.js'));
+const { BUILTIN_AGENT_ROLES, normalizeAgentRole } = require(path.join(app, 'backend/agent-role-policy.cjs'));
 
 // 与 readRoleCard 同形的「草稿条目」:服务端内置角色 → 经表单读回来的样子(多出 builtin 标记)。
 const draftOf = role => ({
