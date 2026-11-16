@@ -221,8 +221,8 @@ test('standalone skill registry respects injected CLI homes, source precedence a
   put(user, 'same', 'user body'); put(path.join(project, '.ruyi/skills'), 'same', 'project body');
   const parse = (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } };
   const registry = createSkillRegistry({ paths: { skills: user }, agentCliHomes: () => cli, externalRoot: () => base,
-    SKILL_ID_RE: /^[a-z0-9_-]+$/, PLAYBOOK_REQUIRES: ['vision'], getCapabilities: async () => ({}),
-    evalPlaybookAvailability: () => ({ available: true, status: 'available', unavailableReason: '' }), loadAllPlaybooks: async () => [],
+    SKILL_ID_RE: /^[a-z0-9_-]+$/, getCapabilities: async () => ({}),
+    loadAllPlaybooks: async () => [],
     readIfExists: async (file, cap) => { try { return (await fs.promises.readFile(file, 'utf8')).slice(0, cap); } catch { return ''; } }, safeJsonParse: parse });
   const entries = await registry.loadSkillRegistry(project, {});
   assert.equal(entries.find(e => e.id === 'external').source, 'claude-code');
@@ -231,4 +231,22 @@ test('standalone skill registry respects injected CLI homes, source precedence a
   const selected = await registry.resolveEnabledSkillEntries({ skills: [{ id: 'same', source: 'user' }, { id: 'external', source: 'claude-code' }] }, {}, project, {}, (...args) => mismatches.push(args));
   assert.deepEqual(selected.map(e => e.id), ['external']);
   assert.deepEqual(mismatches, [['same', 'user', 'project']]);
+});
+
+test('playbook storage owns validation and reports failed deletion without claiming success', async () => {
+  const { createPlaybooks } = require('../../ruyi-workbench/app/backend/playbooks.cjs');
+  const io = fs.promises, base = path.join(root, 'playbook-module'), user = path.join(base, 'user');
+  const store = createPlaybooks({ paths: { playbooks: user }, externalRoot: () => base,
+    safeSessionId: value => /^[a-z0-9_-]+$/i.test(value) ? value : null,
+    safeJsonParse: (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } },
+    atomicWriteJson: (file, value) => io.writeFile(file, JSON.stringify(value)) });
+  const draft = { id: 'valid', title: 'Valid', promptTemplate: 'Do {task}', inputs: [] };
+  await assert.rejects(() => store.saveUserPlaybook({ ...draft, id: '../escape' }), e => e.code === 'invalid_playbook');
+  assert.equal(fs.existsSync(path.join(base, 'escape.json')), false);
+  await store.saveUserPlaybook(draft);
+  assert.equal((await store.loadAllPlaybooks())[0].id, 'valid');
+  await io.mkdir(path.join(user, 'cannot-delete.json'));
+  await assert.rejects(() => store.deleteUserPlaybook('cannot-delete'));
+  assert.equal(fs.existsSync(path.join(user, 'cannot-delete.json')), true);
+  assert.equal((await store.deleteUserPlaybook('valid')).deleted, 'valid');
 });

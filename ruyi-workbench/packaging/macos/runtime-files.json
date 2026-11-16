@@ -281,7 +281,9 @@
     "app/backend/file-visual-io.cjs",
     "app/backend/media-inspection.cjs",
     "app/backend/document-metadata.cjs",
-    "app/backend/skill-registry.cjs"
+    "app/backend/skill-registry.cjs",
+    "app/backend/playbook-policy.cjs",
+    "app/backend/playbooks.cjs"
   ],
   "acc": [
     "LICENSE",

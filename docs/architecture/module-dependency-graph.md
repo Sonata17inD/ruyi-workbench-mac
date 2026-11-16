@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3633 | 3521 | 659 | 67 | 0 | 1 |
+| 92 | 3619 | 3518 | 659 | 67 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -56,7 +56,7 @@
 | 38 | `05b-kimi-bridge.js` | engine | 128 | 77 | 16 |
 | 39 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
 | 40 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
-| 41 | `06-provider-engine.js` | engine | 134 | 62 | 19 |
+| 41 | `06-provider-engine.js` | engine | 120 | 62 | 19 |
 | 42 | `06b-prompt-registry.js` | engine | 5 | 0 | 0 |
 | 43 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
@@ -77,7 +77,7 @@
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 62 | `12-tool-dispatch.js` | tools | 93 | 189 | 25 |
+| 62 | `12-tool-dispatch.js` | tools | 93 | 187 | 25 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 48 | 276 | 37 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -106,7 +106,7 @@
 | 88 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
 | 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
 | 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 91 | `14-main.js` | entrypoint | 1 | 598 | 44 |
+| 91 | `14-main.js` | entrypoint | 1 | 597 | 44 |
 
 ## 模块边
 
@@ -417,7 +417,7 @@
 | `12-tool-dispatch.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `12-tool-dispatch.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |
 | `12-tool-dispatch.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider`, `effectiveSkillSelection`, `resolveAsrProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor` |
-| `12-tool-dispatch.js` | `06-provider-engine.js` | backward | `PLAYBOOK_REQUIRES`, `buildRuntimeIdentityFacts`, `evalPlaybookAvailability`, `getCapabilities`, `listPlaybooksWithAvailability`, `loadAllPlaybooks`, `markNetworkOnline`, `neutralizeAuthoredText`, `peekCapabilities`, `runtimeToolRequirementsMet`, `updateAutomaticThreadTitle` |
+| `12-tool-dispatch.js` | `06-provider-engine.js` | backward | `buildRuntimeIdentityFacts`, `getCapabilities`, `listPlaybooksWithAvailability`, `loadAllPlaybooks`, `markNetworkOnline`, `neutralizeAuthoredText`, `peekCapabilities`, `runtimeToolRequirementsMet`, `updateAutomaticThreadTitle` |
 | `12-tool-dispatch.js` | `06d-memory-domain.js` | backward | `listWorkbenchMemories`, `proposeMemoryRelationRevoke`, `proposeMemoryRelationTool`, `proposeMemoryRevision`, `proposeWorkbenchMemory`, `readWorkbenchMemory` |
 | `12-tool-dispatch.js` | `06i-steward-core.js` | backward | `StewardHooks`, `isStewardToolName`, `stewardAssemblePlaybookPrompt`, `stewardPlaybookMissingInputs` |
 | `12-tool-dispatch.js` | `07-autonomy.js` | backward | `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `bridgedToolTier`, `compareToolRetrievalShadow`, `listCompactTools`, `nativeToolDisabledByPolicy`, `nativeToolSchema`, `nativeToolsAcceptingArgKeys`, `policyDesktopOverrideFor`, `policySessionFor`, `searchToolCatalog`, `toolArgsSkeleton`, `toolDisabledByPolicy`, `toolDisabledResult` |
@@ -745,7 +745,7 @@
 | `14-main.js` | `04i-provider-wire.js` | backward | `PROVIDER_WIRE_PROTOCOLS`, `applyProviderReasoningEffort`, `buildResponsesInputItems`, `normalizeProviderApiStyle`, `providerReasoningEffort`, `providerWireProtocol`, `responsesHistoryWithCompleteToolPairs` |
 | `14-main.js` | `05-claude-engine.js` | backward | `AGENT_CLI_ADAPTERS`, `agentCliAdapter`, `asrFixMessages`, `asrFixSanity`, `maskSecrets`, `maskedSecretConflicts`, `providerFixCompletion`, `providerLaunchVectorKey`, `resolveAsrFixProvider`, `sanitizeExternalMcpServer`, `unmaskProviders`, `unmaskSecrets` |
 | `14-main.js` | `05b-kimi-bridge.js` | backward | `consumeKimiAcpApproval`, `isKimiAcpPlanFilePath`, `kimiAcpFreshActualForOperation`, `kimiAcpInferConcreteToolInput`, `kimiAcpModeOptionFromActivated`, `kimiAcpNativeBashWrapperCandidate`, `kimiAcpNativeBashWrapperTexts`, `kimiAcpNativeShellQuote`, `kimiAcpPermissionToolCall`, `kimiAcpSessionRestoreMethods`, `kimiAcpSuccessfulEnterPlanMode`, `kimiAcpUnknownSessionError`, `kimiSessionStatus`, `parseKimiWireAgentEvents`, `parseKimiWireCompaction`, `prepareKimiAcpSpawn`, `resolveKimiAcpPlanFilePath`, `runKimiCompact`, `watchKimiWire` |
-| `14-main.js` | `06-provider-engine.js` | backward | `CAP_UNKNOWN_TTL_MS`, `ERROR_CLASSES`, `TOOL_ITERATION_BUDGETS`, `TOOL_REQUIRES`, `appendResponseLanguagePolicy`, `appendTurnPolicies`, `buildAgentTeamHint`, `buildBrowserAutomationHint`, `buildClaudeNativeAgentPolicy`, `buildEngineEnvBrief`, `buildMetricsPayload`, `buildPlaybookIndexSection`, `buildPromptTaskContext`, `buildProviderSystemPrompt`, `buildRuntimeIdentityFacts`, `buildSoftwareEngineeringPolicy`, `buildStableSystemPrompt`, `buildToolCustomizationHint`, `buildVolatileParts`, `clampAppendWithSkills`, `claudeProjectDirKey`, `claudeProjectsRoot`, `collectStorageStats`, `desktopAuditEntriesFromResult`, `evalPlaybookAvailability`, `fenceSafeSlice`, `getCapabilities`, `invalidateCapabilityCache`, `matchServiceEntry`, `maybeRecordStorageTrend`, `maybeWriteThreadBrief`, `networkAnchors`, `normalizeMetricsPath`, `normalizePlaybook`, `normalizeStoragePolicy`, `parsePlaybookDraft`, `parseThreadBrief`, `peekCapabilities`, `probeAny`, `providerRawCompletion`, `readStorageTrend`, `recordEngineTranscript`, `recordRequestMetric`, `resolveEngineEnvBrief`, `resolveToolIterationBudget`, `shouldExtendToolIterationBudget`, `shrinkFencedSection`, `softwareEngineeringTaskProfile`, `storageSweep`, `toolRequirementsMet` |
+| `14-main.js` | `06-provider-engine.js` | backward | `CAP_UNKNOWN_TTL_MS`, `ERROR_CLASSES`, `TOOL_ITERATION_BUDGETS`, `TOOL_REQUIRES`, `appendResponseLanguagePolicy`, `appendTurnPolicies`, `buildAgentTeamHint`, `buildBrowserAutomationHint`, `buildClaudeNativeAgentPolicy`, `buildEngineEnvBrief`, `buildMetricsPayload`, `buildPlaybookIndexSection`, `buildPromptTaskContext`, `buildProviderSystemPrompt`, `buildRuntimeIdentityFacts`, `buildSoftwareEngineeringPolicy`, `buildStableSystemPrompt`, `buildToolCustomizationHint`, `buildVolatileParts`, `clampAppendWithSkills`, `claudeProjectDirKey`, `claudeProjectsRoot`, `collectStorageStats`, `desktopAuditEntriesFromResult`, `evalPlaybookAvailability`, `fenceSafeSlice`, `getCapabilities`, `invalidateCapabilityCache`, `matchServiceEntry`, `maybeRecordStorageTrend`, `maybeWriteThreadBrief`, `networkAnchors`, `normalizeMetricsPath`, `normalizePlaybook`, `normalizeStoragePolicy`, `parseThreadBrief`, `peekCapabilities`, `probeAny`, `providerRawCompletion`, `readStorageTrend`, `recordEngineTranscript`, `recordRequestMetric`, `resolveEngineEnvBrief`, `resolveToolIterationBudget`, `shouldExtendToolIterationBudget`, `shrinkFencedSection`, `softwareEngineeringTaskProfile`, `storageSweep`, `toolRequirementsMet` |
 | `14-main.js` | `06b-prompt-registry.js` | backward | `PROMPT_PACK_VERSION`, `getPromptPack` |
 | `14-main.js` | `06c-agent-loop-hooks.js` | backward | `AgentLoopHooks` |
 | `14-main.js` | `06d-memory-domain.js` | backward | `analyzeMemoryMaintenance`, `applyMemoryRelationProposal`, `buildCoreMemoryPromptSection`, `buildMemoryCheckPrompt`, `buildMemoryConflictMap`, `buildMemoryPromptSection`, `confirmMemoryRelation`, `deleteMemoryRelation`, `extractMemoryRelationProposals`, `legacyAccMemoryMigrationComplete`, `listMemoryRelations`, `listWorkbenchMemories`, `loadMemoryRegistry`, `memoryProposalIsDuplicate`, `memoryProposalPrefilter`, `memoryProposalSimilarity`, `migrateLegacyAccMemory`, `parseMemoryProposalDecision`, `proposeMemoryFromSession`, `proposeMemoryRelation`, `proposeMemoryRelationRevoke`, `proposeMemoryRelationTool`, `proposeMemoryRevision`, `proposeWorkbenchMemory`, `rankRelevantMemories`, `readWorkbenchMemory`, `resolveCoreMemoryState`, `resolveMemoryPreflight`, `saveMemory` |

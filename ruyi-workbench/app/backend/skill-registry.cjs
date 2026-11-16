@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { PLAYBOOK_REQUIRES, evalPlaybookAvailability } = require('./playbook-policy.cjs');
 const fsp = require('node:fs/promises');
 const { parseFrontmatter, docMeta, docBody, commandPrompt } = require('./document-metadata.cjs');
 const SKILL_IMPORT_RECORD = '.ruyi-import.json';
@@ -18,7 +19,7 @@ function effectiveSkillSelection(session, config) {
   return out;
 }
 
-function createSkillRegistry({ PLAYBOOK_REQUIRES, SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, evalPlaybookAvailability, loadAllPlaybooks, readIfExists, safeJsonParse }) {
+function createSkillRegistry({ SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, loadAllPlaybooks, readIfExists, safeJsonParse }) {
 // v1 技能体系: 解析 SKILL.md frontmatter 的 requires 字段为能力键数组(取值同 PLAYBOOK_REQUIRES)。
 // parseFrontmatter 把整行值当字符串,故支持「requires: network, vision」与「requires: [network, vision]」两写法。
 function parseSkillRequires(val) {

@@ -1655,5 +1655,5 @@ async function computeHealth(config, { desktopPending = false } = {}) {
 // hunt2-mcp:Windows 记事本存的 SKILL.md 带 UTF-8 BOM,修前 `^---` 对不上,整段 frontmatter 被当正文(name/description
 // 全丢,描述变成「---」)。三个读 frontmatter 的入口都先剥 BOM。
 const { createSkillRegistry } = require('./backend/skill-registry.cjs');
-const SkillRegistry = createSkillRegistry({ PLAYBOOK_REQUIRES, SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, evalPlaybookAvailability, loadAllPlaybooks, readIfExists, safeJsonParse });
+const SkillRegistry = createSkillRegistry({ SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, loadAllPlaybooks, readIfExists, safeJsonParse });
 const { loadSkillRegistry, resolveEnabledSkillEntries } = SkillRegistry;

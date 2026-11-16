@@ -545,7 +545,7 @@
     {
       "id": "playbooks",
       "pattern": "<data>/playbooks/<id>.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/playbooks.cjs",
       "anchor": "paths.playbooks",
       "schema": "object / normalized",
       "writePrimitive": "atomicWriteJson",
@@ -671,7 +671,7 @@
     {
       "id": "skill-import-record",
       "pattern": "<data>/skills/<id>/.ruyi-import.json",
-      "owner": "12-tool-dispatch.js",
+      "owner": "../backend/skill-registry.cjs",
       "anchor": "'.ruyi-import.json'",
       "schema": "object / schema 1 {source,sourcePath,plugin,importedAt,sourceTreeHash,copyTreeHash} (W8: skill copied from Claude Code / Codex / Kimi / a Claude Code plugin)",
       "writePrimitive": "fsp.writeFile into the staging dir before the whole dir is renamed into place (13u migrationCopyOneSkill)",

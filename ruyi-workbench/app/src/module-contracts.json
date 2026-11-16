@@ -5119,17 +5119,10 @@
         "ENGINE_BRIEF_OPEN",
         "ERROR_CLASSES",
         "NETWORK_ANCHORS",
-        "PLAYBOOK_INPUT_TYPES",
-        "PLAYBOOK_REQUIRES",
-        "PLAYBOOK_REUSE_OPEN",
-        "PLAYBOOK_SERVICES",
-        "PLAYBOOK_STATUS_RANK",
         "PROJECT_MEMORY_CAP",
         "REQ_METRICS",
         "REQ_METRICS_RECENT_MAX",
         "RUYI_MCP_TOOL_PREFIX",
-        "SERVICE_GUIDANCE_MAX",
-        "SERVICE_INTENT_KEYWORDS",
         "STORAGE_ARCHIVE_TERMINAL",
         "STORAGE_STEWARD",
         "STORAGE_TREND_MAX",
@@ -5166,7 +5159,6 @@
         "buildThreadBriefMessages",
         "buildToolCustomizationHint",
         "buildVolatileParts",
-        "builtinPlaybooksDir",
         "clampAppendWithSkills",
         "claudeProjectDirKey",
         "claudeProjectsRoot",
@@ -5195,21 +5187,16 @@
         "neutralizeAuthoredText",
         "normalizeMetricsPath",
         "normalizePlaybook",
-        "normalizePlaybookReuse",
         "normalizeStoragePolicy",
-        "parsePlaybookDraft",
         "parseThreadBrief",
         "peekCapabilities",
-        "playbookReuseMessages",
         "playbookReuseSources",
-        "playbookReuseTemplate",
         "probeAny",
         "probeDesktopMcp",
         "probeNetwork",
         "providerEnvLines",
         "providerRawCompletion",
         "readDesktopAudit",
-        "readPlaybooksFromDir",
         "readProjectMemory",
         "readStorageTrend",
         "readWorkbenchAudit",
@@ -5219,7 +5206,6 @@
         "renderCliEnvBrief",
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
-        "resolvePlaybookRecognition",
         "resolveToolIterationBudget",
         "runtimeToolRequirementsMet",
         "sampleProcessRss",
@@ -5257,21 +5243,24 @@
           "provider": "00-boot.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "computeProviderCost",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5313,7 +5302,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5421,7 +5411,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5435,7 +5426,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5484,7 +5476,8 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5624,7 +5617,8 @@
           "provider": "05-claude-engine.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13014,13 +13008,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "evalPlaybookAvailability",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "getCapabilities",
           "kinds": [
             "call",
@@ -13060,13 +13047,6 @@
           "symbol": "peekCapabilities",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "PLAYBOOK_REQUIRES",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -26685,13 +26665,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "parsePlaybookDraft",
           "kinds": [
             "read"
           ]
