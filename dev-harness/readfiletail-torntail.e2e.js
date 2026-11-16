@@ -239,7 +239,7 @@ fsp.stat = async (p, ...rest) => {
 
   // ---------- (d) 静态锁:全仓「尾窗读」原语只有一份定义 ----------
   {
-    const src = readServerSource();
+    const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-changes.cjs'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/intervention-journal.cjs'), 'utf8');
     const tailDefs = src.match(/async function readFileTail\(/g) || [];
     ok(tailDefs.length === 1, '(d) 全仓 readFileTail 只有一份定义(防止长出第五份)');
     const oldRepairDefs = src.match(/async function repairInterventionTornTail\(/g) || [];

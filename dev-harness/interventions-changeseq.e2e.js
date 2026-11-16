@@ -90,7 +90,7 @@ function streamWithQuestion(body, token, onAsk) {
 }
 
 (async () => {
-  const src = readServerSource();
+  const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-changes.cjs'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/intervention-journal.cjs'), 'utf8');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,
@@ -146,8 +146,10 @@ function streamWithQuestion(body, token, onAsk) {
     console.log('\n── [c] 静态锁 ──');
     ok(/function bumpMissionChangeSeq\(sessionId, payload = \{\}\)/.test(src), 'c 02 有携带 change record payload 的 bumpMissionChangeSeq');
     ok(/const missionChangeSeqHighWater = new Map\(\)/.test(src), 'c 02 missionChangeSeqHighWater 高水位 Map');
-    ok(/changeSeq: Math\.max\(0, Number\(p\.changeSeq\) \|\| 0\)/.test(src), 'c 02 normalizeMission changeSeq 字段(持久单调)');
-    ok(/if \(hw > cur\) head\.mission\.changeSeq = hw/.test(src), 'c 02 saveSession 高水位 max-preserve(防 clobber)');
+    const modelSource = fs.readFileSync(path.join(WB, 'app/backend/session-model.cjs'), 'utf8');
+    const persistenceSource = fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8');
+    ok(/changeSeq: Math\.max\(0, Number\(p\.changeSeq\) \|\| 0\)/.test(modelSource), 'c 02 normalizeMission changeSeq 字段(持久单调)');
+    ok(/if \(hw > cur\) head\.mission\.changeSeq = hw/.test(persistenceSource), 'c 02 saveSession 高水位 max-preserve(防 clobber)');
 
   } finally {
     kill(wb); await new Promise(r => provider.close(r)); await sleep(200); fs.rmSync(HOME, { recursive: true, force: true });

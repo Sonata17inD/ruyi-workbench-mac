@@ -45,7 +45,7 @@ const { STEWARD_SOURCE_EVENT_MAP, STEWARD_EVENT_KINDS } = require(path.join(ROOT
 /* ═══════════════ D1 mission change ═══════════════ */
 
 {
-  const text = read('02-session-store.js');
+  const text = read('../backend/mission-changes.cjs');
   const start = text.indexOf('const MISSION_CHANGE_TYPES = new Set([');
   ok(start >= 0, 'D1 找到 02-session-store.js 的 MISSION_CHANGE_TYPES 集合(扫描锚点)');
   const end = text.indexOf(']);', start);
@@ -218,7 +218,7 @@ function typeExpressionLiterals(text) {
   // 写入端存在性:两个新 run 事件必须真有人写,两个新 change type 也必须真有人写。
   const src08 = read('08-agent-runs.js');
   const src09 = read('09-workflow.js');
-  const src02 = read('02-session-store.js');
+  const src02 = read('../backend/mission-changes.cjs');
   ok(/type: 'run_stalled'/.test(src08) && /type: 'run_budget_tripped'/.test(src08),
     'D6 08 有 run_stalled / run_budget_tripped 的写入端');
   ok(/recordRunStalledEvent\(run,/.test(src09) && /recordRunBudgetTrippedEvent\(run,/.test(src09),

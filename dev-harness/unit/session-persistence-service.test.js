@@ -9,7 +9,7 @@ const { createSessionBodies } = require('../../ruyi-workbench/app/backend/sessio
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-persistence-port-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const coordination = { sessionWriteChains: new Map(), sessionRewindGenHighWater: new Map(), missionChangeSeqHighWater: new Map() };
+  const coordination = { sessionWriteChains: new Map(), sessionRewindGenHighWater: new Map() };
   const sessionPath = id => path.join(root, id + '.json');
   const sessionBodyPaths = id => ({ messages: path.join(root, id + '.messages.ndjson'), provider: path.join(root, id + '.provider.ndjson') });
   const published = [];
@@ -17,7 +17,7 @@ function fixture(t) {
     await fs.promises.writeFile(file + '.tmp', payload); await fs.promises.rename(file + '.tmp', file);
   } };
   const service = createSessionPersistence({
-    files, coordination, bodies: createSessionBodies({ isWriting: id => coordination.sessionWriteChains.has(id), logEvent() {} }),
+    files, coordination, missionChanges: { seedRevision() {}, revisionOf: () => 0 }, bodies: createSessionBodies({ isWriting: id => coordination.sessionWriteChains.has(id), logEvent() {} }),
     model: { normalizeSession: session => ({ session, changed: false }), healStalePendingSegments: () => false, mergeMissionBeforeSave() {} },
     lifecycle: { isActive: () => false, protectedHistoryEnabled: () => false, ownsExecution: () => true, isTombstoned: () => false, mergeBackgroundJobs() {} },
     metadata: { applyOverrides() {}, applyRouteOverride() {}, sessionMeta: s => ({ id: s.id, title: s.title }), sessionRecentUserRequest: () => '', scheduleIndexUpdate: (...args) => published.push(args) },

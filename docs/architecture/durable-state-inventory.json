@@ -363,7 +363,7 @@
     {
       "id": "session-changes",
       "pattern": "<data>/sessions/<id>.changes.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/mission-changes.cjs",
       "anchor": ".changes.ndjson",
       "schema": "NDJSON change records",
       "writePrimitive": "serialized append",

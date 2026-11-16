@@ -6,7 +6,7 @@ const fsp = fs.promises;
 function createSessionPersistence({
   files: { sessionPath, sessionBodyPaths, ensureDirs, atomicWriteJson },
   model: { normalizeSession, healStalePendingSegments, mergeMissionBeforeSave },
-  coordination: { sessionWriteChains, sessionRewindGenHighWater, missionChangeSeqHighWater },
+  coordination: { sessionWriteChains, sessionRewindGenHighWater }, missionChanges,
   bodies, lifecycle, metadata, events, safeSessionId, safeJsonParse, nowIso, logEvent,
   storageVersion: SESSION_STORAGE_VERSION,
 }) {
@@ -318,7 +318,7 @@ async function loadSession(id, reloadDepth = 0, staleRetry = 0, view = null) {
     const sid = String(session.id);
     // A load may interleave with an Intervention append already queued in this lifecycle. Seeding must
     // never lower that in-memory high-water mark to the (briefly older) head-file value.
-    missionChangeSeqHighWater.set(sid, Math.max(missionChangeSeqHighWater.get(sid) || 0, Number(session.mission.changeSeq) || 0));
+    missionChanges.seedRevision(sid, session.mission.changeSeq);
   }
   // 账本合并只往 messages 末尾追加(11 的实现:按 backgroundJobId 去重后 push),从不改已有条目 ——
   // 增量取的字节戳(sessionMessagesDelta 的 body)依赖这一点:盘上那 count 条之后的才逐条序列化。
@@ -422,7 +422,7 @@ async function saveSession(session, opts) {
     // directly via bumpMissionChangeSeq). Take max with the in-memory high-water so this save's in-memory
     // session object doesn't clobber an intervention's bump. No auto-bump here (bumps are explicit).
     if (head.mission && typeof head.mission === 'object') {
-      const hw = missionChangeSeqHighWater.get(id) || 0;
+      const hw = missionChanges.revisionOf(id);
       const cur = Number(head.mission.changeSeq) || 0;
       if (hw > cur) head.mission.changeSeq = hw;
     }

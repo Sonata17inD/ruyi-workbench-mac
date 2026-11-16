@@ -18,6 +18,7 @@
     "app/backend/mcp-transports.cjs",
     "app/backend/mission-membership.cjs",
     "app/backend/mission-store.cjs",
+    "app/backend/mission-changes.cjs",
     "app/backend/ordinary-json.cjs",
     "app/backend/privacy-core.cjs",
     "app/backend/privacy-gateway.cjs",

@@ -1375,6 +1375,7 @@
         "MISSION_MAX_TEXT",
         "MISSION_STALL_LIMIT",
         "MISSION_STALL_SIGNAL_WINDOW_MS",
+        "MissionChanges",
         "MissionStore",
         "SESSION_BODY_READ_TRANSIENT",
         "SESSION_BRIEF_GIST_CHARS",
@@ -1468,10 +1469,7 @@
         "mergeMissionBeforeSave",
         "missionAttachThread",
         "missionBudgetRemaining",
-        "missionBudgetTripTurns",
         "missionChangeFilePath",
-        "missionChangeSeqHighWater",
-        "missionChangeWriteChains",
         "missionContainerAcceptanceStamp",
         "missionControlCommand",
         "missionControlFailure",
@@ -1483,7 +1481,6 @@
         "missionProgressDigest",
         "missionRollbackTarget",
         "missionSignalThrottleAllow",
-        "missionSignalThrottleAt",
         "missionSplitThreads",
         "mutateSession",
         "newSessionEngineRoute",
@@ -1756,7 +1753,7 @@
           "provider": "01-config.js",
           "symbol": "readFileTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
