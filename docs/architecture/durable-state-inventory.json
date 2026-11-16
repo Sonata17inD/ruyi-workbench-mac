@@ -965,7 +965,7 @@
     {
       "id": "scheduler-tasks",
       "pattern": "<data>/scheduler/tasks-v1.json",
-      "owner": "13s-scheduler.js",
+      "owner": "../backend/scheduler-runtime.cjs",
       "anchor": "SCHEDULER_TASKS_FILE",
       "schema": "object / schema 1 (tasks[] = 29 号文 §3 的 Commitment 形状：schedule/payload/target/autonomy/policy/state + revision; 127 2-ter: optional target.tier strong|fast (absent = follow global, kept only for prompt + new-session) and optional server-owned workdir = the folder derived for this task on its first steward-on trigger, never accepted from HTTP/tool input and re-checked against workspaces[] on every trigger)",
       "writePrimitive": "atomicWriteJson through a per-process serialized chain (schedulerTasksChain)",
@@ -979,7 +979,7 @@
     {
       "id": "scheduler-fires",
       "pattern": "<data>/scheduler/fires-v1.ndjson",
-      "owner": "13s-scheduler.js",
+      "owner": "../backend/scheduler-runtime.cjs",
       "anchor": "SCHEDULER_FIRES_FILE",
       "schema": "NDJSON fire rows / fires-v1 (seq + occurrenceKey + executionGeneration + phase registered|dispatched|running|reconciled + outcome succeeded|failed|needs_you|skipped|unknown)",
       "writePrimitive": "repairMissionChangeTornTail + appendFile through a per-process serialized chain (the session-changes primitive, same as steward-inbox)",

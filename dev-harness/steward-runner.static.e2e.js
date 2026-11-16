@@ -34,7 +34,7 @@ const src10 = read('10-context-governance.js');
 const src12 = read('12-tool-dispatch.js');
 const src13 = read('13-http-router.js');
 const src13d = read('13d-core-domain-routes.js');
-const src13s = read('13s-scheduler.js'); // scheduler timeout still consumes the internal queue-cancellation hook
+const src13s = read('../backend/scheduler-runtime.cjs'); // scheduler timeout still consumes the internal queue-cancellation hook
 const src13g = read('13g-steward.js');
 // 117 波 T1(32 号文 §2.1):13g 的工具实现与共享原语拆到了三个新文件(纯搬家)。它们与 13g 同属
 // 「13g 族」,同样是 13h 的【消费者】—— 下面 ② 的零前向边判据与 unused 判据都必须覆盖它们,

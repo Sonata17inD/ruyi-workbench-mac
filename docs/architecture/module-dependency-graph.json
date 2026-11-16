@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3544,
-    "requiredSymbols": 3442,
+    "providedSymbols": 3517,
+    "requiredSymbols": 3438,
     "edges": 645,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -22994,59 +22994,32 @@
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
-        "SCHEDULER_DIR_NAME",
-        "SCHEDULER_FIRES_FILE",
-        "SCHEDULER_FIRES_FULL_READ_BYTES",
-        "SCHEDULER_FIRES_TAIL_BYTES",
-        "SCHEDULER_ONTIME_SLACK_MS",
         "SCHEDULER_RUNS_LIMIT_DEFAULT",
         "SCHEDULER_RUNS_LIMIT_MAX",
-        "SCHEDULER_TASKS_FILE",
-        "SCHEDULER_TASKS_SCHEMA",
-        "SCHEDULER_TICK_MS_DEFAULT",
-        "SCHEDULER_TICK_MS_MAX",
-        "SCHEDULER_TICK_MS_MIN",
-        "SCHEDULER_TITLE_IN_FIRE_MAX",
+        "SchedulerRuntime",
         "handleSchedulerApiRoutes",
         "schedulerAppendFire",
-        "schedulerAskWaitMs",
-        "schedulerClockFile",
         "schedulerClockNow",
-        "schedulerDayKey",
         "schedulerDir",
-        "schedulerDispatchFire",
         "schedulerEmitChanged",
         "schedulerEnabled",
         "schedulerEnsureTimer",
         "schedulerFireOnce",
-        "schedulerFiresChain",
-        "schedulerFiresPath",
         "schedulerLoad",
         "schedulerLocaleOf",
-        "schedulerMaybeCrash",
         "schedulerMergeRuns",
         "schedulerNotify",
         "schedulerPermissionModeFor",
         "schedulerPublicTask",
         "schedulerReadFireRows",
-        "schedulerReadFiresText",
-        "schedulerReadTasksFile",
-        "schedulerReconciledState",
-        "schedulerRecordMissedSkip",
         "schedulerRecover",
-        "schedulerRestorePersistedState",
         "schedulerRouteGate",
         "schedulerRunNow",
         "schedulerRuntime",
         "schedulerRuntimeSnapshot",
         "schedulerSaveTasks",
-        "schedulerTaskBusy",
-        "schedulerTasksChain",
         "schedulerTasksPath",
         "schedulerTick",
-        "schedulerTickMs",
-        "schedulerTickOverride",
-        "schedulerTurnTimeoutMs",
         "startScheduler",
         "stopScheduler"
       ],
@@ -23060,20 +23033,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "json",
           "kinds": [
             "call"
@@ -23083,19 +23042,13 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -23137,13 +23090,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
             "call"
@@ -23153,14 +23099,15 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -23174,49 +23121,49 @@
           "provider": "02-session-store.js",
           "symbol": "createSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23237,7 +23184,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardPermissionRank",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23251,28 +23198,29 @@
           "provider": "06j-scheduler-core.js",
           "symbol": "missedOccurrence",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "nextFireAt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "normalizeSchedulerTask",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "occurrenceKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23314,7 +23262,7 @@
           "provider": "10-context-governance.js",
           "symbol": "runSessionTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -35304,17 +35252,13 @@
         "RUYI_EVENTS",
         "URL",
         "apiFailure",
-        "fs",
-        "fsp",
         "json",
         "makeId",
         "nowIso",
-        "path",
         "paths",
         "readJsonBody",
         "safeDecodeURIComponent",
-        "send",
-        "text"
+        "send"
       ],
       "direction": "backward"
     },

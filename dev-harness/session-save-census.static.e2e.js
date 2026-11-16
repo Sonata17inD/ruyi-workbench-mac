@@ -33,7 +33,7 @@ const CENSUS = {
   '13d-core-domain-routes.js': 1,// 权限暂停计时器的纯重写
   '13k-steward-threads.js': 2,   // 建会话
   '13m-steward-runner-base.js': 2, // ensureStewardSession(建/补管家会话)
-  '13s-scheduler.js': 1,         // 定时触发建会话
+  '../backend/scheduler-runtime.cjs': 1,         // 定时触发建会话
 };
 const actual = {};
 for (const n of fs.readdirSync(SRC).filter(x => x.endsWith('.js')).concat(fs.readdirSync(path.join(SRC, '../backend')).filter(x => x.endsWith('.cjs')).map(x => '../backend/' + x)).sort()) {

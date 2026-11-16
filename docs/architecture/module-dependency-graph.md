@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3544 | 3442 | 645 | 61 | 0 | 1 |
+| 92 | 3517 | 3438 | 645 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -96,7 +96,7 @@
 | 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
-| 81 | `13s-scheduler.js` | transport | 55 | 38 | 9 |
+| 81 | `13s-scheduler.js` | transport | 28 | 34 | 9 |
 | 82 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
 | 83 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
 | 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
@@ -674,7 +674,7 @@
 | `13r-event-stream.js` | `04-permission-runtime.js` | backward | `subscribeActiveChildEvents` |
 | `13r-event-stream.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `stewardThreadStateFromHead`, `stewardWatchedThread`, `threadOriginOf` |
 | `13r-event-stream.js` | `13d-core-domain-routes.js` | backward | `missionPendingCounts` |
-| `13s-scheduler.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `URL`, `apiFailure`, `fs`, `fsp`, `json`, `makeId`, `nowIso`, `path`, `paths`, `readJsonBody`, `safeDecodeURIComponent`, `send`, `text` |
+| `13s-scheduler.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `URL`, `apiFailure`, `json`, `makeId`, `nowIso`, `paths`, `readJsonBody`, `safeDecodeURIComponent`, `send` |
 | `13s-scheduler.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig` |
 | `13s-scheduler.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
 | `13s-scheduler.js` | `02-session-store.js` | backward | `createSession`, `loadSession`, `repairMissionChangeTornTail`, `saveSession`, `updateSessionMeta` |

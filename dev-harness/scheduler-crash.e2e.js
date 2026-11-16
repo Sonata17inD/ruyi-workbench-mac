@@ -123,52 +123,49 @@ const DAILY_BODY = title => ({ title, schedule: { kind: 'daily', at: '09:00' }, 
 async function recoveryWorker() {
   let input = ''; for await (const chunk of process.stdin) input += chunk;
   const command = JSON.parse(input);
-  const S = require('./lib/server-internals').loadServerInternals(['schedulerLoad', 'schedulerRecover', 'schedulerTick',
-    'schedulerFireOnce', 'schedulerRuntime', 'schedulerReadFireRows'], { withEval: true });
+  let S;
+  const { service, nextFireAt } = require('./lib/scheduler-fixture').createSchedulerFixture({
+    async writeJson(write, file, value, options) {
+      const result = await write(file, value, options);
+      if (['settle-crash', 'overlap-crash'].includes(command.op)
+          && file === S.schedulerTasksPath() && value.tasks.some(task => !task.state.inFlightRunId)) process.exit(3);
+      return result;
+    },
+    async appendFile(append, file, payload, encoding) {
+      const row = JSON.parse(payload);
+      if (row.phase === 'dispatched' && (command.op === 'edit-settle' || command.fail)) {
+        throw Object.assign(new Error('synthetic dispatch failure'), { code: 'EIO' });
+      }
+      if (row.phase === 'reconciled') {
+        if (command.op === 'edit-settle') {
+          const task = S.schedulerRuntime.tasks[0];
+          task.schedule = { kind: 'daily', at: '21:00' };
+          task.state.nextFireAt = new Date(nextFireAt(task.schedule, S.schedulerClockNow())).toISOString();
+          task.state.enabled = true;
+          task.state.consecutiveFailures = 0;
+          await S.schedulerSaveTasks();
+        }
+        if (['skip-overlap', 'overlap-crash'].includes(command.op)) { await S.schedulerSaveTasks(); process.exit(3); }
+      }
+      const result = await append(file, payload, encoding);
+      if (row.phase === 'reconciled' && ['skip-crash', 'skip-overlap', 'settle-crash', 'overlap-crash'].includes(command.op)) process.exit(3);
+      return result;
+    },
+  });
+  S = service;
   const rows = await S.schedulerLoad();
   if (command.op === 'edit-settle') {
-    S.__eval(`schedulerAppendFire = ((append) => async row => {
-      if (row.phase === 'dispatched') throw Object.assign(new Error('synthetic dispatch failure'), { code: 'EIO' });
-      if (row.phase === 'reconciled') {
-        const task = schedulerRuntime.tasks[0];
-        task.schedule = { kind: 'daily', at: '21:00' };
-        task.state.nextFireAt = new Date(nextFireAt(task.schedule, schedulerClockNow())).toISOString();
-        task.state.enabled = true;
-        task.state.consecutiveFailures = 0;
-        await schedulerSaveTasks();
-      }
-      return append(row);
-    })(schedulerAppendFire);`);
     await S.schedulerFireOnce(S.schedulerRuntime.tasks[0], 'ontime', command.dueMs);
     console.log(JSON.stringify({ task: S.schedulerRuntime.tasks[0], rows: await S.schedulerReadFireRows() }));
     return;
   }
   if (command.op === 'skip-crash' || command.op === 'skip-overlap') {
-    S.__eval(`schedulerAppendFire = ((append) => async row => {
-      ${command.op === 'skip-overlap' ? "if (row.phase === 'reconciled') { await schedulerSaveTasks(); process.exit(3); }" : ''}
-      const result = await append(row);
-      if (row.phase === 'reconciled') process.exit(3);
-      return result;
-    })(schedulerAppendFire);`);
     if (command.op === 'skip-overlap') await S.schedulerTick();
     else if (command.cap) await S.schedulerFireOnce(S.schedulerRuntime.tasks[0], 'late', command.dueMs);
     else await S.schedulerRecover(rows);
     throw new Error('skip persistence crash boundary was not reached');
   }
   if (['settle-crash', 'overlap-crash'].includes(command.op)) {
-    // Exit immediately after the first terminal persistence action, whichever store is written first.
-    S.__eval(`atomicWriteJson = ((write) => async (file, value, options) => {
-      const result = await write(file, value, options);
-      if (file === schedulerTasksPath() && value.tasks.some(task => !task.state.inFlightRunId)) process.exit(3);
-      return result;
-    })(atomicWriteJson);
-    schedulerAppendFire = ((append) => async row => {
-      ${command.fail ? 'if (row.phase === "dispatched") throw Object.assign(new Error("synthetic dispatch failure"), {code:"EIO"});' : ''}
-      ${command.op === 'overlap-crash' ? 'if (row.phase === "reconciled") { await schedulerSaveTasks(); process.exit(3); }' : ''}
-      const result = await append(row);
-      if (row.phase === 'reconciled') process.exit(3);
-      return result;
-    })(schedulerAppendFire);`);
     await S.schedulerFireOnce(S.schedulerRuntime.tasks[0], command.mode, command.dueMs);
     throw new Error('terminal crash boundary was not reached');
   }

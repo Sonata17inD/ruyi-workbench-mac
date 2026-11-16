@@ -182,7 +182,7 @@ function startProvider(port) {
     {
       const FLAGS = ['WCW_SCHEDULER_CLOCK_FILE', 'WCW_SCHEDULER_TICK_MS', 'WCW_SCHEDULER_ASK_WAIT_MS', 'WCW_SCHEDULER_CRASH_AT', 'WCW_SCHEDULER_TIMEOUT_MS'];   // 第五个旗 TIMEOUT_MS:走查修复(等批准不被超时吃掉 / 排队超时)的单测用
       const srcDir = path.join(WB, 'app', 'src');
-      const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js'));
+      const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js')).concat(fs.readdirSync(path.join(srcDir, '../backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f));
       for (const flag of FLAGS) {
         const hits = [];
         for (const f of files) {
@@ -190,8 +190,8 @@ function startProvider(port) {
           const reads = (body.match(new RegExp('process\\.env\\.' + flag + '\\b', 'g')) || []).length;
           if (reads) hits.push(f + ' x' + reads);
         }
-        ok(hits.length === 1 && hits[0] === '13s-scheduler.js x1',
-          `A7[${flag}] 整个 src/ 里只有 13s 的一处 process.env 读取点(实测 ${JSON.stringify(hits)})`);
+        ok(hits.length === 1 && hits[0] === '../backend/scheduler-runtime.cjs x1',
+          `A7[${flag}] 生产模块里只有 scheduler-runtime 的一处 process.env 读取点(实测 ${JSON.stringify(hits)})`);
       }
       for (const flag of FLAGS) {
         ok(process.env[flag] === undefined, `A8[${flag}] 本进程没设这个旗 —— 下面那条断言才算数`);
