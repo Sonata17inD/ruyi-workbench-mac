@@ -11504,9 +11504,8 @@
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
         "BackgroundJobs",
+        "RgProbe",
         "ShellSessions",
-        "_rgProbe",
-        "_rgProbeInflight",
         "adaptiveCatalogForMcp",
         "binaryReadHint",
         "boundedReadPage",
@@ -11552,11 +11551,8 @@
         "readIfExists",
         "readWebCache",
         "regexScanFilesBounded",
-        "rgExeName",
         "rgProbeCandidates",
-        "rgProbeResolve",
         "runGit",
-        "runRgOwned",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
@@ -11611,20 +11607,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -11669,14 +11651,7 @@
           "provider": "00-boot.js",
           "symbol": "ruyiVendorBinDir",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "samePathEntry",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11768,20 +11743,6 @@
           "symbol": "ensureDataRootReal",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutable",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
           ]
         },
         {

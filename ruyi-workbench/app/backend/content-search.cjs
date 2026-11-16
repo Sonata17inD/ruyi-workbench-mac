@@ -4,6 +4,7 @@ const fsp = require('node:fs/promises');
 const { DEFAULT_IGNORE_DIRS, DOTNET_PROJECT_RE, buildIgnoreMatcher, explicitSegmentsOfGlob, globToRegExp, normalizeSearchPattern } = require('./path-patterns.cjs');
 const { assertSearchExecution, awaitSearchProbe, closeSearchWorker } = require('./search-workers.cjs');
 function createContentSearch({ ProcessRuntime, walkFiles, probe, privacy, sensitiveGlobsForRg }) {
+  const { runRgOwned } = require('./rg-execution.cjs').createRgExecution({ ProcessRuntime });
   const { hasRgAsync, probeRg } = probe;
   const { privacyProjectSearch, privacySourceActive, privacySourceMark, sourceViewOf } = privacy;
 async function searchFileContent(root, pattern, opts = {}) {
@@ -313,50 +314,6 @@ function patternMayMatchNonAscii(pattern) {
   const p = String(pattern == null ? '' : pattern);
   return /[^\x00-\x7f]/.test(p) || /\\(?:x\{|u|[pP]\{|[wWSD])/.test(p);
 }
-// A fallback may start only after the supervised rg execution has completed its cleanup.
-async function runRgOwned(command, argv, cwd, timeoutMs, maxBuffer, signal,
-  owner = { ...ProcessRuntime.currentOwner(), kind: 'file-search' }) {
-  const failure = (code, cleanup) => Object.assign(new Error('Search execution could not complete safely'), {
-    code, searchExecutionFailure: true, cleanupScope: cleanup?.scope,
-    cleanupIncomplete: cleanup?.incomplete === true, cleanupEscapeCoverage: cleanup?.escapeCoverage,
-    cleanupUnconfirmed: cleanup?.unconfirmed,
-  });
-  if (signal?.aborted) throw failure('aborted');
-  let capture;
-  try {
-    capture = await ProcessRuntime.capture(command, argv, { signal, cwd, maxBuffer, encoding: 'utf8' },
-      owner);
-  } catch { return null; } // No child was started, so JS fallback is safe.
-  const { child } = capture;
-  let stopping = false, resolveStopped;
-  const stopped = new Promise(resolve => { resolveStopped = resolve; });
-  const stop = async code => {
-    if (stopping) return;
-    stopping = true;
-    let cleanup = { scope: 'unknown', incomplete: true };
-    try { ProcessRuntime.stopChild(child); cleanup = await ProcessRuntime.waitForCleanup(child, 1500); }
-    catch { /* preserve uncertainty */ }
-    finally {
-      child.stdout.destroy(); child.stderr.destroy();
-      resolveStopped({ error: Object.assign(new Error('Search interrupted'), { code }), cleanup });
-    }
-  };
-  const abort = () => { void stop('aborted'); };
-  signal?.addEventListener('abort', abort, { once: true });
-  const timer = setTimeout(() => { void stop('ETIMEDOUT'); }, timeoutMs);
-  if (signal?.aborted) abort();
-  try {
-    let result = await Promise.race([capture.output.then(async output => ({ ...output,
-      cleanup: await ProcessRuntime.waitForCleanup(child, 1500) })), stopped]);
-    if (stopping) result = await stopped;
-    if (result.cleanup?.incomplete) throw failure('process_cleanup_incomplete', result.cleanup);
-    if (signal?.aborted) throw failure('aborted', result.cleanup);
-    if (result.error?.code === 'ERR_PROCESS_OUTPUT_INCOMPLETE') throw failure('process_output_incomplete', result.cleanup);
-    if (result.error && result.error.code !== 1) return null;
-    return { stdout: result.stdout, code: result.error ? 1 : 0 };
-  } finally { clearTimeout(timer); signal?.removeEventListener('abort', abort); }
-}
-
 // rg -l:列出含 0x80 以上字节的文件(UTF-8 中文文件与 GBK 文件都在内;纯 ASCII 文件不在)。参数用与主搜索相同的 filt。
 function rgListHighByteFiles(rg, base, filt, timeoutMs, signal) {
   return runRgOwned(rg, ['--no-messages', '-l', '--crlf', ...filt, '--', '(?-u)[\\x80-\\xFF]', base], base, timeoutMs, 8_000_000, signal)
@@ -505,6 +462,6 @@ async function searchFileContentRg(root, pattern, opts = {}) {
 }
 
 
-return { searchFileContent, regexScanFilesBounded, searchMaxFileBytes, explicitAllowDirs, prunedDirsHint, runRgOwned, searchFileContentJs, searchFileContentRg };
+return { searchFileContent, regexScanFilesBounded, searchMaxFileBytes, explicitAllowDirs, prunedDirsHint, searchFileContentJs, searchFileContentRg };
 }
 module.exports = { createContentSearch };

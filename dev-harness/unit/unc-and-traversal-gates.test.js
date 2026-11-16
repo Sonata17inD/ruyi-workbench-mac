@@ -60,7 +60,7 @@ catch (e) {
   I.remoteUncDenial = () => ''; I.uncHostAndPath = () => null; I.UNC_DENIED_ERROR = '<none>';
 }
 // 随仓 rg.exe 不走 PATH(Windows CI f2dfa62 红:子进程仍报 engine=rg):直接把模块级探测缓存设为 null = 「探过,没有 rg」。
-if (NO_RG) I.__eval('_rgProbe = null');
+if (NO_RG) I.__eval('hasRgAsync = async () => false; probeRg = () => null');
 
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

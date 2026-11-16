@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3414,
-    "requiredSymbols": 3492,
+    "providedSymbols": 3410,
+    "requiredSymbols": 3487,
     "edges": 657,
     "forwardEdges": 66,
     "duplicateProvides": 0,
@@ -11632,9 +11632,8 @@
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
         "BackgroundJobs",
+        "RgProbe",
         "ShellSessions",
-        "_rgProbe",
-        "_rgProbeInflight",
         "adaptiveCatalogForMcp",
         "binaryReadHint",
         "boundedReadPage",
@@ -11680,11 +11679,8 @@
         "readIfExists",
         "readWebCache",
         "regexScanFilesBounded",
-        "rgExeName",
         "rgProbeCandidates",
-        "rgProbeResolve",
         "runGit",
-        "runRgOwned",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
@@ -11739,20 +11735,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -11797,14 +11779,7 @@
           "provider": "00-boot.js",
           "symbol": "ruyiVendorBinDir",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "samePathEntry",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11896,20 +11871,6 @@
           "symbol": "ensureDataRootReal",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutable",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -32032,14 +31993,11 @@
         "URL",
         "dataRoot",
         "dataRootAliases",
-        "fs",
-        "fsp",
         "nowIso",
         "path",
         "paths",
         "runKeyedChain",
-        "ruyiVendorBinDir",
-        "samePathEntry"
+        "ruyiVendorBinDir"
       ],
       "direction": "backward"
     },
@@ -32094,8 +32052,6 @@
       "symbols": [
         "_dataRootReal",
         "ensureDataRootReal",
-        "existsExecutable",
-        "existsExecutableAsync",
         "guardFileToolPath",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",

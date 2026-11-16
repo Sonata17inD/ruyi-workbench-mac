@@ -302,7 +302,9 @@
     "app/backend/content-search.cjs",
     "app/backend/privacy-sources.cjs",
     "app/backend/background-jobs.cjs",
-    "app/backend/shell-sessions.cjs"
+    "app/backend/shell-sessions.cjs",
+    "app/backend/rg-execution.cjs",
+    "app/backend/rg-probe.cjs"
   ],
   "acc": [
     "LICENSE",

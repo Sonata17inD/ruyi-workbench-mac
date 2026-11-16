@@ -177,7 +177,7 @@ describe('#6 · 遍历结果保持调用方的路径写法(符号链接工作区
   for (const engine of ['rg-or-default', 'js']) {
     it(`file_search / file_list / glob / project_snapshot 回给模型的绝对路径是工作区的写法,不是 realpath(${engine})`, async (t) => {
       if (!linked) return t.skip('no links');
-      if (engine === 'js') I.__eval('_rgProbe = null');
+      if (engine === 'js') I.__eval('hasRgAsync = async () => false; probeRg = () => null');
       const H = I.FILE_TOOL_HANDLERS;
       const s = await H.file_search.handler({ pattern: 'needle', root: link }, ctx());
       assert.equal(s.ok, true, dump(s));
