@@ -9,10 +9,7 @@ const { httpRequest, webFetchFailMessage } = require('./http-request.cjs');
 const { boundedReadPage } = require('./text-pages.cjs');
 const { extractMainText, parseBingHtml, parseBaiduHtml, SEARCH_CJK_RE, searchPageBlocked, mergeSearchResults } = require('./html-content.cjs');
 const nowIso = () => new Date().toISOString();
-function safeJsonParse(raw) {
-  try { return JSON.parse(typeof raw === 'string' && raw.charCodeAt(0) === 0xFEFF ? raw.slice(1) : raw); }
-  catch { return null; }
-}
+const { safeJsonParse } = require('./ordinary-json.cjs');
 function createWebTools({ cacheDirectory, atomicWriteJson, network }) {
 // Web cache: dataRoot/webcache/<sha256(url)>.json holding {url,title,text,ts}. Written after a successful
 // fetch; read as an OFFLINE fallback (no TTL — an old copy is still useful when there is no network — but the

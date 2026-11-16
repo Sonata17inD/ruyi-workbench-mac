@@ -42,4 +42,12 @@ function copyOrdinaryJsonData(value, freeze = true) {
   };
   return copy(value, 0);
 }
-module.exports = { copyOrdinaryJsonData };
+function safeJsonParse(raw, fallback = null) {
+  try {
+    return JSON.parse((typeof raw === 'string' && raw.charCodeAt(0) === 0xFEFF) ? raw.slice(1) : raw);
+  } catch {
+    return fallback;
+  }
+}
+
+module.exports = { copyOrdinaryJsonData, safeJsonParse };

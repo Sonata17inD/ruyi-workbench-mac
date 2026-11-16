@@ -1,4 +1,5 @@
 'use strict';
+const { debugHypothesis } = require('../../ruyi-workbench/app/backend/debug-hypothesis.cjs');
 // 代码审计类工具的噪声与保真(审计 NE-14)。
 //   [A1] code_review_scan:正则 .exec( / querySelector / 散文里的 update+拼接 不再当成 shell-exec / sql-concat;真风险照报
 //   [A2] code_review_scan:counts 在 findings 之前,高危排前面
@@ -96,14 +97,14 @@ test('[A4] claude_md_audit:词界 —— "latest" 不算写了 test 命令', asy
 });
 
 test('[A5] debug_hypothesis:test 之后 ledger 仍保留 mechanism/expectedEvidence/verification', async () => {
-  const init = await srv.toolCall('debug_hypothesis', { action: 'init', hypotheses: [{ id: 'H1', description: 'cache stale', mechanism: 'TTL not reset', expectedEvidence: 'old value after write', verification: 'write then read twice' }] }, {});
+  const init = debugHypothesis( { action: 'init', hypotheses: [{ id: 'H1', description: 'cache stale', mechanism: 'TTL not reset', expectedEvidence: 'old value after write', verification: 'write then read twice' }] });
   assert.equal(init.ok, true);
-  const t = await srv.toolCall('debug_hypothesis', { action: 'test', ledger: init.ledger, hypothesisId: 'H1', result: 'supports', evidence: 'saw old value' }, {});
+  const t = debugHypothesis( { action: 'test', ledger: init.ledger, hypothesisId: 'H1', result: 'supports', evidence: 'saw old value' });
   assert.equal(t.ok, true, JSON.stringify(t));
   const h = t.ledger.hypotheses[0];
   assert.equal(h.mechanism, 'TTL not reset');
   assert.equal(h.expectedEvidence, 'old value after write');
   assert.equal(h.verification, 'write then read twice');
-  const s = await srv.toolCall('debug_hypothesis', { action: 'status', ledger: t.ledger }, {});
+  const s = debugHypothesis( { action: 'status', ledger: t.ledger });
   assert.equal(s.ledger.hypotheses[0].verification, 'write then read twice');
 });

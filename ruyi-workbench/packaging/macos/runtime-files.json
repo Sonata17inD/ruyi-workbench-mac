@@ -290,7 +290,9 @@
     "app/backend/html-content.cjs",
     "app/backend/text-pages.cjs",
     "app/backend/http-request.cjs",
-    "app/backend/web-tools.cjs"
+    "app/backend/web-tools.cjs",
+    "app/backend/debug-hypothesis.cjs",
+    "app/backend/data-profiler.cjs"
   ],
   "acc": [
     "LICENSE",

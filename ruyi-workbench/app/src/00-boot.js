@@ -353,15 +353,7 @@ function executionArgumentsDigest(value) {
 
 // Copy only ordinary JSON data properties; no getters, toJSON or inherited serialization hooks.
 // Null prototypes make a prepared value stable across asynchronous serialization boundaries.
-const { copyOrdinaryJsonData } = require('./backend/ordinary-json.cjs');
-
-function safeJsonParse(raw, fallback = null) {
-  try {
-    return JSON.parse((typeof raw === 'string' && raw.charCodeAt(0) === 0xFEFF) ? raw.slice(1) : raw);
-  } catch {
-    return fallback;
-  }
-}
+const { copyOrdinaryJsonData, safeJsonParse } = require('./backend/ordinary-json.cjs');
 
 const { decodeConsoleText, createConsoleLineDecoder, decodeTextFileBytes, createNdjsonLineFeeder, createCappedDiagnosticText } = require('./backend/text-codecs.cjs');
 

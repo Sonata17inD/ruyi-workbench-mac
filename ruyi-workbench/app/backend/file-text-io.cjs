@@ -625,10 +625,37 @@ const FileTextIo = (() => {
     return null;
   }
 
+async function readFileWindow(p, maxBytes) {
+  let fh = null;
+  try {
+    fh = await nodeFsp.open(p, 'r');
+    const st = await fh.stat();
+    if (!st.isFile()) return { error: '不是普通文件(是目录或设备)', code: 'not_file' };
+    if (st.size === 0) return { error: '文件为空', code: 'empty' };
+    const n = Math.min(st.size, maxBytes);
+    const buf = Buffer.alloc(n);
+    let got = 0;
+    while (got < n) {
+      const { bytesRead } = await fh.read(buf, got, n - got, got);
+      if (!bytesRead) break;
+      got += bytesRead;
+    }
+    return { buf: got < n ? buf.subarray(0, got) : buf, fileBytes: st.size };
+  } catch (e) {
+    const c = e && e.code;
+    if (c === 'ENOENT' || c === 'ENOTDIR') return { error: '文件不存在', code: 'not_found' };
+    if (c === 'EACCES' || c === 'EPERM') return { error: '没有读取该文件的权限', code: 'no_permission' };
+    if (c === 'EISDIR') return { error: '不是普通文件(是目录)', code: 'not_file' };
+    return { error: '无法读取文件: ' + ((e && e.message) || String(e)), code: 'read_failed' };
+  } finally {
+    if (fh) { try { await fh.close(); } catch { /* ignore */ } }
+  }
+}
+
   return Object.freeze({
     CHUNK_BYTES, SCAN_TOTALS_MAX_BYTES, ACCEPTED_ENCODINGS_TEXT,
     normalizeEncodingName, gb18030Supported, sniffEncoding, decodeBuffer, encodeText, UnencodableError,
-    readTextWindow, readHead, writeFileAtomic, fsErrorEnvelope,
+    readTextWindow, readHead, readFileWindow, writeFileAtomic, fsErrorEnvelope,
     findWhitespaceMatch, describeWsKinds, locateMatches, closestWindow, showWs,
   });
 })();
