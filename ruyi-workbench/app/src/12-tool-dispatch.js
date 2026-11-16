@@ -677,7 +677,7 @@ const STEWARD_TOOL_HANDLERS = {
 const { FILE_TOOL_HANDLERS, ARCHIVE_TOOL_HANDLERS, fileToolBeforeForCheckpoint, fileToolPrivacySourceOptions, fileToolFsFailure, guardedWalkRoot, respellWalkPaths, toolRootProblem } = require('./backend/file-tools.cjs').createFileTools({
   paths: { fileToolWorkspaceDir, resolveFileToolPath, resolveFileToolRoot, guardFileToolPath, pathWithinRoot, isSensitiveDataPath, isSensitiveHardlinkAlias, sensitiveFileIdentities },
   checkpoints: { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx },
-  source: { FileVisualIo, MediaInspection, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, sourceViewOf },
+  source: { FileVisualIo, MediaInspection, PrivacyGateway, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, sourceViewOf },
   search: { explicitAllowDirs, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint },
   archive: { zipCollectEntries },
   runtime: { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall: (...args) => toolCall(...args) },
@@ -932,7 +932,11 @@ const DESKTOP_TOOL_HANDLERS = {
   } },
 };
 
-const HTTP_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024;
+const { httpDownloadTool, guardDownloadDest } = require('./backend/http-download.cjs').createHttpDownload({
+  guardFileToolPath, loadSession, isMcpChild: () => RUNTIME.isMcpChild,
+  fileToolBeforeForCheckpoint, journalSessionCtx, journalRecord, journalCheckpointWarn,
+  markNetworkOnline,
+});
 const NETWORK_TOOL_HANDLERS = {
   web_search: { paths: null, guardNote: "纯网络读;searchBackend 为管理端可信端点(SSRF 豁免录在案 v0.9-S9)", handler: async (args, ctx) => {
     // v0.9-S9 (D6): web_search reads searchBackend from config (baseUrl is the admin's TRUSTED endpoint →
@@ -953,90 +957,7 @@ const NETWORK_TOOL_HANDLERS = {
       }
       return httpRequest(args, { signal: ctx && ctx.signal });
   } },
-  http_download: { paths: "write", guardNote: '', handler: async (args, ctx) => {
-    // v1.1-W2 (T1) http_download(url, dest, maxBytes=100MB,上限即 100MB): 下载文件到工作区。复用 web_fetch 的 SSRF 全套护栏
-    //   （httpGetGuarded：逐跳 ssrfCheck + dnsResolvesToPrivate）。dest 过工作区路径护栏（guardDownloadDest）。
-    //   dest 已存在 → before 快照（op:modify，回滚=写回）；新建 op:create（回滚=删）。Content-Length 与实收都卡 maxBytes。
-      const url = String(args.url || '').trim();
-      if (!url) return { ok: false, error: 'url 不能为空' };
-      if (!args.dest) return { ok: false, error: 'dest 不能为空' };
-      const maxBytesAsked = Number(args.maxBytes) || 100 * 1024 * 1024;
-      const maxBytes = Math.min(HTTP_DOWNLOAD_MAX_BYTES, Math.max(1, maxBytesAsked));
-      // 走查 W1·F9:maxBytes 被 HTTP_DOWNLOAD_MAX_BYTES(100MB)夹住 —— 只能调小、不能放宽。修前超限提示说「增大 maxBytes」,模型照做(甚至传 10GB)
-      // 仍被同一个 100MB 拒绝,反复失败。现在按「是否已到硬上限」给不同的话,到顶了就指向别的办法。
-      const mbOf = n => Math.round(n / 1024 / 1024);
-      const tooBig = () => ({
-        error: `文件超过大小上限（${mbOf(maxBytes)}MB）` + (maxBytesAsked > HTTP_DOWNLOAD_MAX_BYTES ? `（传入的 maxBytes 超过单文件硬上限,已按 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB 处理）` : ''),
-        maxBytesCap: HTTP_DOWNLOAD_MAX_BYTES,
-        hint: maxBytes < HTTP_DOWNLOAD_MAX_BYTES
-          ? `可把 maxBytes 调大重试(最多 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB)`
-          : `已是单文件硬上限 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 shell_run（curl --output）下载,或让用户手动下载`,
-      });
-      // ① SSRF 前置拒绝（与 webFetch 同：内网/回环/非 http(s) 一律不发包）。
-      const pre = ssrfCheck(url);
-      if (!pre.allowed) return { ok: false, error: pre.reason, blocked: pre.host };
-      // ② 落盘目标护栏（工作区内）。
-      const rawDest = String(args.dest);
-      const guard = await guardDownloadDest(rawDest, ctx);
-      if (!guard.ok) return { ok: false, error: guard.error, ...(guard.code ? { code: guard.code } : {}) };
-      let dest = guard.absPath;
-      // dest 是文件夹:已存在的目录,或以 / \ 结尾(path.resolve 会吞掉结尾分隔符,所以看原始串)—— 文件存进去,名字取响应头 / URL。
-      // 修前:已存在的目录直接抛裸 EISDIR;`x/newdir/` 悄悄写成一个叫 newdir 的文件。
-      const destStat = await fsp.stat(dest).catch(() => null);
-      const intoDir = /[\\/]$/.test(rawDest) || !!(destStat && destStat.isDirectory());
-      if (intoDir && destStat && !destStat.isDirectory()) {
-        return { ok: false, code: 'ENOTDIR', error: `dest 以 / 结尾表示文件夹,但 ${dest} 是一个已存在的文件`, hint: '去掉结尾的分隔符,或换一个文件夹路径' };
-      }
-      // ③ 下载（httpGetGuarded 逐跳 SSRF + DNS 重绑定防御 + Content-Length 预拒 + maxBytes 实收截断）。
-      // timeoutMs:空闲超时(多久没收到数据就放弃)。修前只有这一道 —— 对端每秒滴一个字节能把下载拖到天荒地老(timeoutMs:1500 实测跑了 9 秒以上);
-      // 现在显式给了 timeoutMs 就同时是整个下载的总期限,没给则空闲 30s、总期限 30 分钟(大文件慢网也够用)。ctx.signal = 用户 Stop,取消下载。
-      const idleMs = Number(args.timeoutMs) > 0 ? Number(args.timeoutMs) : 30000;
-      const totalMs = Number(args.timeoutMs) > 0 ? Number(args.timeoutMs) : 30 * 60 * 1000;
-      const got = await httpGetGuarded(url, { maxBytes, timeoutMs: idleMs, totalTimeoutMs: totalMs, rejectOverMaxBytes: true, signal: (ctx && ctx.signal) || null });
-      if (got.blocked) return { ok: false, error: got.error, blocked: got.blocked };
-      if (got.failClass === 'too-big') return { ok: false, ...tooBig(), contentLength: got.contentLength };
-      if (!got.ok || !got.body) {
-        const mapped = webFetchFailMessage(got);
-        return { ok: false, error: mapped.error, failClass: got.failClass || 'other', statusCode: got.statusCode, ...(mapped.hint ? { hint: mapped.hint } : {}) };
-      }
-      // 实收字节卡上限：httpGetGuarded 在 maxBytes 处截断并置 truncated → 视为超限拒绝（不落半截文件）。
-      if (got.truncated) return { ok: false, ...tooBig() };
-      let pathForJournal = path.resolve(rawDest);
-      if (intoDir) {
-        dest = path.join(dest, downloadFileNameFrom(got.contentDisposition, got.finalUrl || url));
-        pathForJournal = dest;
-        // 拼出的完整路径再过一遍写闸(名字已清洗成单个文件名,这里是兜底)。
-        const g2 = await guardDownloadDest(dest, ctx);
-        if (!g2.ok) return { ok: false, error: g2.error, ...(g2.code ? { code: g2.code } : {}) };
-        dest = g2.absPath;
-      }
-      // ④ 检查点 + 落盘。fs 的失败(EISDIR / ENAMETOOLONG / EACCES …)翻成 {ok:false, code, error},不再把裸异常甩出去。
-      let exists = false, before = null, jr = null;
-      try {
-        const st2 = await fsp.stat(dest).catch(() => null);
-        if (st2 && st2.isDirectory()) return { ok: false, code: 'EISDIR', error: `${dest} 是一个文件夹,不能当文件写`, hint: '给 dest 一个文件名,或以 / 结尾表示存进该文件夹' };
-        exists = !!st2;
-        before = exists ? await fileToolBeforeForCheckpoint(dest, st2.size) : null;   // 走查 W1·F8:先 stat,超检查点上限的旧文件不整份读进内存
-        const jctx = await journalSessionCtx(ctx);
-        jr = await journalRecord(jctx.sessionId, jctx.turnSeq, 'http_download', pathForJournal, exists ? 'modify' : 'create', exists ? before : null);
-        await fsp.mkdir(path.dirname(dest), { recursive: true });
-        await fsp.writeFile(dest, got.body);
-      } catch (e) {
-        return describeFsWriteError(e, dest);
-      }
-      markNetworkOnline(); // 成功下载 = 在线证据，顺手刷新能力缓存
-      const ret = { ok: true, path: dest, bytes: got.body.length, contentType: (got.contentType || null), op: exists ? 'modify' : 'create' };
-      if (got.decodedFrom) ret.decodedFrom = got.decodedFrom;   // 服务器回了压缩体,落盘的是解压后的内容
-      // b2-P2: 200 但返回 HTML(常见于「错误页伪装成 200」/登录页/验证页)且目标非 .html/.htm 时提示 —— 防止模型误把网页当二进制文件
-      const ct = String(got.contentType || '');
-      const destExt = path.extname(dest).toLowerCase();
-      if (/text\/html/i.test(ct) && !['.html', '.htm'].includes(destExt)) {
-        ret.note = `服务器返回 text/html 且目标扩展名不是 .html —— 可能下载到了错误页/登录页/验证页,请核对内容。`;
-      }
-      const warn = journalCheckpointWarn(jr); // hunt2 #17
-      if (warn) ret.checkpointWarn = warn;
-      return ret;
-  } },
+  http_download: httpDownloadTool,
   browser_open: { paths: null, guardNote: "spawn 默认浏览器(buildBrowserOpenSpawn 无 shell);exec tier 门,不触文件路径", handler: async (args, ctx) => {
       const target = String(args.url || '').trim();
       if (!target) return { ok: false, error: 'url is required', hint: '传一个 http(s) 网址或本地 .html 文件路径' };

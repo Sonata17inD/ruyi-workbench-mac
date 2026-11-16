@@ -11499,15 +11499,10 @@
       "file": "11-native-tools.js",
       "layer": "tools",
       "provides": [
-        "BINARY_READ_DB",
-        "BINARY_READ_OFFICE",
-        "BINARY_READ_SUFFIXES",
-        "BINARY_READ_ZIPLIKE",
         "BackgroundJobs",
         "RgProbe",
         "ShellSessions",
         "adaptiveCatalogForMcp",
-        "binaryReadHint",
         "boundedReadPage",
         "claudeMdAudit",
         "codeReviewScan",
@@ -11516,9 +11511,7 @@
         "dataProfile",
         "debugHypothesis",
         "dependencyInventory",
-        "describeFsWriteError",
         "docsSearch",
-        "downloadFileNameFrom",
         "explicitAllowDirs",
         "frontendAudit",
         "gitCommit",
@@ -11526,12 +11519,10 @@
         "gitLog",
         "gitReadOnlyGuard",
         "gitStatus",
-        "guardDownloadDest",
         "hasRg",
         "hasRgAsync",
         "httpGetGuarded",
         "httpRequest",
-        "isBinaryReadPath",
         "killAllShellSessions",
         "levenshtein",
         "peekRgProbe",
@@ -11655,13 +11646,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
@@ -11673,13 +11657,6 @@
           "symbol": "readConfig",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "RUNTIME",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11725,13 +11702,6 @@
           ]
         },
         {
-          "provider": "02-session-store.js",
-          "symbol": "loadSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03-bridge-guard.js",
           "symbol": "_dataRootReal",
           "kinds": [
@@ -11743,13 +11713,6 @@
           "symbol": "ensureDataRootReal",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardFileToolPath",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -11963,7 +11926,6 @@
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
         "FileToolPaths",
-        "HTTP_DOWNLOAD_MAX_BYTES",
         "INTEGRATION_TOOL_HANDLERS",
         "LAUNCH_MODE",
         "MANIFEST_FULL_VERIFY_MS",
@@ -12006,8 +11968,10 @@
         "fileToolPrivacySourceOptions",
         "fileToolWorkspaceDir",
         "fileToolWriteLockKey",
+        "guardDownloadDest",
         "guardedWalkRoot",
         "hasTextLineBreak",
+        "httpDownloadTool",
         "httpRequestTargetsWorkbench",
         "invokeAdaptiveMcpTool",
         "isControlPlaneToolName",
@@ -12328,7 +12292,6 @@
           "provider": "02-session-store.js",
           "symbol": "journalRecord",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12350,7 +12313,6 @@
           "provider": "02-session-store.js",
           "symbol": "journalSessionCtx",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12720,7 +12682,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "markNetworkOnline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12959,13 +12921,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "binaryReadHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "boundedReadPage",
           "kinds": [
             "call"
@@ -13015,21 +12970,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "describeFsWriteError",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "docsSearch",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "downloadFileNameFrom",
           "kinds": [
             "call"
           ]
@@ -13078,30 +13019,9 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "guardDownloadDest",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "httpGetGuarded",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "httpRequest",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "isBinaryReadPath",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13225,13 +13145,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "ssrfCheck",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "walkDepthHint",
           "kinds": [
             "read"
@@ -13261,13 +13174,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "webFetch",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "webFetchFailMessage",
           "kinds": [
             "call"
           ]
@@ -28165,13 +28071,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "guardDownloadDest",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "peekRgProbe",
           "kinds": [
             "read"
@@ -28250,6 +28149,13 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "attachScreenshotImage",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "guardDownloadDest",
           "kinds": [
             "read"
           ]

@@ -304,7 +304,9 @@
     "app/backend/background-jobs.cjs",
     "app/backend/shell-sessions.cjs",
     "app/backend/rg-execution.cjs",
-    "app/backend/rg-probe.cjs"
+    "app/backend/rg-probe.cjs",
+    "app/backend/file-type-policy.cjs",
+    "app/backend/http-download.cjs"
   ],
   "acc": [
     "LICENSE",

@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3410,
-    "requiredSymbols": 3487,
-    "edges": 657,
+    "providedSymbols": 3402,
+    "requiredSymbols": 3475,
+    "edges": 656,
     "forwardEdges": 66,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -11627,15 +11627,10 @@
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
-        "BINARY_READ_DB",
-        "BINARY_READ_OFFICE",
-        "BINARY_READ_SUFFIXES",
-        "BINARY_READ_ZIPLIKE",
         "BackgroundJobs",
         "RgProbe",
         "ShellSessions",
         "adaptiveCatalogForMcp",
-        "binaryReadHint",
         "boundedReadPage",
         "claudeMdAudit",
         "codeReviewScan",
@@ -11644,9 +11639,7 @@
         "dataProfile",
         "debugHypothesis",
         "dependencyInventory",
-        "describeFsWriteError",
         "docsSearch",
-        "downloadFileNameFrom",
         "explicitAllowDirs",
         "frontendAudit",
         "gitCommit",
@@ -11654,12 +11647,10 @@
         "gitLog",
         "gitReadOnlyGuard",
         "gitStatus",
-        "guardDownloadDest",
         "hasRg",
         "hasRgAsync",
         "httpGetGuarded",
         "httpRequest",
-        "isBinaryReadPath",
         "killAllShellSessions",
         "levenshtein",
         "peekRgProbe",
@@ -11783,13 +11774,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
@@ -11801,13 +11785,6 @@
           "symbol": "readConfig",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "RUNTIME",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11853,13 +11830,6 @@
           ]
         },
         {
-          "provider": "02-session-store.js",
-          "symbol": "loadSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03-bridge-guard.js",
           "symbol": "_dataRootReal",
           "kinds": [
@@ -11871,13 +11841,6 @@
           "symbol": "ensureDataRootReal",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardFileToolPath",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12099,7 +12062,6 @@
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
         "FileToolPaths",
-        "HTTP_DOWNLOAD_MAX_BYTES",
         "INTEGRATION_TOOL_HANDLERS",
         "LAUNCH_MODE",
         "MANIFEST_FULL_VERIFY_MS",
@@ -12142,8 +12104,10 @@
         "fileToolPrivacySourceOptions",
         "fileToolWorkspaceDir",
         "fileToolWriteLockKey",
+        "guardDownloadDest",
         "guardedWalkRoot",
         "hasTextLineBreak",
+        "httpDownloadTool",
         "httpRequestTargetsWorkbench",
         "invokeAdaptiveMcpTool",
         "isControlPlaneToolName",
@@ -12464,7 +12428,6 @@
           "provider": "02-session-store.js",
           "symbol": "journalRecord",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12486,7 +12449,6 @@
           "provider": "02-session-store.js",
           "symbol": "journalSessionCtx",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12856,7 +12818,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "markNetworkOnline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13095,13 +13057,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "binaryReadHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "boundedReadPage",
           "kinds": [
             "call"
@@ -13151,21 +13106,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "describeFsWriteError",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "docsSearch",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "downloadFileNameFrom",
           "kinds": [
             "call"
           ]
@@ -13214,30 +13155,9 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "guardDownloadDest",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "httpGetGuarded",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "httpRequest",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "isBinaryReadPath",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13361,13 +13281,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "ssrfCheck",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "walkDepthHint",
           "kinds": [
             "read"
@@ -13397,13 +13310,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "webFetch",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "webFetchFailMessage",
           "kinds": [
             "call"
           ]
@@ -28359,13 +28265,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "guardDownloadDest",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "peekRgProbe",
           "kinds": [
             "read"
@@ -28444,6 +28343,13 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "attachScreenshotImage",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "guardDownloadDest",
           "kinds": [
             "read"
           ]
@@ -31990,7 +31896,6 @@
         "EventStreamHooks",
         "RUYI_EVENTS",
         "RUYI_PATH_BEFORE_VENDOR",
-        "URL",
         "dataRoot",
         "dataRootAliases",
         "nowIso",
@@ -32005,7 +31910,6 @@
       "from": "11-native-tools.js",
       "to": "01-config.js",
       "symbols": [
-        "RUNTIME",
         "atomicWriteJson",
         "readConfig",
         "safeSessionId",
@@ -32040,19 +31944,10 @@
     },
     {
       "from": "11-native-tools.js",
-      "to": "02-session-store.js",
-      "symbols": [
-        "loadSession"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "11-native-tools.js",
       "to": "03-bridge-guard.js",
       "symbols": [
         "_dataRootReal",
         "ensureDataRootReal",
-        "guardFileToolPath",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",
         "pathWithinRoot",
@@ -32415,7 +32310,6 @@
       "to": "11-native-tools.js",
       "symbols": [
         "adaptiveCatalogForMcp",
-        "binaryReadHint",
         "boundedReadPage",
         "claudeMdAudit",
         "codeReviewScan",
@@ -32423,19 +32317,14 @@
         "dataProfile",
         "debugHypothesis",
         "dependencyInventory",
-        "describeFsWriteError",
         "docsSearch",
-        "downloadFileNameFrom",
         "explicitAllowDirs",
         "frontendAudit",
         "gitCommit",
         "gitDiff",
         "gitLog",
         "gitStatus",
-        "guardDownloadDest",
-        "httpGetGuarded",
         "httpRequest",
-        "isBinaryReadPath",
         "levenshtein",
         "privacyReadTextWindow",
         "privacySourceActive",
@@ -32453,13 +32342,11 @@
         "shellSend",
         "shellStart",
         "sourceViewOf",
-        "ssrfCheck",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
         "walkTruncationHint",
         "webFetch",
-        "webFetchFailMessage",
         "webSearch",
         "zipCollectEntries"
       ],
@@ -36769,7 +36656,6 @@
       "symbols": [
         "adaptiveCatalogForMcp",
         "crc32",
-        "guardDownloadDest",
         "peekRgProbe",
         "probeRgAsync",
         "readWebCache",
@@ -36790,6 +36676,7 @@
       "symbols": [
         "TOOL_HANDLERS",
         "attachScreenshotImage",
+        "guardDownloadDest",
         "suggestToolNames",
         "toolArgsMissingRequired",
         "toolCall",
@@ -37114,7 +37001,6 @@
     "10-context-governance.js->09d-token-estimation.js",
     "11-native-tools.js->00-boot.js",
     "11-native-tools.js->01-config.js",
-    "11-native-tools.js->02-session-store.js",
     "11-native-tools.js->03-bridge-guard.js",
     "11-native-tools.js->04-permission-runtime.js",
     "11-native-tools.js->06-provider-engine.js",

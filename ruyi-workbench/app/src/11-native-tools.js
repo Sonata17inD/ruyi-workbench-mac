@@ -35,38 +35,6 @@ const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,
   killAllShellSessions, shellMcpChildGuard, shellSessions } = ShellSessions;
 EventStreamHooks.backgroundShells = ShellSessions.backgroundShells;
 
-// v0.8-S1: glob → RegExp. Self-written, zero-dep. Semantics: `**` crosses directory separators,
-// `*` matches within one path segment (not `/` or `\`), `?` matches one non-separator char; every
-// other regex metacharacter is escaped literally. Matches against the relative path (with either
-// slash flavor accepted). Anchored full-match (^…$).
-const BINARY_READ_SUFFIXES = new Set([
-  'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'ico', 'tif', 'tiff',
-  'pdf', 'zip', 'gz', 'tar', 'rar', '7z', 'exe', 'dll', 'so', 'dylib', 'bin',
-  'mp3', 'mp4', 'avi', 'mov', 'mkv', 'wav', 'flac', 'woff', 'woff2', 'ttf', 'otf', 'eot',
-  'class', 'o', 'obj', 'pyc', 'wasm',
-  // 2026-10 走查(R2):Office / 压缩容器 / 数据库。它们按 UTF-8 宽松解码是一堆乱码,修前 file_read 回 ok:true 还把乱码当内容交给模型
-  // (.docx/.xlsx/.pptx 本质是 zip;.jar/.apk 同理;.sqlite/.db 是二进制页)。按扩展名直接拒,并在 hint 里指向该用的工具。
-  'doc', 'docx', 'docm', 'dot', 'dotx', 'xls', 'xlsx', 'xlsm', 'xlsb', 'ppt', 'pptx', 'pptm', 'odt', 'ods', 'odp',
-  'jar', 'war', 'ear', 'apk', 'whl', 'nupkg', 'bz2', 'xz', 'zst', 'cab', 'iso', 'msi',
-  'sqlite', 'sqlite3', 'db', 'mdb', 'accdb',
-]);
-function isBinaryReadPath(p) {
-  const ext = path.extname(String(p || '')).replace(/^\./, '').toLowerCase();
-  return ext !== '' && BINARY_READ_SUFFIXES.has(ext);
-}
-// 被 file_read 按扩展名拒绝时的下一步:按文件类型指向真正该用的工具(模型据此改道,而不是反复重试 file_read)。
-const BINARY_READ_OFFICE = new Set(['doc', 'docx', 'docm', 'dot', 'dotx', 'xls', 'xlsx', 'xlsm', 'xlsb', 'ppt', 'pptx', 'pptm', 'odt', 'ods', 'odp']);
-const BINARY_READ_ZIPLIKE = new Set(['zip', 'jar', 'war', 'ear', 'apk', 'whl', 'nupkg']);
-const BINARY_READ_DB = new Set(['sqlite', 'sqlite3', 'db', 'mdb', 'accdb']);
-function binaryReadHint(p) {
-  const ext = path.extname(String(p || '')).replace(/^\./, '').toLowerCase();
-  if (BINARY_READ_OFFICE.has(ext)) return '新版 Office/ODF 可直接 file_read 读取文字与内嵌图片,不需要桌面控制;旧 .doc/.xls/.ppt 请先另存为 .docx/.xlsx/.pptx,或用 script_run 解析';
-  if (ext === 'pdf') return 'PDF 可直接 file_read {path,pageOffset,pageLimit} 读取文字与页面图像(需要 Python + pdfplumber),不需要桌面控制';
-  if (BINARY_READ_ZIPLIKE.has(ext)) return '这是 zip 类压缩包:先用 archive_unzip {list:true} 看条目清单,再解压到工作区后读取需要的文件';
-  if (BINARY_READ_DB.has(ext)) return '这是数据库文件,不是文本:没有原生读取工具,请用 script_run 写 python(sqlite3 模块)或命令行查询';
-  return '图片可直接 file_read,视觉模型会收到图像;其它二进制文件不能按文本读取';
-}
-
 const RgProbe = require('./backend/rg-probe.cjs').createRgProbe({
   ProcessRuntime, vendorBinDir: ruyiVendorBinDir, pathBeforeVendor: RUYI_PATH_BEFORE_VENDOR,
 });
@@ -167,70 +135,6 @@ const { webFetch, webSearch, webCachePath, readWebCache, writeWebCache } = requi
 // CRC32：标准 IEEE 多项式 0xEDB88320 的反射查表实现（256 项预计算表，纯 JS，无依赖）。与 PKZIP/zlib 兼容。
 const { crc32, zipWrite, zipReadCentralDir, zipReadEntryData } = require('./backend/archive-codec.cjs');
 const { zipCollectEntries } = require('./backend/archive-collector.cjs').createArchiveCollector({ ensureDataRootReal, isSensitiveDataPath, isSensitiveHardlinkAlias });
-
-// ── http_download 的文件名与错误翻译 ──────────────────────────────────────────────────────────────────────────
-// dest 是文件夹(已存在的目录,或以 / \ 结尾)时,文件存进这个文件夹里,名字取 Content-Disposition 的 filename(优先 RFC 5987 的 filename*),
-// 没有就取最终 URL 路径的最后一段,再没有叫 download。名字只留「一个文件名」:去掉任何目录部分(path.win32.basename 同时认 \ 与 /)、
-// Windows 不允许的字符、保留设备名,并限长 —— 服务器给的名字不可信,不能借它跳出 dest 目录。
-function downloadFileNameFrom(contentDisposition, finalUrl) {
-  let name = '';
-  const cd = String(contentDisposition || '');
-  let m = /filename\*\s*=\s*(?:UTF-8|utf-8)?'[^']*'([^;]+)/i.exec(cd);
-  if (m) { try { name = decodeURIComponent(m[1].trim().replace(/^"|"$/g, '')); } catch { name = m[1].trim(); } }
-  if (!name) { m = /filename\s*=\s*"([^"]*)"/i.exec(cd) || /filename\s*=\s*([^;]+)/i.exec(cd); if (m) name = m[1].trim(); }
-  if (!name) {
-    try { const seg = new URL(String(finalUrl || '')).pathname.split('/').filter(Boolean).pop() || ''; name = decodeURIComponent(seg); } catch { /* 取不到就用兜底名 */ }
-  }
-  name = path.win32.basename(String(name || '').replace(/\0/g, ''));
-  name = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_').replace(/[. ]+$/, '').replace(/^\.+$/, '');
-  if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i.test(name)) name = '_' + name;
-  if (name.length > 150) { const ext = path.extname(name).slice(0, 20); name = name.slice(0, 150 - ext.length) + ext; }
-  return name || 'download';
-}
-// fs 写盘失败的人话(原样的 EISDIR / ENAMETOOLONG 对模型没有可行动的信息)。
-function describeFsWriteError(e, target) {
-  const code = (e && e.code) || '';
-  const msg = {
-    EISDIR: '目标路径是一个文件夹,不能当文件写',
-    ENAMETOOLONG: '文件名或路径太长(请缩短文件名或目录路径)',
-    EACCES: '没有写入权限',
-    EPERM: '没有写入权限(文件可能是只读,或被系统保护)',
-    ENOENT: '目标路径的某一级不存在或无法创建',
-    ENOTDIR: '目标路径中有一段是文件而不是文件夹',
-    ENOSPC: '磁盘空间不足',
-    EBUSY: '文件正被其它程序占用',
-    EROFS: '目标位置是只读的',
-  }[code] || ((e && e.message) || '写入失败');
-  return { ok: false, code: code || 'write_failed', error: `无法保存到 ${target}:${msg}`, path: target };
-}
-
-// v1.1-W2 (T1) — http_download 的落盘目标护栏。thread 进来的 ctx 可能带 session/config（provider 引擎路径）
-// 或不带（MCP child 路径）。带 → 走 guardWorkspacePath（realpath + fileAllowedRoots）；不带 → 退化护栏：
-// dest 的父目录必须在 dataRoot 或 process.cwd 下（与文件工具「落盘落在工作区」同精神，绝不写系统任意路径）。
-// 返回 {ok, absPath?} 或 {ok:false, error}。dest 尚不存在时对其父目录做包含判定。
-// 安全审计 #3:修前两条路都比 file_write 松 —— 带 ctx 走的是 guardWorkspacePath(读根集合,不查 autoexec / OS 关键目录,
-// ws\.git\hooks\pre-commit 照下不误);不带 ctx(MCP 子进程、tool_invoke_edit、不带 sessionId 的 /api/tools/http_download)
-// 只看父目录在不在 dataRoot / process.cwd 下,连敏感名单都没查,实测直接盖掉了 <dataRoot>\config.json。现在两条路都走
-// 文件工具的同一个【写】闸 guardFileToolPath(敏感/受保护数据 + autoexec + OS 关键目录三层地板,写根包含判定,宽写档
-// 语义一致)。ctx 缺会话时按 file_* 工具在 MCP 子进程里的同一口径补:WCW_SESSION_ID 指向的会话 cwd;MCP 子进程
-// 连它也没有时,子进程的 cwd 就是 CLI 给的会话工作目录(沿用修前「当前工作目录可下」的那一半,但它在 serve 进程
-// 里是安装目录,所以只在 MCP 子进程认)。配置照旧由 guardFileToolPath 在缺 ctx.config 时从盘读。
-async function guardDownloadDest(rawDest, ctx) {
-  const dest = String(rawDest || '');
-  if (!dest || !path.isAbsolute(dest)) return { ok: false, error: '下载目标必须是绝对路径' };
-  const abs = path.resolve(dest);
-  let gctx = ctx || null;
-  if (!(gctx && gctx.session)) {
-    let session = null;
-    const sid = (gctx && gctx.sessionId) || process.env.WCW_SESSION_ID || '';
-    if (sid) { try { session = await loadSession(String(sid)); } catch { session = null; } }
-    if (!session && RUNTIME.isMcpChild) session = { cwd: process.cwd() };
-    if (session) gctx = { ...(gctx || {}), session };
-  }
-  const g = await guardFileToolPath(abs, gctx, { tool: 'http_download', write: true });
-  if (!g.ok) return { ok: false, error: g.error || '下载目标不在允许的工作区内', code: g.code };
-  return { ok: true, absPath: g.absPath };
-}
 
 // v0.8-S4a: `ctx` optionally carries checkpoint-journal context {sessionId, turnSeq}. The provider loop
 // passes its live session.id/turnSeq; the MCP child passes nothing (journalSessionCtx resolves both from

@@ -1,6 +1,7 @@
 'use strict';
 const { classifyListPattern, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, levenshtein } = require('./path-patterns.cjs');
 const { assertSearchExecution } = require('./search-workers.cjs');
+const { isBinaryReadPath, binaryReadHint } = require('./file-type-policy.cjs');
 const { READ_PAGE_JSON_BUDGET } = require('./text-pages.cjs');
 const path = require('node:path');
 const { ZIP_MAX_ENTRIES, ZIP_MAX_TOTAL, zipReadCentralDir, zipReadEntryDataAsync, zipWriteAsync } = require('./archive-codec.cjs');
@@ -21,7 +22,7 @@ function fileMoveSameFileKind(from, to, fromSt, toSt, platform) {
 function createFileTools({ paths, checkpoints, source, search, archive, runtime, mutations }) {
   const { fileToolWorkspaceDir, resolveFileToolPath, resolveFileToolRoot, guardFileToolPath, pathWithinRoot, isSensitiveDataPath, isSensitiveHardlinkAlias, sensitiveFileIdentities } = paths;
   const { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx } = checkpoints;
-  const { FileVisualIo, MediaInspection, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, sourceViewOf } = source;
+  const { FileVisualIo, MediaInspection, PrivacyGateway, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, sourceViewOf } = source;
   const { explicitAllowDirs, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint } = search;
   const { zipCollectEntries } = archive;
   const { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall } = runtime;

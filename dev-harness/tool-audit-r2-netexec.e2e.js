@@ -11,33 +11,23 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib �
 //       ctx.signal 能取消下载 / 请求(修前根本没接)。
 //  (N4) http_request:timeoutMs 为负数不再报 Node 的 out of range(还被归成 timeout);3xx 带 location。
 //  (N5) shell_start 的上限是【每个会话】的(修前全进程共用,B 会话被 A 的 shell 挤满却看不见、杀不掉);全局另有安全上限;
-//       超长命令(-EncodedCommand 超命令行上限)→ command_too_long + 指路 script_run;没有 PowerShell → 明确失败(修前 ok:true 的死会话)。
-//  (N6) keyboard_send_keys:空 keys → {ok:false}(修前抛异常);literal:true 转义 SendKeys 控制符;delayMs 限 0..10000。
-//  (N7) 没有 PowerShell(非 Windows)的几个工具:desktop_screenshot / keyboard_send_keys / script_run / powershell_run
-//       回 {ok:false, code:'windows_only', hint}(修前裸 `spawn powershell.exe ENOENT`);desktop_screenshot 只在文件真生成时给 path。
-//  (N8) desktop_screenshot 的脚本先设 DPI 感知(SetProcessDPIAware)再碰 System.Windows.Forms —— 【Windows 真机未验证】,
-//       这里对生成的脚本文本做断言(运行时值:fake powershell 记录下来的脚本 + 对生成函数的静态切片)。
-//  (N9) 空 / 非法参数给 {ok:false} 信封而不是抛异常或「打开服务进程的当前目录」。
-//
-// Linux 上用一个假 powershell.exe(node 脚本)记录收到的 -File 脚本 / 撑住交互 shell;Windows 上 PATH 假件不适用,
-// 相关块 `process.platform !== 'win32'` 才跑(Windows CI 不会跑到它们,改这些断言要留意)。
-// 判定行:`TOOL AUDIT R2 NETEXEC E2E: ALL PASS`。
+//       长命令走 Mac 脚本文件，不受旧命令行编码长度约束。
+// Retired tools must be absent from native dispatch; supported tools retain structured argument errors.
+// Native Mac screenshot protocol and shell isolation use controlled fixtures only.
+// Windows runtime fixtures were removed with their product backends.
 (async () => {
 'use strict';
+if (process.platform !== 'darwin') { console.log('SKIP requires macOS'); return; }
 const fs = require('fs'), os = require('os'), path = require('path'), http = require('http'), zlib = require('zlib');
 const { createRunner } = require('./lib/harness');
-const { functionBlock } = require('./lib/source-slice');
 const t = createRunner('TOOL AUDIT R2 NETEXEC');
 const { ok } = t;
 const ROOT = path.resolve(__dirname, '..');
-const IS_WIN = process.platform === 'win32';
-const IS_MAC = process.platform === 'darwin';
 const { shellTool, echo } = require('./lib/platform-shell-fixture');
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-'));
 process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-ws-'));
 const BIN = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-bin-'));
-const REC = path.join(BIN, 'ps-record.jsonl');
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
 process.env.NO_PROXY = '127.0.0.1'; process.env.no_proxy = '127.0.0.1';
 
@@ -89,28 +79,6 @@ const fixture = http.createServer((req, res) => {
 await new Promise(r => fixture.listen(0, '127.0.0.1', r));
 const B = `http://127.0.0.1:${fixture.address().port}`;
 
-// ── 假 powershell.exe(仅非 Windows):记录 -File 脚本;交互模式撑住直到 stdin 关闭 ────────────────────────────────────────
-function installFakePowerShell() {
-  const f = path.join(BIN, 'powershell.exe');
-  fs.writeFileSync(f, `#!${process.execPath}
-const fs = require('fs');
-const a = process.argv.slice(2);
-const fi = a.indexOf('-File');
-if (fi >= 0) {
-  const script = fs.readFileSync(a[fi + 1], 'utf8').replace(/^\\uFEFF/, '');
-  fs.appendFileSync(${JSON.stringify(REC)}, JSON.stringify({ script }) + '\\n');
-  if (process.env.FAKE_PS_PNG === '1') { const m = /Save\\('([^']+\\.png)'/.exec(script); if (m) fs.writeFileSync(m[1], Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])); }
-  process.exit(0);
-}
-process.stdin.resume();
-process.stdin.on('end', () => process.exit(0));
-setInterval(() => {}, 1000);
-`);
-  fs.chmodSync(f, 0o755);
-  process.env.PATH = BIN + path.delimiter + process.env.PATH;
-}
-const records = () => (fs.existsSync(REC) ? fs.readFileSync(REC, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l).script) : []);
-
 const openShells = [];
 const previousMacHelper = process.env.RUYI_MACOS_AUTOMATION_HELPER;
 const macHelper = path.join(BIN, 'controlled-mac-capture');
@@ -126,15 +94,15 @@ function macCaptureReply(value, status = macReady) {
 }
 
 try {
-  /* ═════════ (N7 前半) 没有 PowerShell 的环境(Linux 且假件还没装进 PATH)═════════ */
-  if (IS_MAC) {
+  // Native permission failure and retired-tool dispatch.
+  {
     const denied = { ok: false, protocolVersion: 1, ready: false, authorization: 'denied', code: 'permission_denied', error: 'controlled denial' };
     macCaptureReply(denied, denied);
     const shot0 = await call('desktop_screenshot', {});
     ok(shot0.ok === false && shot0.code === 'permission_denied' && !('path' in shot0), 'N7a Mac controlled permission denial never claims a screenshot path');
     for (const tool of ['keyboard_send_keys', 'powershell_run']) {
       const result = await call(tool, tool === 'powershell_run' ? { command: 'echo hi' } : { keys: 'abc' });
-      ok(result.ok === false && result.code === 'tool-disabled', `N7 Mac unsupported ${tool} is refused without execution`);
+      ok(result.threw === 'Unknown tool: ' + tool, `N7 Mac unsupported ${tool} is absent from native dispatch`);
     }
     const script = await call('script_run', { language: 'node', code: 'console.log("MAC_SCRIPT_OK")' });
     ok(script.ok && script.stdout.includes('MAC_SCRIPT_OK'), 'N7c Mac Node scripts execute without PowerShell');
@@ -143,21 +111,6 @@ try {
     if (started.ok) await call('shell_kill', { shellId: 'mac-start' });
     const listed = await call('shell_list', {});
     ok(listed.ok && listed.shells.length === 0, 'N5e owned Mac shell is removed after cleanup');
-  } else if (!IS_WIN) {
-    const shot0 = await call('desktop_screenshot', {});
-    ok(shot0.ok === false && shot0.code === 'windows_only' && !('path' in shot0) && !/spawn powershell/.test(JSON.stringify(shot0)),
-      `N7a 无 PowerShell:desktop_screenshot → windows_only、不返回没生成的 path、不甩裸 spawn ENOENT(got ${JSON.stringify(shot0).slice(0, 220)})`);
-    const key0 = await call('keyboard_send_keys', { keys: 'abc' });
-    ok(key0.ok === false && key0.code === 'windows_only', `N7b keyboard_send_keys 无 PowerShell → windows_only(got ${JSON.stringify(key0).slice(0, 160)})`);
-    const sc0 = await call('script_run', { code: 'echo hi' });
-    ok(sc0.ok === false && sc0.code === 'windows_only' && /python|node/.test(String(sc0.hint || '')), `N7c script_run 缺省 powershell 无 PowerShell → windows_only 且指路 python/node(got ${JSON.stringify(sc0).slice(0, 200)})`);
-    const ps0 = await call('powershell_run', { command: 'echo hi' });
-    ok(ps0.ok === false && ps0.code === 'windows_only', `N7d powershell_run 无 PowerShell → windows_only(got ${JSON.stringify(ps0).slice(0, 160)})`);
-    const sh0 = await call('shell_start', { shellId: 'dead1' });
-    ok(sh0.ok === false && sh0.code === 'windows_only', `N5d shell_start 无 PowerShell → ok:false(修前 ok:true 的死会话;got ${JSON.stringify(sh0).slice(0, 160)})`);
-    const list0 = await call('shell_list', {});
-    ok(list0.ok === true && list0.shells.length === 0, `N5e 起不来的 shell 不留空壳会话(got ${JSON.stringify(list0.shells)})`);
-    installFakePowerShell();
   }
 
   /* ═════════ (N1) 内容编码 ═════════ */
@@ -224,8 +177,8 @@ try {
   const evil = await call('http_download', { url: B + '/evil', dest: dir1 + path.sep });
   ok(evil.ok === true && samePath(path.dirname(evil.path), dir1) && !fs.existsSync(path.join(WS, 'escape.txt')), `N3c 服务器给的文件名里的 ..\\ 不能让文件跳出 dest 文件夹(got ${JSON.stringify(evil).slice(0, 200)})`);
   const long = await call('http_download', { url: B + '/gz', dest: path.join(WS, 'a'.repeat(300)) });
-  ok(long.ok === false && typeof long.error === 'string' && !long.threw && (IS_WIN || long.code === 'ENAMETOOLONG'
-    || (IS_MAC && long.code === 'not-allowed' && /无法解析的符号链接/.test(long.error)))
+  ok(long.ok === false && typeof long.error === 'string' && !long.threw && (long.code === 'ENAMETOOLONG'
+    || (long.code === 'not-allowed' && /无法解析的符号链接/.test(long.error)))
     && !('path' in long) && !fs.existsSync(path.join(WS, 'a'.repeat(300))), `N3d 名字过长 → {ok:false, code, error} 信封,不抛(修前裸异常 ENAMETOOLONG;got ${JSON.stringify(long).slice(0, 160)})`);
   const fileAsDir = await call('http_download', { url: B + '/gz', dest: dlz + path.sep });
   ok(fileAsDir.ok === false && !fileAsDir.threw, `N3e dest 以分隔符结尾却是已存在的文件 → ok:false(got ${JSON.stringify(fileAsDir).slice(0, 140)})`);
@@ -258,13 +211,11 @@ try {
   const bList = await call('shell_list', {}, { session: sessB });
   ok(bList.shells.length === 1 && bList.shells[0].shellId === 'b1', `N5f B 的 shell_list 只看得见自己的(got ${JSON.stringify(bList.shells.map(s => s.shellId))})`);
   const tooLong = await call('shell_start', { shellId: 'long1', command: echo('x'.repeat(13000)) }, { session: sessB });
-  if (IS_MAC) {
+  {
     ok(tooLong.ok === true, 'N5g Mac native execution has no cmd.exe 8191-character limit');
     if (tooLong.ok) await call('shell_kill', { shellId: 'long1' }, { session: sessB });
-  } else {
-    ok(tooLong.ok === false && tooLong.code === 'command_too_long' && /script_run/.test(String(tooLong.hint || '')), `N5g 超长命令 → command_too_long 并指路 script_run(got ${JSON.stringify(tooLong).slice(0, 200)})`);
   }
-  if (!IS_WIN) {
+  {
     // 全局安全上限:A 3 + B 1 已开,再用 C / D / E 把总数推到 12,下一个会话的第 1 个被全局上限拒绝(错误里说清是全局的)。
     const extra = [];
     for (const nm of ['c', 'd', 'e']) extra.push(await mkSession('r2 ' + nm));
@@ -276,13 +227,8 @@ try {
   }
   for (const [id, sess] of openShells.splice(0)) await call('shell_kill', { shellId: id }, { session: sess });
 
-  /* ═════════ (N6 / N7 / N8) 键盘与截图(Linux 用假 PowerShell 记录脚本)═════════ */
-  const emptyKeys = await call('keyboard_send_keys', { keys: '' });
-  ok(emptyKeys.ok === false && !emptyKeys.threw, `N6a 空 keys → {ok:false}(修前抛 Error('keys is required');got ${JSON.stringify(emptyKeys).slice(0, 140)})`);
-  if (IS_MAC) {
-    const unavailable = await call('keyboard_send_keys', { keys: 'literal fixture', literal: true });
-    ok(unavailable.ok === false && unavailable.code === 'tool-disabled' && records().length === 0,
-      'N6 Mac omits Windows SendKeys and invokes no PowerShell fixture');
+  // Controlled Mac screenshot responses; no live desktop capture.
+  {
     macCaptureReply(macFrame);
     const imagePath = path.join(WS, 'controlled.png');
     const image = await call('desktop_screenshot', { outputPath: imagePath });
@@ -292,45 +238,12 @@ try {
     const missing = path.join(WS, 'never.png');
     const failed = await call('desktop_screenshot', { outputPath: missing });
     ok(failed.ok === false && !('path' in failed) && !fs.existsSync(missing), 'N7f failed Mac capture never claims a file');
-    console.log('SKIP Windows SendKeys/literal/DPI fake-PS execution on Mac; static DPI source checks still run');
-  } else if (!IS_WIN) {
-    const kLit = await call('keyboard_send_keys', { keys: 'Hello (world) 50% a+b {x} [1]~^', literal: true, delayMs: 99999999 });
-    const kRaw = await call('keyboard_send_keys', { keys: '^c' });
-    const recs = records();
-    const sLit = recs.find(s => s.includes('SendKeys') && s.includes('Hello'));
-    ok(kLit.ok === true && !!sLit && sLit.includes("SendKeys('Hello {(}world{)} 50{%} a{+}b {{}x{}} {[}1{]}{~}{^}')"),
-      `N6b literal:true 转义 + ^ % ~ ( ) { } [ ](got ${sLit})`);
-    ok(!!sLit && /Start-Sleep -Milliseconds 10000;/.test(sLit), `N6c delayMs 限在 10000(got ${(sLit || '').slice(0, 120)})`);
-    const sRaw = recs.find(s => s.includes("SendKeys('^c')"));
-    ok(kRaw.ok === true && !!sRaw, `N6d 不带 literal 时 keys 原样交给 SendKeys(^c 仍是 Ctrl+C;got ${JSON.stringify(recs.map(s => s.slice(-60)))})`);
-    const kNl = await call('keyboard_send_keys', { keys: 'line1\nline2', literal: true });
-    ok(kNl.ok === true && records().some(s => s.includes("SendKeys('line1{ENTER}line2')")), 'N6e literal 模式下换行变 {ENTER}');
-    const kNeg = await call('keyboard_send_keys', { keys: 'z', delayMs: -50 });
-    ok(kNeg.ok === true && records().some(s => /Start-Sleep -Milliseconds 0;.*SendKeys\('z'\)/.test(s)), 'N6f delayMs 为负数夹到 0');
-
-    // 截图:脚本里要有 DPI 感知,且在碰 System.Windows.Forms 之前
-    process.env.FAKE_PS_PNG = '1';
-    const shot = await call('desktop_screenshot', { outputPath: path.join(WS, 'shot.png') });
-    delete process.env.FAKE_PS_PNG;
-    ok(shot.ok === true && shot.path === path.join(WS, 'shot.png') && fs.existsSync(shot.path), `N7e 文件真生成时才返回 path(got ${JSON.stringify(shot).slice(0, 160)})`);
-    const shotScript = records().find(s => s.includes('CopyFromScreen'));
-    ok(!!shotScript && shotScript.indexOf('SetProcessDPIAware') >= 0 && shotScript.indexOf('SetProcessDPIAware') < shotScript.indexOf('System.Windows.Forms'),
-      'N8a 截图脚本先 SetProcessDPIAware 再加载 System.Windows.Forms(Windows 真机未验证)');
-    const shot2 = await call('desktop_screenshot', { outputPath: path.join(WS, 'never.png') }); // 假 PS 这次不生成文件
-    ok(shot2.ok === false && !('path' in shot2) && !fs.existsSync(path.join(WS, 'never.png')), `N7f 脚本跑完却没生成文件 → ok:false 且不给 path(got ${JSON.stringify(shot2).slice(0, 200)})`);
   }
-  // 静态:生成函数的文本(任何平台都跑;锁「DPI 在 try 里、先于 Forms」这个结构)
-  const dispatchSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8');
-  const fn = functionBlock(dispatchSrc, 'buildDesktopScreenshotScript');
-  ok(fn.length > 200, 'N8b 切到了 buildDesktopScreenshotScript');
-  const iDpi = fn.indexOf('SetProcessDPIAware();'), iForms = fn.indexOf('Add-Type -AssemblyName System.Windows.Forms');
-  ok(iDpi > 0 && iDpi < iForms && /try \{[\s\S]*?SetProcessDPIAware[\s\S]*?\} catch \{ \}/.test(fn.slice(0, iForms)) && /user32\.dll/.test(fn),
-    'N8c DPI 感知调用在 try/catch 里(失败无害),且先于 System.Windows.Forms(Windows 真机未验证)');
 
   /* ═════════ (N9) 空 / 非法参数的信封 ═════════ */
   const blanks = [
-    ['powershell_run', { command: '   ' }], ['script_run', { code: '  ' }], ['office_open', { path: '  ' }],
-    ['keyboard_send_keys', { keys: '' }], ['desktop_screenshot', { outputPath: 123 }],
+    ['script_run', { code: '  ' }], ['office_open', { path: '  ' }],
+    ['desktop_screenshot', { outputPath: 123 }],
   ];
   for (const [tool, a] of blanks) {
     const r = await call(tool, a);
