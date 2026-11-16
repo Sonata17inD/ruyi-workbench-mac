@@ -376,9 +376,7 @@ function handle(m) {
 
 // ── [N6b] 工具截图附件:tmp+rename、按会话标签命名、删会话时清 ───────────────────────────────────────────────
 test('[N6b] 删会话时清掉该会话的 toolimg_* 附件目录(别的会话的不动)', async () => {
-  const { functionBlock } = require('../lib/source-slice');
-  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/02-session-store.js'), 'utf8');
-  const tagOf = new Function('crypto', `${functionBlock(src, 'toolImageSessionTag')}\nreturn toolImageSessionTag;`)(require('crypto'));
+  const { toolImageSessionTag: tagOf } = require('../../ruyi-workbench/app/backend/session-deletion.cjs');
   const a = await srv.createSession({ title: 'a', cwd: root });
   const b = await srv.createSession({ title: 'b', cwd: root });
   const uploads = path.join(process.env.RUYI_HOME, 'uploads');

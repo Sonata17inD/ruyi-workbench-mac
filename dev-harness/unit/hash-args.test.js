@@ -117,10 +117,10 @@ ok(typeof hashArgs === 'function', '① server.js 导出了 hashArgs');
   const defs = (bootSrc.match(/function hashArgs\(/g) || []).length;
   ok(defs === 1, '⑦a 00-boot.js 里 hashArgs 只有一份定义(got ' + defs + ')');
 
-  const grants = fs.readFileSync(path.join(app, 'src', '06f-autonomy-grants.js'), 'utf8');
-  ok(grants.includes('hashArgs(args)'), '⑦b 06f-autonomy-grants.js::consumeGrant 已改调 hashArgs(args)');
+  const grants = fs.readFileSync(path.join(app, 'backend', 'autonomy-grants.cjs'), 'utf8');
+  ok(grants.includes('hashArgs(args)'), '⑦b autonomy-grants.cjs::consumeGrant 已改调 hashArgs(args)');
   ok(!/crypto\.createHash\('sha1'\)\.update\(JSON\.stringify\(args \|\| \{\}\)\)/.test(grants),
-    '⑦c 06f-autonomy-grants.js 不再残留手写的 sha1(JSON.stringify(args||{})) 字面量');
+    '⑦c autonomy-grants.cjs 不再残留手写的 sha1(JSON.stringify(args||{})) 字面量');
 
   const ledger = fs.readFileSync(path.join(app, 'src', '09b-replan-ledger.js'), 'utf8');
   ok(ledger.includes('hashArgs(argsStr)'), '⑦d 09b-replan-ledger.js::recordNodeContinuation 已改调 hashArgs(argsStr)');

@@ -3929,7 +3929,7 @@ async function runSessionTurn(input) {
     // 第27波:run 结束 → scope:'run' 授权蒸发(遍历删 runId 匹配项),登记表清理。scope:'session' 授权跨回合保留,直到
     // TTL/次数耗尽或显式撤销/切模式。
     try { revokeGrantsForRun(session.id, driverRunId); } catch { /* best-effort */ }
-    if (activeDriverRuns.get(session.id) === driverRunId) activeDriverRuns.delete(session.id);
+    endDriverRun(session.id, driverRunId);
     if (settleResolve) { try { settleResolve(); } catch { /* best-effort */ } }
     // 回合成败账(会话头 stewardLastTurn):【每条】线程的回合,不管是谁发起的都要落这一笔。修前只有管家/调度器
     // 发起的回合会写(13k stewardRecordLaunchOutcome / 13s),用户自己在界面上发起的回合没有 —— 收件箱第四源读不到

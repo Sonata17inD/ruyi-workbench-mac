@@ -2,6 +2,7 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
+function toolImageSessionTag(sessionId) { return crypto.createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10); }
 // Owns deletion tombstones and teardown ordering. No agent, transport or model imports.
 function createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent,
@@ -34,7 +35,6 @@ function sessionAssociatedSaveIsTombstoned(id) {
 // the per-chat recovery and workflow records that otherwise have their own GC lifecycle.
 // 工具截图附件(10 boundToolResultForDisplay)落在 uploads/toolimg_<tag>_<hash>/,tag 由会话 id 派生;删会话时按前缀整批清,
 // 否则长时间的桌面操控会话会在 uploads/ 里留下成百上千个永不回收的文件。
-function toolImageSessionTag(sessionId) { return crypto.createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10); }
 async function removeSessionToolImages(sessionId) {
   const prefix = `toolimg_${toolImageSessionTag(sessionId)}_`;
   let names = [];
@@ -143,4 +143,4 @@ async function bulkDeleteUnpinnedSessions({ preserveSessionId, purgeAssociated =
 
 return { deleteSession, bulkDeleteUnpinnedSessions, markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, toolImageSessionTag, removeSessionToolImages, clearDeletedSession: id => sessionDeleteTombstones.delete(id) };
 }
-module.exports = { createSessionDeletion };
+module.exports = { createSessionDeletion, toolImageSessionTag };

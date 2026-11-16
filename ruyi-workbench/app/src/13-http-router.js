@@ -1138,7 +1138,7 @@ async function handleApi(req, res, pathname) {
     const q = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
     const sessionId = safeSessionId(q.sessionId);
     if (!sessionId) return send(res, apiSessionIdInvalid());
-    return send(res, json({ ok: true, grants: listGrantsView(sessionId), activeRun: activeDriverRuns.get(sessionId) || null }));
+    return send(res, json({ ok: true, grants: listGrantsView(sessionId), activeRun: activeDriverRunOf(sessionId) }));
   }
   if (req.method === 'POST' && pathname === '/api/autonomy/grant') {
     if (!tokenOk(req)) return send(res, json({ ok: false, error: 'missing or invalid workbench token' }, 403));
@@ -1160,9 +1160,7 @@ async function handleApi(req, res, pathname) {
     if (body.preview === true) {
       return send(res, json({ ok: true, preview: true, grant: { tool: g.tool, tier: g.tier, scope: g.scope, pathGlob: g.pathGlob, cmdAllow: g.cmdAllow, netAllowed: g.netAllowed, maxUses: g.maxUses }, dropped: norm.dropped, dryRun }));
     }
-    const list = autonomyGrants.get(sessionId) || [];
-    list.push(g);
-    autonomyGrants.set(sessionId, list);
+    installGrant(sessionId, g);
     logEvent({ kind: 'autonomy_grant_issued', grantId: g.grantId, sessionId, tool: g.tool, tier: g.tier, scope: g.scope, pathGlob: g.pathGlob, cmdAllow: g.cmdAllow, netAllowed: g.netAllowed, maxUses: g.maxUses, ttlMs: g.ttlMs });
     const reg = activeChildren.get(sessionId);
     if (reg && reg.onEvent) { try { reg.onEvent({ type: 'autonomy_grant', grants: listGrantsView(sessionId) }); } catch { /* stream gone */ } }

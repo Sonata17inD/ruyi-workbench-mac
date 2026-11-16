@@ -521,7 +521,7 @@ const { deleteSession, bulkDeleteUnpinnedSessions, markSessionDeleted, sessionSa
   execution: {
     stop: stopSession, activeRuns: () => activeAgentRuns.values(), stopRuns: stopMissionAgentRuns,
     settler: id => turnSettlers.get(id), isActive: id => activeChildren.has(id),
-    revokeGrants: revokeAllGrants,
+    revokeGrants: (...args) => revokeAllGrants(...args),
     flushRuns: (...args) => EventStreamHooks.flushSessionAgentRuns?.(...args),
   },
   membership: { readHead: readMissionSessionHead, ownerOf: sessionMissionId, remove: (...args) => missionIndexRemove(...args) },

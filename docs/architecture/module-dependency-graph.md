@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3669 | 3488 | 655 | 61 | 0 | 1 |
+| 92 | 3657 | 3485 | 655 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -63,7 +63,7 @@
 | 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 46 | `06d-memory-domain.js` | engine | 178 | 39 | 11 |
 | 47 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
-| 48 | `06f-autonomy-grants.js` | engine | 25 | 12 | 5 |
+| 48 | `06f-autonomy-grants.js` | engine | 13 | 10 | 5 |
 | 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
 | 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 51 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
@@ -81,7 +81,7 @@
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 61 | 276 | 36 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
-| 66 | `13d-core-domain-routes.js` | transport | 65 | 149 | 19 |
+| 66 | `13d-core-domain-routes.js` | transport | 65 | 148 | 19 |
 | 67 | `13e-pretender-index.js` | transport | 57 | 40 | 9 |
 | 68 | `13i-steward-inbox.js` | transport | 90 | 29 | 8 |
 | 69 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
@@ -276,7 +276,7 @@
 | `06e-mission-domain.js` | `03-bridge-guard.js` | backward | `normalizeCwd` |
 | `06e-mission-domain.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `06e-mission-domain.js` | `06b-prompt-registry.js` | backward | `getPromptPack` |
-| `06f-autonomy-grants.js` | `00-boot.js` | backward | `fsp`, `hashArgs`, `makeId`, `path` |
+| `06f-autonomy-grants.js` | `00-boot.js` | backward | `hashArgs`, `makeId` |
 | `06f-autonomy-grants.js` | `03-bridge-guard.js` | backward | `AUTOEXEC_DENYLIST`, `isSensitiveDataPath`, `normalizeCwd`, `pathWithinRoot` |
 | `06f-autonomy-grants.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `06f-autonomy-grants.js` | `07-autonomy.js` | forward | `NATIVE_TOOL_TIER`, `nativeToolTier` |
@@ -384,7 +384,7 @@
 | `10-context-governance.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider`, `agentCliAdapter`, `runClaudeTurn` |
 | `10-context-governance.js` | `06-provider-engine.js` | backward | `buildProviderSystemPrompt`, `buildStableSystemPrompt`, `maybeWriteThreadBrief`, `settleThreadBrief` |
 | `10-context-governance.js` | `06e-mission-domain.js` | backward | `runMissionDriver` |
-| `10-context-governance.js` | `06f-autonomy-grants.js` | backward | `activeDriverRuns`, `bindDriverRun`, `revokeGrantsForRun` |
+| `10-context-governance.js` | `06f-autonomy-grants.js` | backward | `bindDriverRun`, `endDriverRun`, `revokeGrantsForRun` |
 | `10-context-governance.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `StewardHooks`, `stewardTaintToolCall`, `stewardWatchedThread` |
 | `10-context-governance.js` | `07-autonomy.js` | backward | `buildOpenAiTools`, `fetchOpenAiModels`, `nativeToolTier` |
 | `10-context-governance.js` | `09-workflow.js` | backward | `runOpenAiTurn` |
@@ -449,7 +449,7 @@
 | `13-http-router.js` | `05b-kimi-bridge.js` | backward | `applyKimiStatusToSession`, `fileURLToPath`, `kimiSessionStatus`, `kimiStatusFingerprint`, `kimiUsageFromStatus` |
 | `13-http-router.js` | `06-provider-engine.js` | backward | `ERROR_CLASSES`, `buildMetricsPayload`, `buildOpsMetrics`, `collectAudit`, `collectStorageStats`, `deleteUserPlaybook`, `draftPlaybookFromSession`, `getCapabilities`, `listPlaybooksWithAvailability`, `matchServiceEntry`, `maybeRecordStorageTrend`, `normalizePlaybook`, `playbookReuseSources`, `recordRequestMetric`, `runtimeToolRequirementsMet`, `saveUserPlaybook`, `storageSweep` |
 | `13-http-router.js` | `06d-memory-domain.js` | backward | `MEMORY_EXCLUSION_MAX`, `analyzeMemoryMaintenance`, `applyMemoryRelationProposal`, `confirmMemoryRelation`, `decideMemoryProposal`, `deleteMemory`, `deleteMemoryRelation`, `draftMemoryFromSession`, `listMemoryProjectGroups`, `listMemoryRelations`, `loadMemoryRegistry`, `memoryFailureResponse`, `migrateLegacyAccMemory`, `migrateMemory`, `moveMemoryScope`, `projectKeyForCwd`, `proposeMemoryFromSession`, `proposeMemoryRelation`, `readMemoryItem`, `replayPendingMemoryProposal`, `resolveCoreMemoryState`, `saveMemory`, `syncAgentInstructionImports`, `validateMemoryProposalSave` |
-| `13-http-router.js` | `06f-autonomy-grants.js` | backward | `activeDriverRuns`, `autonomyGrants`, `dryRunGrantFiles`, `listGrantsView`, `normalizeGrant`, `revokeAllGrants`, `revokeGrant` |
+| `13-http-router.js` | `06f-autonomy-grants.js` | backward | `activeDriverRunOf`, `dryRunGrantFiles`, `installGrant`, `listGrantsView`, `normalizeGrant`, `revokeAllGrants`, `revokeGrant` |
 | `13-http-router.js` | `06i-steward-core.js` | backward | `StewardHooks`, `isStewardToolName` |
 | `13-http-router.js` | `07-autonomy.js` | backward | `buildClaudeAgentDefinitions`, `fetchOpenAiModels`, `getAgentRoleLibrary`, `nativeToolDisabledByPolicy`, `policyDesktopOverrideFor`, `probeProviderCompletion`, `projectAgentRoleFile`, `projectCwdDirectoryFailure`, `readClaudeProjectAgentRoles`, `readProjectAgentRoles`, `saveProjectAgentRoles`, `toolPackForName` |
 | `13-http-router.js` | `08-agent-runs.js` | backward | `agentRunResultSlice`, `agentWorkflowSaveProblem`, `autoResumeInterruptedRuns`, `buildAgentRunEnvelope`, `deleteAgentWorkflow`, `getAgentWorkflows`, `markInterruptedAgentRuns`, `normalizeAgentWorkflow`, `resolveOrchestrateNodes`, `saveAgentRun`, `saveAgentWorkflow` |
@@ -510,7 +510,7 @@
 | `13d-core-domain-routes.js` | `03-bridge-guard.js` | backward | `bridgedReadPathGate`, `normalizeCwd`, `pathWithinRoot`, `resolveContainmentPath` |
 | `13d-core-domain-routes.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `13d-core-domain-routes.js` | `04-permission-runtime.js` | backward | `driverAutoSessions`, `extendUserQuestion`, `logEvent`, `normalizeQuestionAnswer`, `permissionWaitMs`, `redact`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `sessionExecutionObservation`, `sessionExecutionSnapshot` |
-| `13d-core-domain-routes.js` | `06f-autonomy-grants.js` | backward | `CLI_TOOL_TIER`, `consumeGrant` |
+| `13d-core-domain-routes.js` | `06f-autonomy-grants.js` | backward | `consumeGrant` |
 | `13d-core-domain-routes.js` | `06h-retrieval-index.js` | backward | `createRetrievalCorpusCache`, `rankRetrievalCorpus`, `retrievalTerms` |
 | `13d-core-domain-routes.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `StewardHooks`, `aggregateMissionState`, `deriveStewardThreadState`, `stewardRuyiOwnedPath`, `stewardSanitizeText`, `stewardThreadStateFromCard`, `stewardThreadStateFromHead`, `stewardThreadStateRank`, `stewardThreadTurnQueued`, `waitReasonFor` |
 | `13d-core-domain-routes.js` | `07-autonomy.js` | backward | `DESKTOP_MCP_SERVER_ID`, `STEER_QUEUE_MAX`, `agentRunFile`, `applyAgentWorktree`, `cleanupAgentWorktree`, `getAgentRoleLibrary`, `nativeToolGate`, `nativeToolTier`, `toolDisabledByPolicy`, `toolDisabledResult`, `toolIsRevertible` |

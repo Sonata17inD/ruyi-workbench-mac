@@ -2053,8 +2053,7 @@
           "provider": "06f-autonomy-grants.js",
           "symbol": "revokeAllGrants",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -6754,25 +6753,13 @@
       "file": "06f-autonomy-grants.js",
       "layer": "engine",
       "provides": [
-        "CLI_FILE_FAMILY",
-        "CLI_TOOL_TIER",
-        "GRANT_EDIT_AUTOEXEC_DENY",
-        "GRANT_EXEC_CMD_FIELD",
-        "GRANT_EXEC_MAX_TTL_MS",
-        "GRANT_EXEC_MAX_USES",
-        "GRANT_EXEC_METACHARS",
-        "GRANT_EXEC_TOOLS",
-        "GRANT_MAX_TTL_MS",
-        "GRANT_MAX_USES",
-        "GRANT_MIN_TTL_MS",
-        "GRANT_NET_PATTERN",
-        "NATIVE_FILE_FAMILY",
-        "activeDriverRuns",
-        "autonomyGrants",
+        "activeDriverRunOf",
         "bindDriverRun",
         "consumeGrant",
         "dryRunGrantFiles",
+        "endDriverRun",
         "grantIssueTierInfo",
+        "installGrant",
         "listGrantsView",
         "normalizeGrant",
         "resolveToolPermissionContext",
@@ -6783,28 +6770,14 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
+          "symbol": "hashArgs",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "hashArgs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -6820,28 +6793,28 @@
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6855,14 +6828,14 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolTier",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "globToRegExp",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -11701,14 +11674,14 @@
         },
         {
           "provider": "06f-autonomy-grants.js",
-          "symbol": "activeDriverRuns",
+          "symbol": "bindDriverRun",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
-          "symbol": "bindDriverRun",
+          "symbol": "endDriverRun",
           "kinds": [
             "call"
           ]
@@ -14983,21 +14956,21 @@
         },
         {
           "provider": "06f-autonomy-grants.js",
-          "symbol": "activeDriverRuns",
+          "symbol": "activeDriverRunOf",
           "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06f-autonomy-grants.js",
-          "symbol": "autonomyGrants",
-          "kinds": [
-            "read"
+            "call"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "dryRunGrantFiles",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06f-autonomy-grants.js",
+          "symbol": "installGrant",
           "kinds": [
             "call"
           ]
@@ -16718,13 +16691,6 @@
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06f-autonomy-grants.js",
-          "symbol": "CLI_TOOL_TIER",
-          "kinds": [
-            "read"
           ]
         },
         {
