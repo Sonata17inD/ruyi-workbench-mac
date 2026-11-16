@@ -679,7 +679,7 @@ const { FILE_TOOL_HANDLERS, ARCHIVE_TOOL_HANDLERS, fileToolBeforeForCheckpoint, 
   checkpoints: { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx },
   source: { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, READ_PAGE_JSON_BUDGET, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews },
   search: { assertSearchExecution, classifyListPattern, explicitAllowDirs, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint, levenshtein },
-  archive: { ZIP_MAX_ENTRIES, ZIP_MAX_TOTAL, zipCollectEntries, zipReadCentralDir, zipReadEntryDataAsync, zipWriteAsync },
+  archive: { zipCollectEntries },
   runtime: { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall: (...args) => toolCall(...args) },
   mutations: { fileToolWriteLockKey, withFileToolWriteLock },
 });
@@ -932,6 +932,7 @@ const DESKTOP_TOOL_HANDLERS = {
   } },
 };
 
+const HTTP_DOWNLOAD_MAX_BYTES = 100 * 1024 * 1024;
 const NETWORK_TOOL_HANDLERS = {
   web_search: { paths: null, guardNote: "纯网络读;searchBackend 为管理端可信端点(SSRF 豁免录在案 v0.9-S9)", handler: async (args, ctx) => {
     // v0.9-S9 (D6): web_search reads searchBackend from config (baseUrl is the admin's TRUSTED endpoint →
@@ -960,16 +961,16 @@ const NETWORK_TOOL_HANDLERS = {
       if (!url) return { ok: false, error: 'url 不能为空' };
       if (!args.dest) return { ok: false, error: 'dest 不能为空' };
       const maxBytesAsked = Number(args.maxBytes) || 100 * 1024 * 1024;
-      const maxBytes = Math.min(ZIP_MAX_SINGLE_FILE, Math.max(1, maxBytesAsked));
-      // 走查 W1·F9:maxBytes 被 ZIP_MAX_SINGLE_FILE(100MB)夹住 —— 只能调小、不能放宽。修前超限提示说「增大 maxBytes」,模型照做(甚至传 10GB)
+      const maxBytes = Math.min(HTTP_DOWNLOAD_MAX_BYTES, Math.max(1, maxBytesAsked));
+      // 走查 W1·F9:maxBytes 被 HTTP_DOWNLOAD_MAX_BYTES(100MB)夹住 —— 只能调小、不能放宽。修前超限提示说「增大 maxBytes」,模型照做(甚至传 10GB)
       // 仍被同一个 100MB 拒绝,反复失败。现在按「是否已到硬上限」给不同的话,到顶了就指向别的办法。
       const mbOf = n => Math.round(n / 1024 / 1024);
       const tooBig = () => ({
-        error: `文件超过大小上限（${mbOf(maxBytes)}MB）` + (maxBytesAsked > ZIP_MAX_SINGLE_FILE ? `（传入的 maxBytes 超过单文件硬上限,已按 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB 处理）` : ''),
-        maxBytesCap: ZIP_MAX_SINGLE_FILE,
-        hint: maxBytes < ZIP_MAX_SINGLE_FILE
-          ? `可把 maxBytes 调大重试(最多 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB)`
-          : `已是单文件硬上限 ${mbOf(ZIP_MAX_SINGLE_FILE)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 shell_run(Invoke-WebRequest -OutFile)下载,或让用户手动下载`,
+        error: `文件超过大小上限（${mbOf(maxBytes)}MB）` + (maxBytesAsked > HTTP_DOWNLOAD_MAX_BYTES ? `（传入的 maxBytes 超过单文件硬上限,已按 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB 处理）` : ''),
+        maxBytesCap: HTTP_DOWNLOAD_MAX_BYTES,
+        hint: maxBytes < HTTP_DOWNLOAD_MAX_BYTES
+          ? `可把 maxBytes 调大重试(最多 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB)`
+          : `已是单文件硬上限 ${mbOf(HTTP_DOWNLOAD_MAX_BYTES)}MB,再调大 maxBytes 也不会放宽;更大的文件请改用 shell_run（curl --output）下载,或让用户手动下载`,
       });
       // ① SSRF 前置拒绝（与 webFetch 同：内网/回环/非 http(s) 一律不发包）。
       const pre = ssrfCheck(url);

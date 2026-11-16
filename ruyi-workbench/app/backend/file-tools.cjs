@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const { ZIP_MAX_ENTRIES, ZIP_MAX_TOTAL, zipReadCentralDir, zipReadEntryDataAsync, zipWriteAsync } = require('./archive-codec.cjs');
 const fsp = require('node:fs/promises');
 const { FileTextIo } = require('./file-text-io.cjs');
 const { UTF8_BOM_BYTES, accAnnotateNonAscii, accCpName, buildNonAsciiReport, defaultTextLineEnding, detectTextLineEnding, hasTextLineBreak, normalizeTextLineEndings, textFileWantsUtf8Bom } = require('./file-text-format.cjs');
@@ -19,7 +20,7 @@ function createFileTools({ paths, checkpoints, source, search, archive, runtime,
   const { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx } = checkpoints;
   const { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, READ_PAGE_JSON_BUDGET, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews } = source;
   const { assertSearchExecution, classifyListPattern, explicitAllowDirs, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint, levenshtein } = search;
-  const { ZIP_MAX_ENTRIES, ZIP_MAX_TOTAL, zipCollectEntries, zipReadCentralDir, zipReadEntryDataAsync, zipWriteAsync } = archive;
+  const { zipCollectEntries } = archive;
   const { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall } = runtime;
   const { fileToolWriteLockKey, withFileToolWriteLock } = mutations;
 const FileReadCache = require('./file-read-cache.cjs').createFileReadCache({ execResultCacheEnabled, execResultCacheMaxEntries, logEvent });

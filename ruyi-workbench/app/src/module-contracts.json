@@ -11535,7 +11535,6 @@
         "BROWSER_UA",
         "BROWSE_IGNORE_DIRS",
         "CODE_SYMBOL_SUFFIXES",
-        "CRC32_TABLE",
         "DATA_PROFILE_JSON_FULL_BYTES",
         "DATA_PROFILE_JSON_STREAM_BYTES",
         "DATA_PROFILE_MAX_COLUMNS",
@@ -11604,12 +11603,6 @@
         "WEB_FETCH_DEFAULT_CHARS",
         "WEB_FETCH_MAX_CHARS",
         "WEB_FETCH_PAGE_TTL_MS",
-        "ZIP_ASYNC_DEFLATE_MIN",
-        "ZIP_BOMB_MSG",
-        "ZIP_MAX_ENTRIES",
-        "ZIP_MAX_SINGLE_FILE",
-        "ZIP_MAX_TOTAL",
-        "_profileGb18030",
         "_rgProbe",
         "_rgProbeInflight",
         "adaptiveCatalogForMcp",
@@ -11637,7 +11630,6 @@
         "columnProfile",
         "completeBackgroundJob",
         "crc32",
-        "crc32Async",
         "createBoundedPathMatcher",
         "createDeflateAutoStream",
         "dataProfile",
@@ -11821,20 +11813,10 @@
         "webSearchViaBackend",
         "writeBackgroundJobRows",
         "writeWebCache",
-        "zipAssemble",
         "zipCollectEntries",
-        "zipDecodeName",
-        "zipDeflateRawAsync",
-        "zipEntryCompressedSlice",
-        "zipInflateRawAsync",
         "zipReadCentralDir",
         "zipReadEntryData",
-        "zipReadEntryDataAsync",
-        "zipTopLevelNames",
-        "zipVerifyEntry",
-        "zipWrite",
-        "zipWriteAsync",
-        "zipYield"
+        "zipWrite"
       ],
       "requires": [
         {
@@ -11987,13 +11969,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "00-platform-runtime.js",
           "symbol": "platformShellEnvironment",
           "kinds": [
@@ -12081,7 +12056,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12109,14 +12085,16 @@
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12339,6 +12317,7 @@
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
         "FileToolPaths",
+        "HTTP_DOWNLOAD_MAX_BYTES",
         "INTEGRATION_TOOL_HANDLERS",
         "LAUNCH_MODE",
         "MANIFEST_FULL_VERIFY_MS",
@@ -13736,49 +13715,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "ZIP_MAX_ENTRIES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "ZIP_MAX_SINGLE_FILE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "ZIP_MAX_TOTAL",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "zipCollectEntries",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "zipReadCentralDir",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "zipReadEntryDataAsync",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "zipWriteAsync",
           "kinds": [
             "read"
           ]

@@ -275,7 +275,9 @@
     "app/backend/kimi-model-discovery.cjs",
     "app/backend/toolbox-registry.cjs",
     "app/backend/toolbox-services.cjs",
-    "app/backend/file-tools.cjs"
+    "app/backend/file-tools.cjs",
+    "app/backend/archive-codec.cjs",
+    "app/backend/archive-collector.cjs"
   ],
   "acc": [
     "LICENSE",

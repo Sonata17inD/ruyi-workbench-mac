@@ -147,7 +147,7 @@ test('[B6] http_download:maxBytes 只能调低;到硬上限后的 hint 指向别
     assert.match(String(a.error), /硬上限/, '说清传入的 maxBytes 被夹住了');
     assert.equal(a.maxBytesCap, 100 * MB);
     assert.match(String(a.hint), /硬上限/);
-    assert.match(String(a.hint), /Invoke-WebRequest/);
+    assert.match(String(a.hint), /curl --output/);
     assert.doesNotMatch(String(a.hint), /增大/);
     // 没到顶:maxBytes 调低了 → 可以调大
     const b = await toolCall('http_download', { url, dest, maxBytes: 1 * MB }, ctx);

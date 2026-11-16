@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3661 | 3536 | 663 | 68 | 0 | 1 |
+| 92 | 3644 | 3529 | 663 | 68 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -73,11 +73,11 @@
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
 | 56 | `09-workflow.js` | orchestration | 27 | 273 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
-| 58 | `11-native-tools.js` | tools | 310 | 60 | 14 |
+| 58 | `11-native-tools.js` | tools | 292 | 59 | 14 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
-| 62 | `12-tool-dispatch.js` | tools | 105 | 194 | 25 |
+| 62 | `12-tool-dispatch.js` | tools | 106 | 188 | 25 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 48 | 276 | 37 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -387,7 +387,7 @@
 | `10-context-governance.js` | `07-autonomy.js` | backward | `buildOpenAiTools`, `fetchOpenAiModels`, `nativeToolTier` |
 | `10-context-governance.js` | `09-workflow.js` | backward | `runOpenAiTurn` |
 | `10-context-governance.js` | `09d-token-estimation.js` | backward | `CONTEXT_WINDOW_FALLBACK`, `EVAPORATED_PREFIX`, `countCjkCodeUnits`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `tokensFromTextCounts` |
-| `11-native-tools.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `RUYI_PATH_BEFORE_VENDOR`, `StringDecoder`, `URL`, `cp`, `crypto`, `dataRoot`, `dataRootAliases`, `decodeConsoleText`, `fs`, `fsp`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `ruyiVendorBinDir`, `safeJsonParse`, `samePathEntry`, `text`, `zlib` |
+| `11-native-tools.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `RUYI_PATH_BEFORE_VENDOR`, `StringDecoder`, `URL`, `cp`, `crypto`, `dataRoot`, `dataRootAliases`, `decodeConsoleText`, `fs`, `fsp`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `ruyiVendorBinDir`, `safeJsonParse`, `samePathEntry`, `text` |
 | `11-native-tools.js` | `00-platform-runtime.js` | backward | `platformShellEnvironment` |
 | `11-native-tools.js` | `01-config.js` | backward | `RUNTIME`, `atomicWriteJson`, `readConfig`, `safeSessionId`, `sessionPath` |
 | `11-native-tools.js` | `01c-runtime-flags.js` | backward | `observationRecallEnabled` |
@@ -426,7 +426,7 @@
 | `12-tool-dispatch.js` | `07-autonomy.js` | backward | `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `bridgedToolTier`, `compareToolRetrievalShadow`, `listCompactTools`, `nativeToolDisabledByPolicy`, `nativeToolSchema`, `nativeToolsAcceptingArgKeys`, `policyDesktopOverrideFor`, `policySessionFor`, `searchToolCatalog`, `toolArgsSkeleton`, `toolDisabledByPolicy`, `toolDisabledResult` |
 | `12-tool-dispatch.js` | `08-agent-runs.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `getAgentWorkflows` |
 | `12-tool-dispatch.js` | `10-context-governance.js` | backward | `providerTurnQuotaKey`, `rehydrateObservation` |
-| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `READ_PAGE_JSON_BUDGET`, `ZIP_MAX_ENTRIES`, `ZIP_MAX_SINGLE_FILE`, `ZIP_MAX_TOTAL`, `adaptiveCatalogForMcp`, `assertSearchExecution`, `binaryReadHint`, `boundedReadPage`, `classifyListPattern`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `embeddedIpv4FromV6`, `explicitAllowDirs`, `explicitSegmentsOfGlob`, `explicitSegmentsOfRegex`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `globToRegExp`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `normalizeGlobPatternForRoot`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries`, `zipReadCentralDir`, `zipReadEntryDataAsync`, `zipWriteAsync` |
+| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `READ_PAGE_JSON_BUDGET`, `adaptiveCatalogForMcp`, `assertSearchExecution`, `binaryReadHint`, `boundedReadPage`, `classifyListPattern`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `embeddedIpv4FromV6`, `explicitAllowDirs`, `explicitSegmentsOfGlob`, `explicitSegmentsOfRegex`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `globToRegExp`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `normalizeGlobPatternForRoot`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries` |
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |

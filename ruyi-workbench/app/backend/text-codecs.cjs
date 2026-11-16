@@ -141,4 +141,13 @@ function createCappedDiagnosticText(cap = CLI_DIAGNOSTIC_TEXT_CAP) {
   };
 }
 
-module.exports = { decodeConsoleText, createConsoleLineDecoder, decodeTextFileBytes, createNdjsonLineFeeder, createCappedDiagnosticText };
+let _profileGb18030 = null;
+function profileGb18030Decoder() {
+  if (_profileGb18030 === null) {
+    try { _profileGb18030 = typeof TextDecoder === 'function' ? new TextDecoder('gb18030', { fatal: true }) : false; }
+    catch { _profileGb18030 = false; }   // 精简 ICU 的 Node 不带 gb18030 → 退回有损 UTF-8
+  }
+  return _profileGb18030 || null;
+}
+
+module.exports = { profileGb18030Decoder, decodeConsoleText, createConsoleLineDecoder, decodeTextFileBytes, createNdjsonLineFeeder, createCappedDiagnosticText };

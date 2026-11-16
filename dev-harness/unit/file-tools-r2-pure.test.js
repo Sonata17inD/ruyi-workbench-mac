@@ -68,7 +68,7 @@ describe('normalizeGlobPatternForRoot', () => {
 });
 
 describe('zipTopLevelNames', () => {
-  const names = sliceFn('11-native-tools.js', 'zipTopLevelNames');
+  const { zipTopLevelNames: names } = require('../../ruyi-workbench/app/backend/archive-codec.cjs');
   it('互不同名的保持 basename', () => {
     assert.deepEqual(names(['/w/a.txt', '/w/b.txt']), ['a.txt', 'b.txt']);
   });
@@ -80,5 +80,35 @@ describe('zipTopLevelNames', () => {
   it('大小写不同也算同名(zip 在 Windows 上解压不分大小写)', () => {
     const r = names(['/w/d1/N.txt', '/w/d2/n.txt']);
     assert.equal(new Set(r.map(x => x.toLowerCase())).size, 2);
+  });
+});
+
+
+describe('archive codec module', () => {
+  const codec = require('../../ruyi-workbench/app/backend/archive-codec.cjs');
+  it('sync and async archives preserve UTF-8 filenames and exact bytes across compression thresholds', async () => {
+    const entries = [{ name: '中文/报告.txt', data: Buffer.from('原始内容\r\n') }, { name: 'large.bin', data: Buffer.alloc(300000, 41) }];
+    for (const zip of [codec.zipWrite(entries), await codec.zipWriteAsync(entries)]) {
+      const records = codec.zipReadCentralDir(zip);
+      assert.deepEqual(records.map(r => r.name), entries.map(e => e.name));
+      for (let i = 0; i < records.length; i++) {
+        assert.deepEqual(codec.zipReadEntryData(zip, records[i]), entries[i].data);
+        assert.deepEqual(await codec.zipReadEntryDataAsync(zip, records[i]), entries[i].data);
+      }
+    }
+  });
+  it('both readers reject checksum mismatches and expansion beyond declared size', async () => {
+    const zip = codec.zipWrite([{ name: 'payload.txt', data: Buffer.alloc(10000, 65) }]);
+    const [record] = codec.zipReadCentralDir(zip);
+    const badCrc = { ...record, crc: record.crc ^ 1 };
+    assert.throws(() => codec.zipReadEntryData(zip, badCrc), /CRC32/);
+    await assert.rejects(() => codec.zipReadEntryDataAsync(zip, badCrc), /CRC32/);
+    const bomb = { ...record, uncompSize: 1 };
+    assert.throws(() => codec.zipReadEntryData(zip, bomb), /上限|大小/);
+    await assert.rejects(() => codec.zipReadEntryDataAsync(zip, bomb), /上限|大小/);
+  });
+  it('rejects truncated central directories before extraction', () => {
+    const zip = codec.zipWrite([{ name: 'a', data: Buffer.from('a') }]);
+    assert.throws(() => codec.zipReadCentralDir(zip.subarray(0, zip.length - 10)));
   });
 });
