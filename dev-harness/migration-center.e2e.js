@@ -186,6 +186,8 @@ const apply = async body => request('POST', '/api/migration/apply', body);
 
     // ── C 注入去重 ──
     const sess = (await request('POST', '/api/sessions', { cwd: WORK })).json.session;
+    const selectedProvider = await request('PATCH', '/api/sessions/' + encodeURIComponent(sess.id), { engineRoute: { engine: 'openai', providerId: 'fake', model: 'fake-model' } });
+    ok(selectedProvider?.status === 200, 'C0 explicitly selects the fixture provider for memory injection');
     await request('POST', '/api/chat/stream', { sessionId: sess.id, message: 'hello provider', cwd: WORK });
     // 核心胶囊走易变层(可能在 system 之外的消息里):把这一发所有消息的文本拼起来看。
     const textOf = c => (typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (p && typeof p.text === 'string' ? p.text : '')).join('\n') : '');

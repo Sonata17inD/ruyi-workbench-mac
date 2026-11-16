@@ -648,3 +648,10 @@
 - media-harness 直接实例化所属模块，删除 dispatchTestHooks.MediaInspection 测试专用导出。文档与音频监督 E2E 全通过，覆盖取消、超时、后代停止、缺失监督器、清理不完整、保留输出管道和 Unicode。
 - 初次 native-file-vision：6 通过、2 因 Python 图像依赖未配置跳过。使用仓库现有 Python 后，与媒体单元合跑 16 项，15 通过、1 因 FFmpeg 未安装跳过；真实 FFmpeg 测量未计通过。清理空参数循环后，受影响 PDF／OOXML／图片转换 3 项再验通过。导出面单元通过。
 - 100 模块边界／白名单、依赖图、EOL、构建一致性与 diff 通过。共享宿主 62566 行；旧核心 SCC 从 32 成员降至 30，静态门上限同步收紧为 30；仍未完成整体消环、最终性能与发行验收。无重复备份／打包。
+
+## 工作包 4bs：技能目录与记忆文档元数据
+
+- document-metadata 独立拥有 frontmatter、摘要和正文解析，memory-store 直接引用，不再从工具分发层注入纯函数。skill-registry 统一目录扫描、来源优先级、启用来源锁与插件副本历史识别；CLI 家目录统一走显式提供者，迁移中心调用同一服务实例。
+- 首轮 59 项单元中 54 通过、5 失败，原因是旧测试按 function 声明扫描而遗漏已改为 import 的解析器；测试改为直接引用模块后受影响 34 项通过。增补独立注册表覆盖 CLI 家目录、项目覆盖用户源及来源变化拒绝注入，14 项技能工具单元通过。skills-registry、playbook-skill-tools、health-i18n 与导出面通过。
+- 迁移 E2E 首轮发现三个目录读取方法未暴露给迁移消费者，补齐服务接口后恢复扫描、复制、更新／撤销。随后 C1 揭示既有真实缺陷：记忆缓存使用 dev/ino/ctime/mtime/size 身份，Provider 发送前仍按旧 size/mtime 判据比较，误清有效核心记忆。统一为 MemoryStore.memoryEntryCurrent，直接测试保留正常快照、拒绝保留 mtime 的原子替换和删除；完整迁移 E2E 与 memory-active-scope E2E 通过。迁移测试明确选择 fake Provider，避免依赖新线程默认引擎。
+- 102 模块边界／白名单、依赖图、EOL、构建一致性与 diff 通过。共享宿主 62298 行；旧核心仍 30 成员 SCC，整体薄入口、性能与发行验收尚未完成。未重复打包。

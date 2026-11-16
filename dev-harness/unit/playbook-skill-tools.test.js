@@ -211,3 +211,24 @@ test('[S3] skill_read 语义不变:没启用的技能读不了(skill_list 只列
   const ok = await call('skill_read', { id: 'browser-debug' }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(ok.ok, true);
 });
+
+test('standalone skill registry respects injected CLI homes, source precedence and source locks', async () => {
+  const { createSkillRegistry } = require('../../ruyi-workbench/app/backend/skill-registry.cjs');
+  const base = path.join(root, 'registry-module'), cli = Object.fromEntries(['claude', 'codex', 'kimi'].map(name => [name, path.join(base, name)]));
+  const user = path.join(base, 'user'), project = path.join(base, 'project');
+  const put = (dir, id, body) => { const dest = path.join(dir, id); fs.mkdirSync(dest, { recursive: true }); fs.writeFileSync(path.join(dest, 'SKILL.md'), body); };
+  put(path.join(cli.claude, 'skills'), 'external', '---\nname: Injected CLI skill\n---\nbody');
+  put(user, 'same', 'user body'); put(path.join(project, '.ruyi/skills'), 'same', 'project body');
+  const parse = (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } };
+  const registry = createSkillRegistry({ paths: { skills: user }, agentCliHomes: () => cli, externalRoot: () => base,
+    SKILL_ID_RE: /^[a-z0-9_-]+$/, PLAYBOOK_REQUIRES: ['vision'], getCapabilities: async () => ({}),
+    evalPlaybookAvailability: () => ({ available: true, status: 'available', unavailableReason: '' }), loadAllPlaybooks: async () => [],
+    readIfExists: async (file, cap) => { try { return (await fs.promises.readFile(file, 'utf8')).slice(0, cap); } catch { return ''; } }, safeJsonParse: parse });
+  const entries = await registry.loadSkillRegistry(project, {});
+  assert.equal(entries.find(e => e.id === 'external').source, 'claude-code');
+  assert.equal(entries.find(e => e.id === 'same').source, 'project');
+  const mismatches = [];
+  const selected = await registry.resolveEnabledSkillEntries({ skills: [{ id: 'same', source: 'user' }, { id: 'external', source: 'claude-code' }] }, {}, project, {}, (...args) => mismatches.push(args));
+  assert.deepEqual(selected.map(e => e.id), ['external']);
+  assert.deepEqual(mismatches, [['same', 'user', 'project']]);
+});

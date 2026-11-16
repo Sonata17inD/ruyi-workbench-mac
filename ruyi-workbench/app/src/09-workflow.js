@@ -1689,10 +1689,7 @@ async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, prov
     if (stewardVolatile) return;
     let changed = memorySelectionSignature(session, workingDir) !== memorySnapshotSelection;
     if (!changed && !memorySnapshotInvalid && enabledMemoryEntries.length) {
-      const current = await Promise.all(enabledMemoryEntries.map(async entry => {
-        try { const stat = await fsp.stat(entry.file); return stat.isFile() && `${stat.size}:${stat.mtimeMs}` === entry.memoryVersion && !memoryIsExpired(entry); }
-        catch { return false; }
-      }));
+      const current = await Promise.all(enabledMemoryEntries.map(entry => MemoryStore.memoryEntryCurrent(entry)));
       const edges = await readConfirmedSupersedeEdges(workingDir).catch(() => null);
       changed = !current.every(Boolean) || !edges || JSON.stringify(edges) !== memorySnapshotRelations;
     }

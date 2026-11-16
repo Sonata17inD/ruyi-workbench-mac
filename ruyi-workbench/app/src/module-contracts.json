@@ -3242,6 +3242,7 @@
         "collectDisplayUrlRestores",
         "configSecretValueOrCleared",
         "configUrlOrCleared",
+        "effectiveSkillSelection",
         "isSensitiveHeaderName",
         "maskExternalMcpServerForDisplay",
         "maskExtraHeaders",
@@ -4190,13 +4191,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "effectiveSkillSelection",
           "kinds": [
             "call"
           ]
@@ -6328,20 +6322,6 @@
           "symbol": "providerRawCompletion",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "firstParaDesc",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "parseFrontmatter",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -9585,6 +9565,13 @@
         },
         {
           "provider": "06d-memory-domain.js",
+          "symbol": "MemoryStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06d-memory-domain.js",
           "symbol": "proposeMemoryRelation",
           "kinds": [
             "call"
@@ -12285,7 +12272,6 @@
       "provides": [
         "AGENT_TOOL_HANDLERS",
         "ARCHIVE_TOOL_HANDLERS",
-        "BUNDLED_PLUGIN_IDS",
         "CHECKPOINT_LIST_LIMIT",
         "CHECKPOINT_LIST_PATHS_MAX",
         "CODE_TOOL_HANDLERS",
@@ -12308,11 +12294,10 @@
         "SCRATCHPAD_WRITE_NOTE",
         "SCREENSHOT_EMBED_MAX_BYTES",
         "SHELL_TOOL_HANDLERS",
-        "SKILL_IMPORT_RECORD",
-        "SKILL_IMPORT_SOURCES",
         "SKILL_TOOL_ROWS_MAX",
         "STEWARD_GUARD_NOTE",
         "STEWARD_TOOL_HANDLERS",
+        "SkillRegistry",
         "TOOL_ARGS_ERROR_TEXT",
         "TOOL_HANDLERS",
         "UTF8_BOM_BYTES",
@@ -12327,24 +12312,18 @@
         "buildWorkbenchSelfStatus",
         "checkpointListResult",
         "clampCatalogToolLimit",
-        "claudePluginSkillDirs",
-        "commandPrompt",
         "computeHealth",
+        "createSkillRegistry",
         "defaultTextLineEnding",
         "desktopControlComponentOnDisk",
         "desktopControlState",
         "detectTextLineEnding",
-        "docBody",
-        "docMeta",
-        "effectiveSkillSelection",
         "execCwdProblem",
         "fileToolBeforeForCheckpoint",
         "fileToolFsFailure",
         "fileToolPrivacySourceOptions",
         "fileToolWorkspaceDir",
         "fileToolWriteLockKey",
-        "firstParaDesc",
-        "foldFrontmatterBlock",
         "guardedWalkRoot",
         "hasTextLineBreak",
         "httpRequestTargetsWorkbench",
@@ -12362,10 +12341,6 @@
         "observationRecallError",
         "observationRecallQuotaTake",
         "openToolUncDenied",
-        "parseFrontmatter",
-        "parseSkillRequires",
-        "readSkillDir",
-        "readSkillImportRecord",
         "resolveEnabledSkillEntries",
         "resolveFileToolPath",
         "resolveFileToolRoot",
@@ -12373,7 +12348,6 @@
         "respellWalkPaths",
         "runPythonScript",
         "scratchpadWriteTool",
-        "stripLeadingBom",
         "suggestToolNames",
         "textFileWantsUtf8Bom",
         "toolArgPropertyLenient",
@@ -12395,7 +12369,7 @@
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12488,7 +12462,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13004,6 +12979,13 @@
         },
         {
           "provider": "05-claude-engine.js",
+          "symbol": "effectiveSkillSelection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "05-claude-engine.js",
           "symbol": "resolveAsrProvider",
           "kinds": [
             "call"
@@ -13034,14 +13016,15 @@
           "provider": "06-provider-engine.js",
           "symbol": "evalPlaybookAvailability",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13055,7 +13038,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13583,7 +13566,7 @@
           "provider": "11-native-tools.js",
           "symbol": "readIfExists",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23966,6 +23949,7 @@
         "MIGRATION_SKILL_MAX_FILES",
         "MIGRATION_SKILL_STAGE_PREFIX",
         "MigrationTrashHooks",
+        "SKILL_IMPORT_RECORD",
         "migrationAnalyzeValue",
         "migrationApply",
         "migrationBackup",
@@ -24266,28 +24250,7 @@
         },
         {
           "provider": "12-tool-dispatch.js",
-          "symbol": "claudePluginSkillDirs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "readSkillDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "readSkillImportRecord",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "SKILL_IMPORT_RECORD",
+          "symbol": "SkillRegistry",
           "kinds": [
             "read"
           ]

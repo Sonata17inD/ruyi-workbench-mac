@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3644 | 3525 | 660 | 68 | 0 | 1 |
+| 92 | 3633 | 3521 | 659 | 67 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -52,7 +52,7 @@
 | 34 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
 | 35 | `04j-voice-lexicon.js` | foundation | 1 | 0 | 0 |
 | 36 | `04j-voice-learn.js` | foundation | 1 | 0 | 0 |
-| 37 | `05-claude-engine.js` | engine | 76 | 136 | 27 |
+| 37 | `05-claude-engine.js` | engine | 77 | 135 | 27 |
 | 38 | `05b-kimi-bridge.js` | engine | 128 | 77 | 16 |
 | 39 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
 | 40 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
@@ -61,7 +61,7 @@
 | 43 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 46 | `06d-memory-domain.js` | engine | 161 | 35 | 10 |
+| 46 | `06d-memory-domain.js` | engine | 161 | 33 | 9 |
 | 47 | `06e-mission-domain.js` | engine | 3 | 13 | 5 |
 | 48 | `06f-autonomy-grants.js` | engine | 13 | 10 | 5 |
 | 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
@@ -71,13 +71,13 @@
 | 53 | `08-agent-runs.js` | orchestration | 107 | 120 | 24 |
 | 54 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
-| 56 | `09-workflow.js` | orchestration | 27 | 273 | 29 |
+| 56 | `09-workflow.js` | orchestration | 27 | 274 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
 | 58 | `11-native-tools.js` | tools | 292 | 59 | 14 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 62 | `12-tool-dispatch.js` | tools | 106 | 188 | 25 |
+| 62 | `12-tool-dispatch.js` | tools | 93 | 189 | 25 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 48 | 276 | 37 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -98,7 +98,7 @@
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
 | 82 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
-| 83 | `13u-migration-center.js` | transport | 62 | 39 | 7 |
+| 83 | `13u-migration-center.js` | transport | 63 | 36 | 7 |
 | 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
 | 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
 | 86 | `13y-external-bot-credentials.js` | transport | 1 | 5 | 3 |
@@ -214,7 +214,7 @@
 | `05-claude-engine.js` | `06e-mission-domain.js` | forward | `buildMissionPromptSection` |
 | `05-claude-engine.js` | `07-autonomy.js` | forward | `buildClaudeAgentDefinitions`, `classifyToolPacks` |
 | `05-claude-engine.js` | `08-agent-runs.js` | forward | `buildOrchestrateHint`, `getAgentWorkflows` |
-| `05-claude-engine.js` | `12-tool-dispatch.js` | forward | `effectiveSkillSelection`, `resolveEnabledSkillEntries` |
+| `05-claude-engine.js` | `12-tool-dispatch.js` | forward | `resolveEnabledSkillEntries` |
 | `05-claude-engine.js` | `13-http-router.js` | forward | `buildModelHint`, `discoverKimiModels`, `discoverModels`, `kimiModelList`, `offlineModelList` |
 | `05b-kimi-bridge.js` | `00-boot.js` | backward | `MAX_BODY_BYTES`, `RUYI_EVENTS`, `StringDecoder`, `URL`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `http`, `makeId`, `nowIso`, `os`, `path`, `pathToFileURL`, `paths`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
 | `05b-kimi-bridge.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherUsable`, `decodeClaudeCliText`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi` |
@@ -266,7 +266,6 @@
 | `06d-memory-domain.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `06d-memory-domain.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider` |
 | `06d-memory-domain.js` | `06-provider-engine.js` | backward | `providerRawCompletion` |
-| `06d-memory-domain.js` | `12-tool-dispatch.js` | forward | `firstParaDesc`, `parseFrontmatter` |
 | `06e-mission-domain.js` | `00-boot.js` | backward | `neutralizeFenceTag`, `nowIso` |
 | `06e-mission-domain.js` | `02-session-store.js` | backward | `MISSION_MAX_TEXT`, `MISSION_STALL_LIMIT`, `evaluateMissionCheck`, `maybeFinalizeMission`, `missionProgressDigest`, `recordMissionCheckResult`, `saveSession`, `sessionObjectIsStale` |
 | `06e-mission-domain.js` | `03-bridge-guard.js` | backward | `normalizeCwd` |
@@ -352,7 +351,7 @@
 | `09-workflow.js` | `06-provider-engine.js` | backward | `appendTurnPolicies`, `buildPromptTaskContext`, `buildStableSystemPrompt`, `buildVolatileParts`, `evalPlaybookAvailability`, `getCapabilities`, `loadAllPlaybooks`, `neutralizeAuthoredText`, `readProjectMemory`, `repairNodeJsonViaProvider`, `resolveToolIterationBudget`, `shouldExtendToolIterationBudget`, `softwareEngineeringTaskProfile` |
 | `09-workflow.js` | `06b-prompt-registry.js` | backward | `PROMPT_EN`, `PROMPT_PACK_VERSION`, `getPromptPack`, `revertNoticeTurns` |
 | `09-workflow.js` | `06c-agent-loop-hooks.js` | backward | `AgentLoopHooks` |
-| `09-workflow.js` | `06d-memory-domain.js` | backward | `buildMemoryCheckPrompt`, `buildMemoryConflictMap`, `buildMemoryPromptSection`, `buildMemoryTurnSection`, `extractMemoryRelationProposals`, `filterMemoryForNativeCli`, `memoryExclusionSet`, `memoryIsExpired`, `memorySelectionSignature`, `proposeMemoryRelation`, `readConfirmedSupersedeEdges`, `resolveMemoryPreflight` |
+| `09-workflow.js` | `06d-memory-domain.js` | backward | `MemoryStore`, `buildMemoryCheckPrompt`, `buildMemoryConflictMap`, `buildMemoryPromptSection`, `buildMemoryTurnSection`, `extractMemoryRelationProposals`, `filterMemoryForNativeCli`, `memoryExclusionSet`, `memoryIsExpired`, `memorySelectionSignature`, `proposeMemoryRelation`, `readConfirmedSupersedeEdges`, `resolveMemoryPreflight` |
 | `09-workflow.js` | `06f-autonomy-grants.js` | backward | `consumeGrant` |
 | `09-workflow.js` | `06g-resource-leases.js` | backward | `acquireResourceLease`, `inferToolResources`, `normalizeAgentResources`, `releaseResourceLease`, `remapAgentResources` |
 | `09-workflow.js` | `06i-steward-core.js` | backward | `StewardHooks`, `isStewardToolName` |
@@ -417,7 +416,7 @@
 | `12-tool-dispatch.js` | `04-permission-runtime.js` | backward | `bridgedServerUnavailableMessage`, `configureMcpFromTool`, `getBridgedClient`, `logEvent`, `resolveBridge`, `resolveExternalMcpServers`, `safeMcpInventory` |
 | `12-tool-dispatch.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `12-tool-dispatch.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |
-| `12-tool-dispatch.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider`, `resolveAsrProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor` |
+| `12-tool-dispatch.js` | `05-claude-engine.js` | backward | `activeOpenAiProvider`, `effectiveSkillSelection`, `resolveAsrProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor` |
 | `12-tool-dispatch.js` | `06-provider-engine.js` | backward | `PLAYBOOK_REQUIRES`, `buildRuntimeIdentityFacts`, `evalPlaybookAvailability`, `getCapabilities`, `listPlaybooksWithAvailability`, `loadAllPlaybooks`, `markNetworkOnline`, `neutralizeAuthoredText`, `peekCapabilities`, `runtimeToolRequirementsMet`, `updateAutomaticThreadTitle` |
 | `12-tool-dispatch.js` | `06d-memory-domain.js` | backward | `listWorkbenchMemories`, `proposeMemoryRelationRevoke`, `proposeMemoryRelationTool`, `proposeMemoryRevision`, `proposeWorkbenchMemory`, `readWorkbenchMemory` |
 | `12-tool-dispatch.js` | `06i-steward-core.js` | backward | `StewardHooks`, `isStewardToolName`, `stewardAssemblePlaybookPrompt`, `stewardPlaybookMissingInputs` |
@@ -714,7 +713,7 @@
 | `13u-migration-center.js` | `04-permission-runtime.js` | backward | `_parseTomlMcpServers`, `_tomlKeyPath`, `logEvent`, `parseMcpConfigFile`, `safeUrlForDisplay` |
 | `13u-migration-center.js` | `05-claude-engine.js` | backward | `sanitizeExternalMcpServer` |
 | `13u-migration-center.js` | `06d-memory-domain.js` | backward | `syncAgentInstructionImports` |
-| `13u-migration-center.js` | `12-tool-dispatch.js` | backward | `SKILL_IMPORT_RECORD`, `claudePluginSkillDirs`, `readSkillDir`, `readSkillImportRecord` |
+| `13u-migration-center.js` | `12-tool-dispatch.js` | backward | `SkillRegistry` |
 | `13v-external-channel-protocols.js` | `00-boot.js` | backward | `crypto`, `json`, `text` |
 | `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `URL`, `apiFailure`, `crypto`, `fsp`, `json`, `makeId`, `nowIso`, `path`, `paths`, `runKeyedChain`, `send`, `text` |
 | `13w-external-bots.js` | `01-config.js` | backward | `DurableJsonStore`, `originOk`, `tokenOk` |

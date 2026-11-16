@@ -1,4 +1,6 @@
 'use strict';
+const { parseFrontmatter } = require('../../ruyi-workbench/app/backend/document-metadata.cjs');
+
 // 记忆走查「A:作用域与写入路径」(06d-memory-domain)。真源码、临时 HOME、零网络。
 // 未导出的内部函数经 dev-harness/lib/server-internals.js 取真函数(不增加 14-main.js 的导出面)。
 //   [G]  作用域闸:模型要 global 时,用户最近几条消息里有没有「全局」的说法(关键词补全 + 多条消息窗口 + 个人偏好口径);
@@ -37,14 +39,14 @@ const WANT = ['memoryGlobalScopeAllowed', 'memoryRecentUserTexts', 'normalizeMem
   'saveMemory', 'readMemoryItem', 'moveMemoryScope', 'memoryGlobalDir', 'memoryProjectDir', 'memoryUsageKey', 'touchMemoryUsage', 'readMemoryUsageState',
   'proposeMemoryRelation', 'confirmMemoryRelation', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
   'planAgentInstructionEntries', 'syncAgentInstructionImports', 'agentInstructionSources', 'readAgentInstructionSource', 'splitAgentInstructionText',
-  'renderAgentInstructionMemory', 'agentInstructionMemoryId', 'agentInstructionImportFile', 'sha256Hex', 'clipRecentMemoryDraftContext', 'parseFrontmatter',
+  'renderAgentInstructionMemory', 'agentInstructionMemoryId', 'agentInstructionImportFile', 'sha256Hex', 'clipRecentMemoryDraftContext',
   'memoryAutoGlobalAllowed', 'memoryProposalPrefilter'];
 const present = WANT.filter(n => new RegExp('(?:function|const|let)\\s+' + n + '\\b').test(SERVER_SRC));
 const I = loadServerInternals(present);
 const need = name => { assert.equal(typeof I[name], 'function', `${name} 不存在(修前代码没有这个功能)`); return I[name]; };
 
 const memFile = (scope, id) => path.join(scope === 'global' ? path.join(root, 'memory', 'global') : I.memoryProjectDir(PROJ), id + '.md');
-const fmOf = (scope, id) => I.parseFrontmatter(fs.readFileSync(memFile(scope, id), 'utf8'));
+const fmOf = (scope, id) => parseFrontmatter(fs.readFileSync(memFile(scope, id), 'utf8'));
 
 // ───────────── [G] 作用域闸 ─────────────
 test('[G1] 用户说「全局/所有会话/每个项目/globally/everywhere…」时放行 global(修前只认四五个词)', () => {

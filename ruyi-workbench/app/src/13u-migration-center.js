@@ -1,3 +1,4 @@
+const { SKILL_IMPORT_RECORD } = require('./backend/skill-registry.cjs');
 // ============================================================================
 // 13u 迁移中心(W2;56 号文 §3 + 用户 2026-09-24 原话「让用户无痛迁移…包括把老的如意迁移到新的如意里;
 // 要注意如意的安装包可能是在电脑里的任意位置」)。
@@ -299,7 +300,7 @@ function migrationSkillKey(source, plugin, id) {
 async function migrationSkillSources() {
   const homes = agentCliHomes();
   const out = [];
-  for (const d of await claudePluginSkillDirs()) out.push({ source: 'claude-plugin', plugin: d.plugin, baseDir: d.skillsDir });
+  for (const d of await SkillRegistry.claudePluginSkillDirs()) out.push({ source: 'claude-plugin', plugin: d.plugin, baseDir: d.skillsDir });
   out.push({ source: 'kimi', plugin: '', baseDir: path.join(homes.kimi, 'skills') });
   out.push({ source: 'codex', plugin: '', baseDir: path.join(homes.codex, 'skills') });
   out.push({ source: 'claude-code', plugin: '', baseDir: path.join(homes.claude, 'skills') });
@@ -374,7 +375,7 @@ async function migrationSkillRow(src, entry) {
   const st = dest ? await migrationLstat(dest) : null;
   if (!st) { row.status = tree.tooLarge ? 'too-large' : 'live'; return row; }
   if (st.isSymbolicLink() || !st.isDirectory()) { row.status = 'conflict'; row.conflictWith = 'user'; return row; }
-  const rec = await readSkillImportRecord(dest);
+  const rec = await SkillRegistry.readSkillImportRecord(dest);
   if (!rec || rec.source !== src.source || rec.plugin !== (src.plugin || '') || !rec.sourcePath || samePathKey(rec.sourcePath) !== samePathKey(entry.dir)) {
     row.status = 'conflict'; row.conflictWith = rec ? rec.source : 'user';
     return row;
@@ -391,7 +392,7 @@ async function migrationSkillRows(config) {
   const caps = null;
   const rows = [];
   for (const src of await migrationSkillSources()) {
-    for (const entry of (await readSkillDir(src.baseDir, src.source, caps)).values()) rows.push(await migrationSkillRow(src, entry));
+    for (const entry of (await SkillRegistry.readSkillDir(src.baseDir, src.source, caps)).values()) rows.push(await migrationSkillRow(src, entry));
     if (rows.length >= 400) break;
   }
   // 同名时谁生效(只给看:活读那一行被谁盖住了)。user 目录里有同名 → 如意自己的那份生效。
@@ -510,7 +511,7 @@ async function migrationUndoSkillCopy(f) {
   if (!dest || samePathKey(dest) !== samePathKey(String(f.file || ''))) return { id: String(item.id || ''), outcome: 'kept', reason: 'invalid-log' };
   const st = await migrationLstat(dest);
   if (!st || st.isSymbolicLink() || !st.isDirectory()) return { id: item.id, outcome: 'kept', reason: 'gone' };
-  const rec = await readSkillImportRecord(dest);
+  const rec = await SkillRegistry.readSkillImportRecord(dest);
   const hash = await migrationTreeHash(await migrationSkillTree(dest));
   if (!rec || !hash || hash !== item.copyTreeHash) return { id: item.id, outcome: 'kept', reason: 'edited' };
   const backupRoot = samePathKey(path.join(migrationDir(), MIGRATION_SKILL_BACKUP_DIR));

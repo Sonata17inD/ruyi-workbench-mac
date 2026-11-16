@@ -1,4 +1,6 @@
 'use strict';
+const { parseFrontmatter } = require('../../ruyi-workbench/app/backend/document-metadata.cjs');
+
 // 走查 W1 #4 / #10 / #11(06d-memory-domain)与 #8(12-tool-dispatch parseFrontmatter)。真源码、临时 HOME、零网络。
 // 这几个都是未导出的内部函数 —— 经 dev-harness/lib/server-internals.js 取真函数(不增加 14-main.js 的导出面)。
 //   [S] memoryProposalLooksSensitive:JS 的 \b 只认 ASCII 单词字符,修前 `\b(?:…|密码|密钥)` 对中文永远不命中,冒号也只认半角。
@@ -19,8 +21,8 @@ process.env.HOME = path.join(root, 'home');
 process.env.USERPROFILE = process.env.HOME;
 fs.mkdirSync(process.env.HOME, { recursive: true });
 const { loadServerInternals } = require('../lib/server-internals');
-const { memoryProposalLooksSensitive, deleteMemory, memoryGlobalDir, saveMemory, parseFrontmatter } = loadServerInternals([
-  'memoryProposalLooksSensitive', 'deleteMemory', 'memoryGlobalDir', 'saveMemory', 'parseFrontmatter',
+const { memoryProposalLooksSensitive, deleteMemory, memoryGlobalDir, saveMemory } = loadServerInternals([
+  'memoryProposalLooksSensitive', 'deleteMemory', 'memoryGlobalDir', 'saveMemory',
 ]);
 
 const { memorySearchTerms, rankRelevantMemories } = require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall();

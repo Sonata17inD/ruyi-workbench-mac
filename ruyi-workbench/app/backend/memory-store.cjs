@@ -2,7 +2,8 @@
 const path = require('node:path');
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
-function createMemoryStore({ memoryRoot, atomicWriteJson, parseFrontmatter, firstParaDesc, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
+const { parseFrontmatter, firstParaDesc } = require('./document-metadata.cjs');
+function createMemoryStore({ memoryRoot, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
   limits: { MEMORY_TYPES, MEMORY_METADATA_READ_CAP, CORE_MEMORY_SUMMARY_CAP, MEMORY_USAGE_TOUCH_MS, MEMORY_RULE_TOUCH_MS },
 }) {
 function fmVal(s) { return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').trim(); }
@@ -111,6 +112,14 @@ async function writeMemoryMeta(dir, cwd) {
 const MEMORY_HEAD_CACHE = new Map(); // file -> { key, entry }
 const MEMORY_HEAD_CACHE_MAX = 2000;
 
+function memoryStatVersion(st) { return `${st.dev}:${st.ino}:${st.ctimeMs}:${st.mtimeMs}:${st.size}`; }
+async function memoryEntryCurrent(entry) {
+  try {
+    const stat = await fsp.stat(entry.file);
+    return stat.isFile() && memoryStatVersion(stat) === entry.memoryVersion && !memoryIsExpired(entry);
+  } catch { return false; }
+}
+
 async function readMemoryDir(dir, scope) {
   const out = new Map();
   let files = [];
@@ -127,7 +136,7 @@ async function readMemoryDir(dir, scope) {
     try {
       const st = await fsp.stat(file);
       if (!st.isFile() || st.size > 260 * 1024) continue;
-      cacheKey = `${st.dev}:${st.ino}:${st.ctimeMs}:${st.mtimeMs}:${st.size}`;
+      cacheKey = memoryStatVersion(st);
       const cached = MEMORY_HEAD_CACHE.get(file);
       if (cached && cached.key === cacheKey && cached.entry.scope === scope) { out.set(id, cached.entry); continue; }
       const fh = await fsp.open(file, 'r');
@@ -292,6 +301,6 @@ async function deleteMemory(id, scope, cwd) {
   return { ok: true, deleted: safe, scope };
 }
 
-  return { fmVal, memoryGlobalDir, projectKeyForCwd, memoryProjectDir, memoryUsageFile, memoryUsageKey, fmBool, cleanMemoryDate, memoryIsExpired, memoryReviewDue, readMemoryUsageState, touchMemoryUsage, mutateMemoryUsageState, writeMemoryMeta, readMemoryDir, loadMemoryRegistry, listMemoryProjectGroups, readMemoryItem, saveMemory, deleteMemory };
+  return { memoryEntryCurrent, fmVal, memoryGlobalDir, projectKeyForCwd, memoryProjectDir, memoryUsageFile, memoryUsageKey, fmBool, cleanMemoryDate, memoryIsExpired, memoryReviewDue, readMemoryUsageState, touchMemoryUsage, mutateMemoryUsageState, writeMemoryMeta, readMemoryDir, loadMemoryRegistry, listMemoryProjectGroups, readMemoryItem, saveMemory, deleteMemory };
 }
 module.exports = { createMemoryStore };

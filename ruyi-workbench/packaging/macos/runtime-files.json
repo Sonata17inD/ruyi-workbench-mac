@@ -279,7 +279,9 @@
     "app/backend/archive-codec.cjs",
     "app/backend/archive-collector.cjs",
     "app/backend/file-visual-io.cjs",
-    "app/backend/media-inspection.cjs"
+    "app/backend/media-inspection.cjs",
+    "app/backend/document-metadata.cjs",
+    "app/backend/skill-registry.cjs"
   ],
   "acc": [
     "LICENSE",
