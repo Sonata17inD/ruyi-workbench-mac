@@ -5,8 +5,8 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3588,
-    "requiredSymbols": 3453,
-    "edges": 646,
+    "requiredSymbols": 3450,
+    "edges": 645,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -644,13 +644,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "contentTypeFor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cp",
           "kinds": [
             "read"
@@ -681,7 +674,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -779,7 +773,6 @@
           "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -913,7 +906,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3018,20 +3011,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformOpenSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformShellEnvironment",
           "kinds": [
             "read"
           ]
@@ -28799,7 +28778,6 @@
         "URL",
         "VERSION",
         "agentCliHomes",
-        "contentTypeFor",
         "cp",
         "crypto",
         "ensureDirs",
@@ -29355,15 +29333,6 @@
       "to": "00-boot.js",
       "symbols": [
         "spawnDetachedChecked"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "04-desktop-shell.js",
-      "to": "00-platform-runtime.js",
-      "symbols": [
-        "platformOpenSpawn",
-        "platformShellEnvironment"
       ],
       "direction": "backward"
     },

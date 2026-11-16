@@ -75,7 +75,8 @@ ok(facts.defaultPort === bootPort, `facts.defaultPort(${facts.defaultPort}) == 0
 // ② serveStatic 浏览器导航分支把 __WCW_TOKEN__ 置空(HTML 不再明文下发 token)。
 ok(facts.tokenBootstrap === 'api-bootstrap', `facts.tokenBootstrap(${facts.tokenBootstrap}) == 'api-bootstrap'`);
 ok(require('../ruyi-workbench/app/backend/http-route-policy.cjs').ROUTE_AUTH.some(r => r.m === 'POST' && r.p === '/api/bootstrap' && r.auth === 'open'), "ROUTE_AUTH 含 POST /api/bootstrap(auth=open,浏览器拿 token 唯一通道)");
-ok(built.includes('__WCW_TOKEN__') && built.includes("browserNav ? ''"), "serveStatic 浏览器分支置空 token(HTML 不再明文下发)");
+const staticAssetsSource = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/static-assets.cjs'), 'utf8');
+ok(staticAssetsSource.includes('__WCW_TOKEN__') && staticAssetsSource.includes("browserNav ? ''"), "serveStatic 浏览器分支置空 token(HTML 不再明文下发)");
 
 // EC-A:live probe 数 = SKIP 集大小;且每条 SKIP 条目文件名须含 'live' 或在白名单
 // (防 SKIP 混入非 live 件如已知 flaky,使 liveProbes 语义失真)。deepseek-tools 文件名不含 live 但属 live probe(真 API 调用)。

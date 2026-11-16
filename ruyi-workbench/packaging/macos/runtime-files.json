@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "workbench": [
     "app/backend/http-protocol.cjs",
+    "app/backend/static-assets.cjs",
     "app/backend/hanzi-pinyin.cjs",
     "app/backend/voice-lexicon.cjs",
     "app/backend/voice-learn.cjs",
@@ -21,6 +22,7 @@
     "app/backend/image-content.cjs",
     "app/backend/local-crypto.cjs",
     "app/backend/mac-capabilities.cjs",
+    "app/backend/mac-launch-policy.cjs",
     "app/backend/mcp-transports.cjs",
     "app/backend/mission-membership.cjs",
     "app/backend/mission-store.cjs",

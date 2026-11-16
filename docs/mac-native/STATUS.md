@@ -507,3 +507,10 @@
 - 结果形状单元移除假 Windows 宿主和 powershell.exe 命名夹具，直接验证实际 Mac shell。35 项原有定向单元通过；夹具清理后的 14 项结果形状回归通过；2 项直接准入测试验证取消、缺依赖及异常拒绝。
 - Mac shell E2E 通过，简化 async 入口后复验通过，覆盖大输出、后台超时、启动取消、持久会话中断、清理确认与 shell 环境注入阻断。模块边界、依赖图、EOL、facts、构建一致性与 diff 通过。
 - backend 78 模块，共享宿主 68374 行；旧图仍 1 SCC。整体第四阶段与冻结发行未完成，无重复打包。
+
+## 工作包 4az：启动策略与静态资源服务
+
+- mac-launch-policy 独立拥有 Mac PATH、LaunchServices argv 与 shell 环境净化；desktop-shell 直接引用策略模块，减少宿主注入。真实启动测试直接引用纯策略，保留 HTTP／Finder／搬移运行完整入口。
+- static-assets 独立拥有静态根目录选择和资源响应，通过明确路径判定、对端判定及运行时身份端口组合；直接依赖 http-protocol。配置模块不再实现 HTML token 注入或 MIME 响应。
+- Mac 运行时启动 E2E、Mac shell E2E、2 项准入单元、surface-hardening-w2 全部通过；覆盖搬移、helper 缺失恢复、Finder 字面参数、bash 环境净化、远端及浏览器不获 HTML token。facts 与 v17 静态锁同步真实所属模块后通过。
+- 模块边界、依赖图、EOL、构建一致性与 diff 通过。backend 80 模块，共享宿主 68307 行，旧图 645 边／1 SCC。第四阶段和最终冻结发行仍未完成，无重复打包。

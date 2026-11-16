@@ -32,7 +32,7 @@ const server = readServerSource();
 const runall = fs.readFileSync(RUNALL, 'utf8');
 
 // ── S1: serveStatic 用段比较,startsWith 前缀判定绝迹 ─────────────────────────
-const serveStaticBody = server.slice(server.indexOf('async function serveStatic'), server.indexOf('async function serveStatic') + 900);
+const serveStaticBody = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/static-assets.cjs'), 'utf8');
 ok(/pathWithinRoot\(full,/.test(serveStaticBody), 'S1: serveStatic 用 pathWithinRoot 段比较');
 ok(!/full\.startsWith\(path\.normalize\(base\)\)/.test(serveStaticBody), 'S1: startsWith 前缀判定已移除');
 

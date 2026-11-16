@@ -4,8 +4,9 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const { decodeConsoleText } = require('./text-codecs.cjs');
+const { platformOpenSpawn, platformShellEnvironment } = require('./mac-launch-policy.cjs');
 
-function createDesktopShell({ ProcessRuntime, killChildTree, spawnDetachedChecked, platformOpenSpawn, platformShellEnvironment }) {
+function createDesktopShell({ ProcessRuntime, killChildTree, spawnDetachedChecked }) {
   // 显式保留用户命令输出的 UTF-8／GB18030 按行解码。
   function decodeBestEffort(buf) {
     return decodeConsoleText(buf);

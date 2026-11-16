@@ -602,13 +602,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "contentTypeFor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cp",
           "kinds": [
             "read"
@@ -639,7 +632,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -737,7 +731,6 @@
           "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -871,7 +864,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2948,20 +2941,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformOpenSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformShellEnvironment",
           "kinds": [
             "read"
           ]

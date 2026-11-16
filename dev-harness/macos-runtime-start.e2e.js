@@ -15,7 +15,8 @@ const t = createRunner('MACOS RUNTIME START');
 const { ok } = t;
 const root = fs.mkdtempSync(path.join(process.platform === 'darwin' ? '/tmp' : os.tmpdir(), 'ruyi-p1-'));
 process.env.RUYI_HOME = path.join(root, 'unit-data');
-const S = loadServerInternals(['platformRuntimeEnvironment', 'platformOpenSpawn', 'buildRevealSpawn',
+const launchPolicy = require('../ruyi-workbench/app/backend/mac-launch-policy.cjs');
+const S = loadServerInternals(['buildRevealSpawn',
   'desktopPythonCandidates', 'rgProbeCandidates', 'bundledNodeExe', 'DesktopShell', 'CONFIG_SCHEMA']);
 const wb = path.resolve(__dirname, '..', 'ruyi-workbench');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -31,16 +32,16 @@ async function until(fn) {
 
 (async () => {
   try {
-    const env = S.platformRuntimeEnvironment({ PATH: ':/custom/bin:relative:/custom/bin', KEEP: 'yes' }, 'darwin', '/runtime/bin/node');
+    const env = launchPolicy.platformRuntimeEnvironment({ PATH: ':/custom/bin:relative:/custom/bin', KEEP: 'yes' }, 'darwin', '/runtime/bin/node');
     ok(env.PATH === '/runtime/bin:/custom/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
       && env.KEEP === 'yes', 'Mac PATH uses absolute entries, fixed fallbacks and the running Node');
     const target = '/tmp/中文 空格😀;&$(touch ignored).txt';
-    const open = S.platformOpenSpawn(target, 'open', 'darwin');
+    const open = launchPolicy.platformOpenSpawn(target, 'open', 'darwin');
     ok(open.command === '/usr/bin/open' && JSON.stringify(open.args) === JSON.stringify(['--', target]), 'Mac open passes Unicode/metacharacters as one literal argument');
     const reveal = S.buildRevealSpawn('open', '/tmp/恶意.command', 'darwin');
     ok(reveal.mode === 'select' && reveal.degraded && reveal.args[0] === '-R', 'Mac executable scripts degrade to Finder selection');
-    ok(S.platformOpenSpawn('/tmp/危险.app', 'open', 'darwin').args[0] === '-R', 'Mac app bundles cannot launch through generic open');
-    assert.throws(() => S.platformOpenSpawn(target, 'open', 'win32'), /Mac desktop is required/);
+    ok(launchPolicy.platformOpenSpawn('/tmp/危险.app', 'open', 'darwin').args[0] === '-R', 'Mac app bundles cannot launch through generic open');
+    assert.throws(() => launchPolicy.platformOpenSpawn(target, 'open', 'win32'), /Mac desktop is required/);
     ok(S.bundledNodeExe() === process.execPath, 'source-run MCP reuses its running Node executable');
     if (process.platform !== 'darwin') {
       console.log('SKIP real Mac launcher and Finder route integration require macOS');

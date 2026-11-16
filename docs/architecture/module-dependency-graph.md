@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3588 | 3453 | 646 | 61 | 0 | 1 |
+| 92 | 3588 | 3450 | 645 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -30,7 +30,7 @@
 | 12 | `01h-privacy-core.js` | foundation | 1 | 0 | 0 |
 | 13 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
 | 14 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
-| 15 | `01-config.js` | foundation | 189 | 56 | 13 |
+| 15 | `01-config.js` | foundation | 189 | 55 | 13 |
 | 16 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
 | 17 | `01l-credential-recovery.js` | foundation | 2 | 12 | 3 |
 | 18 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
@@ -44,7 +44,7 @@
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 28 | `04-permission-runtime.js` | foundation | 152 | 48 | 10 |
-| 29 | `04-desktop-shell.js` | foundation | 1 | 5 | 4 |
+| 29 | `04-desktop-shell.js` | foundation | 1 | 3 | 3 |
 | 30 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
 | 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 32 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
@@ -116,7 +116,7 @@
 | `00-boot.js` | `01-config.js` | forward | `atomicWriteJson`, `readConfig` |
 | `00-boot.js` | `02-session-store.js` | forward | `bumpMissionChangeSeq`, `overlayUnflushedSessionIndex`, `readSessionIndex` |
 | `00-boot.js` | `05-claude-engine.js` | forward | `CLAUDE_ENDPOINT_PRESETS` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `contentTypeFor`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `URL`, `VERSION`, `agentCliHomes`, `cp`, `crypto`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `normalizePricing`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
 | `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId`, `isRuyiMcpServerId` |
 | `01-config.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP`, `PERMISSION_MODES`, `PERMISSION_MODE_ALIASES`, `agentRoleIsUntrusted`, `normalizeAgentRole` |
 | `01-config.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `AGENT_CLI_TYPES`, `isAgentCliType`, `normalizeAgentCliType` |
@@ -169,7 +169,6 @@
 | `03a-privacy-gateway.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
 | `04-desktop-shell.js` | `00-boot.js` | backward | `spawnDetachedChecked` |
-| `04-desktop-shell.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn`, `platformShellEnvironment` |
 | `04-desktop-shell.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04-desktop-shell.js` | `04-permission-runtime.js` | backward | `killChildTree` |
 | `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text` |
