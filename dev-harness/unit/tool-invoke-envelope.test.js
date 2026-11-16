@@ -18,6 +18,7 @@ process.env.RUYI_HOME = path.join(root, 'data');
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
+const { toolInvokeEnvelopeRepair } = require('../../ruyi-workbench/app/backend/tool-policy.cjs');
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const { toolCall, classifyToolPacks, buildOpenAiTools, buildToolCatalog, searchToolCatalog, createToolLoadingState, dispatchTestHooks: H } = srv;
 after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { /* ignore */ } try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ } });
@@ -28,7 +29,7 @@ fs.writeFileSync(path.join(ws, 'a.txt'), 'hello envelope');
 const ctx = () => ({ config: { toolLoadingMode: 'auto' }, workingDir: ws, session: { id: 'sess_envelope', cwd: ws } });
 
 test('[E1] 两种写歪的壳确定地还原,其余形状原样', () => {
-  const repair = H.toolInvokeEnvelopeRepair;
+  const repair = toolInvokeEnvelopeRepair;
   // 自套娃(真机 3 次)
   let r = repair({ name: 'tool_invoke_read', arguments: { name: 'file_read', arguments: { path: 'a.txt' } } });
   assert.deepEqual(r, { args: { name: 'file_read', arguments: { path: 'a.txt' } }, repair: 'self_wrap' });
@@ -71,13 +72,13 @@ test('[E1b] 能被还原执行的形状,原始入参里的命令仍在高风险�
     { arguments: canonical }, { arguments: wrap(canonical, 1) },
   ];
   for (const raw of shapes) {
-    const r = H.toolInvokeEnvelopeRepair(raw);
+    const r = toolInvokeEnvelopeRepair(raw);
     assert.equal(r.args.name, 'shell_run', JSON.stringify(raw));
     assert.ok(srv.stewardToolPermanentlyExempt('tool_invoke_exec', raw), `还原前的原始入参也扫得到:${JSON.stringify(raw)}`);
   }
   // 再深一层就不还原:目标仍是代理名,分发点按控制面拒绝
-  assert.equal(H.toolInvokeEnvelopeRepair(wrap(canonical, 3)).args.name, 'tool_invoke_exec');
-  assert.equal(H.toolInvokeEnvelopeRepair({ arguments: wrap(canonical, 2) }).args.name, 'tool_invoke_exec');
+  assert.equal(toolInvokeEnvelopeRepair(wrap(canonical, 3)).args.name, 'tool_invoke_exec');
+  assert.equal(toolInvokeEnvelopeRepair({ arguments: wrap(canonical, 2) }).args.name, 'tool_invoke_exec');
 });
 
 test('[E2] 真分发路径上两种壳都跑到目标', async () => {

@@ -1231,7 +1231,6 @@
         "IRREVERSIBLE_BRIDGED_KIND",
         "IRREVERSIBLE_LEDGER_MAX",
         "IRREVERSIBLE_NATIVE_KIND",
-        "TOOL_INVOKE_TARGET_NAME",
         "TURN_SUMMARY_COMMAND_TOOLS",
         "TURN_SUMMARY_FILE_TOOLS",
         "TURN_SUMMARY_KNOWN_TOOLS",
@@ -8914,11 +8913,7 @@
         "AGENT_RUN_TERMINAL",
         "AgentResults",
         "LEGACY_SPAWN_NOTE",
-        "PARALLEL_READ_NEUTRAL",
-        "PLAN_DISCOVERY_BLOCKED_TOOLS",
-        "PROXY_UNWRAP_AGENT_TARGETS",
-        "PROXY_UNWRAP_TARGETS",
-        "RETIER_SKIP_TARGETS",
+        "ToolPolicy",
         "WAIT_AGENTS_DEFAULT_MS",
         "WAIT_AGENTS_MAX_MS",
         "agentNodeTimeLimits",
@@ -9436,20 +9431,6 @@
           ]
         },
         {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "normalizeToolInvokeArgs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "toolInvokeEnvelopeRepair",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedOfficeScriptGate",
           "kinds": [
@@ -9629,7 +9610,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10028,7 +10010,8 @@
           "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10196,7 +10179,8 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolTier",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

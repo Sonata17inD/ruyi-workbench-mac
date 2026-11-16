@@ -155,6 +155,11 @@ try {
     && srv.planDiscoveryToolBatchAllowed([{ name: 'tool_invoke_read', rawArgs: JSON.stringify({ name: 'file_read', arguments: { path: 'a.txt' } }) }], {}, {}) === true,
   'F2 计划阶段:代理到 todo_write / orchestrate_agents 的调用按目标判(被拦),代理到只读工具照放行');
 
+  for (const target of ['file_write', 'shell_run', 'unknown_future_tool']) {
+    const proxied = { name: 'tool_invoke_read', rawArgs: JSON.stringify({ name: target, arguments: {} }) };
+    ok(srv.planDiscoveryToolBatchAllowed([proxied], {}, {}) === false, 'F3 planning resolves low-tier proxy target: ' + target);
+  }
+
   /* ── (9) 入参描述 ── */
   const metadataCaps = { runtime: { capabilities: { 'desktop.capture': { ready: true }, 'process.supervisor': { ready: true } } } };
   const full = srv.buildOpenAiTools({ ...cfg, toolLoadingMode: 'full', subagentMaxPerTurn: 4 }, metadataCaps, { skillsEnabled: true });
@@ -162,19 +167,19 @@ try {
   const byName = new Map(); for (const x of [...full, ...stew]) byName.set(x.function.name, x.function);
   const WANT = {
     workbench_memory_list: ['scope', 'limit'], workbench_memory_read: ['id'], workbench_memory_propose: ['name', 'type'],
-    powershell_run: ['command', 'timeoutMs'], shell_send: ['shellId', 'input'], shell_poll: ['shellId'], script_run: ['language', 'code', 'timeoutMs'],
+    shell_run: ['command', 'timeoutMs'], shell_send: ['shellId', 'input'], shell_poll: ['shellId'], script_run: ['language', 'code', 'timeoutMs'],
     file_write: ['createDirs'], file_list: ['root', 'recursive', 'maxFiles', 'maxDepth', 'ignoreDirs', 'includeIgnored', 'absolute', 'ignoreCase'],
     file_search: ['root', 'maxResults', 'maxFiles', 'maxDepth', 'ignoreDirs', 'includeIgnored', 'ignoreCase', 'group'],
     glob: ['root', 'maxResults', 'maxDepth', 'ignoreDirs', 'includeIgnored', 'absolute'], mcp_configure: ['operation'],
-    desktop_screenshot: ['outputPath', 'timeoutMs'], keyboard_send_keys: ['keys', 'delayMs', 'timeoutMs'],
+    desktop_screenshot: ['outputPath', 'timeoutMs'],
     project_snapshot: ['root', 'maxFiles', 'maxDepth', 'ignoreDirs', 'includeIgnored', 'absolute'],
     code_review_scan: ['root', 'maxFiles', 'maxDepth', 'maxFindings', 'ignoreDirs'], frontend_audit: ['root', 'maxFiles', 'maxDepth', 'ignoreDirs'],
     docs_search: ['root', 'maxResults', 'maxFiles', 'maxDepth', 'ignoreDirs', 'includeIgnored'], codebase_symbol_search: ['symbol'],
     http_request: ['url', 'method', 'headers', 'body', 'timeoutMs', 'maxBodyChars'], web_fetch: ['url'], mission_update: ['milestones', 'goal'],
     orchestrate_agents: ['nodes'], steward_schedule_pause: ['basis'], steward_schedule_resume: ['basis'], steward_schedule_run_now: ['basis'], steward_schedule_delete: ['basis'],
   };
-  // Unsupported Windows names remain registered for metadata audit but are not
-  // offered on Mac. Synthetic readiness checks only schema composition.
+  // Audit registered Mac schemas even when current authorization hides an offer.
+  // Synthetic readiness checks only schema composition.
   const offeredNames = new Set(byName.keys());
   for (const name of Object.keys(WANT)) if (!byName.has(name)) {
     const schema = srv.nativeToolSchema(name);
