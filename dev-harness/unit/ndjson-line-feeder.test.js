@@ -28,7 +28,7 @@ process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '..', '..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
 
-const { createNdjsonLineFeeder } = srv;
+const { createNdjsonLineFeeder } = require('../../ruyi-workbench/app/backend/text-codecs.cjs');
 
 describe('createNdjsonLineFeeder', () => {
   it('① 导出了 createNdjsonLineFeeder', () => {

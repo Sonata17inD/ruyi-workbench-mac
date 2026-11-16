@@ -24,11 +24,7 @@ after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { 
 // 11b 是零出边的叶子模块:单独求值就能拿到 FileTextIo(只需要 require)。
 const { FileTextIo } = require('../../ruyi-workbench/app/backend/file-text-io.cjs');
 // 00-boot 里 decodeTextFileBytes 是一个自包含函数:从源码切出来单独求值,用来直测 complete=false(附件路径只会传 true)。
-const bootSrc = fs.readFileSync(path.join(SRC, '00-boot.js'), 'utf8');
-const fnStart = bootSrc.indexOf('function decodeTextFileBytes(');
-const fnEnd = bootSrc.indexOf('\nfunction createNdjsonLineFeeder(', fnStart);
-assert.ok(fnStart > 0 && fnEnd > fnStart, '能从 00-boot 切出 decodeTextFileBytes');
-const decodeTextFileBytes = vm.runInNewContext(bootSrc.slice(fnStart, fnEnd) + '\ndecodeTextFileBytes', { Buffer, TextDecoder });
+const { decodeTextFileBytes } = require('../../ruyi-workbench/app/backend/text-codecs.cjs');
 
 const GBK_HELLO = Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0xa3, 0xac, 0xca, 0xc0, 0xbd, 0xe7]);   // GBK:你好,世界
 const u16le = (s, bom = true) => Buffer.concat([bom ? Buffer.from([0xff, 0xfe]) : Buffer.alloc(0), Buffer.from(s, 'utf16le')]);

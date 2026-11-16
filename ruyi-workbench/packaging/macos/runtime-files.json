@@ -250,7 +250,8 @@
     "app/backend/memory-prompts.cjs",
     "app/backend/memory-relations.cjs",
     "app/backend/memory-store.cjs",
-    "app/backend/runtime-policy.cjs"
+    "app/backend/runtime-policy.cjs",
+    "app/backend/text-codecs.cjs"
   ],
   "acc": [
     "LICENSE",

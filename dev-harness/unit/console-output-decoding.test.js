@@ -24,20 +24,7 @@ const { readServerSource } = require('../src-reader');
 const readSrcFile = name => fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
 const { functionBlock, constBlock } = require('../lib/source-slice');
 
-const source = readServerSource();
-function load() {
-  const code = [
-    'let _consoleGbDecoder = null;',
-    constBlock(source, '_consoleUtf8Strict'),
-    functionBlock(source, 'decodeConsoleSegment'),
-    functionBlock(source, 'decodeConsoleText'),
-    functionBlock(source, 'consoleIncompleteTail'),
-    functionBlock(source, 'createConsoleLineDecoder'),
-    '({ decodeConsoleText, createConsoleLineDecoder })',
-  ].join('\n');
-  return vm.runInNewContext(code, { Buffer, TextDecoder });
-}
-const { decodeConsoleText, createConsoleLineDecoder } = load();
+const { decodeConsoleText, createConsoleLineDecoder } = require('../../ruyi-workbench/app/backend/text-codecs.cjs');
 
 const GBK_ZHONGWEN = [0xd6, 0xd0, 0xce, 0xc4];                          // 中文
 const GBK_LUANMA = [0xc2, 0xd2, 0xc2, 0xeb];                            // 乱码
@@ -80,4 +67,14 @@ test('Mac shell decodes UTF-8 incrementally and uses its private completion chan
   assert.ok(shell.includes("new StringDecoder('utf8')"));
   assert.ok(shell.includes('bindMacShellProtocol(sess)'));
   assert.ok(!shell.includes('powershell.exe'));
+});
+
+test('idle flush preserves complete UTF-8 characters without a newline', () => {
+  for (const text of ['中', '中文末', '😀中', '提示：']) {
+    const decoder = createConsoleLineDecoder();
+    assert.equal(decoder.write(Buffer.from(text)), '');
+    assert.equal(decoder.flush(), text);
+    assert.equal(decoder.pendingBytes, 0);
+    assert.equal(decoder.end(), '');
+  }
 });
