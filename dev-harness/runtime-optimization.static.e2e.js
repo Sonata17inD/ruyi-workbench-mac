@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { readServerSource } = require('./src-reader');
 const src = readServerSource();
+const promptRegistrySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/prompt-registry.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
@@ -274,9 +275,9 @@ ok(/function summaryPromptI18nEnabled\(config\)/.test(src), 'F3 判定函数存�
   // 机械对账：两处必须是同一条规则的同一种写法 —— `.trim().toLowerCase() === 'en-us'`。
   // 改了一边另一边就红，抄写件不会悄悄长成第二套口径（与 steward-tools.static ⑥ 同一个模具）。
   const RULE = /\.trim\(\)\.toLowerCase\(\) === 'en-us'/g;
-  const hits = (src.match(RULE) || []).length;
+  const hits = ((src + promptRegistrySource).match(RULE) || []).length;
   ok(hits === 2, `F3 「什么算英文界面」全仓恰好两处同样的写法（06b 的 getPromptPack ＋ 10 的抄写件；实得 ${hits} 处）`);
-  ok(/function getPromptPack\(locale\)[\s\S]{0,160}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(src),
+  ok(/function getPromptPack\(locale\)[\s\S]{0,160}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(promptRegistrySource),
     'F3 其中一处就在 06b 的 getPromptPack 里（抄的是它，不是凭空一条）');
   ok(/function summaryPromptIsEnglish\(config\)[\s\S]{0,220}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(src),
     'F3 另一处在 summaryPromptIsEnglish 里，且仍然先过 summaryPromptI18nEnabled 这道开关');

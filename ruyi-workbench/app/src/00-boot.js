@@ -818,7 +818,7 @@ function appendUsageLedger(entry) {
         const at = usageLedgerPending.indexOf(pending);
         if (at >= 0) usageLedgerPending.splice(at, 1);
       }
-      markPretenderIndexDirty(rec.sessionId, 'usage'); // 75c: lazily refresh only this Mission's usage aggregate
+      RUYI_EVENTS.emit('projection.invalidated', { sessionId: rec.sessionId, reason: 'usage' }); // 75c: lazily refresh only this Mission's usage aggregate
       if (rec.kind === 'turn') bumpMissionChangeSeq(rec.sessionId, {
         type: 'budget',
         cursor: { turnSeq: rec.turnSeq, engine: rec.engine },

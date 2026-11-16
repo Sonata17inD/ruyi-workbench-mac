@@ -127,7 +127,6 @@ function logEvent(record) {
 }
 
 // --- Active claude child registry keyed by session id, for stop/restart/interrupt + disconnect kill. ---
-const activeChildren = new Map(); // sessionId -> { child, pid, state, startedAt, lastEventAt, interactive, onEvent }
 // 第 117 波 117l D4(27 号文 §11.9;用户第四轮走查第 3 条「『它刚说』更新不够及时」):活回合尾巴的累加器。
 // 两个引擎(09 的 provider 回合与 05 的 Claude 回合)在各自的 reg.onEvent 包装里调它 —— 同一份口径、
 // 同一份预算,不各写一套。三条纪律:
@@ -248,7 +247,6 @@ function installActiveChildEventFanout(reg) {
 // activeChildren,但被停回合的收尾(推 aborted assistant + saveSession)发生在此之后 —— rewindSession
 // 若只看 activeChildren 就会在这个窗口截断落盘,然后被 dying turn 的收尾 save 整份盖回(丢失写:
 // 「回溯了但消息又回来」)。rewindSession 先等本表 settle 再截断,顺序由此确定。
-const turnSettlers = new Map();
 // A logical driver owns all of its queued/child turns. Never infer ownership from the current child.
 // Bounded evidence for completed-then-undo. A newer admitted driver replaces the old identity.
 const sessionLastExecutions = new Map();
@@ -335,7 +333,6 @@ SessionExecutionHooks.stop = requestSessionExecutionStop;
 // 收件箱收集(13i)把本表与活回合同等对待:在表里就等下一拍。只活在内存。
 const turnOutcomePending = new Set();
 // --- Pending tool-permission prompts awaiting a UI decision (v3 bridge). ---
-const pendingPermissions = new Map(); // requestId -> { resolve, sessionId, timer, deadlineAt }
 
 // 128f-⑪(Brief §4.2 第 7 条前半;用户 2026-09-19 拍板 A「立刻通知你,请求挂 600 秒等你处理」):
 // 一条权限请求【等多久】的唯一判据。修前四处各算各的 —— provider 回合(09)与 Kimi 桥(05b)经 07 的
@@ -376,12 +373,10 @@ function permissionWaitMs(sessionId, config, sessionHead) {
 }
 // Questions are a real turn boundary, not a fire-and-forget notification. Both the Provider tool loop and
 // the Claude MCP bridge wait on this registry; /api/chat/answer settles exactly one matching entry.
-const pendingQuestions = new Map(); // questionId -> { sessionId, questions, timer, deliver }
 // v0.9-S5: pending PLAN approvals awaiting a UI decision (真流程 plan mode). Mirrors pendingPermissions:
 // planId -> { resolve, sessionId, timer }. runOpenAiTurn (plan mode, provider engine) emits a `plan` event
 // after the model's first PLAN: message and PAUSES the turn awaiting /api/plan/decision. resolve() settles
 // with { decision:'approve'|'reject', note? }; the timeout auto-rejects (same permissionTimeoutMs budget).
-const pendingPlans = new Map(); // planId -> { resolve, sessionId, timer }
 // 第27f波:当前处于【无人值守(driverAuto)回合】的会话集 —— provider 路径直接用闭包 driverAuto,但 CLI 桥(Claude 子进程
 // loopback 的 /api/permission/request)拿不到 driverAuto,故用此集判定。runClaudeTurn 的 driverAuto 回合进出维护。纯内存。
 const driverAutoSessions = new Set();

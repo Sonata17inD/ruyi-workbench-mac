@@ -207,15 +207,22 @@
           "kinds": [
             "read"
           ]
-        },
-        {
-          "provider": "13e-pretender-index.js",
-          "symbol": "markPretenderIndexDirty",
-          "kinds": [
-            "call"
-          ]
         }
       ]
+    },
+    {
+      "file": "01o-execution-state.js",
+      "layer": "foundation",
+      "provides": [
+        "activeAgentRuns",
+        "activeChildren",
+        "pendingPermissions",
+        "pendingPlans",
+        "pendingQuestions",
+        "sessionWriteChains",
+        "turnSettlers"
+      ],
+      "requires": []
     },
     {
       "file": "00b-ruyi-names.js",
@@ -577,7 +584,6 @@
         "serveStatic",
         "sessionMcpConfigSweepDone",
         "sessionPath",
-        "sessionWriteChains",
         "sessionsDirOwnWriteSeq",
         "spawnProbeAsync",
         "spawnProbeSync",
@@ -882,6 +888,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "03-bridge-guard.js",
           "symbol": "existsExecutableAsync",
           "kinds": [
@@ -898,13 +911,6 @@
         {
           "provider": "04-desktop-shell.js",
           "symbol": "DesktopShell",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -1907,13 +1913,6 @@
           ]
         },
         {
-          "provider": "01-config.js",
-          "symbol": "sessionWriteChains",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01c-runtime-flags.js",
           "symbol": "MEMORY_FIXED_SELECTION_HARD_MAX",
           "kinds": [
@@ -1925,6 +1924,55 @@
           "symbol": "resolvePermissionMode",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPlans",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingQuestions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "sessionWriteChains",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -2118,13 +2166,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
             "call"
@@ -2132,42 +2173,7 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "pendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingPlans",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingQuestions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "recordEngineTranscript",
           "kinds": [
             "call"
           ]
@@ -2184,13 +2190,6 @@
           "symbol": "revokeAllGrants",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -2238,13 +2237,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "runGit",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13e-pretender-index.js",
-          "symbol": "markPretenderIndexDirty",
           "kinds": [
             "call"
           ]
@@ -2644,7 +2636,6 @@
         "_tomlValue",
         "_toolboxCache",
         "_toolboxSkipLogged",
-        "activeChildren",
         "appendLiveTail",
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
@@ -2724,9 +2715,6 @@
         "parseClaudeTaskNotification",
         "parseKimiStreamJsonEvent",
         "parseMcpConfigFile",
-        "pendingPermissions",
-        "pendingPlans",
-        "pendingQuestions",
         "permissionWaitMs",
         "probeDesktopExecutionReceipts",
         "probeMcpConnector",
@@ -2762,7 +2750,6 @@
         "subscribeActiveChildEvents",
         "toolboxComponentsDir",
         "turnOutcomePending",
-        "turnSettlers",
         "validateBrowserTargetPatch"
       ],
       "requires": [
@@ -3007,6 +2994,41 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntimeHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPlans",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingQuestions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
           "kinds": [
             "read"
           ]
@@ -3947,6 +3969,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
@@ -4069,13 +4098,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -4974,6 +4996,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
@@ -5132,13 +5161,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -5512,7 +5534,6 @@
         "CAP_UNKNOWN_TTL_MS",
         "ENGINE_BRIEF_CLOSE",
         "ENGINE_BRIEF_OPEN",
-        "ENGINE_TRANSCRIPT_ID_RE",
         "ERROR_CLASSES",
         "NETWORK_ANCHORS",
         "PLAYBOOK_INPUT_TYPES",
@@ -5568,7 +5589,6 @@
         "claudeProjectsRoot",
         "collectAudit",
         "collectChildProcessInfo",
-        "collectLiveClaudeSessionIds",
         "collectStorageStats",
         "deleteUserPlaybook",
         "desktopAuditEntriesFromResult",
@@ -5576,12 +5596,6 @@
         "draftPlaybookFromSession",
         "engineBriefFacts",
         "engineTranscriptCwd",
-        "engineTranscriptKnown",
-        "engineTranscriptLedgerChain",
-        "engineTranscriptLedgerLoad",
-        "engineTranscriptLedgerLoaded",
-        "engineTranscriptLedgerPath",
-        "engineTranscriptLedgerSave",
         "evalPlaybookAvailability",
         "fenceSafeSlice",
         "getCapabilities",
@@ -5744,13 +5758,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -5786,7 +5794,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5821,7 +5830,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5869,6 +5879,13 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -5932,13 +5949,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -6708,6 +6718,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
@@ -6719,13 +6736,6 @@
           "symbol": "normalizeCwd",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -7341,7 +7351,6 @@
         "_nativeToolSchemaByName",
         "accPolicyHiddenToolNames",
         "actionTargetMeta",
-        "activeAgentRuns",
         "adaptiveMetaToolSchemas",
         "agentRunDir",
         "agentRunFile",
@@ -7678,6 +7687,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPlans",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
@@ -7794,20 +7817,6 @@
           "symbol": "parseClaudeEvent",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingPlans",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -8339,6 +8348,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
@@ -8515,13 +8538,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "pendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
             "call"
@@ -8693,13 +8709,6 @@
           "symbol": "stewardAutoAskReason",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -8978,13 +8987,6 @@
         {
           "provider": "13-http-router.js",
           "symbol": "resolveNodeModel",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13e-pretender-index.js",
-          "symbol": "markPretenderIndexDirty",
           "kinds": [
             "call"
           ]
@@ -9359,6 +9361,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "applyMissionUpdate",
           "kinds": [
@@ -9662,13 +9678,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -10182,13 +10191,6 @@
           "symbol": "actionTargetMeta",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11529,6 +11531,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "createSession",
           "kinds": [
@@ -11712,13 +11728,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "assertSessionExecutionOwner",
           "kinds": [
             "call"
@@ -11776,13 +11785,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "turnOutcomePending",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
           "kinds": [
             "read"
           ]
@@ -12353,6 +12355,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "03-bridge-guard.js",
           "symbol": "_dataRootReal",
           "kinds": [
@@ -12424,13 +12440,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "call"
@@ -12469,13 +12478,6 @@
           "symbol": "probeAny",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -14370,6 +14372,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "applyMissionUpdate",
           "kinds": [
@@ -14652,13 +14668,6 @@
         {
           "provider": "04-desktop-shell.js",
           "symbol": "DesktopShell",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -15198,13 +15207,6 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "StewardHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
           "kinds": [
             "read"
           ]
@@ -15833,6 +15835,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
@@ -15877,13 +15893,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -16124,13 +16133,6 @@
           "symbol": "storageSweep",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -16435,6 +16437,48 @@
           "symbol": "resolvePermissionMode",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPlans",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingQuestions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -16775,13 +16819,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "driverAutoSessions",
           "kinds": [
             "read"
@@ -16806,27 +16843,6 @@
           "symbol": "normalizeQuestionAnswer",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingPlans",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingQuestions",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -16869,13 +16885,6 @@
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -16988,13 +16997,6 @@
           "symbol": "waitReasonFor",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -17386,6 +17388,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
             "call"
@@ -17462,6 +17471,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "compactInterventionJournal",
           "kinds": [
@@ -17505,13 +17528,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
             "call"
@@ -17550,13 +17566,6 @@
           "symbol": "threadVisible",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -17784,6 +17793,27 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
@@ -17799,13 +17829,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
             "call"
@@ -17814,13 +17837,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "turnOutcomePending",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
           "kinds": [
             "read"
           ]
@@ -17865,13 +17881,6 @@
           "symbol": "stewardWatchedThread",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -18553,6 +18562,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "createSession",
           "kinds": [
@@ -18697,13 +18713,6 @@
           "symbol": "realpathForContainment",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -19504,6 +19513,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
@@ -19872,13 +19888,6 @@
           "symbol": "threadOriginOf",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -21151,6 +21160,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "readInterventions",
           "kinds": [
@@ -21176,13 +21192,6 @@
           "symbol": "logEvent",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -21286,6 +21295,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
@@ -21332,13 +21348,6 @@
           "symbol": "applySessionPermissionModeOverride",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -21805,6 +21814,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
           "kinds": [
@@ -21851,13 +21867,6 @@
           "symbol": "sessionTodosSignature",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -22320,6 +22329,34 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingPermissions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "pendingQuestions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
@@ -22363,13 +22400,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
             "call"
@@ -22384,20 +22414,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "pendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "pendingQuestions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "promptDeadlineIsReal",
           "kinds": [
             "call"
@@ -22408,13 +22424,6 @@
           "symbol": "stopSession",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -23279,6 +23288,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "readMissionSessionHead",
           "kinds": [
@@ -23295,13 +23311,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]
@@ -24488,6 +24497,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
@@ -24504,20 +24527,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
           "kinds": [
             "read"
           ]
@@ -24845,6 +24854,20 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
@@ -24915,22 +24938,8 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "04h-provider-http.js",
           "symbol": "ProviderHttpHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "activeAgentRuns",
           "kinds": [
             "read"
           ]
@@ -25478,6 +25487,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
@@ -25998,13 +26014,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "resolveWorkspace",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "activeChildren",
           "kinds": [
             "read"
           ]

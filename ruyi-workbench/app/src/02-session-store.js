@@ -252,7 +252,7 @@ function appendMissionChangeRecord(sessionId, record) {
   return runKeyedChain(missionChangeWriteChains, sid, async () => {
     await repairMissionChangeTornTail(file);
     await fsp.appendFile(file, JSON.stringify(record) + '\n', 'utf8');
-    markPretenderIndexDirty(sid, 'source');
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' });
   });
 }
 function foldMissionChangeJournalText(txt, currentRevision = 0) {
@@ -423,7 +423,7 @@ function appendIntervention(sessionId, record) {
       try { await fsp.appendFile(file, line, 'utf8'); break; }
       catch (e) { if (attempt >= 3 || !/^(EPERM|EBUSY|EACCES)$/.test(String(e && e.code))) throw e; await new Promise(r => setTimeout(r, 10 + attempt * 20)); }
     }
-    markPretenderIndexDirty(sid, 'source'); // 75c: authority changed; materialized view is disposable
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' }); // 75c: authority changed; materialized view is disposable
     return true;
   }).catch(() => {});
   interventionWriteChains.set(sid, next);
@@ -566,7 +566,7 @@ async function compactInterventionJournal(sessionId, opts = {}) {
     if (!opts.force && !worthwhile) return { ok: true, compacted: false, rowsBefore: folded.rowCount, rowsAfter, bytesBefore: folded.bytes, bytesAfter: folded.bytes };
     const payload = folded.interventions.map(rec => JSON.stringify(rec)).join('\n') + (rowsAfter ? '\n' : '');
     await atomicWriteJson(file, payload);
-    markPretenderIndexDirty(sid, 'source');
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' });
     return {
       ok: true, compacted: true,
       rowsBefore: folded.rowCount, rowsAfter,
@@ -1986,7 +1986,7 @@ async function deleteSession(id, { purgeAssociated = false } = {}) {
     ]);
   }
   scheduleSessionIndexUpdate(id, SESSION_TOMBSTONE); // PF2: queue removal from the metadata index (debounced; see saveSession)
-  markPretenderIndexDirty(id, 'source'); // 75c: remove from disposable Mission/Intervention projection index
+  RUYI_EVENTS.emit('projection.invalidated', { sessionId: id, reason: 'source' }); // 75c: remove from disposable Mission/Intervention projection index
   // 128f-⑫(用户 2026-09-19「删除线程没有及时的界面反馈」):删完告诉所有在看的人「这一条没了」。
   // 修前一帧都不派,管家视角的左栏要等 15 s 那一拍轮询或用户点别处(13r 的 thread.removed 头注)。
   RUYI_EVENTS.emit('thread.removed', { sessionId: id });
@@ -4194,7 +4194,7 @@ async function saveSession(session, opts) {
   // PF2: queue the sidebar metadata index update (cheap sync Map.set; the write is debounced + coalesced). The
   // index is only a cache and listSessions falls back to a full file scan whenever its id-set drifts from disk.
   scheduleSessionIndexUpdate(id, metaSnapshot);
-  markPretenderIndexDirty(id, 'source'); // 75c: session head/body facts changed; rebuild this Mission slice lazily
+  RUYI_EVENTS.emit('projection.invalidated', { sessionId: id, reason: 'source' }); // 75c: session head/body facts changed; rebuild this Mission slice lazily
   // 128f-⑫:会话头每落一次盘就「碰」一下推送层;那边只在这一行看得见的东西变了才真推(13r thread.touched 头注)。
   // 停自动推进、回退、管家接手、预算熔断……这些写口不必各自再记得派一发。
   RUYI_EVENTS.emit('thread.touched', { sessionId: id });
@@ -4202,7 +4202,7 @@ async function saveSession(session, opts) {
   // 引用 + 超保留期」三者同时成立的转录,绝不碰用户自己 Claude Code 的转录)。fire-and-forget,账本写失败
   // 不影响会话保存(大不了 GC 永远不碰这条转录 —— 保守方向)。
   if (typeof session.claudeSessionId === 'string' && session.claudeSessionId) {
-    void recordEngineTranscript(session.claudeSessionId, session.cwd).catch(() => {});
+    RUYI_EVENTS.emit('session.transcript.observed', { claudeSessionId: session.claudeSessionId, cwd: session.cwd });
   }
   return session;
 }

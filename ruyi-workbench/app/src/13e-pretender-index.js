@@ -113,6 +113,11 @@ function markPretenderIndexDirty(sessionId, reason = 'source') {
   if (reason === 'usage') pretenderIndexRuntime.usageDirty.add(sid);
 }
 
+// Invalidation is synchronous with authoritative writes; readers never observe an unmarked commit.
+RUYI_EVENTS.subscribe((name, payload) => {
+  if (name === 'projection.invalidated') markPretenderIndexDirty(payload?.sessionId, payload?.reason);
+});
+
 function pretenderHash(value) {
   return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value), 'utf8').digest('hex').slice(0, 24);
 }

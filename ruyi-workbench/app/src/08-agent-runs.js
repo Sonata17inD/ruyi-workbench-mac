@@ -278,7 +278,7 @@ async function saveAgentRun(run) {
       await atomicWriteJson(runFile, snapshot);
       agentRunDigestWriteSeq += 1;
       agentRunDigestCache.delete(runFile); // digest 摘要缓存:进程内写成功即作废该文件条目(见 listAgentRunDigests 头注)
-      markPretenderIndexDirty(run.sessionId, 'source'); // 75c: persisted run digest participates in Mission projection
+      RUYI_EVENTS.emit('projection.invalidated', { sessionId: run.sessionId, reason: 'source' }); // 75c: persisted run digest participates in Mission projection
       // 128f-⑫:班组的状态真的换了(跑着/暂停/等池/收尾……)才派一发 —— 左栏行上的「暂停／继续」、焦点栏的班组段读的
       // 都是落盘这一份摘要,而它不经过会话头(13r「会话头落盘即碰一下」那一路盖不到)。节点每一步也会存一次,
       // 那些不换状态的存一帧都不派。暂停是「先回 pausing、跑循环下一拍才真停」,所以派在这里而不是控制路由上。

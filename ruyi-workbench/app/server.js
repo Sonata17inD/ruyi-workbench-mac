@@ -856,7 +856,7 @@ function appendUsageLedger(entry) {
         const at = usageLedgerPending.indexOf(pending);
         if (at >= 0) usageLedgerPending.splice(at, 1);
       }
-      markPretenderIndexDirty(rec.sessionId, 'usage'); // 75c: lazily refresh only this Mission's usage aggregate
+      RUYI_EVENTS.emit('projection.invalidated', { sessionId: rec.sessionId, reason: 'usage' }); // 75c: lazily refresh only this Mission's usage aggregate
       if (rec.kind === 'turn') bumpMissionChangeSeq(rec.sessionId, {
         type: 'budget',
         cursor: { turnSeq: rec.turnSeq, engine: rec.engine },
@@ -1566,6 +1566,9 @@ async function recordInstallLaunch(launchMode) {
     return { ok: true, packageRoot: root };
   } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
 }
+
+// One execution state per host; lifecycle services own the entries, never replace the maps.
+const { sessionWriteChains, activeChildren, turnSettlers, pendingPermissions, pendingQuestions, pendingPlans, activeAgentRuns } = require('./backend/execution-state.cjs').createExecutionState();
 
 // 00b-ruyi-names.js - 3.0 收口:如意自有的对外标识(原 v1.0-S9 注释里「建议 v2.0 收口」的存量兼容标识)。
 // 零出边(不引用任何其他模块的顶层符号),排在 00-boot 之后;所有用到 MCP server id 的模块都只引用这里,不进依赖环。
@@ -6005,7 +6008,6 @@ function sessionPath(id) {
   return path.join(paths.sessions, `${assertSessionIdForPath(id)}.json`);
 }
 // 第25波对抗轮: per-session 写链(见 saveSession)—— 与 agentRunWriteChains 同范式。
-const sessionWriteChains = new Map();
 
 // 81-P1: Immutable encrypted credential records; config holds typed references, never vault plaintext.
 const { CredentialVault } = require('./backend/credential-vault.cjs');
@@ -7076,7 +7078,7 @@ function appendMissionChangeRecord(sessionId, record) {
   return runKeyedChain(missionChangeWriteChains, sid, async () => {
     await repairMissionChangeTornTail(file);
     await fsp.appendFile(file, JSON.stringify(record) + '\n', 'utf8');
-    markPretenderIndexDirty(sid, 'source');
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' });
   });
 }
 function foldMissionChangeJournalText(txt, currentRevision = 0) {
@@ -7247,7 +7249,7 @@ function appendIntervention(sessionId, record) {
       try { await fsp.appendFile(file, line, 'utf8'); break; }
       catch (e) { if (attempt >= 3 || !/^(EPERM|EBUSY|EACCES)$/.test(String(e && e.code))) throw e; await new Promise(r => setTimeout(r, 10 + attempt * 20)); }
     }
-    markPretenderIndexDirty(sid, 'source'); // 75c: authority changed; materialized view is disposable
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' }); // 75c: authority changed; materialized view is disposable
     return true;
   }).catch(() => {});
   interventionWriteChains.set(sid, next);
@@ -7390,7 +7392,7 @@ async function compactInterventionJournal(sessionId, opts = {}) {
     if (!opts.force && !worthwhile) return { ok: true, compacted: false, rowsBefore: folded.rowCount, rowsAfter, bytesBefore: folded.bytes, bytesAfter: folded.bytes };
     const payload = folded.interventions.map(rec => JSON.stringify(rec)).join('\n') + (rowsAfter ? '\n' : '');
     await atomicWriteJson(file, payload);
-    markPretenderIndexDirty(sid, 'source');
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: sid, reason: 'source' });
     return {
       ok: true, compacted: true,
       rowsBefore: folded.rowCount, rowsAfter,
@@ -8810,7 +8812,7 @@ async function deleteSession(id, { purgeAssociated = false } = {}) {
     ]);
   }
   scheduleSessionIndexUpdate(id, SESSION_TOMBSTONE); // PF2: queue removal from the metadata index (debounced; see saveSession)
-  markPretenderIndexDirty(id, 'source'); // 75c: remove from disposable Mission/Intervention projection index
+  RUYI_EVENTS.emit('projection.invalidated', { sessionId: id, reason: 'source' }); // 75c: remove from disposable Mission/Intervention projection index
   // 128f-⑫(用户 2026-09-19「删除线程没有及时的界面反馈」):删完告诉所有在看的人「这一条没了」。
   // 修前一帧都不派,管家视角的左栏要等 15 s 那一拍轮询或用户点别处(13r 的 thread.removed 头注)。
   RUYI_EVENTS.emit('thread.removed', { sessionId: id });
@@ -11018,7 +11020,7 @@ async function saveSession(session, opts) {
   // PF2: queue the sidebar metadata index update (cheap sync Map.set; the write is debounced + coalesced). The
   // index is only a cache and listSessions falls back to a full file scan whenever its id-set drifts from disk.
   scheduleSessionIndexUpdate(id, metaSnapshot);
-  markPretenderIndexDirty(id, 'source'); // 75c: session head/body facts changed; rebuild this Mission slice lazily
+  RUYI_EVENTS.emit('projection.invalidated', { sessionId: id, reason: 'source' }); // 75c: session head/body facts changed; rebuild this Mission slice lazily
   // 128f-⑫:会话头每落一次盘就「碰」一下推送层;那边只在这一行看得见的东西变了才真推(13r thread.touched 头注)。
   // 停自动推进、回退、管家接手、预算熔断……这些写口不必各自再记得派一发。
   RUYI_EVENTS.emit('thread.touched', { sessionId: id });
@@ -11026,7 +11028,7 @@ async function saveSession(session, opts) {
   // 引用 + 超保留期」三者同时成立的转录,绝不碰用户自己 Claude Code 的转录)。fire-and-forget,账本写失败
   // 不影响会话保存(大不了 GC 永远不碰这条转录 —— 保守方向)。
   if (typeof session.claudeSessionId === 'string' && session.claudeSessionId) {
-    void recordEngineTranscript(session.claudeSessionId, session.cwd).catch(() => {});
+    RUYI_EVENTS.emit('session.transcript.observed', { claudeSessionId: session.claudeSessionId, cwd: session.cwd });
   }
   return session;
 }
@@ -14561,7 +14563,6 @@ function logEvent(record) {
 }
 
 // --- Active claude child registry keyed by session id, for stop/restart/interrupt + disconnect kill. ---
-const activeChildren = new Map(); // sessionId -> { child, pid, state, startedAt, lastEventAt, interactive, onEvent }
 // 第 117 波 117l D4(27 号文 §11.9;用户第四轮走查第 3 条「『它刚说』更新不够及时」):活回合尾巴的累加器。
 // 两个引擎(09 的 provider 回合与 05 的 Claude 回合)在各自的 reg.onEvent 包装里调它 —— 同一份口径、
 // 同一份预算,不各写一套。三条纪律:
@@ -14682,7 +14683,6 @@ function installActiveChildEventFanout(reg) {
 // activeChildren,但被停回合的收尾(推 aborted assistant + saveSession)发生在此之后 —— rewindSession
 // 若只看 activeChildren 就会在这个窗口截断落盘,然后被 dying turn 的收尾 save 整份盖回(丢失写:
 // 「回溯了但消息又回来」)。rewindSession 先等本表 settle 再截断,顺序由此确定。
-const turnSettlers = new Map();
 // A logical driver owns all of its queued/child turns. Never infer ownership from the current child.
 // Bounded evidence for completed-then-undo. A newer admitted driver replaces the old identity.
 const sessionLastExecutions = new Map();
@@ -14769,7 +14769,6 @@ SessionExecutionHooks.stop = requestSessionExecutionStop;
 // 收件箱收集(13i)把本表与活回合同等对待:在表里就等下一拍。只活在内存。
 const turnOutcomePending = new Set();
 // --- Pending tool-permission prompts awaiting a UI decision (v3 bridge). ---
-const pendingPermissions = new Map(); // requestId -> { resolve, sessionId, timer, deadlineAt }
 
 // 128f-⑪(Brief §4.2 第 7 条前半;用户 2026-09-19 拍板 A「立刻通知你,请求挂 600 秒等你处理」):
 // 一条权限请求【等多久】的唯一判据。修前四处各算各的 —— provider 回合(09)与 Kimi 桥(05b)经 07 的
@@ -14810,12 +14809,10 @@ function permissionWaitMs(sessionId, config, sessionHead) {
 }
 // Questions are a real turn boundary, not a fire-and-forget notification. Both the Provider tool loop and
 // the Claude MCP bridge wait on this registry; /api/chat/answer settles exactly one matching entry.
-const pendingQuestions = new Map(); // questionId -> { sessionId, questions, timer, deliver }
 // v0.9-S5: pending PLAN approvals awaiting a UI decision (真流程 plan mode). Mirrors pendingPermissions:
 // planId -> { resolve, sessionId, timer }. runOpenAiTurn (plan mode, provider engine) emits a `plan` event
 // after the model's first PLAN: message and PAUSES the turn awaiting /api/plan/decision. resolve() settles
 // with { decision:'approve'|'reject', note? }; the timeout auto-rejects (same permissionTimeoutMs budget).
-const pendingPlans = new Map(); // planId -> { resolve, sessionId, timer }
 // 第27f波:当前处于【无人值守(driverAuto)回合】的会话集 —— provider 路径直接用闭包 driverAuto,但 CLI 桥(Claude 子进程
 // loopback 的 /api/permission/request)拿不到 driverAuto,故用此集判定。runClaudeTurn 的 driverAuto 回合进出维护。纯内存。
 const driverAutoSessions = new Set();
@@ -26681,21 +26678,7 @@ function normalizeStoragePolicy(raw) {
 
 // 递归占用统计(字节 + 文件数)。cap 防爆(异常巨大的树截断并标记,不拖死请求);任何节点读不到即跳过,
 // 整体永不抛 —— 统计是展示辅助,不是审计依据。
-async function dirStat(dir, cap = 100000) {
-  const out = { bytes: 0, files: 0, truncated: false };
-  async function walk(d) {
-    if (out.files >= cap) { out.truncated = true; return; }
-    const ents = await fsp.readdir(d, { withFileTypes: true }).catch(() => []);
-    for (const ent of ents) {
-      if (out.files >= cap) { out.truncated = true; return; }
-      const p = path.join(d, ent.name);
-      if (ent.isDirectory()) await walk(p);
-      else { const st = await fsp.stat(p).catch(() => null); if (st) { out.bytes += st.size; out.files++; } }
-    }
-  }
-  await walk(dir);
-  return out;
-}
+const { dirStat } = require('./backend/storage-stat.cjs');
 
 async function collectStorageStats(config) {
   const defs = [
@@ -26910,105 +26893,13 @@ async function sweepWebcacheStore(policy, result) {
 //   ③ 删除 = 该 id 的 .jsonl + 同名目录(子代理侧录);绝不按目录通配,绝不碰账本外任何文件
 //      (用户的 Claude Code 自己产生的转录永远安全)。
 // 会话删除时不立即连带(保守)—— 活引用消失后由保留期兜底清理。
-function claudeProjectsRoot() {
-  // e2e 缝:WCW_CLAUDE_PROJECTS_DIR 重定向(stats 与 sweep 共用此根,保证测的就是生产的判定路径)。
-  return process.env.WCW_CLAUDE_PROJECTS_DIR || path.join(os.homedir(), '.claude', 'projects');
-}
-// claude CLI 的项目目录键:把 cwd 的非字母数字字符全部换成 '-'(E:\a\b → E--a-b,与 CLI 实测一致)。
-function claudeProjectDirKey(cwd) { return String(cwd || '').replace(/[^a-zA-Z0-9]/g, '-'); }
-const ENGINE_TRANSCRIPT_ID_RE = /^[A-Za-z0-9_-]{8,128}$/; // claude sessionId 形状(UUID/hex);脏值拒绝入账
-const engineTranscriptKnown = new Map(); // sessionId -> { cwd, firstSeen }
-let engineTranscriptLedgerLoaded = false;
-let engineTranscriptLedgerChain = Promise.resolve();
-function engineTranscriptLedgerPath() { return path.join(paths.data, 'engine-transcripts.json'); }
-async function engineTranscriptLedgerLoad() {
-  if (engineTranscriptLedgerLoaded) return;
-  engineTranscriptLedgerLoaded = true;
-  try {
-    const raw = safeJsonParse(await fsp.readFile(engineTranscriptLedgerPath(), 'utf8'), null);
-    const known = raw && raw.known;
-    if (known && typeof known === 'object' && !Array.isArray(known)) {
-      for (const [sid, meta] of Object.entries(known)) {
-        if (!ENGINE_TRANSCRIPT_ID_RE.test(sid)) continue;
-        engineTranscriptKnown.set(sid, { cwd: String((meta && meta.cwd) || ''), firstSeen: String((meta && meta.firstSeen) || '') });
-      }
-    }
-  } catch { /* 无账本/坏账本 → 空起步(保守:不认识的一律不碰) */ }
-}
-async function engineTranscriptLedgerSave() {
-  const known = {};
-  for (const [sid, meta] of engineTranscriptKnown) known[sid] = { cwd: meta.cwd, firstSeen: meta.firstSeen };
-  const thisWrite = engineTranscriptLedgerChain.catch(() => {}).then(() => atomicWriteJson(engineTranscriptLedgerPath(), { version: 1, known }));
-  engineTranscriptLedgerChain = thisWrite;
-  await thisWrite;
-}
-// saveSession 钩子:登记本工作台 spawn 的转录 id。仅新 id 落盘(同 id 重复登记零 IO)。
-async function recordEngineTranscript(claudeSessionId, cwd) {
-  const sid = String(claudeSessionId || '').trim();
-  if (!ENGINE_TRANSCRIPT_ID_RE.test(sid)) return;
-  await engineTranscriptLedgerLoad();
-  if (engineTranscriptKnown.has(sid)) return;
-  engineTranscriptKnown.set(sid, { cwd: String(cwd || ''), firstSeen: nowIso() });
-  await engineTranscriptLedgerSave().catch(() => {});
-}
-// Resume compatibility probe used by the Claude turn path. The ledger records the cwd that first
-// produced a native session id, which is exactly the Claude project bucket where its transcript lives.
-// Unknown ids stay permissive for backward compatibility; the CLI-error retry remains the final guard.
-async function engineTranscriptCwd(claudeSessionId) {
-  const sid = String(claudeSessionId || '').trim();
-  if (!ENGINE_TRANSCRIPT_ID_RE.test(sid)) return '';
-  await engineTranscriptLedgerLoad();
-  const meta = engineTranscriptKnown.get(sid);
-  return String((meta && meta.cwd) || '');
-}
-// 活引用扫描:所有会话头(v2 头/legacy 全文都有 claudeSessionId 字段;头很小,全扫便宜)。
-async function collectLiveClaudeSessionIds() {
-  const live = new Set();
-  let files = [];
-  try { files = await fsp.readdir(paths.sessions); } catch { return live; }
-  for (const f of files) {
-    if (!f.endsWith('.json') || f === SESSION_INDEX_FILE) continue;
-    try {
-      const o = safeJsonParse(await fsp.readFile(path.join(paths.sessions, f), 'utf8'), null);
-      if (o && typeof o.claudeSessionId === 'string' && ENGINE_TRANSCRIPT_ID_RE.test(o.claudeSessionId)) live.add(o.claudeSessionId);
-    } catch { /* 单个坏文件不阻塞扫描 */ }
-  }
-  return live;
-}
-async function sweepEngineTranscriptsStore(policy, result) {
-  const days = Number(policy.engineTranscriptDays) || 0;
-  if (days <= 0) return;
-  const cutoffMs = Date.now() - days * 86400000;
-  await engineTranscriptLedgerLoad();
-  if (!engineTranscriptKnown.size) return;
-  const live = await collectLiveClaudeSessionIds();
-  const root = claudeProjectsRoot();
-  let ledgerDirty = false;
-  for (const [sid, meta] of [...engineTranscriptKnown]) {
-    if (live.has(sid)) continue; // 活会话引用 → 绝不碰
-    const dirKey = claudeProjectDirKey(meta.cwd);
-    const file = path.join(root, dirKey, sid + '.jsonl');
-    // 防账本脏 cwd 拼出逃逸路径:dirKey 只能含字母数字与 '-',sid 过白名单正则,path.join 结果必在 root 下。
-    const st = await fsp.stat(file).catch(() => null);
-    if (!st || !st.isFile()) { engineTranscriptKnown.delete(sid); ledgerDirty = true; continue; } // 转录已不在 → 账本除名
-    if (st.mtimeMs > cutoffMs) continue; // 太新 → 保留
-    let freed = st.size, unlinked = true;
-    await fsp.unlink(file).catch(() => { unlinked = false; });
-    if (unlinked) {
-      const sideDir = path.join(root, dirKey, sid); // 子代理侧录目录(新版 CLI),存在才连带
-      const sideStat = await fsp.stat(sideDir).catch(() => null);
-      if (sideStat && sideStat.isDirectory()) {
-        const sideBytes = (await dirStat(sideDir)).bytes;
-        await fsp.rm(sideDir, { recursive: true, force: true }).catch(() => {});
-        freed += sideBytes;
-      }
-      engineTranscriptKnown.delete(sid); ledgerDirty = true;
-      result.freedBytes += freed;
-      result.actions.push({ store: 'engineTranscripts', action: 'delete', detail: `${dirKey}/${sid}.jsonl`, bytes: freed });
-    }
-  }
-  if (ledgerDirty) await engineTranscriptLedgerSave().catch(() => {});
-}
+// Owned transcript ledger; storage announces durable sessions without depending on an engine.
+const { claudeProjectsRoot, claudeProjectDirKey, recordEngineTranscript, engineTranscriptCwd, sweepEngineTranscriptsStore } = require('./backend/engine-transcripts.cjs').createEngineTranscriptStore({
+  paths, atomicWriteJson, nowIso, safeJsonParse, sessionIndexFile: SESSION_INDEX_FILE,
+});
+RUYI_EVENTS.subscribe((name, payload) => {
+  if (name === 'session.transcript.observed') void recordEngineTranscript(payload.claudeSessionId, payload.cwd).catch(() => {});
+});
 
 // 统一 sweep 入口:boot 自动(全目标) + POST /api/storage/clean(可单目标)。进程内串行(并发第二
 // 次调用直接拒绝);结果留痕 STORAGE_STEWARD 并落审计账。targets=null 表示全部。
@@ -34499,7 +34390,6 @@ async function drainSteerQueue(reg, session, onEvent) {
 function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
 function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
 const agentRunWriteChains = new Map();
-const activeAgentRuns = new Map(); // runId -> { run, ctrl, paused, stopRequested, resumeWaiters, steerQueues }
 // 第46波46e(双冷 resume 窄窗修复):resume「在飞」标记。activeAgentRuns 只在 runtime 构造好才注册,
 // 而 existingRun 分支从校验到注册之间有 await(getAgentRoleLibrary/cleanupAgentWorktree)——两个近同时
 // 的 resume 会都穿过 activeAgentRuns.has 守卫。此集合在分支【入口同步】占位,成功注册或早退/异常即释,
@@ -35463,7 +35353,7 @@ async function saveAgentRun(run) {
       await atomicWriteJson(runFile, snapshot);
       agentRunDigestWriteSeq += 1;
       agentRunDigestCache.delete(runFile); // digest 摘要缓存:进程内写成功即作废该文件条目(见 listAgentRunDigests 头注)
-      markPretenderIndexDirty(run.sessionId, 'source'); // 75c: persisted run digest participates in Mission projection
+      RUYI_EVENTS.emit('projection.invalidated', { sessionId: run.sessionId, reason: 'source' }); // 75c: persisted run digest participates in Mission projection
       // 128f-⑫:班组的状态真的换了(跑着/暂停/等池/收尾……)才派一发 —— 左栏行上的「暂停／继续」、焦点栏的班组段读的
       // 都是落盘这一份摘要,而它不经过会话头(13r「会话头落盘即碰一下」那一路盖不到)。节点每一步也会存一次,
       // 那些不换状态的存一帧都不派。暂停是「先回 pausing、跑循环下一拍才真停」,所以派在这里而不是控制路由上。
@@ -65289,6 +65179,11 @@ function markPretenderIndexDirty(sessionId, reason = 'source') {
   pretenderIndexRuntime.dirtySessions.add(sid);
   if (reason === 'usage') pretenderIndexRuntime.usageDirty.add(sid);
 }
+
+// Invalidation is synchronous with authoritative writes; readers never observe an unmarked commit.
+RUYI_EVENTS.subscribe((name, payload) => {
+  if (name === 'projection.invalidated') markPretenderIndexDirty(payload?.sessionId, payload?.reason);
+});
 
 function pretenderHash(value) {
   return crypto.createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value), 'utf8').digest('hex').slice(0, 24);

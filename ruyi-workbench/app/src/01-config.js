@@ -3807,4 +3807,3 @@ function sessionPath(id) {
   return path.join(paths.sessions, `${assertSessionIdForPath(id)}.json`);
 }
 // 第25波对抗轮: per-session 写链(见 saveSession)—— 与 agentRunWriteChains 同范式。
-const sessionWriteChains = new Map();

@@ -18,6 +18,12 @@ test('SSE shutdown ends clients, unsubscribes sources, clears replay and refuses
   await hooks.handleApiRoutes(req, res, '/api/events/stream');
   assert.equal(hooks.presenceSnapshot().length, 1);
   assert.equal(sources.size, 1); assert.equal(taps.size, 1);
+  const ringBefore = service.eventStreamRing.length;
+  for (const listener of sources) {
+    listener('projection.invalidated', { sessionId: 'private-session', reason: 'source' });
+    listener('session.transcript.observed', { claudeSessionId: 'private-transcript', cwd: '/private/workspace' });
+  }
+  assert.equal(service.eventStreamRing.length, ringBefore, 'internal storage notifications never become SSE frames');
   service.close(); service.close();
   assert.equal(res.writableEnded, true); assert.equal(hooks.presenceSnapshot().length, 0);
   assert.equal(sources.size, 0); assert.equal(taps.size, 0); assert.equal(service.eventStreamRing.length, 0);

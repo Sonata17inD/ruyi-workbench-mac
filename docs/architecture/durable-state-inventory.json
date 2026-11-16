@@ -517,7 +517,7 @@
     {
       "id": "engine-transcript-index",
       "pattern": "<data>/engine-transcripts.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/engine-transcripts.cjs",
       "anchor": "'engine-transcripts.json'",
       "schema": "object / version 1",
       "writePrimitive": "atomicWriteJson + chain",
@@ -531,7 +531,7 @@
     {
       "id": "engine-transcripts",
       "pattern": "<engine-root>/<type>/<session>.jsonl",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/engine-transcripts.cjs",
       "anchor": "'.jsonl'",
       "schema": "external JSONL transcript",
       "writePrimitive": "engine-owned",
