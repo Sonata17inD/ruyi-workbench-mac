@@ -102,7 +102,7 @@ function spawnWb() {
 }
 
 (async () => {
-  const src = readServerSource() + ['session-model.cjs', 'mission-driver.cjs'].map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8')).join('\n');
+  const src = readServerSource() + ['session-model.cjs', 'mission-driver.cjs', 'mission-control.cjs'].map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8')).join('\n');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,

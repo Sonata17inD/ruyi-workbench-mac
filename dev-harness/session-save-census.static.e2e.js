@@ -19,7 +19,8 @@ const CENSUS = {
   '../backend/session-rewind.cjs': 1, // 撤回成功的严格提交。
   '../backend/session-transactions.cjs': 2, // 读改写与回合收尾的共享提交出口。
   '../backend/session-persistence.cjs': 3, // 装载归一化、旧格式迁移与迁移备份恢复。
-  '02-session-store.js': 4, // 元数据、创建与任务控制；成员调用的适配器不重复计数。
+  '02-session-store.js': 4, // 元数据、创建与任务控制存储端口适配器。
+  '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
   '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
@@ -75,7 +76,7 @@ const sites = [
   ['08-agent-runs.js appendAgentWorkflowSummaryToSession', fnBody('08-agent-runs.js', 'async function appendAgentWorkflowSummaryToSession('), false],
   ['13p-steward-runner-actions.js stewardStampReply', fnBody('13p-steward-runner-actions.js', 'async function stewardStampReply('), false],
   ['13q-steward-runner-turn.js stewardArchiveConversation', fnBody('13q-steward-runner-turn.js', 'async function stewardArchiveConversation('), true],
-  ['02-session-store.js missionControlCommand', fnBody('02-session-store.js', 'async function missionControlCommand('), false],
+  ['02-session-store.js missionControlCommand', fnBody('../backend/mission-control.cjs', 'async function missionControlCommand('), false],
 ];
 for (const [label, body, needsExpectGen] of sites) {
   const code = codeLines(body).join('\n');

@@ -98,7 +98,7 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
   const sites = [
     { file: '06d-memory-domain.js', needle: "neutralizeFenceTag(t, 'workbench-memory')" },
     { file: '06d-memory-domain.js', needle: "neutralizeFenceTag(String(value || ''), 'workbench-memory-core')" },
-    { file: '06e-mission-domain.js', needle: "neutralizeFenceTag(t == null ? '' : t, 'mission-ledger')" },
+    { file: '../backend/mission-driver.cjs', needle: "neutralizeFenceTag(t == null ? '' : t, 'mission-ledger')" },
     { file: '06-provider-engine.js', needle: "neutralizeFenceTag(text, 'project-memory')" },
     { file: '06-provider-engine.js', needle: "neutralizeFenceTag(t, 'skill-index')" },
     { file: '09-workflow.js', needle: "neutralizeFenceTag(note, 'workbench-plan-approved')" },
