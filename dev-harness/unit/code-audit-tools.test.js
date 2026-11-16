@@ -13,9 +13,17 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-code-audit-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'data');
-process.env.RUYI_HOME = path.join(root, 'data');
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const audit = require('../../ruyi-workbench/app/backend/code-audits.cjs').createCodeAudits({
+  files: {
+    // These policy fixtures are flat directories; traversal is covered by the tool E2Es.
+    walkFiles: async dir => Promise.all((await fs.promises.readdir(dir)).sort().map(async name => ({
+      type: 'file', path: path.join(dir, name), relativePath: name,
+      size: (await fs.promises.stat(path.join(dir, name))).size,
+    }))),
+    readIfExists: async (file, limit) => (await fs.promises.readFile(file, 'utf8')).slice(0, limit),
+  },
+  privacy: { privacySourceActive: () => false, privacySourceMark: value => value },
+});
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ } });
 const mk = (name, files) => {
   const dir = path.join(root, name);
@@ -23,7 +31,6 @@ const mk = (name, files) => {
   for (const [f, body] of Object.entries(files)) fs.writeFileSync(path.join(dir, f), body);
   return dir;
 };
-const ctxFor = dir => ({ config: { permissionMode: 'default' }, session: { id: 's', cwd: dir } });
 
 test('[A1] code_review_scan:正则 exec / querySelector / 散文拼接不再误报', async () => {
   const dir = mk('a1', {
@@ -44,7 +51,7 @@ test('[A1] code_review_scan:正则 exec / querySelector / 散文拼接不再误�
     ].join('\n'),
     'risky.py': "import os\nos.system('rm ' + p)\nsubprocess.run(cmd, shell=True)\n",
   });
-  const r = await srv.toolCall('code_review_scan', { root: dir }, ctxFor(dir));
+  const r = await audit.codeReviewScan(dir);
   assert.equal(r.ok, true);
   const quiet = r.findings.filter(f => f.relativePath === 'quiet.js');
   assert.deepEqual(quiet, [], 'quiet.js: ' + JSON.stringify(quiet));
@@ -58,7 +65,7 @@ test('[A2] code_review_scan:counts 在 findings 前,高危排前面', async () =
     'a-notes.js': '// TODO: later\n',
     'z-config.js': "const apiKey = 'abcdefghijklmnop123456';\n",
   });
-  const r = await srv.toolCall('code_review_scan', { root: dir }, ctxFor(dir));
+  const r = await audit.codeReviewScan(dir);
   const keys = Object.keys(r);
   assert.ok(keys.indexOf('counts') < keys.indexOf('findings'));
   assert.equal(r.findings[0].severity, 'high', JSON.stringify(r.findings.map(f => f.severity)));
@@ -76,7 +83,7 @@ test('[A3] frontend_audit:首个命中的行号与片段;注释里的 CDN 不算
     ].join('\n'),
     'app.css': 'a { color: red; }\n/* cdn: https://cdn.example.com/x */\nh1 { letter-spacing: -1px; }\n',
   });
-  const r = await srv.toolCall('frontend_audit', { root: dir }, ctxFor(dir));
+  const r = await audit.frontendAudit(dir);
   const ext = r.issues.find(i => i.id === 'external-asset' && i.relativePath === 'index.html');
   assert.ok(ext, JSON.stringify(r.issues));
   assert.equal(ext.line, 3);
@@ -88,11 +95,11 @@ test('[A3] frontend_audit:首个命中的行号与片段;注释里的 CDN 不算
 
 test('[A4] claude_md_audit:词界 —— "latest" 不算写了 test 命令', async () => {
   const dir = mk('a4', { 'CLAUDE.md': 'latest thoughts, nothing else here\n' });
-  const r = await srv.toolCall('claude_md_audit', { root: dir }, ctxFor(dir));
+  const r = await audit.claudeMdAudit(dir);
   assert.equal(r.found, 1);
   assert.ok(r.audits[0].missing.includes('commands'), JSON.stringify(r.audits[0].missing));
   const dir2 = mk('a4b', { 'CLAUDE.md': '# Overview\nRun the tests with `npm test`. Follow the style conventions. No secrets. Works offline.\n' });
-  const r2 = await srv.toolCall('claude_md_audit', { root: dir2 }, ctxFor(dir2));
+  const r2 = await audit.claudeMdAudit(dir2);
   assert.deepEqual(r2.audits[0].missing, []);
 });
 

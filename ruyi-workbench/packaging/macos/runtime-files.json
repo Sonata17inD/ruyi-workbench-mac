@@ -293,7 +293,9 @@
     "app/backend/web-tools.cjs",
     "app/backend/debug-hypothesis.cjs",
     "app/backend/data-profiler.cjs",
-    "app/backend/git-tools.cjs"
+    "app/backend/git-tools.cjs",
+    "app/backend/code-audits.cjs",
+    "app/backend/code-search.cjs"
   ],
   "acc": [
     "LICENSE",
