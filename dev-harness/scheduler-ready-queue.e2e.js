@@ -74,7 +74,7 @@ const fake = http.createServer((req, res) => {
 (async () => {
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
-  const src = readServerSource();
+  const src = readServerSource() + fs.readFileSync(path.join(WB, 'app/backend/workflow-scheduler.cjs'), 'utf8');
 
   // ── C) 静态锁(第26波c: 判环/派发/就绪逻辑已抽入纯 reducer computeSchedulerStep,静态锁随之校验 reducer 形态) ──
   ok(!/await Promise\.all\(batch\.map\(/.test(src), 'C 批次屏障代码已移除(Promise.all(batch.map) 不存在)');
