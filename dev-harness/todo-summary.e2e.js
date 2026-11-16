@@ -1,10 +1,10 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
 // E2E (v0.8-S3): todo_write + turn_summary on the provider engine (fake-openai, offline).
-//  Turn 1 (FAKE_TOOL_SEQUENCE = [todo_write{3 items, 1 done}, file_write{path,content}, powershell_run{echo x}]):
+//  Turn 1 (FAKE_TOOL_SEQUENCE = [todo_write{3 items, 1 done}, file_write{path,content}, shell_run{echo x}]):
 //    ① the stream carries a `todo` event whose items.length === 3;
 //    ② the turn ends with a `turn_summary`: filesChanged contains the written path, commands === 1
-//       (only powershell_run — todo_write/file_write are NOT commands), turnSeq is a number;
+//       (only shell_run — todo_write/file_write are NOT commands), turnSeq is a number;
 //    ③ GET the session: session.todos.length === 3 and the last assistant message carries turnSummary.
 //  Turn 2 (no tools): the collapsing turn_summary has filesChanged empty + commands 0 (reassurance-line data).
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
@@ -59,11 +59,11 @@ function writeConfig(home, fakePort) {
       { text: '收尾', status: 'pending' },
     ] } },
     { name: 'file_write', args: { path: target, content: 'hello turn summary' } },
-    { name: 'powershell_run', args: { command: 'echo x' } },
+    { name: 'shell_run', args: { command: 'echo x' } },
   ]);
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq }, windowsHide: true });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 
@@ -76,7 +76,7 @@ function writeConfig(home, fakePort) {
     const sid = created.session && created.session.id;
     ok(!!sid, 'session created');
 
-    // ---- Turn 1: sequence todo_write -> file_write -> powershell_run ----
+    // ---- Turn 1: sequence todo_write -> file_write -> shell_run ----
     const ev1 = await postStream(WB_PORT, { sessionId: sid, message: '开工', cwd: HOME });
     const todoEvents = ev1.filter(e => e.type === 'todo');
     ok(todoEvents.length >= 1, 'turn1: a `todo` event was streamed (got ' + todoEvents.length + ')');
@@ -86,7 +86,7 @@ function writeConfig(home, fakePort) {
     ok(!!ts1, 'turn1: turn_summary emitted');
     ok(ts1 && typeof ts1.turnSeq === 'number', 'turn1: turn_summary.turnSeq is a number (got ' + (ts1 && ts1.turnSeq) + ')');
     ok(ts1 && Array.isArray(ts1.filesChanged) && ts1.filesChanged.some(f => f && f.path === target), 'turn1: filesChanged contains the written path');
-    ok(ts1 && ts1.commands === 1, 'turn1: commands === 1 (only powershell_run) (got ' + (ts1 && ts1.commands) + ')');
+    ok(ts1 && ts1.commands === 1, 'turn1: commands === 1 (only shell_run) (got ' + (ts1 && ts1.commands) + ')');
     // v0.9-S4 (C4): artifacts is now POPULATED — a journal `create` (the new made.txt) becomes one artifact.
     ok(ts1 && Array.isArray(ts1.artifacts) && ts1.artifacts.length === 1 && ts1.artifacts[0].path === target && ts1.artifacts[0].kind === 'txt', 'turn1: artifacts has the created made.txt (kind txt) — v0.9-S4');
     // v0.8-S4a: file_write is now journaled → its filesChanged entry is revertible:true (was false in S3).

@@ -236,16 +236,16 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     // ============ (f) 静态锁 ============
     const readSrc = name => fs.readFileSync(path.join(WB, 'app', 'src', name), 'utf8');
     const readPub = name => fs.readFileSync(path.join(WB, 'app', 'public', 'js', name), 'utf8');
-    const srcNames = fs.readdirSync(path.join(WB, 'app', 'src')).filter(name => name.endsWith('.js'));
+    const srcNames = fs.readdirSync(path.join(WB, 'app', 'src')).filter(name => name.endsWith('.js')).concat(fs.readdirSync(path.join(WB, 'app', 'backend')).filter(name => name.endsWith('.cjs')).map(name => '../backend/' + name));
     // f1:机器验收的章 —— 全仓只有一个地方写得了它。
     const stampWriters = srcNames.filter(name => /\.lastCheck\s*=/.test(readSrc(name)));
-    ok(stampWriters.length === 1 && stampWriters[0] === '02-session-store.js',
+    ok(stampWriters.length === 1 && stampWriters[0] === '../backend/session-model.cjs',
       'f1 机器验收的章只有一处写入口(实 ' + JSON.stringify(stampWriters) + ')');
-    ok((readSrc('02-session-store.js').match(/milestone\.lastCheck = /g) || []).length === 1
-      && /function recordMissionCheckResult\(/.test(readSrc('02-session-store.js')),
+    ok((readSrc('../backend/session-model.cjs').match(/milestone\.lastCheck = /g) || []).length === 1
+      && /function recordMissionCheckResult\(/.test(readSrc('../backend/session-model.cjs')),
       'f1 那一处就是 recordMissionCheckResult(不许有第二条赋值)');
     // f2:落章的调用点恰两处,都是真的跑了检查那两条路。
-    const stampCallers = srcNames.filter(name => name !== '02-session-store.js' && /recordMissionCheckResult\(/.test(readSrc(name)));
+    const stampCallers = srcNames.filter(name => name !== '../backend/session-model.cjs' && /recordMissionCheckResult\(/.test(readSrc(name)));
     ok(stampCallers.length === 2 && stampCallers.includes('06e-mission-domain.js') && stampCallers.includes('13-http-router.js'),
       'f2 落章的调用点恰两处:驱动器每轮 + action:check(实 ' + JSON.stringify(stampCallers) + ')');
     for (const name of stampCallers) {
@@ -262,8 +262,8 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     }
     // f3:容器验收项的写面 —— 规范器只在 02,HTTP 侧三条路由全是 UI header token,模型工具面零处。
     const acceptanceWriters = srcNames.filter(name => /normalizeMissionAcceptance\(/.test(readSrc(name)));
-    ok(acceptanceWriters.length === 1 && acceptanceWriters[0] === '02-session-store.js',
-      'f3 容器验收项的规范器只在 02(实 ' + JSON.stringify(acceptanceWriters) + ')');
+    ok(acceptanceWriters.length === 1 && acceptanceWriters[0] === '../backend/mission-store.cjs',
+      'f3 容器验收项的规范器只在 mission-store(实 ' + JSON.stringify(acceptanceWriters) + ')');
     const src13d = readSrc('13d-core-domain-routes.js');
     for (const fn of ['createMissionContainer', 'patchMissionContainer', 'missionMergeInto']) {
       const at = src13d.indexOf('await ' + fn + '(');
@@ -276,8 +276,8 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     ok(leaked.length === 0, 'f3 模型工具面零处写容器验收项(实 ' + JSON.stringify(leaked) + ')');
     // f4:四态的判据只许有一份 —— 前端不许自己按 checkType 推。
     const facts = readPub('thread-facts.js'), drawer = readPub('steward-drawer.js');
-    ok(/function buildMissionAcceptanceProjection\(/.test(readSrc('02-session-store.js')),
-      'f4 四态判据的正身在服务端 02');
+    ok(/function buildMissionAcceptanceProjection\(/.test(readSrc('../backend/session-model.cjs')),
+      'f4 四态判据的正身在 session-model');
     ok(!/checkType\s*[!=]==?\s*'(command|file_exists)'/.test(facts) && !/checkType\s*[!=]==?\s*'(command|file_exists)'/.test(drawer),
       'f4 前端零处按 checkType 自己推来源(推导只许在服务端那一份)');
     ok(/acceptanceRecorded/.test(facts) && (drawer.match(/acceptanceUnrecorded/g) || []).length === 2,
