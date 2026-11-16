@@ -29,7 +29,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ① 单一入口
 {
-  const s13f = src('13f-native-tool-schemas.js');
+  const s13f = src('../backend/native-tool-schemas.cjs');
   ok(!/name: 'spawn_agent'/.test(s13f), '① 13f MCP_TOOLS 无 spawn_agent schema');
   ok(/name: 'orchestrate_agents'/.test(s13f) && /name: 'wait_agents'/.test(s13f) && /name: 'agent_result'/.test(s13f), '① 13f 有 orchestrate_agents / wait_agents / agent_result');
   ok(/background: \{ type: 'boolean'/.test(s13f) && /task: \{ type: 'string', description: 'single-agent shorthand/.test(s13f), '① orchestrate_agents schema 含顶层单代理简写与 background');

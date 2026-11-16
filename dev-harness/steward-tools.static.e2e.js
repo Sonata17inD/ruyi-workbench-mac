@@ -121,7 +121,7 @@ const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
 const src12 = read('12-tool-dispatch.js');
 const src13 = read('13-http-router.js');
-const src13f = read('13f-native-tool-schemas.js');
+const src13f = read('../backend/native-tool-schemas.cjs');
 const src13g = read('13g-steward.js');
 const src13h = read('13h-steward-runner.js');
 // 117 波 T2(32 号文 §5):13h 拆成六个文件(纯搬家)。①c/①d 要的那两张登记表(STEWARD_ACTION_HOOKS

@@ -139,7 +139,7 @@ test('[G7] git_commit:addAll 默认 false;schema 文字与代码一致;没暂存
   const ok = await srv.toolCall('git_commit', { message: 'all', addAll: true }, ctxFor(repo));
   assert.equal(ok.ok, true, JSON.stringify(ok).slice(0, 300));
   assert.equal(path.resolve(ok.cwd), path.resolve(repo), 'git_commit 也用对话工作目录');
-  const schema = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13f-native-tool-schemas.js'), 'utf8');
+  const schema = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');
   const addAllLine = schema.split('\n').find(l => /addAll:\s*\{/.test(l));
   assert.ok(addAllLine && /default false/.test(addAllLine) && !/default true/.test(addAllLine), addAllLine);
 });

@@ -238,7 +238,8 @@
     "app/backend/tool-policy.cjs",
     "app/backend/workflow-scheduler.cjs",
     "app/backend/http-authorization.cjs",
-    "app/backend/http-route-policy.cjs"
+    "app/backend/http-route-policy.cjs",
+    "app/backend/native-tool-schemas.cjs"
   ],
   "acc": [
     "LICENSE",

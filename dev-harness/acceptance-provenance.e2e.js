@@ -270,7 +270,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       ok(at > 0 && /tokenOk\(req\)/.test(src13d.slice(Math.max(0, at - 700), at)),
         'f3 ' + fn + ' 的 HTTP 入口就在它前面那道 tokenOk(UI header token)门后');
     }
-    const toolFacing = ['09-workflow.js', '11-native-tools.js', '12-tool-dispatch.js', '13f-native-tool-schemas.js',
+    const toolFacing = ['09-workflow.js', '11-native-tools.js', '12-tool-dispatch.js', '../backend/native-tool-schemas.cjs',
       '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', '13t-steward-schedule.js'];
     const leaked = toolFacing.filter(name => /(createMissionContainer|patchMissionContainer|missionMergeInto)\(/.test(readSrc(name)));
     ok(leaked.length === 0, 'f3 模型工具面零处写容器验收项(实 ' + JSON.stringify(leaked) + ')');

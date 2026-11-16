@@ -59,7 +59,7 @@ test('[M3] 回合摘要的两张表只收真工具、档位对得上', () => {
 });
 
 test('[M4] 没有原生 schema 的 handler 只能是既知的元工具', () => {
-  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13f-native-tool-schemas.js'), 'utf8');
+  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');
   const schemaNames = new Set([...src.matchAll(/^\s{4}name: '([a-z_0-9]+)'/gm)].map(m => m[1]));
   assert.ok(schemaNames.size > 50, `schema 名抽取失败(只抽到 ${schemaNames.size} 个)`);
   assert.deepEqual(handlers.filter(n => !schemaNames.has(n)).sort(), [...HANDLER_WITHOUT_SCHEMA].sort());

@@ -93,7 +93,7 @@ const toolNames = list => list.filter(a => a.kind === 'tool').map(a => a.tool);
   const rejected = inTable.filter(tool => actsOf([{ label: 'x', kind: 'tool', tool, args: validArgs(tool) }]).length !== 1);
   ok(rejected.length === 0, `⑤ 表里的每一个工具都真的能变成按钮(变不成的:${JSON.stringify(rejected)})`);
 
-  const src13f = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13f-native-tool-schemas.js'), 'utf8');
+  const src13f = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'native-tool-schemas.cjs'), 'utf8');
   const allTools = [...new Set([...src13f.matchAll(/name:\s*'(steward_[a-z_]+)'/g)].map(m => m[1]))];
   ok(allTools.length >= 30, `⑤1 扫得到管家工具全集(实得 ${allTools.length} 个;扫不到 = 本条静默失效)`);
   const outside = allTools.filter(t => !inTable.includes(t));
