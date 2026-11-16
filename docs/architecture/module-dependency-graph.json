@@ -6317,14 +6317,13 @@
         "MEMORY_PROPOSAL_MIN_JUDGE_GAP",
         "MEMORY_PROPOSAL_MIN_TURN_GAP",
         "MEMORY_PROPOSAL_STATE_MAX_BYTES",
-        "MEMORY_RELATION_CAP",
-        "MEMORY_RELATION_TYPES",
         "MEMORY_RELEVANCE_MAX",
         "MEMORY_RULE_TOUCH_MS",
         "MEMORY_TYPES",
         "MEMORY_USAGE_TOUCH_MS",
         "MemoryPrompts",
         "MemoryRecall",
+        "MemoryRelations",
         "accMemoryImportMarker",
         "accMemoryImportStore",
         "agentInstructionChain",
@@ -6360,6 +6359,7 @@
         "fmBool",
         "fmVal",
         "inspectAgentInstructionEntries",
+        "isMemoryRelationType",
         "legacyAccMemoryCandidates",
         "legacyAccMemoryMigrationComplete",
         "listMemoryProjectGroups",
@@ -6435,6 +6435,7 @@
         "readWorkbenchMemory",
         "recordMemoryProposalUsage",
         "removeAgentInstructionEntries",
+        "removeMemoryRelationsFor",
         "renderAgentInstructionMemory",
         "replayPendingMemoryProposal",
         "resolveCoreMemoryState",
@@ -6453,8 +6454,7 @@
         "writeAgentInstructionEntries",
         "writeAgentInstructionState",
         "writeMemoryMeta",
-        "writeMemoryProposalState",
-        "writeMemoryRelations"
+        "writeMemoryProposalState"
       ],
       "requires": [
         {
@@ -6517,7 +6517,8 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6531,7 +6532,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6559,14 +6561,16 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6594,7 +6598,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6687,7 +6692,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

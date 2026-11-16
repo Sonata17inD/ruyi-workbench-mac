@@ -713,7 +713,7 @@
     {
       "id": "memory-relations",
       "pattern": "<data>/memory/**/_relations.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-relations.cjs",
       "anchor": "'_relations.json'",
       "schema": "array / domain normalized",
       "writePrimitive": "atomicWriteJson",
