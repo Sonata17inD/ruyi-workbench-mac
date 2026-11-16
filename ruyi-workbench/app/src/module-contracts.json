@@ -12346,9 +12346,6 @@
         "CHECKPOINT_LIST_LIMIT",
         "CHECKPOINT_LIST_PATHS_MAX",
         "CORE_TOOL_HANDLERS",
-        "EXEC_CACHE_ENTRY_MAX_BYTES",
-        "EXEC_CACHE_MAX_SESSIONS",
-        "EXEC_CACHE_WHITELIST",
         "FILE_EDIT_ENCODING_HINT_NOT_ROUNDTRIP",
         "FILE_EDIT_ENCODING_HINT_UNDECODABLE",
         "FILE_EDIT_ENCODING_TIP",
@@ -12358,6 +12355,7 @@
         "FILE_READ_JSON_BUDGET",
         "FILE_READ_LINE_DEFAULT",
         "FILE_TOOL_HANDLERS",
+        "FileReadCache",
         "OBSERVATION_RECALL_MAX_CHARS",
         "OBSERVATION_RECALL_QUOTA",
         "SCRATCHPAD_WRITE_NOTE",
@@ -12376,14 +12374,6 @@
         "checkpointListResult",
         "defaultTextLineEnding",
         "detectTextLineEnding",
-        "execCacheContext",
-        "execCacheKeyFileRead",
-        "execCacheLookup",
-        "execCacheSameVersion",
-        "execCacheSessionMap",
-        "execCacheStore",
-        "execCacheVersionOf",
-        "execResultCacheBySession",
         "expandFileToolPathVars",
         "fileMoveSameFileKind",
         "fileToolBatch",
@@ -12641,14 +12631,14 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "execResultCacheEnabled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "execResultCacheMaxEntries",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12921,7 +12911,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

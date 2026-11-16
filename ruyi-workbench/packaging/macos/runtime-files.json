@@ -239,7 +239,8 @@
     "app/backend/workflow-scheduler.cjs",
     "app/backend/http-authorization.cjs",
     "app/backend/http-route-policy.cjs",
-    "app/backend/native-tool-schemas.cjs"
+    "app/backend/native-tool-schemas.cjs",
+    "app/backend/file-read-cache.cjs"
   ],
   "acc": [
     "LICENSE",

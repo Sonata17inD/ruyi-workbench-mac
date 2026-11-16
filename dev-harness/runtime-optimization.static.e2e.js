@@ -75,11 +75,12 @@ ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRo
 // 默认关,逐项取证。命中带 cacheHit 诚实标记;错误/中断/竞态不缓存。
 ok(/runtimeExecResultCacheV1: true/.test(src) && /execResultCacheMaxEntriesV1: 200/.test(src), 'S #2a 大文件真实门后默认开启、条数上限缺省 200(显式 false 回退)');
 ok(/function execResultCacheEnabled\(config\)/.test(src) && /function execResultCacheMaxEntries\(config\)/.test(src), 'S #2a 唯一判定点存在(开关×上限双门)');
-ok(/const EXEC_CACHE_WHITELIST = new Set\(\['file_read'\]\)/.test(src), 'S #2a 白名单首批仅 file_read(版本明确的本地只读,22 §6.1)');
-ok(/execCacheContext\('file_read', args, ctx, p\)/.test(src), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
-ok(/execCacheSameVersion/.test(src) && /reason: st \? 'stale' : 'gone'/.test(src), 'S #2a 资源版本 mtimeMs+size 失效(外部写入/删除/重建覆盖)');
-ok(/cacheHit: \{ cachedAt: entry\.cachedAt/.test(src), 'S #2a 命中结果带 cacheHit 诚实标记(不冒称重新执行)');
-ok(/outcome: 'skip', reason: 'race'/.test(src) && /c\.signal && c\.signal\.aborted\) return/.test(src), 'S #2a 竞态/中断结果不缓存');
+const cacheSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-read-cache.cjs'), 'utf8');
+ok(/const EXEC_CACHE_WHITELIST = new Set\(\['file_read'\]\)/.test(cacheSource), 'S #2a 白名单首批仅 file_read(版本明确的本地只读,22 §6.1)');
+ok(/FileReadCache\.context\('file_read', args, ctx, p\)/.test(src), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
+ok(/execCacheSameVersion/.test(cacheSource) && /reason: st \? 'stale' : 'gone'/.test(cacheSource), 'S #2a 资源版本 mtimeMs+size 失效(外部写入/删除/重建覆盖)');
+ok(/cacheHit: \{ cachedAt: entry\.cachedAt/.test(cacheSource), 'S #2a 命中结果带 cacheHit 诚实标记(不冒称重新执行)');
+ok(/outcome: 'skip', reason: 'race'/.test(cacheSource) && /c\.signal && c\.signal\.aborted\) return/.test(cacheSource), 'S #2a 竞态/中断结果不缓存');
 for (const flag of ['runtimeToolRetrievalV1', 'runtimeFailureTelemetryV1']) {
   ok(new RegExp(flag + ': false').test(src), `S ${flag} defaults false`);
   ok(new RegExp("config\\[key\\] === true").test(src), `S strict boolean normalization present (${flag})`);
