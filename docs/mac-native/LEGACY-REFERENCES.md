@@ -12,4 +12,4 @@
 | Python 文件解码、错误匹配中的 Windows 格式名称 | 用户文档、导入历史或外部进程错误可带旧格式 | 仅解码或错误解释；恢复建议指向 Mac 能力 |
 | Git 历史、审查报告、历史测试说明、第三方许可 | 可追溯证据与法律声明 | 不进入运行时执行路径；发行内容受白名单约束 |
 
-`resources/macos-process-helper.c` 目前仍为旧监督协议 v2：属于阶段 3 待改造项目，并未宣称达到能效门槛。最终 Full／Slim 产物需在阶段 5 按冻结源码检查；源码裁剪不等同于产物验收。
+`resources/macos-process-helper.c` 已采用监督协议 v3；三轮监督 CPU 对照见 `supervisor-kqueue.json`。最终 Full／Slim 产物仍需在阶段 5 按冻结源码检查；源码裁剪不等同于产物验收。

@@ -175,7 +175,7 @@ try {
   const tw = await call('file_write', { path: '~/x.txt', content: 'hi' });
   ok(tw.ok === true && fs.existsSync(path.join(WS, 'fakehome', 'x.txt')) && !fs.existsSync(path.join(WS, '~')), `W3 ~/x.txt 展开成家目录,不再在工作区里建「~」文件夹(got ${JSON.stringify(tw).slice(0, 140)})`);
   const tw2 = await call('file_write', { path: '%USERPROFILE%' + path.sep + 'y.txt', content: 'hi' });
-  ok(tw2.ok === true && fs.existsSync(path.join(WS, 'fakehome', 'y.txt')) && !fs.existsSync(path.join(WS, '%USERPROFILE%')), `W3b %USERPROFILE%/y.txt 同样展开(got ${JSON.stringify(tw2).slice(0, 140)})`);
+  ok(tw2.ok === true && fs.existsSync(path.join(WS, '%USERPROFILE%', 'y.txt')) && !fs.existsSync(path.join(WS, 'fakehome', 'y.txt')), 'W3b Windows percent variable remains a literal Mac directory');
   fs.writeFileSync(path.join(WS, '~keep.txt'), 'real file named ~keep');
   const keep = await call('file_read', { path: '~keep.txt' });
   ok(keep.ok === true && /real file/.test(keep.content), 'W3c `~keep.txt` 这种真实文件名不被当成家目录');
@@ -183,10 +183,9 @@ try {
   const tw3 = await call('file_write', { path: '~/z.txt', content: 'hi' });
   ok(tw3.ok === false && !fs.existsSync(path.join(OUTSIDE, 'z.txt')), `W3d 展开后落在工作区外 → 围栏照常拒(got ${JSON.stringify(tw3).slice(0, 140)})`);
   for (const [k, v] of Object.entries(prevHome)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
-  const exp = new Function(functionBlock(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8'), 'expandFileToolPathVars') + '; return expandFileToolPathVars;')();
-  ok(exp('~', {}, 'H') === 'H' && exp('~/a', {}, 'H') === 'H/a' && exp('~\\a', {}, 'H') === 'H\\a' && exp('~a', {}, 'H') === '~a' && exp('~$x.docx', {}, 'H') === '~$x.docx', 'W3e 纯函数:~ / ~/ / ~\\ 展开,~a 与 ~$x 不展开');
-  ok(exp('%USERPROFILE%\\a', { USERPROFILE: 'C:\\Users\\u' }, 'H') === 'C:\\Users\\u\\a' && exp('%HOMEPATH%\\a', { HOMEDRIVE: 'C:', HOMEPATH: '\\Users\\u' }, 'H') === 'C:\\Users\\u\\a'
-    && exp('%APPDATA%/x', { APPDATA: 'C:\\A' }, 'H') === 'C:\\A/x' && exp('%NOPE%\\a', {}, 'H') === '%NOPE%\\a' && exp('x/%USERPROFILE%', { USERPROFILE: 'Q' }, 'H') === 'x/%USERPROFILE%', 'W3f 纯函数:%USERPROFILE% / %HOMEPATH% / %APPDATA% 只在开头展开,未知变量原样');
+  const { expandFileToolPath: exp } = require('../ruyi-workbench/app/backend/file-tool-paths.cjs');
+  ok(exp('~', 'H') === 'H' && exp('~/a', 'H') === 'H/a' && exp('~a', 'H') === '~a', 'W3e Mac home prefix expands');
+  ok(exp('%USERPROFILE%/a', 'H') === '%USERPROFILE%/a' && exp('~\\a', 'H') === '~\\a', 'W3f percent variables and backslashes remain literal Mac file names');
 
   /* ═════════ (G) glob / file_list ═════════ */
   const g1 = await call('glob', { pattern: './src/*.js' });

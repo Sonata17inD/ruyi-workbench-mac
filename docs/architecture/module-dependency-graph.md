@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3623 | 3479 | 653 | 61 | 0 | 1 |
+| 92 | 3623 | 3478 | 653 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -77,7 +77,7 @@
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
-| 62 | `12-tool-dispatch.js` | tools | 64 | 136 | 22 |
+| 62 | `12-tool-dispatch.js` | tools | 64 | 135 | 22 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 61 | 276 | 36 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -408,7 +408,7 @@
 | `12-tool-dispatch.js` | `02-session-store.js` | backward | `JOURNAL_KEEP_TURNS`, `JOURNAL_MAX_BEFORE_BYTES`, `SESSION_SCRATCHPAD_LIMITS`, `bridgedWriteRelativePathArg`, `journalDropEntries`, `journalReadIndex`, `journalRecord`, `journalRecordMany`, `journalRevertLogRead`, `journalSessionCtx`, `loadSession`, `normalizeMetaToolArgs`, `normalizeScratchpadKey`, `normalizeScratchpadText`, `normalizeTodoItems`, `readSessionScratchpad`, `scratchpadTotalChars`, `updateSessionScratchpad` |
 | `12-tool-dispatch.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
 | `12-tool-dispatch.js` | `02f-turn-effect-kinds.js` | backward | `normalizeToolInvokeArgs` |
-| `12-tool-dispatch.js` | `03-bridge-guard.js` | backward | `UNC_DENIED_ERROR`, `WriteBoundaryHooks`, `bridgedOfficeScriptGate`, `bridgedReadPathGate`, `buildBrowserOpenSpawn`, `guardFileToolPath`, `isBrowserDocumentTarget`, `journalBridgedWrite`, `normalizeCwd`, `pathWithinRoot`, `realpathForContainment`, `remoteUncDenialResolved` |
+| `12-tool-dispatch.js` | `03-bridge-guard.js` | backward | `UNC_DENIED_ERROR`, `bridgedOfficeScriptGate`, `bridgedReadPathGate`, `buildBrowserOpenSpawn`, `guardFileToolPath`, `isBrowserDocumentTarget`, `journalBridgedWrite`, `normalizeCwd`, `pathWithinRoot`, `realpathForContainment`, `remoteUncDenialResolved` |
 | `12-tool-dispatch.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `12-tool-dispatch.js` | `04-permission-runtime.js` | backward | `bridgedServerUnavailableMessage`, `configureMcpFromTool`, `getBridgedClient`, `logEvent`, `resolveBridge`, `resolveExternalMcpServers`, `safeMcpInventory` |
 | `12-tool-dispatch.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |

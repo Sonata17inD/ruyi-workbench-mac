@@ -5,7 +5,7 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3623,
-    "requiredSymbols": 3479,
+    "requiredSymbols": 3478,
     "edges": 653,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -12492,6 +12492,7 @@
         "FILE_READ_LINE_DEFAULT",
         "FILE_TOOL_HANDLERS",
         "FileReadCache",
+        "FileToolPaths",
         "OBSERVATION_RECALL_MAX_CHARS",
         "OBSERVATION_RECALL_QUOTA",
         "SCRATCHPAD_WRITE_NOTE",
@@ -12510,7 +12511,6 @@
         "checkpointListResult",
         "defaultTextLineEnding",
         "detectTextLineEnding",
-        "expandFileToolPathVars",
         "fileMoveSameFileKind",
         "fileToolBatch",
         "fileToolBeforeForCheckpoint",
@@ -12858,7 +12858,8 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12977,7 +12978,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13004,13 +13006,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "WriteBoundaryHooks",
           "kinds": [
             "read"
           ]
@@ -32404,7 +32399,6 @@
       "to": "03-bridge-guard.js",
       "symbols": [
         "UNC_DENIED_ERROR",
-        "WriteBoundaryHooks",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
         "buildBrowserOpenSpawn",

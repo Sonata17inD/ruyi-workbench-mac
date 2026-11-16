@@ -22,8 +22,7 @@ describe('fileMoveSameFileKind', () => {
     assert.equal(same('/w/a', '/w/a', a, a, 'linux'), 'identical');
     assert.equal(same('/w/a', '/w/b', a, null, 'linux'), null);
   });
-  it('win32 / darwin:同 dev+ino 且仅大小写不同 → case-only', () => {
-    assert.equal(same('C:\\w\\data.csv', 'C:\\w\\DATA.csv', a, a, 'win32'), 'case-only');
+  it('darwin:同 dev+ino 且仅大小写不同 → case-only', () => {
     assert.equal(same('/w/data.csv', '/w/DATA.csv', a, a, 'darwin'), 'case-only');
   });
   it('ino 不同 = 两个文件;linux 上大小写不同的同 ino 只可能是硬链接 → 都不是改名', () => {
@@ -34,31 +33,14 @@ describe('fileMoveSameFileKind', () => {
   });
 });
 
-describe('expandFileToolPathVars', () => {
-  const expand = sliceFn('12-tool-dispatch.js', 'expandFileToolPathVars', ['os', require('os')]);
-  it('~ 只在开头、后接分隔符或结尾时展开', () => {
-    assert.equal(expand('~', {}, 'H'), 'H');
-    assert.equal(expand('~/x', {}, 'H'), 'H/x');
-    assert.equal(expand('~\\x', {}, 'H'), 'H\\x');
-    assert.equal(expand('~x', {}, 'H'), '~x');
-    assert.equal(expand('~$doc.docx', {}, 'H'), '~$doc.docx');
-    assert.equal(expand('a/~/b', {}, 'H'), 'a/~/b');
+describe('Mac file path expansion', () => {
+  const { expandFileToolPath: expand } = require('../../ruyi-workbench/app/backend/file-tool-paths.cjs');
+  it('expands only a leading home directory token', () => {
+    assert.equal(expand('~', 'H'), 'H'); assert.equal(expand('~/x', 'H'), 'H/x');
+    for (const raw of ['~x', '~$doc.docx', 'a/~/b', '~\\x', '%USERPROFILE%/a', '%TEMP%/a']) assert.equal(expand(raw, 'H'), raw);
   });
-  it('%USERPROFILE% / %HOMEPATH% / %APPDATA% / %TEMP% 只在开头展开,未知变量与取不到的原样', () => {
-    assert.equal(expand('%USERPROFILE%\\a', { USERPROFILE: 'C:\\Users\\u' }, 'H'), 'C:\\Users\\u\\a');
-    assert.equal(expand('%userprofile%/a', { USERPROFILE: 'C:\\U' }, 'H'), 'C:\\U/a');
-    assert.equal(expand('%HOMEPATH%\\a', { HOMEDRIVE: 'C:', HOMEPATH: '\\Users\\u' }, 'H'), 'C:\\Users\\u\\a');
-    assert.equal(expand('%APPDATA%', { APPDATA: 'C:\\A' }, 'H'), 'C:\\A');
-    assert.equal(expand('%TEMP%/t', { TEMP: '/tmp' }, 'H'), '/tmp/t');
-    assert.equal(expand('%NOPE%\\a', {}, 'H'), '%NOPE%\\a');
-    assert.equal(expand('%APPDATA%\\a', {}, 'H'), '%APPDATA%\\a');
-    assert.equal(expand('x\\%USERPROFILE%', { USERPROFILE: 'Q' }, 'H'), 'x\\%USERPROFILE%');
-  });
-  it('USERPROFILE 取不到时回落到 home', () => {
-    assert.equal(expand('%USERPROFILE%/a', {}, 'H'), 'H/a');
-  });
-  it('路径里有 NUL → 抛带 ERR_INVALID_ARG_VALUE 的 TypeError(toolCall 出口转成 bad_path 信封)', () => {
-    assert.throws(() => expand('a\0b', {}, 'H'), e => e.code === 'ERR_INVALID_ARG_VALUE');
+  it('rejects NUL before filesystem operations', () => {
+    assert.throws(() => expand('a\0b', 'H'), e => e.code === 'ERR_INVALID_ARG_VALUE');
   });
 });
 

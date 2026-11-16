@@ -45465,61 +45465,12 @@ function withFileToolWriteLock(filePaths, signal, work) {
   return enter(0);
 }
 
-// 工作区目录(相对路径的基准):ctx.workingDir > 会话 cwd > MCP 会话 > 默认工作区。
-async function fileToolWorkspaceDir(ctx) {
-  const session = ctx && ctx.session;
-  const fromCtx = (ctx && ctx.workingDir) || (session && session.cwd);
-  if (fromCtx) return path.resolve(String(fromCtx));
-  const sid = process.env.WCW_SESSION_ID || '';
-  if (sid) {
-    try {
-      const s = await loadSession(sid);
-      if (s && s.cwd) return path.resolve(String(s.cwd));
-    } catch { /* fall through */ }
-  }
-  const cfg = (ctx && ctx.config) || await readConfig().catch(() => null);
-  return normalizeCwd(null, cfg && cfg.defaultWorkspace);
-}
-// 2026-10 走查(R2):路径开头的 `~`(~ / ~/ / ~\\)与 %USERPROFILE% / %HOMEPATH% / %APPDATA% / %LOCALAPPDATA% / %TEMP% / %TMP% 先展开成真实目录。
-// 修前它们按普通相对路径接在工作区下,file_write {path:'~/x.txt'} 在工作区里凭空建出一个名叫「~」的文件夹还回 ok:true。
-// 展开发生在工作区围栏之【前】(围栏照常判展开后的绝对路径:家目录在工作区外就拒);只认路径【开头】且 `~` 后必须是分隔符或结尾,
-// 所以 `~$doc.docx`(Office 锁文件)、`~backup.txt` 这类真实文件名不受影响。取不到环境变量时(Linux 上没有 %USERPROFILE%)用 os.homedir()。
-// 纯函数:env / home 可注入,便于单测。
-function expandFileToolPathVars(raw, env, home) {
-  const s = String(raw == null ? '' : raw);
-  // 路径里混进 NUL(\0)在最前面就拦:Node 的 fs 会抛 ERR_INVALID_ARG_VALUE,而 stat(...).catch(() => null) 这类写法会把它读成
-  // 「文件不存在」(file_delete)。这里抛带 code 的 TypeError,toolCall 的出口把它变成 bad_path 信封。
-  if (s.includes('\0')) { const e = new TypeError('The argument \'path\' must be a string without null bytes'); e.code = 'ERR_INVALID_ARG_VALUE'; throw e; }
-  const E = env || process.env;
-  const h = () => { try { return home || os.homedir(); } catch { return ''; } };
-  if (s === '~' || s.startsWith('~/') || s.startsWith('~\\')) {
-    const hd = h();
-    return hd ? hd + s.slice(1) : s;
-  }
-  const m = /^%([A-Za-z]+)%(?=$|[\\/])/.exec(s);
-  if (!m) return s;
-  const key = m[1].toUpperCase();
-  let val = '';
-  switch (key) {
-    case 'USERPROFILE': val = E.USERPROFILE || h(); break;
-    case 'HOMEPATH': val = E.HOMEPATH ? ((E.HOMEDRIVE || '') + E.HOMEPATH) : h(); break;
-    case 'APPDATA': val = E.APPDATA || ''; break;
-    case 'LOCALAPPDATA': val = E.LOCALAPPDATA || ''; break;
-    case 'TEMP': case 'TMP': val = E[key] || E.TEMP || E.TMP || ''; break;
-    default: return s;
-  }
-  return val ? val + s.slice(m[0].length) : s;
-}
-// root 参数:绝对路径原样规范化;【相对】路径按工作区解析(与 resolveFileToolPath 同一条链),不再落到服务进程的 cwd
-// (修前 root:'src' 会被报成「工作区外」并点名安装目录下的 src,开了越界或本机模型时更会静默列出/搜索启动目录)。
-async function resolveFileToolRoot(args, ctx) {
-  if (args && args.root) {
-    const s = expandFileToolPathVars(String(args.root));
-    if (path.isAbsolute(s)) return path.resolve(s);
-    return path.resolve(await fileToolWorkspaceDir(ctx), s);
-  }
-  return fileToolWorkspaceDir(ctx);
-}
+const FileToolPaths = require('./backend/file-tool-paths.cjs').createFileToolPaths({
+  loadSession, readConfig, normalizeCwd, getMcpSessionId: () => process.env.WCW_SESSION_ID || '',
+});
+function fileToolWorkspaceDir(...args) { return FileToolPaths.fileToolWorkspaceDir(...args); }
+function resolveFileToolRoot(...args) { return FileToolPaths.resolveFileToolRoot(...args); }
+function resolveFileToolPath(...args) { return FileToolPaths.resolveFileToolPath(...args); }
 
 // 未知档一律按 exec 算(与 nativeToolTier 的 unknown → exec 同口径);代理档本身只会是 read/edit/exec。
 function toolInvokeTierCovers(proxyTier, targetTier) {
@@ -46179,12 +46130,7 @@ const FileReadCache = require('./backend/file-read-cache.cjs').createFileReadCac
 // 不再落到服务进程的 process.cwd()(安装目录/启动目录)。此前 file_read('notes.txt') 会被「工作区外」拒绝并报一个根本不存在的
 // 路径;开了「允许工作区外读写」或本机模型时更糟 —— 相对路径的写入静默落进服务的启动目录并回 ok:true。
 // 绝对路径原样规范化(与旧行为一致);报错里的 path 一律是【解析后的绝对路径】。
-async function resolveFileToolPath(raw, ctx) {
-  const s = expandFileToolPathVars(raw);
-  if (path.isAbsolute(s)) return path.resolve(s);
-  return path.resolve(await resolveFileToolRoot({}, ctx), s);
-}
-WriteBoundaryHooks.resolvePath = resolveFileToolPath;   // 03 的写边界预检(弹窗之前)与 handler 同一条解析链,见 03 preflightWriteBoundary
+
 function fileToolNotFound(p, raw) {
   const rel = raw != null && !path.isAbsolute(String(raw));
   return { ok: false, code: 'not_found', error: '文件不存在', path: p,
@@ -46366,7 +46312,7 @@ function fileMoveSameFileKind(from, to, fromSt, toSt, platform) {
   if (!toSt || !fromSt) return null;
   if (from === to) return 'identical';
   const plat = platform || process.platform;
-  if (plat !== 'win32' && plat !== 'darwin') return null;   // 其余平台默认大小写敏感:大小写不同就是两个文件(同 ino = 硬链接,别当改名)
+  if (plat !== 'darwin') return null;   // 其余平台默认大小写敏感:大小写不同就是两个文件(同 ino = 硬链接,别当改名)
   const sameStat = fromSt.dev === toSt.dev && fromSt.ino !== undefined && Number(fromSt.ino) !== 0 && fromSt.ino === toSt.ino;
   return sameStat && String(from).toLowerCase() === String(to).toLowerCase() ? 'case-only' : null;
 }

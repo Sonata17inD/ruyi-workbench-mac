@@ -12356,6 +12356,7 @@
         "FILE_READ_LINE_DEFAULT",
         "FILE_TOOL_HANDLERS",
         "FileReadCache",
+        "FileToolPaths",
         "OBSERVATION_RECALL_MAX_CHARS",
         "OBSERVATION_RECALL_QUOTA",
         "SCRATCHPAD_WRITE_NOTE",
@@ -12374,7 +12375,6 @@
         "checkpointListResult",
         "defaultTextLineEnding",
         "detectTextLineEnding",
-        "expandFileToolPathVars",
         "fileMoveSameFileKind",
         "fileToolBatch",
         "fileToolBeforeForCheckpoint",
@@ -12722,7 +12722,8 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12841,7 +12842,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12868,13 +12870,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "WriteBoundaryHooks",
           "kinds": [
             "read"
           ]
