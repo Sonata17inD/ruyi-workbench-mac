@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3657,
+    "providedSymbols": 3658,
     "requiredSymbols": 3484,
     "edges": 655,
     "forwardEdges": 61,
@@ -9012,6 +9012,7 @@
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
         "AGENT_RUN_TERMINAL",
+        "AgentResults",
         "LEGACY_SPAWN_NOTE",
         "PARALLEL_READ_NEUTRAL",
         "PLAN_DISCOVERY_BLOCKED_TOOLS",
@@ -9175,7 +9176,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -9693,7 +9695,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10435,7 +10438,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10632,7 +10636,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "readAgentRunRecord",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

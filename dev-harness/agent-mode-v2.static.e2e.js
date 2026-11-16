@@ -80,7 +80,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ③ 后台解耦 + 一次投递
 {
-  const s09 = src('09-workflow.js');
+  const s09 = src('09-workflow.js') + src('../backend/agent-results.cjs');
   ok(/onEvent: detachedOnEvent, ctrl: null, onComplete: run => deliverAgentRunEnvelope\(session\.id, run\)/.test(s09), '③ 09 后台分支:不传 ctrl(回合结束不杀)、完成走信封投递');
   ok(/onEvent = evt => baseOnEvent\(evt && typeof evt === 'object' && !evt\.background \? \{ \.\.\.evt, background: true \} : evt\);/.test(s09), '③ 09 runAgentWorkflow 后台 run 的事件打 background:true');
   ok(/background: isBackgroundRun,/.test(s09), '③ 09 run 记录 background 字段');
@@ -153,7 +153,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const s06b = src('../backend/prompt-registry.cjs');
   ok(!/spawn_agent/.test(s06b), '⑧ 06b 不再提 spawn_agent');
   ok(/orchestrate_agents\(\{task, background:true\}\)/.test(s06b) && /agent_result\(\{runId, nodeId\?\}\)/.test(s06b), '⑧ 06b asyncWork 讲 background:true 与 agent_result');
-  const s09 = src('09-workflow.js');
+  const s09 = src('09-workflow.js') + src('../backend/agent-results.cjs');
   ok(/代理并行规则：当主线还有不依赖代理结果的工作可做时，orchestrate_agents 设置 background:true/.test(s09), '⑧ 09 volatile 后台规则');
   ok(!/offeredNames\.has\('spawn_agent'\)/.test(src('06-provider-engine.js')), '⑧ 06 能力层按 orchestrate_agents 门控');
 }

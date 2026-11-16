@@ -8888,6 +8888,7 @@
       "layer": "orchestration",
       "provides": [
         "AGENT_RUN_TERMINAL",
+        "AgentResults",
         "LEGACY_SPAWN_NOTE",
         "PARALLEL_READ_NEUTRAL",
         "PLAN_DISCOVERY_BLOCKED_TOOLS",
@@ -9051,7 +9052,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -9569,7 +9571,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10311,7 +10314,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10508,7 +10512,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "readAgentRunRecord",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
