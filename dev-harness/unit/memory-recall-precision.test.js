@@ -26,7 +26,7 @@ const S = loadServerInternals([
   'buildMemoryConflictMap', 'analyzeMemoryMaintenance', 'saveMemory', 'deleteMemory', 'proposeMemoryRelation', 'confirmMemoryRelation',
 ]);
 
-Object.assign(S, require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled: config => config?.runtimeMemoryVectorRecallV1 === true }));
+Object.assign(S, require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall());
 
 Object.assign(S, require('../../ruyi-workbench/app/backend/memory-prompts.cjs').createMemoryPrompts({ ...S, summaryCap: S.CORE_MEMORY_SUMMARY_CAP }));
 

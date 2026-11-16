@@ -23,7 +23,7 @@ const { memoryProposalLooksSensitive, deleteMemory, memoryGlobalDir, saveMemory,
   'memoryProposalLooksSensitive', 'deleteMemory', 'memoryGlobalDir', 'saveMemory', 'parseFrontmatter',
 ]);
 
-const { memorySearchTerms, rankRelevantMemories } = require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled: () => false });
+const { memorySearchTerms, rankRelevantMemories } = require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall();
 
 // ───────────── [S] ─────────────
 test('[S1] 中文「密码/密钥 + 冒号/等号 + 值」被拦(半角与全角分隔符)', () => {

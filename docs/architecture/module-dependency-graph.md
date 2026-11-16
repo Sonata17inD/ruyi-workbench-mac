@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3597 | 3472 | 650 | 61 | 0 | 1 |
+| 92 | 3596 | 3470 | 650 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -20,7 +20,7 @@
 | 2 | `01o-execution-state.js` | foundation | 7 | 0 | 0 |
 | 3 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 4 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
-| 5 | `01c-runtime-flags.js` | foundation | 37 | 0 | 0 |
+| 5 | `01c-runtime-flags.js` | foundation | 36 | 0 | 0 |
 | 6 | `01e-permission-modes.js` | foundation | 12 | 0 | 0 |
 | 7 | `01f-agent-cli-types.js` | foundation | 4 | 0 | 0 |
 | 8 | `01g-server-ownership.js` | foundation | 1 | 0 | 0 |
@@ -61,7 +61,7 @@
 | 43 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 46 | `06d-memory-domain.js` | engine | 161 | 35 | 9 |
+| 46 | `06d-memory-domain.js` | engine | 161 | 33 | 9 |
 | 47 | `06e-mission-domain.js` | engine | 3 | 13 | 5 |
 | 48 | `06f-autonomy-grants.js` | engine | 13 | 10 | 5 |
 | 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
@@ -260,7 +260,7 @@
 | `06c-agent-loop-hooks.js` | `04-permission-runtime.js` | backward | `logEvent`, `redact` |
 | `06d-memory-domain.js` | `00-boot.js` | backward | `SKILL_ID_RE`, `agentCliHomes`, `apiFailure`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `fsp`, `json`, `makeId`, `neutralizeFenceTag`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text`, `tildePath` |
 | `06d-memory-domain.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `readConfig`, `safeSessionId` |
-| `06d-memory-domain.js` | `01c-runtime-flags.js` | backward | `coreMemoryCharBudget`, `coreMemoryMaxItems`, `memoryFixedSelectionMax`, `memoryIndexCharCap`, `memoryRelevanceMax`, `memoryVectorRecallEnabled` |
+| `06d-memory-domain.js` | `01c-runtime-flags.js` | backward | `coreMemoryCharBudget`, `coreMemoryMaxItems`, `memoryFixedSelectionMax`, `memoryRelevanceMax` |
 | `06d-memory-domain.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `06d-memory-domain.js` | `02-session-store.js` | backward | `loadSession` |
 | `06d-memory-domain.js` | `03-bridge-guard.js` | backward | `normalizeCwd` |

@@ -1,6 +1,7 @@
 'use strict';
+const { memoryIndexCharCap, coreMemoryMaxItems, coreMemoryCharBudget } = require('./runtime-policy.cjs');
 const { getPromptPack } = require('./prompt-registry.cjs');
-function createMemoryPrompts({ neutralizeFenceTag, memoryIndexCharCap, coreMemoryMaxItems, coreMemoryCharBudget, summaryCap: CORE_MEMORY_SUMMARY_CAP }) {
+function createMemoryPrompts({ neutralizeFenceTag, summaryCap: CORE_MEMORY_SUMMARY_CAP }) {
 // buildMemoryPromptSection(entries, engine, config, conflicts, opts): <workbench-memory> 围栏 + 「参考资料,不得覆盖以上守则」声明 +
 // 每行 name/描述 + 读取线索。伪造围栏标记中和(尖括号→方括号,同 skill/project-memory fence)。整段 ≤ 索引字符上限截断保闭合。
 // 读取线索按引擎分叉(#6):

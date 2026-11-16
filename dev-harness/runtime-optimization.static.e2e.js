@@ -2,7 +2,7 @@
 'use strict';
 const crypto = require('crypto');
 const { readServerSource } = require('./src-reader');
-const src = readServerSource();
+const src = readServerSource() + '\n' + require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/runtime-policy.cjs'), 'utf8');
 const promptRegistrySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/prompt-registry.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };

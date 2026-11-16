@@ -29,21 +29,8 @@ function ok(condition, label) {
   else { console.error('FAIL ' + label); failed += 1; }
 }
 
-// ── 把被测代码从 src 里切出来 ────────────────────────────────────────────────────────────────
-// 切点用稳定字符串锚定,锚点消失即判红(而不是静默测了个空壳)。
-function slice(source, startAnchor, endAnchor, label) {
-  const start = source.indexOf(startAnchor);
-  if (start < 0) throw new Error(`切点丢失(起): ${label} :: ${startAnchor}`);
-  const end = endAnchor ? source.indexOf(endAnchor, start) : source.length;
-  if (end < 0) throw new Error(`切点丢失(止): ${label} :: ${endAnchor}`);
-  return source.slice(start, end);
-}
-
 const retrieval = require('../ruyi-workbench/app/backend/retrieval-index.cjs');
-const runtimeFlags = read('01c-runtime-flags.js');
-const flagSlice = slice(runtimeFlags, 'function memoryVectorRecallEnabled(config) {', '\n}\n', 'flag') + '\n}\n';
-const memoryVectorRecallEnabled = new Function(flagSlice + ';return memoryVectorRecallEnabled;')();
-const context = { ...retrieval, ...require('../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled, defaultLimit: 3 }) };
+const context = { ...retrieval, ...require('../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ defaultLimit: 3 }) };
 ok(typeof context.rankRelevantMemories === 'function' && typeof context.rankMemoriesFused === 'function', 'S0 memory recall loads directly from its owning module');
 
 // ── 合成记忆库(40 条)──────────────────────────────────────────────────────────────────────

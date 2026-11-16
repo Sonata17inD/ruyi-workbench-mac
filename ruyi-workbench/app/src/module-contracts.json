@@ -263,7 +263,6 @@
         "historyReadDedupEnabled",
         "memoryFixedSelectionMax",
         "memoryIndexCharCap",
-        "memoryLimit",
         "memoryRelevanceMax",
         "memoryVectorRecallEnabled",
         "observationRecallEnabled",
@@ -6521,16 +6520,14 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryCharBudget",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryMaxItems",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -6542,23 +6539,9 @@
         },
         {
           "provider": "01c-runtime-flags.js",
-          "symbol": "memoryIndexCharCap",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
           "symbol": "memoryRelevanceMax",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "memoryVectorRecallEnabled",
-          "kinds": [
-            "read"
           ]
         },
         {

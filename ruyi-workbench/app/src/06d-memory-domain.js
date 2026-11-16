@@ -1501,7 +1501,7 @@ async function validateMemoryProposalSave(sessionId, proposalId, cwd) {
   return { ok: true };
 }
 
-const MemoryPrompts = require('./backend/memory-prompts.cjs').createMemoryPrompts({ neutralizeFenceTag, memoryIndexCharCap, coreMemoryMaxItems, coreMemoryCharBudget, summaryCap: CORE_MEMORY_SUMMARY_CAP });
+const MemoryPrompts = require('./backend/memory-prompts.cjs').createMemoryPrompts({ neutralizeFenceTag, summaryCap: CORE_MEMORY_SUMMARY_CAP });
 function buildMemoryPromptSection(...args) { return MemoryPrompts.buildMemoryPromptSection(...args); }
 function buildMemoryTurnSection(...args) { return MemoryPrompts.buildMemoryTurnSection(...args); }
 function memoryCoreLine(...args) { return MemoryPrompts.memoryCoreLine(...args); }
@@ -1685,7 +1685,7 @@ async function analyzeMemoryMaintenance(cwd, scope, opts = {}) {
 // 不读取正文，故每轮成本与文件大小无关；正文仍由模型在确认相关后按需读取。
 // 停用词只剔「几乎每句话都有、对记忆检索零区分度」的虚词。英文这一半必须够全:词项是拿去在 id/name/description 上做子串匹配的,
 // to / in / it / you 这类短词是几乎所有英文条目(甚至 "tool"、"within"、"city")的子串,留着它们等于任何英文提问都能「命中」。
-const MemoryRecall = require('./backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled, defaultLimit: MEMORY_RELEVANCE_MAX });
+const MemoryRecall = require('./backend/memory-recall.cjs').createMemoryRecall({ defaultLimit: MEMORY_RELEVANCE_MAX });
 function rankRelevantMemoriesScored(...args) { return MemoryRecall.rankRelevantMemoriesScored(...args); }
 function memorySearchTerms(...args) { return MemoryRecall.memorySearchTerms(...args); }
 function memoryRetrievalKey(...args) { return MemoryRecall.memoryRetrievalKey(...args); }

@@ -1,7 +1,8 @@
 'use strict';
+const { memoryVectorRecallEnabled } = require('./runtime-policy.cjs');
 const { createRetrievalCorpusCache, rankRetrievalCorpus, reciprocalRankFusion } = require('./retrieval-index.cjs');
 
-function createMemoryRecall({ memoryVectorRecallEnabled, defaultLimit: MEMORY_RELEVANCE_MAX = 8 }) {
+function createMemoryRecall({ defaultLimit: MEMORY_RELEVANCE_MAX = 8 } = {}) {
 const MEMORY_QUERY_STOP = new Set([
   // 英文:冠词/连词/介词/代词/助动词/疑问词/高频副词与口语动词
   'the', 'and', 'for', 'with', 'this', 'that', 'from', 'into', 'please', 'help', 'look', 'check', 'today',

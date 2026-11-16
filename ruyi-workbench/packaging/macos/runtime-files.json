@@ -249,7 +249,8 @@
     "app/backend/agent-role-policy.cjs",
     "app/backend/memory-prompts.cjs",
     "app/backend/memory-relations.cjs",
-    "app/backend/memory-store.cjs"
+    "app/backend/memory-store.cjs",
+    "app/backend/runtime-policy.cjs"
   ],
   "acc": [
     "LICENSE",
