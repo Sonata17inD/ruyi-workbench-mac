@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3600,
-    "requiredSymbols": 3473,
-    "edges": 651,
+    "providedSymbols": 3599,
+    "requiredSymbols": 3472,
+    "edges": 650,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -6323,6 +6323,7 @@
         "MEMORY_RULE_TOUCH_MS",
         "MEMORY_TYPES",
         "MEMORY_USAGE_TOUCH_MS",
+        "MemoryPrompts",
         "MemoryRecall",
         "accMemoryImportMarker",
         "accMemoryImportStore",
@@ -6393,8 +6394,6 @@
         "memoryReviewDue",
         "memorySearchTerms",
         "memorySelectionSignature",
-        "memorySupersededMarks",
-        "memorySupersededTag",
         "memoryToolLibraryCurrent",
         "memoryToolLibraryVersion",
         "memoryToolSupersededStatus",
@@ -6525,7 +6524,7 @@
           "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6623,14 +6622,16 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryCharBudget",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryMaxItems",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6644,7 +6645,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "memoryIndexCharCap",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6699,13 +6700,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "providerRawCompletion",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "getPromptPack",
           "kinds": [
             "call"
           ]
@@ -30602,14 +30596,6 @@
       "to": "06-provider-engine.js",
       "symbols": [
         "providerRawCompletion"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06d-memory-domain.js",
-      "to": "06b-prompt-registry.js",
-      "symbols": [
-        "getPromptPack"
       ],
       "direction": "backward"
     },

@@ -6219,6 +6219,7 @@
         "MEMORY_RULE_TOUCH_MS",
         "MEMORY_TYPES",
         "MEMORY_USAGE_TOUCH_MS",
+        "MemoryPrompts",
         "MemoryRecall",
         "accMemoryImportMarker",
         "accMemoryImportStore",
@@ -6289,8 +6290,6 @@
         "memoryReviewDue",
         "memorySearchTerms",
         "memorySelectionSignature",
-        "memorySupersededMarks",
-        "memorySupersededTag",
         "memoryToolLibraryCurrent",
         "memoryToolLibraryVersion",
         "memoryToolSupersededStatus",
@@ -6421,7 +6420,7 @@
           "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6519,14 +6518,16 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryCharBudget",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "coreMemoryMaxItems",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6540,7 +6541,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "memoryIndexCharCap",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6595,13 +6596,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "providerRawCompletion",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "getPromptPack",
           "kinds": [
             "call"
           ]
