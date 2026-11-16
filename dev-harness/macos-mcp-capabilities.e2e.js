@@ -40,7 +40,7 @@ let runtime;
     t.ok(desktopSearch.ok && !desktopSearch.matches.some(item => windowsOnly.includes(item.name)),
       'adaptive MCP discovery excludes the same Windows-only tools');
     const unsupported = await client.callTool('tool_invoke_exec', { name: 'keyboard_send_keys', arguments: {} }, 5000);
-    t.ok(!unsupported.ok && unsupported.code === 'tool-disabled' && unsupported.error.includes('platform.unsupported'),
+    t.ok(!unsupported.ok && unsupported.code === 'unknown-tool' && unsupported.error.includes('tool not found'),
       'stale MCP proxy invocation cannot reach a Windows-only handler');
     t.ok(!names.includes('desktop_screenshot'), 'MCP listing removes capture when its Mac helper is missing');
     const missingCapture = await client.callTool('tool_invoke_exec',{name:'desktop_screenshot',arguments:{}},5000);

@@ -54,10 +54,10 @@ const HOME = path.join(os.tmpdir(), 'wcw-shell-mcp-guard-e2e');
     const call2 = await rpc('tools/call', { name: 'shell_send', arguments: { shellId: 'x1', input: 'echo hi' } });
     ok(call2.result && call2.result.isError === true, 'shell_send in MCP child → isError:true');
 
-    // Sanity: a normal one-shot tool (powershell_run) still works in the child (guard is shell-specific).
+    // Sanity: a normal one-shot tool (shell_run) still works in the child (guard is shell-specific).
     const ps = await rpc('tools/call', { name: shellTool, arguments: { command: echo('OK123'), timeoutMs: 8000 } });
     const psOut = (ps.result && ps.result.content && ps.result.content[0] && ps.result.content[0].text) || '';
-    ok(ps.result && ps.result.isError === false && psOut.includes('OK123'), 'powershell_run still works in MCP child (guard is shell-specific)');
+    ok(ps.result && ps.result.isError === false && psOut.includes('OK123'), 'shell_run still works in MCP child (guard is shell-specific)');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e.message || e)); fail++; }
   finally {
     try { if (child.pid) killOwnTree(child); } catch { /* ignore */ }

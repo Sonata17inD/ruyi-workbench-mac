@@ -13339,8 +13339,6 @@
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
         "resolveNodeModel",
-        "sendMcp",
-        "sendMcpNotification",
         "setProxyModelsCache",
         "setSessionSkillsCore",
         "sleep",
@@ -13587,23 +13585,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "pathToFileURL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "readJsonBody",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readline",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13617,14 +13601,15 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13848,7 +13833,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13974,7 +13960,8 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "observationRecallEnabled",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14345,7 +14332,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killAllMcpClients",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14464,7 +14452,8 @@
           "provider": "05-claude-engine.js",
           "symbol": "maskProviders",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14498,13 +14487,6 @@
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "applyKimiStatusToSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "fileURLToPath",
           "kinds": [
             "call"
           ]
@@ -14632,7 +14614,8 @@
           "provider": "06-provider-engine.js",
           "symbol": "runtimeToolRequirementsMet",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14870,7 +14853,8 @@
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14905,14 +14889,15 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "policyDesktopOverrideFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14961,7 +14946,7 @@
           "provider": "07-autonomy.js",
           "symbol": "toolPackForName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15157,7 +15142,7 @@
           "provider": "10-context-governance.js",
           "symbol": "truncateToolResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
