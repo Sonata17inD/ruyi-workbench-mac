@@ -1,3 +1,3 @@
 Object.assign(ToolboxHooks, require('./backend/toolbox-services.cjs').createToolboxServices({
-  ProcessRuntime, killChildTree, readConfig, mutateConfig, enabledToolboxComponents, invalidateToolboxCache, scanToolboxComponents, logEvent, redact, safeJsonParse,
+  ProcessRuntime, killChildTree, readConfig, mutateConfig, registry: ToolboxRegistry, logEvent, redact, safeJsonParse,
 }));

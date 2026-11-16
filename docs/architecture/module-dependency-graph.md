@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3561 | 3447 | 645 | 61 | 0 | 1 |
+| 92 | 3555 | 3444 | 645 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -43,9 +43,9 @@
 | 25 | `03-bridge-guard.js` | foundation | 102 | 29 | 7 |
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 28 | `04-permission-runtime.js` | foundation | 152 | 48 | 10 |
+| 28 | `04-permission-runtime.js` | foundation | 146 | 47 | 10 |
 | 29 | `04-desktop-shell.js` | foundation | 1 | 3 | 3 |
-| 30 | `04f-toolbox-services.js` | foundation | 0 | 11 | 4 |
+| 30 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 32 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 33 | `04i-provider-wire.js` | foundation | 37 | 17 | 2 |
@@ -171,7 +171,7 @@
 | `04-desktop-shell.js` | `00-boot.js` | backward | `spawnDetachedChecked` |
 | `04-desktop-shell.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04-desktop-shell.js` | `04-permission-runtime.js` | backward | `killChildTree` |
-| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `text` |
+| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `cp`, `crypto`, `dataRoot`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `path`, `paths`, `safeJsonParse`, `text` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
 | `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `bridgedEnvKeyStripped`, `detectDesktopMcp`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `mutateConfig`, `readConfig`, `selectedAgentCli` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `ProcessRuntimeHooks` |
@@ -184,7 +184,7 @@
 | `04f-toolbox-services.js` | `00-boot.js` | backward | `safeJsonParse` |
 | `04f-toolbox-services.js` | `01-config.js` | backward | `mutateConfig`, `readConfig` |
 | `04f-toolbox-services.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
-| `04f-toolbox-services.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `enabledToolboxComponents`, `invalidateToolboxCache`, `killChildTree`, `logEvent`, `redact`, `scanToolboxComponents` |
+| `04f-toolbox-services.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `ToolboxRegistry`, `killChildTree`, `logEvent`, `redact` |
 | `04h-provider-http.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `04i-provider-anthropic.js` | `04h-provider-http.js` | backward | `providerBaseWithV1` |
 | `04i-provider-wire.js` | `04h-provider-http.js` | backward | `providerApiBase`, `providerBaseWithV1`, `providerCompletionUrl`, `providerRequestHeaders` |

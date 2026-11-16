@@ -2466,9 +2466,8 @@
         "PermissionWaitHooks",
         "REDACT_PATTERNS",
         "SENSITIVE_URL_PARAM_RE",
-        "TOOLBOX_COMPONENT_MAX",
-        "TOOLBOX_PROVIDES_TYPES",
         "ToolboxHooks",
+        "ToolboxRegistry",
         "_dropInCache",
         "_expandMcpVar",
         "_nativeToolNameSet",
@@ -2479,8 +2478,6 @@
         "_tomlSplitTop",
         "_tomlStripComment",
         "_tomlValue",
-        "_toolboxCache",
-        "_toolboxSkipLogged",
         "appendLiveTail",
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
@@ -2515,7 +2512,6 @@
         "installActiveChildEventFanout",
         "invalidateMcpDropInCache",
         "invalidateMcpRuntime",
-        "invalidateToolboxCache",
         "isClaudeResumeMissingError",
         "isEquivalentDesktopAccServer",
         "isNativeToolName",
@@ -2576,10 +2572,8 @@
         "sameClaudeResumeCwd",
         "sanitizeFsSegmentName",
         "sanitizeServerId",
-        "sanitizeToolboxComponent",
         "scanMcpDropIns",
         "scanMcpSources",
-        "scanToolboxComponents",
         "sessionExecutionCheck",
         "sessionExecutionCheckRewind",
         "sessionExecutionObservation",
@@ -2674,13 +2668,6 @@
           "symbol": "nowIso",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -2996,20 +2983,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "enabledToolboxComponents",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "invalidateToolboxCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "read"
@@ -3031,14 +3004,14 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "scanToolboxComponents",
+          "symbol": "ToolboxHooks",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "ToolboxHooks",
+          "symbol": "ToolboxRegistry",
           "kinds": [
             "read"
           ]

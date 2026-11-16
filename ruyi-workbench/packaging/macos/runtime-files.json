@@ -260,6 +260,7 @@
     "app/backend/memory-store.cjs",
     "app/backend/runtime-policy.cjs",
     "app/backend/text-codecs.cjs",
+    "app/backend/toolbox-registry.cjs",
     "app/backend/toolbox-services.cjs"
   ],
   "acc": [

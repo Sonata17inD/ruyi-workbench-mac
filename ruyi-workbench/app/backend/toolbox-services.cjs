@@ -2,7 +2,8 @@
 const http = require('node:http');
 const path = require('node:path');
 
-function createToolboxServices({ ProcessRuntime, killChildTree, readConfig, mutateConfig, enabledToolboxComponents, invalidateToolboxCache, scanToolboxComponents, logEvent, redact, safeJsonParse, fetch = globalThis.fetch }) {
+function createToolboxServices({ ProcessRuntime, killChildTree, readConfig, mutateConfig, registry, logEvent, redact, safeJsonParse, fetch = globalThis.fetch }) {
+  const { enabled: enabledToolboxComponents, invalidate: invalidateToolboxCache, scan: scanToolboxComponents } = registry || {};
   // ── 04f · ruyi-toolbox 服务类组件:拉起、探活、接成能力端点、回收 ─────────────────────────────────────────
   // 用户 2026-09-21:「如意启动时自动探测本机上是否有这个 asr shim,有的话自动拉起并自动配置好,开箱即用」,
   // 随后扩成「toolbox 下的都是这样」。对接面只有 ruyi-toolbox 仓的 docs/00-component-registry.md;登记文件的读取与

@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3561,
-    "requiredSymbols": 3447,
+    "providedSymbols": 3555,
+    "requiredSymbols": 3444,
     "edges": 645,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -2534,9 +2534,8 @@
         "PermissionWaitHooks",
         "REDACT_PATTERNS",
         "SENSITIVE_URL_PARAM_RE",
-        "TOOLBOX_COMPONENT_MAX",
-        "TOOLBOX_PROVIDES_TYPES",
         "ToolboxHooks",
+        "ToolboxRegistry",
         "_dropInCache",
         "_expandMcpVar",
         "_nativeToolNameSet",
@@ -2547,8 +2546,6 @@
         "_tomlSplitTop",
         "_tomlStripComment",
         "_tomlValue",
-        "_toolboxCache",
-        "_toolboxSkipLogged",
         "appendLiveTail",
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
@@ -2583,7 +2580,6 @@
         "installActiveChildEventFanout",
         "invalidateMcpDropInCache",
         "invalidateMcpRuntime",
-        "invalidateToolboxCache",
         "isClaudeResumeMissingError",
         "isEquivalentDesktopAccServer",
         "isNativeToolName",
@@ -2644,10 +2640,8 @@
         "sameClaudeResumeCwd",
         "sanitizeFsSegmentName",
         "sanitizeServerId",
-        "sanitizeToolboxComponent",
         "scanMcpDropIns",
         "scanMcpSources",
-        "scanToolboxComponents",
         "sessionExecutionCheck",
         "sessionExecutionCheckRewind",
         "sessionExecutionObservation",
@@ -2742,13 +2736,6 @@
           "symbol": "nowIso",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -3068,20 +3055,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "enabledToolboxComponents",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "invalidateToolboxCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "read"
@@ -3103,14 +3076,14 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "scanToolboxComponents",
+          "symbol": "ToolboxHooks",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "ToolboxHooks",
+          "symbol": "ToolboxRegistry",
           "kinds": [
             "read"
           ]
@@ -29323,7 +29296,6 @@
         "fsp",
         "makeId",
         "nowIso",
-        "os",
         "path",
         "paths",
         "safeJsonParse",
@@ -29451,12 +29423,10 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "ToolboxHooks",
-        "enabledToolboxComponents",
-        "invalidateToolboxCache",
+        "ToolboxRegistry",
         "killChildTree",
         "logEvent",
-        "redact",
-        "scanToolboxComponents"
+        "redact"
       ],
       "direction": "backward"
     },
