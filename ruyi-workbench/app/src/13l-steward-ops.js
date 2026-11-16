@@ -520,7 +520,7 @@ async function stewardRunResumeTier(sessionId, runId, config) {
   }
   const run = safeJsonParse(raw, null);
   if (!run) return 'unknown';
-  return String(classifyRunResumeTier(run, await agentRunPermissionMode(sessionId, config || {})).tier || '');
+  return String(AgentRecovery.classifyRunResumeTier(run, await AgentRecovery.agentRunPermissionMode(sessionId, config || {})).tier || '');
 }
 async function stewardImplRunAction(args, ctx, config) {
   const sessionId = safeSessionId(args.sessionId);

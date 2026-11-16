@@ -906,7 +906,7 @@ try {
     const rd = f => fs.readFileSync(path.join(SRC, f), 'utf8');
     // data-safety P1-3:超时兜底那条路【明知有残留竞态】仍然写下去(拒绝会把「会丢字段」换成
     // 「权限 chip 用不了」,§8.6 不接受)。行为不改,但必须留痕 —— 事后能对账「这次强制写发生过」。
-    const src02 = rd('02-session-store.js');
+    const src02 = rd('../backend/session-meta-updates.cjs');
     ok(/session_meta_defer_forced/.test(src02), 'I1 P1-3:超时兜底强制写落一条审计事件(session_meta_defer_forced)');
     ok(/stillActive: activeChildren\.has\(id\), stillSettling: turnSettlers\.has\(id\)/.test(src02),
       'I1b 审计事件写清楚当时会话还在不在活回合/收尾窗口里');

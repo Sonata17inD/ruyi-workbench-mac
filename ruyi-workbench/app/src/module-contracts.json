@@ -1342,22 +1342,19 @@
         "SESSION_HEAD_READ_RETRIES",
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
-        "SESSION_META_DEFER_TIMEOUT_MS",
-        "SESSION_META_STALE_REPLAYS",
         "SESSION_NOTES_MAX_CHARS",
         "SESSION_SCRATCHPAD_LIMITS",
         "SESSION_SCRATCHPAD_SCHEMA",
         "SESSION_STORAGE_VERSION",
         "SESSION_TOMBSTONE",
-        "STEWARD_WATCH_NOTE_MAX",
         "SessionBodies",
+        "SessionMetaUpdates",
         "SessionPersistence",
         "SessionRewind",
         "appendDisplayMessagesToProviderHistory",
         "appendIntervention",
         "appendMissionChangeRecord",
         "applyMissionUpdate",
-        "applySessionMetaPatch",
         "applySessionTitleOverride",
         "archiveMissionResult",
         "asResultObject",
@@ -1505,7 +1502,6 @@
         "sessionMessagesDelta",
         "sessionMessagesStamp",
         "sessionMeta",
-        "sessionMetaDeferChains",
         "sessionMetaIsSteward",
         "sessionMissionId",
         "sessionNotesPath",
@@ -1525,13 +1521,11 @@
         "setSessionTitleOverride",
         "settleIntervention",
         "sortSessionMetas",
-        "stewardWatchNoteFrom",
         "stopMissionAgentRuns",
         "syncProviderHistoryFromDisplay",
         "toolImageSessionTag",
         "transitionInterventionState",
         "updateSessionMeta",
-        "updateSessionMetaAttempt",
         "updateSessionScratchpad",
         "waitMissionTurnSettled",
         "withJournalWriteLock",
@@ -1822,14 +1816,14 @@
           "provider": "02d-session-overrides.js",
           "symbol": "normalizeSessionDesktopTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "normalizeSessionPermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1879,7 +1873,8 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -19377,9 +19372,9 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunPermissionMode",
+          "symbol": "AgentRecovery",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

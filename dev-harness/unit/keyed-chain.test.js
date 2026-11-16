@@ -53,14 +53,14 @@ test('[K3] 结算后自清;新接上的链不被旧链删掉', async () => {
 test('[K4] 修前的手写副本都已收编', () => {
   const handRolled = /(\w+Chains|\w+Locks)\.get\([^)]*\) \|\| Promise\.resolve\(\);\s*\n\s*const \w+ = \w+\.catch\(\(\) => \{\}\)\.then/g;
   const found = [];
-  for (const f of ['02-session-store.js', '08-agent-runs.js']) {
+  for (const f of ['02-session-store.js', '08-agent-runs.js', '../backend/session-meta-updates.cjs']) {
     const text = fs.readFileSync(path.join(SRC, f), 'utf8');
     for (const m of text.matchAll(handRolled)) found.push(`${f}:${m[1]}`);
   }
   // 仍手写、且有理由的:saveSession / bumpMissionChangeSeq 的 sessionWriteChains(在飞快照被别处读)、
   // appendIntervention(结算推送 + 压缩计数,且其写入块被 readfiletail-torntail (c2) 原样抠出执行)、
   // setSessionMetaDeferred(自己的延后合并语义)。
-  const allowed = new Set(['02-session-store.js:sessionWriteChains', '02-session-store.js:interventionWriteChains', '02-session-store.js:sessionMetaDeferChains']);
+  const allowed = new Set(['02-session-store.js:sessionWriteChains', '02-session-store.js:interventionWriteChains', '../backend/session-meta-updates.cjs:sessionMetaDeferChains']);
   assert.deepEqual(found.filter(x => !allowed.has(x)), [], '新写链请用 runKeyedChain(00-boot)');
 });
 
