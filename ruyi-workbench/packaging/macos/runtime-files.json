@@ -301,7 +301,8 @@
     "app/backend/file-walker.cjs",
     "app/backend/content-search.cjs",
     "app/backend/privacy-sources.cjs",
-    "app/backend/background-jobs.cjs"
+    "app/backend/background-jobs.cjs",
+    "app/backend/shell-sessions.cjs"
   ],
   "acc": [
     "LICENSE",

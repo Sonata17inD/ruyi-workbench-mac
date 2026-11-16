@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3445,
-    "requiredSymbols": 3497,
-    "edges": 658,
+    "providedSymbols": 3414,
+    "requiredSymbols": 3492,
+    "edges": 657,
     "forwardEdges": 66,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -11632,26 +11632,15 @@
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
         "BackgroundJobs",
-        "MAC_SHELL_COMMAND_MAX_BYTES",
-        "MAC_SHELL_DRIVER",
-        "SHELL_BUF_MAX",
-        "SHELL_GLOBAL_MAX",
-        "SHELL_IDLE_MS",
-        "SHELL_OUTPUT_DEFAULT_CHARS",
-        "SHELL_OUTPUT_MAX_CHARS",
-        "SHELL_OUTPUT_MIN_CHARS",
-        "SHELL_POLL_WAIT_MAX_MS",
+        "ShellSessions",
         "_rgProbe",
         "_rgProbeInflight",
         "adaptiveCatalogForMcp",
-        "backgroundShellCountsBySession",
         "binaryReadHint",
-        "bindMacShellProtocol",
         "boundedReadPage",
         "claudeMdAudit",
         "codeReviewScan",
         "codebaseSymbolSearch",
-        "completeBackgroundJob",
         "crc32",
         "dataProfile",
         "debugHypothesis",
@@ -11661,7 +11650,6 @@
         "downloadFileNameFrom",
         "explicitAllowDirs",
         "frontendAudit",
-        "genShellId",
         "gitCommit",
         "gitDiff",
         "gitLog",
@@ -11673,11 +11661,8 @@
         "httpGetGuarded",
         "httpRequest",
         "isBinaryReadPath",
-        "isHighSurrogate",
-        "isLowSurrogate",
         "killAllShellSessions",
         "levenshtein",
-        "macShellSendChains",
         "peekRgProbe",
         "persistBackgroundJob",
         "privacyProjectSearch",
@@ -11700,37 +11685,21 @@
         "rgProbeResolve",
         "runGit",
         "runRgOwned",
-        "scheduleShellReaper",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
         "searchMaxFileBytes",
-        "sendMacShell",
         "sensitiveGlobsForRg",
-        "sessionBackgroundShellRows",
-        "sessionShellOutputTail",
-        "shellAppend",
-        "shellCleanupFields",
-        "shellEndOffset",
-        "shellIdValid",
-        "shellIdleReaper",
         "shellKill",
-        "shellLastLine",
         "shellList",
-        "shellLookup",
         "shellMcpChildGuard",
-        "shellOutputCap",
         "shellPoll",
         "shellSend",
-        "shellSendResult",
         "shellSessions",
-        "shellShapeOutput",
-        "shellSliceFrom",
         "shellStart",
         "shellVisibleTo",
         "sourceViewOf",
         "ssrfCheck",
-        "stopMacShell",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -11747,13 +11716,6 @@
         "zipWrite"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "dataRoot",
@@ -11793,14 +11755,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
             "read"
           ]
         },
@@ -11822,7 +11776,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11855,28 +11809,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "StringDecoder",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformShellEnvironment",
           "kinds": [
             "call"
           ]
@@ -11906,7 +11839,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11914,7 +11846,6 @@
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12041,7 +11972,6 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12056,7 +11986,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -32099,29 +32029,17 @@
         "EventStreamHooks",
         "RUYI_EVENTS",
         "RUYI_PATH_BEFORE_VENDOR",
-        "StringDecoder",
         "URL",
-        "crypto",
         "dataRoot",
         "dataRootAliases",
         "fs",
         "fsp",
         "nowIso",
-        "os",
         "path",
         "paths",
         "runKeyedChain",
         "ruyiVendorBinDir",
-        "samePathEntry",
-        "text"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "11-native-tools.js",
-      "to": "00-platform-runtime.js",
-      "symbols": [
-        "platformShellEnvironment"
+        "samePathEntry"
       ],
       "direction": "backward"
     },

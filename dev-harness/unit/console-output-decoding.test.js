@@ -63,7 +63,7 @@ test('[E2] 流式解码:切在汉字中间不出替换符,尾巴 flush 时吐出
 });
 
 test('Mac shell decodes UTF-8 incrementally and uses its private completion channel', () => {
-  const shell = functionBlock(readSrcFile('11-native-tools.js'), 'shellStart');
+  const shell = functionBlock(readSrcFile('../backend/shell-sessions.cjs'), 'shellStart');
   assert.ok(shell.includes("new StringDecoder('utf8')"));
   assert.ok(shell.includes('bindMacShellProtocol(sess)'));
   assert.ok(!shell.includes('powershell.exe'));
