@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3588,
-    "requiredSymbols": 3450,
+    "providedSymbols": 3561,
+    "requiredSymbols": 3447,
     "edges": 645,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -3036,60 +3036,11 @@
       "order": 30,
       "layer": "foundation",
       "note": "ruyi-toolbox 服务类组件：拉起／探活／接成能力端点／回收（登记读取与 MCP 并入住 04）",
-      "provides": [
-        "TOOLBOX_HEALTH_DEADLINE_MS",
-        "TOOLBOX_HEALTH_POLL_MS",
-        "TOOLBOX_PROBE_TIMEOUT_MS",
-        "TOOLBOX_STDERR_TAIL",
-        "ensureToolboxServiceForProvider",
-        "finishToolboxCleanup",
-        "onAsrSelectionChanged",
-        "reconcileToolbox",
-        "startToolboxService",
-        "stopAllToolboxServicesSync",
-        "stopToolboxService",
-        "syncToolboxProviders",
-        "toolboxDesiredProviders",
-        "toolboxEntry",
-        "toolboxFreePort",
-        "toolboxHealthForProvider",
-        "toolboxKillTree",
-        "toolboxListenOnce",
-        "toolboxPortFree",
-        "toolboxProbe",
-        "toolboxProviderId",
-        "toolboxReconcileChain",
-        "toolboxRetryCooldownMs",
-        "toolboxServices",
-        "toolboxStatusView",
-        "toolboxUnloadForProvider",
-        "toolboxUnloadTargets"
-      ],
+      "provides": [],
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "http",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -3098,14 +3049,14 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3119,42 +3070,42 @@
           "provider": "04-permission-runtime.js",
           "symbol": "enabledToolboxComponents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateToolboxCache",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "scanToolboxComponents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -29474,10 +29425,7 @@
       "from": "04f-toolbox-services.js",
       "to": "00-boot.js",
       "symbols": [
-        "http",
-        "path",
-        "safeJsonParse",
-        "text"
+        "safeJsonParse"
       ],
       "direction": "backward"
     },

@@ -30,7 +30,7 @@ function heartbeat(file) {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP native supervisor requires macOS'); return; }
     if (!fs.existsSync(helper)) throw new Error('Build the macOS helper before running this test');
-    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient', 'killKimiAcpTerminal', 'stopToolboxService', 'toolboxServices', 'cleanupKimiAcpTerminals', 'handleKimiAcpTerminalRequest']);
+    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient', 'killKimiAcpTerminal', 'cleanupKimiAcpTerminals', 'handleKimiAcpTerminalRequest']);
     runtime = S.ProcessRuntime;
     const capability = runtime.helperCapability();
     t.ok(capability.ready && capability.installed && capability.protocolVersion === 3 && Object.isFrozen(capability),
@@ -222,13 +222,16 @@ function heartbeat(file) {
       const collected = await S.cleanupKimiAcpTerminals(cleanupReg);
       t.ok(collected.unconfirmed === 1 && cleanupReg.kimiAcpCleanupIncomplete === 1 && cleanupEvents.length === 1,
         'background Kimi terminal cleanup records failure without rejecting owner teardown');
-      const entry = { owned: true, child: incompleteChild, state: 'running', error: '' };
-      S.toolboxServices.set('incomplete-test', entry);
-      try {
-        S.stopToolboxService('incomplete-test');
-        await until(() => entry.state === 'failed');
-        t.ok(entry.cleanup.incomplete && entry.error === 'cleanup-unconfirmed', 'toolbox preserves failed cleanup instead of reporting stopped');
-      } finally { S.toolboxServices.delete('incomplete-test'); }
+      const toolbox = require('../ruyi-workbench/app/backend/toolbox-services.cjs').createToolboxServices({
+        ProcessRuntime: runtime, killChildTree: child => runtime.stop(child),
+        logEvent() {}, safeJsonParse: JSON.parse,
+        fetch: async () => ({ ok: true, text: async () => '{}' }),
+      });
+      const component = { id: 'incomplete-test', service: { port: 0, health: '/health', component: 'fixture', portEnv: 'PORT' }, run: { command: process.execPath, args: [], env: fixtureChildEnv() } };
+      const entry = await toolbox.start(component);
+      toolbox.stop(component.id);
+      await until(() => entry.cleanup?.incomplete);
+      t.ok(entry.state === 'failed' && entry.cleanup.incomplete, 'toolbox preserves failed cleanup instead of reporting stopped');
     } finally { S.ProcessRuntimeHooks.helperPath = normalHelperPath; }
 
     for (const mode of ['exit', 'sigkill']) {

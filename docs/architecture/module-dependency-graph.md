@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3588 | 3450 | 645 | 61 | 0 | 1 |
+| 92 | 3561 | 3447 | 645 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -45,7 +45,7 @@
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 28 | `04-permission-runtime.js` | foundation | 152 | 48 | 10 |
 | 29 | `04-desktop-shell.js` | foundation | 1 | 3 | 3 |
-| 30 | `04f-toolbox-services.js` | foundation | 27 | 14 | 4 |
+| 30 | `04f-toolbox-services.js` | foundation | 0 | 11 | 4 |
 | 31 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 32 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 33 | `04i-provider-wire.js` | foundation | 37 | 17 | 2 |
@@ -181,7 +181,7 @@
 | `04-permission-runtime.js` | `06d-memory-domain.js` | forward | `legacyAccMemoryMigrationComplete` |
 | `04-permission-runtime.js` | `13d-core-domain-routes.js` | forward | `decideIntervention` |
 | `04-permission-runtime.js` | `13f-native-tool-schemas.js` | forward | `MCP_TOOLS` |
-| `04f-toolbox-services.js` | `00-boot.js` | backward | `http`, `path`, `safeJsonParse`, `text` |
+| `04f-toolbox-services.js` | `00-boot.js` | backward | `safeJsonParse` |
 | `04f-toolbox-services.js` | `01-config.js` | backward | `mutateConfig`, `readConfig` |
 | `04f-toolbox-services.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `04f-toolbox-services.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `enabledToolboxComponents`, `invalidateToolboxCache`, `killChildTree`, `logEvent`, `redact`, `scanToolboxComponents` |
