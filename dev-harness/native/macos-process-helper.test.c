@@ -37,6 +37,16 @@ int main(void) {
     if (!wait_stopped(child, false)) failures++;
     puts("CHECK helper-stopped target resumes on interrupted cleanup");
 
+    // Simulate a successful stop request overtaken by SIGCONT before confirmation.
+    if (signal_verified(&row, SIGSTOP) != 1 || !wait_stopped(child, true)) failures++;
+    if (signal_verified(&row, SIGCONT) != 1 || !wait_stopped(child, false)) failures++;
+    row.resume_after_stop = false;
+    if (!await_quiescent(&row, monotonic_milliseconds() + 100)
+        || !row.resume_after_stop || !wait_stopped(child, true)) failures++;
+    resume_stopped(&row, 1);
+    if (!wait_stopped(child, false)) failures++;
+    puts("CHECK overtaken stop is retried and restoration ownership retained");
+
     ProcessRow stale = row;
     stale.created++;
     if (!contains_identity(&row, 1, &row) || contains_identity(&row, 1, &stale)) failures++;

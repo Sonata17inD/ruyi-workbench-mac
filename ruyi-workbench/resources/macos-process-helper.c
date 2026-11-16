@@ -146,14 +146,23 @@ static size_t confirm_exits(const ProcessRow *rows, size_t length) {
 }
 
 // A queued SIGSTOP does not establish a fork barrier until the process is stopped.
-static bool await_quiescent(const ProcessRow *expected, uint64_t deadline) {
-    uint64_t started = monotonic_milliseconds();
+static bool await_quiescent(ProcessRow *expected, uint64_t deadline) {
+    uint64_t started = monotonic_milliseconds(), retry_at = started + 10;
     do {
         ProcessRow current;
         if (!read_process(expected->pid, &current)) return errno == ESRCH;
         if (current.created != expected->created || current.zombie || current.is_stopped) return true;
         uint64_t now = monotonic_milliseconds();
         if (interrupted || !started || !now || now - started >= 100 || now >= deadline) return false;
+        // A fork/exec transition or concurrent SIGCONT can leave a verified target
+        // running after the first stop request. Retry within the same deadline;
+        // only an observed stopped/exited identity establishes the barrier.
+        if (now >= retry_at) {
+            int stopped = signal_verified(expected, SIGSTOP);
+            if (stopped < 0) return false;
+            if (stopped == 1) expected->resume_after_stop = true;
+            retry_at = now + 10;
+        }
         usleep(1000);
     } while (true);
 }

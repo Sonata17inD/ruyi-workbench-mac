@@ -35,6 +35,18 @@ function heartbeat(file) {
     const capability = runtime.helperCapability();
     t.ok(capability.ready && capability.installed && capability.protocolVersion === 3 && Object.isFrozen(capability),
       'native helper capability requires executable versioned libproc probe');
+    const raceScript = path.join(root, 'cancel-at-fork.sh');
+    fs.writeFileSync(raceScript, 'sleep 30\n');
+    const rapidResults = [];
+    for (let i = 0; i < 100; i++) {
+      const handle = await runtime.start({ executable: '/bin/bash', argv: [raceScript], owner: { kind: 'cancel-at-fork' } });
+      handles.push(handle);
+      await runtime.ready(runtime.child(handle));
+      await sleep(1);
+      rapidResults.push(await runtime.stop(handle, 'cancel-at-fork'));
+    }
+    t.ok(rapidResults.every(result => !result.incomplete && result.unconfirmed === 0),
+      '100 immediate fork/exec cancellations confirm both supervisors: ' + JSON.stringify(rapidResults.filter(result => result.incomplete)));
     const originalHelperPath = S.ProcessRuntimeHooks.helperPath;
     const probeHelper = path.join(root, 'capability-fixture');
     const marker = path.join(root, 'unapproved-target');
