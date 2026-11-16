@@ -732,3 +732,9 @@
 - 在原有停止确认时限内每 10ms 重新核验身份并重试 SIGSTOP，仍以实际停止／退出建立屏障。重试成功记录恢复所有权，保持预先停止的进程不被误恢复；不放宽 incomplete 判据、不增加正常空闲扫描。
 - 原生定向测试覆盖停止请求被 SIGCONT 覆盖及恢复所有权；新增 100 次快速取消全部确认两层清理。完整 macos-process-runtime、macos-process-cleanup、macos-sync-supervisor E2E 通过；修复后 background-completion 通过。测试失败时现在输出清理结果和隔离账本，避免只有状态断言而无法定位。
 - 构建 helper、EOL 与 diff 检查通过；未生成安装包。既有能效报告不作为修改后的重新测量，本轮最终性能／发行验收仍待完成。
+
+## 工作包 4cd：后台完成账本服务
+
+- background-jobs 独立拥有同步串行账本、会话合并／撤回、provider／CLI 投递、来源绑定消息回执及启动时有界扫描。通过活会话／运行查询、通知、唤醒和文本规范化端口组合；内部调用自身方法，不依赖共享 EventStreamHooks。宿主暂保留连接桥，shell 完成判据留在进程层。
+- 7 项账本／XML／导出面单元通过，直接实例测试覆盖重启合并、只投递一次、撤回不复活、跨来源拒绝、落盘失败保留活会话回执且不唤醒，以及 SSE 不携带正文。agent-final-mailbox、spawn-background-dag、steward-background-hold 完整 E2E 通过；background-completion 发现的原生竞态在 4cc 修复后通过。
+- 存储所有权清单与运行白名单已更新。122 显式模块无导入环，模块图、持久化清单静态门、EOL、构建一致性和 diff 通过。共享宿主 57139 行，旧核心仍 30 成员 SCC；完整分层和最终性能／发行验收尚未完成。无冗余备份／打包。

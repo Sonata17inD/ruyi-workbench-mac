@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3448 | 3497 | 658 | 66 | 0 | 1 |
+| 92 | 3445 | 3497 | 658 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -73,7 +73,7 @@
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
 | 56 | `09-workflow.js` | orchestration | 27 | 274 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
-| 58 | `11-native-tools.js` | tools | 121 | 56 | 14 |
+| 58 | `11-native-tools.js` | tools | 118 | 56 | 14 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |

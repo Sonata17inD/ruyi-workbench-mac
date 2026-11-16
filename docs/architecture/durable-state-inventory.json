@@ -839,7 +839,7 @@
     {
       "id": "background-job-ledger",
       "pattern": "<data>/sessions/background-jobs/<sessionId>.json",
-      "owner": "11-native-tools.js",
+      "owner": "../backend/background-jobs.cjs",
       "anchor": "backgroundJobFile",
       "schema": "array of job receipts / implicit v1 (id/shellId/name/sessionId/status/exitCode/output/truncated/completedAt)",
       "writePrimitive": "unique fixed tmp name per file + renameSync INSIDE the child-close synchronous event (single-threaded event loop serializes read-modify-write; async atomicWriteJson would interleave concurrent closes and lose updates)",

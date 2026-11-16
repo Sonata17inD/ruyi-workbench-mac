@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3448,
+    "providedSymbols": 3445,
     "requiredSymbols": 3497,
     "edges": 658,
     "forwardEdges": 66,
@@ -11627,11 +11627,11 @@
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
-        "BACKGROUND_LEDGER_SCAN_CONCURRENCY",
         "BINARY_READ_DB",
         "BINARY_READ_OFFICE",
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
+        "BackgroundJobs",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
         "SHELL_BUF_MAX",
@@ -11644,8 +11644,6 @@
         "_rgProbe",
         "_rgProbeInflight",
         "adaptiveCatalogForMcp",
-        "backgroundJobFile",
-        "backgroundJobText",
         "backgroundShellCountsBySession",
         "binaryReadHint",
         "bindMacShellProtocol",
@@ -11680,7 +11678,6 @@
         "killAllShellSessions",
         "levenshtein",
         "macShellSendChains",
-        "markAgentMessageDelivered",
         "peekRgProbe",
         "persistBackgroundJob",
         "privacyProjectSearch",
@@ -11796,7 +11793,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -11908,14 +11906,16 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12049,7 +12049,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12133,7 +12133,7 @@
           "provider": "07-autonomy.js",
           "symbol": "neutralizeInjectedPrefixes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
