@@ -61738,7 +61738,6 @@ module.exports = {
   normalizePlaybook,
   evalPlaybookAvailability,
   matchServiceEntry, // 127-⑧:服务入口整体序(可用 > 需配置 > 未知 > 暂无模板)的进程内单测
-  parsePlaybookDraft,
   // v0.9-S3 (C3): workspace-by-fingerprint — exposed for e2e direct unit testing of the resolver.
   resolveWorkspace,
   // PF1: checkpoint GC size-cap cache — exposed for e2e (assert no per-write full sweep + still purges over-cap).

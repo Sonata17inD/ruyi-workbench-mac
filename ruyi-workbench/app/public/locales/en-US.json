@@ -4492,5 +4492,6 @@
   "host.picker_hint": "You can also enter the full path manually.",
   "host.notification_denied": "macOS has denied notification permission. Allow Ruyi Workbench in System Settings > Notifications.",
   "settings.update.macInstall": "Quit Ruyi, then install Ruyi.app from the new Mac package. Threads and settings live in a separate data directory.",
-  "settings.update.macRollback": "To roll back, quit Ruyi and reinstall the previous Mac version. Check its release notes for data compatibility."
+  "settings.update.macRollback": "To roll back, quit Ruyi and reinstall the previous Mac version. Check its release notes for data compatibility.",
+  "skills.requirements.unknown": "Capability status is unknown. Check again before running."
 }

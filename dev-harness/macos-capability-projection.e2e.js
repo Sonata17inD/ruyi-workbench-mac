@@ -30,7 +30,8 @@ async function probe(diag) {
   t.ok(!S.evalPlaybookAvailability({ requires: ['desktopAutomation'] }, { desktopMcp: dm }).available && dm.screenOcr.ready === false,
     'screen workflows remain blocked on screen denial');
   dm = await probe({ ok: false });
-  t.ok(dm.ocr.ready === null && S.evalPlaybookAvailability({ requires: ['ocr'] }, { desktopMcp: dm }).status === 'unknown',
+  t.ok(dm.ocr.ready === null && S.evalPlaybookAvailability({ requires: ['ocr'] }, { desktopMcp: dm }).status === 'unknown'
+    && S.evalPlaybookAvailability({ requires: ['ocr'] }, { desktopMcp: dm }).available === false,
     'failed diagnostics do not claim absent or ready OCR');
   t.done();
 })().catch(error => { t.fail(error.stack); t.done(); });

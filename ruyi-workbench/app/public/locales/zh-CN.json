@@ -4492,5 +4492,6 @@
   "host.picker_hint": "也可在输入框中手动填写完整路径。",
   "host.notification_denied": "macOS 已拒绝通知权限。可在系统设置的“通知”中找到如意工作台并重新允许。",
   "settings.update.macInstall": "退出 Ruyi 后，从新的 Mac 安装包安装 Ruyi.app。线程和配置保存在独立数据目录中。",
-  "settings.update.macRollback": "需要回退时，退出应用并重新安装此前的 Mac 版本；按该版本说明检查数据兼容性。"
+  "settings.update.macRollback": "需要回退时，退出应用并重新安装此前的 Mac 版本；按该版本说明检查数据兼容性。",
+  "skills.requirements.unknown": "能力状态未知，请重新检查后再运行"
 }

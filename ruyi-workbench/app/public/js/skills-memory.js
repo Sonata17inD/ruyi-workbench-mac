@@ -88,6 +88,7 @@ const BUILTIN_SKILL_I18N_IDS = Object.freeze({
   'playbook:pb:scheduled-digest': 'playbook.scheduledDigest',
 });
 const BUILTIN_SKILL_AVAILABILITY_I18N_KEYS = Object.freeze({
+  '能力状态未知，请重新检查后再运行': 'skills.requirements.unknown',
   '需要联网(当前离线)': 'skills.requirements.networkOffline',
   '需要桌面控制(未检测到 ai-computer-control)': 'skills.requirements.desktopControl',
   '需要视觉模型(当前引擎未开启视觉)': 'skills.requirements.vision',
