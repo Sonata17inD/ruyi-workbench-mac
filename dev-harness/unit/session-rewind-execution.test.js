@@ -5,10 +5,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { functionBlock, sliceBlock, constBlock } = require('../lib/source-slice');
+const { functionBlock, constBlock } = require('../lib/source-slice');
 const root = path.resolve(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, 'ruyi-workbench/app', file), 'utf8');
-const store = read('src/02-session-store.js');
+const { createSessionRewind } = require('../../ruyi-workbench/app/backend/session-rewind.cjs');
 const conversation = read('public/js/steward-conversation.js');
 const execution = id => ({ serverInstanceId: 'process-A', driverRunId: id, phase: 'running' });
 const idleOptions = () => ({ guardExecution: true, expectedExecution: null, expectedIdleState: {
@@ -40,10 +40,15 @@ function fixture(overrides = {}) {
     cancelModelRunsOfDiscardedTurns: () => {}, EventStreamHooks: {}, RUYI_EVENTS: { emit() {} },
     ...overrides,
   });
-  const guarded = sliceBlock(store, '// A guarded rewind owns admission', 'async function rewindSessionContents');
-  assert.ok(guarded.includes('async function rewindSession('));
-  vm.runInContext(guarded + '\n' + functionBlock(store, 'rewindSessionContents') + '\nthis.rewind = rewindSession;', ctx);
-  return { ctx, calls, session, rewind: ctx.rewind, blocked: () => ctx.SessionExecutionHooks.admissionBlocked('s') };
+  ctx.storage = { loadSession: ctx.loadSession, saveSession: ctx.saveSession, bumpMissionChangeSeq: ctx.bumpMissionChangeSeq };
+  const service = createSessionRewind({
+    execution: ctx.SessionExecutionHooks, state: ctx, storage: ctx.storage,
+    checkpoints: { rollback: ctx.journalRollback, prune: ctx.journalRevertLogPrune },
+    effects: { ...ctx.EventStreamHooks, cancelModelRunsOfDiscardedTurns: ctx.cancelModelRunsOfDiscardedTurns },
+    events: ctx.RUYI_EVENTS, logEvent: ctx.logEvent, timers: ctx,
+  });
+  ctx.SessionExecutionHooks.admissionBlocked = service.admissionBlocked;
+  return { ctx, calls, session, rewind: service.rewindSession, blocked: () => service.admissionBlocked('s') };
 }
 
 test('guarded rewind rejects missing identity and stop conflicts before reads or rollback, releasing admission', async () => {
@@ -82,8 +87,8 @@ test('admission stays closed through settlement and file rollback, including con
 test('a guarded rewind cannot overlap an already pending legacy rewind', async () => {
   const pendingRead = deferred();
   const f = fixture();
-  const load = f.ctx.loadSession;
-  f.ctx.loadSession = async id => { await pendingRead.promise; return load(id); };
+  const load = f.ctx.storage.loadSession;
+  f.ctx.storage.loadSession = async id => { await pendingRead.promise; return load(id); };
   const legacy = f.rewind('s', 2, false);
   assert.equal((await f.rewind('s', 2, true, { guardExecution: true, expectedExecution: null })).error, 'rewind_in_progress');
   pendingRead.resolve();
@@ -93,8 +98,8 @@ test('a guarded rewind cannot overlap an already pending legacy rewind', async (
 test('the actual turn entry refuses admission while guarded rewind awaits storage', async () => {
   const pendingRead = deferred();
   const f = fixture();
-  const load = f.ctx.loadSession;
-  f.ctx.loadSession = async id => { await pendingRead.promise; return load(id); };
+  const load = f.ctx.storage.loadSession;
+  f.ctx.storage.loadSession = async id => { await pendingRead.promise; return load(id); };
   const pending = f.rewind('s', 2, false, idleOptions());
   assert.equal(f.blocked(), true);
   let registered = 0;
@@ -110,7 +115,7 @@ test('the actual turn entry refuses admission while guarded rewind awaits storag
   await assert.rejects(f.ctx.startTurn({ sessionId: 's', source: 'steward' }), error => error.code === 'SESSION_EXECUTION_LOCKED');
   assert.equal(registered, 0, 'no new driver identity or grant binding occurs');
   assert.equal(f.ctx.turnSettlers.size, 0);
-  f.ctx.loadSession = load;
+  f.ctx.storage.loadSession = load;
   pendingRead.resolve();
   assert.equal((await pending).ok, true);
   assert.equal(f.blocked(), false);
