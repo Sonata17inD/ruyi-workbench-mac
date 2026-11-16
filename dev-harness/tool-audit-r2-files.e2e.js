@@ -256,14 +256,12 @@ try {
   ok(self.ok === true && self.unchanged === true && journalIndex().length === before && rd('self.txt', 'utf8') === 'same', `M2 file_move 到自己身上:不动、不记检查点(got ${JSON.stringify(self).slice(0, 140)} journal ${before}→${journalIndex().length})`);
   const mv = await call('file_move', { from: 'self.txt', to: 'moved.txt' });
   ok(mv.ok === true && rd('moved.txt', 'utf8') === 'same' && !fs.existsSync(path.join(WS, 'self.txt')), 'M2b 普通移动照常');
-  // 同一文件判定(纯逻辑;win32 大小写改名的依据)。Windows 未实机验证。
-  const sameKind = new Function(functionBlock(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8'), 'fileMoveSameFileKind') + '; return fileMoveSameFileKind;')();
+  const { fileMoveSameFileKind: sameKind } = require('../ruyi-workbench/app/backend/file-tools.cjs');
   const st1 = { dev: 1, ino: 77 }, st2 = { dev: 1, ino: 78 };
-  ok(sameKind('C:\\w\\data.csv', 'C:\\w\\DATA.csv', st1, st1, 'win32') === 'case-only', 'M3 win32:同 dev+ino 仅大小写不同 → case-only(允许改名)');
-  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'darwin') === 'case-only', 'M3b darwin 同理');
-  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'linux') === null, 'M3c linux:大小写敏感,同 ino 只可能是硬链接,不当改名');
-  ok(sameKind('C:\\w\\data.csv', 'C:\\w\\DATA.csv', st1, st2, 'win32') === null, 'M3d win32:ino 不同 = 两个文件 → 照常「目标已存在」');
-  ok(sameKind('C:\\w\\a.csv', 'C:\\w\\a.csv', st1, st1, 'win32') === 'identical' && sameKind('a', 'b', st1, null, 'win32') === null, 'M3e 逐字相同 → identical;目标不存在 → null');
+  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'darwin') === 'case-only', 'M3 Mac case-only rename uses birth filesystem identity');
+  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st2, 'darwin') === null, 'M3b different inode is not a case-only rename');
+  ok(sameKind('/w/a.csv', '/w/b.csv', st1, st1, 'darwin') === null, 'M3c hardlink with different name is not a case-only rename');
+  ok(sameKind('/w/a.csv', '/w/a.csv', st1, st1, 'darwin') === 'identical' && sameKind('a', 'b', st1, null, 'darwin') === null, 'M3d identical and absent destinations');
 
   /* ═════════ (Z) archive_zip / archive_unzip ═════════ */
   fs.mkdirSync(path.join(WS, 'd1')); fs.mkdirSync(path.join(WS, 'd2'));
@@ -318,7 +316,7 @@ try {
   ok(same.ok === true && same.unchanged === true && journalIndex().length === jBefore && fs.statSync(path.join(WS, 'same.txt')).mtimeMs === mt0, `X2 oldText==newText:不写盘、不记检查点(got ${JSON.stringify(same).slice(0, 160)})`);
   const real = await call('file_edit', { path: 'same.txt', oldText: 'foo', newText: 'baz' });
   ok(real.ok === true && real.replacements === 1 && rd('same.txt', 'utf8') === 'baz\nbar\n', 'X2b 真改动照常');
-  const src12 = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8');
+  const src12 = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'file-tools.cjs'), 'utf8');
   ok(!/请改用 read_file/.test(src12) && !/file_edit 只编辑 UTF-8 文件/.test(src12), 'X3 文案:不再点名不存在的 read_file,not_utf8 不再只说 UTF-8');
   fs.writeFileSync(path.join(WS, 'bin-ish.txt'), Buffer.from([0x81, 0x20, 0xfe, 0xfe, 0x80, 0x81, 0xff]));
   const nu = await call('file_edit', { path: 'bin-ish.txt', oldText: 'x', newText: 'y' });

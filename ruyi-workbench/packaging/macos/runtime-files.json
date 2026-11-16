@@ -274,7 +274,8 @@
     "app/backend/cli-diagnostics.cjs",
     "app/backend/kimi-model-discovery.cjs",
     "app/backend/toolbox-registry.cjs",
-    "app/backend/toolbox-services.cjs"
+    "app/backend/toolbox-services.cjs",
+    "app/backend/file-tools.cjs"
   ],
   "acc": [
     "LICENSE",

@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const { readServerSource } = require('./src-reader');
 const src = readServerSource() + '\n' + require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/runtime-policy.cjs'), 'utf8');
+const fileToolsSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-tools.cjs'), 'utf8');
 const promptRegistrySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/prompt-registry.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -78,7 +79,7 @@ ok(/runtimeExecResultCacheV1: true/.test(src) && /execResultCacheMaxEntriesV1: 2
 ok(/function execResultCacheEnabled\(config\)/.test(src) && /function execResultCacheMaxEntries\(config\)/.test(src), 'S #2a 唯一判定点存在(开关×上限双门)');
 const cacheSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-read-cache.cjs'), 'utf8');
 ok(/const EXEC_CACHE_WHITELIST = new Set\(\['file_read'\]\)/.test(cacheSource), 'S #2a 白名单首批仅 file_read(版本明确的本地只读,22 §6.1)');
-ok(/FileReadCache\.context\('file_read', args, ctx, p\)/.test(src), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
+ok(/FileReadCache\.context\('file_read', args, ctx, p\)/.test(fileToolsSource), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
 ok(/execCacheSameVersion/.test(cacheSource) && /reason: st \? 'stale' : 'gone'/.test(cacheSource), 'S #2a 资源版本 mtimeMs+size 失效(外部写入/删除/重建覆盖)');
 ok(/cacheHit: \{ cachedAt: entry\.cachedAt/.test(cacheSource), 'S #2a 命中结果带 cacheHit 诚实标记(不冒称重新执行)');
 ok(/outcome: 'skip', reason: 'race'/.test(cacheSource) && /c\.signal && c\.signal\.aborted\) return/.test(cacheSource), 'S #2a 竞态/中断结果不缓存');

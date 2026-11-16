@@ -98,6 +98,7 @@ function tokenize(source) {
   };
   const regexCanStart = () => {
     if (!prev) return true;
+    if (prev.type === 'literal') return false;
     if (prev.type === 'id') return new Set(['return', 'throw', 'case', 'delete', 'void', 'typeof', 'instanceof', 'in', 'of', 'yield', 'await', 'else', 'do']).has(prev.value);
     return !new Set([')', ']', '}', '++', '--']).has(prev.value);
   };
@@ -106,7 +107,7 @@ function tokenize(source) {
     const ch = source[i], next = source[i + 1];
     if (mode.type === 'template') {
       if (ch === '\\') { i += 2; continue; }
-      if (ch === '`') { modeStack.pop(); i++; continue; }
+      if (ch === '`') { modeStack.pop(); push('literal', '<template>', i, line); i++; continue; }
       if (ch === '$' && next === '{') {
         modeStack.push({ type: 'code', templateExprDepth: 1 });
         push('punct', '{', i, line);
@@ -127,17 +128,19 @@ function tokenize(source) {
       i += 2; continue;
     }
     if (ch === '\'' || ch === '"') {
-      const quote = ch; i++;
+      const quote = ch, start = i, tokenLine = line; i++;
       while (i < source.length) {
         if (source[i] === '\\') { i += 2; continue; }
         if (source[i] === quote) { i++; break; }
         if (source[i] === '\n') line++;
         i++;
       }
+      push('literal', '<string>', start, tokenLine);
       continue;
     }
     if (ch === '`') { modeStack.push({ type: 'template' }); i++; continue; }
     if (ch === '/' && regexCanStart()) {
+      const start = i, tokenLine = line;
       i++; let inClass = false;
       while (i < source.length) {
         if (source[i] === '\\') { i += 2; continue; }
@@ -147,7 +150,13 @@ function tokenize(source) {
         if (source[i] === '\n') line++;
         i++;
       }
+      push('literal', '<regex>', start, tokenLine);
       continue;
+    }
+    if (/\d/.test(ch) || (ch === '.' && /\d/.test(next || ''))) {
+      const start = i;
+      const number = /^(?:0[xX][\da-fA-F_]+|0[bB][01_]+|0[oO][0-7_]+|(?:[\d_]+(?:\.[\d_]*)?|\.[\d_]+)(?:[eE][+-]?[\d_]+)?)(?:n)?/.exec(source.slice(i));
+      if (number) { push('literal', '<number>', start, line); i += number[0].length; continue; }
     }
     if (isIdentifierStart(ch)) {
       const start = i, tokenLine = line;

@@ -16,7 +16,7 @@ const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 const sliceFn = (file, name, ...deps) => new Function(...deps.map(d => d[0]), functionBlock(read(file), name) + `; return ${name};`)(...deps.map(d => d[1]));
 
 describe('fileMoveSameFileKind', () => {
-  const same = sliceFn('12-tool-dispatch.js', 'fileMoveSameFileKind');
+  const { fileMoveSameFileKind: same } = require('../../ruyi-workbench/app/backend/file-tools.cjs');
   const a = { dev: 1, ino: 5 }, b = { dev: 1, ino: 6 };
   it('逐字相同 → identical;目标不存在 → null', () => {
     assert.equal(same('/w/a', '/w/a', a, a, 'linux'), 'identical');

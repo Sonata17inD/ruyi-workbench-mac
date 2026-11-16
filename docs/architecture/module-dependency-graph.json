@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3455,
-    "requiredSymbols": 3409,
-    "edges": 645,
-    "forwardEdges": 61,
+    "providedSymbols": 3661,
+    "requiredSymbols": 3536,
+    "edges": 663,
+    "forwardEdges": 68,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -4281,6 +4281,20 @@
           ]
         },
         {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "effectiveSkillSelection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "13-http-router.js",
           "symbol": "buildModelHint",
           "kinds": [
@@ -4981,6 +4995,14 @@
           "symbol": "upsertCompactMarker",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolCall",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -6410,6 +6432,20 @@
           "symbol": "providerRawCompletion",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "firstParaDesc",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "parseFrontmatter",
+          "kinds": [
+            "read"
           ]
         }
       ]
@@ -8543,6 +8579,34 @@
           ]
         },
         {
+          "provider": "11-native-tools.js",
+          "symbol": "httpGetGuarded",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ssrfCheck",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolCall",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolFailureResult",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "13-http-router.js",
           "symbol": "resolveNodeModel",
           "kinds": [
@@ -10559,6 +10623,34 @@
           ]
         },
         {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolCall",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolFailureResult",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "validateNativeToolArgs",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "13-http-router.js",
           "symbol": "buildModelHint",
           "kinds": [
@@ -11561,14 +11653,30 @@
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
+        "AUDIT_TEST_DIR_RE",
+        "AUDIT_TEST_FILE_RE",
         "BACKGROUND_LEDGER_SCAN_CONCURRENCY",
         "BINARY_READ_DB",
         "BINARY_READ_OFFICE",
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
+        "BROWSER_UA",
         "BROWSE_IGNORE_DIRS",
+        "CODE_SYMBOL_SUFFIXES",
+        "CRC32_TABLE",
+        "DATA_PROFILE_JSON_FULL_BYTES",
+        "DATA_PROFILE_JSON_STREAM_BYTES",
+        "DATA_PROFILE_MAX_COLUMNS",
+        "DATA_PROFILE_WINDOW_BYTES",
+        "DEBUG_HYP_KEEP_HEAD",
+        "DEBUG_HYP_MAX_TESTS",
         "DEFAULT_IGNORE_DIRS",
+        "DOCS_SEARCH_SUFFIXES",
         "DOTNET_PROJECT_RE",
+        "FETCH_BINARY_TYPE_RE",
+        "FETCH_TEXT_TYPE_RE",
+        "FRONTEND_EXT_URL_RES",
+        "FRONTEND_LOCAL_HOST_RE",
         "GIT_COMMIT_TIMEOUT_DEFAULT_MS",
         "GIT_DIFF_MAX_BUFFER",
         "GIT_DIFF_MAX_CHARS",
@@ -11580,16 +11688,26 @@
         "GIT_TIMEOUT_MAX_MS",
         "GIT_UNTRACKED_LIST_MAX",
         "HARD_IGNORE_DIRS",
+        "HTML_BLOCK_TAGS",
+        "HTML_DROP_ROLES",
+        "HTML_DROP_TAGS",
+        "HTML_MAX_LINKS",
+        "HTML_VOID_TAGS",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
         "NativeSourceHooks",
         "PATH_MATCH_WORKER_SRC",
+        "PROFILE_CELL_MAX_CHARS",
+        "PROFILE_DELIMITER_NAMES",
+        "READ_PAGE_JSON_BUDGET",
         "REGEX_SCAN_MAX_MS",
         "REGEX_SCAN_WORKER_SRC",
         "RG_REPAIR_MAX_FILES",
+        "SEARCH_CJK_RE",
         "SEARCH_DEFAULT_MAX_FILE_BYTES",
         "SEARCH_JS_DEFAULT_MAX_FILES",
         "SEARCH_MAX_FILE_BYTES_CEILING",
+        "SECRET_PLACEHOLDER_RE",
         "SHELL_BUF_MAX",
         "SHELL_GLOBAL_MAX",
         "SHELL_IDLE_MS",
@@ -11597,55 +11715,143 @@
         "SHELL_OUTPUT_MAX_CHARS",
         "SHELL_OUTPUT_MIN_CHARS",
         "SHELL_POLL_WAIT_MAX_MS",
+        "SYMBOL_BAT",
+        "SYMBOL_C_FAMILY",
+        "SYMBOL_C_TYPE_TAIL",
+        "SYMBOL_JS_LIKE",
+        "SYMBOL_JVM_SWIFT",
+        "SYMBOL_NOT_METHOD",
+        "SYMBOL_PS",
+        "SYMBOL_TYPED_METHOD",
+        "SYMBOL_TYPED_NOT_DEF",
+        "SYMBOL_VB",
         "WALK_PATTERN_BATCH",
         "WALK_PATTERN_BUDGET_MS",
         "WALK_PATTERN_MAX_CHARS",
+        "WEB_CACHE_HARD_MAX_ENTRIES",
+        "WEB_FETCH_DEFAULT_CHARS",
+        "WEB_FETCH_MAX_CHARS",
+        "WEB_FETCH_PAGE_TTL_MS",
+        "ZIP_ASYNC_DEFLATE_MIN",
+        "ZIP_BOMB_MSG",
+        "ZIP_MAX_ENTRIES",
+        "ZIP_MAX_SINGLE_FILE",
+        "ZIP_MAX_TOTAL",
+        "_profileGb18030",
         "_rgProbe",
         "_rgProbeInflight",
+        "adaptiveCatalogForMcp",
         "applyNonUtf8Report",
         "assertSearchExecution",
+        "auditLimit",
         "awaitSearchProbe",
         "backgroundJobFile",
         "backgroundJobText",
         "backgroundShellCountsBySession",
         "binaryReadHint",
         "bindMacShellProtocol",
+        "boundedReadPage",
+        "browserHeaders",
         "buildIgnoreMatcher",
+        "builtinSearch",
+        "charsetFromContentType",
+        "classifyFetchError",
+        "classifyFetchedBody",
         "classifyListPattern",
+        "claudeMdAudit",
         "closeSearchWorker",
+        "codeReviewScan",
+        "codebaseSymbolSearch",
+        "columnProfile",
         "completeBackgroundJob",
+        "crc32",
+        "crc32Async",
         "createBoundedPathMatcher",
+        "createDeflateAutoStream",
+        "dataProfile",
+        "dataProfileRaw",
+        "debugHypStats",
+        "debugHypTrimTests",
+        "debugHypWarnings",
+        "debugHypothesis",
+        "decodeBingRedirect",
+        "decodeEntities",
+        "decodeHtmlBody",
+        "decodeProfileText",
+        "deepseekWebRequest",
+        "dependencyInventory",
+        "describeFsWriteError",
+        "destroyBodyDecoders",
+        "detectProfileDelimiter",
         "discoverPrunedDirs",
+        "dnsResolvesToPrivate",
+        "docsSearch",
+        "downloadFileNameFrom",
+        "embeddedIpv4FromV6",
+        "escapeRegexLiteral",
+        "evictWebCacheOverCap",
         "explicitAllowDirs",
         "explicitSegmentsOfGlob",
         "explicitSegmentsOfRegex",
+        "extractMainText",
+        "findExternalAssetHost",
+        "frontendAudit",
         "genShellId",
+        "gitCommit",
         "gitCwdMissingError",
         "gitDiff",
         "gitHeadToJsonBudget",
         "gitHookNames",
         "gitHumanError",
+        "gitLog",
+        "gitMissingPathHint",
         "gitReadOnlyGuard",
         "gitReadOnlyGuardError",
         "gitStagedSnapshot",
         "gitStatus",
         "globToRegExp",
+        "guardDownloadDest",
         "hasRg",
         "hasRgAsync",
+        "htmlAttr",
+        "htmlBlocksByClass",
+        "htmlClassTokens",
+        "htmlElementInner",
+        "htmlFragmentToText",
+        "htmlRenderTokens",
+        "htmlResolveLink",
+        "htmlTagAttr",
+        "htmlTokenize",
+        "httpGetGuarded",
+        "httpRequest",
         "ignoreGlobsForRg",
+        "inferColumnType",
+        "isAuditTestPath",
         "isBinaryReadPath",
         "isHighSurrogate",
         "isLowSurrogate",
+        "isPrivateIpv4",
+        "isStrictUtf8",
+        "judgeSecretValue",
         "killAllShellSessions",
         "levenshtein",
         "macShellSendChains",
         "markAgentMessageDelivered",
         "maybeGroup",
+        "mergeSearchResults",
         "normalizeGlobPatternForRoot",
+        "normalizeProfileDelimiter",
         "normalizeSearchPattern",
+        "numericStats",
+        "openHttpRequest",
+        "parseBaiduHtml",
+        "parseBingHtml",
+        "parseCsv",
+        "parseProxyUrl",
         "patternMayMatchNonAscii",
         "peekRgProbe",
         "persistBackgroundJob",
+        "privacyProfileSamples",
         "privacyProjectSearch",
         "privacyReadTextWindow",
         "privacySourceActive",
@@ -11657,12 +11863,25 @@
         "probeRg",
         "probeRgAsync",
         "probeRgInfoSync",
+        "profileBinaryKind",
+        "profileCellValue",
+        "profileColumnCapMeta",
+        "profileGb18030Decoder",
+        "profileJsonArrayHead",
+        "profileJsonColumns",
+        "proxyConnectTunnel",
+        "proxyForUrl",
+        "proxyIpv4ToInt",
+        "proxyNoProxyMatches",
         "prunedDirsHint",
         "readBackgroundJobs",
         "readIfExists",
+        "readProfileWindow",
+        "readWebCache",
         "regexBacktrackBounded",
         "regexScanFilesBounded",
         "resolveGitCwd",
+        "responseBodyStream",
         "rgExeName",
         "rgListHighByteFiles",
         "rgProbeCandidates",
@@ -11670,13 +11889,21 @@
         "rgRepairNonUtf8",
         "runGit",
         "runRgOwned",
+        "safeFromCodePoint",
         "scheduleShellReaper",
+        "searchBackendNeverFallsBack",
         "searchExplicitNames",
+        "searchFailFromResponse",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
         "searchMaxDepth",
         "searchMaxFileBytes",
+        "searchPageBlocked",
+        "searchParseJsonResponse",
+        "searchQueryTerms",
+        "searchResultKey",
+        "searchSnippetText",
         "sendMacShell",
         "sensitiveGlobsForRg",
         "sessionBackgroundShellRows",
@@ -11700,15 +11927,42 @@
         "shellSliceFrom",
         "shellStart",
         "shellVisibleTo",
+        "sniffMetaCharset",
+        "ssrfCheck",
         "stopMacShell",
+        "stripHtmlNoise",
         "summarizeGitStatus",
+        "symbolCi",
+        "symbolLanguageDefPatterns",
+        "textDecoderFor",
         "validateGitLogFilter",
         "validateGitRef",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
         "walkTruncationHint",
-        "writeBackgroundJobRows"
+        "webCachePath",
+        "webFetch",
+        "webFetchFailMessage",
+        "webFetchPageLinks",
+        "webSearch",
+        "webSearchViaBackend",
+        "writeBackgroundJobRows",
+        "writeWebCache",
+        "zipAssemble",
+        "zipCollectEntries",
+        "zipDecodeName",
+        "zipDeflateRawAsync",
+        "zipEntryCompressedSlice",
+        "zipInflateRawAsync",
+        "zipReadCentralDir",
+        "zipReadEntryData",
+        "zipReadEntryDataAsync",
+        "zipTopLevelNames",
+        "zipVerifyEntry",
+        "zipWrite",
+        "zipWriteAsync",
+        "zipYield"
       ],
       "requires": [
         {
@@ -11890,6 +12144,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "RUNTIME",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
             "call"
@@ -11898,6 +12159,13 @@
         {
           "provider": "01-config.js",
           "symbol": "sessionPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01c-runtime-flags.js",
+          "symbol": "observationRecallEnabled",
           "kinds": [
             "call"
           ]
@@ -11924,6 +12192,13 @@
           ]
         },
         {
+          "provider": "02-session-store.js",
+          "symbol": "loadSession",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "03-bridge-guard.js",
           "symbol": "_dataRootReal",
           "kinds": [
@@ -11947,6 +12222,13 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "existsExecutableAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "guardFileToolPath",
           "kinds": [
             "call"
           ]
@@ -11995,6 +12277,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "collectBridgedTools",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "call"
@@ -12036,10 +12325,38 @@
           ]
         },
         {
+          "provider": "06-provider-engine.js",
+          "symbol": "runtimeToolRequirementsMet",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "isStewardToolName",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "07-autonomy.js",
           "symbol": "AgentWorktreeHooks",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "buildToolCatalog",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "dropPolicyDisabledBridgedTools",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -12051,9 +12368,23 @@
         },
         {
           "provider": "07-autonomy.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
           "symbol": "neutralizeInjectedPrefixes",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "13f-native-tool-schemas.js",
+          "symbol": "MCP_TOOLS",
+          "kinds": [
+            "read"
           ]
         }
       ]
@@ -12132,64 +12463,108 @@
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
+        "AGENT_TOOL_HANDLERS",
+        "ARCHIVE_TOOL_HANDLERS",
+        "BUNDLED_PLUGIN_IDS",
         "CHECKPOINT_LIST_LIMIT",
         "CHECKPOINT_LIST_PATHS_MAX",
+        "CODE_TOOL_HANDLERS",
         "CORE_TOOL_HANDLERS",
-        "FILE_EDIT_ENCODING_HINT_NOT_ROUNDTRIP",
-        "FILE_EDIT_ENCODING_HINT_UNDECODABLE",
-        "FILE_EDIT_ENCODING_TIP",
-        "FILE_EDIT_MAX_BYTES",
-        "FILE_READ_CHAR_DEFAULT",
-        "FILE_READ_CHAR_MAX",
-        "FILE_READ_JSON_BUDGET",
-        "FILE_READ_LINE_DEFAULT",
+        "DESKTOP_CONTROL_DETAILS",
+        "DESKTOP_TOOL_HANDLERS",
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
-        "FileReadCache",
         "FileToolPaths",
+        "INTEGRATION_TOOL_HANDLERS",
+        "LAUNCH_MODE",
+        "MANIFEST_FULL_VERIFY_MS",
+        "NETWORK_TOOL_HANDLERS",
         "OBSERVATION_RECALL_MAX_CHARS",
         "OBSERVATION_RECALL_QUOTA",
+        "PLAYBOOK_PARAM_CHARS_MAX",
+        "PLAYBOOK_READ_TEXT_MAX",
+        "PLAYBOOK_TOOL_ROWS_MAX",
         "SCRATCHPAD_WRITE_NOTE",
+        "SCREENSHOT_EMBED_MAX_BYTES",
+        "SHELL_TOOL_HANDLERS",
+        "SKILL_IMPORT_RECORD",
+        "SKILL_IMPORT_SOURCES",
+        "SKILL_TOOL_ROWS_MAX",
         "STEWARD_GUARD_NOTE",
         "STEWARD_TOOL_HANDLERS",
         "TOOL_ARGS_ERROR_TEXT",
+        "TOOL_HANDLERS",
         "UTF8_BOM_BYTES",
+        "VISION_SIDECAR_SUFFIX",
+        "_maniCache",
         "_recallQuota",
         "accAnnotateNonAscii",
         "accCpName",
-        "assertFileToolActive",
-        "buildFileEditMiss",
+        "agentToolLoopback",
+        "attachScreenshotImage",
         "buildNonAsciiReport",
         "buildWorkbenchSelfStatus",
         "checkpointListResult",
+        "clampCatalogToolLimit",
+        "claudePluginSkillDirs",
+        "commandPrompt",
+        "computeHealth",
         "defaultTextLineEnding",
+        "desktopControlComponentOnDisk",
+        "desktopControlState",
         "detectTextLineEnding",
-        "fileMoveSameFileKind",
-        "fileToolBatch",
+        "docBody",
+        "docMeta",
+        "effectiveSkillSelection",
+        "execCwdProblem",
         "fileToolBeforeForCheckpoint",
-        "fileToolCleanupFields",
-        "fileToolDropPhantom",
         "fileToolFsFailure",
-        "fileToolNotFound",
         "fileToolPrivacySourceOptions",
-        "fileToolUnencodable",
         "fileToolWorkspaceDir",
         "fileToolWriteLockKey",
+        "firstParaDesc",
+        "foldFrontmatterBlock",
+        "guardedWalkRoot",
         "hasTextLineBreak",
+        "httpRequestTargetsWorkbench",
         "invokeAdaptiveMcpTool",
+        "isControlPlaneToolName",
         "isUtf8Encoding",
         "journalCheckpointWarn",
+        "jsonSchemaCoerceObject",
+        "jsonSchemaCoerceValue",
+        "jsonSchemaObjectProblems",
+        "jsonSchemaTypeName",
+        "jsonSchemaValueProblems",
+        "loadSkillRegistry",
         "normalizeTextLineEndings",
         "observationRecallError",
         "observationRecallQuotaTake",
+        "openToolUncDenied",
+        "parseFrontmatter",
+        "parseSkillRequires",
+        "readSkillDir",
+        "readSkillImportRecord",
+        "resolveEnabledSkillEntries",
         "resolveFileToolPath",
         "resolveFileToolRoot",
+        "resolveGitToolCwd",
+        "respellWalkPaths",
+        "runPythonScript",
         "scratchpadWriteTool",
+        "stripLeadingBom",
+        "suggestToolNames",
         "textFileWantsUtf8Bom",
         "toolArgPropertyLenient",
         "toolArgsMissingRequired",
+        "toolCall",
+        "toolFailureResult",
         "toolInvokeMissingNameResult",
         "toolInvokeTierCovers",
+        "toolRootProblem",
+        "unknownToolError",
+        "validateNativeToolArgs",
+        "verifyManifest",
         "withFileToolWriteLock",
         "withToolArgsGuide",
         "workbenchMemoryReadLoopback"
@@ -12205,13 +12580,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
           "kinds": [
             "read"
           ]
@@ -12234,7 +12602,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12255,6 +12624,7 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -12435,6 +12805,13 @@
           ]
         },
         {
+          "provider": "01n-desktop-automation.js",
+          "symbol": "MacDesktopAutomation",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
@@ -12459,7 +12836,7 @@
           "provider": "02-session-store.js",
           "symbol": "journalDropEntries",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12473,14 +12850,15 @@
           "provider": "02-session-store.js",
           "symbol": "journalRecord",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalRecordMany",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12494,7 +12872,8 @@
           "provider": "02-session-store.js",
           "symbol": "journalSessionCtx",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12598,7 +12977,29 @@
         },
         {
           "provider": "03-bridge-guard.js",
+          "symbol": "buildOpenSpawn",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "buildRevealSpawn",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "guardWorkspaceExecute",
           "kinds": [
             "call"
           ]
@@ -12608,6 +13009,20 @@
           "symbol": "isBrowserDocumentTarget",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -12627,9 +13042,16 @@
         },
         {
           "provider": "03-bridge-guard.js",
+          "symbol": "OFFICE_WRITER_LIB_RE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12648,6 +13070,27 @@
         },
         {
           "provider": "03-bridge-guard.js",
+          "symbol": "resolveExecCwd",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "REVEAL_OPEN_SAFE_EXTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "sensitiveFileIdentities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
           "kinds": [
             "read"
@@ -12656,6 +13099,13 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-desktop-shell.js",
+          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -12708,6 +13158,13 @@
           "symbol": "safeMcpInventory",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "04-visual-pipeline.js",
+          "symbol": "VisualPipeline",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -13023,7 +13480,140 @@
         },
         {
           "provider": "11-native-tools.js",
+          "symbol": "adaptiveCatalogForMcp",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "assertSearchExecution",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
           "symbol": "binaryReadHint",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "boundedReadPage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "classifyListPattern",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "claudeMdAudit",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "codebaseSymbolSearch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "codeReviewScan",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "dataProfile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "debugHypothesis",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "dependencyInventory",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "describeFsWriteError",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "docsSearch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "downloadFileNameFrom",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "embeddedIpv4FromV6",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "explicitAllowDirs",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "explicitSegmentsOfGlob",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "explicitSegmentsOfRegex",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "frontendAudit",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "gitCommit",
           "kinds": [
             "call"
           ]
@@ -13037,7 +13627,42 @@
         },
         {
           "provider": "11-native-tools.js",
+          "symbol": "gitLog",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
           "symbol": "gitStatus",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "globToRegExp",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "guardDownloadDest",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "httpGetGuarded",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "httpRequest",
           "kinds": [
             "call"
           ]
@@ -13046,14 +13671,13 @@
           "provider": "11-native-tools.js",
           "symbol": "isBinaryReadPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "levenshtein",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -13066,37 +13690,44 @@
         },
         {
           "provider": "11-native-tools.js",
+          "symbol": "normalizeGlobPatternForRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
           "symbol": "privacyReadTextWindow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceActive",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceLine",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceLineOffsets",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceMark",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13115,9 +13746,177 @@
         },
         {
           "provider": "11-native-tools.js",
+          "symbol": "prunedDirsHint",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "READ_PAGE_JSON_BUDGET",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
           "symbol": "readIfExists",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "searchFileContent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellKill",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellList",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellMcpChildGuard",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellPoll",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellSend",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "shellStart",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ssrfCheck",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "walkDepthHint",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "walkEnvelopeEntries",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "walkFiles",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "walkTruncationHint",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webFetch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webFetchFailMessage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webSearch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ZIP_MAX_ENTRIES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ZIP_MAX_SINGLE_FILE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ZIP_MAX_TOTAL",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipCollectEntries",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipReadCentralDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipReadEntryDataAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipWriteAsync",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -15018,6 +15817,43 @@
           "symbol": "probeRgAsync",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "computeHealth",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "LAUNCH_MODE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "loadSkillRegistry",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "TOOL_HANDLERS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolCall",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -19457,10 +20293,45 @@
           ]
         },
         {
+          "provider": "11-native-tools.js",
+          "symbol": "webFetch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webSearch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "12-tool-dispatch.js",
           "symbol": "buildWorkbenchSelfStatus",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "computeHealth",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "loadSkillRegistry",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "TOOL_HANDLERS",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -20003,6 +20874,13 @@
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "jsonSchemaValueProblems",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -21032,6 +21910,13 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "parseStructuredAgentOutput",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "jsonSchemaObjectProblems",
           "kinds": [
             "call"
           ]
@@ -23641,6 +24526,34 @@
           "kinds": [
             "call"
           ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "claudePluginSkillDirs",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "readSkillDir",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "readSkillImportRecord",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "SKILL_IMPORT_RECORD",
+          "kinds": [
+            "read"
+          ]
         }
       ]
     },
@@ -23883,6 +24796,13 @@
           "symbol": "nativeToolSchema",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "TOOL_HANDLERS",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -27949,6 +28869,76 @@
         },
         {
           "provider": "11-native-tools.js",
+          "symbol": "adaptiveCatalogForMcp",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "classifyFetchError",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "crc32",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "embeddedIpv4FromV6",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "extractMainText",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "guardDownloadDest",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "httpGetGuarded",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "isPrivateIpv4",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "parseBaiduHtml",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "parseBingHtml",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
           "symbol": "peekRgProbe",
           "kinds": [
             "read"
@@ -27962,6 +28952,76 @@
           ]
         },
         {
+          "provider": "11-native-tools.js",
+          "symbol": "readWebCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "ssrfCheck",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webCachePath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webFetch",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webFetchFailMessage",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "webSearch",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "writeWebCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipReadCentralDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipReadEntryData",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "zipWrite",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "11d-media-inspection.js",
           "symbol": "MediaInspection",
           "kinds": [
@@ -27970,7 +29030,49 @@
         },
         {
           "provider": "12-tool-dispatch.js",
+          "symbol": "attachScreenshotImage",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "suggestToolNames",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "TOOL_HANDLERS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
           "symbol": "toolArgsMissingRequired",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolCall",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "toolFailureResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "12-tool-dispatch.js",
+          "symbol": "validateNativeToolArgs",
           "kinds": [
             "read"
           ]
@@ -29440,6 +30542,15 @@
     },
     {
       "from": "05-claude-engine.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "effectiveSkillSelection",
+        "resolveEnabledSkillEntries"
+      ],
+      "direction": "forward"
+    },
+    {
+      "from": "05-claude-engine.js",
       "to": "13-http-router.js",
       "symbols": [
         "buildModelHint",
@@ -29620,6 +30731,14 @@
         "lastSessionContextTokens",
         "runAgentExternalCompact",
         "upsertCompactMarker"
+      ],
+      "direction": "forward"
+    },
+    {
+      "from": "05b-kimi-bridge.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "toolCall"
       ],
       "direction": "forward"
     },
@@ -29981,6 +31100,15 @@
         "providerRawCompletion"
       ],
       "direction": "backward"
+    },
+    {
+      "from": "06d-memory-domain.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "firstParaDesc",
+        "parseFrontmatter"
+      ],
+      "direction": "forward"
     },
     {
       "from": "06e-mission-domain.js",
@@ -30679,6 +31807,24 @@
     },
     {
       "from": "08-agent-runs.js",
+      "to": "11-native-tools.js",
+      "symbols": [
+        "httpGetGuarded",
+        "ssrfCheck"
+      ],
+      "direction": "forward"
+    },
+    {
+      "from": "08-agent-runs.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "toolCall",
+        "toolFailureResult"
+      ],
+      "direction": "forward"
+    },
+    {
+      "from": "08-agent-runs.js",
       "to": "13-http-router.js",
       "symbols": [
         "resolveNodeModel"
@@ -31143,6 +32289,17 @@
     },
     {
       "from": "09-workflow.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "resolveEnabledSkillEntries",
+        "toolCall",
+        "toolFailureResult",
+        "validateNativeToolArgs"
+      ],
+      "direction": "forward"
+    },
+    {
+      "from": "09-workflow.js",
       "to": "13-http-router.js",
       "symbols": [
         "buildModelHint",
@@ -31471,10 +32628,19 @@
       "from": "11-native-tools.js",
       "to": "01-config.js",
       "symbols": [
+        "RUNTIME",
         "atomicWriteJson",
         "readConfig",
         "safeSessionId",
         "sessionPath"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "11-native-tools.js",
+      "to": "01c-runtime-flags.js",
+      "symbols": [
+        "observationRecallEnabled"
       ],
       "direction": "backward"
     },
@@ -31497,12 +32663,21 @@
     },
     {
       "from": "11-native-tools.js",
+      "to": "02-session-store.js",
+      "symbols": [
+        "loadSession"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "11-native-tools.js",
       "to": "03-bridge-guard.js",
       "symbols": [
         "_dataRootReal",
         "ensureDataRootReal",
         "existsExecutable",
         "existsExecutableAsync",
+        "guardFileToolPath",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",
         "pathWithinRoot",
@@ -31523,6 +32698,7 @@
       "from": "11-native-tools.js",
       "to": "04-permission-runtime.js",
       "symbols": [
+        "collectBridgedTools",
         "killChildTree",
         "logEvent",
         "redact"
@@ -31535,7 +32711,16 @@
       "symbols": [
         "markNetworkOnline",
         "networkAnchors",
-        "probeAny"
+        "probeAny",
+        "runtimeToolRequirementsMet"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "11-native-tools.js",
+      "to": "06i-steward-core.js",
+      "symbols": [
+        "isStewardToolName"
       ],
       "direction": "backward"
     },
@@ -31545,9 +32730,20 @@
       "symbols": [
         "AgentWorktreeHooks",
         "MAIL_TEXT_MAX",
+        "buildToolCatalog",
+        "dropPolicyDisabledBridgedTools",
+        "nativeToolDisabledByPolicy",
         "neutralizeInjectedPrefixes"
       ],
       "direction": "backward"
+    },
+    {
+      "from": "11-native-tools.js",
+      "to": "13f-native-tool-schemas.js",
+      "symbols": [
+        "MCP_TOOLS"
+      ],
+      "direction": "forward"
     },
     {
       "from": "11c-file-visual-io.js",
@@ -31593,7 +32789,6 @@
         "TOOL_TIER_RANK",
         "URL",
         "agentCliHomes",
-        "cp",
         "crypto",
         "externalRoot",
         "fs",
@@ -31646,6 +32841,14 @@
     },
     {
       "from": "12-tool-dispatch.js",
+      "to": "01n-desktop-automation.js",
+      "symbols": [
+        "MacDesktopAutomation"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
       "to": "02-session-store.js",
       "symbols": [
         "JOURNAL_KEEP_TURNS",
@@ -31689,17 +32892,26 @@
       "from": "12-tool-dispatch.js",
       "to": "03-bridge-guard.js",
       "symbols": [
+        "OFFICE_WRITER_LIB_RE",
+        "REVEAL_OPEN_SAFE_EXTS",
         "UNC_DENIED_ERROR",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
         "buildBrowserOpenSpawn",
+        "buildOpenSpawn",
+        "buildRevealSpawn",
         "guardFileToolPath",
+        "guardWorkspaceExecute",
         "isBrowserDocumentTarget",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
         "journalBridgedWrite",
         "normalizeCwd",
         "pathWithinRoot",
         "realpathForContainment",
-        "remoteUncDenialResolved"
+        "remoteUncDenialResolved",
+        "resolveExecCwd",
+        "sensitiveFileIdentities"
       ],
       "direction": "backward"
     },
@@ -31708,6 +32920,14 @@
       "to": "03a-privacy-gateway.js",
       "symbols": [
         "PrivacyGateway"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
+      "to": "04-desktop-shell.js",
+      "symbols": [
+        "DesktopShell"
       ],
       "direction": "backward"
     },
@@ -31722,6 +32942,14 @@
         "resolveBridge",
         "resolveExternalMcpServers",
         "safeMcpInventory"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
+      "to": "04-visual-pipeline.js",
+      "symbols": [
+        "VisualPipeline"
       ],
       "direction": "backward"
     },
@@ -31830,11 +33058,40 @@
       "to": "11-native-tools.js",
       "symbols": [
         "NativeSourceHooks",
+        "READ_PAGE_JSON_BUDGET",
+        "ZIP_MAX_ENTRIES",
+        "ZIP_MAX_SINGLE_FILE",
+        "ZIP_MAX_TOTAL",
+        "adaptiveCatalogForMcp",
+        "assertSearchExecution",
         "binaryReadHint",
+        "boundedReadPage",
+        "classifyListPattern",
+        "claudeMdAudit",
+        "codeReviewScan",
+        "codebaseSymbolSearch",
+        "dataProfile",
+        "debugHypothesis",
+        "dependencyInventory",
+        "describeFsWriteError",
+        "docsSearch",
+        "downloadFileNameFrom",
+        "embeddedIpv4FromV6",
+        "explicitAllowDirs",
+        "explicitSegmentsOfGlob",
+        "explicitSegmentsOfRegex",
+        "frontendAudit",
+        "gitCommit",
         "gitDiff",
+        "gitLog",
         "gitStatus",
+        "globToRegExp",
+        "guardDownloadDest",
+        "httpGetGuarded",
+        "httpRequest",
         "isBinaryReadPath",
         "levenshtein",
+        "normalizeGlobPatternForRoot",
         "privacyReadTextWindow",
         "privacySourceActive",
         "privacySourceLine",
@@ -31842,7 +33099,27 @@
         "privacySourceMark",
         "privacySourceViews",
         "probeRgAsync",
-        "readIfExists"
+        "prunedDirsHint",
+        "readIfExists",
+        "searchFileContent",
+        "shellKill",
+        "shellList",
+        "shellMcpChildGuard",
+        "shellPoll",
+        "shellSend",
+        "shellStart",
+        "ssrfCheck",
+        "walkDepthHint",
+        "walkEnvelopeEntries",
+        "walkFiles",
+        "walkTruncationHint",
+        "webFetch",
+        "webFetchFailMessage",
+        "webSearch",
+        "zipCollectEntries",
+        "zipReadCentralDir",
+        "zipReadEntryDataAsync",
+        "zipWriteAsync"
       ],
       "direction": "backward"
     },
@@ -32344,6 +33621,18 @@
     },
     {
       "from": "13-http-router.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "LAUNCH_MODE",
+        "TOOL_HANDLERS",
+        "computeHealth",
+        "loadSkillRegistry",
+        "toolCall"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13-http-router.js",
       "to": "13b-api-domain-routes.js",
       "symbols": [
         "handleAudioApiRoutes",
@@ -32564,6 +33853,14 @@
       "to": "07-autonomy.js",
       "symbols": [
         "nativeToolSchema"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13ab-privacy-api.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "TOOL_HANDLERS"
       ],
       "direction": "backward"
     },
@@ -33264,6 +34561,14 @@
       "to": "07-autonomy.js",
       "symbols": [
         "nativeToolSchema"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13g-steward.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "jsonSchemaValueProblems"
       ],
       "direction": "backward"
     },
@@ -34088,7 +35393,9 @@
       "to": "11-native-tools.js",
       "symbols": [
         "privacySourceMark",
-        "privacySourceViews"
+        "privacySourceViews",
+        "webFetch",
+        "webSearch"
       ],
       "direction": "backward"
     },
@@ -34096,7 +35403,10 @@
       "from": "13l-steward-ops.js",
       "to": "12-tool-dispatch.js",
       "symbols": [
-        "buildWorkbenchSelfStatus"
+        "TOOL_HANDLERS",
+        "buildWorkbenchSelfStatus",
+        "computeHealth",
+        "loadSkillRegistry"
       ],
       "direction": "backward"
     },
@@ -34446,6 +35756,14 @@
       "to": "08-agent-runs.js",
       "symbols": [
         "parseStructuredAgentOutput"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13o-steward-runner-prompt.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "jsonSchemaObjectProblems"
       ],
       "direction": "backward"
     },
@@ -35232,6 +36550,17 @@
       "to": "06d-memory-domain.js",
       "symbols": [
         "syncAgentInstructionImports"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13u-migration-center.js",
+      "to": "12-tool-dispatch.js",
+      "symbols": [
+        "SKILL_IMPORT_RECORD",
+        "claudePluginSkillDirs",
+        "readSkillDir",
+        "readSkillImportRecord"
       ],
       "direction": "backward"
     },
@@ -36100,8 +37429,28 @@
       "from": "14-main.js",
       "to": "11-native-tools.js",
       "symbols": [
+        "adaptiveCatalogForMcp",
+        "classifyFetchError",
+        "crc32",
+        "embeddedIpv4FromV6",
+        "extractMainText",
+        "guardDownloadDest",
+        "httpGetGuarded",
+        "isPrivateIpv4",
+        "parseBaiduHtml",
+        "parseBingHtml",
         "peekRgProbe",
-        "probeRgAsync"
+        "probeRgAsync",
+        "readWebCache",
+        "ssrfCheck",
+        "webCachePath",
+        "webFetch",
+        "webFetchFailMessage",
+        "webSearch",
+        "writeWebCache",
+        "zipReadCentralDir",
+        "zipReadEntryData",
+        "zipWrite"
       ],
       "direction": "backward"
     },
@@ -36117,7 +37466,13 @@
       "from": "14-main.js",
       "to": "12-tool-dispatch.js",
       "symbols": [
+        "TOOL_HANDLERS",
+        "attachScreenshotImage",
+        "suggestToolNames",
         "toolArgsMissingRequired",
+        "toolCall",
+        "toolFailureResult",
+        "validateNativeToolArgs",
         "withToolArgsGuide"
       ],
       "direction": "backward"
@@ -36274,6 +37629,9 @@
       "09d-token-estimation.js",
       "10-context-governance.js",
       "11-native-tools.js",
+      "11c-file-visual-io.js",
+      "11d-media-inspection.js",
+      "12-tool-dispatch.js",
       "13-http-router.js",
       "13b-api-domain-routes.js",
       "13d-core-domain-routes.js",
@@ -36328,6 +37686,7 @@
     "05-claude-engine.js->06e-mission-domain.js",
     "05-claude-engine.js->07-autonomy.js",
     "05-claude-engine.js->08-agent-runs.js",
+    "05-claude-engine.js->12-tool-dispatch.js",
     "05-claude-engine.js->13-http-router.js",
     "05b-kimi-bridge.js->00-boot.js",
     "05b-kimi-bridge.js->01-config.js",
@@ -36340,6 +37699,7 @@
     "05b-kimi-bridge.js->06c-agent-loop-hooks.js",
     "05b-kimi-bridge.js->07-autonomy.js",
     "05b-kimi-bridge.js->10-context-governance.js",
+    "05b-kimi-bridge.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->13-http-router.js",
     "05c-kimi-search-policy.js->00-boot.js",
     "05c-kimi-search-policy.js->03-bridge-guard.js",
@@ -36364,6 +37724,7 @@
     "06d-memory-domain.js->04-permission-runtime.js",
     "06d-memory-domain.js->05-claude-engine.js",
     "06d-memory-domain.js->06-provider-engine.js",
+    "06d-memory-domain.js->12-tool-dispatch.js",
     "06e-mission-domain.js->00-boot.js",
     "06e-mission-domain.js->02-session-store.js",
     "06e-mission-domain.js->03-bridge-guard.js",
@@ -36398,6 +37759,8 @@
     "08-agent-runs.js->09-workflow.js",
     "08-agent-runs.js->09d-token-estimation.js",
     "08-agent-runs.js->10-context-governance.js",
+    "08-agent-runs.js->11-native-tools.js",
+    "08-agent-runs.js->12-tool-dispatch.js",
     "08-agent-runs.js->13-http-router.js",
     "09-workflow.js->00-boot.js",
     "09-workflow.js->01-config.js",
@@ -36415,6 +37778,7 @@
     "09-workflow.js->09b-replan-ledger.js",
     "09-workflow.js->09d-token-estimation.js",
     "09-workflow.js->10-context-governance.js",
+    "09-workflow.js->12-tool-dispatch.js",
     "09-workflow.js->13-http-router.js",
     "09b-replan-ledger.js->00-boot.js",
     "09d-token-estimation.js->07-autonomy.js",
@@ -36432,10 +37796,29 @@
     "10-context-governance.js->09d-token-estimation.js",
     "11-native-tools.js->00-boot.js",
     "11-native-tools.js->01-config.js",
+    "11-native-tools.js->02-session-store.js",
     "11-native-tools.js->03-bridge-guard.js",
     "11-native-tools.js->04-permission-runtime.js",
     "11-native-tools.js->06-provider-engine.js",
     "11-native-tools.js->07-autonomy.js",
+    "11-native-tools.js->13f-native-tool-schemas.js",
+    "11c-file-visual-io.js->00-boot.js",
+    "11d-media-inspection.js->00-boot.js",
+    "12-tool-dispatch.js->00-boot.js",
+    "12-tool-dispatch.js->01-config.js",
+    "12-tool-dispatch.js->02-session-store.js",
+    "12-tool-dispatch.js->03-bridge-guard.js",
+    "12-tool-dispatch.js->04-desktop-shell.js",
+    "12-tool-dispatch.js->04-permission-runtime.js",
+    "12-tool-dispatch.js->05-claude-engine.js",
+    "12-tool-dispatch.js->06-provider-engine.js",
+    "12-tool-dispatch.js->06d-memory-domain.js",
+    "12-tool-dispatch.js->07-autonomy.js",
+    "12-tool-dispatch.js->08-agent-runs.js",
+    "12-tool-dispatch.js->10-context-governance.js",
+    "12-tool-dispatch.js->11-native-tools.js",
+    "12-tool-dispatch.js->11c-file-visual-io.js",
+    "12-tool-dispatch.js->11d-media-inspection.js",
     "13-http-router.js->00-boot.js",
     "13-http-router.js->01-config.js",
     "13-http-router.js->02-session-store.js",
@@ -36452,6 +37835,7 @@
     "13-http-router.js->09-workflow.js",
     "13-http-router.js->10-context-governance.js",
     "13-http-router.js->11-native-tools.js",
+    "13-http-router.js->12-tool-dispatch.js",
     "13-http-router.js->13b-api-domain-routes.js",
     "13-http-router.js->13d-core-domain-routes.js",
     "13-http-router.js->13e-pretender-index.js",
@@ -36521,6 +37905,7 @@
     "05-claude-engine.js->06e-mission-domain.js",
     "05-claude-engine.js->07-autonomy.js",
     "05-claude-engine.js->08-agent-runs.js",
+    "05-claude-engine.js->12-tool-dispatch.js",
     "05-claude-engine.js->13-http-router.js",
     "05b-kimi-bridge.js->05c-kimi-search-policy.js",
     "05b-kimi-bridge.js->05d-kimi-prompt-parts.js",
@@ -36528,12 +37913,14 @@
     "05b-kimi-bridge.js->06c-agent-loop-hooks.js",
     "05b-kimi-bridge.js->07-autonomy.js",
     "05b-kimi-bridge.js->10-context-governance.js",
+    "05b-kimi-bridge.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->13-http-router.js",
     "06-provider-engine.js->06b-prompt-registry.js",
     "06-provider-engine.js->06d-memory-domain.js",
     "06-provider-engine.js->06e-mission-domain.js",
     "06-provider-engine.js->07-autonomy.js",
     "06-provider-engine.js->11-native-tools.js",
+    "06d-memory-domain.js->12-tool-dispatch.js",
     "06f-autonomy-grants.js->07-autonomy.js",
     "06f-autonomy-grants.js->11-native-tools.js",
     "07-autonomy.js->08-agent-runs.js",
@@ -36543,10 +37930,14 @@
     "08-agent-runs.js->09-workflow.js",
     "08-agent-runs.js->09d-token-estimation.js",
     "08-agent-runs.js->10-context-governance.js",
+    "08-agent-runs.js->11-native-tools.js",
+    "08-agent-runs.js->12-tool-dispatch.js",
     "08-agent-runs.js->13-http-router.js",
     "09-workflow.js->10-context-governance.js",
+    "09-workflow.js->12-tool-dispatch.js",
     "09-workflow.js->13-http-router.js",
     "09d-token-estimation.js->10-context-governance.js",
+    "11-native-tools.js->13f-native-tool-schemas.js",
     "13-http-router.js->13b-api-domain-routes.js",
     "13-http-router.js->13d-core-domain-routes.js",
     "13-http-router.js->13e-pretender-index.js",

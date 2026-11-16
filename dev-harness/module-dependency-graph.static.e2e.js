@@ -65,6 +65,16 @@ const executableDeclarations = declarationInfo(tokenize('#!/usr/bin/env node\n' 
 ok(JSON.stringify(executableDeclarations) === JSON.stringify(fixtureDeclarations),
   'platform entry hashbang does not hide declarations or create spurious dependency symbols');
 
+const divisionFixture = [
+  'const ratio = 1024 / 2; function afterNumber() {}',
+  "const textRatio = '4' / 2; function afterString() {}",
+  'const templateRatio = `4` / 2; function afterTemplate() {}',
+  'const matcher = /[{}]/g; function afterRegex() {}',
+].join('\n');
+const divisionNames = declarationInfo(tokenize(divisionFixture)).provides.map(item => item.name).sort();
+ok(JSON.stringify(divisionNames) === JSON.stringify(['afterNumber', 'afterRegex', 'afterString', 'afterTemplate', 'matcher', 'ratio', 'templateRatio', 'textRatio']),
+  'literal division and regex braces cannot hide later declarations');
+
 const hooks = graph.modules.find(module => module.file === '06c-agent-loop-hooks.js');
 ok(hooks && JSON.stringify(hooks.provides) === JSON.stringify(['AgentLoopHooks']),
   '103b isolation pilot exposes one namespace instead of fourteen hook internals');
