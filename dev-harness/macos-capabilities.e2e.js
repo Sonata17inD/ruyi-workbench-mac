@@ -78,12 +78,16 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const slow = '#!/bin/sh\nprintf x >> ' + quote(count) + '\n/bin/sleep 0.15\nprintf \'%s\\n\' '
       + quote(JSON.stringify(report)) + '\n';
     fs.writeFileSync(helper, slow, { mode: 0o700 });
+    const probeStarted = performance.now();
     let ticks = 0;
     const timer = setInterval(() => { ticks++; }, 10);
     const snapshots = await Promise.all(Array.from({ length: 6 }, () => S.ProcessRuntime.capabilitySnapshot()));
     clearInterval(timer);
-    t.ok(snapshots.every(snapshot => snapshot.capabilities['process.supervisor'].ready) && ticks > 2,
-      'cold asynchronous capability probes keep the event loop responsive');
+    const probeElapsedMs = Math.round(performance.now() - probeStarted);
+    const supervisors = snapshots.map(snapshot => snapshot.capabilities['process.supervisor']);
+    t.ok(supervisors.every(state => state.ready),
+      'cold asynchronous probes all report readiness: ' + JSON.stringify({ elapsedMs: probeElapsedMs, states: supervisors.map(({ ready, code, reasonCode }) => ({ ready, code, reasonCode })) }));
+    t.ok(ticks > 2, 'cold asynchronous capability probes keep the event loop responsive: ' + JSON.stringify({ ticks, elapsedMs: probeElapsedMs }));
     t.ok(fs.readFileSync(count, 'utf8') === 'x', 'concurrent capability consumers share one helper probe');
     fs.writeFileSync(helper, slow + '\n# refreshed fixture');
     const pending = S.ProcessRuntime.helperCapabilityAsync();

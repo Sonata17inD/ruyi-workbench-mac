@@ -555,3 +555,9 @@
 - 两项直接／真实命令测试通过：隔离目录运行 doctor 与 doctor --human 均正常退出，默认 JSON 可解析，human 保留原 JSON 前缀并增加健康信息。health-i18n 源码锁迁到真实模块后通过。
 - Mac 能力 E2E 首次在“冷探针异步响应性”复合断言失败；未改判据，单独复跑全件通过。原因未确认，记录首次 /tmp/ruyi-diagnostics-capabilities.log 与复跑 /tmp/ruyi-diagnostics-capabilities-recheck.log，不以复跑抹去首次失败。
 - 模块边界、依赖图、facts、EOL、构建一致性与 diff 通过。backend 86 模块，共享宿主 67268 行；旧图仍 1 SCC。核心分层和最终发行未完成，未重复打包。
+
+## 工作包 4bg：能力探针偶发失败追查
+
+- 将原先混合“六个探针均 ready”与“事件循环 tick > 2”的断言拆开，保留原通过门槛，输出每个状态的 code／reasonCode、总耗时及 tick 数，避免今后再次失败却无法识别是哪一项。
+- 单独串行运行 Mac 能力整件三次均通过。六并发消费者每轮共享一次 helper 探测，六个状态均 ready；耗时 490／513／499 ms，tick 44／46／45。记录 /tmp/ruyi-probe-audit-{1,2,3}.log。
+- 未复现 4bf 的首次失败，原因仍未确认；没有放宽产品探针期限或验收条件，不登记为已修复。后续完整候选验收仍须观察这一项。本轮只做针对已发生失败的诊断与复验，无打包。
