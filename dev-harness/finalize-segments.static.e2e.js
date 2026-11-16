@@ -37,7 +37,7 @@ const builderEnd = builderSrc.indexOf('module.exports =');
 ok(builderStart >= 0 && builderEnd > builderStart, 'F1 createTurnSegmentBuilder 在 session store 源码');
 
 const healStart = store.indexOf('function healStalePendingSegments(session)');
-const healEnd = store.indexOf('\nasync function loadSession(', healStart);
+const healEnd = store.indexOf('\nconst SessionPersistence =', healStart);
 ok(healStart >= 0 && healEnd > healStart, 'F2 healStalePendingSegments 在 session store 源码');
 
 // Build a vm context with the globals healStalePendingSegments references (the pending registries).

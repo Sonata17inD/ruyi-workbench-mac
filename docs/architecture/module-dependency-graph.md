@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3700 | 3490 | 655 | 61 | 0 | 1 |
+| 92 | 3691 | 3489 | 655 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -39,7 +39,7 @@
 | 21 | `02f-turn-effect-kinds.js` | foundation | 19 | 0 | 0 |
 | 22 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
 | 23 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
-| 24 | `02-session-store.js` | foundation | 240 | 74 | 15 |
+| 24 | `02-session-store.js` | foundation | 231 | 73 | 15 |
 | 25 | `03-bridge-guard.js` | foundation | 102 | 29 | 7 |
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
@@ -140,7 +140,7 @@
 | `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `configReadCache`, `lastGoodConfig`, `mutateConfig`, `normalizeConfig`, `readConfig` |
 | `01l-credential-recovery.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01m-privacy-regex.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
-| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `crypto`, `ensureDirs`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text` |
+| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `crypto`, `ensureDirs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text` |
 | `02-session-store.js` | `01-config.js` | backward | `DurableJsonStore`, `assertSessionIdForPath`, `atomicWriteJson`, `mutateConfig`, `noteSessionsDirOwnWrite`, `readConfig`, `readFileTail`, `safeSessionId`, `selectedAgentCli`, `sessionPath` |
 | `02-session-store.js` | `01c-runtime-flags.js` | backward | `MEMORY_FIXED_SELECTION_HARD_MAX` |
 | `02-session-store.js` | `01e-permission-modes.js` | backward | `resolvePermissionMode` |

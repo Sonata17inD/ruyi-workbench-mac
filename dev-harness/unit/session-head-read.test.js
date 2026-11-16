@@ -231,7 +231,7 @@ describe('loadSession：装载那一眼之后有人写过盘，就不许拿旧�
 });
 
 describe('两道守卫的源码锁（把「不许在并发写盘时动手」钉住，防回改）', () => {
-  const store = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '02-session-store.js'), 'utf8');
+  const store = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'session-persistence.cjs'), 'utf8');
   const routes = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
 
   it('守卫①：写链在跑就等它跑完再重来，绝不截断/隔离', () => {

@@ -18,8 +18,8 @@ const codeLines = text => text.split('\n').map(l => l.replace(/\/\/.*$/, ''));
 const CENSUS = {
   '../backend/session-rewind.cjs': 1, // 撤回成功的严格提交。
   '../backend/session-transactions.cjs': 2, // 读改写与回合收尾的共享提交出口。
-  '02-session-store.js': 7,     // 回合外的存储层自身:updateSessionMeta ×2、loadSession 自愈 ×2、v1 回退、createSession、撤回、mutateSession、任务控制;
-                                 // + saveTurnFinalSession(三个引擎回合收尾那一存的共用出口,带回合代数闸 —— 被更新的回合顶替过就丢,审计 t4)
+  '../backend/session-persistence.cjs': 3, // 装载归一化、旧格式迁移与迁移备份恢复。
+  '02-session-store.js': 4, // 元数据、创建与任务控制；成员调用的适配器不重复计数。
   '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
   '06e-mission-domain.js': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)

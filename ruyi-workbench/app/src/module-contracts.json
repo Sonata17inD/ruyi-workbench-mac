@@ -1382,7 +1382,6 @@
         "SESSION_DELETE_SETTLE_TIMEOUT_MS",
         "SESSION_DELETE_TOMBSTONE_MAX",
         "SESSION_HEAD_READ_RETRIES",
-        "SESSION_HEAD_TRANSIENT",
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
         "SESSION_META_DEFER_TIMEOUT_MS",
@@ -1394,6 +1393,7 @@
         "SESSION_TOMBSTONE",
         "STEWARD_WATCH_NOTE_MAX",
         "SessionBodies",
+        "SessionPersistence",
         "SessionRewind",
         "appendIntervention",
         "appendMissionChangeRecord",
@@ -1409,11 +1409,9 @@
         "buildTurnSummary",
         "bulkDeleteUnpinnedSessions",
         "bumpMissionChangeSeq",
-        "bumpSessionDiskWriteSeq",
         "cancelModelRunsOfDiscardedTurns",
         "captureWorkspaceTurnBaseline",
         "checkpointRollbackContext",
-        "claimRewindGeneration",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
         "compactInterventionJournal",
@@ -1470,7 +1468,6 @@
         "listMissionContainers",
         "listSessions",
         "loadSession",
-        "loadSessionV1Backup",
         "markInterruptedInterventions",
         "markSessionDeleted",
         "maybeFinalizeMission",
@@ -1514,7 +1511,6 @@
         "readMissionChangesWithMeta",
         "readMissionContainer",
         "readMissionSessionHead",
-        "readSessionBodiesOmittingProvider",
         "readSessionBodyFile",
         "readSessionHeadResilient",
         "readSessionIndex",
@@ -1526,7 +1522,6 @@
         "recordMissionBudgetTrippedChange",
         "recordMissionCheckResult",
         "recordMissionStalledChange",
-        "recoverSessionBodyState",
         "registerIntervention",
         "rememberLastUsedEngineRoute",
         "removeSessionToolImages",
@@ -1547,7 +1542,6 @@
         "sessionBodyCommitValid",
         "sessionBodyDanglingFromLines",
         "sessionBodyDigest",
-        "sessionBodyFileStamp",
         "sessionBodyPaths",
         "sessionBodyPerfStats",
         "sessionBodyRecord",
@@ -1555,8 +1549,6 @@
         "sessionBodyText",
         "sessionBriefOf",
         "sessionDeleteTombstones",
-        "sessionDiskWriteSeq",
-        "sessionDiskWriteSeqOf",
         "sessionDisplayTitle",
         "sessionIndexPath",
         "sessionKind",
@@ -1587,7 +1579,6 @@
         "stopMissionAgentRuns",
         "toolImageSessionTag",
         "transitionInterventionState",
-        "truncateSessionBody",
         "updateSessionMeta",
         "updateSessionMetaAttempt",
         "updateSessionScratchpad",
@@ -1619,20 +1610,12 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
           "kinds": [
             "read"
           ]
