@@ -26,7 +26,7 @@ ok(/\/api\/memory\/metadata/.test(js) && /memory-core-toggle/.test(js) && /memor
 ok(/CORE_MEMORY_MAX = 200/.test(autonomy) && /CORE_MEMORY_CHAR_CAP = 16000/.test(autonomy),
   'core capsule fallbacks track the widened defaults (200 items / 16000 chars)');
 ok(/coreMemoryMaxItems\(config\)/.test(autonomy) && /coreMemoryCharBudget\(config\)/.test(autonomy)
-  && /memoryRelevanceMax\(effectiveConfig\)/.test(autonomy) && /memoryIndexCharCap\(config\)/.test(autonomy),
+  && /memoryRelevanceMax\(effectiveConfig\)/.test(autonomy) && /memoryIndexCharCap\(config\)/.test(read('ruyi-workbench/app/backend/memory-prompts.cjs')),
   'capsule/retrieval/index limits are resolved through the config-reading predicates, not the raw constants');
 ok(/memoryCoreScore/.test(autonomy) && /important/.test(autonomy) && /core-rule/.test(autonomy), 'protected LRU accounts for importance and implicit rule use');
 ok(/pathname === '\/api\/memory\/metadata'/.test(router), 'metadata quick actions preserve the full memory through a dedicated backend route');

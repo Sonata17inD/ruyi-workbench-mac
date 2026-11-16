@@ -307,7 +307,8 @@ ok(srv.toolPackForName('steward_decide', {}) === 'steward', "④ toolPackForName
 
 ok(/if \(isStewardToolName\(t\.name\) && !\(opts && opts\.stewardSession === true\)\) continue;/.test(src07),
   '⑤ 面 1:07 buildOpenAiTools 有 isStewardToolName 门(fail-closed 默认不 offer)');
-ok(/isStewardToolName\(t\.name\) && !stewardSession/.test(src13) && /process\.env\.WCW_SESSION_KIND === 'steward'/.test(src13),
+const mcpServerSource = fs.readFileSync(path.join(APP, 'backend/mcp-server.cjs'), 'utf8');
+ok(/isStewardToolName\(t\.name\) && !stewardSession/.test(mcpServerSource) && /env\.WCW_SESSION_KIND === 'steward'/.test(mcpServerSource),
   '⑤ 面 2:13 MCP tools/list 桥有 isStewardToolName 门(身份来自注入的 WCW_SESSION_KIND,缺失即隐藏)');
 ok(/!isStewardToolName\(t\.name\) \|\| stewardSession/.test(src11),
   '⑤ 面 3:11 adaptiveCatalogForMcp 有 isStewardToolName 门');

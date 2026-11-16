@@ -14,7 +14,6 @@ app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return fixture.v
 app.PrivacyCore.configHooks.openLocal = (...args) => { opens++; return fixture.vault.openLocal(...args); };
 const state = app.__eval(`(() => {
   const state = { config: null, session: null, live: { live: false }, run: null, steward: null, runner: {} };
-  readJsonBody = async req => req.fixtureBody || {};
   tokenOk = () => true;
   readConfig = async () => state.config;
   runSessionTurn = opts => state.run(opts);
@@ -28,7 +27,10 @@ const state = app.__eval(`(() => {
   return state;
 })()`);
 const policy = mode => ({ privacyModeV1: mode, privacyRulesV1: [], privacyTechnicalV1: false, providers: [], stewardEnabledV1: true });
-const request = (method, url, fixtureBody = {}) => Object.assign(new EventEmitter(), { method, url, headers: {}, fixtureBody, socket: { setNoDelay() {} } });
+const request = (method, url, body = {}) => Object.assign(new EventEmitter(), {
+  method, url, headers: {}, socket: { setNoDelay() {} },
+  async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); },
+});
 function response() {
   const res = new EventEmitter();
   Object.assign(res, { chunks: [], headers: {}, writableEnded: false, destroyed: false,

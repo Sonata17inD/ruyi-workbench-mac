@@ -97,7 +97,7 @@ ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySna
 ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/mission-driver.cjs', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
 
 // ⑤ 撤回相关的码有稳定码与人话(Brief §4.2 第 18 条)。
-const boot = read('00-boot.js');
+const boot = read('../backend/http-protocol.cjs');
 ok(/\['rewind_superseded', 'session\.rewind_superseded'\]/.test(boot), "⑤ 裸串 'rewind_superseded' 归一成稳定码 session.rewind_superseded");
 const app = fs.readFileSync(path.join(SRC, '..', 'public', 'app.js'), 'utf8');
 const drawer = fs.readFileSync(path.join(SRC, '..', 'public', 'js', 'steward-drawer.js'), 'utf8');

@@ -60,7 +60,8 @@ ok(/state: 'budget_guard_paused'/.test(src) && /m\.autoMode = 'supervised'/.test
 ok(/runtimeToolTimeBudgetShadowV1: false/.test(src) && /runtimeToolTimeBudgetV1: false/.test(src), 'S 13a-t shadow/主动双开关默认关闭');
 ok(/function toolTimeBudgetEnabled\(config\)/.test(src) && /function toolTimeBudgetShadowEnabled\(config\)/.test(src), 'S 13a-t 双开关唯一判定点存在');
 ok(/toolAbort\.abort\('tool_time_budget'\)/.test(src), 'S 13a-t 硬终态复用 toolAbort 杀树路径(不造第二套控制器)');
-ok(/signal\.reason === 'tool_time_budget'/.test(src) && /budgetKilled: true/.test(src), 'S 13a-t 04 中断原因感知(仅新原因走专用文案,旧原因逐字节不变)');
+const shellSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/desktop-shell.cjs'), 'utf8');
+ok(/signal\.reason === 'tool_time_budget'/.test(shellSource) && /budgetKilled: true/.test(shellSource), 'S 13a-t 04 中断原因感知(仅新原因走专用文案,旧原因逐字节不变)');
 ok(/kind: 'tool_byte_budget_shadow'/.test(src), 'S 13a-t 字节轴只计数不改写(20-C1 High 未解除)');
 // 106 #1 G1/G2: 前缀缓存布局修复 —— G1 保持默认关,G2 经真实 DeepSeek A/B 门后默认开。
 ok(/runtimeVolatileTailLayoutV1: false/.test(src) && /runtimeAppendOnlyToolSchemasV1: true/.test(src), 'S #1 G1 默认关闭、G2 真实 provider 门后默认开启');
