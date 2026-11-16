@@ -42618,7 +42618,7 @@ const FILE_TOOL_HANDLERS = {
           assertFileToolActive(ctx);
           if (caseOnly) {
             // 大小写不敏感文件系统上的纯改大小写:经一个临时名中转两步改(直接 rename 在个别驱动 / 同步盘上不会真的改大小写)。
-            const tmp = path.join(path.dirname(from), `.${path.win32.basename(from)}.${process.pid}.${Date.now().toString(36)}.rn`);
+            const tmp = path.join(path.dirname(from), `.${path.basename(from)}.${process.pid}.${Date.now().toString(36)}.rn`);
             await fsp.rename(from, tmp);
             try { await fsp.rename(tmp, to); }
             catch (e2) {
@@ -43104,11 +43104,6 @@ const ARCHIVE_TOOL_HANDLERS = {
   } },
 };
 
-// PowerShell 单引号字面量转义:除了 ASCII `'`,PowerShell 还把 ‘ ’ ‚ ‛ 四个弯引号也当单引号定界符。修前只双写 ASCII
-// 引号,模型文本里常见的 it’s 让脚本解析失败,`x’); Start-Process calc; ('` 则直接注入一条命令。四种都按「连写两个 = 一个字面」转义。
-function psSingleQuoted(value) {
-  return String(value == null ? '' : value).replace(/['\u2018\u2019\u201A\u201B]/g, ch => ch + ch);
-}
 // root 或它往上几级有没有 .gitignore(只为 file_search 零命中时的那一句提示,不求精确)。
 async function nearestGitignore(root) {
   let dir = path.resolve(String(root || ''));
@@ -53139,7 +53134,7 @@ function stewardDeliveryFiles(summary, cwd) {
     if (!row || typeof row.path !== 'string' || !row.path.trim()) continue;
     const absolute = path.resolve(cwd || '', row.path);
     const key = absolute;
-    pathsByKey.set(key, { path: absolute, name: path.win32.basename(absolute), kind: kindForPath(absolute) });
+    pathsByKey.set(key, { path: absolute, name: path.basename(absolute), kind: kindForPath(absolute) });
   }
   return [...pathsByKey.values()];
 }

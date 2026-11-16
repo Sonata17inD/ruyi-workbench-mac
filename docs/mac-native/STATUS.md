@@ -586,3 +586,9 @@
 - 执行快速回归的全部单元：2748 项，2738 通过、9 跳过、1 失败。失败来自 privacy-display-http 尝试重赋值已迁为常量的 readJsonBody；改为提供可异步读取的真实 JSON 请求体，保留实际 HTTP 解码，受影响 8 项全通过。
 - 单元失败导致 runner 尚未执行静态门，因此另以每件隔离家目录、原 fixture-home-guard 串行执行 76 件静态门：72 通过，4 失败。memory-toolbox、runtime-optimization、session-save-census、steward-tools 仍断言旧宿主位置；逐项改为真实 memory-prompts、desktop-shell、http-protocol、mcp-server 模块后四件复验通过。MCP 环境端口是显式 env，首轮修锁遗漏此变化，补齐后通过。
 - 不将首次失败或 9 项跳过计为通过；未重复执行整轮 65K 文件归档单元，也未打包。第四阶段核心分层与第五阶段交付仍未完成。
+
+## 工作包 2k：Mac 字面文件名与死代码
+
+- 删除无人调用的 PowerShell 单引号转义函数；本地交付文件名及大小写改名临时路径使用原生 path.basename，避免把 Mac 文件名中的字面反斜杠当成路径分隔符。
+- 两项实际模块／文件系统回归通过：中文反斜杠文件名交付保持完整，大小写改名保留文件名以及 UTF-8 BOM／CRLF 原字节。未改旧历史路径解释和用户文件格式支持。
+- 构建、依赖图、facts 已更新，EOL、构建一致性与 diff 通过；未打包、未操作真实业务数据。

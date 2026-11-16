@@ -10,7 +10,7 @@ function stewardDeliveryFiles(summary, cwd) {
     if (!row || typeof row.path !== 'string' || !row.path.trim()) continue;
     const absolute = path.resolve(cwd || '', row.path);
     const key = absolute;
-    pathsByKey.set(key, { path: absolute, name: path.win32.basename(absolute), kind: kindForPath(absolute) });
+    pathsByKey.set(key, { path: absolute, name: path.basename(absolute), kind: kindForPath(absolute) });
   }
   return [...pathsByKey.values()];
 }
