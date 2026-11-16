@@ -17,7 +17,12 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-lease-nested-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+let leaseSeq = 0;
+const srv = require('../../ruyi-workbench/app/backend/resource-leases.cjs').createResourceLeases({
+  makeId: () => 'lease_' + (++leaseSeq), nowIso: () => new Date().toISOString(),
+  pathWithinRoot: (target, base) => { const rel = path.relative(base, target); return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel)); },
+  collectBridgedWriteTargets: () => [], env: {},
+});
 const { acquireResourceLease, releaseResourceLease, normalizeAgentResources } = srv;
 
 const cwd = path.join(root, 'proj');
@@ -126,8 +131,63 @@ test('[L2] signal 已经 aborted:直接以 AbortError 拒,不留在等待队列�
   assert.equal(another.settled, true, 'H 释放后 Y 立刻拿到');
   assert.ok(another.token);
   releaseResourceLease(another.token);
-  // 没有冲突时已 aborted 的 signal 不影响直接放行(行为不变:只在「要入队」时才判)。
-  const free = await acquireResourceLease('Z', res('file:' + path.join(cwd, 'free.txt')), ac.signal, null, NO_TIMEOUT);
-  assert.ok(free);
-  releaseResourceLease(free);
+  await assert.rejects(acquireResourceLease('Z', res('file:' + path.join(cwd, 'free.txt')), ac.signal, null, NO_TIMEOUT), { name: 'AbortError' });
+});
+
+test('settled waits detach cancellation listeners and cancelling a queued writer wakes compatible readers', async () => {
+  const { getEventListeners } = require('node:events');
+  const resource = res('read:file:' + path.join(cwd, 'queue.txt'));
+  const writerResource = res('file:' + path.join(cwd, 'queue.txt'));
+  const held = await acquireResourceLease('held-read', resource);
+  const controller = new AbortController();
+  const writer = track(acquireResourceLease('waiting-write', writerResource, controller.signal, null, NO_TIMEOUT));
+  const reader = track(acquireResourceLease('next-read', resource, null, null, NO_TIMEOUT));
+  assert.equal(reader.settled, false);
+  controller.abort();
+  await writer.done;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(reader.settled, true, 'the cancelled writer must stop blocking a compatible reader');
+  releaseResourceLease(reader.token); releaseResourceLease(held);
+  const heldWrite = await acquireResourceLease('holder', writerResource);
+  const signal = new AbortController().signal;
+  const waiting = acquireResourceLease('waiting', writerResource, signal, null, NO_TIMEOUT);
+  assert.equal(getEventListeners(signal, 'abort').length, 1);
+  releaseResourceLease(heldWrite);
+  const token = await waiting;
+  assert.equal(getEventListeners(signal, 'abort').length, 0);
+  releaseResourceLease(token);
+});
+
+test('cancellation inside the wait notification cannot enqueue a request after its signal fires', async () => {
+  const resources = res('file:' + path.join(cwd, 'notify.txt'));
+  const held = await acquireResourceLease('notify-holder', resources);
+  const controller = new AbortController();
+  const request = track(acquireResourceLease('notify-waiter', resources, controller.signal, () => controller.abort(), NO_TIMEOUT));
+  await new Promise(resolve => setImmediate(resolve));
+  try { assert.equal(request.settled, true); assert.equal(request.error?.name, 'AbortError'); }
+  finally { releaseResourceLease(held); if (request.token) releaseResourceLease(request.token); }
+});
+
+test('a deadline removes its signal listener and wakes readers queued behind the expired writer', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { getEventListeners } = require('node:events');
+  const read = res('read:file:' + path.join(cwd, 'timeout.txt')), write = res('file:' + path.join(cwd, 'timeout.txt'));
+  const held = await acquireResourceLease('timed-holder', read);
+  const signal = new AbortController().signal;
+  const writer = track(acquireResourceLease('timed-writer', write, signal, null, 10));
+  const reader = track(acquireResourceLease('timed-reader', read));
+  t.mock.timers.tick(10);
+  await writer.done; await reader.done;
+  assert.equal(writer.error?.code, 'RESOURCE_TIMEOUT');
+  assert.equal(getEventListeners(signal, 'abort').length, 0);
+  assert.ok(reader.token);
+  releaseResourceLease(reader.token); releaseResourceLease(held);
+});
+
+test('releasing a blocker inside onWait cannot lose the only wakeup', async () => {
+  const resources = res('file:' + path.join(cwd, 'release-notify.txt'));
+  const held = await acquireResourceLease('release-holder', resources);
+  const waiting = track(acquireResourceLease('release-waiter', resources, null, () => releaseResourceLease(held), NO_TIMEOUT));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(waiting.settled, true); assert.ok(waiting.token); releaseResourceLease(waiting.token);
 });

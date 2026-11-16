@@ -6871,46 +6871,27 @@
       "file": "06g-resource-leases.js",
       "layer": "engine",
       "provides": [
-        "ACC_DESKTOP_READ_TOOLS",
-        "ACC_DESKTOP_WRITE_TOOLS",
-        "ACC_NON_DESKTOP_TOOLS",
-        "DEFAULT_RESOURCE_LEASE_TIMEOUT_MS",
-        "RESOURCE_LEASE_TIMEOUT_MS",
         "acquireResourceLease",
         "agentResourcesConflict",
         "bridgedDesktopLeaseMode",
-        "canonicalResourcePath",
-        "drainResourceWaiters",
-        "groupHoldsLease",
         "inferToolResources",
         "normalizeAgentResource",
         "normalizeAgentResources",
         "releaseResourceLease",
         "remapAgentResources",
-        "resourceBlockers",
-        "resourceLeases",
-        "resourcePathContains",
-        "resourceWaiters",
-        "wouldDeadlock"
+        "resourceBlockers"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -6919,14 +6900,14 @@
           "provider": "02-session-store.js",
           "symbol": "collectBridgedWriteTargets",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

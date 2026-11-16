@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3681 | 3489 | 655 | 61 | 0 | 1 |
+| 92 | 3669 | 3488 | 655 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -64,7 +64,7 @@
 | 46 | `06d-memory-domain.js` | engine | 178 | 39 | 11 |
 | 47 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
 | 48 | `06f-autonomy-grants.js` | engine | 25 | 12 | 5 |
-| 49 | `06g-resource-leases.js` | engine | 21 | 5 | 3 |
+| 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
 | 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 51 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
 | 52 | `07-autonomy.js` | orchestration | 155 | 83 | 21 |
@@ -281,7 +281,7 @@
 | `06f-autonomy-grants.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `06f-autonomy-grants.js` | `07-autonomy.js` | forward | `NATIVE_TOOL_TIER`, `nativeToolTier` |
 | `06f-autonomy-grants.js` | `11-native-tools.js` | forward | `globToRegExp` |
-| `06g-resource-leases.js` | `00-boot.js` | backward | `makeId`, `nowIso`, `path` |
+| `06g-resource-leases.js` | `00-boot.js` | backward | `makeId`, `nowIso` |
 | `06g-resource-leases.js` | `02-session-store.js` | backward | `collectBridgedWriteTargets` |
 | `06g-resource-leases.js` | `03-bridge-guard.js` | backward | `pathWithinRoot` |
 | `06i-steward-core.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
