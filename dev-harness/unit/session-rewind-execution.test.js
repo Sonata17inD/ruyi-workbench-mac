@@ -139,13 +139,20 @@ test('legacy idle rewind remains compatible while guarded explicit idle reaches 
   }
 });
 
+function bindExecutions(f, serverInstanceId = 'process-A') {
+  const service = require('../../ruyi-workbench/app/backend/session-executions.cjs').createSessionExecutions({
+    activeChildren: f.ctx.activeChildren, turnSettlers: f.ctx.turnSettlers, serverInstanceId,
+    hooks: f.ctx.SessionExecutionHooks, stopChild: f.ctx.stopSession,
+  });
+  Object.assign(f.ctx, service);
+  f.ctx.SessionExecutionHooks.checkRewind = service.sessionExecutionCheckRewind;
+  f.ctx.SessionExecutionHooks.observation = service.sessionExecutionObservation;
+}
+
 test('idle undo rejects any intervening admission, tombstone eviction or process change even without turn progression', async () => {
-  const runtime = read('src/04-permission-runtime.js');
   const make = () => {
-    const f = fixture({ OVERLAY_ID: 'process-A', sessionLastExecutions: new Map(), sessionExecutionEvictionGeneration: 0 });
-    vm.runInContext(['recordSessionExecutionOwner', 'sessionExecutionObservation', 'sessionExecutionSnapshot', 'sessionExecutionCheck', 'sessionExecutionCheckRewind']
-      .map(name => functionBlock(runtime, name)).join('\n')
-      + '\nSessionExecutionHooks.checkRewind = sessionExecutionCheckRewind; SessionExecutionHooks.observation = sessionExecutionObservation;', f.ctx);
+    const f = fixture();
+    bindExecutions(f);
     return f;
   };
   const admitted = make();
@@ -161,7 +168,7 @@ test('idle undo rejects any intervening admission, tombstone eviction or process
   assert.equal(evicted.ctx.SessionExecutionHooks.observation('s').lastDriverRunId, null);
   assert.equal((await evicted.rewind('s', 2, true, idleOptions())).error, 'execution_changed');
   assert.deepEqual(evicted.calls, []);
-  const restarted = make(); restarted.ctx.OVERLAY_ID = 'process-B';
+  const restarted = make(); bindExecutions(restarted, 'process-B');
   assert.equal((await restarted.rewind('s', 2, true, idleOptions())).error, 'execution_changed');
   assert.deepEqual(restarted.calls, []);
 });
@@ -214,11 +221,9 @@ test('legacy automatic stop compares the pre-read identity and refuses a replace
 });
 
 test('completed A can rewind using bounded admission evidence; completed B invalidates old A', async () => {
-  const runtime = read('src/04-permission-runtime.js');
   const make = () => {
-    const f = fixture({ OVERLAY_ID: 'process-A', sessionLastExecutions: new Map() });
-    vm.runInContext(['recordSessionExecutionOwner', 'sessionExecutionSnapshot', 'sessionExecutionCheck', 'sessionExecutionCheckRewind']
-      .map(name => functionBlock(runtime, name)).join('\n') + '\nSessionExecutionHooks.checkRewind = sessionExecutionCheckRewind;', f.ctx);
+    const f = fixture();
+    bindExecutions(f);
     f.ctx.recordSessionExecutionOwner('s', { driverRunId: 'A' });
     f.ctx.turnSettlers.delete('s');
     return f;
@@ -231,7 +236,7 @@ test('completed A can rewind using bounded admission evidence; completed B inval
   b.ctx.turnSettlers.delete('s');
   assert.equal((await b.rewind('s', 2, true, { guardExecution: true, expectedExecution: execution('A') })).error, 'execution_changed');
   assert.deepEqual(b.calls, []);
-  for (const invalidate of [f => f.ctx.sessionLastExecutions.clear(), f => { f.ctx.OVERLAY_ID = 'process-B'; }]) {
+  for (const invalidate of [f => { for (let i = 0; i < 2048; i++) f.ctx.recordSessionExecutionOwner('other-' + i, { driverRunId: 'r-' + i }); }, f => bindExecutions(f, 'process-B')]) {
     const f = make(); invalidate(f);
     assert.equal((await f.rewind('s', 2, true, { guardExecution: true, expectedExecution: execution('A') })).error, 'execution_changed');
     assert.deepEqual(f.calls, []);

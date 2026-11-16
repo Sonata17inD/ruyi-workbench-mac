@@ -2,20 +2,14 @@
 require('../lib/self-isolate-home');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { functionBlock } = require('../lib/source-slice');
-const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/04-permission-runtime.js'), 'utf8');
+const { createSessionExecutions } = require('../../ruyi-workbench/app/backend/session-executions.cjs');
 function fixture() {
   const effects = [];
-  const context = vm.createContext({ OVERLAY_ID: 'epoch-one', turnSettlers: new Map(), sessionLastExecutions: new Map(), sessionExecutionEvictionGeneration: 0, activeChildren: new Map(), SessionExecutionHooks: {
+  const context = { turnSettlers: new Map(), activeChildren: new Map(), SessionExecutionHooks: {
     cancelQueuedTurn(sid, run) { effects.push(['queue', sid, run]); return context.queued === run; },
     revokeGrants(sid) { effects.push(['revoke', sid]); },
-  }, stopSession(sid, reason) { effects.push(['stop', sid, reason]); context.activeChildren.delete(sid); } });
-  for (const name of ['recordSessionExecutionOwner', 'sessionExecutionObservation', 'sessionExecutionSnapshot', 'sessionExecutionCheck', 'sessionExecutionCheckRewind', 'assertSessionExecutionOwner', 'registerSessionExecutionChild', 'requestSessionExecutionStop']) {
-    vm.runInContext(functionBlock(source, name), context);
-  }
+  }, stopSession(sid, reason) { effects.push(['stop', sid, reason]); context.activeChildren.delete(sid); } };
+  Object.assign(context, createSessionExecutions({ ...context, serverInstanceId: 'epoch-one', hooks: context.SessionExecutionHooks, stopChild: context.stopSession }));
   function admit(run, phase = 'starting') {
     const owner = { driverRunId: run, phase, cancelRequested: false, cancel(reason) { this.cancelRequested = true; effects.push(['cancel', run, reason]); } };
     context.recordSessionExecutionOwner('s', owner);
@@ -73,7 +67,8 @@ test('completed undo requires last admitted identity; completion of a newer driv
   assert.equal(c.sessionExecutionCheckRewind('s', expected('B')).ok, true);
   assert.equal(c.sessionExecutionCheckRewind('s', { ...expected('B'), serverInstanceId: 'epoch-old' }).ok, false);
   for (let i = 0; i < 2048; i++) c.recordSessionExecutionOwner('other-' + i, { driverRunId: 'r-' + i });
-  assert.equal(c.sessionLastExecutions.size, 2048);
+  assert.equal(c.sessionExecutionObservation('other-0').lastDriverRunId, 'r-0');
+  assert.equal(c.sessionExecutionObservation('s').lastDriverRunId, null);
   assert.equal(c.sessionExecutionCheckRewind('s', expected('B')).ok, false);
 });
 
