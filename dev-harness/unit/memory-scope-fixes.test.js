@@ -35,7 +35,7 @@ const SERVER = process.env.RUYI_TEST_SERVER_JS ? path.resolve(process.env.RUYI_T
 const SERVER_SRC = fs.readFileSync(SERVER, 'utf8');
 const WANT = ['memoryGlobalScopeAllowed', 'memoryRecentUserTexts', 'normalizeMemoryProposalCandidate', 'findMemoryProposalDuplicate', 'memoryProposalDuplicateFailure',
   'saveMemory', 'readMemoryItem', 'moveMemoryScope', 'memoryGlobalDir', 'memoryProjectDir', 'memoryUsageKey', 'touchMemoryUsage', 'readMemoryUsageState',
-  'writeMemoryRelations', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
+  'proposeMemoryRelation', 'confirmMemoryRelation', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
   'planAgentInstructionEntries', 'syncAgentInstructionImports', 'agentInstructionSources', 'readAgentInstructionSource', 'splitAgentInstructionText',
   'renderAgentInstructionMemory', 'agentInstructionMemoryId', 'agentInstructionImportFile', 'sha256Hex', 'clipRecentMemoryDraftContext', 'parseFrontmatter',
   'memoryAutoGlobalAllowed', 'memoryProposalPrefilter'];
@@ -252,16 +252,17 @@ test('[M1] 项目 → 全局:写新删旧,createdAt 沿用,用量旁账随迁,�
 test('[M2] 关系边不能跨作用域:涉及它的边从原作用域摘掉并如实计数;无关的边保留', async () => {
   const save = need('saveMemory'), move = need('moveMemoryScope');
   for (const id of ['rel-a', 'rel-b', 'rel-c']) await save({ id, scope: 'project', type: 'reference', name: id, description: id + ' d', body: id }, PROJ);
-  await need('writeMemoryRelations')('project', PROJ, [
-    { id: 'edge1', type: 'supports', from: 'rel-a', to: 'rel-b', scope: 'project', confirmed: true },
-    { id: 'edge2', type: 'contradicts', from: 'rel-c', to: 'rel-a', scope: 'project', confirmed: false },
-    { id: 'edge3', type: 'supports', from: 'rel-b', to: 'rel-c', scope: 'project', confirmed: true },
-  ]);
+  const edges = [];
+  for (const [from, to, type, confirmed] of [['rel-a', 'rel-b', 'supports', true], ['rel-c', 'rel-a', 'contradicts', false], ['rel-b', 'rel-c', 'supports', true]]) {
+    const proposed = await need('proposeMemoryRelation')({ from, to, type, scope: 'project' }, PROJ);
+    assert.equal(proposed.ok, true); edges.push(proposed.relation.id);
+    if (confirmed) assert.equal((await need('confirmMemoryRelation')(proposed.relation.id, PROJ)).ok, true);
+  }
   const r = await move({ id: 'rel-a', scope: 'global', name: 'rel-a', description: 'rel-a d', type: 'reference', body: 'rel-a' }, 'project', PROJ);
   assert.equal(r.ok, true);
   assert.equal(r.moved.relationsDropped, 2);
   const left = await need('readMemoryRelations')('project', PROJ);
-  assert.deepEqual(left.map(e => e.id), ['edge3']);
+  assert.deepEqual(left.map(e => e.id), [edges[2]]);
 });
 
 test('[M3] 全局 → 项目(下放);目标作用域已有同 id → 拒绝(conflict + 稳定码),两边都不动', async () => {

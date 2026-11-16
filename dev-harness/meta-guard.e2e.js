@@ -75,8 +75,8 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   ok(/m: 'GET', p: '\/api\/agent-workflows', auth: 'token-browser'/.test(table), 'D agent-workflows GET 标 token-browser(第33波收紧)');
   ok(/m: 'GET', p: '\/api\/playbooks', auth: 'token-browser'/.test(table), 'D playbooks GET 标 token-browser(第33波收紧)');
   // deny-by-default:authorizeRoute 未匹配路由返回拒绝。
-  const { authorizeRoute } = require('../ruyi-workbench/app/backend/http-authorization.cjs').createHttpAuthorization({ port: 8765, token: 'test' });
-  ok(authorizeRoute({ headers: { host: '127.0.0.1:8765', 'x-wcw-token': 'test' } }, 'POST', '/api/unknown-route') === 'route not authorized', 'D authorizeRoute deny-by-default 未匹配路由拒绝');
+  const { authorizeRoute } = require('../ruyi-workbench/app/backend/http-authorization.cjs').createHttpAuthorization({ port: 0, token: 'test' });
+  ok(authorizeRoute({ headers: { host: '127.0.0.1:0', 'x-wcw-token': 'test' } }, 'POST', '/api/unknown-route') === 'route not authorized', 'D authorizeRoute deny-by-default 未匹配路由拒绝');
 }
 
 // ── E) 两引擎能力对称:orchestrate_agents 的模板/意图提示必须【两个引擎都注入】。历史上 Claude 引擎从不告知有哪些

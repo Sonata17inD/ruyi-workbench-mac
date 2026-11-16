@@ -559,13 +559,13 @@
     {
       "id": "memory-body",
       "pattern": "<data>/memory/{global,project/<key>}/<id>.md",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'.md'",
       "schema": "markdown + frontmatter",
       "writePrimitive": "atomicWriteJson (markdown string passthrough)",
       "corruption": "unparsable head yields defaults; oversized (>260KB) file is skipped by the registry",
       "capacity": "one file per memory; 260KB write-side cap",
-      "cache": "in-process head cache keyed by size+mtime (113a)",
+      "cache": "in-process head cache keyed by device/inode/change time/mtime/size",
       "recovery": "user rewrite or re-propose; sidecars are rebuilt from bodies",
       "lifecycle": "shared-lifecycle",
       "exemptionReason": "memory bodies are user-authored content, not derived state: the workbench never regenerates them"
@@ -573,7 +573,7 @@
     {
       "id": "memory-usage",
       "pattern": "<data>/memory/_usage-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'_usage-v1.json'",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson",
@@ -587,7 +587,7 @@
     {
       "id": "memory-meta",
       "pattern": "<data>/memory/**/meta.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'meta.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",

@@ -96,8 +96,8 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
   ok(defs === 1, '⑦a 00-boot.js 里 neutralizeFenceTag 只有一份定义(got ' + defs + ')');
 
   const sites = [
-    { file: '06d-memory-domain.js', needle: "neutralizeFenceTag(t, 'workbench-memory')" },
-    { file: '06d-memory-domain.js', needle: "neutralizeFenceTag(String(value || ''), 'workbench-memory-core')" },
+    { file: '../backend/memory-prompts.cjs', needle: "neutralizeFenceTag(t, 'workbench-memory')" },
+    { file: '../backend/memory-prompts.cjs', needle: "neutralizeFenceTag(String(value || ''), 'workbench-memory-core')" },
     { file: '../backend/mission-driver.cjs', needle: "neutralizeFenceTag(t == null ? '' : t, 'mission-ledger')" },
     { file: '06-provider-engine.js', needle: "neutralizeFenceTag(text, 'project-memory')" },
     { file: '06-provider-engine.js', needle: "neutralizeFenceTag(t, 'skill-index')" },
@@ -109,7 +109,7 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
   }
 
   // 六处不应再各自手写同款字面量正则(排除 00-boot.js 自身的实现)。
-  const callerFiles = ['06d-memory-domain.js', '06e-mission-domain.js', '06-provider-engine.js', '09-workflow.js'];
+  const callerFiles = ['../backend/memory-prompts.cjs', '06e-mission-domain.js', '06-provider-engine.js', '09-workflow.js'];
   let leftoverLiterals = 0;
   for (const f of callerFiles) {
     const src = fs.readFileSync(path.join(app, 'src', f), 'utf8');

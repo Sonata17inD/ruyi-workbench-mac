@@ -248,7 +248,8 @@
     "app/backend/product-identity.cjs",
     "app/backend/agent-role-policy.cjs",
     "app/backend/memory-prompts.cjs",
-    "app/backend/memory-relations.cjs"
+    "app/backend/memory-relations.cjs",
+    "app/backend/memory-store.cjs"
   ],
   "acc": [
     "LICENSE",
