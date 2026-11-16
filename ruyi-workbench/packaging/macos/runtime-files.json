@@ -265,6 +265,8 @@
     "app/backend/local-support.cjs",
     "app/backend/tool-dispatcher.cjs",
     "app/backend/scheduler-runtime.cjs",
+    "app/backend/scheduler-routes.cjs",
+    "app/backend/scheduler-steward.cjs",
     "app/backend/process-helper-capability.cjs",
     "app/backend/cli-diagnostics.cjs",
     "app/backend/kimi-model-discovery.cjs",

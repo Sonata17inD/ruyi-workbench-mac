@@ -50,7 +50,7 @@ const ROUTER_FILES = [
   '../backend/event-stream.cjs',
   // 第 123 波 M1（37 号文 §3.3）：定时任务六条 /api/scheduler/tasks（13s 拼接顺序在 13 之后，
   // 经 handleApi 里一行 `await handleSchedulerApiRoutes(...)` 直调委派，同 13b/13c/13d）。
-  '13s-scheduler.js',
+  '../backend/scheduler-routes.cjs',
   '13w-external-bots.js',
   '13ab-privacy-api.js',
 ];
@@ -99,7 +99,7 @@ const DOMAIN_BY_FILE = {
   '13g-steward.js': 'steward',
   '13h-steward-runner.js': 'steward',
   '../backend/event-stream.cjs': 'event-stream',
-  '13s-scheduler.js': 'scheduler',
+  '../backend/scheduler-routes.cjs': 'scheduler',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

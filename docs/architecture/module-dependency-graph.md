@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3517 | 3438 | 645 | 61 | 0 | 1 |
+| 92 | 3482 | 3423 | 645 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -96,8 +96,8 @@
 | 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
-| 81 | `13s-scheduler.js` | transport | 28 | 34 | 9 |
-| 82 | `13t-steward-schedule.js` | transport | 23 | 39 | 10 |
+| 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
+| 82 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
 | 83 | `13u-migration-center.js` | transport | 62 | 35 | 6 |
 | 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
 | 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
@@ -674,7 +674,7 @@
 | `13r-event-stream.js` | `04-permission-runtime.js` | backward | `subscribeActiveChildEvents` |
 | `13r-event-stream.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `stewardThreadStateFromHead`, `stewardWatchedThread`, `threadOriginOf` |
 | `13r-event-stream.js` | `13d-core-domain-routes.js` | backward | `missionPendingCounts` |
-| `13s-scheduler.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `URL`, `apiFailure`, `json`, `makeId`, `nowIso`, `paths`, `readJsonBody`, `safeDecodeURIComponent`, `send` |
+| `13s-scheduler.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `makeId`, `nowIso`, `paths`, `safeDecodeURIComponent` |
 | `13s-scheduler.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig` |
 | `13s-scheduler.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
 | `13s-scheduler.js` | `02-session-store.js` | backward | `createSession`, `loadSession`, `repairMissionChangeTornTail`, `saveSession`, `updateSessionMeta` |
@@ -683,7 +683,7 @@
 | `13s-scheduler.js` | `06j-scheduler-core.js` | backward | `SCHEDULER_LIMITS`, `SCHEDULER_OUTCOMES`, `SCHEDULER_PHASES`, `SchedulerHooks`, `describeSchedule`, `missedOccurrence`, `nextFireAt`, `normalizeSchedulerTask`, `occurrenceKey` |
 | `13s-scheduler.js` | `07-autonomy.js` | backward | `schedulerAskWaitSessions` |
 | `13s-scheduler.js` | `10-context-governance.js` | backward | `runSessionTurn` |
-| `13t-steward-schedule.js` | `00-boot.js` | backward | `fsp`, `makeId`, `nowIso`, `text` |
+| `13t-steward-schedule.js` | `00-boot.js` | backward | `makeId`, `nowIso` |
 | `13t-steward-schedule.js` | `01-config.js` | backward | `readConfig`, `safeSessionId` |
 | `13t-steward-schedule.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `StewardHooks`, `stewardSanitizeText` |
 | `13t-steward-schedule.js` | `06j-scheduler-core.js` | backward | `SCHEDULER_LIMITS`, `SchedulerHooks`, `describeSchedule`, `nextFireAt`, `normalizeSchedulerTask` |
@@ -692,7 +692,7 @@
 | `13t-steward-schedule.js` | `13j-steward-tool-base.js` | backward | `stewardAppendDecision`, `stewardFail`, `stewardRawKind`, `stewardReadSessionHead` |
 | `13t-steward-schedule.js` | `13k-steward-threads.js` | backward | `stewardCanonWorkspacePath`, `stewardDeriveThreadCwd`, `stewardUnattendedByModel`, `stewardValidateCwd` |
 | `13t-steward-schedule.js` | `13q-steward-runner-turn.js` | backward | `stewardEnsureOpenAiRoute` |
-| `13t-steward-schedule.js` | `13s-scheduler.js` | backward | `schedulerClockNow`, `schedulerEmitChanged`, `schedulerEnabled`, `schedulerEnsureTimer`, `schedulerLoad`, `schedulerReadFireRows`, `schedulerRunNow`, `schedulerRuntime`, `schedulerSaveTasks` |
+| `13t-steward-schedule.js` | `13s-scheduler.js` | backward | `SchedulerRuntime` |
 | `13u-migration-center.js` | `00-boot.js` | backward | `MigrationHooks`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `crypto`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `installRegistryPath`, `nowIso`, `os`, `path`, `paths`, `readInstallRegistry`, `ruyiPackageInfo`, `safeJsonParse`, `samePathKey`, `text`, `tildePath` |
 | `13u-migration-center.js` | `01-config.js` | backward | `agentMcpImportSources`, `atomicWriteJson`, `classifyAgentMcpCandidate`, `generateMcpConfig`, `kimiMcpManagedIds`, `mutateConfig`, `readConfig` |
 | `13u-migration-center.js` | `04-desktop-shell.js` | backward | `DesktopShell` |

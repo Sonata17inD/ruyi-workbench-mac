@@ -22820,55 +22820,18 @@
       "file": "13s-scheduler.js",
       "layer": "transport",
       "provides": [
-        "SCHEDULER_RUNS_LIMIT_DEFAULT",
-        "SCHEDULER_RUNS_LIMIT_MAX",
         "SchedulerRuntime",
         "handleSchedulerApiRoutes",
-        "schedulerAppendFire",
-        "schedulerClockNow",
-        "schedulerDir",
-        "schedulerEmitChanged",
-        "schedulerEnabled",
-        "schedulerEnsureTimer",
-        "schedulerFireOnce",
-        "schedulerLoad",
-        "schedulerLocaleOf",
-        "schedulerMergeRuns",
-        "schedulerNotify",
         "schedulerPermissionModeFor",
-        "schedulerPublicTask",
-        "schedulerReadFireRows",
-        "schedulerRecover",
-        "schedulerRouteGate",
-        "schedulerRunNow",
-        "schedulerRuntime",
         "schedulerRuntimeSnapshot",
-        "schedulerSaveTasks",
-        "schedulerTasksPath",
-        "schedulerTick",
         "startScheduler",
         "stopScheduler"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -22888,13 +22851,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -22904,21 +22860,7 @@
           "provider": "00-boot.js",
           "symbol": "safeDecodeURIComponent",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -22932,7 +22874,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -23017,7 +22958,7 @@
           "provider": "06j-scheduler-core.js",
           "symbol": "describeSchedule",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23038,7 +22979,6 @@
           "provider": "06j-scheduler-core.js",
           "symbol": "normalizeSchedulerTask",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -23097,23 +23037,10 @@
       "file": "13t-steward-schedule.js",
       "layer": "transport",
       "provides": [
-        "SCHEDULER_COMMITMENT_WINDOW_MS",
-        "SCHEDULER_INBOX_KIND",
-        "SCHEDULER_INBOX_TEXT_MAX",
-        "SCHEDULER_NOTICE_TEXT",
-        "STEWARD_SCHEDULE_PROMPT_MIN_GAP_MIN",
         "schedulerCommitmentsSince",
-        "schedulerInboxAppend",
-        "schedulerMinGapMinutes",
-        "schedulerNormalizationNotes",
         "schedulerOnReminderDue",
         "schedulerOnSchedulerNotice",
         "schedulerPrepareThread",
-        "schedulerToolFind",
-        "schedulerToolGate",
-        "schedulerToolLoad",
-        "schedulerToolRow",
-        "schedulerToolSetEnabled",
         "stewardImplScheduleCreate",
         "stewardImplScheduleDelete",
         "stewardImplScheduleList",
@@ -23124,28 +23051,14 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -23154,14 +23067,14 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23182,28 +23095,28 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "describeSchedule",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "nextFireAt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "normalizeSchedulerTask",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23231,35 +23144,35 @@
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardAppendInboxRows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardClipSummary",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardInboxRowDedupeKeys",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardIsoAt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardLoadState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23273,126 +23186,70 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardRawKind",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardCanonWorkspacePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardDeriveThreadCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardUnattendedByModel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardValidateCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "stewardEnsureOpenAiRoute",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerClockNow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerEmitChanged",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerEnsureTimer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerLoad",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerReadFireRows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerRunNow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "schedulerRuntime",
-          "kinds": [
             "read"
           ]
         },
         {
           "provider": "13s-scheduler.js",
-          "symbol": "schedulerSaveTasks",
+          "symbol": "SchedulerRuntime",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-16T08:40:13.106Z",
+  "generatedAt": "2026-11-16T10:11:36.243Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -12,7 +12,7 @@
       "ruyi-workbench/app/src/13g-steward.js",
       "ruyi-workbench/app/src/13h-steward-runner.js",
       "ruyi-workbench/app/backend/event-stream.cjs",
-      "ruyi-workbench/app/src/13s-scheduler.js",
+      "ruyi-workbench/app/backend/scheduler-routes.cjs",
       "ruyi-workbench/app/src/13w-external-bots.js",
       "ruyi-workbench/app/src/13ab-privacy-api.js"
     ]
@@ -1019,6 +1019,166 @@
         "dev-harness\\thread-switch-race.browser.e2e.js",
         "dev-harness\\unit\\event-stream-lifecycle.test.js",
         "dev-harness\\unit\\http-input-hardening.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/scheduler/tasks",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\macos-desktop-lifecycle.e2e.js",
+        "dev-harness\\quiet-card-snooze.browser.e2e.js",
+        "dev-harness\\rail-pocket.browser.e2e.js",
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler-ui.browser.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\settings-wave1.browser.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\steward-settings.static.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/scheduler/tasks",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\macos-desktop-lifecycle.e2e.js",
+        "dev-harness\\quiet-card-snooze.browser.e2e.js",
+        "dev-harness\\rail-pocket.browser.e2e.js",
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler-ui.browser.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\settings-wave1.browser.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\steward-settings.static.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "regex",
+      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)$",
+      "path": "/api/scheduler/tasks/:taskId",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "*"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "regex",
+      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)$",
+      "path": "/api/scheduler/tasks/:taskId",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "*"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "regex",
+      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)\\/run-now$",
+      "path": "/api/scheduler/tasks/:taskId/run-now",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "regex",
+      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)\\/runs$",
+      "path": "/api/scheduler/tasks/:taskId/runs",
+      "file": "../backend/scheduler-routes.cjs",
+      "handler": "handleSchedulerApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "scheduler",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\scheduler-api.e2e.js",
+        "dev-harness\\scheduler-crash.e2e.js",
+        "dev-harness\\scheduler-steward.e2e.js",
+        "dev-harness\\scheduler.e2e.js",
+        "dev-harness\\steward-exempt-delegation.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
+        "dev-harness\\unit\\scheduler-persist.test.js",
+        "dev-harness\\unit\\scheduler-review-fixes.test.js"
       ]
     },
     {
@@ -5724,166 +5884,6 @@
         "dev-harness\\unit\\external-owner-runner.test.js",
         "dev-harness\\unit\\privacy-display-http.test.js",
         "dev-harness\\unit\\steward-say-stream.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/scheduler/tasks",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\macos-desktop-lifecycle.e2e.js",
-        "dev-harness\\quiet-card-snooze.browser.e2e.js",
-        "dev-harness\\rail-pocket.browser.e2e.js",
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler-ui.browser.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\settings-wave1.browser.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\steward-settings.static.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/scheduler/tasks",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\macos-desktop-lifecycle.e2e.js",
-        "dev-harness\\quiet-card-snooze.browser.e2e.js",
-        "dev-harness\\rail-pocket.browser.e2e.js",
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler-ui.browser.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\settings-wave1.browser.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\steward-settings.static.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "regex",
-      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)$",
-      "path": "/api/scheduler/tasks/:taskId",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "*"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "regex",
-      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)$",
-      "path": "/api/scheduler/tasks/:taskId",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "*"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "regex",
-      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)\\/run-now$",
-      "path": "/api/scheduler/tasks/:taskId/run-now",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "regex",
-      "pattern": "^\\/api\\/scheduler\\/tasks\\/([^/]+)\\/runs$",
-      "path": "/api/scheduler/tasks/:taskId/runs",
-      "file": "13s-scheduler.js",
-      "handler": "handleSchedulerApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "scheduler",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\scheduler-api.e2e.js",
-        "dev-harness\\scheduler-crash.e2e.js",
-        "dev-harness\\scheduler-steward.e2e.js",
-        "dev-harness\\scheduler.e2e.js",
-        "dev-harness\\steward-exempt-delegation.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\scheduler-enable-and-run-now.test.js",
-        "dev-harness\\unit\\scheduler-persist.test.js",
-        "dev-harness\\unit\\scheduler-review-fixes.test.js"
       ]
     },
     {

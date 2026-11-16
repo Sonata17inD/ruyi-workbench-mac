@@ -59,3 +59,27 @@ test('configuration changes during load do not bypass startup recovery', async (
     assert.ok(f.writes.length > 0);
   } finally { f.release(); f.service.stopScheduler(); }
 });
+
+test('scheduler sleeps until the next due time instead of polling every 30 seconds', () => {
+  delete process.env.WCW_SCHEDULER_CLOCK_FILE;
+  delete process.env.WCW_SCHEDULER_TICK_MS;
+  const f = fixture();
+  const runtime = f.service.schedulerRuntime;
+  Object.assign(runtime, { enabled: true, started: true, lateQueue: [], tasks: [
+    { id: 'future', state: { enabled: true, nextFireAt: new Date(Date.now() + 1800000).toISOString() } },
+  ] });
+  f.service.schedulerEnsureTimer();
+  assert.ok(runtime.timer._idleTimeout > 1700000 && runtime.timer._idleTimeout <= 1800000);
+  runtime.tasks[0].state.enabled = false;
+  f.service.schedulerEnsureTimer();
+  assert.equal(runtime.timer, null);
+  runtime.tasks[0].state.enabled = true;
+  runtime.inFlightTaskIds.add('future');
+  f.service.schedulerEnsureTimer();
+  assert.equal(runtime.timer, null);
+  runtime.inFlightTaskIds.clear();
+  runtime.enabled = false;
+  f.service.schedulerEnsureTimer();
+  assert.equal(runtime.timer, null);
+  f.service.stopScheduler();
+});

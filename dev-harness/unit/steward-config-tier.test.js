@@ -404,7 +404,7 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
   // 机械锁:三个开线程的口都经 13q 的 ensureOpenAiRoute,13t 没指定档位也兜。
   const fs2 = require('fs');
   const src13q = fs2.readFileSync(path.join(app, 'src', '13q-steward-runner-turn.js'), 'utf8');
-  const src13t = fs2.readFileSync(path.join(app, 'src', '13t-steward-schedule.js'), 'utf8');
+  const src13t = fs2.readFileSync(path.join(app, 'backend', 'scheduler-steward.cjs'), 'utf8');
   ok(src13q.includes("route = stewardEnsureOpenAiRoute(session, config, decided.tier);") && src13q.includes("if (current && current.engine === 'openai') return current;"),
     '⑦ 13q:档位没配 → ensureOpenAiRoute;已是 OpenAI 路由一字不动');
   ok(src13t.includes("stewardEnsureOpenAiRoute(session, config, '')") && !src13t.includes('StewardHooks.ensureOpenAiRoute'), '⑦ 13t 没指定档位也经同一个函数(直接调,不进 StewardHooks 表)');

@@ -490,67 +490,67 @@
     {
       "file": "13s-scheduler.js",
       "startLine": 61661,
-      "endLine": 61879,
+      "endLine": 61673,
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗"
     },
     {
       "file": "13t-steward-schedule.js",
-      "startLine": 61880,
-      "endLine": 62400,
+      "startLine": 61674,
+      "endLine": 61701,
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环"
     },
     {
       "file": "13u-migration-center.js",
-      "startLine": 62401,
-      "endLine": 63455,
+      "startLine": 61702,
+      "endLine": 62756,
       "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环"
     },
     {
       "file": "13v-external-channel-protocols.js",
-      "startLine": 63456,
-      "endLine": 63666,
+      "startLine": 62757,
+      "endLine": 62967,
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers"
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "startLine": 63667,
-      "endLine": 63802,
+      "startLine": 62968,
+      "endLine": 63103,
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes"
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "startLine": 63803,
-      "endLine": 63805,
+      "startLine": 63104,
+      "endLine": 63106,
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS"
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "startLine": 63806,
-      "endLine": 63901,
+      "startLine": 63107,
+      "endLine": 63202,
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted"
     },
     {
       "file": "13ab-privacy-api.js",
-      "startLine": 63902,
-      "endLine": 64071,
+      "startLine": 63203,
+      "endLine": 63372,
       "note": "81-P2: token-authenticated security settings and recovery API"
     },
     {
       "file": "13w-external-bots.js",
-      "startLine": 64072,
-      "endLine": 64821,
+      "startLine": 63373,
+      "endLine": 64122,
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker"
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "startLine": 64822,
-      "endLine": 65275,
+      "startLine": 64123,
+      "endLine": 64576,
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open"
     },
     {
       "file": "14-main.js",
-      "startLine": 65276,
-      "endLine": 66009,
+      "startLine": 64577,
+      "endLine": 65310,
       "note": "main()/module.exports"
     }
   ]
