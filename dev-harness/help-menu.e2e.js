@@ -228,7 +228,8 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
 
     /* ⑦ 源码锁:请求串永不进路径 / 枚举是源码常量 */
     const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
-    ok(/const OPEN_PATH_TARGETS = Object\.freeze\(\['data', 'logs', 'workspace', 'manuals'\]\);/.test(routerSrc),
+    const supportSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'local-support.cjs'), 'utf8');
+    ok(/const OPEN_PATH_TARGETS = Object\.freeze\(\['data', 'logs', 'workspace', 'manuals'\]\);/.test(supportSrc),
       '⑦ OPEN_PATH_TARGETS 是 Object.freeze 的源码枚举');
     const opStart = routerSrc.indexOf("if (req.method === 'POST' && pathname === '/api/open-path') {");
     const opEnd = routerSrc.indexOf('\n  }\n', opStart);
@@ -238,11 +239,11 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
     ok(!!opBlock && !/body\.(path|dir|target)\s*\|\|\s*['"]/.test(opBlock.replace(/typeof \(body && body\.target\)[^\n]*\n/, ''))
       && opBlock.includes('OPEN_PATH_TARGETS.includes(target)'),
       '⑦ target 必须先过 OPEN_PATH_TARGETS.includes,handler 不读任何路径型 body 字段');
-    ok(/function openPathTargetDir\(target, session\) \{[\s\S]*?return '';\n\}/.test(routerSrc)
-      && /if \(target === 'data'\) return paths\.data;/.test(routerSrc)
-      && /if \(target === 'workspace'\) return String\(\(session && session\.cwd\) \|\| ''\);/.test(routerSrc),
+    ok(/function openPathTargetDir\(target, session\) \{[\s\S]*?return '';\n\}/.test(supportSrc)
+      && /if \(target === 'data'\) return paths\.data;/.test(supportSrc)
+      && /if \(target === 'workspace'\) return String\(\(session && session\.cwd\) \|\| ''\);/.test(supportSrc),
       '⑦ 目录映射是四条硬编码分支 + 兜底空串,没有任何字符串拼接');
-    ok(/const hits = names\.filter\(n => \/\^workbench-\\d\{4\}-\\d\{2\}-\\d\{2\}\\\.ndjson\$\/\.test\(n\)\)/.test(routerSrc),
+    ok(/const hits = names\.filter\(n => \/\^workbench-\\d\{4\}-\\d\{2\}-\\d\{2\}\\\.ndjson\$\/\.test\(n\)\)/.test(supportSrc),
       '⑦ 日志文件名在服务端已知目录里按固定正则筛,请求里没有文件名入参');
     // 读失败分支绝不能把 Node 的 ENOENT/EPERM 文本回给前端: 那句话里带着日志文件的绝对路径。
     const logStart = routerSrc.indexOf("if (req.method === 'GET' && pathname === '/api/logs/tail') {");
