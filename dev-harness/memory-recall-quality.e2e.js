@@ -18,7 +18,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
@@ -41,33 +40,11 @@ function slice(source, startAnchor, endAnchor, label) {
 }
 
 const retrieval = require('../ruyi-workbench/app/backend/retrieval-index.cjs');
-const memoryDomain = read('06d-memory-domain.js');
 const runtimeFlags = read('01c-runtime-flags.js');
-
-const rankingSlice = slice(
-  memoryDomain,
-  'const MEMORY_QUERY_STOP = new Set([',
-  '\nfunction memoryExclusionSet(',
-  'memory ranking',
-);
 const flagSlice = slice(runtimeFlags, 'function memoryVectorRecallEnabled(config) {', '\n}\n', 'flag') + '\n}\n';
-
-const context = { console, ...retrieval };
-vm.runInNewContext(
-  'const MEMORY_RELEVANCE_MAX = 3;\n'
-  + flagSlice + '\n'
-  + rankingSlice + '\n'
-  + 'this.rankRelevantMemories = rankRelevantMemories;\n'
-  + 'this.rankMemoriesFused = rankMemoriesFused;\n'
-  + 'this.rankMemoriesForRecall = rankMemoriesForRecall;\n'
-  + 'this.retrievalTerms = retrievalTerms;\n'
-  + 'this.buildRetrievalCorpus = buildRetrievalCorpus;\n'
-  + 'this.rankRetrievalCorpus = rankRetrievalCorpus;\n'
-  + 'this.reciprocalRankFusion = reciprocalRankFusion;\n',
-  context,
-);
-ok(typeof context.rankRelevantMemories === 'function' && typeof context.rankMemoriesFused === 'function',
-  'S0 两条排序路径都从 src 切片装载成功(切点未漂移)');
+const memoryVectorRecallEnabled = new Function(flagSlice + ';return memoryVectorRecallEnabled;')();
+const context = { ...retrieval, ...require('../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled, defaultLimit: 3 }) };
+ok(typeof context.rankRelevantMemories === 'function' && typeof context.rankMemoriesFused === 'function', 'S0 memory recall loads directly from its owning module');
 
 // ── 合成记忆库(40 条)──────────────────────────────────────────────────────────────────────
 let seq = 0;

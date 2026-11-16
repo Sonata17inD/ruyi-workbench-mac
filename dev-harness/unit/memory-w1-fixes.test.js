@@ -19,9 +19,11 @@ process.env.HOME = path.join(root, 'home');
 process.env.USERPROFILE = process.env.HOME;
 fs.mkdirSync(process.env.HOME, { recursive: true });
 const { loadServerInternals } = require('../lib/server-internals');
-const { memoryProposalLooksSensitive, memorySearchTerms, rankRelevantMemories, deleteMemory, memoryGlobalDir, saveMemory, parseFrontmatter } = loadServerInternals([
-  'memoryProposalLooksSensitive', 'memorySearchTerms', 'rankRelevantMemories', 'deleteMemory', 'memoryGlobalDir', 'saveMemory', 'parseFrontmatter',
+const { memoryProposalLooksSensitive, deleteMemory, memoryGlobalDir, saveMemory, parseFrontmatter } = loadServerInternals([
+  'memoryProposalLooksSensitive', 'deleteMemory', 'memoryGlobalDir', 'saveMemory', 'parseFrontmatter',
 ]);
+
+const { memorySearchTerms, rankRelevantMemories } = require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled: () => false });
 
 // ───────────── [S] ─────────────
 test('[S1] 中文「密码/密钥 + 冒号/等号 + 值」被拦(半角与全角分隔符)', () => {

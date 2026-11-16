@@ -243,7 +243,8 @@
     "app/backend/file-read-cache.cjs",
     "app/backend/file-tool-paths.cjs",
     "app/backend/file-text-format.cjs",
-    "app/backend/file-mutation-queue.cjs"
+    "app/backend/file-mutation-queue.cjs",
+    "app/backend/memory-recall.cjs"
   ],
   "acc": [
     "LICENSE",

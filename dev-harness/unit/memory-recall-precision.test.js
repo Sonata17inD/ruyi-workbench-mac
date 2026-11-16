@@ -22,9 +22,11 @@ process.env.USERPROFILE = process.env.HOME;
 fs.mkdirSync(process.env.HOME, { recursive: true });
 const { loadServerInternals } = require('../lib/server-internals');
 const S = loadServerInternals([
-  'rankMemoriesForRecall', 'rankRelevantMemories', 'memorySearchTerms', 'resolveMemoryPreflight', 'buildMemoryPromptSection', 'buildMemoryCheckPrompt',
+  'resolveMemoryPreflight', 'buildMemoryPromptSection', 'buildMemoryCheckPrompt',
   'buildMemoryConflictMap', 'analyzeMemoryMaintenance', 'saveMemory', 'deleteMemory', 'proposeMemoryRelation', 'confirmMemoryRelation',
 ]);
+
+Object.assign(S, require('../../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ memoryVectorRecallEnabled: config => config?.runtimeMemoryVectorRecallV1 === true }));
 
 let seq = 0;
 const E = (scope, type, id, name, description, extra = {}) => ({

@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3620,
-    "requiredSymbols": 3477,
-    "edges": 653,
+    "providedSymbols": 3606,
+    "requiredSymbols": 3474,
+    "edges": 652,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -6317,8 +6317,6 @@
         "CORE_MEMORY_MAX",
         "CORE_MEMORY_SUMMARY_CAP",
         "MEMORY_EXCLUSION_MAX",
-        "MEMORY_FUSION_SCOPE_BONUS",
-        "MEMORY_FUSION_TYPE_BONUS",
         "MEMORY_GLOBAL_PROGRAMMING_RE",
         "MEMORY_GLOBAL_SCOPE_RE",
         "MEMORY_HEAD_CACHE",
@@ -6333,17 +6331,13 @@
         "MEMORY_PROPOSAL_MIN_JUDGE_GAP",
         "MEMORY_PROPOSAL_MIN_TURN_GAP",
         "MEMORY_PROPOSAL_STATE_MAX_BYTES",
-        "MEMORY_QUERY_CJK_PARTICLES",
-        "MEMORY_QUERY_STOP",
         "MEMORY_RELATION_CAP",
         "MEMORY_RELATION_TYPES",
         "MEMORY_RELEVANCE_MAX",
         "MEMORY_RULE_TOUCH_MS",
-        "MEMORY_SEARCH_TERMS_MAX",
         "MEMORY_TYPES",
         "MEMORY_USAGE_TOUCH_MS",
-        "MEMORY_VECTOR_ONLY_MIN_SCORE",
-        "MEMORY_VECTOR_ONLY_REL_SCORE",
+        "MemoryRecall",
         "accMemoryImportMarker",
         "accMemoryImportStore",
         "agentInstructionChain",
@@ -6389,14 +6383,10 @@
         "memoryCoreLine",
         "memoryCoreScore",
         "memoryDraftFromObject",
-        "memoryEditWithin",
         "memoryExclusionSet",
         "memoryFailureResponse",
         "memoryGlobalDir",
         "memoryGlobalScopeAllowed",
-        "memoryHayWords",
-        "memoryHaystackFuzzyHasTerm",
-        "memoryHaystackHasTerm",
         "memoryIsExpired",
         "memoryProjectDir",
         "memoryProposalBatchInput",
@@ -6411,13 +6401,9 @@
         "memoryProposalStateChains",
         "memoryProposalStateFile",
         "memoryProposeAlreadyPendingResult",
-        "memoryRecallCorpus",
-        "memoryRecallCorpusCache",
-        "memoryRecallLimit",
         "memoryRecentUserTexts",
         "memoryRelationsFile",
         "memoryRetrievalKey",
-        "memoryRetrievalText",
         "memoryReviewDue",
         "memorySearchTerms",
         "memorySelectionSignature",
@@ -6686,7 +6672,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "memoryVectorRecallEnabled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6734,27 +6720,6 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "createRetrievalCorpusCache",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "rankRetrievalCorpus",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "reciprocalRankFusion",
           "kinds": [
             "call"
           ]
@@ -30667,16 +30632,6 @@
       "to": "06b-prompt-registry.js",
       "symbols": [
         "getPromptPack"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06d-memory-domain.js",
-      "to": "06h-retrieval-index.js",
-      "symbols": [
-        "createRetrievalCorpusCache",
-        "rankRetrievalCorpus",
-        "reciprocalRankFusion"
       ],
       "direction": "backward"
     },
