@@ -1,10 +1,11 @@
 'use strict';
+const { buildIgnoreMatcher } = require('./path-patterns.cjs');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 function createCodeAudits({ files, privacy }) {
-  const { buildIgnoreMatcher, readIfExists, walkFiles } = files;
+  const { readIfExists, walkFiles } = files;
   const { PrivacyGateway, privacySourceActive, privacySourceFragment, privacySourceLine, privacySourceLineOffsets, privacySourceMark } = privacy;
 async function dependencyInventory(root) {
   const cwd = path.resolve(root || process.cwd());

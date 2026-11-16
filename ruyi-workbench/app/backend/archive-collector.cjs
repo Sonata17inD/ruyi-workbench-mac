@@ -1,9 +1,10 @@
 'use strict';
+const { buildIgnoreMatcher, DOTNET_PROJECT_RE } = require('./path-patterns.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 const { ZIP_MAX_SINGLE_FILE, ZIP_MAX_TOTAL, ZIP_MAX_ENTRIES, zipTopLevelNames } = require('./archive-codec.cjs');
 
-function createArchiveCollector({ ensureDataRootReal, isSensitiveDataPath, isSensitiveHardlinkAlias, buildIgnoreMatcher, DOTNET_PROJECT_RE }) {
+function createArchiveCollector({ ensureDataRootReal, isSensitiveDataPath, isSensitiveHardlinkAlias }) {
 // 收集要打包的路径（文件或文件夹）→ 一个 {name, data} 平面列表。name 是 ZIP 内的相对路径（'/' 分隔）。
 // baseName = 该顶层路径在包内的根名（文件夹用其 basename，文件用 basename）。递归遍历文件夹；符号链接跳过。
 // 累计大小 > ZIP_MAX_TOTAL 或单文件 > ZIP_MAX_SINGLE_FILE → 抛人话错误（调用方转 {ok:false}）。

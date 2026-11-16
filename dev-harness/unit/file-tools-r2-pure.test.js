@@ -1,19 +1,10 @@
-// Unit(2026-10 工具走查·第二轮 · 文件工具组):几个纯函数的快通道锁。运行时行为由 dev-harness/tool-audit-r2-files.e2e.js 钉着;
-// 这里钉的是只靠字符串/路径运算、不碰盘的判据 —— 其中 fileMoveSameFileKind 的 win32 / darwin 分支在 Linux CI 上无法实机跑,
-// 只能在这里用注入的 platform 与 stat 字段把「大小写改名」的判据钉住(Windows 实机行为未验证)。
-//
-// 这些函数没有导出(14-main 的导出面有只减不增的锁),按 CLAUDE.md 的做法用 source-slice 从源码切出来单独求值。
+// Direct module tests for path rules and archive codecs; tool authorization is covered by E2Es.
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const { describe, it } = require('node:test');
-const { functionBlock } = require('../lib/source-slice');
 
-const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
-const sliceFn = (file, name, ...deps) => new Function(...deps.map(d => d[0]), functionBlock(read(file), name) + `; return ${name};`)(...deps.map(d => d[1]));
 
 describe('fileMoveSameFileKind', () => {
   const { fileMoveSameFileKind: same } = require('../../ruyi-workbench/app/backend/file-tools.cjs');
@@ -45,7 +36,7 @@ describe('Mac file path expansion', () => {
 });
 
 describe('normalizeGlobPatternForRoot', () => {
-  const norm = sliceFn('11-native-tools.js', 'normalizeGlobPatternForRoot', ['path', path]);
+  const { normalizeGlobPatternForRoot: norm } = require('../../ruyi-workbench/app/backend/path-patterns.cjs');
   const root = path.resolve('/ws/proj');
   it('前导 ./ 与 .\\ 被剥掉并说明', () => {
     assert.equal(norm('./src/*.js', root).pattern, 'src/*.js');

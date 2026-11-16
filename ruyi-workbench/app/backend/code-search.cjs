@@ -1,7 +1,9 @@
 'use strict';
+const { normalizeSearchPattern } = require('./path-patterns.cjs');
+const { assertSearchExecution } = require('./search-workers.cjs');
 const path = require('node:path');
 function createCodeSearch({ files, privacy }) {
-  const { assertSearchExecution, normalizeSearchPattern, readIfExists, regexScanFilesBounded, searchMaxFileBytes, walkFiles } = files;
+  const { readIfExists, regexScanFilesBounded, searchMaxFileBytes, walkFiles } = files;
   const { PrivacyGateway, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacyProjectSearch } = privacy;
 const DOCS_SEARCH_SUFFIXES = /\.(?:md|mdx|markdown|txt|rst|adoc|asciidoc|org)$/i;
 async function docsSearch(root, query, opts = {}) {

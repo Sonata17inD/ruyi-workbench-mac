@@ -17,7 +17,7 @@ const cp = require('child_process'), http = require('http'), path = require('pat
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
 // 架构还债批 3·D:AUTOEXEC_DENYLIST / hashArgs / pathWithinRoot 三者都经 14-main 导出,直接取产物里的那一份
-// 授权书直接实例化所属模块；globToRegExp 仍由源码取得真实实现。
+// 授权书和路径匹配规则直接引用所属模块。
 const srv = require(SERVER);
 const WB_PORT = await getFreePort();
 const HOME = path.join(os.tmpdir(), 'wcw-autonomy-grant-e2e');
@@ -51,13 +51,15 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
 // [S] 静态源锁
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态源锁 ──');
+const routePolicySource = fs.readFileSync(path.join(WB, 'app/backend/http-route-policy.cjs'), 'utf8');
+const fileToolsSource = fs.readFileSync(path.join(WB, 'app/backend/file-tools.cjs'), 'utf8');
 
 // S1 签发主权律(第33波起 ROUTE_AUTH 表替代 needsToken OR 链):/api/autonomy/ 在 ROUTE_AUTH 表里标 'token'(header-token 门)。
-ok(/\{ m: 'POST', p: '\/api\/autonomy\/', auth: 'token', prefix: true \}/.test(src), 'S1 /api/autonomy/ 在 ROUTE_AUTH 表标 token(header-token 门)');
+ok(/\{ m: 'POST', p: '\/api\/autonomy\/', auth: 'token', prefix: true \}/.test(routePolicySource), 'S1 /api/autonomy/ 在 ROUTE_AUTH 表标 token(header-token 门)');
 
 // S2 R-P2-2:/api/autonomy 【不】是 body-token 路由(body-token 仅 permission/request·todo·mission·launch,不可 body-token 绕过)。
-const bodyTokenEntries = (src.match(/\{[^}]*auth: 'body-token'[^}]*\}/g) || []).join('\n');
-ok(!/autonomy/.test(bodyTokenEntries), 'S2 /api/autonomy 不在 body-token 路由(不可 body-token 绕过)');
+const bodyTokenEntries = (routePolicySource.match(/\{[^}]*auth: 'body-token'[^}]*\}/g) || []).join('\n');
+ok(bodyTokenEntries.length > 0 && !/autonomy/.test(bodyTokenEntries), 'S2 /api/autonomy 不在 body-token 路由(不可 body-token 绕过)');
 
 // S3 R-P2-2:三个 autonomy handler 各自 tokenOk(req) 自查,且授权书路由区【无】body-token 兜底。
 const autonomyRegion = (src.match(/\/\/ ── 第27波:自主性授权书 API[\s\S]*?if \(req\.method === 'POST' && pathname === '\/api\/agent-workflow\/launch'\)/) || [''])[0];
@@ -141,8 +143,8 @@ ok(grantBlock.length > 1000
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] 所属授权模块直测──');
 
-// 抽真 globToRegExp(未导出,保真不重写);pathWithinRoot 取产物导出的那一个。
-const globToRegExp = new Function(functionBlock(src, 'globToRegExp') + '\nreturn globToRegExp;')();
+// 路径匹配直接引用模块；pathWithinRoot 使用既有路径边界夹具。
+const { globToRegExp } = require('../ruyi-workbench/app/backend/path-patterns.cjs');
 const pathWithinRoot = srv.pathWithinRoot;
 
 // 抽授权书核心块(autonomyGrants 声明 → listGrantsView 结束)。
@@ -438,8 +440,8 @@ console.log('\n── [P7] 对抗验证修复回归 ──');
 }
 
 // S9 对抗轮 P2 GapB 静态锁:archive_zip/archive_unzip 处理体现调用 guardFileToolPath(源/目标护栏)。
-ok(/guardFileToolPath\(path\.resolve\(String\(raw\)\), ctx, \{ tool: 'archive_zip', write: false \}\)/.test(src) && /guardFileToolPath\(dest, ctx, \{ tool: 'archive_zip', write: true \}\)/.test(src), 'S9 archive_zip 源(读)+dest(写)过 guardFileToolPath(Gap B)');
-ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.test(src) && /guardFileToolPath\(destDir, ctx, \{ tool: 'archive_unzip', write: true \}\)/.test(src), 'S9 archive_unzip src(读)+destDir(写)过 guardFileToolPath(Gap B)');
+ok(/guardFileToolPath\(path\.resolve\(String\(raw\)\), ctx, \{ tool: 'archive_zip', write: false \}\)/.test(fileToolsSource) && /guardFileToolPath\(dest, ctx, \{ tool: 'archive_zip', write: true \}\)/.test(fileToolsSource), 'S9 archive_zip 源(读)+dest(写)过 guardFileToolPath(Gap B)');
+ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.test(fileToolsSource) && /guardFileToolPath\(destDir, ctx, \{ tool: 'archive_unzip', write: true \}\)/.test(fileToolsSource), 'S9 archive_unzip src(读)+destDir(写)过 guardFileToolPath(Gap B)');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [H] Live HTTP

@@ -6503,13 +6503,6 @@
           "kinds": [
             "read"
           ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "globToRegExp",
-          "kinds": [
-            "read"
-          ]
         }
       ]
     },
@@ -11511,14 +11504,11 @@
         "BINARY_READ_OFFICE",
         "BINARY_READ_SUFFIXES",
         "BINARY_READ_ZIPLIKE",
-        "BROWSE_IGNORE_DIRS",
         "DEFAULT_IGNORE_DIRS",
         "DOTNET_PROJECT_RE",
-        "HARD_IGNORE_DIRS",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
         "NativeSourceHooks",
-        "PATH_MATCH_WORKER_SRC",
         "REGEX_SCAN_MAX_MS",
         "REGEX_SCAN_WORKER_SRC",
         "RG_REPAIR_MAX_FILES",
@@ -11532,9 +11522,6 @@
         "SHELL_OUTPUT_MAX_CHARS",
         "SHELL_OUTPUT_MIN_CHARS",
         "SHELL_POLL_WAIT_MAX_MS",
-        "WALK_PATTERN_BATCH",
-        "WALK_PATTERN_BUDGET_MS",
-        "WALK_PATTERN_MAX_CHARS",
         "_rgProbe",
         "_rgProbeInflight",
         "adaptiveCatalogForMcp",
@@ -11548,14 +11535,12 @@
         "bindMacShellProtocol",
         "boundedReadPage",
         "buildIgnoreMatcher",
-        "classifyListPattern",
         "claudeMdAudit",
         "closeSearchWorker",
         "codeReviewScan",
         "codebaseSymbolSearch",
         "completeBackgroundJob",
         "crc32",
-        "createBoundedPathMatcher",
         "dataProfile",
         "debugHypothesis",
         "dependencyInventory",
@@ -11565,7 +11550,6 @@
         "downloadFileNameFrom",
         "explicitAllowDirs",
         "explicitSegmentsOfGlob",
-        "explicitSegmentsOfRegex",
         "frontendAudit",
         "genShellId",
         "gitCommit",
@@ -11588,7 +11572,6 @@
         "macShellSendChains",
         "markAgentMessageDelivered",
         "maybeGroup",
-        "normalizeGlobPatternForRoot",
         "normalizeSearchPattern",
         "patternMayMatchNonAscii",
         "peekRgProbe",
@@ -11608,7 +11591,6 @@
         "readBackgroundJobs",
         "readIfExists",
         "readWebCache",
-        "regexBacktrackBounded",
         "regexScanFilesBounded",
         "rgExeName",
         "rgListHighByteFiles",
@@ -11886,7 +11868,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11915,7 +11896,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11923,7 +11903,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11931,21 +11910,21 @@
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "sensitiveFileIdentities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13121,13 +13100,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "assertSearchExecution",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "binaryReadHint",
           "kinds": [
             "read"
@@ -13138,13 +13110,6 @@
           "symbol": "boundedReadPage",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "classifyListPattern",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13219,20 +13184,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "explicitSegmentsOfGlob",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "explicitSegmentsOfRegex",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "frontendAudit",
           "kinds": [
             "call"
@@ -13264,13 +13215,6 @@
           "symbol": "gitStatus",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "globToRegExp",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13311,13 +13255,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "NativeSourceHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "normalizeGlobPatternForRoot",
           "kinds": [
             "read"
           ]

@@ -1,4 +1,6 @@
 'use strict';
+const { classifyListPattern, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, levenshtein } = require('./path-patterns.cjs');
+const { assertSearchExecution } = require('./search-workers.cjs');
 const { READ_PAGE_JSON_BUDGET } = require('./text-pages.cjs');
 const path = require('node:path');
 const { ZIP_MAX_ENTRIES, ZIP_MAX_TOTAL, zipReadCentralDir, zipReadEntryDataAsync, zipWriteAsync } = require('./archive-codec.cjs');
@@ -20,7 +22,7 @@ function createFileTools({ paths, checkpoints, source, search, archive, runtime,
   const { fileToolWorkspaceDir, resolveFileToolPath, resolveFileToolRoot, guardFileToolPath, pathWithinRoot, isSensitiveDataPath, isSensitiveHardlinkAlias, sensitiveFileIdentities } = paths;
   const { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx } = checkpoints;
   const { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews } = source;
-  const { assertSearchExecution, classifyListPattern, explicitAllowDirs, explicitSegmentsOfGlob, explicitSegmentsOfRegex, globToRegExp, normalizeGlobPatternForRoot, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint, levenshtein } = search;
+  const { explicitAllowDirs, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint } = search;
   const { zipCollectEntries } = archive;
   const { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall } = runtime;
   const { fileToolWriteLockKey, withFileToolWriteLock } = mutations;

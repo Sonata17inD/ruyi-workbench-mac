@@ -1,9 +1,10 @@
 'use strict';
 const path = require('node:path');
+const { globToRegExp } = require('./path-patterns.cjs');
 const fsp = require('node:fs/promises');
 // Ephemeral grants are owned by one runtime, never by session persistence.
 function createAutonomyGrants({ hashArgs, makeId, AUTOEXEC_DENYLIST, isSensitiveDataPath,
-  normalizeCwd, pathWithinRoot, logEvent, nativeTierFor, nativeToolTier, globToRegExp }) {
+  normalizeCwd, pathWithinRoot, logEvent, nativeTierFor, nativeToolTier }) {
 // ════════════════════════════════════════════════════════════════════════════════════════════════════
 // 第27波(AUTONOMY-PLAN §27):自主性授权书(Autonomy Grant)—— 现有权限系统的严格【子集缓存】,不是新权限来源。
 // 只做一件事:在用户【预先经 UI header token 明示】的「工具 × 路径 × 命令 × 次数 × 时长」笼子内,把工具决策点

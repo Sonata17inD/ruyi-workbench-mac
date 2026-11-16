@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3484 | 3506 | 659 | 67 | 0 | 1 |
+| 92 | 3473 | 3499 | 658 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -63,7 +63,7 @@
 | 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 46 | `06d-memory-domain.js` | engine | 161 | 33 | 9 |
 | 47 | `06e-mission-domain.js` | engine | 3 | 13 | 5 |
-| 48 | `06f-autonomy-grants.js` | engine | 13 | 10 | 5 |
+| 48 | `06f-autonomy-grants.js` | engine | 13 | 9 | 4 |
 | 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
 | 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 51 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
@@ -73,11 +73,11 @@
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
 | 56 | `09-workflow.js` | orchestration | 27 | 274 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
-| 58 | `11-native-tools.js` | tools | 157 | 57 | 14 |
+| 58 | `11-native-tools.js` | tools | 146 | 57 | 14 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 62 | `12-tool-dispatch.js` | tools | 93 | 185 | 25 |
+| 62 | `12-tool-dispatch.js` | tools | 93 | 179 | 25 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 48 | 276 | 37 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -275,7 +275,6 @@
 | `06f-autonomy-grants.js` | `03-bridge-guard.js` | backward | `AUTOEXEC_DENYLIST`, `isSensitiveDataPath`, `normalizeCwd`, `pathWithinRoot` |
 | `06f-autonomy-grants.js` | `04-permission-runtime.js` | backward | `logEvent` |
 | `06f-autonomy-grants.js` | `07-autonomy.js` | forward | `NATIVE_TOOL_TIER`, `nativeToolTier` |
-| `06f-autonomy-grants.js` | `11-native-tools.js` | forward | `globToRegExp` |
 | `06g-resource-leases.js` | `00-boot.js` | backward | `makeId`, `nowIso` |
 | `06g-resource-leases.js` | `02-session-store.js` | backward | `collectBridgedWriteTargets` |
 | `06g-resource-leases.js` | `03-bridge-guard.js` | backward | `pathWithinRoot` |
@@ -423,7 +422,7 @@
 | `12-tool-dispatch.js` | `07-autonomy.js` | backward | `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `bridgedToolTier`, `compareToolRetrievalShadow`, `listCompactTools`, `nativeToolDisabledByPolicy`, `nativeToolSchema`, `nativeToolsAcceptingArgKeys`, `policyDesktopOverrideFor`, `policySessionFor`, `searchToolCatalog`, `toolArgsSkeleton`, `toolDisabledByPolicy`, `toolDisabledResult` |
 | `12-tool-dispatch.js` | `08-agent-runs.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `getAgentWorkflows` |
 | `12-tool-dispatch.js` | `10-context-governance.js` | backward | `providerTurnQuotaKey`, `rehydrateObservation` |
-| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `adaptiveCatalogForMcp`, `assertSearchExecution`, `binaryReadHint`, `boundedReadPage`, `classifyListPattern`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `explicitAllowDirs`, `explicitSegmentsOfGlob`, `explicitSegmentsOfRegex`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `globToRegExp`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `normalizeGlobPatternForRoot`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries` |
+| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `adaptiveCatalogForMcp`, `binaryReadHint`, `boundedReadPage`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `explicitAllowDirs`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries` |
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |

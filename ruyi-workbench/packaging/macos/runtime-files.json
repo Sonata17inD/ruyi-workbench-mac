@@ -295,7 +295,10 @@
     "app/backend/data-profiler.cjs",
     "app/backend/git-tools.cjs",
     "app/backend/code-audits.cjs",
-    "app/backend/code-search.cjs"
+    "app/backend/code-search.cjs",
+    "app/backend/path-patterns.cjs",
+    "app/backend/search-workers.cjs",
+    "app/backend/file-walker.cjs"
   ],
   "acc": [
     "LICENSE",
