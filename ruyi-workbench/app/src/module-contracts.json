@@ -11525,8 +11525,6 @@
         "DEFAULT_IGNORE_DIRS",
         "DOCS_SEARCH_SUFFIXES",
         "DOTNET_PROJECT_RE",
-        "FETCH_BINARY_TYPE_RE",
-        "FETCH_TEXT_TYPE_RE",
         "FRONTEND_EXT_URL_RES",
         "FRONTEND_LOCAL_HOST_RE",
         "GIT_COMMIT_TIMEOUT_DEFAULT_MS",
@@ -11612,7 +11610,6 @@
         "completeBackgroundJob",
         "crc32",
         "createBoundedPathMatcher",
-        "createDeflateAutoStream",
         "dataProfile",
         "dataProfileRaw",
         "debugHypStats",
@@ -11632,7 +11629,6 @@
         "dnsResolvesToPrivate",
         "docsSearch",
         "downloadFileNameFrom",
-        "embeddedIpv4FromV6",
         "escapeRegexLiteral",
         "evictWebCacheOverCap",
         "explicitAllowDirs",
@@ -11675,7 +11671,6 @@
         "isBinaryReadPath",
         "isHighSurrogate",
         "isLowSurrogate",
-        "isPrivateIpv4",
         "isStrictUtf8",
         "judgeSecretValue",
         "killAllShellSessions",
@@ -11714,9 +11709,7 @@
         "profileGb18030Decoder",
         "profileJsonArrayHead",
         "profileJsonColumns",
-        "proxyConnectTunnel",
         "proxyForUrl",
-        "proxyIpv4ToInt",
         "proxyNoProxyMatches",
         "prunedDirsHint",
         "readBackgroundJobs",
@@ -11772,14 +11765,12 @@
         "shellSliceFrom",
         "shellStart",
         "shellVisibleTo",
-        "sniffMetaCharset",
         "ssrfCheck",
         "stopMacShell",
         "stripHtmlNoise",
         "summarizeGitStatus",
         "symbolCi",
         "symbolLanguageDefPatterns",
-        "textDecoderFor",
         "validateGitLogFilter",
         "validateGitRef",
         "walkDepthHint",
@@ -11945,8 +11936,7 @@
           "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -13356,13 +13346,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "downloadFileNameFrom",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "embeddedIpv4FromV6",
           "kinds": [
             "call"
           ]
@@ -28547,13 +28530,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "embeddedIpv4FromV6",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "extractMainText",
           "kinds": [
             "read"
@@ -28562,20 +28538,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "guardDownloadDest",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "httpGetGuarded",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "isPrivateIpv4",
           "kinds": [
             "read"
           ]

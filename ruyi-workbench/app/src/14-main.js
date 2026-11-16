@@ -587,8 +587,6 @@ module.exports = {
   AUTOEXEC_DENYLIST,
   // v0.9-S9: web_search / web_fetch — SSRF guard + main-text extraction + cache (exposed for e2e direct units).
   ssrfCheck,
-  embeddedIpv4FromV6, // v0.9 F1: IPv4-mapped IPv6 extraction — exposed for the ssrf-hardening e2e direct unit.
-  isPrivateIpv4,      // v0.9 F1/F2: exposed so the e2e can assert range judgments directly.
   extractMainText,
   webCachePath,
   readWebCache,
@@ -597,7 +595,6 @@ module.exports = {
   webSearch,
   // v1.1-W1a (T1/T2/T3): fetch error classification + multi-target probe + builtin HTML search — exposed for e2e units.
   classifyFetchError,
-  httpGetGuarded,
   webFetchFailMessage,
   // v1.1-W2 (T1): zero-dep ZIP codec + download dest guard — exposed for tools-v3 e2e direct units.
   crc32,

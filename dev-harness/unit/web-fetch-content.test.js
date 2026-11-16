@@ -323,3 +323,26 @@ test('[C6] 缓存超过硬上限就删最旧的(WCW_WEBCACHE_HARD_MAX 是测试�
     assert.ok(await srv.readWebCache(urls[3]));
   } finally { delete process.env.WCW_WEBCACHE_HARD_MAX; }
 });
+
+test('响应解码保持压缩数据完整，兼容逐字节传输和多层编码', async () => {
+  const { Readable } = require('node:stream');
+  const z = require('node:zlib');
+  const { responseBodyStream } = require('../../ruyi-workbench/app/backend/http-body.cjs');
+  const expected = Buffer.from('中文正文与完整的压缩尾部。'.repeat(3000));
+  for (const [encoding, encoded] of [
+    ['gzip', z.gzipSync(expected)],
+    ['deflate', z.deflateSync(expected)],
+    ['deflate', z.deflateRawSync(expected)],
+    ['br', z.brotliCompressSync(expected)],
+    ['gzip, br', z.brotliCompressSync(z.gzipSync(expected))],
+  ]) {
+    for (const split of [false, true]) {
+      const input = Readable.from(split ? Array.from(encoded, byte => Buffer.from([byte])) : [encoded]);
+      input.headers = { 'content-encoding': encoding };
+      const body = responseBodyStream(input);
+      const parts = [];
+      for await (const chunk of body.stream) parts.push(chunk);
+      assert.deepEqual(Buffer.concat(parts), expected, `${encoding}, split=${split}`);
+    }
+  }
+});

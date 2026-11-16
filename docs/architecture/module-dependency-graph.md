@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3619 | 3518 | 659 | 67 | 0 | 1 |
+| 92 | 3610 | 3514 | 659 | 67 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -73,11 +73,11 @@
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
 | 56 | `09-workflow.js` | orchestration | 27 | 274 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
-| 58 | `11-native-tools.js` | tools | 292 | 59 | 14 |
+| 58 | `11-native-tools.js` | tools | 283 | 59 | 14 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 62 | `12-tool-dispatch.js` | tools | 93 | 187 | 25 |
+| 62 | `12-tool-dispatch.js` | tools | 93 | 186 | 25 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 48 | 276 | 37 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -106,7 +106,7 @@
 | 88 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
 | 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
 | 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 91 | `14-main.js` | entrypoint | 1 | 597 | 44 |
+| 91 | `14-main.js` | entrypoint | 1 | 594 | 44 |
 
 ## 模块边
 
@@ -423,7 +423,7 @@
 | `12-tool-dispatch.js` | `07-autonomy.js` | backward | `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `bridgedToolTier`, `compareToolRetrievalShadow`, `listCompactTools`, `nativeToolDisabledByPolicy`, `nativeToolSchema`, `nativeToolsAcceptingArgKeys`, `policyDesktopOverrideFor`, `policySessionFor`, `searchToolCatalog`, `toolArgsSkeleton`, `toolDisabledByPolicy`, `toolDisabledResult` |
 | `12-tool-dispatch.js` | `08-agent-runs.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `getAgentWorkflows` |
 | `12-tool-dispatch.js` | `10-context-governance.js` | backward | `providerTurnQuotaKey`, `rehydrateObservation` |
-| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `READ_PAGE_JSON_BUDGET`, `adaptiveCatalogForMcp`, `assertSearchExecution`, `binaryReadHint`, `boundedReadPage`, `classifyListPattern`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `embeddedIpv4FromV6`, `explicitAllowDirs`, `explicitSegmentsOfGlob`, `explicitSegmentsOfRegex`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `globToRegExp`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `normalizeGlobPatternForRoot`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries` |
+| `12-tool-dispatch.js` | `11-native-tools.js` | backward | `NativeSourceHooks`, `READ_PAGE_JSON_BUDGET`, `adaptiveCatalogForMcp`, `assertSearchExecution`, `binaryReadHint`, `boundedReadPage`, `classifyListPattern`, `claudeMdAudit`, `codeReviewScan`, `codebaseSymbolSearch`, `dataProfile`, `debugHypothesis`, `dependencyInventory`, `describeFsWriteError`, `docsSearch`, `downloadFileNameFrom`, `explicitAllowDirs`, `explicitSegmentsOfGlob`, `explicitSegmentsOfRegex`, `frontendAudit`, `gitCommit`, `gitDiff`, `gitLog`, `gitStatus`, `globToRegExp`, `guardDownloadDest`, `httpGetGuarded`, `httpRequest`, `isBinaryReadPath`, `levenshtein`, `normalizeGlobPatternForRoot`, `privacyReadTextWindow`, `privacySourceActive`, `privacySourceLine`, `privacySourceLineOffsets`, `privacySourceMark`, `privacySourceViews`, `probeRgAsync`, `prunedDirsHint`, `readIfExists`, `searchFileContent`, `shellKill`, `shellList`, `shellMcpChildGuard`, `shellPoll`, `shellSend`, `shellStart`, `ssrfCheck`, `walkDepthHint`, `walkEnvelopeEntries`, `walkFiles`, `walkTruncationHint`, `webFetch`, `webFetchFailMessage`, `webSearch`, `zipCollectEntries` |
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |
@@ -758,7 +758,7 @@
 | `14-main.js` | `09-workflow.js` | backward | `legacySpawnToOrchestrateArgs`, `planDiscoveryToolBatchAllowed`, `waitForAgentRunResults` |
 | `14-main.js` | `09d-token-estimation.js` | backward | `CONTEXT_WINDOW_FALLBACK`, `classifyTextForEstimate`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `setEstimateBucketsV1` |
 | `14-main.js` | `10-context-governance.js` | backward | `COMPACT_MARKER_MIN_SAVED_TOKENS`, `COMPACT_RESEED_TAIL_MAX_TOKENS`, `CompactionPlan`, `agentConversationContextMeta`, `agentNodeContextWindow`, `appendPromptToLastUserMessage`, `buildObservationRecallPrompt`, `buildSessionNotesInjectPrompt`, `buildSummaryFactTableMessages`, `buildSummaryRefineMessages`, `calibratedEstimate`, `checkSummaryEntities`, `chunkHistoryByBudget`, `configuredConversationWindow`, `contextWindowFromTable`, `contextWindowOverrideKey`, `dedupeRepeatedReads`, `estimateFactor`, `evaporateBudgetBoundary`, `evaporateHistory`, `extractContextLength`, `extractSessionNotes`, `extractSummaryEntities`, `fileReadDedupKey`, `fitHistoryForSummary`, `historyStartsWithCompactionSummary`, `historyUnitStarts`, `isContextOverflowError`, `learnedWindowCap`, `mapSummaryWithLimit`, `maybeWriteSessionNotes`, `measureObservationReductionShadow`, `mergeSessionNotes`, `noteEstimateSample`, `noteWindowOvershoot`, `openCompactMarker`, `parseSessionNotesMarkdown`, `providerContextWindow`, `providerConversationContextWindow`, `providerSummaryCall`, `recentFileReads`, `recentTurnsBoundary`, `reduceObservationContent`, `rehydrateObservation`, `renderSessionNotesMarkdown`, `resolveCompactionProvider`, `resolveContextWindow`, `resolveSummaryCallPolicy`, `runSessionTurn`, `summaryMaxConcurrent`, `summaryPromptWithGuidance`, `summarySingleShotCap`, `summarySingleShotReserveTokens`, `upsertCompactMarker`, `validateStructuredSummary`, `writeHistorySnapshot` |
-| `14-main.js` | `11-native-tools.js` | backward | `adaptiveCatalogForMcp`, `classifyFetchError`, `crc32`, `embeddedIpv4FromV6`, `extractMainText`, `guardDownloadDest`, `httpGetGuarded`, `isPrivateIpv4`, `parseBaiduHtml`, `parseBingHtml`, `peekRgProbe`, `probeRgAsync`, `readWebCache`, `ssrfCheck`, `webCachePath`, `webFetch`, `webFetchFailMessage`, `webSearch`, `writeWebCache`, `zipReadCentralDir`, `zipReadEntryData`, `zipWrite` |
+| `14-main.js` | `11-native-tools.js` | backward | `adaptiveCatalogForMcp`, `classifyFetchError`, `crc32`, `extractMainText`, `guardDownloadDest`, `parseBaiduHtml`, `parseBingHtml`, `peekRgProbe`, `probeRgAsync`, `readWebCache`, `ssrfCheck`, `webCachePath`, `webFetch`, `webFetchFailMessage`, `webSearch`, `writeWebCache`, `zipReadCentralDir`, `zipReadEntryData`, `zipWrite` |
 | `14-main.js` | `12-tool-dispatch.js` | backward | `TOOL_HANDLERS`, `attachScreenshotImage`, `suggestToolNames`, `toolArgsMissingRequired`, `toolCall`, `toolFailureResult`, `validateNativeToolArgs`, `withToolArgsGuide` |
 | `14-main.js` | `13-http-router.js` | backward | `doctor`, `installIntegration`, `parseArgs`, `startMcp`, `startServer` |
 | `14-main.js` | `13d-core-domain-routes.js` | backward | `buildMissionAggregateRows`, `missionAggregateStats` |

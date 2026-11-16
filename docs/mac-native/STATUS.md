@@ -669,3 +669,10 @@
 - 技能目录复用同一策略，阻止未知能力技能进入启用索引；界面中英文补齐未知原因，源目录与运行时语言目录同步。模板矩阵测试从保持旧 fail-open 字节形状改为核验 unknown 不放行，仍对已确定状态保留旧语义对照。
 - 入口加载测试发现上一包最终清理漏删 14-main 的 parsePlaybookDraft 导出，导致 ReferenceError；已删无调用者的过期导出，3 项导出面测试通过。不能将上一包清理前回归视为清理后入口证明，本条明确登记并修复。
 - 27 项模板／技能单元、完整 playbooks、skills-registry 与 Mac capability projection E2E 通过。i18n 首轮提示文档源目录未同步，补齐后通过；模块边界、依赖图、EOL、构建一致性及 diff 通过。整体架构和最终交付仍未完成，无打包。
+
+## 工作包 4bu：网络策略、传输与响应解码
+
+- network-policy 独立拥有地址／DNS 私网检查；http-transport 直接引用策略与 http-body，统一代理、CONNECT、直连 DNS pin、逐跳重定向、请求期限和取消。响应字符集／类型及解压集中到 http-body；移除三个宿主测试导出，传输与 SSRF 测试直接引用所属模块。
+- 提取首轮遗漏 http_request 的 charsetFromContentType 依赖，补齐显式导入后 44 项网络／入口单元全部通过；最终删减导出后受影响 27 项再验通过，SSRF hardening E2E 通过。未将首轮失败计入通过。
+- 增补直接解码测试复现旧裸 deflate 首包仅一个字节时误判 zlib 格式。现在收齐两字节再识别，校验 zlib 窗口字段，流结束等待内层解压完成；18 项正文测试通过，覆盖 gzip、zlib／裸 deflate、Brotli、多层编码、完整及逐字节传输。
+- 107 模块边界／发行白名单、依赖图、EOL、构建一致性及 diff 通过；共享宿主 61440 行，旧共享核心仍为 30 成员 SCC。完整分层、最终性能与发行验收仍未完成，无重复打包／备份。
