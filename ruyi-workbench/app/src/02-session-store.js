@@ -1107,142 +1107,26 @@ async function updateSessionMetaAttempt(id, patch, replayDepth) {
 // 用 createdAt 而不是「有墓碑就拒」:固定 id 的会话(管家 STEWARD_SESSION_ID)删掉后会以同一个 id 重建,
 // 新对象的 createdAt 晚于删除时刻,照常落盘;createSession 另外显式清墓碑。条目只活在本进程(重启后没有
 // 在飞的旧对象),有上限防长驻进程无界增长。
-const SESSION_DELETE_TOMBSTONE_MAX = 5000;
-const SESSION_DELETE_SETTLE_TIMEOUT_MS = 8000;   // 与 rewindSession 等垂死回合 settle 的窗口同值
-const sessionDeleteTombstones = new Map();
-function markSessionDeleted(id, purgeAssociated = false) {
-  const previous = sessionDeleteTombstones.get(id);
-  sessionDeleteTombstones.delete(id);
-  sessionDeleteTombstones.set(id, { at: Date.now(), purgeAssociated: Boolean(purgeAssociated || (previous && previous.purgeAssociated)) });
-  while (sessionDeleteTombstones.size > SESSION_DELETE_TOMBSTONE_MAX) sessionDeleteTombstones.delete(sessionDeleteTombstones.keys().next().value);
-}
-function sessionSaveIsTombstoned(session) {
-  const deleted = sessionDeleteTombstones.get(session && session.id);
-  if (!deleted) return false;
-  const createdMs = Date.parse(String((session && session.createdAt) || ''));
-  return !Number.isFinite(createdMs) || createdMs <= deleted.at;
-}
-function sessionAssociatedSaveIsTombstoned(id) {
-  const deleted = sessionDeleteTombstones.get(id);
-  return !!(deleted && deleted.purgeAssociated);
-}
-// Delete the persisted chat itself. `purgeAssociated` is deliberately opt-in: a normal single-chat
-// delete keeps its previous, conservative behavior, while the batch-cleanup flow can also reclaim
-// the per-chat recovery and workflow records that otherwise have their own GC lifecycle.
-// 工具截图附件(10 boundToolResultForDisplay)落在 uploads/toolimg_<tag>_<hash>/,tag 由会话 id 派生;删会话时按前缀整批清,
-// 否则长时间的桌面操控会话会在 uploads/ 里留下成百上千个永不回收的文件。
-function toolImageSessionTag(sessionId) { return crypto.createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10); }
-async function removeSessionToolImages(sessionId) {
-  const prefix = `toolimg_${toolImageSessionTag(sessionId)}_`;
-  let names = [];
-  try { names = await fsp.readdir(paths.uploads); } catch { return 0; }
-  let n = 0;
-  for (const name of names) {
-    if (!name.startsWith(prefix)) continue;
-    await fsp.rm(path.join(paths.uploads, name), { recursive: true, force: true }).then(() => { n += 1; }).catch(() => {});
-  }
-  return n;
-}
-async function deleteSession(id, { purgeAssociated = false } = {}) {
-  // 不合形/保留名(index、`_` 前缀 …,见 01 safeSessionId)先拒:修前 DELETE /api/sessions/index 一路走到 unlink index.json。
-  assertSessionIdForPath(id);
-  // hunt2-P2:先立墓碑(同步,先于 stopSession 触发的任何收尾),再等垂死回合 settle 与已在跑的那一截写链
-  // 落完,最后才 unlink —— 否则 unlink 与正在进行的 append/头写交错,删完还会剩下半份文件。
-  markSessionDeleted(id, purgeAssociated);
-  stopSession(id, 'deleted');
-  // 后台班组不在 activeChildren 里。删除线程同样要停它们,否则它们仍会派发后续节点。
-  // 停止只请求 abort,不是等待收尾;清关联数据时还要等已在飞的快照/事件写完,迟到写由同一墓碑拒掉。
-  const deletedRunIds = new Set([...activeAgentRuns.values()].filter(live => live && live.run && live.run.sessionId === id).map(live => live.run.id));
-  await stopMissionAgentRuns(id);
-  {
-    const settler = turnSettlers.get(id);
-    if (settler && settler.promise) {
-      const settled = await Promise.race([
-        settler.promise.then(() => true, () => true),
-        new Promise(r => { const t = setTimeout(() => r(false), SESSION_DELETE_SETTLE_TIMEOUT_MS); if (t.unref) t.unref(); }),
-      ]);
-      if (!settled) logEvent({ kind: 'session_delete_settle_timeout', sessionId: id });
-    }
-    const inFlight = sessionWriteChains.get(id);
-    if (inFlight) await inFlight.catch(() => {});
-    // C2:草稿本那一截写链同样先落完再 unlink(墓碑已立,之后排进来的写会被 updateSessionScratchpad 拒掉)。
-    const scratchpadInFlight = sessionScratchpadChains.get(id);
-    if (scratchpadInFlight) await scratchpadInFlight.catch(() => {});
-  }
-  try { revokeAllGrants(id, 'session-deleted'); } catch { /* best-effort */ } // 第27波:会话销毁 → 授权书全清
-  // 116g:删线程 = 从它所在事项的反向索引里摘掉。**必须在删会话头之前读**(头没了就不知道它属于谁)。
-  // 漏掉这一步不会让读模型说错话(读侧一律与会话头对账,死 id 天然不进任何视图),但会让事项文件里
-  // 留一条永远对不上的 id —— 索引是权威,权威里不该有垃圾。尽力而为,任何失败都不阻断删除。
-  try {
-    const head = await readMissionSessionHead(id);
-    const owner = head && sessionMissionId(head);
-    if (owner && owner !== id) await missionIndexRemove(owner, id);
-  } catch { /* best-effort: 读侧对账兜底 */ }
-  await fsp.unlink(sessionPath(id)).catch(() => {}); // idempotent
-  // v1.9 存储 v2:正文/迁移备份/损坏隔离副本一并清(用户删会话 = 删除其全部数据载体)。
-  const bp = sessionBodyPaths(id);
-  const proposalSessionId = safeSessionId(id);
-  await Promise.all([
-    fsp.unlink(bp.messages).catch(() => {}),
-    fsp.unlink(bp.provider).catch(() => {}),
-    fsp.unlink(sessionPath(id) + '.v1bak').catch(() => {}),
-    fsp.unlink(sessionPath(id) + '.corrupt').catch(() => {}),
-    fsp.unlink(bp.messages + '.corrupt').catch(() => {}),
-    fsp.unlink(bp.provider + '.corrupt').catch(() => {}),
-    fsp.unlink(bp.messages + '.prevbody').catch(() => {}),
-    fsp.unlink(bp.provider + '.prevbody').catch(() => {}),
-    fsp.unlink(interventionFilePath(id)).catch(() => {}),
-    fsp.unlink(missionChangeFilePath(id)).catch(() => {}),
-    // hunt2-P9:会话笔记旁车与每会话 MCP 配置(内含 loopback token 与外部 MCP 的 env)同属这条会话的数据载体。
-    fsp.unlink(sessionNotesPath(id)).catch(() => {}),
-    fsp.unlink(sessionScratchpadPath(id)).catch(() => {}),   // C2:会话草稿本旁车
-    proposalSessionId ? fsp.unlink(path.join(paths.generated, `workbench.mcp.${proposalSessionId}.json`)).catch(() => {}) : Promise.resolve(),
-    proposalSessionId ? fsp.unlink(path.join(paths.memory, 'proposals', proposalSessionId + '.json')).catch(() => {}) : Promise.resolve(),
-    // hunt2 #19:后台任务账本(11 backgroundJobFile,同一 safeSessionId 闸)—— 含命令输出/代理信封,随会话一起删。
-    proposalSessionId ? fsp.unlink(path.join(paths.sessions, 'background-jobs', proposalSessionId + '.json')).catch(() => {}) : Promise.resolve(),
-  ]);
-  await removeSessionToolImages(id);
-  dropSessionBodyState(id);
-  SessionPersistence.invalidateReads(id);   // 删除前开读的装载不得把旧副本回写成「复活」的会话
-  dropSessionTitleOverride(id);
-  sessionEngineRouteOverrides.delete(id);
-  sessionEngineRouteScopeOverrides.delete(id);
-  sessionPermissionModeOverrides.delete(id); // 116-2a: 会话销毁 = 覆盖表条目一并销毁(否则同名新会话会继承)
-  sessionDesktopToolsOverrides.delete(id);   // 117z-E2 提交①: 同上(桌面覆盖绝不能被同名新会话继承)
-  dropInterventionSessionState(id);          // 介入记录缓存 + 压实节拍计数:会话没了,内存里的这两份也不留
-  if (purgeAssociated) {
-    if (EventStreamHooks.flushSessionAgentRuns) await EventStreamHooks.flushSessionAgentRuns(id, deletedRunIds);
-    await Promise.all([
-      fsp.rm(journalDir(id), { recursive: true, force: true }).catch(() => {}),
-      fsp.rm(agentRunDir(id), { recursive: true, force: true }).catch(() => {}),
-    ]);
-  }
-  scheduleSessionIndexUpdate(id, SESSION_TOMBSTONE); // PF2: queue removal from the metadata index (debounced; see saveSession)
-  RUYI_EVENTS.emit('projection.invalidated', { sessionId: id, reason: 'source' }); // 75c: remove from disposable Mission/Intervention projection index
-  // 128f-⑫(用户 2026-09-19「删除线程没有及时的界面反馈」):删完告诉所有在看的人「这一条没了」。
-  // 修前一帧都不派,管家视角的左栏要等 15 s 那一拍轮询或用户点别处(13r 的 thread.removed 头注)。
-  RUYI_EVENTS.emit('thread.removed', { sessionId: id });
-  return { ok: true, id, purgedAssociated: Boolean(purgeAssociated) };
-}
-
-// Safety-first bulk history cleanup. It can only delete UNPINNED chats, preserves the explicitly
-// supplied current chat, and refuses to tear down a currently-running chat. This keeps the UI action
-// useful for clearing history without turning a single misclick into a "delete everything" operation.
-async function bulkDeleteUnpinnedSessions({ preserveSessionId, purgeAssociated = false } = {}) {
-  const preserveId = safeSessionId(preserveSessionId);
-  const sessions = await listSessions();
-  const deleted = [];
-  const skipped = { pinned: 0, preserved: 0, active: 0 };
-  for (const meta of sessions) {
-    if (!meta || !meta.id) continue;
-    if (meta.pinned) { skipped.pinned++; continue; }
-    if (preserveId && meta.id === preserveId) { skipped.preserved++; continue; }
-    if (activeChildren.has(meta.id)) { skipped.active++; continue; }
-    await deleteSession(meta.id, { purgeAssociated });
-    deleted.push(meta.id);
-  }
-  return { ok: true, deleted, deletedCount: deleted.length, skipped, purgedAssociated: Boolean(purgeAssociated) };
-}
+const { deleteSession, bulkDeleteUnpinnedSessions, markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, toolImageSessionTag, removeSessionToolImages, clearDeletedSession } = require('./backend/session-deletion.cjs').createSessionDeletion({
+  paths, assertSessionIdForPath, safeSessionId, logEvent,
+  files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
+    sessionNotesPath, sessionScratchpadPath, journalDir: id => journalDir(id), agentRunDir },
+  pendingWrites: { sessionWriteChains, sessionScratchpadChains },
+  execution: {
+    stop: stopSession, activeRuns: () => activeAgentRuns.values(), stopRuns: stopMissionAgentRuns,
+    settler: id => turnSettlers.get(id), isActive: id => activeChildren.has(id),
+    revokeGrants: revokeAllGrants,
+    flushRuns: (...args) => EventStreamHooks.flushSessionAgentRuns?.(...args),
+  },
+  membership: { readHead: readMissionSessionHead, ownerOf: sessionMissionId, remove: (...args) => missionIndexRemove(...args) },
+  index: { list: listSessions, remove: id => scheduleSessionIndexUpdate(id, SESSION_TOMBSTONE) },
+  invalidateSessionState: id => {
+    dropSessionBodyState(id); SessionPersistence.invalidateReads(id);
+    dropSessionTitleOverride(id); sessionEngineRouteOverrides.delete(id); sessionEngineRouteScopeOverrides.delete(id);
+    sessionPermissionModeOverrides.delete(id); sessionDesktopToolsOverrides.delete(id); dropInterventionSessionState(id);
+  },
+  events: RUYI_EVENTS,
+});
 
 // 架构还债批 3·B: 会话引擎路由的纯函数(normalizeSessionEngineRoute/sessionEngineRouteFromConfig/inferSessionEngineRoute/configForSessionEngineRoute)抽至 02e-session-engine-route.js。
 
@@ -2257,7 +2141,7 @@ function sanitizeImportedSessionMessages(raw) {
 
 async function createSession({ title, cwd, origin, engineRoute }) {
   const id = makeId('sess');
-  sessionDeleteTombstones.delete(id);   // hunt2-P2:新建的会话绝不继承同名旧会话的删除墓碑
+  clearDeletedSession(id);   // hunt2-P2:新建的会话绝不继承同名旧会话的删除墓碑
   const config = await readConfig();
   // 导入会话(POST /api/sessions 的 messages,来自用户选的 JSON 文件)同样不可信:修前 [null] 让建会话 500
   // (而且半截落了盘),数字/字符串元素原样进正文。只收【普通对象 + 非空字符串 role + content 缺省或为字符串/数组】

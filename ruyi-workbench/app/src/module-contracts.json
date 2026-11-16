@@ -1379,8 +1379,6 @@
         "SESSION_BODY_READ_TRANSIENT",
         "SESSION_BRIEF_GIST_CHARS",
         "SESSION_BRIEF_TITLE_CHARS",
-        "SESSION_DELETE_SETTLE_TIMEOUT_MS",
-        "SESSION_DELETE_TOMBSTONE_MAX",
         "SESSION_HEAD_READ_RETRIES",
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
@@ -1412,6 +1410,7 @@
         "cancelModelRunsOfDiscardedTurns",
         "captureWorkspaceTurnBaseline",
         "checkpointRollbackContext",
+        "clearDeletedSession",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
         "compactInterventionJournal",
@@ -1548,7 +1547,6 @@
         "sessionBodyRecordFromRead",
         "sessionBodyText",
         "sessionBriefOf",
-        "sessionDeleteTombstones",
         "sessionDisplayTitle",
         "sessionIndexPath",
         "sessionKind",
@@ -2055,21 +2053,23 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "revokeAllGrants",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "agentRunDir",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
