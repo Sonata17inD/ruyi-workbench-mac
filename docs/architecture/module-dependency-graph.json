@@ -5,8 +5,8 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3644,
-    "requiredSymbols": 3529,
-    "edges": 663,
+    "requiredSymbols": 3525,
+    "edges": 660,
     "forwardEdges": 68,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -12387,20 +12387,6 @@
       ],
       "requires": [
         {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
@@ -12418,14 +12404,6 @@
         "MediaInspection"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "StringDecoder",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
@@ -28959,13 +28937,6 @@
           ]
         },
         {
-          "provider": "11d-media-inspection.js",
-          "symbol": "MediaInspection",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "12-tool-dispatch.js",
           "symbol": "attachScreenshotImage",
           "kinds": [
@@ -32683,26 +32654,9 @@
     },
     {
       "from": "11c-file-visual-io.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "cp",
-        "paths"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "11c-file-visual-io.js",
       "to": "01h-process-runtime.js",
       "symbols": [
         "ProcessRuntime"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "11d-media-inspection.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "StringDecoder"
       ],
       "direction": "backward"
     },
@@ -37386,14 +37340,6 @@
     },
     {
       "from": "14-main.js",
-      "to": "11d-media-inspection.js",
-      "symbols": [
-        "MediaInspection"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "14-main.js",
       "to": "12-tool-dispatch.js",
       "symbols": [
         "TOOL_HANDLERS",
@@ -37559,8 +37505,6 @@
       "09d-token-estimation.js",
       "10-context-governance.js",
       "11-native-tools.js",
-      "11c-file-visual-io.js",
-      "11d-media-inspection.js",
       "12-tool-dispatch.js",
       "13-http-router.js",
       "13b-api-domain-routes.js",
@@ -37732,8 +37676,6 @@
     "11-native-tools.js->06-provider-engine.js",
     "11-native-tools.js->07-autonomy.js",
     "11-native-tools.js->13f-native-tool-schemas.js",
-    "11c-file-visual-io.js->00-boot.js",
-    "11d-media-inspection.js->00-boot.js",
     "12-tool-dispatch.js->00-boot.js",
     "12-tool-dispatch.js->01-config.js",
     "12-tool-dispatch.js->02-session-store.js",
@@ -37747,8 +37689,6 @@
     "12-tool-dispatch.js->08-agent-runs.js",
     "12-tool-dispatch.js->10-context-governance.js",
     "12-tool-dispatch.js->11-native-tools.js",
-    "12-tool-dispatch.js->11c-file-visual-io.js",
-    "12-tool-dispatch.js->11d-media-inspection.js",
     "13-http-router.js->00-boot.js",
     "13-http-router.js->01-config.js",
     "13-http-router.js->02-session-store.js",

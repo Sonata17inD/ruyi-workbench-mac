@@ -10,10 +10,10 @@ const ws = path.join(root, 'workspace'), home = path.join(root, 'data');
 fs.mkdirSync(ws); fs.mkdirSync(home);
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 if (process.env.RUYI_NATIVE_READ_TEST_PYTHON) process.env.RUYI_BUNDLED_PYTHON = process.env.RUYI_NATIVE_READ_TEST_PYTHON;
-const srv = require('../../ruyi-workbench/app/server.js');
+const srv = require('../lib/server-internals').loadServerInternals(['toolCall', 'buildOpenAiTools', 'buildToolCatalog', 'searchToolCatalog', 'ProcessRuntime']);
 // These schema/loading fixtures model a ready runtime; unavailable hosts have dedicated e2e coverage.
 const capabilities = { network: { online: true }, gitCli: true, runtime: { capabilities: { 'process.supervisor': { ready: true } } } };
-const media = srv.dispatchTestHooks.MediaInspection;
+const media = require('../../ruyi-workbench/app/backend/media-inspection.cjs').createMediaInspection({ ProcessRuntime: srv.ProcessRuntime });
 const config = { defaultWorkspace: ws, workspaces: [{ path: ws, read: true, write: true, execute: true }], permissionMode: 'bypass',
   includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [], toolLoadingMode: 'full' };
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config));

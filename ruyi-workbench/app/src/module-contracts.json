@@ -12255,20 +12255,6 @@
       ],
       "requires": [
         {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
@@ -12284,14 +12270,6 @@
         "MediaInspection"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "StringDecoder",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
@@ -28760,13 +28738,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "zipWrite",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11d-media-inspection.js",
-          "symbol": "MediaInspection",
           "kinds": [
             "read"
           ]

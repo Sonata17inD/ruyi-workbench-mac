@@ -277,7 +277,9 @@
     "app/backend/toolbox-services.cjs",
     "app/backend/file-tools.cjs",
     "app/backend/archive-codec.cjs",
-    "app/backend/archive-collector.cjs"
+    "app/backend/archive-collector.cjs",
+    "app/backend/file-visual-io.cjs",
+    "app/backend/media-inspection.cjs"
   ],
   "acc": [
     "LICENSE",

@@ -641,3 +641,10 @@
 - 解压中途停止不会刷新尚未落盘的 pending 批次。已准备检查点但未写入的条目撤销检查点；已写文件保留对应记录，返回 partial、filesExtracted 和既有文件错误契约 aborted。源读取阶段中止保留 ABORT_ERR 异常／结果语义。
 - 20 项文件检查点单元通过（含源读取中取消两项和第一文件落盘后取消一项）；此前联跑其余 23 项通过。新增压缩异步边界取消测试后 15 项纯逻辑／协议单元通过；文件工具 E2E 通过。中途取消测试首轮错误地期待内部 ABORT_ERR 而收到既有文件信封 aborted，按真实公开契约修正后通过；未改变产品错误契约来迎合测试。
 - 模块边界／白名单、EOL、构建一致性及 diff 通过；没有重复打包。第四阶段全量核心分层和最终验收仍未完成。
+
+## 工作包 4br：原生图像／媒体服务
+
+- file-visual-io 与 media-inspection 通过 ProcessRuntime 显式端口独立实例化，宿主仅组合服务。删除未受监督的非 Mac spawn/execFile 回退、Windows Python 9009 判据、PROGRAMFILES/LOCALAPPDATA 浏览器路径；Chrome/Chromium/Edge 采用 Mac Application 路径。简化空后缀／空启动参数循环。
+- media-harness 直接实例化所属模块，删除 dispatchTestHooks.MediaInspection 测试专用导出。文档与音频监督 E2E 全通过，覆盖取消、超时、后代停止、缺失监督器、清理不完整、保留输出管道和 Unicode。
+- 初次 native-file-vision：6 通过、2 因 Python 图像依赖未配置跳过。使用仓库现有 Python 后，与媒体单元合跑 16 项，15 通过、1 因 FFmpeg 未安装跳过；真实 FFmpeg 测量未计通过。清理空参数循环后，受影响 PDF／OOXML／图片转换 3 项再验通过。导出面单元通过。
+- 100 模块边界／白名单、依赖图、EOL、构建一致性与 diff 通过。共享宿主 62566 行；旧核心 SCC 从 32 成员降至 30，静态门上限同步收紧为 30；仍未完成整体消环、最终性能与发行验收。无重复备份／打包。
