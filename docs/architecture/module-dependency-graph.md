@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3657 | 3485 | 655 | 61 | 0 | 1 |
+| 92 | 3657 | 3484 | 655 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -62,7 +62,7 @@
 | 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 46 | `06d-memory-domain.js` | engine | 178 | 39 | 11 |
-| 47 | `06e-mission-domain.js` | engine | 3 | 14 | 5 |
+| 47 | `06e-mission-domain.js` | engine | 3 | 13 | 5 |
 | 48 | `06f-autonomy-grants.js` | engine | 13 | 10 | 5 |
 | 49 | `06g-resource-leases.js` | engine | 9 | 4 | 3 |
 | 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
@@ -271,7 +271,7 @@
 | `06d-memory-domain.js` | `06-provider-engine.js` | backward | `providerRawCompletion` |
 | `06d-memory-domain.js` | `06b-prompt-registry.js` | backward | `getPromptPack` |
 | `06d-memory-domain.js` | `06h-retrieval-index.js` | backward | `createRetrievalCorpusCache`, `rankRetrievalCorpus`, `reciprocalRankFusion` |
-| `06e-mission-domain.js` | `00-boot.js` | backward | `neutralizeFenceTag`, `nowIso`, `text` |
+| `06e-mission-domain.js` | `00-boot.js` | backward | `neutralizeFenceTag`, `nowIso` |
 | `06e-mission-domain.js` | `02-session-store.js` | backward | `MISSION_MAX_TEXT`, `MISSION_STALL_LIMIT`, `evaluateMissionCheck`, `maybeFinalizeMission`, `missionProgressDigest`, `recordMissionCheckResult`, `saveSession`, `sessionObjectIsStale` |
 | `06e-mission-domain.js` | `03-bridge-guard.js` | backward | `normalizeCwd` |
 | `06e-mission-domain.js` | `04-permission-runtime.js` | backward | `logEvent` |

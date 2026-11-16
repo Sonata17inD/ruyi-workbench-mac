@@ -5,7 +5,7 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3657,
-    "requiredSymbols": 3485,
+    "requiredSymbols": 3484,
     "edges": 655,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -6759,19 +6759,12 @@
           "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -6780,14 +6773,14 @@
           "provider": "02-session-store.js",
           "symbol": "evaluateMissionCheck",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "maybeFinalizeMission",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6808,49 +6801,49 @@
           "provider": "02-session-store.js",
           "symbol": "missionProgressDigest",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionCheckResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionObjectIsStale",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -30767,8 +30760,7 @@
       "to": "00-boot.js",
       "symbols": [
         "neutralizeFenceTag",
-        "nowIso",
-        "text"
+        "nowIso"
       ],
       "direction": "backward"
     },

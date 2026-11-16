@@ -46,4 +46,6 @@ node dev-harness/macos-capability-projection.e2e.js
 
 `--fast` 已包含单元测试。开发中运行受影响范围，最终集成才进行完整 Mac 适用回归、独占能效对照与 Full／Slim 打包验收。跳过和未执行项不计入通过。
 
+版本与测试清册见 [工程事实](facts.json)，清册数量不表示通过数量。
+
 [审查报告](docs/audits/2026-11-13-mac-only/REPORT.md) · [历史变更](CHANGELOG.md) · [第三方许可](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)

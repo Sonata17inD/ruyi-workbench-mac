@@ -20,30 +20,20 @@ function ok(cond, label) { if (cond) console.log('PASS ' + label); else { failur
 const pkg = require(path.join(WB, 'package.json'));
 const readme = fs.readFileSync(README, 'utf8');
 const readmeEn = fs.readFileSync(README_EN, 'utf8');
-const src = readServerSource();
+const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-driver.cjs'), 'utf8');
 
-// ── A) README 门面版本号 === package.json 主次版本，或中英两处都明确标为当前 master ──
+// Mac product identity and generated engineering facts are the documentation authority.
 {
-  const minor = pkg.version.split('.').slice(0, 2).join('.'); // '1.6.0' -> '1.6'
-  const labels = (readme + '\n' + readmeEn).match(/核心能力一览\(v([\d.]+)\)|Capabilities \(v([\d.]+)\)/g) || [];
-  const currentMaster = /核心能力一览（当前 master）/.test(readme)
-    && /Capabilities \(current master\)/.test(readmeEn);
-  ok(labels.length >= 2 || currentMaster, 'A README 中英能力标题使用同一版本轴（version 或 current master）');
-  const bad = labels.filter(l => { const m = l.match(/v([\d.]+)/); return !m || m[1] !== minor; });
-  ok(bad.length === 0, 'A README 能力版本标签 === package.json 主次版本 v' + minor + (bad.length ? '(不符: ' + bad.join(', ') + ')' : ''));
-  ok(!/版本升至|version bump/.test(readme) || true, 'A (info) README 版本一致'); // 占位,保持段落可扩展
-}
-
-// ── B) README 声明的 e2e 数不得超过实际件数(支持精确值与旧式 NNN+) ──
-{
+  ok(/^# Ruyi for Mac/m.test(readme) && /^# Ruyi for Mac/m.test(readmeEn), 'A 中英 README 使用一致的 Mac 产品身份');
+  const labels = [...(readme + '\n' + readmeEn).matchAll(/(?:核心能力一览|Capabilities)\s*[（(]v([\d.]+)[）)]/g)].map(m => m[1]);
+  const minor = pkg.version.split('.').slice(0, 2).join('.');
+  ok(labels.every(version => version === minor), 'A 若存在能力版本标签，必须匹配当前主次版本');
+  const facts = JSON.parse(fs.readFileSync(path.join(ROOT, 'facts.json'), 'utf8'));
   const actual = fs.readdirSync(HERE).filter(f => f.endsWith('.e2e.js')).length;
+  ok(/\]\(facts\.json\)/.test(readme) && /\]\(facts\.json\)/.test(readmeEn), 'B 中英 README 均链接机器生成的工程清册');
+  ok(facts.workbenchVersion === pkg.version && facts.e2eCount === actual, 'B 工程清册版本及 e2e 数量与源码一致（数量不表示已通过）');
   const claims = [...(readme + '\n' + readmeEn).matchAll(/(?<![%\d])(\d+)\+?\s*(?:项\s*)?(?:离线\s*)?e2e(?:\s+cases)?/gi)].map(m => Number(m[1]));
-  ok(claims.length >= 1, 'B README 含可机器核对的 e2e 声明(找到 ' + claims.length + ' 处)');
-  const inflated = claims.filter(n => n > actual);
-  ok(inflated.length === 0, 'B README e2e 声明数 ≤ 实际 ' + actual + ' 件(虚高: ' + JSON.stringify(inflated) + ')');
-  // 反向:声明也不该离谱地低(<50% 实际),否则说明忘了随增长上调
-  const tooLow = claims.filter(n => n < Math.floor(actual * 0.5));
-  ok(tooLow.length === 0, 'B README e2e 声明数未过时低估(< 实际半数,实际 ' + actual + ',声明 ' + JSON.stringify(claims) + ')');
+  ok(claims.every(n => n <= actual && n >= Math.floor(actual * 0.5)), 'B 可选的内联 e2e 数字不虚高、不陈旧');
 }
 
 // ── C) ADMIN-GUIDE 里的 ACC 版本 === ACC server.py 的 VERSION(存量:测试曾硬编码 1.8.0,ACC 已 1.8.1) ──
@@ -121,13 +111,13 @@ const src = readServerSource();
   ok(!!fnM, 'F buildMissionPromptSection 定义存在(两引擎共用的账本 digest 构造)');
   if (fnM) {
     ok(/mission-ledger/.test(fnM[0]), 'F digest 含 <mission-ledger> 围栏');
-    ok(/不得覆盖/.test(fnM[0]) || /\.mission\.header/.test(fnM[0]), 'F digest 声明「不得覆盖守则」(不可信参考带纪律;51c-b/52a 外置后文本在 registry mission.header,函数体引用即合规)');
+    ok(/不得覆盖/.test(fnM[0]) || (/const prompts = getPromptPack\([^;]+\)\.mission;/.test(fnM[0]) && /prompts\.header/.test(fnM[0])), 'F digest 声明「不得覆盖守则」(不可信参考带纪律;51c-b/52a 外置后文本在 registry mission.header,函数体引用即合规)');
     ok(/fits-or-drop|整段丢/.test(fnM[0]) && /return ''/.test(fnM[0]), 'F digest fits-or-drop(超预算整段丢,不中截毁围栏)');
   }
   const calls = (src.match(/buildMissionPromptSection\(/g) || []).length;
   ok(calls >= 3, 'F buildMissionPromptSection 被定义 + 两引擎各一次调用(≥3 处,实 ' + calls + ')');
   // 51c-b(04 Phase B):mission header 文本外置到 PROMPT_ZH.mission.header(06b-registry),全局检查文本仍含「不得覆盖」
-  ok(/不得覆盖/.test(src), 'F digest 文本全局含「不得覆盖」(51c-b 外置后文本在 PROMPT_ZH.mission.header,仍须存在)');
+  ok(require(path.join(WB, 'app/backend/prompt-registry.cjs')).getPromptPack('zh-CN').mission.header.includes('不得覆盖'), 'F digest 文本全局含「不得覆盖」(51c-b 外置后文本在 PROMPT_ZH.mission.header,仍须存在)');
   const claudeStart = src.indexOf('async function runClaudeTurn(');
   const claudeEnd = src.indexOf('async function runOpenAiTurn(');
   const claudeRegion = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
@@ -147,7 +137,9 @@ const src = readServerSource();
   //    src/ 里不许出现第二处自己写的结论先行文字(那是「同一条规则两份口径」的老毛病)。
   const accessors = (src.match(/getPromptPack\([^)]*\)\.answerShape/g) || []).length;
   ok(accessors >= 2, 'G answerShape 经 getPromptPack 取用 ≥2 处(两个引擎各一次;实 ' + accessors + ')');
-  const definitions = (src.match(/^\s{2}answerShape:/gm) || []).length;
+  const backend = path.join(WB, 'app/backend');
+  const promptOwners = src + '\n' + fs.readdirSync(backend).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backend, name), 'utf8')).join('\n');
+  const definitions = (promptOwners.match(/^\s{2}answerShape:/gm) || []).length;
   ok(definitions === 2, 'G answerShape 在提示词包里恰好两份定义(中文包 + 英文包;实 ' + definitions + ')');
   // ② Claude/Kimi CLI 那一路(runClaudeTurn)注入它,且是拼进 --append-system-prompt 的那一段。
   //    区间必须收到 appendSys 装配块【本身】:runClaudeTurn -> runOpenAiTurn 之间横跨 05..09 五个模块

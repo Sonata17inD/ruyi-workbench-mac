@@ -31,4 +31,6 @@ node dev-harness/macos-capability-projection.e2e.js
 
 The fast suite includes unit tests. Skipped and unexecuted checks are not passes.
 
+See [generated engineering facts](facts.json) for the version and test inventory; inventory counts are not pass counts.
+
 [Audit](docs/audits/2026-11-13-mac-only/REPORT.md) · [History](CHANGELOG.md) · [Third-party notices](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)

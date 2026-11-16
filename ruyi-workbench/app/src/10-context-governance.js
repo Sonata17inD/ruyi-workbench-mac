@@ -3912,7 +3912,7 @@ async function runSessionTurn(input) {
     // 对抗轮 P2: isAlive 同时看 turnStopped —— /api/stop(服务端 stopSession,不关 socket)也要能刹住驱动器,
     // 不能只靠客户端断连(否则脚本/代理调 /api/stop 后驱动器仍relaunch 到预算耗尽)。
     if (session.mission && session.mission.autoMode === 'until-done') {
-      await runMissionDriver({ session, config, provider, emit, runTurn, getLastTokens: () => lastTurnTokens, isAlive: () => !disconnectHandled && !finished && !turnStopped && !settleEntry.cancelRequested, ownsSession: () => turnSettlers.get(session.id) === settleEntry });
+      await runMissionDriver({ session, config, provider, emit, runTurn, executionOwner: settleEntry, getLastTokens: () => lastTurnTokens, isAlive: () => !disconnectHandled && !finished && !turnStopped && !settleEntry.cancelRequested, ownsSession: () => turnSettlers.get(session.id) === settleEntry });
     }
   } catch (err) {
     // 116h:排队中被取消 -> 与「被 /api/stop 停掉」同一条语义(process/stopped),不是错误信封。

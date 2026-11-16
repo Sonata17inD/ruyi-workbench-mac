@@ -45,7 +45,7 @@ async function waitToken() {
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
 
-const src = readServerSource() + '\n' + fs.readFileSync(path.join(WB, 'app/backend/autonomy-grants.cjs'), 'utf8');
+const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-driver.cjs'), 'utf8') + '\n' + fs.readFileSync(path.join(WB, 'app/backend/autonomy-grants.cjs'), 'utf8');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态源锁

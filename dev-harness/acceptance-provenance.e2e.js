@@ -246,7 +246,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       'f1 那一处就是 recordMissionCheckResult(不许有第二条赋值)');
     // f2:落章的调用点恰两处,都是真的跑了检查那两条路。
     const stampCallers = srcNames.filter(name => name !== '../backend/session-model.cjs' && /recordMissionCheckResult\(/.test(readSrc(name)));
-    ok(stampCallers.length === 2 && stampCallers.includes('06e-mission-domain.js') && stampCallers.includes('13-http-router.js'),
+    ok(stampCallers.length === 2 && stampCallers.includes('../backend/mission-driver.cjs') && stampCallers.includes('13-http-router.js'),
       'f2 落章的调用点恰两处:驱动器每轮 + action:check(实 ' + JSON.stringify(stampCallers) + ')');
     for (const name of stampCallers) {
       // 128b:action:check 的落盘改走 mutateSession(撤回插在中间时在新读的副本上重放),章不能再紧挨着检查写 ——

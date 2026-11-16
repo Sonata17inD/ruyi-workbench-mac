@@ -22,7 +22,7 @@ const CENSUS = {
   '02-session-store.js': 4, // 元数据、创建与任务控制；成员调用的适配器不重复计数。
   '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
-  '06e-mission-domain.js': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
+  '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
   '07-autonomy.js': 1,           // steer 排空(回合自存)
   '09-workflow.js': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
   '10-context-governance.js': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
@@ -93,7 +93,7 @@ ok(/throwIfStale:\s*true/.test(mutate) && /expectGen/.test(mutate) && /session\.
 // ④ 旁车与驱动器过撤回闸。
 ok(/sessionObjectIsStale\(session\)/.test(fnBody('10-context-governance.js', 'function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
 ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('10-context-governance.js')), '④ 历史快照:陈旧对象不写');
-ok(/sessionObjectIsStale\(session\)/.test(fnBody('06e-mission-domain.js', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
+ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/mission-driver.cjs', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
 
 // ⑤ 撤回相关的码有稳定码与人话(Brief §4.2 第 18 条)。
 const boot = read('00-boot.js');

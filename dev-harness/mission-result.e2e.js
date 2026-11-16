@@ -1,10 +1,10 @@
-﻿require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
+require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
 'use strict';
 // E2E(第72波 EC-E 切片三):任务结果模型 + 不可逆操作正向账。
 // 覆盖:
 //  (a) provider 回合内 mission_update 全 done -> maybeFinalizeMission 盖 complete 章(09 接线);
-//      同回合 powershell_run 进不可逆账(kind exec + detail),file_read 只读不记账;
+//      同回合 shell_run 进不可逆账(kind exec + detail),file_read 只读不记账;
 //      snapshot.result 全字段(acceptance/unfinished/artifacts/changes/checkpoints/irreversible);
 //      changes.commands 是数字(第70波 NaN bug 修复回归)。
 //  (b) 再武装:update 加 pending 里程碑 -> 旧 complete 章清理(result=null);
@@ -81,7 +81,7 @@ function startProvider() {
     }
     if (done === 0) return emitToolCall(res, id, 'call_m1', 'mission_update', { milestones: [{ id: 'm1', status: 'done', evidence: '第一步完成' }] });
     if (done === 1) return emitToolCall(res, id, 'call_m2', 'mission_update', { milestones: [{ id: 'm2', status: 'done', evidence: '第二步完成' }] });
-    if (done === 2) return emitToolCall(res, id, 'call_cmd', 'powershell_run', { command: 'echo seventy-two' });
+    if (done === 2) return emitToolCall(res, id, 'call_cmd', 'shell_run', { command: 'echo seventy-two' });
     if (done === 3) return emitToolCall(res, id, 'call_rd', 'file_read', { path: 'package.json' });
     return emitText(res, id, '全部完成');
   });
@@ -102,7 +102,7 @@ function spawnWb() {
 }
 
 (async () => {
-  const src = readServerSource();
+  const src = readServerSource() + ['session-model.cjs', 'mission-driver.cjs'].map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8')).join('\n');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,
@@ -140,7 +140,7 @@ function spawnWb() {
     const tsEvt = events.find(e => e.type === 'turn_summary');
     const tsIv = (tsEvt && Array.isArray(tsEvt.irreversible)) ? tsEvt.irreversible : [];
     ok(!!tsEvt && Array.isArray(tsEvt.irreversible), '(a) turn_summary 事件带 irreversible 账');
-    ok(tsIv.length === 1 && tsIv[0].name === 'powershell_run' && tsIv[0].kind === 'exec' && /seventy-two/.test(tsIv[0].detail), '(a) powershell_run 入账(exec + detail)');
+    ok(tsIv.length === 1 && tsIv[0].name === 'shell_run' && tsIv[0].kind === 'exec' && /seventy-two/.test(tsIv[0].detail), '(a) shell_run 入账(exec + detail)');
     ok(!tsIv.some(iv => iv.name === 'file_read'), '(a) file_read 只读不记账');
 
     // 等回合收尾 save 落盘,再读快照
