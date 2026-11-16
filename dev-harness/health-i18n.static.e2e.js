@@ -202,7 +202,8 @@ function healthIdsFromServer() {
     `G1 desktop-control 状态词典前后端一致(${serverTokens.join(', ')})`);
   // 145-W3:search-ripgrep 的来源词典三处一致 —— 前端状态表、CLI doctor 的严重度表、服务端 detail 前缀
   // (来源词直接取自 probeRgAsync 的 source 字段 env/bundled/system,缺席写 absent:)。
-  const rgRow = routerSrc.match(/'search-ripgrep': Object\.freeze\(\{([^}]*)\}\)/);
+  const doctorSrc = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/cli-diagnostics.cjs'), 'utf8');
+  const rgRow = doctorSrc.match(/'search-ripgrep': Object\.freeze\(\{([^}]*)\}\)/);
   const rgServerStates = rgRow ? [...rgRow[1].matchAll(/([a-z]+):\s*'/g)].map(m => m[1]) : [];
   ok(Array.isArray(mod.SEARCH_RIPGREP_STATES) && rgServerStates.length === mod.SEARCH_RIPGREP_STATES.length
     && rgServerStates.every(s => mod.SEARCH_RIPGREP_STATES.includes(s))
@@ -218,10 +219,10 @@ function healthIdsFromServer() {
   ok(dispatchSrc.includes("push('desktop-control'") && dispatchSrc.includes('function desktopControlState(config')
     && dispatchSrc.includes('peekCapabilities()') && accLogInCode.length === 0,
     'G2 服务端 desktop-control 只用工作台已有的数据(config + 只读能力缓存 + 桥接解析),不去读安装器日志');
-  ok(routerSrc.includes('function doctorHumanLines(') && routerSrc.includes("argv.human === true")
-    && routerSrc.includes('doctorLocaleCatalog(') && mainSrc.includes('doctor(argv)'),
+  ok(doctorSrc.includes('function doctorHumanLines(') && doctorSrc.includes("argv.human === true")
+    && doctorSrc.includes('doctorLocaleCatalog(') && mainSrc.includes('doctor(argv)'),
     'G3 CLI doctor --human 已接线且默认仍走 JSON');
-  ok(/console\.log\(JSON\.stringify\(info, null, 2\)\);\r?\n\s*\/\/ 118b/.test(routerSrc),
+  ok(/console\.log\(JSON\.stringify\(info, null, 2\)\);\r?\n\s*\/\/ 118b/.test(doctorSrc),
     'G4 默认 JSON 输出在 --human 判定之前打印,脚本调用逐字节不变');
   ok(overlayPayload.has('app/public/js/health-i18n.js'), 'G5 overlay 离线载荷含映射模块');
   ok(/\.health-row \.h-pill\b/.test(toolPaneCss) && /\.health-summary-line\b/.test(toolPaneCss)

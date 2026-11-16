@@ -548,3 +548,10 @@
 - 准入判断同时检查 stopping 与 settled：探针超时后清理尚未返回也不得启动目标；迟到的准入拒绝不覆盖超时结果。直接模块测试用虚拟时钟和延迟清理验证这一窗口。
 - Mac CLI 模型 E2E 全通过，覆盖中文分块、非法 JSON、非零退出、stdout/stderr 超限、真实十秒超时、清理异常、缺 helper、不完整清理和后代保留管道。旧清理异常夹具由改写宿主变量改为显式服务依赖注入后通过。
 - 边界、依赖图、EOL、facts、构建一致性与 diff 通过。backend 85 模块，共享宿主 67395 行；旧图仍 1 SCC。核心分层与最终发行未完成，未重复打包。
+
+## 工作包 4bf：CLI 诊断服务
+
+- cli-diagnostics 独立拥有 doctor JSON／人话输出、诊断级别映射、语言目录读取及 CLI 参数解析；路径、配置、运行身份与健康探测从宿主显式注入。HTTP 路由不再实现 CLI 诊断。
+- 两项直接／真实命令测试通过：隔离目录运行 doctor 与 doctor --human 均正常退出，默认 JSON 可解析，human 保留原 JSON 前缀并增加健康信息。health-i18n 源码锁迁到真实模块后通过。
+- Mac 能力 E2E 首次在“冷探针异步响应性”复合断言失败；未改判据，单独复跑全件通过。原因未确认，记录首次 /tmp/ruyi-diagnostics-capabilities.log 与复跑 /tmp/ruyi-diagnostics-capabilities-recheck.log，不以复跑抹去首次失败。
+- 模块边界、依赖图、facts、EOL、构建一致性与 diff 通过。backend 86 模块，共享宿主 67268 行；旧图仍 1 SCC。核心分层和最终发行未完成，未重复打包。

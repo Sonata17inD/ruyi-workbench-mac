@@ -262,6 +262,7 @@
     "app/backend/text-codecs.cjs",
     "app/backend/user-question-protocol.cjs",
     "app/backend/model-selection.cjs",
+    "app/backend/cli-diagnostics.cjs",
     "app/backend/kimi-model-discovery.cjs",
     "app/backend/toolbox-registry.cjs",
     "app/backend/toolbox-services.cjs"

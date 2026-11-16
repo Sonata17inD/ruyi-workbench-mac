@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3549,
+    "providedSymbols": 3544,
     "requiredSymbols": 3442,
     "edges": 645,
     "forwardEdges": 61,
@@ -13268,8 +13268,6 @@
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
-        "DOCTOR_HEALTH_SEVERITY",
-        "DOCTOR_HUMAN_LANGS",
         "HELP_DOC_FILES",
         "HELP_DOC_LANGS",
         "HELP_DOC_MAX_BYTES",
@@ -13287,11 +13285,8 @@
         "discoverKimiModels",
         "discoverModels",
         "doctor",
-        "doctorFill",
         "doctorHealthSeverity",
-        "doctorHealthVariant",
         "doctorHumanLines",
-        "doctorLocaleCatalog",
         "fetchProxyModels",
         "getProxyModelsCache",
         "handleApi",
@@ -13418,7 +13413,8 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13432,7 +13428,8 @@
           "provider": "00-boot.js",
           "symbol": "exePath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13446,7 +13443,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13700,7 +13698,8 @@
           "provider": "01-config.js",
           "symbol": "detectClaudePath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13749,7 +13748,8 @@
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14165,7 +14165,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "existsExecutable",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

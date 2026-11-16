@@ -13128,8 +13128,6 @@
       "file": "13-http-router.js",
       "layer": "transport",
       "provides": [
-        "DOCTOR_HEALTH_SEVERITY",
-        "DOCTOR_HUMAN_LANGS",
         "HELP_DOC_FILES",
         "HELP_DOC_LANGS",
         "HELP_DOC_MAX_BYTES",
@@ -13147,11 +13145,8 @@
         "discoverKimiModels",
         "discoverModels",
         "doctor",
-        "doctorFill",
         "doctorHealthSeverity",
-        "doctorHealthVariant",
         "doctorHumanLines",
-        "doctorLocaleCatalog",
         "fetchProxyModels",
         "getProxyModelsCache",
         "handleApi",
@@ -13278,7 +13273,8 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13292,7 +13288,8 @@
           "provider": "00-boot.js",
           "symbol": "exePath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13306,7 +13303,8 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13560,7 +13558,8 @@
           "provider": "01-config.js",
           "symbol": "detectClaudePath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13609,7 +13608,8 @@
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14025,7 +14025,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "existsExecutable",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
