@@ -1067,6 +1067,7 @@ const FILE_TOOL_HANDLERS = {
 
 const ARCHIVE_TOOL_HANDLERS = {
   archive_zip: { paths: "both", guardNote: '', handler: async (args, ctx) => {
+      assertFileToolActive(ctx);
     // v1.1-W2 (T1) archive_zip(paths[], dest): 打包工作区内文件/文件夹为 .zip（deflate，零 npm）。
     //   dest 已存在 → 存 before（op:modify，回滚=写回原 dest）；否则 op:create（回滚=删 dest）。
     //   单文件 100MB / 总量 500MB 上限（zipCollectEntries 内卡，超限人话拒绝）。
@@ -1092,10 +1093,11 @@ const ARCHIVE_TOOL_HANDLERS = {
       // F9:子目录默认按共用忽略清单剪枝(node_modules/.git/__pycache__/venv/dist/build …);exclude 追加目录名,
       // includeIgnored:true 全部放开。被剪掉的在结果里如实报告(skippedExcluded / excludedDirs)。
       // skipPaths:[dest] —— 输出文件自己不入包(dest 落在被打包的目录里时,第二次打包不再把上一次的 zip 装进去)。
-      try { entries = await zipCollectEntries(inputs, { ignoreDirs: Array.isArray(args.exclude) ? args.exclude.filter(x => typeof x === 'string') : [], includeIgnored: args.includeIgnored === true, skipPaths: [dest] }); }
-      catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+      try { entries = await zipCollectEntries(inputs, { ignoreDirs: Array.isArray(args.exclude) ? args.exclude.filter(x => typeof x === 'string') : [], includeIgnored: args.includeIgnored === true, skipPaths: [dest], signal: ctx && ctx.signal }); }
+      catch (e) { return { ok: false, ...(e.code === 'ABORT_ERR' ? { code: e.code } : {}), error: (e && e.message) || String(e) }; }
       if (!entries.length) return { ok: false, error: '没有可打包的文件（源为空、全是符号链接,或只有 dest 自己）', ...(entries.skippedLinks ? { skippedLinks: entries.skippedLinks } : {}) };
-      const zipBuf = await zipWriteAsync(entries);   // F9:压缩走线程池 + 让出事件循环,不再同步卡住服务
+      assertFileToolActive(ctx);
+      const zipBuf = await zipWriteAsync(entries, { signal: ctx && ctx.signal });   // F9:压缩走线程池 + 让出事件循环,不再同步卡住服务
       // 走查 W1·F8:已存在的旧 zip 先 stat、按检查点上限决定读不读(超限只记 skippedBytes 标记),不再不看大小整份读进内存。
       const destSt = await fsp.stat(dest).catch(() => null);
       const destExists = !!destSt;
@@ -1107,14 +1109,16 @@ const ARCHIVE_TOOL_HANDLERS = {
           else { const f = fileToolFsFailure(e, dest); if (f) return f; throw e; }
         }
       }
+      assertFileToolActive(ctx);
       const jctx = await journalSessionCtx(ctx);
       const jr = await journalRecord(jctx.sessionId, jctx.turnSeq, 'archive_zip', dest, destExists ? 'modify' : 'create', destExists ? destBefore : null);
       // 2026-10 走查(R2):原子写(同目录临时文件 + rename),与 file_write / file_edit 同一条路 —— 修前 writeFile 直写,
       // 中途失败(磁盘满 / 被占用)会留下半个 zip 并把旧包写坏;失败时撤掉刚记的检查点,把错误变成带 hint 的信封。
       let writeResult;
       try {
+        assertFileToolActive(ctx);
         await fsp.mkdir(path.dirname(dest), { recursive: true });
-        writeResult = await FileTextIo.writeFileAtomic(dest, zipBuf);
+        writeResult = await FileTextIo.writeFileAtomic(dest, zipBuf, { signal: ctx && ctx.signal });
       } catch (e) {
         const dropped = e.targetMayBeModified ? null : await fileToolDropPhantom(jctx, 'archive_zip', dest, jr);
         const f = fileToolFsFailure(e, dest, { checkpointRolledBack: !!(dropped && dropped.ok),
@@ -1135,6 +1139,7 @@ const ARCHIVE_TOOL_HANDLERS = {
         ...(checkpointWarn ? { checkpointWarn } : {}) };
   } },
   archive_unzip: { paths: "both", guardNote: '', handler: async (args, ctx) => {
+      assertFileToolActive(ctx);
     // v1.1-W2 (T1) archive_unzip(src, destDir, overwrite=false): 解 .zip 到 destDir（stored/deflate）。
     //   【Zip Slip 防御·安全命门】每个条目 resolve 后必须仍在 destDir 内，任一 '..' 越界 → 整包拒绝（不解压任何文件）。
     //   符号链接条目跳过。条目数 ≤65534（zip 格式上限,65535 是 zip64 哨兵）、声明/解压累计 ≤500MB 且逐条核对大小与 CRC32（zip 炸弹，超限中止）；list:true 只列不解。
@@ -1160,6 +1165,7 @@ const ARCHIVE_TOOL_HANDLERS = {
       let buf, records;
       try { buf = await fsp.readFile(src); records = zipReadCentralDir(buf); }
       catch (e) { return { ok: false, ...(fileToolFsFailure(e, src) || {}), error: (e && e.message) || String(e) }; }
+      assertFileToolActive(ctx);
       if (records.length > ZIP_MAX_ENTRIES) return { ok: false, error: `压缩包条目数超过上限（${ZIP_MAX_ENTRIES}）`, hint: '疑似 zip 炸弹，已拒绝' };
       // F9:炸弹防御看【体积】:解压前先把中央目录声明的总大小与最大单条核对(不用先展开)。修前只有 2000 条目上限,
       // archive_zip 自己打出的 2506 条目包都被拒;真正的炸弹(少数条目、体积巨大)靠这里与逐条 maxOutputLength 拦。
@@ -1217,6 +1223,7 @@ const ARCHIVE_TOOL_HANDLERS = {
         }
       }
       // ---- 第二遍：逐条解压 + 检查点。累计字节卡 500MB（zip 炸弹二次防御，inflate 后累加）----
+      assertFileToolActive(ctx);
       const jctx = await journalSessionCtx(ctx);
       const written = [];
       let extractedBytes = 0;
@@ -1230,6 +1237,9 @@ const ARCHIVE_TOOL_HANDLERS = {
       // 之后的 flush 变成空操作,调用方统一经 failWithWritten 回 {ok:false, partial:true, filesExtracted:N}。
       let writeErr = null;
       const flush = async () => {
+        if (ctx?.signal?.aborted && !writeErr) {
+          writeErr = { e: Object.assign(new Error('Archive extraction cancelled'), { code: 'ABORT_ERR' }), absPath: pending[0]?.absPath || destDir };
+        }
         if (writeErr) { pending = []; pendingBytes = 0; return; }
         if (!pending.length) return;
         const batch = pending;
@@ -1240,7 +1250,9 @@ const ARCHIVE_TOOL_HANDLERS = {
         for (let bi = 0; bi < batch.length; bi += 1) {
           const b = batch[bi];
           try {
+            assertFileToolActive(ctx);
             await fsp.mkdir(path.dirname(b.absPath), { recursive: true });
+            assertFileToolActive(ctx);
             await fsp.writeFile(b.absPath, b.data);
           } catch (e) {
             writeErr = { e, absPath: b.absPath, name: b.name };
@@ -1259,13 +1271,14 @@ const ARCHIVE_TOOL_HANDLERS = {
         if (writeErr) {
           // 落盘失败优先于调用方想说的话:带上哪个条目、什么原因(并给 code/hint)。
           const f = fileToolFsFailure(writeErr.e, writeErr.absPath);
-          Object.assign(o, { error: `解压写入失败: ${(writeErr.e && writeErr.e.message) || String(writeErr.e)}`, path: writeErr.absPath, ...(writeErr.name ? { entry: writeErr.name } : {}), ...(f ? { code: f.code, hint: f.hint } : {}) });
+          Object.assign(o, { ...(writeErr.e?.code === 'ABORT_ERR' ? { code: 'ABORT_ERR' } : {}), error: `解压写入失败: ${(writeErr.e && writeErr.e.message) || String(writeErr.e)}`, path: writeErr.absPath, ...(writeErr.name ? { entry: writeErr.name } : {}), ...(f ? { code: f.code, hint: f.hint } : {}) });
         }
         if (written.length) o.partial = true;
         if (checkpointWarn) o.checkpointWarn = checkpointWarn;
         return o;
       };
       for (const { rec, absPath } of plan) {
+        if (ctx?.signal?.aborted) return failWithWritten('Archive extraction cancelled');
         if (rec.isDir || rec.name.endsWith('/')) {
           try { await fsp.mkdir(absPath, { recursive: true }); }
           catch (e) { await flush(); writeErr = writeErr || { e, absPath, name: rec.name }; return failWithWritten('目录条目创建失败'); }

@@ -107,6 +107,12 @@ describe('archive codec module', () => {
     assert.throws(() => codec.zipReadEntryData(zip, bomb), /上限|大小/);
     await assert.rejects(() => codec.zipReadEntryDataAsync(zip, bomb), /上限|大小/);
   });
+  it('stops compression after cancellation at an asynchronous boundary', async () => {
+    const controller = new AbortController();
+    const result = codec.zipWriteAsync([{ name: 'large.bin', data: Buffer.alloc(300000, 41) }], { signal: controller.signal });
+    controller.abort();
+    await assert.rejects(result, e => e.code === 'ABORT_ERR');
+  });
   it('rejects truncated central directories before extraction', () => {
     const zip = codec.zipWrite([{ name: 'a', data: Buffer.from('a') }]);
     assert.throws(() => codec.zipReadCentralDir(zip.subarray(0, zip.length - 10)));

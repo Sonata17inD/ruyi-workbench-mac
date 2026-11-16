@@ -136,10 +136,15 @@ function zipWrite(entries) {
 }
 // F9:archive_zip 走这条 —— 大文件的 deflate 与 CRC 不再在主线程同步跑(实测 5×40MB 随机文件同步压缩让事件循环停顿 6.8 s,
 // SSE/其它会话/API 全卡住);压缩交给 libuv 线程池,条目之间让出事件循环。产物与 zipWrite 字节一致。
-async function zipWriteAsync(entries) {
+async function zipWriteAsync(entries, { signal } = {}) {
+  const assertActive = () => {
+    if (signal?.aborted) throw Object.assign(new Error('Archive compression cancelled'), { code: 'ABORT_ERR' });
+  };
+  assertActive();
   const prepared = [];
   let sinceYield = 0;
   for (const e of entries) {
+    assertActive();
     const n = e.data.length;
     if (n === 0) { prepared.push({ crc: 0, method: 0, comp: Buffer.alloc(0) }); continue; }
     if (n < ZIP_ASYNC_DEFLATE_MIN) {
@@ -149,9 +154,11 @@ async function zipWriteAsync(entries) {
       continue;
     }
     const crc = await crc32Async(e.data);
+    assertActive();
     prepared.push({ crc, method: 8, comp: await zipDeflateRawAsync(e.data) });
     sinceYield = 0;
   }
+  assertActive();
   return zipAssemble(entries, prepared);
 }
 

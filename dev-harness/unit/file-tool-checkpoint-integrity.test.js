@@ -442,3 +442,52 @@ describe('hunt2 · 写族文件工具与检查点完整性', () => {
     assert.equal(fs.existsSync(ledger), false);
   });
 });
+
+describe('archive cancellation before commit', () => {
+  for (const tool of ['archive_zip', 'archive_unzip']) {
+    it(`${tool} stops when cancelled during source reading`, async () => {
+      const ws = freshWs(), sid = await seedSession(1);
+      const src = path.join(ws, tool === 'archive_zip' ? 'source.txt' : 'source.zip');
+      const dest = path.join(ws, tool === 'archive_zip' ? 'result.zip' : 'result');
+      const { zipWrite } = require('../../ruyi-workbench/app/backend/archive-codec.cjs');
+      fs.writeFileSync(src, tool === 'archive_zip' ? Buffer.from('source bytes') : zipWrite([{ name: 'entry.txt', data: Buffer.from('source bytes') }]));
+      const gate = hook('readFile', p => String(p) === src, { gate: true });
+      const controller = new AbortController();
+      const before = indexOf(sid);
+      const promise = srv.toolCall(tool, tool === 'archive_zip' ? { paths: [src], dest } : { src, destDir: dest },
+        { ...ctxFor(ws, sid, 1), signal: controller.signal }).catch(e => ({ ok: false, code: e.code }));
+      try {
+        await gate.reached;
+        controller.abort(); gate.release();
+        const result = await promise;
+        assert.equal(result.ok, false);
+        assert.equal(result.code, 'ABORT_ERR');
+        assert.equal(fs.existsSync(dest), false, 'cancelled operation must not create output');
+        assert.deepEqual(indexOf(sid), before, 'no success checkpoint for cancelled operation');
+      } finally { gate.release(); gate.restore(); }
+    });
+  }
+});
+
+it('archive extraction cancellation preserves only completed files and their checkpoints', async () => {
+  const ws = freshWs(), sid = await seedSession(1);
+  const src = path.join(ws, 'source.zip'), dest = path.join(ws, 'result');
+  const { zipWrite } = require('../../ruyi-workbench/app/backend/archive-codec.cjs');
+  fs.writeFileSync(src, zipWrite([{ name: 'first.txt', data: Buffer.from('first') }, { name: 'second.txt', data: Buffer.from('second') }]));
+  const controller = new AbortController(), original = fsp.writeFile;
+  fsp.writeFile = async function (...args) {
+    const value = await original.apply(this, args);
+    if (String(args[0]) === path.join(dest, 'first.txt')) controller.abort();
+    return value;
+  };
+  try {
+    const result = await srv.toolCall('archive_unzip', { src, destDir: dest }, { ...ctxFor(ws, sid, 1), signal: controller.signal });
+    assert.equal(result.ok, false);
+    assert.equal(result.code, 'aborted');
+    assert.equal(result.partial, true);
+    assert.equal(result.filesExtracted, 1);
+    assert.equal(fs.readFileSync(path.join(dest, 'first.txt'), 'utf8'), 'first');
+    assert.equal(fs.existsSync(path.join(dest, 'second.txt')), false);
+    assert.equal(indexOf(sid).length, 1, 'unwritten batch entries lose their phantom checkpoints');
+  } finally { fsp.writeFile = original; }
+});

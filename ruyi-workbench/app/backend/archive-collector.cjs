@@ -11,6 +11,10 @@ function createArchiveCollector({ ensureDataRootReal, isSensitiveDataPath, isSen
 // 用户【显式】传入的顶层路径不剪;opts.ignoreDirs 追加、opts.includeIgnored 全部放开(仍剪 .git/.svn/.hg 之外的都进包)。
 // 被剪掉的计入 entries.skippedExcluded / entries.excludedDirs,由调用方说出来。
 async function zipCollectEntries(rootPaths, opts = {}) {
+  const assertActive = () => {
+    if (opts.signal?.aborted) throw Object.assign(new Error('Archive collection cancelled'), { code: 'ABORT_ERR' });
+  };
+  assertActive();
   const entries = []; // {name, data:Buffer, isDir}
   let total = 0;
   // hunt2 #3:敏感控制面逐项过滤。archive_zip 只对顶层输入过护栏,打包一个【祖先目录】(典型:工作区 = 家目录,
@@ -30,6 +34,7 @@ async function zipCollectEntries(rootPaths, opts = {}) {
   entries.dedupedInputs = [];
   entries.renamedInputs = [];
   const addFile = async (absPath, zipName, relFromTop) => {
+    assertActive();
     if (skipSet.has(foldP(path.resolve(absPath)))) { entries.skippedDest = true; return; }
     if (isSensitiveDataPath(absPath)) { entries.skippedSensitive += 1; return; }
     const st = await fsp.lstat(absPath);
@@ -56,7 +61,8 @@ async function zipCollectEntries(rootPaths, opts = {}) {
     total += st.size;
     if (total > ZIP_MAX_TOTAL) throw new Error(`打包总大小超过上限（${Math.round(ZIP_MAX_TOTAL / 1024 / 1024)}MB）`);
     if (entries.length >= ZIP_MAX_ENTRIES) throw new Error(`条目数超过 zip 格式上限（${ZIP_MAX_ENTRIES}）;请缩小打包范围,或用 exclude 追加要跳过的目录名`);
-    const data = await fsp.readFile(absPath);
+    const data = await fsp.readFile(absPath, { signal: opts.signal });
+    assertActive();
     entries.push({ name: zipName, data, isDir: false });
   };
   // 顶层输入去重 + 包内名字(同名的保留相对结构)。
@@ -83,6 +89,7 @@ async function zipCollectEntries(rootPaths, opts = {}) {
     if (seenNames.has(k)) throw new Error(`包内出现重名条目「${e.name}」:打包的路径之间有重叠或同名;请分开打包,或去掉重复的路径`);
     seenNames.set(k, true);
   }
+  assertActive();
   return entries;
 }
   return { zipCollectEntries };
