@@ -299,7 +299,8 @@
     "app/backend/path-patterns.cjs",
     "app/backend/search-workers.cjs",
     "app/backend/file-walker.cjs",
-    "app/backend/content-search.cjs"
+    "app/backend/content-search.cjs",
+    "app/backend/privacy-sources.cjs"
   ],
   "acc": [
     "LICENSE",

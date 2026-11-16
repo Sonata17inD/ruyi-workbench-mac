@@ -190,3 +190,27 @@ test('large diffs keep protected tokens whole and project complete filenames bef
     assert.ok(restore(result.stat).includes(name));
   });
 });
+
+test('独立来源服务直接读取并保留对象身份，克隆不能继承来源证明', async () => {
+  const { createPrivacySources } = require('../../ruyi-workbench/app/backend/privacy-sources.cjs');
+  const sources = createPrivacySources({ PrivacyGateway: app.PrivacyGateway });
+  const other = createPrivacySources({ PrivacyGateway: app.PrivacyGateway });
+  const raw = JSON.stringify({ patientCode: 'PRIVATE-DIRECT-SOURCE', safe: 'normal' });
+  const target = put('direct-source.json', raw);
+  const st = fs.statSync(target);
+  const request = { mode: 'chars', offset: 0, limit: 2000, jsonBudget: 50000 };
+  await run(policy('off'), async () => {
+    const read = await sources.privacyReadTextWindow(target, st, request);
+    assert.equal(read.content, raw);
+    assert.equal(sources.sourceViewOf(read), undefined);
+  });
+  await run(policy(), async () => {
+    const read = await sources.privacyReadTextWindow(target, st, request);
+    assert.equal(read.ok, true);
+    assert.ok(!read.content.includes('PRIVATE-DIRECT-SOURCE'));
+    assert.ok(sources.sourceViewOf(read));
+    assert.equal(sources.sourceViewOf(structuredClone(read)), undefined);
+    assert.equal(other.sourceViewOf(read), undefined);
+    assert.equal(restore(read.content), raw);
+  });
+});

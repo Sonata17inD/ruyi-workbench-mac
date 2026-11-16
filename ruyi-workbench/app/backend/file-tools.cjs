@@ -21,7 +21,7 @@ function fileMoveSameFileKind(from, to, fromSt, toSt, platform) {
 function createFileTools({ paths, checkpoints, source, search, archive, runtime, mutations }) {
   const { fileToolWorkspaceDir, resolveFileToolPath, resolveFileToolRoot, guardFileToolPath, pathWithinRoot, isSensitiveDataPath, isSensitiveHardlinkAlias, sensitiveFileIdentities } = paths;
   const { JOURNAL_MAX_BEFORE_BYTES, journalCheckpointWarn, journalDropEntries, journalRecord, journalRecordMany, journalSessionCtx } = checkpoints;
-  const { FileVisualIo, MediaInspection, NativeSourceHooks, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, privacySourceViews } = source;
+  const { FileVisualIo, MediaInspection, PrivacyGateway, binaryReadHint, isBinaryReadPath, privacyReadTextWindow, privacySourceActive, privacySourceLine, privacySourceLineOffsets, privacySourceMark, sourceViewOf } = source;
   const { explicitAllowDirs, prunedDirsHint, searchFileContent, walkDepthHint, walkEnvelopeEntries, walkFiles, walkTruncationHint } = search;
   const { zipCollectEntries } = archive;
   const { execResultCacheEnabled, execResultCacheMaxEntries, externalRoot, logEvent, readConfig, toolCall } = runtime;
@@ -276,7 +276,6 @@ async function fileToolBatch(operation, args, ctx) {
   } catch (error) { return { ok: false, code: error.code || 'batch_failed', error: error.message, partial: results.some(r => r.ok) || changedDirectories > 0, results }; }
 }
 
-NativeSourceHooks.readTextWindow = (filePath, st, req) => FileTextIo.readTextWindow(filePath, st, req);
 function fileToolPrivacySourceOptions(ctx, tool) {
   if (!privacySourceActive()) return {};
   return { privacyGuard: async target => {
@@ -440,7 +439,7 @@ const FILE_TOOL_HANDLERS = {
             ? `第 ${w.lineTruncated.line} 行超长(${w.lineTruncated.lineChars} 字符),只返回了开头;要读它的其余部分请用字符模式 offset=${w.lineTruncated.nextOffset};继续后面的行请用 lineOffset=${w.nextLine}`
             : `还有更多内容;继续读请用 lineOffset=${w.nextLine}` } : {}),
           ...encFields, sourceLineEnding: w.eol, contentLineEnding: 'lf', ...(na && na.total ? { non_ascii: na } : {}) };
-        privacySourceMark(result, ['/content'], privacySourceViews.get(w));
+        privacySourceMark(result, ['/content'], sourceViewOf(w));
         if (cctx) await FileReadCache.store(cctx, result);
         return result;
       }
@@ -453,7 +452,7 @@ const FILE_TOOL_HANDLERS = {
         ...(w.truncated ? { hint: `还有更多内容;继续读请用 offset=${w.nextOffset}(或用 lineOffset/lineLimit 行模式按行读)` } : {}),
         ...(limitClamped ? { limitClamped: true, limitMax: FILE_READ_CHAR_MAX } : {}),
         ...encFields, sourceLineEnding: w.eol, contentLineEnding: detectTextLineEnding(w.content), ...(na && na.total ? { non_ascii: na } : {}) };
-      privacySourceMark(result, ['/content'], privacySourceViews.get(w));
+      privacySourceMark(result, ['/content'], sourceViewOf(w));
       if (cctx) await FileReadCache.store(cctx, result);
       return result;
   } },

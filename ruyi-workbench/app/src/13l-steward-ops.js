@@ -1198,7 +1198,7 @@ async function stewardImplFileRead(args, ctx, config) {
   }
   const content = stewardExternalBlock('file', raw, out.content || out.text || '');
   stewardEyesSettle(ctx, STEWARD_EYES_CHARS, content.length);
-  return privacySourceMark({ ...stewardFileVisualResult(out), ok: true, path: stewardSanitizeText(raw).slice(0, 300), workspace: stewardSanitizeText(root).slice(0, 300), tainted: true, content }, ['/content'], privacySourceViews.get(out));
+  return privacySourceMark({ ...stewardFileVisualResult(out), ok: true, path: stewardSanitizeText(raw).slice(0, 300), workspace: stewardSanitizeText(root).slice(0, 300), tainted: true, content }, ['/content'], sourceViewOf(out));
 }
 
 // 30) steward_thread_artifact_read —— 读一条线程【自己在交付里列出来的】那些文件。
@@ -1231,7 +1231,7 @@ async function stewardImplThreadArtifactRead(args, ctx, config) {
   }
   const content = stewardExternalBlock('artifact', hit, out.content || out.text || '');
   stewardEyesSettle(ctx, STEWARD_EYES_CHARS, content.length);
-  return privacySourceMark({ ...stewardFileVisualResult(out), ok: true, sessionId, path: stewardSanitizeText(hit).slice(0, 300), tainted: true, content }, ['/content'], privacySourceViews.get(out));
+  return privacySourceMark({ ...stewardFileVisualResult(out), ok: true, sessionId, path: stewardSanitizeText(hit).slice(0, 300), tainted: true, content }, ['/content'], sourceViewOf(out));
 }
 
 function stewardFileReadArgs(args) {

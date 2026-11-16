@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3449,
-    "requiredSymbols": 3498,
+    "providedSymbols": 3448,
+    "requiredSymbols": 3497,
     "edges": 658,
     "forwardEdges": 66,
     "duplicateProvides": 0,
@@ -11634,7 +11634,6 @@
         "BINARY_READ_ZIPLIKE",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
-        "NativeSourceHooks",
         "SHELL_BUF_MAX",
         "SHELL_GLOBAL_MAX",
         "SHELL_IDLE_MS",
@@ -11691,7 +11690,6 @@
         "privacySourceLine",
         "privacySourceLineOffsets",
         "privacySourceMark",
-        "privacySourceViews",
         "probeRg",
         "probeRgAsync",
         "probeRgInfoSync",
@@ -11733,6 +11731,7 @@
         "shellSliceFrom",
         "shellStart",
         "shellVisibleTo",
+        "sourceViewOf",
         "ssrfCheck",
         "stopMacShell",
         "walkDepthHint",
@@ -13359,13 +13358,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "NativeSourceHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "privacyReadTextWindow",
           "kinds": [
             "read"
@@ -13395,13 +13387,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceMark",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceViews",
           "kinds": [
             "read"
           ]
@@ -13474,6 +13459,13 @@
           "symbol": "shellStart",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -19907,9 +19899,9 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "privacySourceViews",
+          "symbol": "sourceViewOf",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -32548,7 +32540,6 @@
       "from": "12-tool-dispatch.js",
       "to": "11-native-tools.js",
       "symbols": [
-        "NativeSourceHooks",
         "adaptiveCatalogForMcp",
         "binaryReadHint",
         "boundedReadPage",
@@ -32577,7 +32568,6 @@
         "privacySourceLine",
         "privacySourceLineOffsets",
         "privacySourceMark",
-        "privacySourceViews",
         "probeRgAsync",
         "prunedDirsHint",
         "readIfExists",
@@ -32588,6 +32578,7 @@
         "shellPoll",
         "shellSend",
         "shellStart",
+        "sourceViewOf",
         "ssrfCheck",
         "walkDepthHint",
         "walkEnvelopeEntries",
@@ -34870,7 +34861,7 @@
       "to": "11-native-tools.js",
       "symbols": [
         "privacySourceMark",
-        "privacySourceViews",
+        "sourceViewOf",
         "webFetch",
         "webSearch"
       ],

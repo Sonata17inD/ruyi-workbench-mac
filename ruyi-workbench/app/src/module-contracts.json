@@ -11506,7 +11506,6 @@
         "BINARY_READ_ZIPLIKE",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
-        "NativeSourceHooks",
         "SHELL_BUF_MAX",
         "SHELL_GLOBAL_MAX",
         "SHELL_IDLE_MS",
@@ -11563,7 +11562,6 @@
         "privacySourceLine",
         "privacySourceLineOffsets",
         "privacySourceMark",
-        "privacySourceViews",
         "probeRg",
         "probeRgAsync",
         "probeRgInfoSync",
@@ -11605,6 +11603,7 @@
         "shellSliceFrom",
         "shellStart",
         "shellVisibleTo",
+        "sourceViewOf",
         "ssrfCheck",
         "stopMacShell",
         "walkDepthHint",
@@ -13223,13 +13222,6 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "NativeSourceHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "privacyReadTextWindow",
           "kinds": [
             "read"
@@ -13259,13 +13251,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "privacySourceMark",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceViews",
           "kinds": [
             "read"
           ]
@@ -13338,6 +13323,13 @@
           "symbol": "shellStart",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -19751,9 +19743,9 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "privacySourceViews",
+          "symbol": "sourceViewOf",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
