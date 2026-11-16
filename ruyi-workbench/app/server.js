@@ -71,7 +71,6 @@ const DesktopExecutionHooks = {};
 const DeliveryHooks = {};
 const ExternalBotHooks = {};
 const DEFAULT_PORT = 8765;
-const MAX_BODY_BYTES = 128 * 1024 * 1024;
 // 127-114b(26 号文 §3/45 号文 §2 ②): ASR 转写入站专用上限 25 MB —— 早于上面的 128 MB 总闸判定
 // (同一请求流里先撞哪条闸,决定 26 MB 夹具拿到的是 413 还是放行;反向:把本常量换成 MAX_BODY_BYTES
 // 或把判定挪到 readBody 之后,asr-transcribe.e2e.js 的 24.9/26 MB 返回码对照当场红)。
@@ -273,71 +272,7 @@ const paths = {
 // v1 技能体系: 技能/目录名的安全字符集(供落盘 skills/<id>/、防路径穿越)。复用同 playbook id 的形状。
 const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-const LEGACY_API_ERROR_CODES = new Map([
-  ['missing or invalid workbench token', 'auth.token_invalid'],
-  ['bad token', 'auth.token_invalid'],
-  ['invalid sessionId', 'session.id_invalid'],
-  ['sessionId required', 'session.id_required'],
-  ['session not found', 'session.not_found'],
-  ['method not allowed', 'api.method_not_allowed'],
-  ['host not allowed', 'api.host_rejected'],
-  ['unknown action', 'request.action_unknown'],
-  // 128b:撤回相关的三句裸串给稳定码(否则一律落成 api.request_failed,前端只能把原串 'rewind_superseded' 摆给用户看)。
-  ['rewind_superseded', 'session.rewind_superseded'],
-  ['session.rewound_during_write', 'session.rewound_during_write'],
-  ['session.history_changed_during_compact', 'session.history_changed_during_compact'],
-]);
-
-// Keep the legacy message as an optional diagnostic while ensuring every HTTP error has a stable,
-// language-neutral machine code. Individual routes can still use apiFailure() for a richer code/params.
-function normalizeApiErrorPayload(data) {
-  if (!data || data.ok !== false || typeof data.error !== 'string') return data;
-  const message = data.error;
-  const { error, ...rest } = data;
-  return {
-    ...rest,
-    error: {
-      code: LEGACY_API_ERROR_CODES.get(message) || 'api.request_failed',
-      params: {},
-      message,
-    },
-  };
-}
-
-function json(data, status = 200, headers = {}) {
-  return {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8', ...headers },
-    body: JSON.stringify(normalizeApiErrorPayload(data), null, 2),
-  };
-}
-
-// P2 API error contract. Error codes and params are stable/localization-friendly; message remains a
-// diagnostic fallback for older callers while the front end migrates away from sentence matching.
-function apiFailure(code, params = {}, message = '', status = 400) {
-  return json({
-    ok: false,
-    error: {
-      code: String(code || 'api.unknown'),
-      params: params && typeof params === 'object' && !Array.isArray(params) ? params : {},
-      ...(message ? { message: String(message) } : {}),
-    },
-  }, status);
-}
-
-// 架构还债批 1 #7:按 sessionId 操作的路由最常见的两句失败。修前 40 余处各自手写裸串
-// json({ ok:false, error:'invalid sessionId' }, 400) / 'session not found' 404,靠上面那张遗留映射表
-// 兜底翻成稳定码 —— 拼错一个字就悄悄落成 api.request_failed。出参与遗留写法逐字节相同(code/params/message 同序)。
-function apiSessionIdInvalid() { return apiFailure('session.id_invalid', {}, 'invalid sessionId', 400); }
-function apiSessionNotFound() { return apiFailure('session.not_found', {}, 'session not found', 404); }
-
-function text(data, status = 200, headers = {}) {
-  return {
-    status,
-    headers: { 'content-type': 'text/plain; charset=utf-8', ...headers },
-    body: data,
-  };
-}
+const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 // 按 key 串行的写链(架构还债批 1 #3):同一个 key 上的 work 一个接一个跑,前一个失败不挡后一个;
 // 链尾结算后(成功或失败)若仍是自己就从 map 里摘掉,不留长寿条目。返回的就是这一次 work 的 promise ——
@@ -5051,67 +4986,6 @@ function writeToChild(sessionId, obj) {
 // Tools the workbench OWNS the interactive answer for (never intercept tools the CLI runs itself).
 function isAskUserTool(name) {
   return typeof name === 'string' && name.replace(/[^a-z]/gi, '').toLowerCase().includes('askuserquestion');
-}
-
-async function readBody(req) {
-  // 声明长度已超总闸就不必先缓冲 128 MB 再拒(同 readAudioBody 的预检);提前回 413 后客户端可能还在续传,
-  // 连接随即被拆,req 上迟到的 error/aborted 挂空接吞掉。apiCode 让 413 不再被 sendError 报成 api.internal_error。
-  req.on('error', () => {});
-  if (Number(req.headers && req.headers['content-length'] || 0) > MAX_BODY_BYTES) {
-    throw Object.assign(new Error('Request body too large'), { statusCode: 413, apiCode: 'api.body_too_large' });
-  }
-  const chunks = [];
-  let total = 0;
-  for await (const chunk of req) {
-    total += chunk.length;
-    if (total > MAX_BODY_BYTES) {
-      const err = new Error('Request body too large');
-      err.statusCode = 413;
-      err.apiCode = 'api.body_too_large';
-      throw err;
-    }
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString('utf8');
-}
-
-async function readJsonBody(req) {
-  const raw = await readBody(req);
-  if (!raw.trim()) return {};
-  let value;
-  try { value = JSON.parse(raw); }
-  catch { throw Object.assign(new Error('request body is not valid JSON'), { statusCode: 400, apiCode: 'api.bad_json' }); }   // C17:客户端的错,回 400 不回 500
-  // 合法 JSON 但不是对象(null / 数组 / 字符串 / 数字):按空体处理。约 30 个 handler 直接读 body.xxx,
-  // 请求体是 `null` 时就是 TypeError → 500 + http_unhandled 日志;没有任何路由收顶层数组或标量。
-  return (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
-}
-
-function send(res, response) {
-  res.writeHead(response.status || 200, response.headers || {});
-  res.end(response.body || '');
-}
-
-function sendError(res, err) {
-  const status = err.statusCode || 500;
-  send(res, apiFailure(err.apiCode || 'api.internal_error', {}, err.message || String(err), status));
-}
-
-function contentTypeFor(file) {
-  const ext = path.extname(file).toLowerCase();
-  return {
-    '.html': 'text/html; charset=utf-8',
-    '.css': 'text/css; charset=utf-8',
-    '.js': 'application/javascript; charset=utf-8',
-    '.json': 'application/json; charset=utf-8',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.bmp': 'image/bmp',
-    '.ico': 'image/x-icon',
-    '.svg': 'image/svg+xml',
-  }[ext] || 'application/octet-stream';
 }
 
 function staticBase() {
@@ -70027,7 +69901,6 @@ module.exports = {
   // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A14/F3/NE-12;走查 W1·F10 的 sweepStaleScriptFiles)的纯函数与钩子,一个键收口 —— unit/tool-dispatch-hardening.test.js 直调(sweepStaleScriptFiles:unit/script-run-cleanup.test.js)。
   // 2026-10 能力总闸补桥接面:toolDisabledByPolicy / accPolicyHiddenToolNames / dropPolicyDisabledBridgedTools / ACC_POLICY_TOOL_FAMILIES 同住这个键(unit/acc-capability-gates.test.js 直调)。
   dispatchTestHooks: { MediaInspection, sweepStaleScriptFiles, validateNativeToolArgs, suggestToolNames, toolFailureResult, nativeToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, dropPolicyDisabledBridgedTools, ACC_POLICY_TOOL_FAMILIES, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, toolArgsSkeleton, withToolArgsGuide, toolArgsMissingRequired, normalizeMcpToolResult, attachScreenshotImage, desktopAuditEntriesFromResult, bridgedDesktopLeaseMode, mcpChildExitResult, bridgedServerUnavailableMessage },
-  apiSessionIdInvalid, apiSessionNotFound, // 架构还债批 1 #7:两句最常见的会话路由失败(unit/api-error-helpers.test.js)
   IRREVERSIBLE_NATIVE_KIND, TURN_SUMMARY_FILE_TOOLS, TURN_SUMMARY_COMMAND_TOOLS, // 架构还债批 1 #9:与工具注册表对账(unit/tool-metadata-consistency.test.js)
   runKeyedChain, // 架构还债批 1 #3:按 key 串行写链的唯一实现(unit/keyed-chain.test.js)
   spawnDetachedChecked, // 分离式外部启动带 'error' 监听的唯一入口(unit/http-input-hardening.test.js 直测 ENOENT 不成 uncaughtException)

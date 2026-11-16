@@ -7,13 +7,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-api-errors-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const { apiSessionIdInvalid, apiSessionNotFound } = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const { apiSessionIdInvalid, apiSessionNotFound } = require('../../ruyi-workbench/app/backend/http-protocol.cjs');
 
 const BARE_ERROR_CEILING = 123;   // 2026-09-27 批 1 #7 迁完两句会话失败之后的实数(修前 159)
 
@@ -39,5 +35,3 @@ test('[E2] 裸串错误信封只减不增', () => {
   assert.ok(count <= BARE_ERROR_CEILING,
     `裸串错误信封 ${count} 处,超过上限 ${BARE_ERROR_CEILING}(新路由请用 apiFailure(code, params, message, status)):${JSON.stringify(per)}`);
 });
-
-process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });

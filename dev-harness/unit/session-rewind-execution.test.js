@@ -194,18 +194,16 @@ test('guarded idle requires the complete observation and checks authoritative tu
 });
 
 test('guarded HTTP rewind keeps stable conflict codes and forwards the original idle observation', async () => {
-  const boot = read('src/00-boot.js');
   const source = read('src/13b-api-domain-routes.js');
   for (const error of ['execution_identity_required', 'execution_identity_unavailable', 'execution_changed', 'rewind_in_progress', 'rewind_settle_timeout']) {
     let options;
     const ctx = vm.createContext({
+      ...require('../../ruyi-workbench/app/backend/http-protocol.cjs'),
       readJsonBody: async () => ({ sessionId: 's', targetTurnSeq: 2, rollbackFiles: true, ...idleOptions() }),
       safeSessionId: id => id, send: (_res, value) => value,
       rewindSession: async (_id, _target, _files, observed) => { options = observed; return { ok: false, error }; },
     });
-    vm.runInContext(constBlock(boot, 'LEGACY_API_ERROR_CODES') + '\n'
-      + ['normalizeApiErrorPayload', 'json', 'apiFailure'].map(name => functionBlock(boot, name)).join('\n') + '\n'
-      + functionBlock(source, 'handleCheckpointApiRoutes') + '\nthis.route = handleCheckpointApiRoutes;', ctx);
+    vm.runInContext(functionBlock(source, 'handleCheckpointApiRoutes') + '\nthis.route = handleCheckpointApiRoutes;', ctx);
     const response = await ctx.route({ method: 'POST' }, {}, '/api/session/rewind');
     assert.equal(response.status, 409);
     assert.equal(JSON.parse(response.body).error.code, error);

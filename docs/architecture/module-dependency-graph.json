@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3591,
-    "requiredSymbols": 3470,
+    "providedSymbols": 3590,
+    "requiredSymbols": 3467,
     "edges": 650,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -42,7 +42,6 @@
         "ExternalBotHooks",
         "INSTALL_REGISTRY_MAX",
         "INSTALL_REGISTRY_SCHEMA",
-        "LEGACY_API_ERROR_CODES",
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
         "MigrationHooks",
@@ -80,6 +79,7 @@
         "claudeLedgerSource",
         "computeCostFromPricing",
         "computeProviderCost",
+        "contentTypeFor",
         "copyOrdinaryJsonData",
         "cp",
         "createCappedDiagnosticText",
@@ -121,7 +121,9 @@
         "pathToFileURL",
         "paths",
         "pidAlive",
+        "readBody",
         "readInstallRegistry",
+        "readJsonBody",
         "readUsageRows",
         "readline",
         "recordInstallLaunch",
@@ -135,6 +137,8 @@
         "safeJsonParse",
         "samePathEntry",
         "samePathKey",
+        "send",
+        "sendError",
         "spawnDetachedChecked",
         "text",
         "tildePath",
@@ -511,7 +515,6 @@
         "configRecoveryCredentialChoice",
         "configValueEquals",
         "configWriteChain",
-        "contentTypeFor",
         "decodeClaudeCliStream",
         "decodeClaudeCliText",
         "defaultConfig",
@@ -588,13 +591,11 @@
         "probeDesktopPython",
         "probeDesktopPythonAsync",
         "queueBootCliPathProbe",
-        "readBody",
         "readConfig",
         "readConfigPrev",
         "readDesktopPythonDiskEntries",
         "readDesktopPythonDiskEntry",
         "readFileTail",
-        "readJsonBody",
         "readUserJsonObjectForMerge",
         "refreshInBackground",
         "requestIsLoopback",
@@ -602,8 +603,6 @@
         "safeSessionId",
         "sanitizeLastUsedEngineRoute",
         "selectedAgentCli",
-        "send",
-        "sendError",
         "serveStatic",
         "sessionMcpConfigSweepDone",
         "sessionPath",
@@ -638,16 +637,16 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
+          "symbol": "CONFIG_SCHEMA",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "CONFIG_SCHEMA",
+          "symbol": "contentTypeFor",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -702,13 +701,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "MAX_BODY_BYTES",
           "kinds": [
             "read"
           ]
@@ -11178,6 +11170,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "SessionExecutionHooks",
           "kinds": [
             "read"
@@ -11220,21 +11226,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -13546,6 +13538,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "contentTypeFor",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cp",
           "kinds": [
             "read"
@@ -13735,6 +13734,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "readline",
           "kinds": [
             "read"
@@ -13757,6 +13763,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sendError",
           "kinds": [
             "call"
           ]
@@ -13857,13 +13877,6 @@
           "symbol": "ConfigPatchHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "contentTypeFor",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13980,13 +13993,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "requestIsLoopback",
           "kinds": [
             "call"
@@ -14009,20 +14015,6 @@
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sendError",
           "kinds": [
             "call"
           ]
@@ -15578,7 +15570,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -15627,21 +15633,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -16129,6 +16121,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
             "call"
@@ -16151,6 +16150,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -16192,21 +16198,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -18044,6 +18036,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -18066,13 +18065,6 @@
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -20182,6 +20174,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -20197,20 +20203,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -22725,6 +22717,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "SessionExecutionHooks",
           "kinds": [
             "read"
@@ -22739,21 +22745,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -23096,6 +23088,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
             "read"
@@ -23104,13 +23103,6 @@
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "read"
           ]
@@ -23308,6 +23300,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -23316,6 +23315,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeDecodeURIComponent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -23344,20 +23350,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -24285,6 +24277,13 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -24301,13 +24300,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -24545,6 +24537,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "send",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -24567,13 +24566,6 @@
         {
           "provider": "01-config.js",
           "symbol": "originOk",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "send",
           "kinds": [
             "call"
           ]
@@ -24803,20 +24795,6 @@
         "main"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionIdInvalid",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionNotFound",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "appendUsageLedger",
@@ -28910,14 +28888,13 @@
       "symbols": [
         "CONFIG_SCHEMA",
         "DEFAULT_PORT",
-        "MAX_BODY_BYTES",
         "RUYI_EVENTS",
         "SKILL_ID_RE",
         "StringDecoder",
         "URL",
         "VERSION",
         "agentCliHomes",
-        "apiFailure",
+        "contentTypeFor",
         "cp",
         "crypto",
         "ensureDirs",
@@ -31793,6 +31770,8 @@
         "nowIso",
         "path",
         "paths",
+        "readJsonBody",
+        "send",
         "text",
         "zlib"
       ],
@@ -31804,9 +31783,7 @@
       "symbols": [
         "DurableJsonStore",
         "readConfig",
-        "readJsonBody",
-        "safeSessionId",
-        "send"
+        "safeSessionId"
       ],
       "direction": "backward"
     },
@@ -32486,6 +32463,7 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "buildUsageSummary",
+        "contentTypeFor",
         "cp",
         "crypto",
         "dataRootAliases",
@@ -32507,10 +32485,13 @@
         "path",
         "pathToFileURL",
         "paths",
+        "readJsonBody",
         "readline",
         "recordInstallLaunch",
         "safeJsonParse",
         "samePathKey",
+        "send",
+        "sendError",
         "spawnDetachedChecked",
         "text",
         "zlib"
@@ -32544,7 +32525,6 @@
         "authorizeRoute",
         "autoImportClaudeCodeMcp",
         "beginBootCliPathProbes",
-        "contentTypeFor",
         "decodeClaudeCliText",
         "desktopMcpDetectionPending",
         "detectClaudePath",
@@ -32561,12 +32541,9 @@
         "mutateConfig",
         "prepareAgentCliSpawn",
         "readConfig",
-        "readJsonBody",
         "requestIsLoopback",
         "safeSessionId",
         "selectedAgentCli",
-        "send",
-        "sendError",
         "serveStatic",
         "sweepStaleScriptFiles",
         "syncAgentCliMcpManifests",
@@ -33008,6 +32985,7 @@
         "json",
         "nowIso",
         "path",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -33018,7 +32996,6 @@
       "symbols": [
         "readConfig",
         "safeSessionId",
-        "send",
         "tokenOk"
       ],
       "direction": "backward"
@@ -33081,7 +33058,8 @@
       "symbols": [
         "apiFailure",
         "json",
-        "paths"
+        "paths",
+        "send"
       ],
       "direction": "backward"
     },
@@ -33091,8 +33069,7 @@
       "symbols": [
         "DurableJsonStore",
         "mutateConfig",
-        "readConfig",
-        "send"
+        "readConfig"
       ],
       "direction": "backward"
     },
@@ -33266,7 +33243,9 @@
         "os",
         "path",
         "paths",
+        "readJsonBody",
         "safeJsonParse",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -33279,9 +33258,7 @@
         "generateMcpConfig",
         "mutateConfig",
         "readConfig",
-        "readJsonBody",
         "safeSessionId",
-        "send",
         "writeToChild"
       ],
       "direction": "backward"
@@ -33419,9 +33396,11 @@
         "os",
         "path",
         "paths",
+        "readJsonBody",
         "runKeyedChain",
         "safeDecodeURIComponent",
         "safeJsonParse",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -33440,9 +33419,7 @@
       "symbols": [
         "atomicWriteJson",
         "readConfig",
-        "readJsonBody",
         "safeSessionId",
-        "send",
         "sessionPath",
         "tokenMatches",
         "tokenOk"
@@ -33800,6 +33777,8 @@
         "apiFailure",
         "json",
         "nowIso",
+        "readJsonBody",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -33809,8 +33788,6 @@
       "to": "01-config.js",
       "symbols": [
         "readConfig",
-        "readJsonBody",
-        "send",
         "tokenOk"
       ],
       "direction": "backward"
@@ -33956,7 +33933,9 @@
         "SessionExecutionHooks",
         "apiFailure",
         "json",
-        "nowIso"
+        "nowIso",
+        "readJsonBody",
+        "send"
       ],
       "direction": "backward"
     },
@@ -33965,9 +33944,7 @@
       "to": "01-config.js",
       "symbols": [
         "readConfig",
-        "readJsonBody",
         "safeSessionId",
-        "send",
         "tokenOk"
       ],
       "direction": "backward"
@@ -35511,7 +35488,8 @@
         "RUYI_EVENTS",
         "URL",
         "apiFailure",
-        "nowIso"
+        "nowIso",
+        "send"
       ],
       "direction": "backward"
     },
@@ -35519,8 +35497,7 @@
       "from": "13r-event-stream.js",
       "to": "01-config.js",
       "symbols": [
-        "safeSessionId",
-        "send"
+        "safeSessionId"
       ],
       "direction": "backward"
     },
@@ -35583,7 +35560,9 @@
         "nowIso",
         "path",
         "paths",
+        "readJsonBody",
         "safeDecodeURIComponent",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -35593,9 +35572,7 @@
       "to": "01-config.js",
       "symbols": [
         "atomicWriteJson",
-        "readConfig",
-        "readJsonBody",
-        "send"
+        "readConfig"
       ],
       "direction": "backward"
     },
@@ -35882,6 +35859,7 @@
         "path",
         "paths",
         "runKeyedChain",
+        "send",
         "text"
       ],
       "direction": "backward"
@@ -35892,7 +35870,6 @@
       "symbols": [
         "DurableJsonStore",
         "originOk",
-        "send",
         "tokenOk"
       ],
       "direction": "backward"
@@ -35987,8 +35964,6 @@
         "CONFIG_SCHEMA",
         "EventStreamHooks",
         "RUYI_EVENTS",
-        "apiSessionIdInvalid",
-        "apiSessionNotFound",
         "appendUsageLedger",
         "buildUsageSummary",
         "createNdjsonLineFeeder",
