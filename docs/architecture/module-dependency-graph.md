@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3620 | 3478 | 653 | 61 | 0 | 1 |
+| 92 | 3620 | 3477 | 653 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -77,7 +77,7 @@
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 3 | 2 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 2 | 2 |
-| 62 | `12-tool-dispatch.js` | tools | 61 | 135 | 22 |
+| 62 | `12-tool-dispatch.js` | tools | 61 | 134 | 22 |
 | 63 | `13f-native-tool-schemas.js` | transport | 2 | 1 | 1 |
 | 64 | `13-http-router.js` | transport | 61 | 276 | 36 |
 | 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 12 |
@@ -401,7 +401,7 @@
 | `11c-file-visual-io.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `11d-media-inspection.js` | `00-boot.js` | backward | `StringDecoder` |
 | `11d-media-inspection.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
-| `12-tool-dispatch.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `DesktopExecutionHooks`, `OVERLAY_ID`, `SKILL_ID_RE`, `TOOL_TIER_RANK`, `URL`, `agentCliHomes`, `cp`, `crypto`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
+| `12-tool-dispatch.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `DesktopExecutionHooks`, `OVERLAY_ID`, `SKILL_ID_RE`, `TOOL_TIER_RANK`, `URL`, `agentCliHomes`, `cp`, `crypto`, `externalRoot`, `fs`, `fsp`, `makeId`, `nowIso`, `os`, `path`, `paths`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
 | `12-tool-dispatch.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherOk`, `commandForSelfMcp`, `defaultConfig`, `ensureDesktopMcpWarm`, `externalServerJs`, `readConfig`, `safeSessionId`, `selectedAgentCli`, `staticBase` |
 | `12-tool-dispatch.js` | `01c-runtime-flags.js` | backward | `execResultCacheEnabled`, `execResultCacheMaxEntries`, `observationRecallEnabled` |
 | `12-tool-dispatch.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |

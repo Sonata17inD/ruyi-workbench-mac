@@ -12,29 +12,9 @@ function journalCheckpointWarn(jr) {
   return '';
 }
 
-// hunt2 #7:写族文件工具的按路径串行。主回合的写工具本就串行,但子代理 / 工作流节点 / 代理 run 会并发
-// toolCall():两个 file_edit 同读旧内容 → 各自 await 检查点(gzip + 落盘,几毫秒到几十毫秒)→ 后写者整份盖掉
-// 前者,两边都回 ok:true(实测 AAA/BBB 两处替换只剩一处)。读-改-写整段进同一条按路径的写链。
-// 多路径(move/copy)按排好序的键逐个进链 —— 固定加锁顺序,A→B 与 B→A 并发也不会互等成死锁;
-// 链内只会再拿检查点的会话锁(它从不反过来拿路径锁),所以也不存在跨两类锁的环。
-const fileToolWriteChains = new Map();
-function fileToolWriteLockKey(filePath) {
-  const resolved = path.resolve(String(filePath || ''));
-  return resolved;
-}
-function withFileToolWriteLock(filePaths, signal, work) {
-  // Darwin aliases include case/Unicode spellings, Data paths and hard links. A shared
-  // chain keeps read-modify-write stable even when atomic rename replaces the inode.
-  // This deliberately serializes writes to unrelated files on macOS as well.
-  const keys = process.platform === 'darwin' ? ['darwin-file-writes'] : [...new Set(filePaths.map(fileToolWriteLockKey))].sort();
-  const enter = i => {
-    // A queued request must recheck Stop after the previous writer releases its lock.
-    // Once work begins, let its checkpoint/mutation transaction finish consistently.
-    if (signal && signal.aborted) return { ok: false, code: 'aborted', error: 'File operation cancelled before acquiring its write lock' };
-    return i >= keys.length ? work() : runKeyedChain(fileToolWriteChains, keys[i], () => enter(i + 1));
-  };
-  return enter(0);
-}
+const FileMutationQueue = require('./backend/file-mutation-queue.cjs').createFileMutationQueue();
+function fileToolWriteLockKey(filePath) { return path.resolve(String(filePath || '')); }
+function withFileToolWriteLock(filePaths, signal, work) { return FileMutationQueue.run(signal, work); }
 
 const FileToolPaths = require('./backend/file-tool-paths.cjs').createFileToolPaths({
   loadSession, readConfig, normalizeCwd, getMcpSessionId: () => process.env.WCW_SESSION_ID || '',

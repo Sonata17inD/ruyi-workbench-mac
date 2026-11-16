@@ -24,7 +24,7 @@ function disk(args) {
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP macOS filesystem policy requires macOS'); return; }
-    const S = loadServerInternals(['guardFileToolPath', 'toolCall', 'workspaceWriteRoots', 'fileAllowedRoots', 'normalizeConfig', 'withFileToolWriteLock', 'fileToolWriteChains']);
+    const S = loadServerInternals(['guardFileToolPath', 'toolCall', 'workspaceWriteRoots', 'fileAllowedRoots', 'normalizeConfig', 'withFileToolWriteLock', 'FileMutationQueue']);
     const guard = (file, ctx = context, write = true) => S.guardFileToolPath(file, ctx, { tool: 'file_write', write });
     for (const target of ['/System/ruyi-no-write', '/bin/ruyi-no-write', '/sbin/ruyi-no-write', '/usr/bin/ruyi-no-write',
       '/etc/hosts', '/private/etc/hosts', '/private/var/db/ruyi-no-write', '/var/log/ruyi-no-write', '/dev/ruyi-no-write', '/', '/private', '/Users']) {
@@ -74,14 +74,14 @@ function disk(args) {
       let release;
       const held = S.withFileToolWriteLock([cancelSource], null, () => new Promise(resolve => { release = resolve; }));
       while (!release) await new Promise(resolve => setImmediate(resolve));
-      const previous = S.fileToolWriteChains.get('darwin-file-writes');
+      const previous = S.FileMutationQueue.pendingCount;
       const pending = S.toolCall(tool, args, { ...context, signal: controller.signal });
       try {
         const deadline = Date.now() + 5000;
-        while (S.fileToolWriteChains.get('darwin-file-writes') === previous && Date.now() < deadline) {
+        while (S.FileMutationQueue.pendingCount === previous && Date.now() < deadline) {
           await new Promise(resolve => setTimeout(resolve, 5));
         }
-        t.ok(S.fileToolWriteChains.get('darwin-file-writes') !== previous, tool + ' waits behind the active writer');
+        t.ok(S.FileMutationQueue.pendingCount !== previous, tool + ' waits behind the active writer');
         controller.abort();
       } finally { release(); await held; }
       const result = await pending;

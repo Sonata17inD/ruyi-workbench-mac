@@ -242,7 +242,8 @@
     "app/backend/native-tool-schemas.cjs",
     "app/backend/file-read-cache.cjs",
     "app/backend/file-tool-paths.cjs",
-    "app/backend/file-text-format.cjs"
+    "app/backend/file-text-format.cjs",
+    "app/backend/file-mutation-queue.cjs"
   ],
   "acc": [
     "LICENSE",

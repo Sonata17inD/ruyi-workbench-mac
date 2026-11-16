@@ -12355,6 +12355,7 @@
         "FILE_READ_JSON_BUDGET",
         "FILE_READ_LINE_DEFAULT",
         "FILE_TOOL_HANDLERS",
+        "FileMutationQueue",
         "FileReadCache",
         "FileToolPaths",
         "OBSERVATION_RECALL_MAX_CHARS",
@@ -12384,7 +12385,6 @@
         "fileToolPrivacySourceOptions",
         "fileToolUnencodable",
         "fileToolWorkspaceDir",
-        "fileToolWriteChains",
         "fileToolWriteLockKey",
         "hasTextLineBreak",
         "invokeAdaptiveMcpTool",
@@ -12502,13 +12502,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
           ]
         },
         {

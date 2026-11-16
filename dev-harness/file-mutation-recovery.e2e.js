@@ -16,7 +16,7 @@ const restore = () => Object.assign(fsp, original);
 const fault = code => Object.assign(new Error('fixture ' + code), { code });
 (async () => {
   try {
-    const S = loadServerInternals(['toolCall', 'journalReadIndex', 'journalDir', 'withFileToolWriteLock', 'fileToolWriteChains']);
+    const S = loadServerInternals(['toolCall', 'journalReadIndex', 'journalDir', 'withFileToolWriteLock', 'FileMutationQueue']);
     const from = path.join(workspace, 'source.txt'), to = path.join(workspace, 'destination.txt');
     let serial = 0;
     const context = () => { const id = 'mutation-' + (++serial); return { sessionId: id, turnSeq: 1,
@@ -105,12 +105,12 @@ const fault = code => Object.assign(new Error('fixture ' + code), { code });
       reset(); ctx = context(); let release;
       const held = S.withFileToolWriteLock([from, to], null, () => new Promise(resolve => { release = resolve; }));
       while (!release) await new Promise(resolve => setImmediate(resolve));
-      const previous = S.fileToolWriteChains.get('darwin-file-writes');
+      const previous = S.FileMutationQueue.pendingCount;
       const pending = S.toolCall('file_copy', { from, to: upper, overwrite: true }, ctx);
       try {
         const deadline = Date.now() + 5000;
-        while (S.fileToolWriteChains.get('darwin-file-writes') === previous && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
-        t.ok(S.fileToolWriteChains.get('darwin-file-writes') !== previous, 'copy is queued before source identity changes');
+        while (S.FileMutationQueue.pendingCount === previous && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
+        t.ok(S.FileMutationQueue.pendingCount !== previous, 'copy is queued before source identity changes');
         fs.unlinkSync(from); fs.writeFileSync(from, 'new source');
       } finally { release(); await held; }
       result = await pending;
