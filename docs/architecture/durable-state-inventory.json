@@ -951,7 +951,7 @@
     {
       "id": "mission-container",
       "pattern": "<data>/missions/<missionId>.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/mission-store.cjs",
       "anchor": "MISSIONS_DIR_NAME",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson inside a per-mission serialized read-modify-write chain",
