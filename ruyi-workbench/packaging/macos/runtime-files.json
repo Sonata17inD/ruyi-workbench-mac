@@ -35,6 +35,7 @@
     "app/backend/session-bodies.cjs",
     "app/backend/session-executions.cjs",
     "app/backend/session-index.cjs",
+    "app/backend/session-metadata.cjs",
     "app/backend/session-rewind.cjs",
     "app/backend/storage-stat.cjs",
     "app/backend/turn-segments.cjs",

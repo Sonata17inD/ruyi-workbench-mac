@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3712,
+    "providedSymbols": 3713,
     "requiredSymbols": 3490,
-    "edges": 656,
-    "forwardEdges": 62,
+    "edges": 655,
+    "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -1490,6 +1490,7 @@
         "detectDanglingTurn",
         "dropInterventionSessionState",
         "dropSessionBodyState",
+        "dropSessionTitleOverride",
         "evaluateMissionCheck",
         "finalizeMissionAfterTurn",
         "flushSessionIndex",
@@ -1499,6 +1500,7 @@
         "foldTurnSummaries",
         "followupAcceptanceCriterion",
         "getSessionBodyState",
+        "getSessionTitleOverride",
         "healStalePendingSegments",
         "interventionAppendCounts",
         "interventionFilePath",
@@ -1627,7 +1629,6 @@
         "sessionDiskWriteSeq",
         "sessionDiskWriteSeqOf",
         "sessionDisplayTitle",
-        "sessionFirstUserExcerpt",
         "sessionIndexPath",
         "sessionKind",
         "sessionMessagesDelta",
@@ -1649,10 +1650,10 @@
         "sessionScratchpadChains",
         "sessionScratchpadPath",
         "sessionScratchpadStore",
-        "sessionTitleOverrides",
         "sessionTodosSignature",
         "setSessionBodyState",
         "setSessionIndexRebuildScanHookForTest",
+        "setSessionTitleOverride",
         "settleIntervention",
         "sortSessionMetas",
         "stewardWatchNoteFrom",
@@ -1889,7 +1890,8 @@
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1994,7 +1996,7 @@
           "provider": "02d-session-overrides.js",
           "symbol": "sessionPermissionModeOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2143,13 +2145,6 @@
           "symbol": "stopSession",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "PROMPT_PACK_VERSION",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -5872,6 +5867,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "getSessionTitleOverride",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -5900,9 +5902,9 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "sessionTitleOverrides",
+          "symbol": "setSessionTitleOverride",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -29534,14 +29536,6 @@
     },
     {
       "from": "02-session-store.js",
-      "to": "06b-prompt-registry.js",
-      "symbols": [
-        "PROMPT_PACK_VERSION"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "02-session-store.js",
       "to": "06f-autonomy-grants.js",
       "symbols": [
         "revokeAllGrants"
@@ -30618,8 +30612,9 @@
         "SESSION_BRIEF_GIST_CHARS",
         "SESSION_BRIEF_TITLE_CHARS",
         "SESSION_INDEX_FILE",
+        "getSessionTitleOverride",
         "loadSession",
-        "sessionTitleOverrides",
+        "setSessionTitleOverride",
         "updateSessionMeta"
       ],
       "direction": "backward"
@@ -37444,7 +37439,6 @@
     "02-session-store.js->03-bridge-guard.js",
     "02-session-store.js->04-desktop-shell.js",
     "02-session-store.js->04-permission-runtime.js",
-    "02-session-store.js->06b-prompt-registry.js",
     "02-session-store.js->06f-autonomy-grants.js",
     "02-session-store.js->07-autonomy.js",
     "02-session-store.js->08-agent-runs.js",

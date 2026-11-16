@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3712 | 3490 | 656 | 62 | 0 | 1 |
+| 92 | 3713 | 3490 | 655 | 61 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -39,7 +39,7 @@
 | 21 | `02f-turn-effect-kinds.js` | foundation | 19 | 0 | 0 |
 | 22 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
 | 23 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
-| 24 | `02-session-store.js` | foundation | 252 | 75 | 16 |
+| 24 | `02-session-store.js` | foundation | 253 | 74 | 15 |
 | 25 | `03-bridge-guard.js` | foundation | 102 | 29 | 7 |
 | 26 | `03a-privacy-gateway.js` | foundation | 1 | 2 | 2 |
 | 27 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
@@ -56,7 +56,7 @@
 | 38 | `05b-kimi-bridge.js` | engine | 128 | 76 | 15 |
 | 39 | `05c-kimi-search-policy.js` | engine | 42 | 11 | 2 |
 | 40 | `05d-kimi-prompt-parts.js` | engine | 15 | 4 | 2 |
-| 41 | `06-provider-engine.js` | engine | 134 | 61 | 19 |
+| 41 | `06-provider-engine.js` | engine | 134 | 62 | 19 |
 | 42 | `06b-prompt-registry.js` | engine | 5 | 0 | 0 |
 | 43 | `06c-agent-loop-hooks.js` | engine | 1 | 3 | 2 |
 | 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
@@ -151,7 +151,6 @@
 | `02-session-store.js` | `03-bridge-guard.js` | forward | `guardFileToolPath`, `pathWithinRoot`, `realpathForContainment` |
 | `02-session-store.js` | `04-desktop-shell.js` | forward | `DesktopShell` |
 | `02-session-store.js` | `04-permission-runtime.js` | forward | `logEvent`, `stopSession` |
-| `02-session-store.js` | `06b-prompt-registry.js` | forward | `PROMPT_PACK_VERSION` |
 | `02-session-store.js` | `06f-autonomy-grants.js` | forward | `revokeAllGrants` |
 | `02-session-store.js` | `07-autonomy.js` | forward | `agentRunDir` |
 | `02-session-store.js` | `08-agent-runs.js` | forward | `appendAgentRunEvent`, `bumpRunIntervention`, `listAgentRuns`, `saveAgentRun` |
@@ -247,7 +246,7 @@
 | `06-provider-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `isAgentCliType` |
 | `06-provider-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `06-provider-engine.js` | `01o-execution-state.js` | backward | `activeChildren` |
-| `06-provider-engine.js` | `02-session-store.js` | backward | `SESSION_BRIEF_GIST_CHARS`, `SESSION_BRIEF_TITLE_CHARS`, `SESSION_INDEX_FILE`, `loadSession`, `sessionTitleOverrides`, `updateSessionMeta` |
+| `06-provider-engine.js` | `02-session-store.js` | backward | `SESSION_BRIEF_GIST_CHARS`, `SESSION_BRIEF_TITLE_CHARS`, `SESSION_INDEX_FILE`, `getSessionTitleOverride`, `loadSession`, `setSessionTitleOverride`, `updateSessionMeta` |
 | `06-provider-engine.js` | `03-bridge-guard.js` | backward | `existsExecutableAsync`, `probeGitCliAsync` |
 | `06-provider-engine.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `06-provider-engine.js` | `04-permission-runtime.js` | backward | `collectBridgedTools`, `logEvent`, `mcpClients`, `redact`, `resolveExternalMcpServers`, `sanitizeServerId` |

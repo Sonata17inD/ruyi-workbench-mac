@@ -23,7 +23,6 @@ const state = app.__eval(`(() => {
   readSessionHeadResilient = async () => state.session;
   sessionEnvelopeStamp = async () => 'synthetic-disk-stamp';
   sessionEnvelopeLiveParts = () => state.live;
-  sessionDisplayTitle = session => session.title || '';
   StewardHooks.runnerState = async () => state.runner;
   stewardInboxState = async () => ({ enabled: true });
   return state;

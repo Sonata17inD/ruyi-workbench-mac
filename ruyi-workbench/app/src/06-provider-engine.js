@@ -1360,7 +1360,7 @@ async function reassertThreadBrief(sessionId) {
     const brief = threadBriefDone.get(sid);
     if (!brief) return null;
     const head = await loadSession(sid).catch(() => null);
-    const live = sessionTitleOverrides.get(sid);
+    const live = getSessionTitleOverride(sid);
     if (!head || head.titleSource === 'user' || (live && live.rewindGen !== undefined && (Number(head.rewindGen) || 0) !== live.rewindGen)) return null;
     if (head && head.threadBrief && String(head.threadBrief.title || '').trim()) return brief;  // 已经在盘上
     await updateSessionMeta(sid, { threadBrief: brief }).catch(() => null);
@@ -1380,8 +1380,8 @@ async function updateAutomaticThreadTitle(input) {
   if (!parsed) return { ok: false, error: 'title_required' };
   const brief = { schema: 1, title: parsed.title.slice(0, SESSION_BRIEF_TITLE_CHARS), gist: parsed.gist.slice(0, SESSION_BRIEF_GIST_CHARS), at: nowIso(), model: 'agent', stage: 'settled' };
   const rewindGen = Number(head.rewindGen) || 0;
-  if (sessionTitleOverrides.get(sid)?.titleSource === 'user') return { ok: true, updated: false, reason: 'user_title' };
-  sessionTitleOverrides.set(sid, { threadBrief: brief, rewindGen });
+  if (getSessionTitleOverride(sid)?.titleSource === 'user') return { ok: true, updated: false, reason: 'user_title' };
+  setSessionTitleOverride(sid, { threadBrief: brief, rewindGen });
   threadBriefDone.set(sid, brief);
   RUYI_EVENTS.emit('thread.state', { sessionId: sid });
   await updateSessionMeta(sid, { threadBrief: brief, threadBriefRewindGen: rewindGen });
@@ -1455,9 +1455,9 @@ async function threadBriefOnce(o, sid, policyBound = false) {
         const current = await loadSession(sid).catch(() => null);
         if (!current || current.titleSource === 'user' || (Number(current.rewindGen) || 0) !== (Number(head.rewindGen) || 0)
             || String(current.threadBrief?.at || '') !== String(head.threadBrief?.at || '')) return null;
-        const live = sessionTitleOverrides.get(sid);
+        const live = getSessionTitleOverride(sid);
         if (live?.titleSource === 'user' || live?.threadBrief) return null;
-        sessionTitleOverrides.set(sid, { threadBrief: brief, rewindGen: Number(head.rewindGen) || 0 });
+        setSessionTitleOverride(sid, { threadBrief: brief, rewindGen: Number(head.rewindGen) || 0 });
         RUYI_EVENTS.emit('thread.state', { sessionId: sid });
         await updateSessionMeta(sid, { threadBrief: brief, threadBriefRewindGen: Number(head.rewindGen) || 0 }).catch(() => null);
         return brief;

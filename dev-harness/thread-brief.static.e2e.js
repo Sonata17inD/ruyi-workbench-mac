@@ -6,7 +6,7 @@
 // 本件看住的是一条结构性约定,而不是某个行为 —— 行为由 thread-brief.e2e.js / session-search.e2e.js /
 // unit/steward-preroute.test.js 三件跑出来验:
 //
-//   ① 判据只有一处:`sessionDisplayTitle` 在 src/ 里只定义一次(02-session-store.js),
+//   ① 判据只有一处:`sessionDisplayTitle` 在生产模块里只定义一次(session-metadata.cjs),
 //      其余模块一律只【调用】。这条是 112 波摸底那个教训的直接产物(服务端发 54 种、前端认 34 种)——
 //      「哪个名字该显示」只要有第二个判定点,两个面迟早各说各话。
 //   ② 消费面各自读的是【服务端算好的结果】,不是自己拼:六个装配点必须都在。
@@ -37,7 +37,9 @@ function ok(condition, label) {
   else { failures += 1; console.log('FAIL ' + label); }
 }
 
-const store = readSrc('02-session-store.js');
+const store = readSrc('../backend/session-metadata.cjs');
+const backendSources = fs.readdirSync(path.join(SRC, '../backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f);
+const serverSources = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat(backendSources);
 const provider = readSrc('06-provider-engine.js');
 const core = readSrc('../backend/steward-core.cjs');
 const config = readSrc('01-config.js');
@@ -56,10 +58,10 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 
 /* ── ① 判据只有一处 ─────────────────────────────────────────────────────────── */
 {
-  const defs = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+  const defs = serverSources
     .filter(f => /function\s+sessionDisplayTitle\s*\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
-  ok(defs.length === 1 && defs[0] === '02-session-store.js',
-    `① sessionDisplayTitle 在 src/ 里只定义一次,且住 02-session-store.js(实得 ${JSON.stringify(defs)})`);
+  ok(defs.length === 1 && defs[0] === '../backend/session-metadata.cjs',
+    `① sessionDisplayTitle 在生产模块里只定义一次,且住 session-metadata.cjs(实得 ${JSON.stringify(defs)})`);
   ok(/if \(!o \|\| o\.titleSource === 'user'\) return raw;/.test(store),
     '① 优先级第一条:人起的名字压过一切(titleSource === \'user\' 直接回原话)');
   ok(/return generated \|\| raw;/.test(store),
@@ -72,9 +74,9 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
   ok(/return sessionFirstUserExcerpt\(o\) \|\| raw;/.test(store),
     '① 117l-A1-fix companion:第四档是首条用户消息的摘录,取不到仍旧回落原话(绝不返回空标题)');
   {
-    const excerptDefs = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+    const excerptDefs = serverSources
       .filter(f => /function\s+sessionFirstUserExcerpt\s*\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
-    ok(excerptDefs.length === 1 && excerptDefs[0] === '02-session-store.js',
+    ok(excerptDefs.length === 1 && excerptDefs[0] === '../backend/session-metadata.cjs',
       `① 117l-A1-fix companion:摘录函数也只定义一次,且与判据住同一处(实得 ${JSON.stringify(excerptDefs)})`);
   }
   ok(/const rows = \(o && Array\.isArray\(o\.messages\)\) \? o\.messages : null;\s*\n\s*if \(!rows\) return '';/.test(store),

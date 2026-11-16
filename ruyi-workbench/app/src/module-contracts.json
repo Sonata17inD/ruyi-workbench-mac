@@ -1430,6 +1430,7 @@
         "detectDanglingTurn",
         "dropInterventionSessionState",
         "dropSessionBodyState",
+        "dropSessionTitleOverride",
         "evaluateMissionCheck",
         "finalizeMissionAfterTurn",
         "flushSessionIndex",
@@ -1439,6 +1440,7 @@
         "foldTurnSummaries",
         "followupAcceptanceCriterion",
         "getSessionBodyState",
+        "getSessionTitleOverride",
         "healStalePendingSegments",
         "interventionAppendCounts",
         "interventionFilePath",
@@ -1567,7 +1569,6 @@
         "sessionDiskWriteSeq",
         "sessionDiskWriteSeqOf",
         "sessionDisplayTitle",
-        "sessionFirstUserExcerpt",
         "sessionIndexPath",
         "sessionKind",
         "sessionMessagesDelta",
@@ -1589,10 +1590,10 @@
         "sessionScratchpadChains",
         "sessionScratchpadPath",
         "sessionScratchpadStore",
-        "sessionTitleOverrides",
         "sessionTodosSignature",
         "setSessionBodyState",
         "setSessionIndexRebuildScanHookForTest",
+        "setSessionTitleOverride",
         "settleIntervention",
         "sortSessionMetas",
         "stewardWatchNoteFrom",
@@ -1829,7 +1830,8 @@
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1934,7 +1936,7 @@
           "provider": "02d-session-overrides.js",
           "symbol": "sessionPermissionModeOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2083,13 +2085,6 @@
           "symbol": "stopSession",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "PROMPT_PACK_VERSION",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -5778,6 +5773,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "getSessionTitleOverride",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -5806,9 +5808,9 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "sessionTitleOverrides",
+          "symbol": "setSessionTitleOverride",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
