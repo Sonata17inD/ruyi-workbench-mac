@@ -19,7 +19,12 @@ const quote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP macOS supervisor requires macOS'); return; }
-    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'runGit', 'gitHumanError', 'gitCommit', 'gitReadOnlyGuard', 'gitDiff', 'toolCall', 'DesktopShell', 'gitExec', 'createAgentWorktree', 'cleanupAgentWorktree', 'applyAgentWorktree', 'agentRunFile'], { withEval: true });
+    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'killChildTree', 'PrivacyGateway', 'privacySourceActive', 'privacySourceLine', 'privacySourceLineOffsets', 'toolCall', 'DesktopShell', 'gitExec', 'createAgentWorktree', 'cleanupAgentWorktree', 'applyAgentWorktree', 'agentRunFile']);
+    Object.assign(S, require('../ruyi-workbench/app/backend/git-tools.cjs').createGitTools({
+      ProcessRuntime: S.ProcessRuntime, killChildTree: S.killChildTree,
+      privacy: { PrivacyGateway: S.PrivacyGateway, privacySourceActive: S.privacySourceActive,
+        privacySourceLine: S.privacySourceLine, privacySourceLineOffsets: S.privacySourceLineOffsets },
+    }));
     runtime = S.ProcessRuntime;
     if (!fs.existsSync(S.ProcessRuntimeHooks.helperPath())) throw new Error('Build the native macOS process helper first');
     async function capture(script, options = {}) {
@@ -163,14 +168,17 @@ if(args.includes('rev-parse'))process.stdout.write(${JSON.stringify(isolation.re
       fs.writeFileSync(mutationLog, '');
       const persistenceRun = { id: 'run_abc222', sessionId: 'sess_abc222', nodes: [{ id: 'node-a', isolation: { ...isolation, status: 'ready', commit: 'fixture-commit' } }] };
       const persistenceFile = S.agentRunFile(persistenceRun.sessionId, persistenceRun.id);
-      S.__eval(`globalThis.__worktreeOriginalWrite = atomicWriteJson; atomicWriteJson = async (file,value,...rest) => {
-        const snapshot = typeof value === 'string' ? JSON.parse(value) : value;
-        if(file === ${JSON.stringify(persistenceFile)} && snapshot.nodes?.[0]?.isolation?.status === 'applied') throw Object.assign(new Error('synthetic applied persistence failure'),{code:'EIO'});
-        return globalThis.__worktreeOriginalWrite(file,value,...rest);
-      };`);
+      const originalRename = fs.promises.rename;
+      fs.promises.rename = async (from, to) => {
+        if (to === persistenceFile) {
+          const snapshot = JSON.parse(await fs.promises.readFile(from, 'utf8'));
+          if (snapshot.nodes?.[0]?.isolation?.status === 'applied') throw Object.assign(new Error('synthetic applied persistence failure'), { code: 'EIO' });
+        }
+        return originalRename(from, to);
+      };
       let persistenceError;
       try { await S.applyAgentWorktree(persistenceRun, 'node-a'); } catch (error) { persistenceError = error; }
-      finally { S.__eval('atomicWriteJson = globalThis.__worktreeOriginalWrite; delete globalThis.__worktreeOriginalWrite;'); }
+      finally { fs.promises.rename = originalRename; }
       const pendingApply = JSON.parse(fs.readFileSync(persistenceFile, 'utf8'));
       const blockedReplay = await S.applyAgentWorktree(pendingApply, 'node-a');
       t.ok(persistenceError?.applied && persistenceError.applicationUnconfirmed && pendingApply.nodes[0].isolation.status === 'applying'
@@ -180,13 +188,13 @@ if(args.includes('rev-parse'))process.stdout.write(${JSON.stringify(isolation.re
       fs.writeFileSync(mutationLog, '');
       const intentRun = { id: 'run_abc333', sessionId: 'sess_abc333', nodes: [{ id: 'node-a', isolation: { ...isolation, status: 'ready', commit: 'fixture-commit' } }] };
       const intentFile = S.agentRunFile(intentRun.sessionId, intentRun.id);
-      S.__eval(`globalThis.__worktreeOriginalWrite = atomicWriteJson; atomicWriteJson = async (file,value,...rest) => {
-        if(file === ${JSON.stringify(intentFile)}) throw Object.assign(new Error('synthetic intent persistence failure'),{code:'EIO'});
-        return globalThis.__worktreeOriginalWrite(file,value,...rest);
-      };`);
+      fs.promises.rename = async (from, to) => {
+        if (to === intentFile) throw Object.assign(new Error('synthetic intent persistence failure'), { code: 'EIO' });
+        return originalRename(from, to);
+      };
       let intentError;
       try { await S.applyAgentWorktree(intentRun, 'node-a'); } catch (error) { intentError = error; }
-      finally { S.__eval('atomicWriteJson = globalThis.__worktreeOriginalWrite; delete globalThis.__worktreeOriginalWrite;'); }
+      finally { fs.promises.rename = originalRename; }
       t.ok(intentError?.code === 'EIO' && intentRun.nodes[0].isolation.status === 'ready' && !fs.readFileSync(mutationLog, 'utf8').includes('cherry-pick'),
         'failed intent persistence prevents Git mutation and restores in-memory readiness');
       const completeFrames = [{ event: 'started', value: 123, created: '1' },

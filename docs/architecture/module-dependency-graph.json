@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3530,
-    "requiredSymbols": 3508,
+    "providedSymbols": 3508,
+    "requiredSymbols": 3507,
     "edges": 659,
     "forwardEdges": 67,
     "duplicateProvides": 0,
@@ -2035,14 +2035,14 @@
           "provider": "11-native-tools.js",
           "symbol": "gitReadOnlyGuard",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "runGit",
           "kinds": [
-            "read"
+            "call"
           ]
         }
       ]
@@ -11648,16 +11648,6 @@
         "DOTNET_PROJECT_RE",
         "FRONTEND_EXT_URL_RES",
         "FRONTEND_LOCAL_HOST_RE",
-        "GIT_COMMIT_TIMEOUT_DEFAULT_MS",
-        "GIT_DIFF_MAX_BUFFER",
-        "GIT_DIFF_MAX_CHARS",
-        "GIT_DIFF_STAT_MAX_CHARS",
-        "GIT_READ_ONLY_FLAGS",
-        "GIT_REF_RE",
-        "GIT_SAFE_FLAGS",
-        "GIT_STATUS_MAX_LINES",
-        "GIT_TIMEOUT_MAX_MS",
-        "GIT_UNTRACKED_LIST_MAX",
         "HARD_IGNORE_DIRS",
         "MAC_SHELL_COMMAND_MAX_BYTES",
         "MAC_SHELL_DRIVER",
@@ -11727,16 +11717,9 @@
         "frontendAudit",
         "genShellId",
         "gitCommit",
-        "gitCwdMissingError",
         "gitDiff",
-        "gitHeadToJsonBudget",
-        "gitHookNames",
-        "gitHumanError",
         "gitLog",
-        "gitMissingPathHint",
         "gitReadOnlyGuard",
-        "gitReadOnlyGuardError",
-        "gitStagedSnapshot",
         "gitStatus",
         "globToRegExp",
         "guardDownloadDest",
@@ -11773,12 +11756,10 @@
         "probeRgInfoSync",
         "prunedDirsHint",
         "readBackgroundJobs",
-        "readFileWindow",
         "readIfExists",
         "readWebCache",
         "regexBacktrackBounded",
         "regexScanFilesBounded",
-        "resolveGitCwd",
         "rgExeName",
         "rgListHighByteFiles",
         "rgProbeCandidates",
@@ -11818,11 +11799,8 @@
         "shellVisibleTo",
         "ssrfCheck",
         "stopMacShell",
-        "summarizeGitStatus",
         "symbolCi",
         "symbolLanguageDefPatterns",
-        "validateGitLogFilter",
-        "validateGitRef",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -11863,13 +11841,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "dataRootAliases",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeConsoleText",
           "kinds": [
             "call"
           ]
@@ -12154,7 +12125,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -32274,7 +32246,6 @@
         "crypto",
         "dataRoot",
         "dataRootAliases",
-        "decodeConsoleText",
         "fs",
         "fsp",
         "nowIso",

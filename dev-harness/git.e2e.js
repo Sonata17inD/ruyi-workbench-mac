@@ -63,6 +63,7 @@ function gitAvailable() {
   // ══════════ 静态断言(不依赖 git,总是跑)══════════
   {
     const server = readServerSource();
+    const gitSource = fs.readFileSync(path.join(WB, 'app/backend/git-tools.cjs'), 'utf8');
     const appjs = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆分后函数不再只在 app.js)
     const css = require('./read-frontend-css.js').readFrontendCss();
 
@@ -74,11 +75,11 @@ function gitAvailable() {
     ok(/git_commit:\s*\{\s*requires:\s*\['gitCli',\s*'processSupervisor'\]/.test(server), '⑥ TOOL_REQUIRES git_commit requires Git and process supervision');
     // ⑥d 安全加固(对抗复核 CRITICAL防回潮,git 缺失机器也守):runGit 前置 GIT_SAFE_FLAGS 中和仓库自带
     // core.fsmonitor / diff.external;gitDiff 加 --no-textconv。全部覆盖仓库配置的代码执行面。
-    ok(/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*core\.fsmonitor=/.test(server), '⑥ server.js GIT_SAFE_FLAGS 含 core.fsmonitor=(中和 fsmonitor RCE)');
-    ok(/\[\s*\.\.\.GIT_SAFE_FLAGS\s*,\s*\.\.\.args\s*\]/.test(server), '⑥ runGit 对所有 git 调用前置 GIT_SAFE_FLAGS');
+    ok(/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*core\.fsmonitor=/.test(gitSource), '⑥ git-tools GIT_SAFE_FLAGS 含 core.fsmonitor=(中和 fsmonitor RCE)');
+    ok(/\[\s*\.\.\.GIT_SAFE_FLAGS\s*,\s*\.\.\.args\s*\]/.test(gitSource), '⑥ runGit 对所有 git 调用前置 GIT_SAFE_FLAGS');
     // gitDiff 用 --no-ext-diff --no-textconv 封 diff.external / textconv 面(不能用 `-c diff.external=` 空值——会破坏正常 diff)。
-    ok(/'diff',\s*'--no-ext-diff',\s*'--no-textconv'/.test(server), '⑥ gitDiff 加 --no-ext-diff --no-textconv(封 diff.external/textconv 面)');
-    ok(!/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*diff\.external=/.test(server), '⑥ GIT_SAFE_FLAGS 不含空 diff.external=(会破坏正常 diff)');
+    ok(/'diff',\s*'--no-ext-diff',\s*'--no-textconv'/.test(gitSource), '⑥ gitDiff 加 --no-ext-diff --no-textconv(封 diff.external/textconv 面)');
+    ok(!/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*diff\.external=/.test(gitSource), '⑥ GIT_SAFE_FLAGS 不含空 diff.external=(会破坏正常 diff)');
 
     // ⑥b app.js 含 .diff-view 渲染,且逐行用 textContent(禁 innerHTML)构建。
     ok(/renderDiffView/.test(appjs) && /'diff-view'/.test(appjs), "⑥ app.js 定义 renderDiffView('diff-view')");
