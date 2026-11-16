@@ -727,7 +727,7 @@
     {
       "id": "agent-run-snapshot",
       "pattern": "<data>/agent-runs/<session>/<run>.json",
-      "owner": "07-autonomy.js",
+      "owner": "../backend/agent-run-store.cjs",
       "anchor": "agentRunFile",
       "schema": "object / domain versioned",
       "writePrimitive": "atomicWriteJson + per-run chain",
@@ -741,7 +741,7 @@
     {
       "id": "agent-run-events",
       "pattern": "<data>/agent-runs/<session>/<run>.events.ndjson",
-      "owner": "08-agent-runs.js",
+      "owner": "../backend/agent-run-store.cjs",
       "anchor": ".events.ndjson",
       "schema": "NDJSON events",
       "writePrimitive": "serialized append",

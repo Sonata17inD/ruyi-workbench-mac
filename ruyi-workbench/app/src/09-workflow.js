@@ -1181,7 +1181,7 @@ async function runAgentWorkflow({ parentSession, provider, config, nodes: rawNod
   await saveAgentRun(run).catch(() => {});   // 对抗轮修: 非致命 —— 终稿写失败时结果仍应回给调用方(onComplete/回合),磁盘状态由降级横幅兜底
   onEvent({ type: 'agent_workflow', state: 'end', id: runId, status: run.status, succeeded: nodes.length - failed.length, failed: failed.length });
   if (typeof onComplete === 'function') await onComplete(run).catch(() => {});
-  } finally { clearInterval(idleWatchdog); clearInterval(workflowControlTimer); if (progressSaveTimer) { clearTimeout(progressSaveTimer); progressSaveTimer = null; } activeAgentRuns.delete(runId); agentRunSaveFailures.delete(runId); }   // 对抗轮修: 失败计数随 run 生命周期清理(防 Map 泄漏)
+  } finally { clearInterval(idleWatchdog); clearInterval(workflowControlTimer); if (progressSaveTimer) { clearTimeout(progressSaveTimer); progressSaveTimer = null; } activeAgentRuns.delete(runId); AgentRunStore.endRun(runId); }   // 对抗轮修: 失败计数随 run 生命周期清理(防 Map 泄漏)
   return {
     ok: run.status === 'succeeded', runId, status: run.status, startedCount,
     results: nodes.map(n => ({ id: n.id, status: n.status, result: n.result, structuredResult: n.structuredResult, confidence: n.confidence, gateVerdict: n.gateVerdict || '', gateResult: n.gateResult || null, error: n.error, errorClass: n.errorClass || '', dependsOn: n.dependsOn, dependencyPolicy: n.dependencyPolicy || 'all_success', role: n.roleId || '', engine: n.engine || 'openai', attempts: n.attempts, minSuccessfulToolCalls: n.minSuccessfulToolCalls || 0, toolEvidence: n.toolEvidence || null, condition: n.condition, skipReason: n.skipReason || '', loopIteration: n.loopIteration, noProgressCount: n.noProgressCount, loopStopReason: n.loopStopReason || '', jsonRepaired: n.jsonRepaired || false })),

@@ -2621,8 +2621,7 @@ async function handleAgentRunApiRoutes(req, res, pathname) {
       const run = safeJsonParse(await fsp.readFile(file, 'utf8'), null);
       for (const node of (run && run.nodes || [])) if (node.isolation) await cleanupAgentWorktree(node.isolation);
       await fsp.unlink(file);
-      agentRunDigestWriteSeq += 1;
-      agentRunDigestCache.delete(file);   // digest 摘要缓存(08):文件没了条目一并撤
+      AgentRunStore.invalidateDigest(file);   // digest 摘要缓存(08):文件没了条目一并撤
       // 对抗轮修(第25波): 删除快照必须连带删姊妹事件日志 —— 用户删「运行记录」的心智模型是数据消失,
       // 取证 ndjson(含时间线/错误切片)不该在删除后无限期残留。
       await fsp.unlink(agentRunEventsFile(sessionId, runId)).catch(() => {});

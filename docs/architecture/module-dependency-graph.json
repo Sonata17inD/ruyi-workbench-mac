@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3654,
-    "requiredSymbols": 3485,
+    "providedSymbols": 3642,
+    "requiredSymbols": 3482,
     "edges": 654,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -7292,7 +7292,6 @@
         "adaptiveMetaToolSchemas",
         "agentRunDir",
         "agentRunFile",
-        "agentRunWriteChains",
         "agentWorktreeApplyChains",
         "agentWorktreePathOwned",
         "applyAgentWorktree",
@@ -7983,12 +7982,8 @@
         "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
-        "AGENT_RUN_DIGEST_CACHE_MAX",
-        "AGENT_RUN_EVENTS_PAGE_MAX",
-        "AGENT_RUN_EVENTS_TAIL_BYTES",
-        "AGENT_RUN_PERSIST_DEGRADED_AFTER",
-        "AGENT_RUN_PERSIST_PAUSE_AFTER",
         "AUTO_RESUME_MAX",
+        "AgentRunStore",
         "BUILTIN_AGENT_WORKFLOWS",
         "C3_HIGH_RISK_GATE",
         "CLAUDE_EXEC_TOOLS",
@@ -8005,21 +8000,14 @@
         "agentMessageReceipt",
         "agentPoolExpansionEligibility",
         "agentRunCapabilities",
-        "agentRunDigestCache",
         "agentRunDigestRow",
         "agentRunDigestShadow",
-        "agentRunDigestStats",
-        "agentRunDigestWriteSeq",
-        "agentRunEventChains",
         "agentRunEventsFile",
         "agentRunHealth",
         "agentRunHealthChanged",
-        "agentRunLastHealth",
-        "agentRunLastSavedStatus",
         "agentRunPermissionMode",
         "agentRunResultSlice",
         "agentRunRoster",
-        "agentRunSaveFailures",
         "agentWorkflowSaveProblem",
         "agentWorkflowStatusText",
         "aggregateAgentVote",
@@ -8165,7 +8153,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8186,7 +8175,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8200,7 +8189,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8232,17 +8222,11 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8256,14 +8240,15 @@
           "provider": "01-config.js",
           "symbol": "readFileTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8326,7 +8311,7 @@
           "provider": "02-session-store.js",
           "symbol": "missionSignalThrottleAllow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8368,7 +8353,7 @@
           "provider": "02-session-store.js",
           "symbol": "sessionAssociatedSaveIsTombstoned",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8473,7 +8458,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8655,20 +8641,14 @@
           "provider": "07-autonomy.js",
           "symbol": "agentRunDir",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "agentRunFile",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "agentRunWriteChains",
-          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -10414,7 +10394,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunSaveFailures",
+          "symbol": "AgentRunStore",
           "kinds": [
             "read"
           ]
@@ -17025,23 +17005,9 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunDigestCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "agentRunDigestRow",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "agentRunDigestWriteSeq",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -17056,6 +17022,13 @@
           "symbol": "agentRunHealth",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "AgentRunStore",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -27914,7 +27887,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunDigestStats",
+          "symbol": "AgentRunStore",
           "kinds": [
             "read"
           ]
@@ -31223,8 +31196,7 @@
         "runKeyedChain",
         "safeJsonParse",
         "samePathKey",
-        "text",
-        "zlib"
+        "text"
       ],
       "direction": "backward"
     },
@@ -31408,7 +31380,6 @@
         "MEMORY_WRITE_TOOL_NAMES",
         "agentRunDir",
         "agentRunFile",
-        "agentRunWriteChains",
         "bridgedToolTier",
         "buildOpenAiTools",
         "classifyToolPacks",
@@ -31827,11 +31798,11 @@
       "from": "09-workflow.js",
       "to": "08-agent-runs.js",
       "symbols": [
+        "AgentRunStore",
         "accumulateRunUsage",
         "agentRunCapabilities",
         "agentRunResultSlice",
         "agentRunRoster",
-        "agentRunSaveFailures",
         "aggregateAgentVote",
         "aggregateCoverage",
         "appendAgentRunEvent",
@@ -33825,9 +33796,8 @@
       "from": "13d-core-domain-routes.js",
       "to": "08-agent-runs.js",
       "symbols": [
-        "agentRunDigestCache",
+        "AgentRunStore",
         "agentRunDigestRow",
-        "agentRunDigestWriteSeq",
         "agentRunEventsFile",
         "agentRunHealth",
         "appendAgentRunEvent",
@@ -36806,9 +36776,9 @@
       "from": "14-main.js",
       "to": "08-agent-runs.js",
       "symbols": [
+        "AgentRunStore",
         "BUILTIN_AGENT_WORKFLOWS",
         "QUALITY_GATE_OUTPUT_SCHEMA",
-        "agentRunDigestStats",
         "aggregateAgentVote",
         "aggregateCoverage",
         "appendAgentRunEvent",

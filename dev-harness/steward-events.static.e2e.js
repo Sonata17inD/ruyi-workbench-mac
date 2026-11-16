@@ -35,7 +35,8 @@ const okSet = (missing, extra, label) => ok(missing.length === 0 && extra.length
         + (extra.length ? ` :: 表里有源码没有(僵尸条目): ${extra.join(', ')}` : ''));
 
 const read = file => fs.readFileSync(path.join(SRC, file), 'utf8');
-const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).sort();
+const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+  .concat(fs.readdirSync(path.join(SRC, '../backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f)).sort();
 
 // 表本身从产物 require(与生产运行的是同一份;临时 HOME 防污染真实数据根)。
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-events-'));
@@ -216,7 +217,7 @@ function typeExpressionLiterals(text) {
   ok(!Object.prototype.hasOwnProperty.call(ar, 'adaptive_tool_budget'),
     'D6 adaptive_tool_budget 不在 agentRun 子表(它没有 appendAgentRunEvent 写入端,放进去会变僵尸条目)');
   // 写入端存在性:两个新 run 事件必须真有人写,两个新 change type 也必须真有人写。
-  const src08 = read('08-agent-runs.js');
+  const src08 = read('../backend/agent-run-store.cjs');
   const src09 = read('09-workflow.js');
   const src02 = read('../backend/mission-changes.cjs');
   ok(/type: 'run_stalled'/.test(src08) && /type: 'run_budget_tripped'/.test(src08),

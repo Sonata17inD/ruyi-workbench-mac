@@ -2147,7 +2147,7 @@ async function drainSteerQueue(reg, session, onEvent) {
 // config.permissionMode, so an UN-approved plan-mode turn still hard-blocks its sub-agents' edit/exec tools.
 function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
 function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
-const agentRunWriteChains = new Map();
+
 // 第46波46e(双冷 resume 窄窗修复):resume「在飞」标记。activeAgentRuns 只在 runtime 构造好才注册,
 // 而 existingRun 分支从校验到注册之间有 await(getAgentRoleLibrary/cleanupAgentWorktree)——两个近同时
 // 的 resume 会都穿过 activeAgentRuns.has 守卫。此集合在分支【入口同步】占位,成功注册或早退/异常即释,
