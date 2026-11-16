@@ -39,7 +39,8 @@ async function waitToken() {
   for (let i = 0; i < 300; i++) { const t = (readJson(path.join(HOME, 'runtime.json')) || {}).token || ''; if (t) return t; await sleep(150); }
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
-const src = readServerSource();
+const modelSource = fs.readFileSync(path.join(WB, 'app/backend/model-selection.cjs'), 'utf8');
+const src = readServerSource() + '\n' + modelSource;
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
@@ -69,11 +70,11 @@ ok(/model: \{ type: 'string', description: '可选。为新节点按任务难易
 ok(/volatileExtras \+= buildModelHint\(config, provider\);/.test(src), 'S provider 引擎在 volatile user 前缀注入 buildModelHint(带 provider)');
 ok(/const oh = buildOrchestrateHint\(wfs\);/.test(src) && /if \(oh\) indexSecs\.push\(oh\);/.test(src) && /const mh = buildModelHint\(config, activeOpenAiProvider\(config\)\);/.test(src) && /if \(mh\) indexSecs\.push\(mh\);/.test(src), 'S Claude 引擎:编排提示与模型提示各自独立进 stdin 索引段(第35波 P2:indexSecs 注入,不再连坐丢弃、不走命令行故无需 % ! 中和)');
 // schema 描述改为"填错会失败"(不再宣称"忽略回落")。
-ok(/Omit by default so the runtime can validate and use the configured sub-agent preferred endpoint\/model/.test(src) && /fall back to the current conversation endpoint\/model/.test(src), 'S orchestrate model 描述要求默认走预检偏好→当前对话回退');
+ok(/Omit by default so the runtime can validate and use the configured sub-agent preferred endpoint\/model/.test(fs.readFileSync(path.join(WB, 'app/backend/native-tool-schemas.cjs'), 'utf8')) && /fall back to the current conversation endpoint\/model/.test(fs.readFileSync(path.join(WB, 'app/backend/native-tool-schemas.cjs'), 'utf8')), 'S orchestrate model 描述要求默认走预检偏好→当前对话回退');
 // ── 第44波(模型列表 API 化):版本化型号不再硬编码;代理 /v1/models 发现写 sidecar 缓存;Claude 组=别名∪缓存 ──
 ok(!/id: 'claude-opus-4-8'/.test(src) && !/id: 'claude-fable-5'/.test(src) && !/id: 'claude-sonnet-5'/.test(src), 'S 版本化型号不再硬编码(列表=API 返回+自定义)');
 ok(!/\{ id: 'opus',/.test(src) && !/\{ id: 'sonnet',/.test(src) && !/\{ id: 'haiku',/.test(src), 'S 44e:别名也出显示列表(MODEL_PRESETS 只剩 默认)');
-ok(/const PROXY_MODELS_CACHE_PATH = \(\) => path\.join\(paths\.data, 'proxy-models-cache\.json'\);/.test(src), 'S 代理缓存 sidecar(dataRoot 独立文件,不入 config 防竞态)');
+ok(/const PROXY_MODELS_CACHE_PATH = \(\) => path\.join\(dataDirectory, 'proxy-models-cache\.json'\);/.test(src), 'S 代理缓存 sidecar(dataRoot 独立文件,不入 config 防竞态)');
 ok(/function getProxyModelsCache\(\)/.test(src) && /function setProxyModelsCache\(models\)/.test(src), 'S 缓存读写函数存在');
 ok(/for \(const m of getProxyModelsCache\(\)\.models\) add\(m\.id, m\.label\);/.test(src), 'S offlineModelList 合并代理缓存');
 ok(/if \(proxy\.length\) setProxyModelsCache\(proxy\);/.test(src), 'S discoverModels 发现成功即写缓存');
@@ -84,20 +85,9 @@ ok(/CLAUDE_ALIAS_IDS\.has\(m\.id\) \|\| claudeCacheIds\.has\(m\.id\)/.test(src),
 // [P] 纯逻辑源抽取
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] 纯逻辑 ──');
-const grab = (re, name) => { const m = src.match(re); ok(!!m, 'P 源抽取 ' + name); return m ? m[0] : ''; };
-const offList = grab(/function offlineModelList\(config\) \{[\s\S]*?\n\}/, 'offlineModelList');
-const mpresets = grab(/const MODEL_PRESETS = \[[\s\S]*?\];/, 'MODEL_PRESETS');
-const presetIds = grab(/const CLAUDE_ALIAS_IDS = new Set\([^;]*\);/, 'CLAUDE_ALIAS_IDS');
-const tier = grab(/function modelCapabilityTier\(id, label\) \{[\s\S]*?\n\}/, 'modelCapabilityTier');
-const tierLbl = grab(/const MODEL_TIER_LABEL = \{[^}]*\};/, 'MODEL_TIER_LABEL');
-const tierUse = grab(/const MODEL_TIER_USE = \{[^}]*\};/, 'MODEL_TIER_USE');
-const hint = grab(/function buildModelHint\(config, provider\) \{[\s\S]*?\n\}/, 'buildModelHint');
-const tierModel = grab(/function tierModelForNode\(toolTier, engine, config, provider\) \{[\s\S]*?\n\}/, 'tierModelForNode');
-const resolve = grab(/function resolveNodeModel\(rawModel, roleModel, toolTier, engine, config, provider\) \{[\s\S]*?\n\}/, 'resolveNodeModel');
-// 第44波: offlineModelList/buildModelHint/tierModelForNode 现在读代理缓存 —— 抽取沙箱里注入 stub(夹具 2 条)。
 const cacheFixture = [{ id: 'claude-cache-strong', label: 'Claude Cache Strong【强】' }, { id: 'claude-cache-fast', label: 'Claude Cache Fast【快】' }];
-const cacheStub = 'const getProxyModelsCache = () => ({ at: "", models: ' + JSON.stringify(cacheFixture) + ' });';
-const M = new Function(cacheStub + '\n' + mpresets + '\n' + presetIds + '\n' + tierLbl + '\n' + tierUse + '\n' + offList + '\n' + tier + '\n' + hint + '\n' + tierModel + '\n' + resolve + '\nreturn {modelCapabilityTier,buildModelHint,tierModelForNode,resolveNodeModel,offlineModelList};')();
+const M = require('../ruyi-workbench/app/backend/model-selection.cjs').createModelSelection({ dataDirectory: HOME, atomicWriteJson: async () => {}, effectiveAnthropicEnv: () => ({}) });
+M.setProxyModelsCache(cacheFixture);
 
 // 能力档位分类。
 ok(M.modelCapabilityTier('deepseek-v4-flash', '') === 'fast', 'P flash→快');

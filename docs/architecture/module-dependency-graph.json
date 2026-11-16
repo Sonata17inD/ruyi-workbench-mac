@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3555,
+    "providedSymbols": 3549,
     "requiredSymbols": 3444,
     "edges": 645,
     "forwardEdges": 61,
@@ -13268,7 +13268,6 @@
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
-        "CLAUDE_ALIAS_IDS",
         "DOCTOR_HEALTH_SEVERITY",
         "DOCTOR_HUMAN_LANGS",
         "HELP_DOC_FILES",
@@ -13278,12 +13277,8 @@
         "LOG_TAIL_DEFAULT_LINES",
         "LOG_TAIL_MAX_BYTES",
         "LOG_TAIL_MAX_LINES",
-        "MODEL_PRESETS",
-        "MODEL_TIER_LABEL",
-        "MODEL_TIER_USE",
         "OPEN_PATH_TARGETS",
         "PORT_FALLBACK_SPAN",
-        "PROXY_MODELS_CACHE_PATH",
         "START_ERROR_KINDS",
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
@@ -13312,7 +13307,6 @@
         "offlineModelList",
         "openPathTargetDir",
         "parseArgs",
-        "proxyModelsCacheMemo",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
         "resolveNodeModel",
@@ -13670,7 +13664,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13740,7 +13735,7 @@
           "provider": "01-config.js",
           "symbol": "effectiveAnthropicEnv",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

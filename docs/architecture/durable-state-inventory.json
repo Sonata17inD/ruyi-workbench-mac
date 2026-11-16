@@ -853,7 +853,7 @@
     {
       "id": "proxy-models-cache",
       "pattern": "<data>/proxy-models-cache.json",
-      "owner": "13-http-router.js",
+      "owner": "../backend/model-selection.cjs",
       "anchor": "'proxy-models-cache.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",

@@ -261,6 +261,7 @@
     "app/backend/runtime-policy.cjs",
     "app/backend/text-codecs.cjs",
     "app/backend/user-question-protocol.cjs",
+    "app/backend/model-selection.cjs",
     "app/backend/toolbox-registry.cjs",
     "app/backend/toolbox-services.cjs"
   ],
