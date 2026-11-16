@@ -432,8 +432,8 @@
     },
     {
       "id": "journal-index",
-      "pattern": "<data>/sessions/<id>.journal/index.json",
-      "owner": "02-session-store.js",
+      "pattern": "<data>/checkpoints/<id>/index.json",
+      "owner": "../backend/checkpoint-journal.cjs",
       "anchor": "journalIndexPath",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -447,7 +447,7 @@
     {
       "id": "journal-reverts",
       "pattern": "<data>/checkpoints/<id>/reverts.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/checkpoint-journal.cjs",
       "anchor": "journalRevertLogPath",
       "schema": "object / schema 1 (items[]: seq, turnSeq, entrySeq, tool, op, files, paths <=5, at, revertedAt, announced)",
       "writePrimitive": "atomicWriteJson inside a per-session serialized read-modify-write chain (journalRevertChains)",
@@ -460,7 +460,7 @@
     },
     {
       "id": "journal-history",
-      "pattern": "<data>/sessions/<id>.journal/history-*.json.gz",
+      "pattern": "<data>/checkpoints/<id>/history-*.json.gz",
       "owner": "10-context-governance.js",
       "anchor": "history-",
       "schema": "gzip JSON",

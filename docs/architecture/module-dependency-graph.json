@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3777,
-    "requiredSymbols": 3491,
+    "providedSymbols": 3729,
+    "requiredSymbols": 3490,
     "edges": 656,
     "forwardEdges": 62,
     "duplicateProvides": 0,
@@ -1425,15 +1425,8 @@
         "INTERVENTION_TERMINAL",
         "IRREVERSIBLE_COMPOUND_TOOLS",
         "IRREVERSIBLE_RESULT_TEXT_MAX",
-        "JOURNAL_GC_RECALIBRATE_EVERY",
-        "JOURNAL_GC_SCAN_HYSTERESIS",
-        "JOURNAL_GLOBAL_MAX_BYTES",
-        "JOURNAL_KEEP_HISTORY_SNAPSHOTS",
         "JOURNAL_KEEP_TURNS",
         "JOURNAL_MAX_BEFORE_BYTES",
-        "JOURNAL_REVERT_LOG_MAX",
-        "JOURNAL_REVERT_PATHS_MAX",
-        "JOURNAL_SWEEP_BACKOFF_MS",
         "MISSIONS_DIR_NAME",
         "MISSION_CHANGE_TYPES",
         "MISSION_CONTAINER_LIMITS",
@@ -1468,12 +1461,6 @@
         "SessionBodies",
         "TODO_MAX_ITEMS",
         "TODO_MAX_TEXT",
-        "WORKSPACE_BASELINE_DEFAULT_BUDGET_MS",
-        "WORKSPACE_BASELINE_EXTS",
-        "WORKSPACE_BASELINE_MAX_FILES",
-        "WORKSPACE_BASELINE_MAX_MEMORY",
-        "WORKSPACE_BASELINE_NAMES",
-        "WORKSPACE_BASELINE_SKIP_DIRS",
         "appendIntervention",
         "appendMissionChangeRecord",
         "applyMissionUpdate",
@@ -1492,9 +1479,8 @@
         "bumpSessionDiskWriteSeq",
         "cancelModelRunsOfDiscardedTurns",
         "canonicalTodoStatus",
-        "captureGitWorkspaceBaseline",
-        "captureTreeWorkspaceBaseline",
         "captureWorkspaceTurnBaseline",
+        "checkpointRollbackContext",
         "claimRewindGeneration",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
@@ -1504,7 +1490,6 @@
         "danglingTurnState",
         "deleteSession",
         "detectDanglingTurn",
-        "dirSize",
         "dropInterventionSessionState",
         "dropSessionBodyState",
         "evaluateMissionCheck",
@@ -1531,43 +1516,21 @@
         "isUntitledSessionTitle",
         "ivCacheKey",
         "journalBytesAdjust",
-        "journalDeltaDuringSweep",
         "journalDir",
         "journalDropEntries",
-        "journalDropEntriesUnlocked",
         "journalGc",
         "journalGcProbe",
-        "journalGcSinceScan",
-        "journalGlobalBytes",
-        "journalGlobalSweep",
-        "journalGlobalSweepOnce",
-        "journalIndexPath",
-        "journalNextEntrySeq",
         "journalReadIndex",
-        "journalReadIndexForWrite",
         "journalRecord",
         "journalRecordMany",
-        "journalRecordManyUnlocked",
-        "journalRecordUnlocked",
         "journalResolveTurnSeq",
-        "journalRevertChains",
-        "journalRevertLogPath",
         "journalRevertLogPrune",
         "journalRevertLogRead",
         "journalRevertLogRecord",
-        "journalRevertLogWrite",
         "journalRevertNoticesAck",
         "journalRevertNoticesPeek",
-        "journalRevertRecordOf",
         "journalRollback",
         "journalSessionCtx",
-        "journalSweepBackoffUntil",
-        "journalSweepInFlight",
-        "journalSweepProtect",
-        "journalSweeping",
-        "journalTrimProtectedSnapshots",
-        "journalWriteChains",
-        "journalWriteIndex",
         "kindForPath",
         "lastUsedEngineRouteUsable",
         "listMissionContainerIds",
@@ -1721,19 +1684,8 @@
         "withJournalWriteLock",
         "withMissionContainerLock",
         "withSessionMutateLock",
-        "workspaceBaselineBudgetMs",
-        "workspaceBaselineBudgetOnly",
-        "workspaceBaselineFileSnapshot",
-        "workspaceBaselineGitAbs",
-        "workspaceBaselineGitBefore",
-        "workspaceBaselineGitCheckoutCrlf",
-        "workspaceBaselineGitNames",
         "workspaceBaselineIsCodePath",
-        "workspaceBaselineLfToCrlf",
-        "workspaceBaselineNulPaths",
         "workspaceBaselinePathKey",
-        "workspaceBaselineRemainingMs",
-        "workspaceBaselineSnapshotsEqual",
         "writeMissionContainer",
         "writeSessionNotes"
       ],
@@ -1792,7 +1744,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1820,7 +1773,8 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1867,17 +1821,11 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "assertSessionIdForPath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1942,7 +1890,8 @@
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -2173,21 +2122,21 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2265,14 +2214,14 @@
           "provider": "11-native-tools.js",
           "symbol": "gitReadOnlyGuard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "11-native-tools.js",
           "symbol": "runGit",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -29477,8 +29426,7 @@
         "paths",
         "runKeyedChain",
         "safeJsonParse",
-        "text",
-        "zlib"
+        "text"
       ],
       "direction": "backward"
     },
