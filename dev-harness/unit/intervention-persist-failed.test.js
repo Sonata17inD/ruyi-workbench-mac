@@ -15,7 +15,7 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-persist-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const srv = require('../lib/server-internals').loadServerInternals(['createSession', 'registerIntervention', 'transitionInterventionState', 'readInterventions', 'markInterruptedInterventions', 'mapInterventionTransitionFailure']);
 const { createSession, registerIntervention, transitionInterventionState, readInterventions } = srv;
 
 async function pendingIv(tag) {
@@ -65,3 +65,35 @@ test('[P2] 瞬时锁(EBUSY)两次 ⇒ 重试后照常成功', async () => {
 });
 
 process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+
+test('[P3] terminal write failure reports an uncertain outcome without claiming audit success or replaying the action', async () => {
+  const { sid, ivId } = await pendingIv('terminal');
+  const original = fsp.appendFile;
+  let ran = 0, audits = 0, cleanups = 0;
+  fsp.appendFile = async function (file, data, ...args) {
+    if (String(file).includes(sid) && String(file).endsWith('.interventions.ndjson') && JSON.parse(String(data)).status === 'allowed') {
+      throw Object.assign(new Error('simulated terminal disk full'), { code: 'ENOSPC' });
+    }
+    return original.call(this, file, data, ...args);
+  };
+  let result;
+  try {
+    result = await transitionInterventionState(sid, ivId, undefined, 'allowed', {
+      action: () => { ran++; }, audit: () => { audits++; }, afterTerminal: () => { cleanups++; },
+    });
+  } finally { fsp.appendFile = original; }
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'terminal_persist_failed');
+  assert.equal(result.status, 'applying');
+  const response = srv.mapInterventionTransitionFailure(result);
+  assert.equal(response.status, 503);
+  assert.equal(response.body.error.code, 'intervention.terminal_persist_failed');
+  assert.equal(response.body.error.params.outcomeUnknown, true);
+  assert.ok(!response.body.error.message.includes('nothing was applied'));
+  assert.equal(ran, 1); assert.equal(audits, 0); assert.equal(cleanups, 0);
+  assert.equal((await readInterventions(sid)).find(row => row.id === ivId).status, 'applying');
+  const retry = await transitionInterventionState(sid, ivId, undefined, 'allowed', { action: () => { ran++; } });
+  assert.equal(retry.reason, 'not_pending'); assert.equal(ran, 1);
+  await srv.markInterruptedInterventions();
+  assert.equal((await readInterventions(sid)).find(row => row.id === ivId).status, 'indeterminate');
+});

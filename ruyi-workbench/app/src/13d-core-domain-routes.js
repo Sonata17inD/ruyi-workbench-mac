@@ -1634,6 +1634,9 @@ function mapInterventionTransitionFailure(result) {
     return interventionCommandFailure(reason, 409, { status: result.status || '' }, 'intervention is already being applied');
   }
   if (reason === 'persist_failed') return interventionCommandFailure(reason, 503, {}, 'could not record the decision on disk; nothing was applied, try again');
+  if (reason === 'terminal_persist_failed') return interventionCommandFailure(reason, 503, {
+    status: result.status || 'applying', interventionVersion: Number(result.interventionVersion) || 0, outcomeUnknown: true,
+  }, 'the action ran, but its final state could not be recorded; inspect the execution result before taking further action');
   return interventionCommandFailure(reason, 409, {
     ...(result && result.runId ? { runId: result.runId } : {}),
   }, String(result && result.message || 'intervention cannot be delivered'));

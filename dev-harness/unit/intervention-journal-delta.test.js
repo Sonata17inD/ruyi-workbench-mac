@@ -149,14 +149,16 @@ test('[D6] 缓存生命周期(结构锁):结算与落终态摘缓存,删会话�
   const settle = functionBlock(src, 'settleIntervention');
   const transition = functionBlock(src, 'transitionInterventionState');
   const drop = functionBlock(src, 'dropInterventionSessionState');
-  const del = functionBlock(src, 'deleteSession');
+  const deletion = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/session-deletion.cjs'), 'utf8');
+  const del = functionBlock(deletion, 'deleteSession');
   assert.ok(settle.length > 100 && transition.length > 1000 && drop.length > 50 && del.length > 1000, '切到了');
   assert.match(settle, /interventionRecordCache\.delete\(/, '结算(终态)摘缓存');
   assert.match(transition, /interventionRecordCache\.delete\(/, '落终态摘缓存');
   assert.ok(!/interventionRecordCache\.set\([^)]*termRec/.test(transition), '终态记录不再塞回缓存');
   assert.match(drop, /interventionRecordCache\.delete\(/);
   assert.match(drop, /interventionAppendCounts\.delete\(/);
-  assert.match(del, /dropInterventionSessionState\(id\)/, '删会话清它名下的介入缓存与节拍计数');
+  assert.match(del, /invalidateSessionState\(id\)/, '删除调用显式状态失效接口');
+  assert.match(src, /invalidateSessionState: id => \{[^}]*dropInterventionSessionState\(id\)/, '组合入口连接介入缓存与节拍计数清理');
 });
 
 process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });

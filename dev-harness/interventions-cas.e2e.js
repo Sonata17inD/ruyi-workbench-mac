@@ -193,7 +193,7 @@ async function cas(token, sid, ivId, expectedVersion, toStatus, crashAt, source)
     // 116c: 管家来源的审计标签必须自成一档 —— 「谁按的这个批准」是事后解释与撤销的第一现场。
     ok(/source === 'steward' \? 'steward_decision'/.test(src), "e 13d 审计标签 switch 有 source==='steward' -> 'steward_decision' 分支");
     ok(/source: String\(opts\.source \|\| 'contract'\)/.test(src), "e 02 transitionInterventionState 把 source 原样写进 applying/terminal 行");
-    ok(/function stewardMayAct\(permissionMode, eventKind, toolTier\)/.test(src), 'e 06i 管家放行范围经 stewardMayAct 真值表(管家自身无档位)');
+    ok(/function stewardMayAct\(permissionMode, eventKind, toolTier\)/.test(fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/steward-core.cjs'), 'utf8')), 'e 06i 管家放行范围经 stewardMayAct 真值表(管家自身无档位)');
 
   } finally {
     kill(wb); await sleep(200); fs.rmSync(HOME, { recursive: true, force: true });

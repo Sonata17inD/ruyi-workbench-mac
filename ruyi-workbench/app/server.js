@@ -7576,7 +7576,12 @@ async function transitionInterventionState(sessionId, ivId, expectedVersion, toS
     };
     const termRec = { ...applyingRec, ...termRow };   // 完整视图给 audit / afterTerminal / 事件载荷用
     // 动作已经执行,终态没落盘也收不回:记一笔;盘上停在 applying,重启时如实标 indeterminate(见头注)。
-    if (await appendIntervention(sid, termRow) !== true) logEvent({ kind: 'intervention_persist_failed', sessionId: sid, interventionId: id, phase: 'terminal' });
+    if (await appendIntervention(sid, termRow) !== true) {
+      logEvent({ kind: 'intervention_persist_failed', sessionId: sid, interventionId: id, phase: 'terminal' });
+      // The action already ran. Keep the authoritative applying state, refuse replay,
+      // and do not publish a terminal audit or clean up as if persistence succeeded.
+      return { ok: false, reason: 'terminal_persist_failed', status: 'applying', interventionVersion: curVer + 1 };
+    }
     interventionRecordCache.delete(ivCacheKey(sid, id));   // 终态:缓存条目不再有用(见 interventionRecordCache 头注)
     bumpMissionChangeSeq(sid, {
       type: 'intervention_resolved',
@@ -59604,6 +59609,9 @@ function mapInterventionTransitionFailure(result) {
     return interventionCommandFailure(reason, 409, { status: result.status || '' }, 'intervention is already being applied');
   }
   if (reason === 'persist_failed') return interventionCommandFailure(reason, 503, {}, 'could not record the decision on disk; nothing was applied, try again');
+  if (reason === 'terminal_persist_failed') return interventionCommandFailure(reason, 503, {
+    status: result.status || 'applying', interventionVersion: Number(result.interventionVersion) || 0, outcomeUnknown: true,
+  }, 'the action ran, but its final state could not be recorded; inspect the execution result before taking further action');
   return interventionCommandFailure(reason, 409, {
     ...(result && result.runId ? { runId: result.runId } : {}),
   }, String(result && result.message || 'intervention cannot be delivered'));
