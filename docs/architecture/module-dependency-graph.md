@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 3401 | 3472 | 656 | 66 | 0 | 1 |
+| 92 | 3401 | 3468 | 656 | 66 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -68,12 +68,12 @@
 | 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 51 | `06k-config-patch.js` | engine | 1 | 21 | 8 |
 | 52 | `07-autonomy.js` | orchestration | 154 | 83 | 21 |
-| 53 | `08-agent-runs.js` | orchestration | 107 | 120 | 24 |
+| 53 | `08-agent-runs.js` | orchestration | 107 | 119 | 24 |
 | 54 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
 | 55 | `09d-token-estimation.js` | orchestration | 25 | 2 | 2 |
 | 56 | `09-workflow.js` | orchestration | 27 | 274 | 29 |
 | 57 | `10-context-governance.js` | orchestration | 228 | 106 | 21 |
-| 58 | `11-native-tools.js` | tools | 73 | 39 | 12 |
+| 58 | `11-native-tools.js` | tools | 73 | 38 | 12 |
 | 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
@@ -101,12 +101,12 @@
 | 83 | `13u-migration-center.js` | transport | 63 | 36 | 7 |
 | 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
 | 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 86 | `13y-external-bot-credentials.js` | transport | 1 | 5 | 3 |
+| 86 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
 | 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
 | 88 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
 | 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
 | 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 7 |
-| 91 | `14-main.js` | entrypoint | 1 | 589 | 44 |
+| 91 | `14-main.js` | entrypoint | 1 | 588 | 44 |
 
 ## 模块边
 
@@ -308,7 +308,7 @@
 | `07-autonomy.js` | `09d-token-estimation.js` | forward | `estimateTextTokensMemo` |
 | `07-autonomy.js` | `10-context-governance.js` | forward | `CONTEXT_OVERFLOW_PATTERNS`, `cacheContextLength`, `extractContextLength`, `isContextOverflowError` |
 | `07-autonomy.js` | `13f-native-tool-schemas.js` | forward | `MCP_TOOLS`, `PROVIDER_SESSION_TOOL_SCHEMAS` |
-| `08-agent-runs.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SubAgentMemoryHooks`, `TOOL_TIER_RANK`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `fsp`, `makeId`, `nowIso`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `text` |
+| `08-agent-runs.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SubAgentMemoryHooks`, `TOOL_TIER_RANK`, `appendUsageLedger`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `fsp`, `makeId`, `nowIso`, `path`, `paths`, `safeJsonParse`, `samePathKey`, `text` |
 | `08-agent-runs.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig`, `readFileTail`, `safeSessionId` |
 | `08-agent-runs.js` | `01c-runtime-flags.js` | backward | `estimateBucketsEnabled` |
 | `08-agent-runs.js` | `01e-permission-modes.js` | backward | `clampAgentRoleToParent`, `resolvePermissionMode` |
@@ -385,7 +385,7 @@
 | `10-context-governance.js` | `07-autonomy.js` | backward | `buildOpenAiTools`, `fetchOpenAiModels`, `nativeToolTier` |
 | `10-context-governance.js` | `09-workflow.js` | backward | `runOpenAiTurn` |
 | `10-context-governance.js` | `09d-token-estimation.js` | backward | `CONTEXT_WINDOW_FALLBACK`, `EVAPORATED_PREFIX`, `countCjkCodeUnits`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `tokensFromTextCounts` |
-| `11-native-tools.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `RUYI_PATH_BEFORE_VENDOR`, `nowIso`, `paths`, `runKeyedChain`, `ruyiVendorBinDir` |
+| `11-native-tools.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `RUYI_PATH_BEFORE_VENDOR`, `nowIso`, `paths`, `ruyiVendorBinDir` |
 | `11-native-tools.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig`, `safeSessionId`, `sessionPath` |
 | `11-native-tools.js` | `01c-runtime-flags.js` | backward | `observationRecallEnabled` |
 | `11-native-tools.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
@@ -721,10 +721,10 @@
 | `13w-external-bots.js` | `13y-external-bot-credentials.js` | backward | `ExternalBotCredentials` |
 | `13w-external-bots.js` | `13z-external-bot-discovery.js` | backward | `ExternalBotDiscovery` |
 | `13x-external-channel-delivery.js` | `00-boot.js` | backward | `path`, `text` |
-| `13y-external-bot-credentials.js` | `00-boot.js` | backward | `fsp`, `paths`, `runKeyedChain` |
+| `13y-external-bot-credentials.js` | `00-boot.js` | backward | `fsp`, `paths` |
 | `13y-external-bot-credentials.js` | `01-config.js` | backward | `DurableJsonStore` |
 | `13y-external-bot-credentials.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
-| `14-main.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `EventStreamHooks`, `RUYI_EVENTS`, `appendUsageLedger`, `buildUsageSummary`, `createNdjsonLineFeeder`, `flushUsageLedgerSync`, `forEachUsageRow`, `hashArgs`, `neutralizeFenceTag`, `readUsageRows`, `runKeyedChain`, `spawnDetachedChecked`, `usageLedgerCacheStats` |
+| `14-main.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `EventStreamHooks`, `RUYI_EVENTS`, `appendUsageLedger`, `buildUsageSummary`, `createNdjsonLineFeeder`, `flushUsageLedgerSync`, `forEachUsageRow`, `hashArgs`, `neutralizeFenceTag`, `readUsageRows`, `spawnDetachedChecked`, `usageLedgerCacheStats` |
 | `14-main.js` | `01-config.js` | backward | `CONFIG_MIGRATIONS`, `DurableJsonStore`, `autoImportClaudeCodeMcp`, `buildClaudeCliEnv`, `decodeClaudeCliText`, `defaultConfig`, `desktopMcpFromInstalledRoot`, `desktopPythonCandidates`, `detectDesktopMcp`, `detectDesktopMcpAsync`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `generateSessionMcpConfig`, `mutateConfig`, `normalizeConfig`, `pickPython`, `pickPythonAsync`, `prepareAgentCliSpawn`, `probeAgentCliLauncher`, `readConfig`, `readFileTail`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncMcpServersToKimi` |
 | `14-main.js` | `01b-route-auth.js` | backward | `ROUTE_AUTH` |
 | `14-main.js` | `01c-runtime-flags.js` | backward | `appendOnlyToolSchemasEnabled`, `budgetGuardDecision`, `budgetGuardEnabled`, `budgetGuardTurnTokens`, `budgetGuardWarnRatio`, `estimateBucketsEnabled`, `evaporateBudgetBoundaryEnabled`, `execResultCacheEnabled`, `execResultCacheMaxEntries`, `historyReadDedupEnabled`, `reseedReattachFilesEnabled`, `reseedTailUnitsEnabled`, `sessionNotesEnabled`, `sessionNotesInjectEnabled`, `sessionNotesMergeEnabled`, `summaryEntityCheckEnabled`, `summaryFactTableCap`, `summaryFactTableEnabled`, `summaryPromptI18nEnabled`, `summaryRefineEnabled`, `summarySingleShotEnabled`, `toolByteBudgetShadowBytes`, `toolTimeBudgetEnabled`, `toolTimeBudgetHardMs`, `toolTimeBudgetShadowEnabled`, `toolTimeBudgetWarnMs`, `volatileTailLayoutEnabled` |

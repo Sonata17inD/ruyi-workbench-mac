@@ -1,10 +1,11 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 const zlib = require('node:zlib');
 // Checkpoint snapshots, accounting, rollback and notices have one service owner.
-function createCheckpointJournal({ paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit, runKeyedChain, safeJsonParse, sessionPath, getRollbackContext, isSessionActive }) {
+function createCheckpointJournal({ paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit, safeJsonParse, sessionPath, getRollbackContext, isSessionActive }) {
 const JOURNAL_MAX_BEFORE_BYTES = 5 * 1024 * 1024;   // >5MB before-content → skipped:true, content not stored
 const JOURNAL_KEEP_TURNS = 20;                       // per-session GC: keep the most recent 20 turnSeqs
 const JOURNAL_GLOBAL_MAX_BYTES = (() => {

@@ -1,9 +1,10 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 // Per-intervention CAS, journal compaction and restart reconciliation own their
 // write queues and cached records. Execution remains an explicit action callback.
-function createInterventionJournal({ paths, runKeyedChain, nowIso, atomicWriteJson,
+function createInterventionJournal({ paths, nowIso, atomicWriteJson,
   events: RUYI_EVENTS, listAgentRuns, repairTornTail: repairMissionChangeTornTail,
   recordChange: bumpMissionChangeSeq, logEvent }) {
 function interventionFilePath(sessionId) {

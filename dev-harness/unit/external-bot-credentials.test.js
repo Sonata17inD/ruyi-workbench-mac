@@ -6,8 +6,6 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
-const { constBlock, functionBlock } = require('../lib/source-slice');
-const readSource = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
 const plain = value => JSON.parse(JSON.stringify(value));
 const connection = (patch = {}) => ({ id: 'bot_one', platform: 'qq', appId: 'app_one', tenantId: 'app_one', botUserId: '', enabled: false, ...patch });
 const coded = suffix => error => error.code === 'external_credentials.' + suffix && Number.isInteger(error.statusCode) && error.message === error.code;
@@ -50,7 +48,6 @@ function fixture({ platform = 'darwin' } = {}) {
     process: context.process, hooks: { helperPath: () => '/fixture/runtime/macos/ruyi-keychain-helper' },
   });
   context.DurableJsonStore = require('../../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
-  context.runKeyedChain = vm.runInNewContext(functionBlock(readSource('00-boot.js'), 'runKeyedChain') + '\nrunKeyedChain', context);
   const api = require('../../ruyi-workbench/app/backend/external-bot-credentials.cjs').createExternalBotCredentials(context);
   return { api, env, calls, counts: () => ({ writes, children }), disk: () => disk, setDisk: value => { disk = value; },
     mode: value => { mode = value; }, writeError: value => { writeError = value; }, readError: value => { readError = value; } };

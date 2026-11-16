@@ -1,9 +1,10 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 function createMemoryRelations({
   storage: { memoryGlobalDir, memoryProjectDir, readMemoryDir, writeMemoryMeta, atomicWriteJson },
-  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired, runKeyedChain,
+  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired,
 }) {
   const mutations = new Map();
   function locked(scopes, cwd, work) {

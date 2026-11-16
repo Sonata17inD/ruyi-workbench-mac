@@ -165,13 +165,13 @@ const sessionRewindGenHighWater = new Map();
 // 老任务可能已有 changeSeq、却没有本流水：首条记录的前缀被视为 migration baseline；前端首读
 // 从当前 revision 建基线。若已读游标落在 baseline 之前、或流水内部/尾部缺号，则显式 degraded。
 const MissionChanges = require('./backend/mission-changes.cjs').createMissionChanges({
-  paths, sessionPath, sessionWriteChains, readFileTail, runKeyedChain, atomicWriteJson, nowIso,
+  paths, sessionPath, sessionWriteChains, readFileTail, atomicWriteJson, nowIso,
   sessionMissionId: session => sessionMissionId(session),
   invalidateReads: id => SessionPersistence.invalidateReads(id), events: RUYI_EVENTS,
 });
 const { missionChangeFilePath, boundedChangeText, normalizeMissionChangePayload, repairMissionChangeTornTail, appendMissionChangeRecord, foldMissionChangeJournalText, readMissionChangesWithMeta, bumpMissionChangeSeq, missionSignalThrottleAllow, recordMissionStalledChange, recordMissionBudgetTrippedChange, MISSION_CHANGE_TYPES, MISSION_STALL_SIGNAL_WINDOW_MS } = MissionChanges;
 const { interventionFilePath, dropInterventionSessionState, appendIntervention, registerIntervention, settleIntervention, foldInterventionJournalText, readInterventionsWithMeta, readInterventions, interventionJournalWorthCompacting, compactInterventionJournal, markInterruptedInterventions, transitionInterventionState, INTERVENTION_TERMINAL } = require('./backend/intervention-journal.cjs').createInterventionJournal({
-  paths, runKeyedChain, nowIso, atomicWriteJson, events: RUYI_EVENTS, listAgentRuns,
+  paths, nowIso, atomicWriteJson, events: RUYI_EVENTS, listAgentRuns,
   repairTornTail: repairMissionChangeTornTail, recordChange: bumpMissionChangeSeq, logEvent,
 });
 // ── perf(会话正文逐行 sha1 的去重):进程内确定性计数器 ───────────────────────────────────────────────────
@@ -562,7 +562,7 @@ async function readSessionHeadResilient(...args) { return SessionPersistence.rea
 // false = 本回合已被更新的回合顶替,收尾存被丢弃 —— 调用方据此不再派 thread.done / 任务进度(否则把一个
 // 过期回合当成「最新一回合结束」广播出去)。一次普通的停止(没有更新的回合)turnSeq 相等,照常落盘。
 const { saveTurnFinalSession, withSessionMutateLock, mutateSession } = require('./backend/session-transactions.cjs').createSessionTransactions({
-  loadSession, saveSession, runKeyedChain, logEvent,
+  loadSession, saveSession, logEvent,
 });
 
 // 一份内存里的会话对象是不是撤回之前读出来的(驱动器、旁车写入用它判「还该不该接着干」)。
@@ -672,7 +672,7 @@ async function checkpointRollbackContext(sessionId) {
   };
 }
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
-  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard: (...args) => gitReadOnlyGuard(...args), guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit: (...args) => runGit(...args), runKeyedChain, safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
+  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard: (...args) => gitReadOnlyGuard(...args), guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit: (...args) => runGit(...args), safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
 });
 
 // v0.8-S4b B2 — conversation REWIND (Claude Code-style "back up to just before this message"). Truncates
@@ -837,7 +837,7 @@ function collectBridgedWriteTarget(bridgedName, args) {
 // 13d / 13g / 13h 一律调它,禁止另写一份判据。
 // ============================================================================
 
-const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, runKeyedChain, atomicWriteJson });
+const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, atomicWriteJson });
 const { safeMissionId, readMissionContainer, withMissionContainerLock, writeMissionContainer, listMissionContainers, createMissionContainer, patchMissionContainer, missionIndexAdd, missionIndexRemove, MISSION_CONTAINER_MAX_FILES } = MissionStore;
 
 async function readMissionSessionHead(sessionId) {

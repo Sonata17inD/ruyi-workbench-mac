@@ -36,8 +36,8 @@ function fixture() {
     async save(connection,patch) { const current=await this.snapshot(connection);assert.equal(patch.expectedRevision,current.credentialRevision);const values={...localCredentials.get(connection.id),...patch.set};for(const slot of patch.remove||[])delete values[slot];localCredentials.set(connection.id,values);credentialRevision++;return this.inspect(connection); },
   };
   context.DurableJsonStore = require('../../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
-  vm.runInContext(functionBlock(src('00-boot.js'), 'runKeyedChain')
-    + src('13w-external-bots.js') + `;globalThis.api={
+  context.runKeyedChain = require('../../ruyi-workbench/app/backend/keyed-chain.cjs').runKeyedChain;
+  vm.runInContext(src('13w-external-bots.js') + `;globalThis.api={
       read:externalBotReadState,publicConnection:externalBotPublicConnection,
       setup:externalBotStewardSetup,snapshot:async id=>externalBotSetupSnapshot((await externalBotReadState()).connections.find(c=>c.id===id)),
       setupOp:body=>runKeyedChain(externalBotChains,'state',()=>externalBotSetupOperation(body)),saveCredentials:body=>runKeyedChain(externalBotChains,'state',()=>externalBotSaveCredentials(body)),

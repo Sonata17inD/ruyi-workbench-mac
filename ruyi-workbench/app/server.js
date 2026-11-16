@@ -240,18 +240,7 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
-// 按 key 串行的写链(架构还债批 1 #3):同一个 key 上的 work 一个接一个跑,前一个失败不挡后一个;
-// 链尾结算后(成功或失败)若仍是自己就从 map 里摘掉,不留长寿条目。返回的就是这一次 work 的 promise ——
-// 调用方要结果就 await 它,要吞错就自己 catch(helper 只保证链本身不产生未处理的拒绝)。
-// 修前 02 / 08 里七处各自手写同一段 previous.catch().then(work) → set → 自清;需要额外收尾动作的
-// (appendIntervention 的推送与压缩计数、saveSession 的在飞快照)仍然手写,不走这里。
-function runKeyedChain(chains, key, work) {
-  const previous = chains.get(key) || Promise.resolve();
-  const current = previous.catch(() => {}).then(work);
-  chains.set(key, current);
-  current.then(() => {}, () => {}).then(() => { if (chains.get(key) === current) chains.delete(key); });
-  return current;
-}
+const { runKeyedChain } = require('./backend/keyed-chain.cjs');
 
 // 分离式外部启动(打开文件/网址/编辑器/资源管理器)的共用入口。病根:cp.spawn 找不到程序、没权限、被策略拦
 // (ENOENT / EACCES / EPERM)时【不】同步抛出,而是稍后在 ChildProcess 上发 'error' 事件;裸写
@@ -5825,13 +5814,13 @@ const sessionRewindGenHighWater = new Map();
 // 老任务可能已有 changeSeq、却没有本流水：首条记录的前缀被视为 migration baseline；前端首读
 // 从当前 revision 建基线。若已读游标落在 baseline 之前、或流水内部/尾部缺号，则显式 degraded。
 const MissionChanges = require('./backend/mission-changes.cjs').createMissionChanges({
-  paths, sessionPath, sessionWriteChains, readFileTail, runKeyedChain, atomicWriteJson, nowIso,
+  paths, sessionPath, sessionWriteChains, readFileTail, atomicWriteJson, nowIso,
   sessionMissionId: session => sessionMissionId(session),
   invalidateReads: id => SessionPersistence.invalidateReads(id), events: RUYI_EVENTS,
 });
 const { missionChangeFilePath, boundedChangeText, normalizeMissionChangePayload, repairMissionChangeTornTail, appendMissionChangeRecord, foldMissionChangeJournalText, readMissionChangesWithMeta, bumpMissionChangeSeq, missionSignalThrottleAllow, recordMissionStalledChange, recordMissionBudgetTrippedChange, MISSION_CHANGE_TYPES, MISSION_STALL_SIGNAL_WINDOW_MS } = MissionChanges;
 const { interventionFilePath, dropInterventionSessionState, appendIntervention, registerIntervention, settleIntervention, foldInterventionJournalText, readInterventionsWithMeta, readInterventions, interventionJournalWorthCompacting, compactInterventionJournal, markInterruptedInterventions, transitionInterventionState, INTERVENTION_TERMINAL } = require('./backend/intervention-journal.cjs').createInterventionJournal({
-  paths, runKeyedChain, nowIso, atomicWriteJson, events: RUYI_EVENTS, listAgentRuns,
+  paths, nowIso, atomicWriteJson, events: RUYI_EVENTS, listAgentRuns,
   repairTornTail: repairMissionChangeTornTail, recordChange: bumpMissionChangeSeq, logEvent,
 });
 // ── perf(会话正文逐行 sha1 的去重):进程内确定性计数器 ───────────────────────────────────────────────────
@@ -6222,7 +6211,7 @@ async function readSessionHeadResilient(...args) { return SessionPersistence.rea
 // false = 本回合已被更新的回合顶替,收尾存被丢弃 —— 调用方据此不再派 thread.done / 任务进度(否则把一个
 // 过期回合当成「最新一回合结束」广播出去)。一次普通的停止(没有更新的回合)turnSeq 相等,照常落盘。
 const { saveTurnFinalSession, withSessionMutateLock, mutateSession } = require('./backend/session-transactions.cjs').createSessionTransactions({
-  loadSession, saveSession, runKeyedChain, logEvent,
+  loadSession, saveSession, logEvent,
 });
 
 // 一份内存里的会话对象是不是撤回之前读出来的(驱动器、旁车写入用它判「还该不该接着干」)。
@@ -6332,7 +6321,7 @@ async function checkpointRollbackContext(sessionId) {
   };
 }
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
-  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard: (...args) => gitReadOnlyGuard(...args), guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit: (...args) => runGit(...args), runKeyedChain, safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
+  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard: (...args) => gitReadOnlyGuard(...args), guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit: (...args) => runGit(...args), safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
 });
 
 // v0.8-S4b B2 — conversation REWIND (Claude Code-style "back up to just before this message"). Truncates
@@ -6497,7 +6486,7 @@ function collectBridgedWriteTarget(bridgedName, args) {
 // 13d / 13g / 13h 一律调它,禁止另写一份判据。
 // ============================================================================
 
-const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, runKeyedChain, atomicWriteJson });
+const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, atomicWriteJson });
 const { safeMissionId, readMissionContainer, withMissionContainerLock, writeMissionContainer, listMissionContainers, createMissionContainer, patchMissionContainer, missionIndexAdd, missionIndexRemove, MISSION_CONTAINER_MAX_FILES } = MissionStore;
 
 async function readMissionSessionHead(sessionId) {
@@ -20017,7 +20006,7 @@ async function resolveCoreMemoryState(cwd, registry, config = null) {
 // ============================================================================
 const MemoryRelations = require('./backend/memory-relations.cjs').createMemoryRelations({
   storage: { memoryGlobalDir, memoryProjectDir, readMemoryDir, writeMemoryMeta, atomicWriteJson },
-  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired, runKeyedChain,
+  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired,
 });
 function isMemoryRelationType(...args) { return MemoryRelations.isMemoryRelationType(...args); }
 function memoryRelationsFile(...args) { return MemoryRelations.memoryRelationsFile(...args); }
@@ -23328,7 +23317,7 @@ const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunSto
   files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
   lifecycle: { sessionAssociatedSaveIsTombstoned, hasLiveRun: id => activeAgentRuns.has(id), getLiveRun: id => activeAgentRuns.get(id) },
   signals: { missionSignalThrottleAllow, MISSION_STALL_SIGNAL_WINDOW_MS, emit: (...args) => RUYI_EVENTS.emit(...args), logEvent },
-  safeSessionId, safeJsonParse, nowIso, runKeyedChain,
+  safeSessionId, safeJsonParse, nowIso,
 });
 EventStreamHooks.flushSessionAgentRuns = AgentRunStore.flushSessionAgentRuns;
 function agentRunEventsFile(...args) { return AgentRunStore.agentRunEventsFile(...args); }
@@ -33608,7 +33597,7 @@ EventStreamHooks.recentBackgroundAgentJobSessions = BackgroundJobs.recentBackgro
 
 const ShellSessions = require('./backend/shell-sessions.cjs').createShellSessions({
   ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
-  redact, runKeyedChain, safeSessionId, sessionPath,
+  redact,  safeSessionId, sessionPath,
 });
 const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,
   killAllShellSessions, shellMcpChildGuard, shellSessions } = ShellSessions;
@@ -54011,7 +54000,7 @@ const ExternalChannelDelivery = (() => {
 })();
 
 // Explicit credential service dependencies.
-const ExternalBotCredentials = require('./backend/external-bot-credentials.cjs').createExternalBotCredentials({ DurableJsonStore, LocalSecretCrypto, fsp, paths, runKeyedChain, process });
+const ExternalBotCredentials = require('./backend/external-bot-credentials.cjs').createExternalBotCredentials({ DurableJsonStore, LocalSecretCrypto, fsp, paths, process });
 
 // Owner-initiated identity probe against the fixed official Feishu host. One attempt per request, no
 // redirect/proxy/base-URL override, and the app secret is used once and never returned as data.
@@ -55521,7 +55510,6 @@ module.exports = {
   // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A14/F3/NE-12;走查 W1·F10 的 sweepStaleScriptFiles)的纯函数与钩子,一个键收口 —— unit/tool-dispatch-hardening.test.js 直调(sweepStaleScriptFiles:unit/script-run-cleanup.test.js)。
   // 2026-10 能力总闸补桥接面:toolDisabledByPolicy / accPolicyHiddenToolNames / dropPolicyDisabledBridgedTools / ACC_POLICY_TOOL_FAMILIES 同住这个键(unit/acc-capability-gates.test.js 直调)。
   dispatchTestHooks: { sweepStaleScriptFiles, validateNativeToolArgs, suggestToolNames, toolFailureResult, nativeToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, dropPolicyDisabledBridgedTools, ACC_POLICY_TOOL_FAMILIES, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, toolArgsSkeleton, withToolArgsGuide, toolArgsMissingRequired, normalizeMcpToolResult, attachScreenshotImage, desktopAuditEntriesFromResult, bridgedDesktopLeaseMode, mcpChildExitResult, bridgedServerUnavailableMessage },
-  runKeyedChain, // 架构还债批 1 #3:按 key 串行写链的唯一实现(unit/keyed-chain.test.js)
   spawnDetachedChecked, // 分离式外部启动带 'error' 监听的唯一入口(unit/http-input-hardening.test.js 直测 ENOENT 不成 uncaughtException)
   // 架构还债批 2·A:服务商 HTTP 原语(04h)与两个非流式补全外壳 —— unit/provider-http.test.js 钉请求逐字节形状;
   // 瞬时错误重试骨架 —— unit/transient-retry.test.js 钉判据、次数、退避序列与「首字节后不重试」。

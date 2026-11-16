@@ -2,7 +2,7 @@ const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunSto
   files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
   lifecycle: { sessionAssociatedSaveIsTombstoned, hasLiveRun: id => activeAgentRuns.has(id), getLiveRun: id => activeAgentRuns.get(id) },
   signals: { missionSignalThrottleAllow, MISSION_STALL_SIGNAL_WINDOW_MS, emit: (...args) => RUYI_EVENTS.emit(...args), logEvent },
-  safeSessionId, safeJsonParse, nowIso, runKeyedChain,
+  safeSessionId, safeJsonParse, nowIso,
 });
 EventStreamHooks.flushSessionAgentRuns = AgentRunStore.flushSessionAgentRuns;
 function agentRunEventsFile(...args) { return AgentRunStore.agentRunEventsFile(...args); }

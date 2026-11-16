@@ -15,10 +15,7 @@ async function fixture(t) {
     },
   }, safeJsonParse: (s, fallback) => { try { return JSON.parse(s); } catch { return fallback; } },
   SKILL_ID_RE: /^[a-z0-9_-]{1,64}$/i, makeId: () => 'rel_' + (++next), nowIso: () => 'now', fmVal: s => s.trim(), logEvent() {}, memoryIsExpired: () => false,
-  runKeyedChain: (chains, key, work) => {
-    const p = (chains.get(key) || Promise.resolve()).catch(() => {}).then(work); chains.set(key, p);
-    p.then(() => {}, () => {}).then(() => { if (chains.get(key) === p) chains.delete(key); }); return p;
-  }, });
+   });
 }
 test('concurrent proposals preserve all edges and duplicate proposals do not overwrite or duplicate', async t => {
   const graph = await fixture(t);

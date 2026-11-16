@@ -1,7 +1,8 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
-function createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, runKeyedChain, atomicWriteJson }) {
+function createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, atomicWriteJson }) {
 const MISSIONS_DIR_NAME = 'missions';
 const MISSION_CONTAINER_SCHEMA = 1;
 // 容量:事项文件数硬上限。超出后拒绝【新建】(合并/拆分里的新建同样受限),既有事项照常读写。

@@ -1,7 +1,8 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const { AsyncLocalStorage } = require('node:async_hooks');
 // Serializes read/modify/write separately from the lower-level durable write chain.
-function createSessionTransactions({ loadSession, saveSession, runKeyedChain, logEvent }) {
+function createSessionTransactions({ loadSession, saveSession, logEvent }) {
 const mutationScope = new AsyncLocalStorage();
 async function saveTurnFinalSession(session, writer, options = {}) {
   try {

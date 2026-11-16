@@ -1,4 +1,5 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
@@ -7,7 +8,7 @@ const crypto = require('node:crypto');
 const { StringDecoder } = require('node:string_decoder');
 const { platformShellEnvironment } = require('./mac-launch-policy.cjs');
 function createShellSessions({ ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
-  redact, runKeyedChain, safeSessionId, sessionPath }) {
+  redact,  safeSessionId, sessionPath }) {
 // ===================================================================================================
 // Persistent managed bash sessions (provider engine only).
 // A session = one long-lived bash child whose stdout+stderr stream into a

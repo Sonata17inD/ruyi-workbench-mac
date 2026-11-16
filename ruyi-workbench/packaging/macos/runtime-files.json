@@ -307,7 +307,8 @@
     "app/backend/rg-probe.cjs",
     "app/backend/file-type-policy.cjs",
     "app/backend/http-download.cjs",
-    "app/backend/sensitive-paths.cjs"
+    "app/backend/sensitive-paths.cjs",
+    "app/backend/keyed-chain.cjs"
   ],
   "acc": [
     "LICENSE",

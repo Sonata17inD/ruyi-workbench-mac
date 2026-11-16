@@ -14,11 +14,7 @@ test('checkpoint service serializes entries and preserves denied rollback eviden
     paths: { checkpoints: path.join(root, 'checkpoints') },
     assertSessionIdForPath: id => { assert.match(id, /^sess_[a-z]+$/); return id; },
     atomicWriteJson: async (file, value) => { await fs.writeFile(file + '.tmp', typeof value === 'string' ? value : JSON.stringify(value)); await fs.rename(file + '.tmp', file); },
-    runKeyedChain: async (map, key, work) => {
-      const next = (map.get(key) || Promise.resolve()).catch(() => {}).then(work);
-      map.set(key, next);
-      try { return await next; } finally { if (map.get(key) === next) map.delete(key); }
-    },
+
     safeJsonParse: (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } },
     logEvent() {}, nowIso: () => new Date().toISOString(), isSessionActive: () => false,
     getRollbackContext: async id => ({ session: { id } }),

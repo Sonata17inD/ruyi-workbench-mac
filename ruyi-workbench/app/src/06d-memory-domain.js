@@ -1571,7 +1571,7 @@ async function resolveCoreMemoryState(cwd, registry, config = null) {
 // ============================================================================
 const MemoryRelations = require('./backend/memory-relations.cjs').createMemoryRelations({
   storage: { memoryGlobalDir, memoryProjectDir, readMemoryDir, writeMemoryMeta, atomicWriteJson },
-  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired, runKeyedChain,
+  safeJsonParse, SKILL_ID_RE, makeId, nowIso, fmVal, logEvent, memoryIsExpired,
 });
 function isMemoryRelationType(...args) { return MemoryRelations.isMemoryRelationType(...args); }
 function memoryRelationsFile(...args) { return MemoryRelations.memoryRelationsFile(...args); }

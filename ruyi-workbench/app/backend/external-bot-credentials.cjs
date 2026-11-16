@@ -1,7 +1,8 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 // Dedicated local bot credentials, never a model tool. Mac Keychain protects stored values;
 // it does not protect against another program already running as the same OS user. No npm dependency.
-function createExternalBotCredentials({ DurableJsonStore, LocalSecretCrypto, fsp, paths, runKeyedChain, process = globalThis.process }) {
+function createExternalBotCredentials({ DurableJsonStore, LocalSecretCrypto, fsp, paths, process = globalThis.process }) {
   const crypto = require('node:crypto'), path = require('node:path');
   const SLOTS = Object.freeze({ qq: ['botSecret'], feishu: ['verificationToken', 'encryptKey', 'appSecret'] });
   const REF = Object.freeze({ botSecret: 'botSecretEnv', verificationToken: 'verificationTokenEnv', encryptKey: 'encryptKeyEnv', appSecret: 'appSecretEnv' });

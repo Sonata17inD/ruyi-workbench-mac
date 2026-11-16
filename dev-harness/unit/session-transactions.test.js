@@ -3,11 +3,10 @@ require('../lib/self-isolate-home');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createSessionTransactions } = require('../../ruyi-workbench/app/backend/session-transactions.cjs');
-const { runKeyedChain } = require('../../ruyi-workbench/app/server.js');
 function fixture(overrides = {}) {
   let stored = { id: 's', rewindGen: 0, count: 0 };
   const service = createSessionTransactions({
-    runKeyedChain, logEvent() {}, loadSession: async () => structuredClone(stored),
+     logEvent() {}, loadSession: async () => structuredClone(stored),
     saveSession: async value => { stored = structuredClone(value); }, ...overrides,
   });
   return { service, read: () => stored };

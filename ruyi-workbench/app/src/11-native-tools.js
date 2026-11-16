@@ -29,7 +29,7 @@ EventStreamHooks.recentBackgroundAgentJobSessions = BackgroundJobs.recentBackgro
 
 const ShellSessions = require('./backend/shell-sessions.cjs').createShellSessions({
   ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
-  redact, runKeyedChain, safeSessionId, sessionPath,
+  redact,  safeSessionId, sessionPath,
 });
 const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,
   killAllShellSessions, shellMcpChildGuard, shellSessions } = ShellSessions;

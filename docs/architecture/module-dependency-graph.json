@@ -5,7 +5,7 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3401,
-    "requiredSymbols": 3472,
+    "requiredSymbols": 3468,
     "edges": 656,
     "forwardEdges": 66,
     "duplicateProvides": 0,
@@ -1645,8 +1645,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -6291,8 +6290,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -7810,13 +7808,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]
@@ -11721,13 +11712,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]
@@ -24007,13 +23991,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -24661,13 +24638,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "readUsageRows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]
@@ -30842,7 +30812,6 @@
         "nowIso",
         "path",
         "paths",
-        "runKeyedChain",
         "safeJsonParse",
         "samePathKey",
         "text"
@@ -31878,7 +31847,6 @@
         "RUYI_PATH_BEFORE_VENDOR",
         "nowIso",
         "paths",
-        "runKeyedChain",
         "ruyiVendorBinDir"
       ],
       "direction": "backward"
@@ -35870,8 +35838,7 @@
       "to": "00-boot.js",
       "symbols": [
         "fsp",
-        "paths",
-        "runKeyedChain"
+        "paths"
       ],
       "direction": "backward"
     },
@@ -35906,7 +35873,6 @@
         "hashArgs",
         "neutralizeFenceTag",
         "readUsageRows",
-        "runKeyedChain",
         "spawnDetachedChecked",
         "usageLedgerCacheStats"
       ],

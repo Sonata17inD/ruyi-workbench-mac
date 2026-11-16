@@ -1585,8 +1585,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -6187,8 +6186,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -7692,13 +7690,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]
@@ -11593,13 +11584,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]
@@ -23823,13 +23807,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -24467,13 +24444,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "readUsageRows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
           "kinds": [
             "read"
           ]

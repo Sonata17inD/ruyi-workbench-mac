@@ -18,11 +18,7 @@ process.env.RUYI_HOME = root;
 const { mapInterventionTransitionFailure } = require('../lib/server-internals').loadServerInternals(['mapInterventionTransitionFailure']);
 const srv = require('../../ruyi-workbench/app/backend/intervention-journal.cjs').createInterventionJournal({
   paths: { sessions: root }, nowIso: () => new Date().toISOString(), events: { emit() {} }, logEvent() {},
-  runKeyedChain: async (chains, key, work) => {
-    const next = (chains.get(key) || Promise.resolve()).catch(() => {}).then(work);
-    chains.set(key, next);
-    try { return await next; } finally { if (chains.get(key) === next) chains.delete(key); }
-  },
+
   atomicWriteJson: (file, data) => fsp.writeFile(file, data),
   repairTornTail: async () => {}, recordChange: async () => {}, listAgentRuns: async () => [],
 });

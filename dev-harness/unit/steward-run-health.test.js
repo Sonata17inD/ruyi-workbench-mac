@@ -9,7 +9,7 @@ const { pathToFileURL } = require('node:url');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-health-unit-'));
 process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const { loadServerInternals } = require('../lib/server-internals');
-const srv = loadServerInternals(['agentRunHealth', 'missionRunDigest', 'missionHealthRuns', 'buildMissionCard', 'overlayMissionCard', 'pretenderLiveOverlayRevision', 'pretenderIndexRuntime', 'turnSettlers', 'activeChildren', 'activeAgentRuns', 'RUYI_EVENTS', 'saveAgentRun', 'PRETENDER_INDEX_SCHEMA', 'runKeyedChain']);
+const srv = loadServerInternals(['agentRunHealth', 'missionRunDigest', 'missionHealthRuns', 'buildMissionCard', 'overlayMissionCard', 'pretenderLiveOverlayRevision', 'pretenderIndexRuntime', 'turnSettlers', 'activeChildren', 'activeAgentRuns', 'RUYI_EVENTS', 'saveAgentRun', 'PRETENDER_INDEX_SCHEMA']);
 after(() => { srv.activeAgentRuns.clear(); assert.equal(path.dirname(root), path.resolve(os.tmpdir())); assert.ok(path.basename(root).startsWith('ruyi-steward-health-unit-')); fs.rmSync(root, { recursive: true, force: true }); });
 const make = (id = 'run_abcd') => ({ id, sessionId: 'sess_abcdef', status: 'running', createdAt: '2026-10-16T01:00:00Z', updatedAt: '2026-10-16T01:00:00Z', eventSeq: 1, nodes: [{ id: 'idle', status: 'failed' }, { id: 'wait', status: 'waiting_resource', resourceBlockers: [] }], taskPool: [] });
 
@@ -87,7 +87,7 @@ test('snapshot-save health transitions publish existing thread.state, and observ
       atomicWriteJson: async (file, snapshot) => { if (forceFailure) throw new Error('forced snapshot failure'); await fs.promises.writeFile(file, snapshot); } },
     lifecycle: { sessionAssociatedSaveIsTombstoned: () => false, hasLiveRun: id => srv.activeAgentRuns.has(id), getLiveRun: id => srv.activeAgentRuns.get(id) },
     signals: { emit: (...args) => srv.RUYI_EVENTS.emit(...args), logEvent() {} },
-    safeSessionId: id => id, nowIso: () => new Date().toISOString(), runKeyedChain: srv.runKeyedChain,
+    safeSessionId: id => id, nowIso: () => new Date().toISOString(),
   });
   let events = 0;
   let unsubscribe = () => {};

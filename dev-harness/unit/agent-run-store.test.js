@@ -19,11 +19,7 @@ async function fixture(t) {
     lifecycle: { sessionAssociatedSaveIsTombstoned: () => state.tombstone, hasLiveRun: () => true, getLiveRun: () => live },
     signals: { missionSignalThrottleAllow: () => true, MISSION_STALL_SIGNAL_WINDOW_MS: 1000, emit: (...args) => state.events.push(args), logEvent() {} },
     safeSessionId: id => /^[a-z_]+$/.test(id) ? id : null, safeJsonParse: (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } }, nowIso: () => new Date().toISOString(),
-    runKeyedChain: (chains, key, work) => {
-      const next = (chains.get(key) || Promise.resolve()).catch(() => {}).then(work);
-      const tail = next.catch(() => {}); chains.set(key, tail);
-      tail.finally(() => { if (chains.get(key) === tail) chains.delete(key); }); return next;
-    },
+
   });
   return { state, run, live, create, store: create() };
 }

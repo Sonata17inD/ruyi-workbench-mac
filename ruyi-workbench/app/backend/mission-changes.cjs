@@ -1,11 +1,12 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 // Owns mission revision high-water, change journal serialization and signal throttles.
 // Session head mutations share the persistence queue; a missing journal revision
 // remains visible as a gap, never manufactured into a successful record.
 function createMissionChanges({ paths, sessionPath, sessionWriteChains, readFileTail,
-  runKeyedChain, atomicWriteJson, nowIso, sessionMissionId, invalidateReads, events: RUYI_EVENTS }) {
+   atomicWriteJson, nowIso, sessionMissionId, invalidateReads, events: RUYI_EVENTS }) {
 const missionChangeSeqHighWater = new Map();
 function revisionOf(id) { return missionChangeSeqHighWater.get(id) || 0; }
 function seedRevision(id, revision) {

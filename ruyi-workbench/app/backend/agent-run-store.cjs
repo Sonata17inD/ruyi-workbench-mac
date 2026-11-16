@@ -1,4 +1,5 @@
 'use strict';
+const { runKeyedChain } = require('./keyed-chain.cjs');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 const zlib = require('node:zlib');
@@ -6,7 +7,7 @@ function createAgentRunStore({
   files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
   lifecycle: { sessionAssociatedSaveIsTombstoned, hasLiveRun, getLiveRun },
   signals: { missionSignalThrottleAllow, MISSION_STALL_SIGNAL_WINDOW_MS, emit, logEvent },
-  safeSessionId, safeJsonParse, nowIso, runKeyedChain,
+  safeSessionId, safeJsonParse, nowIso,
 }) {
 const agentRunWriteChains = new Map();
 // ============================================================================
