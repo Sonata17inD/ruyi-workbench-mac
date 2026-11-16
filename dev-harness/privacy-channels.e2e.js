@@ -9,7 +9,9 @@ const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-op
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-channels-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
 process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
-const app = loadServerInternals(['readConfig', 'mutateConfig', 'McpStdioClient', 'audioStreamUpstream', 'handleAudioStreamOpen', 'handleAudioStreamSession', 'maybeOcrImageAttachment', 'maybeCompressImageAttachment', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'createKimiAcpRpc', 'writeToChild'], { withEval: true });
+const app = loadServerInternals(['LocalSecretCryptoHooks', 'readConfig', 'mutateConfig', 'McpStdioClient', 'audioStreamUpstream', 'handleAudioStreamOpen', 'handleAudioStreamSession', 'maybeOcrImageAttachment', 'maybeCompressImageAttachment', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'createKimiAcpRpc', 'writeToChild'], { withEval: true });
+const keychainHelper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root);
+app.LocalSecretCryptoHooks.helperPath = () => keychainHelper;
 const t = createRunner('PRIVACY CHANNELS');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(check) { for (let i = 0; i < 200; i++) { if (check()) return true; await sleep(50); } return false; }
@@ -19,7 +21,7 @@ const refused = async work => { try { await work(); return false; } catch (error
 async function main() {
   let mcp, audioServer, summaryServer, foreignProvider;
   try {
-    if (process.platform !== 'win32') { console.log('SKIP production channel persistence requires Windows DPAPI'); return; }
+    if (process.platform !== 'darwin') throw Error('Mac privacy integration requires macOS');
     await app.mutateConfig(current => { Object.assign(current, { credentialEncryptionV1: true, privacyModeV1: 'off', privacyRulesV1: [], defaultWorkspace: work, activeProvider: '', permissionMode: 'acceptEdits', providers: [],
       stewardEnabledV1: false, schedulerEnabledV1: false, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, importAgentInstructions: false, bridgeExternalToolsToProvider: false, runtimeOptimizationShadowV1: false, contextAutoCompactEnabled: false }); return {}; });
     const sentinel = 'channel-private@example.test';
@@ -30,7 +32,7 @@ async function main() {
     const script = path.join(root, 'delayed-mcp.cjs');
     const internalsPath = path.resolve(__dirname, 'lib/server-internals.js');
     const delayHook = `const original = toolCall; toolCall = async (name, args) => { const result = await original(name, args); if (name === 'file_read' && ${JSON.stringify([delayed, delayedError])}.includes(args.path)) { fs.writeFileSync(${JSON.stringify(started)}, 'ready'); const until = Date.now() + 12000; while (!fs.existsSync(${JSON.stringify(release)}) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 30)); if (args.path === ${JSON.stringify(delayedError)}) throw new Error(${JSON.stringify('fixture error: ' + sentinel)}); } return result; };`;
-    fs.writeFileSync(script, `const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp'], { withEval: true }); app.__eval(${JSON.stringify(delayHook)}); app.startMcp();`);
+    fs.writeFileSync(script, `const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp','LocalSecretCryptoHooks'], { withEval: true }); app.LocalSecretCryptoHooks.helperPath=()=>${JSON.stringify(keychainHelper)}; app.__eval(${JSON.stringify(delayHook)}); app.startMcp();`);
     mcp = new app.McpStdioClient({ id: 'privacy-fixture', command: process.execPath, args: [script], cwd: work, startupTimeoutMs: 20000 });
     await mcp.start();
     const listed = await mcp._rpc('resources/list', {}); const uri = listed.resources?.[0]?.uri;

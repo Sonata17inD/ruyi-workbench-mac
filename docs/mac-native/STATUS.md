@@ -486,3 +486,10 @@
 - 真实 MCP EOF（空闲及在途请求）、配置资源掩码与 URI 拒绝、Mac 能力动态刷新、shell 子进程限制四件 E2E 通过。旧 Mac 能力断言仍期待已删除 Windows 工具返回 platform.unsupported，更新为实际删除契约 unknown-tool；旧 shell 回归输出名改为实际 shell_run。
 - 两项直接模块测试覆盖 EOF 等待请求完成、期间开启隐私后结果及异常均不得泄露原文、隐私模式隐藏工具与资源。privacy-channels 旧集成仍受 Windows DPAPI 条件跳过，本次不计为通过；该跨通道集成迁移仍待完成。
 - 模块边界、依赖图、EOL、构建一致性、facts 与 diff 通过。backend 74 模块，共享宿主 70463 行；旧图仍有 1 SCC，未将独立模块无 import 环误计为架构完成。第四阶段与最终冻结发行未完成，未重复打包。
+
+## 工作包 4aw：Mac 隐私集成验收补齐
+
+- 移除 privacy-channels／privacy-protocols／privacy-gateway 的 Windows DPAPI 跳过条件；非 Mac 环境明确失败，Mac 实际执行全部断言。协议夹具改用 shell_run 与 Mac shell 引号契约。
+- 新增测试专用临时密钥助手，父／子宿主通过既有 LocalSecretCryptoHooks 指定同一隔离助手；生产 Mac AES-GCM 封装、凭据库、配置持久化和隐私网关照常执行，不替换为明文存储，也不访问真实系统 Keychain。浏览器夹具提供显式 isolatedKeychain 选项，仅影响测试入口。
+- privacy-channels 39、privacy-protocols 483、privacy-gateway 128 个断言全部通过，无跳过。覆盖 MCP 结果／异常策略切换、语音／媒体／CLI 门、三种 Provider 协议、主子 Agent／历史引用／实际 shell 和 MCP 工具、浏览器设置与加密禁用／恢复。此次临时助手验证不代替原生 Keychain 权限验收。
+- 全仓语法 1375 文件零失败；EOL 与 diff 通过。日志位于 /tmp/ruyi-mac-privacy-{channels,protocols,gateway}.log。上个工作包登记的跨通道集成迁移缺口已关闭；核心模块分层及最终冻结发行仍未完成，未重复打包。

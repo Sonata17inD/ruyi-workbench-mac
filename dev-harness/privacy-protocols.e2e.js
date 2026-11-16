@@ -9,7 +9,8 @@ const { loadServerInternals } = require('./lib/server-internals');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-protocols-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
 process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
-const app = loadServerInternals(['runSessionTurn', 'createSession', 'loadSession', 'readConfig', 'mutateConfig', 'PrivacyGateway', 'PrivacyCore', 'providerRawCompletion', 'runSubAgentCore', 'guardFileToolPath', 'toolCall', 'mcpClients', 'mcpStartingClients', 'killAllMcpClients']);
+const app = loadServerInternals(['LocalSecretCryptoHooks', 'runSessionTurn', 'createSession', 'loadSession', 'readConfig', 'mutateConfig', 'PrivacyGateway', 'PrivacyCore', 'providerRawCompletion', 'runSubAgentCore', 'guardFileToolPath', 'toolCall', 'mcpClients', 'mcpStartingClients', 'killAllMcpClients']);
+app.LocalSecretCryptoHooks.helperPath = (() => { const helper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root); return () => helper; })();
 const t = createRunner('PRIVACY PROTOCOLS'), email = 'protocol-contact@example.test', secret = 'fixture-private-key-123456789';
 const idPrefix = '11010120000101001', weights = [7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2];
 const identity = idPrefix + '10X98765432'[weights.reduce((sum, n, i) => sum + n * Number(idPrefix[i]), 0) % 11];
@@ -44,14 +45,14 @@ async function stopMcp() {
 async function main() {
   const endpoints = [];
   try {
-    if (process.platform !== 'win32') { console.log('SKIP production privacy fixture requires Windows DPAPI; portable gateway behavior is covered by unit tests'); return; }
+    if (process.platform !== 'darwin') throw Error('Mac privacy integration requires macOS');
     fs.writeFileSync(path.join(work, 'contact.txt'), JSON.stringify({ email, idCard: identity, apiKey: secret }, null, 2));
     const mcpScript = path.join(root, 'synthetic-contact-mcp.cjs'), called = path.join(root, 'mcp-called');
     fs.writeFileSync(mcpScript, `const fs=require('node:fs'),rl=require('node:readline').createInterface({input:process.stdin});rl.on('line',line=>{let m;try{m=JSON.parse(line)}catch{return}if(m.id===undefined)return;let result={};if(m.method==='initialize')result={protocolVersion:'2024-11-05',capabilities:{tools:{}},serverInfo:{name:'synthetic-contact',version:'1'}};else if(m.method==='tools/list')result={tools:[{name:'read_contact',description:'Read synthetic contact with no arguments.',inputSchema:{type:'object',properties:{},additionalProperties:false}}]};else if(m.method==='tools/call'&&m.params?.name==='read_contact'){fs.writeFileSync(process.argv[3],'called');result={content:[{type:'text',text:fs.readFileSync(process.argv[2],'utf8')}]};}process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result})+'\\n');});`);
     for (const style of ['chat', 'responses', 'anthropic']) {
       if (fs.existsSync(called)) fs.unlinkSync(called);
       let step = 0, retried = false, scenario = 'main', output = 'out-' + style + '.txt'; const captured = [], events = [];
-      const command = "Write-Output '" + JSON.stringify({ email, idCard: identity, apiKey: secret }) + "'";
+      const command = require('./lib/platform-shell-fixture').echo(JSON.stringify({ email, idCard: identity, apiKey: secret }));
       const script = body => {
         captured.push(body);
         if (!body.stream) return { final: true };
@@ -59,12 +60,12 @@ async function main() {
         step++;
         const plan = ['history', 'off-history'].includes(scenario) ? ['file_write'] : scenario === 'child'
           ? ['file_read', 'file_write', 'file_search', 'file_write', 'contact__read_contact', 'file_write']
-          : ['file_read', 'file_write', 'line', 'file_write', 'file_search', 'file_write', 'powershell_run', 'file_write', 'contact__read_contact', 'file_write'];
+          : ['file_read', 'file_write', 'line', 'file_write', 'file_search', 'file_write', 'shell_run', 'file_write', 'contact__read_contact', 'file_write'];
         const tool = plan[step - 1];
         if (tool === 'file_read') return { name: tool, args: { path: 'contact.txt' } };
         if (tool === 'line') return { name: 'file_read', args: { path: 'contact.txt', lineOffset: 2, lineLimit: 2 } };
         if (tool === 'file_search') return { name: tool, args: { root: work, glob: 'contact.txt', pattern: 'idCard', context: 1 } };
-        if (tool === 'powershell_run') return { name: tool, args: { command, cwd: work } };
+        if (tool === 'shell_run') return { name: tool, args: { command, cwd: work } };
         if (tool === 'contact__read_contact') return { name: tool, args: {} };
         if (tool === 'file_write') {
           const results = ['history', 'off-history'].includes(scenario) ? historyResults(body) : historyRows(body).at(-1) || '';
@@ -138,7 +139,7 @@ async function main() {
       await app.runSessionTurn({ sessionId: session.id, message: 'Read contact.txt and copy its contact email into a local text file. User is user-input@example.test.', onEvent: event => events.push(event) });
       const file = path.join(work, 'out-' + style + '.txt');
       t.ok(fs.existsSync(file) && fs.readFileSync(file, 'utf8') === email + '\n' + identity, style + ': real full/line/search/command/MCP results feed restored email and ID to actual file execution');
-      t.ok(['file_read', 'file_search', 'powershell_run', 'contact__read_contact', 'file_write'].every(name => paired(events, name)) && fs.existsSync(called), style + ': every representative real tool has an exact successful call/result pair');
+      t.ok(['file_read', 'file_search', 'shell_run', 'contact__read_contact', 'file_write'].every(name => paired(events, name)) && fs.existsSync(called), style + ': every representative real tool has an exact successful call/result pair');
       const writes = events.filter(event => event.type === 'tool_use' && event.name === 'file_write');
       t.ok(writes.length === 5 && writes.every(event => paired(events, 'file_write', candidate => candidate.id === event.id) && event.input?.content === email + '\n' + identity && fs.readFileSync(path.resolve(work, event.input.path), 'utf8') === email + '\n' + identity),
         style + ': full, line, search, command and MCP each independently round-trip their latest result to a real output');
