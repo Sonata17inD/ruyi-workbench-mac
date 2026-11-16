@@ -22,7 +22,7 @@ const os = require('os');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePort } = require('./free-port.js');
-const { repairProviderHistoryPairing, repairProviderHistoryToolArgs } = require(path.join(WB, 'app', 'server.js'));
+const { repairProviderHistoryPairing, repairProviderHistoryToolArgs } = require(path.join(WB, 'app/backend/provider-history.cjs')).createProviderHistory({ logEvent() {} });
 const FAKE_PORT = await getFreePort(), WB_PORT = await getFreePort();
 
 const HOME = path.join(os.tmpdir(), 'wcw-provider-pairing-e2e');
@@ -98,7 +98,7 @@ function writeProviderHistory(id, entries) {
 // ─── [U] 单元:repairProviderHistoryPairing 形状 ───
 console.log('── [U] repairProviderHistoryPairing 单元 ──');
 if (typeof repairProviderHistoryPairing !== 'function') {
-  fail++; console.log('FAIL U0 repairProviderHistoryPairing 已从 server.js 导出(修复未落地)');
+  fail++; console.log('FAIL U0 repairProviderHistoryPairing 由 provider-history 模块提供(修复未落地)');
 } else {
   const tc = (id, name) => ({ id, type: 'function', function: { name: name || 'file_read', arguments: '{}' } });
   // a) 完整配对:不动,返回 0
@@ -159,7 +159,7 @@ if (typeof repairProviderHistoryPairing !== 'function') {
 // ─── [U2] 单元:repairProviderHistoryToolArgs 形状(第117波 参数铁律)───
 console.log('── [U2] repairProviderHistoryToolArgs 单元 ──');
 if (typeof repairProviderHistoryToolArgs !== 'function') {
-  fail++; console.log('FAIL U2-0 repairProviderHistoryToolArgs 已从 server.js 导出(修复未落地)');
+  fail++; console.log('FAIL U2-0 repairProviderHistoryToolArgs 由 provider-history 模块提供(修复未落地)');
 } else {
   const tcArgs = (id, args, name) => ({ id, type: 'function', function: { name: name || 'file_read', arguments: args } });
   // a) 五种形状一网打尽:空串 / 半截 JSON(流被截断)/ 非 JSON / 合法 JSON 但不是对象 / 完好。

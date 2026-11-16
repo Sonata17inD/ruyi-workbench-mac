@@ -1271,53 +1271,6 @@ async function launchPersistedAgentRun({ sessionId, runId, retryNodeId, retryCas
   return { ok: true, accepted: true, runId };
 }
 
-// Mirror display messages that were created outside the Provider engine (Claude turns and workflow
-// summaries) into its stateless API history exactly once. Provider-native tool traces stay intact; the cursor
-// only accounts for the shared display stream and therefore survives tool calls and context compaction.
-function appendDisplayMessagesToProviderHistory(session, start) {
-  const messages = Array.isArray(session.messages) ? session.messages : [];
-  const from = Math.max(0, Math.min(Number(start) || 0, messages.length));
-  for (let i = from; i < messages.length; i++) {
-    const m = messages[i];
-    if (!m || typeof m.content !== 'string' || !m.content.trim()) continue;
-    if (m.role === 'user') {
-      // Historical images are represented by their attachment prompt only. Re-embedding pixels from every
-      // earlier turn would make an engine switch unexpectedly huge and bypass the live image cap.
-      session.providerHistory.push({ role: 'user', content: m.content + buildAttachmentPrompt(m.attachments) + buildDeliveryRevisionPrompt(m.meta), ...(m.meta ? { meta: m.meta } : {}) });
-    } else if (m.role === 'assistant') {
-      session.providerHistory.push({ role: 'assistant', content: m.content });
-    }
-  }
-  session.providerHistoryCursor = messages.length;
-}
-
-function syncProviderHistoryFromDisplay(session) {
-  if (!Array.isArray(session.providerHistory)) session.providerHistory = [];
-  const messages = Array.isArray(session.messages) ? session.messages : [];
-  if (session.providerHistory.length === 0) {
-    appendDisplayMessagesToProviderHistory(session, 0);
-    return;
-  }
-
-  let cursor = session.providerHistoryCursor;
-  if (!Number.isInteger(cursor) || cursor < 0 || cursor > messages.length) {
-    // Legacy migration: an existing Provider history already contains all Provider turns. Only a trailing
-    // Claude gap can be missing. Start just after the latest Provider assistant; otherwise mark the current
-    // display tail consumed without duplicating an established history.
-    cursor = messages.length;
-    if (lastAssistantEngine(messages) === 'claude') {
-      for (let i = messages.length - 1; i >= 0; i--) {
-        const m = messages[i];
-        if (m && m.role === 'assistant' && (m.engine === 'openai' || String(m.source || '').startsWith('provider:'))) {
-          cursor = i + 1;
-          break;
-        }
-      }
-    }
-  }
-  appendDisplayMessagesToProviderHistory(session, cursor);
-}
-
 // 引擎在回合闭包里特判的工具(需要活的 session / onEvent / provider 闭包,不能经 toolCall 的无上下文 handler 跑)。
 // 模型常常不直接调,而是 tool_invoke_read/edit/exec {name:'todo_write', arguments:{...}} 走代理 —— 代理分发到 toolCall,
 // 命中的是无回合上下文的兜底 handler:todo_write / mission_update 回 ok:true 却没有任何落盘/事件(静默空操作),

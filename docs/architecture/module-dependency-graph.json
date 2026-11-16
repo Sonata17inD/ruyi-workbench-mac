@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3658,
-    "requiredSymbols": 3484,
+    "providedSymbols": 3659,
+    "requiredSymbols": 3487,
     "edges": 655,
     "forwardEdges": 61,
     "duplicateProvides": 0,
@@ -1437,6 +1437,7 @@
         "MissionChanges",
         "MissionControl",
         "MissionStore",
+        "ProviderHistory",
         "SESSION_BODY_READ_TRANSIENT",
         "SESSION_BRIEF_GIST_CHARS",
         "SESSION_BRIEF_TITLE_CHARS",
@@ -1454,6 +1455,7 @@
         "SessionBodies",
         "SessionPersistence",
         "SessionRewind",
+        "appendDisplayMessagesToProviderHistory",
         "appendIntervention",
         "appendMissionChangeRecord",
         "applyMissionUpdate",
@@ -1627,6 +1629,7 @@
         "sortSessionMetas",
         "stewardWatchNoteFrom",
         "stopMissionAgentRuns",
+        "syncProviderHistoryFromDisplay",
         "toolImageSessionTag",
         "transitionInterventionState",
         "updateSessionMeta",
@@ -2067,6 +2070,20 @@
         },
         {
           "provider": "03-bridge-guard.js",
+          "symbol": "buildAttachmentPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "buildDeliveryRevisionPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
             "read"
@@ -2091,6 +2108,13 @@
           "symbol": "DesktopShell",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "lastAssistantEngine",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -9022,7 +9046,6 @@
         "WAIT_AGENTS_DEFAULT_MS",
         "WAIT_AGENTS_MAX_MS",
         "agentNodeTimeLimits",
-        "appendDisplayMessagesToProviderHistory",
         "canonicalToolInvokeCall",
         "commonPrefixChars",
         "deliverAgentRunEnvelope",
@@ -9038,7 +9061,6 @@
         "runAgentWorkflow",
         "runOpenAiTurn",
         "settleWaitEnvelopes",
-        "syncProviderHistoryFromDisplay",
         "toolSchemaNamesSentBySession",
         "unmarkAgentEnvelopeDelivered",
         "unwrapProxiedControlCall",
@@ -9510,6 +9532,13 @@
           ]
         },
         {
+          "provider": "02-session-store.js",
+          "symbol": "syncProviderHistoryFromDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02c-turn-segments.js",
           "symbol": "createTurnSegmentBuilder",
           "kinds": [
@@ -9680,13 +9709,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "installActiveChildEventFanout",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "lastAssistantEngine",
           "kinds": [
             "call"
           ]
@@ -29419,6 +29441,8 @@
       "from": "02-session-store.js",
       "to": "03-bridge-guard.js",
       "symbols": [
+        "buildAttachmentPrompt",
+        "buildDeliveryRevisionPrompt",
         "guardFileToolPath",
         "pathWithinRoot",
         "realpathForContainment"
@@ -29437,6 +29461,7 @@
       "from": "02-session-store.js",
       "to": "04-permission-runtime.js",
       "symbols": [
+        "lastAssistantEngine",
         "logEvent",
         "stopSession"
       ],
@@ -31569,7 +31594,8 @@
         "saveSession",
         "saveTurnFinalSession",
         "sessionSaveIsTombstoned",
-        "settleIntervention"
+        "settleIntervention",
+        "syncProviderHistoryFromDisplay"
       ],
       "direction": "backward"
     },
@@ -31637,7 +31663,6 @@
         "hasPendingPermissionForSession",
         "hasPendingQuestionForSession",
         "installActiveChildEventFanout",
-        "lastAssistantEngine",
         "logEvent",
         "permissionWaitMs",
         "redact",

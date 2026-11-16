@@ -32,6 +32,7 @@
     "app/backend/process-runtime.cjs",
     "app/backend/prompt-registry.cjs",
     "app/backend/provider-anthropic.cjs",
+    "app/backend/provider-history.cjs",
     "app/backend/provider-http.cjs",
     "app/backend/provider-wire.cjs",
     "app/backend/retrieval-index.cjs",
