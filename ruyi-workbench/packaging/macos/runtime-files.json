@@ -31,6 +31,7 @@
     "app/backend/steward-core.cjs",
     "app/backend/session-bodies.cjs",
     "app/backend/session-executions.cjs",
+    "app/backend/session-index.cjs",
     "app/backend/storage-stat.cjs",
     "app/backend/turn-segments.cjs",
     "app/backend/visual-pipeline.cjs",

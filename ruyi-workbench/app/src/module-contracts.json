@@ -1395,7 +1395,6 @@
         "SESSION_HEAD_READ_RETRIES",
         "SESSION_HEAD_TRANSIENT",
         "SESSION_INDEX_FILE",
-        "SESSION_INDEX_FLUSH_MS",
         "SESSION_LOAD_OMIT_PROVIDER",
         "SESSION_META_DEFER_TIMEOUT_MS",
         "SESSION_META_STALE_REPLAYS",
@@ -1458,7 +1457,6 @@
         "followupAcceptanceCriterion",
         "getSessionBodyState",
         "healStalePendingSegments",
-        "inflightSessionIndex",
         "interventionAppendCounts",
         "interventionFilePath",
         "interventionJournalWorthCompacting",
@@ -1565,11 +1563,8 @@
         "normalizeTodoItems",
         "normalizeTodoWriteArgs",
         "noteMissionMembership",
-        "noteSessionIndexBadHead",
         "overlayUnflushedSessionIndex",
-        "parseSessionHeadForIndex",
         "patchMissionContainer",
-        "pendingSessionIndex",
         "planSessionBodyAppend",
         "projectBridgedIrreversible",
         "providerHistoryToolCalls",
@@ -1621,23 +1616,11 @@
         "sessionBodyText",
         "sessionBriefOf",
         "sessionDeleteTombstones",
-        "sessionDiskIdsExpectedInIndex",
         "sessionDiskWriteSeq",
         "sessionDiskWriteSeqOf",
         "sessionDisplayTitle",
         "sessionFirstUserExcerpt",
-        "sessionHeadStampOf",
-        "sessionIndexChain",
-        "sessionIndexFileStamp",
-        "sessionIndexFlushTimer",
-        "sessionIndexKnownBadHeads",
-        "sessionIndexLatestWrite",
-        "sessionIndexMemo",
         "sessionIndexPath",
-        "sessionIndexRebuildScanHook",
-        "sessionIndexRebuildsActive",
-        "sessionIndexRetireSeq",
-        "sessionIndexWriteSeq",
         "sessionKind",
         "sessionLegacyRewinds",
         "sessionMessagesDelta",
@@ -1677,7 +1660,6 @@
         "waitMissionTurnSettled",
         "withJournalWriteLock",
         "withMissionContainerLock",
-        "withSessionIndexLock",
         "withSessionMutateLock",
         "workspaceBaselineBudgetMs",
         "workspaceBaselineBudgetOnly",
@@ -1693,7 +1675,6 @@
         "workspaceBaselineRemainingMs",
         "workspaceBaselineSnapshotsEqual",
         "writeMissionContainer",
-        "writeSessionIndex",
         "writeSessionNotes"
       ],
       "requires": [
@@ -1715,7 +1696,8 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1792,7 +1774,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1841,7 +1824,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1862,7 +1846,7 @@
           "provider": "01-config.js",
           "symbol": "noteSessionsDirOwnWrite",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1883,7 +1867,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {

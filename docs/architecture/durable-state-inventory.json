@@ -391,7 +391,7 @@
     {
       "id": "session-index",
       "pattern": "<data>/sessions/index.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-index.cjs",
       "anchor": "SESSION_INDEX_FILE",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson; unique sync tmp on exit",
