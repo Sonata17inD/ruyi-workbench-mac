@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3634,
+    "providedSymbols": 3633,
     "requiredSymbols": 3479,
     "edges": 653,
     "forwardEdges": 61,
@@ -12046,7 +12046,6 @@
         "shellShapeOutput",
         "shellSliceFrom",
         "shellStart",
-        "shellStripClixml",
         "shellVisibleTo",
         "stopMacShell",
         "summarizeGitStatus",

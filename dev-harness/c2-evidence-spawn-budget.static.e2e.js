@@ -4,6 +4,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const runs = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '08-agent-runs.js'), 'utf8');
+const evidence = fs.readFileSync(path.join(root, 'ruyi-workbench/app/backend/agent-evidence.cjs'), 'utf8');
 const workflow = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '09-workflow.js'), 'utf8');
 const provider = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '06-provider-engine.js'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'public', 'js', 'interaction-prompts.js'), 'utf8');
@@ -13,12 +14,12 @@ function ok(value, message) {
   console.log('PASS', message);
 }
 
-ok(runs.includes("'deterministic_gap'"), 'M2 gaps are indexed as deterministic evidence');
-ok(runs.includes("check: 'coverage_unhandled'"), 'coverage unhandled items use a typed check');
-ok(runs.includes("check: 'propagate_unpropagated'"), 'propagate unpropagated items use a typed check');
-ok(runs.includes("valueDigest: `sha256:${valueDigest}`"), 'raw gap values are replaced by digests');
-ok(runs.includes("['tool_result', 'deterministic_gap']"), 'evidence catalog accepts deterministic gap events');
-ok(!runs.includes('rawValue:'), 'evidence graph does not persist raw deterministic gap values');
+ok(evidence.includes("'deterministic_gap'"), 'M2 gaps are indexed as deterministic evidence');
+ok(evidence.includes("check: 'coverage_unhandled'"), 'coverage unhandled items use a typed check');
+ok(evidence.includes("check: 'propagate_unpropagated'"), 'propagate unpropagated items use a typed check');
+ok(evidence.includes("valueDigest: `sha256:${valueDigest}`"), 'raw gap values are replaced by digests');
+ok(evidence.includes("['tool_result', 'deterministic_gap']"), 'evidence catalog accepts deterministic gap events');
+ok(!evidence.includes('rawValue:'), 'evidence graph does not persist raw deterministic gap values');
 
 ok(runs.includes('Math.min(1000, Math.max(1, Number(maxIters'), 'sub-agent request budget accepts up to 1000');
 ok(runs.includes('budget = Math.min(adaptiveBudgetLimit, budget + TOOL_ITERATION_BUDGETS.extension)'), 'sub-agent grows budget in bounded increments');

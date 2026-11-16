@@ -52,8 +52,9 @@ ok(/config\.uiMode : 'simple'/.test(server), "S5: uiMode 非法值回退 'simple
 ok(!/config\.uiMode : 'pro'/.test(server), "S5: 回退 'pro' 绝迹");
 
 // ── S6: orchestrate maxItems 三方对齐 64 ────────────────────────────────────
-ok(/type: 'array', minItems: 1, maxItems: 64,/.test(server), 'S6: orchestrate_agents schema maxItems=64');
-ok(!/maxItems: 32/.test(server), 'S6: schema maxItems:32 绝迹');
+const toolSchemas = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');
+ok(/type: 'array', minItems: 1, maxItems: 64,/.test(toolSchemas), 'S6: orchestrate_agents schema maxItems=64');
+ok(!/maxItems: 32/.test(toolSchemas), 'S6: schema maxItems:32 绝迹');
 
 // ── S7: D6 目录可用口径 ─────────────────────────────────────────────────────
 ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(server), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');

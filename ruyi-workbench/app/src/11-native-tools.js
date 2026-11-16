@@ -81,15 +81,6 @@ EventStreamHooks.forgetBackgroundJobs = (sessionId, jobIds) => {
   try { writeBackgroundJobRows(sessionId, kept); } catch (error) { logEvent({ kind: 'background_job_persist_error', sessionId, error: String(error.message || error) }); return 0; }
   return rows.length - kept.length;
 };
-// 135c(真机走查):PowerShell 把进度流序列化成 CLIXML 写进 stderr —— 一行 `#< CLIXML` 加一大行 `<Objs …>…</Objs>`
-// (里面还常是乱码的本地化进度文字)。它原样进了完成回执(对话里、模型下一轮都看得到)和「看输出」。
-// 只剥这两种行首,别的一个字不动。
-function shellStripClixml(text) {
-  return String(text || '').split('\n').filter(line => {
-    const l = line.replace(/^\s+/, '');
-    return !l.startsWith('#< CLIXML') && !l.startsWith('<Objs ') && !l.startsWith('<Obj ');
-  }).join('\n');
-}
 function completeBackgroundJob(shellId, sess) {
   if (sess.mode !== 'background' || sess.notified || !sess.sessionId) return;
   sess.notified = true;
@@ -98,7 +89,7 @@ function completeBackgroundJob(shellId, sess) {
     id: sess.jobId, shellId, name: sess.name, sessionId: sess.sessionId,
     status: sess.cleanup?.incomplete ? 'failed' : sess.cancelled ? 'cancelled' : sess.timedOut ? 'timed_out' : sess.exitCode === 0 ? 'succeeded' : 'failed',
     ...shellCleanupFields(sess),
-    exitCode: sess.exitCode, output: shellStripClixml(sess.buf).slice(-6000), truncated: sess.baseOffset > 0 || sess.buf.length > 6000,
+    exitCode: sess.exitCode, output: String(sess.buf || '').slice(-6000), truncated: sess.baseOffset > 0 || sess.buf.length > 6000,
     completedAt: nowIso(),
   };
   persistBackgroundJob(job);
@@ -718,10 +709,9 @@ function shellList(ctx) {
 
 // 135c:线程内后台任务条的三个读写口(13d 的 /api/sessions/:id/background 路由用)。只认【后台命令】
 // (shell_start 带 command 的那种):交互式 shell 是一个常驻提示符,不是「一件在跑的事」。
-// PowerShell 把进度流序列化成 CLIXML 写进 stderr(`#< CLIXML`、`<Objs …>`),那不是给人看的「最近一行」。
 function shellLastLine(sess) {
   const tail = String(sess.buf || '').slice(-4000).split(/\r?\n/).map(l => l.trim())
-    .filter(l => l && !l.startsWith('#< CLIXML') && !l.startsWith('<Objs ') && !l.startsWith('<Obj '));
+    .filter(Boolean);
   return tail.length ? redact(tail[tail.length - 1]).slice(0, 160) : '';
 }
 function sessionBackgroundShellRows(sessionId) {
@@ -748,7 +738,7 @@ function sessionShellOutputTail(sessionId, shellId, maxChars = 8000) {
   const sess = sid ? shellLookup(String(shellId || ''), { sessionId: sid }) : null;
   if (!sess || !sess.sessionId) return null;
   const cap = Math.min(20000, Math.max(200, Number(maxChars) || 8000));
-  return { output: redact(shellStripClixml(String(sess.buf || '').slice(-cap))), truncated: sess.baseOffset > 0 || sess.buf.length > cap, running: sess.running === true };
+  return { output: redact(String(sess.buf || '').slice(-cap)), truncated: sess.baseOffset > 0 || sess.buf.length > cap, running: sess.running === true };
 }
 
 // 13d 的后台任务路由经延迟绑定命名空间取这四个口(直接引用会造一条 13d->11 的新循环边,依赖图门禁不收)。
