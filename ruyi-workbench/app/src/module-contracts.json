@@ -3457,22 +3457,7 @@
       "provides": [
         "VoiceLearn"
       ],
-      "requires": [
-        {
-          "provider": "04j-hanzi-pinyin.js",
-          "symbol": "HanziPinyin",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "05-claude-engine.js",
@@ -25934,20 +25919,6 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "responsesHistoryWithCompleteToolPairs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-learn.js",
-          "symbol": "VoiceLearn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
           "kinds": [
             "read"
           ]

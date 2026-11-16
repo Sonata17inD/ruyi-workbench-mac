@@ -5,8 +5,8 @@
   "summary": {
     "modules": 92,
     "providedSymbols": 3588,
-    "requiredSymbols": 3464,
-    "edges": 650,
+    "requiredSymbols": 3460,
+    "edges": 646,
     "forwardEdges": 61,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -3541,22 +3541,7 @@
       "provides": [
         "VoiceLearn"
       ],
-      "requires": [
-        {
-          "provider": "04j-hanzi-pinyin.js",
-          "symbol": "HanziPinyin",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "05-claude-engine.js",
@@ -26133,20 +26118,6 @@
           ]
         },
         {
-          "provider": "04j-voice-learn.js",
-          "symbol": "VoiceLearn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "05-claude-engine.js",
           "symbol": "AGENT_CLI_ADAPTERS",
           "kinds": [
@@ -29674,22 +29645,6 @@
         "encodeAnthropicMessages",
         "encodeAnthropicQuick",
         "normalizeAnthropicUsage"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "04j-voice-learn.js",
-      "to": "04j-hanzi-pinyin.js",
-      "symbols": [
-        "HanziPinyin"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "04j-voice-learn.js",
-      "to": "04j-voice-lexicon.js",
-      "symbols": [
-        "VoiceLexicon"
       ],
       "direction": "backward"
     },
@@ -36241,22 +36196,6 @@
         "providerReasoningEffort",
         "providerWireProtocol",
         "responsesHistoryWithCompleteToolPairs"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "14-main.js",
-      "to": "04j-voice-learn.js",
-      "symbols": [
-        "VoiceLearn"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "14-main.js",
-      "to": "04j-voice-lexicon.js",
-      "symbols": [
-        "VoiceLexicon"
       ],
       "direction": "backward"
     },

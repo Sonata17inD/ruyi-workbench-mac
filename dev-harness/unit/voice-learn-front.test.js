@@ -11,18 +11,13 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { functionBlock } = require('../lib/source-slice.js');
 const { fixture: composerFixture } = require('../lib/composer-race-fixture.js');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-voice-learn-front-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
-const { VoiceLearn } = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
-process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+const { VoiceLearn } = require('../../ruyi-workbench/app/backend/voice-learn.cjs');
 const PUBLIC_JS = path.join(repo, 'ruyi-workbench', 'app', 'public', 'js');
 const load = () => import(pathToFileURL(path.join(PUBLIC_JS, 'composer-voice.js')).href);
 const fmt = (key, params = {}) => key + JSON.stringify(params);

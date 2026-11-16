@@ -14,16 +14,9 @@
 //   [L8] 边界:学习关着什么都不动、pending 过期、腾位置的顺序(墓碑 → 打字词 → 学来词,手加的永远不挤)、打字词上限
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-voice-learn-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
-const repo = path.resolve(__dirname, '../..');
-const { VoiceLearn: L, VoiceLexicon: V } = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
-process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+const { VoiceLearn: L } = require('../../ruyi-workbench/app/backend/voice-learn.cjs');
+const { VoiceLexicon: V } = require('../../ruyi-workbench/app/backend/voice-lexicon.cjs');
 
 const T0 = '2026-10-01T10:00:00.000Z';
 const at = (h) => new Date(Date.parse(T0) + h * 3600e3).toISOString();

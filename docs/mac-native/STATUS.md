@@ -493,3 +493,10 @@
 - 新增测试专用临时密钥助手，父／子宿主通过既有 LocalSecretCryptoHooks 指定同一隔离助手；生产 Mac AES-GCM 封装、凭据库、配置持久化和隐私网关照常执行，不替换为明文存储，也不访问真实系统 Keychain。浏览器夹具提供显式 isolatedKeychain 选项，仅影响测试入口。
 - privacy-channels 39、privacy-protocols 483、privacy-gateway 128 个断言全部通过，无跳过。覆盖 MCP 结果／异常策略切换、语音／媒体／CLI 门、三种 Provider 协议、主子 Agent／历史引用／实际 shell 和 MCP 工具、浏览器设置与加密禁用／恢复。此次临时助手验证不代替原生 Keychain 权限验收。
 - 全仓语法 1375 文件零失败；EOL 与 diff 通过。日志位于 /tmp/ruyi-mac-privacy-{channels,protocols,gateway}.log。上个工作包登记的跨通道集成迁移缺口已关闭；核心模块分层及最终冻结发行仍未完成，未重复打包。
+
+## 工作包 4ax：语音词库完整服务模块
+
+- voice-lexicon、voice-learn、hanzi-pinyin 迁为独立 CommonJS 模块；学习内核直接依赖词库和读音表，不再由共享宿主提供。生成脚本同步输出 backend，发行白名单加入三个模块。
+- 四份单元直接引用所属模块，删除两个宿主测试导出及纯函数测试无用的数据目录初始化。22 项语音／拼音／前后端契约测试、3 项导出面测试通过；修改测试初始化后受影响 20 项复验通过。
+- 全部 20898 字读音重新输入生成器，输出与迁移后文件逐字节一致。真实词库 API 与学习 API 两件 E2E 全通过，包含词库持久化、模型判词、关闭学习和日志不写原文。
+- backend 77 模块，共享宿主 68689 行，旧图 92 片段／646 边／1 SCC。边界、依赖图、EOL、构建一致性、facts 与 diff 通过。第四阶段与冻结发行仍未完成，未重复打包。

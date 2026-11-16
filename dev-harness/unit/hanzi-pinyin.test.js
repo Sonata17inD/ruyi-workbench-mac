@@ -15,10 +15,9 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-hanzi-pinyin-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
-const { VoiceLearn } = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
+const { HanziPinyin: P } = require('../../ruyi-workbench/app/backend/hanzi-pinyin.cjs');
 const gen = require(path.join(repo, 'dev-harness', 'hanzi-pinyin-generate.js'));
 process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
-const P = VoiceLearn.HanziPinyin;
 
 test('[P1] 运行时的表:覆盖面、主读音在前、多音字、ü、表外', () => {
   assert.ok(Object.isFrozen(P));
@@ -71,16 +70,16 @@ test('[P2] 生成脚本:去声调、只收两个字段、基本区之外不收�
   assert.deepEqual(table.get(0x5355), ['dan', 'chan', 'shan']);
   assert.deepEqual(table.get(0x7EFF), ['lv', 'lu']);
   const text = gen.render(table);
-  const sandbox = {};
-  vm.runInNewContext(text + '\nthis.out = HanziPinyin;', sandbox);
-  const mod = sandbox.out;
+  const sandbox = { module: { exports: {} } };
+  vm.runInNewContext(text, sandbox);
+  const mod = sandbox.module.exports.HanziPinyin;
   assert.equal(mod.COUNT, 3);
   assert.deepEqual(Array.from(mod.readings('一')), ['yi']);
   assert.deepEqual(Array.from(mod.readings('单')), ['dan', 'chan', 'shan']);
   assert.deepEqual(Array.from(mod.readings('绿')), ['lv', 'lu']);
   assert.deepEqual(Array.from(mod.readings('二')), []);
   assert.ok(!/[\\'"`]/.test(text.split('\n').filter(l => /^    '/.test(l)).map(l => l.slice(5, -2)).join('')), '编码段里没有要转义的字符');
-  const src = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '04j-hanzi-pinyin.js'), 'utf8');
+  const src = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'hanzi-pinyin.cjs'), 'utf8');
   assert.match(src, /【生成物,不要手改】由 dev-harness\/hanzi-pinyin-generate\.js/);
   assert.ok(src.includes('里有读音的 ' + P.COUNT + ' 个字'), '头注里的字数与 COUNT 一致');
   assert.ok(src.includes('COUNT = ' + P.COUNT + ';'));

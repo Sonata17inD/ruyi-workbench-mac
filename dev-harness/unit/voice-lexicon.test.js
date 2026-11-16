@@ -11,16 +11,8 @@
 //   [V7] 设置页视图:墓碑不出现、原厂表全文只在要的时候给
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-voice-lexicon-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
-const repo = path.resolve(__dirname, '../..');
-const { VoiceLexicon: V } = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
-process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+const { VoiceLexicon: V } = require('../../ruyi-workbench/app/backend/voice-lexicon.cjs');
 
 const stateOf = (text, extra = {}) => ({ ...V.applyText(V.defaultState(), text, '2026-10-01T00:00:00.000Z').state, ...extra });
 

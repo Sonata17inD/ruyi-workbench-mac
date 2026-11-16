@@ -2,6 +2,9 @@
   "schemaVersion": 1,
   "workbench": [
     "app/backend/http-protocol.cjs",
+    "app/backend/hanzi-pinyin.cjs",
+    "app/backend/voice-lexicon.cjs",
+    "app/backend/voice-learn.cjs",
     "app/backend/mcp-server.cjs",
     "app/backend/agent-cli-types.cjs",
     "app/backend/checkpoint-journal.cjs",
