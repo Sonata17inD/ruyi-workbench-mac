@@ -12358,7 +12358,7 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12612,7 +12612,7 @@
           "provider": "02-session-store.js",
           "symbol": "normalizeMetaToolArgs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12668,14 +12668,14 @@
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02f-turn-effect-kinds.js",
           "symbol": "normalizeToolInvokeArgs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12971,7 +12971,8 @@
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13034,7 +13035,7 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13048,7 +13049,7 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolSchema",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13062,7 +13063,8 @@
           "provider": "07-autonomy.js",
           "symbol": "policySessionFor",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13090,7 +13092,8 @@
           "provider": "07-autonomy.js",
           "symbol": "toolDisabledResult",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
