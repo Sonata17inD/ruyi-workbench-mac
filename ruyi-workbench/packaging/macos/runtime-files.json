@@ -23,6 +23,7 @@
     "app/backend/agent-evidence.cjs",
     "app/backend/agent-quality.cjs",
     "app/backend/agent-results.cjs",
+    "app/backend/agent-recovery.cjs",
     "app/backend/agent-run-store.cjs",
     "app/backend/autonomy-grants.cjs",
     "app/backend/mission-control.cjs",

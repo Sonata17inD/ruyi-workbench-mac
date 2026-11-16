@@ -247,7 +247,6 @@ module.exports = {
   readAgentRunEvents, appendAgentRunEvent, flushAgentRunEvents, runSubAgentCore,
   // 第40波:boot 恢复并发化 + syncRunEventSeq 尾窗化 — exposed for e2e(尾窗/全读回落/池语义直测)。
   syncRunEventSeq,
-  mapPool,
   autoResumeInterruptedRuns,
   markInterruptedAgentRuns,
   // 第40波:性能观测面 — exposed for e2e(路径归一化/直方图分桶/趋势节流直测)。

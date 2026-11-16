@@ -7864,12 +7864,10 @@
         "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
-        "AUTO_RESUME_MAX",
+        "AgentRecovery",
         "AgentRunStore",
         "BUILTIN_AGENT_WORKFLOWS",
         "C3_HIGH_RISK_GATE",
-        "CLAUDE_EXEC_TOOLS",
-        "CLAUDE_WRITE_TOOLS",
         "EVIDENCE_REFS_MAX_ITEMS",
         "NODE_SUMMARY_MAX",
         "NODE_WRITE_FAMILY",
@@ -7903,8 +7901,6 @@
         "bumpRunIntervention",
         "canonicalWorkflowValue",
         "classifyNodeErrorText",
-        "classifyNodeResumeRisk",
-        "classifyRunResumeTier",
         "computeSchedulerStep",
         "computeWaveSeq",
         "cutAtSentence",
@@ -7921,7 +7917,6 @@
         "indexNodeEvidence",
         "listAgentRunDigests",
         "listAgentRuns",
-        "mapPool",
         "markInterruptedAgentRuns",
         "materializePoolItem",
         "nodeDeliveryEligibility",
@@ -8111,7 +8106,7 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8147,7 +8142,7 @@
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8210,21 +8205,21 @@
           "provider": "02-session-store.js",
           "symbol": "readInterventions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionHeadResilient",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8238,14 +8233,14 @@
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "applySessionPermissionModeOverride",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19692,13 +19687,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "classifyRunResumeTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "listAgentRuns",
           "kinds": [
             "call"
@@ -27809,13 +27797,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "listAgentRunDigests",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "mapPool",
           "kinds": [
             "read"
           ]

@@ -32,7 +32,7 @@ function req(method, p, body, headers = {}) {
 }
 async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.6-6.3s 且余量过窄,是「FAIL workbench up」假红的根(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { try { const r = await req('GET', '/health'); if (r.status === 200) return true; } catch {} await sleep(150); } return false; }
-const src = readServerSource();
+const src = readServerSource() + '\n' + fs.readFileSync(path.join(WB, 'app/backend/agent-recovery.cjs'), 'utf8');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
@@ -58,17 +58,10 @@ ok(/type: 'run_resume_deferred'/.test(src) && /type: 'run_auto_resume'/.test(src
 // [P] 纯逻辑:classifyNodeResumeRisk / classifyRunResumeTier
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] 分级纯函数 ──');
-const m1 = src.match(/function classifyNodeResumeRisk\(node\) \{[\s\S]*?\n\}/);
-const m2 = src.match(/function classifyRunResumeTier\(run, currentPermissionMode\) \{[\s\S]*?\n\}/);
-ok(!!m1 && !!m2, 'P 源抽取两分级函数');
 const NODE_WRITE_FAMILY = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-// 对抗轮修引入 CLAUDE_EXEC_TOOLS/CLAUDE_WRITE_TOOLS 两个模块级 const,源抽取需一并注入(与被测函数同源定义)。
-const mExec = src.match(/const CLAUDE_EXEC_TOOLS = new Set\(\[[^\]]*\]\);/);
-const mWrite = src.match(/const CLAUDE_WRITE_TOOLS = new Set\(\[[^\]]*\]\);/);
-ok(!!mExec && !!mWrite, 'P 源抽取 CLAUDE_EXEC_TOOLS/CLAUDE_WRITE_TOOLS');
-const PRELUDE = mExec[0] + '\n' + mWrite[0] + '\n';
-const classifyNodeResumeRisk = new Function('NODE_WRITE_FAMILY', PRELUDE + m1[0] + '\nreturn classifyNodeResumeRisk;')(NODE_WRITE_FAMILY);
-const classifyRunResumeTier = new Function('NODE_WRITE_FAMILY', PRELUDE + m1[0] + '\n' + m2[0] + '\nreturn classifyRunResumeTier;')(NODE_WRITE_FAMILY);
+const { classifyNodeResumeRisk, classifyRunResumeTier } = require('../ruyi-workbench/app/backend/agent-recovery.cjs').createAgentRecovery({
+  isWriteTool: name => NODE_WRITE_FAMILY.has(name), sessions: {}, runs: {}, execution: {}, interventions: {},
+});
 ok(classifyNodeResumeRisk({ wait: { mode: 'timer' } }).safe === true, 'P wait 节点=safe(零副作用)');
 ok(classifyNodeResumeRisk({ gate: { mode: 'vote' } }).safe === true && classifyNodeResumeRisk({ gate: { mode: 'dedupe' } }).safe === true, 'P 确定性门 vote/dedupe=safe');
 ok(classifyNodeResumeRisk({ toolTier: 'read' }).safe === true && classifyNodeResumeRisk({}).safe === true, 'P read/缺省 tier=safe');
