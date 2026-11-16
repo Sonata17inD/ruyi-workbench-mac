@@ -298,7 +298,8 @@
     "app/backend/code-search.cjs",
     "app/backend/path-patterns.cjs",
     "app/backend/search-workers.cjs",
-    "app/backend/file-walker.cjs"
+    "app/backend/file-walker.cjs",
+    "app/backend/content-search.cjs"
   ],
   "acc": [
     "LICENSE",
