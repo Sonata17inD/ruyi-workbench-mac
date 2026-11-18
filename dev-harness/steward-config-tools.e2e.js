@@ -242,9 +242,7 @@ try {
     for (let i = 0; i < 40; i++) { after = await get('/api/steward/arbiter'); if (after && after.maxParallel === 9) break; await sleep(150); }
     ok(after && after.maxParallel === 9,
       `G3 服务端仲裁上限即时变成 9(改上限不必重启;got ${after && after.maxParallel})`);
-    // 架构还债批 2 B2:applyConfigPatch 从 13-http-router.js 原样搬进了配置域的 06k-config-patch.js(同名同行为),
-    // 两个调用方经 01 的 ConfigPatchHooks 调。G4 跟着落点走;G4b 钉「路由那边真的只剩调用、没有留一份副本」。
-    ok(/StewardHooks\.arbiterRefresh/.test(fs.readFileSync(path.join(WB, 'app', 'src', '06k-config-patch.js'), 'utf8').split('async function applyConfigPatch')[1].split('\nConfigPatchHooks.applyConfigPatch = applyConfigPatch;')[0]),
+    ok(/StewardHooks\.arbiterRefresh/.test(fs.readFileSync(path.join(WB, 'app', 'backend', 'config-patch.cjs'), 'utf8')),
       'G4 源码单点:arbiterRefresh 就挂在 applyConfigPatch 里(路由与管家共用同一条落盘路径)');
     {
       const routerSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'configuration-routes.cjs'), 'utf8');

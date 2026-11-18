@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2056 | 3095 | 596 | 14 | 0 | 0 |
+| 87 | 2052 | 3088 | 596 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -68,7 +68,7 @@
 | 50 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
 | 51 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
 | 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
-| 53 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
+| 53 | `06k-config-patch.js` | engine | 1 | 18 | 7 |
 | 54 | `07-autonomy.js` | orchestration | 50 | 52 | 14 |
 | 55 | `08-agent-runs.js` | orchestration | 59 | 100 | 23 |
 | 56 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
@@ -86,7 +86,7 @@
 | 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 69 | `13i-steward-inbox.js` | transport | 23 | 26 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 60 | 20 | 9 |
-| 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
+| 71 | `13aa-steward-delivery.js` | unclassified | 5 | 19 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 43 | 123 | 18 |
 | 73 | `13l-steward-ops.js` | transport | 28 | 127 | 22 |
 | 74 | `13g-steward.js` | transport | 9 | 63 | 11 |
@@ -233,7 +233,7 @@
 | `06f-autonomy-grants.js` | `00-boot.js` | backward | `hashArgs`, `isSensitiveDataPath`, `logEvent`, `makeId` |
 | `06g-resource-leases.js` | `00-boot.js` | backward | `makeId`, `nowIso` |
 | `06i-steward-core.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `06k-config-patch.js` | `00-boot.js` | backward | `fsp`, `logEvent`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `os`, `path`, `paths`, `unmaskSecrets` |
+| `06k-config-patch.js` | `00-boot.js` | backward | `logEvent`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `paths`, `unmaskSecrets` |
 | `06k-config-patch.js` | `01-config.js` | backward | `ConfigPatchHooks`, `invalidateAgentCliPathCaches`, `mutateConfig`, `syncAgentCliMcpManifests`, `syncAgentRolesToClaude`, `syncClaudeCliSettings`, `syncMcpServersToClaude` |
 | `06k-config-patch.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES_REQUIRING_CONFIRM` |
 | `06k-config-patch.js` | `02-session-store.js` | backward | `rememberLastUsedEngineRoute` |
@@ -413,7 +413,7 @@
 | `13-http-router.js` | `10-context-governance.js` | backward | `agentConversationContextMeta`, `configuredConversationWindow`, `learnedWindowCap`, `runAgentExternalCompact` |
 | `13-http-router.js` | `10a-session-turn.js` | backward | `runProviderCompactTracked`, `runSessionTurn` |
 | `13-http-router.js` | `12-tool-dispatch.js` | backward | `TOOL_HANDLERS`, `computeHealth`, `loadSkillRegistry`, `toolCall` |
-| `13aa-steward-delivery.js` | `00-boot.js` | backward | `DeliveryHooks`, `crypto`, `ensureDataRootReal`, `fsp`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `nowIso`, `path`, `pathWithinAnyRoot`, `text` |
+| `13aa-steward-delivery.js` | `00-boot.js` | backward | `DeliveryHooks`, `ensureDataRootReal`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `nowIso`, `pathWithinAnyRoot` |
 | `13aa-steward-delivery.js` | `01-config.js` | backward | `readConfig` |
 | `13aa-steward-delivery.js` | `02-session-store.js` | backward | `buildMissionAcceptanceProjection`, `kindForPath`, `loadSession`, `readMissionContainer`, `sessionDisplayTitle`, `sessionMissionId` |
 | `13aa-steward-delivery.js` | `03-bridge-guard.js` | backward | `fileAllowedRoots`, `remoteUncDenialResolved` |

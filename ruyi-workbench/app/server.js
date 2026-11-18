@@ -1938,183 +1938,19 @@ const { normalizeAgentResource, normalizeAgentResources, remapAgentResources, ag
 // Explicit scheduler-core module.
 const { SCHEDULER_CODE_CR, SCHEDULER_CODE_DEL, SCHEDULER_CODE_LF, SCHEDULER_CODE_SPACE, SCHEDULER_CODE_TAB, SCHEDULER_CREATORS, SCHEDULER_CRON_DAY_SCAN, SCHEDULER_DEFAULT_POLICY, SCHEDULER_DESCRIBE_KEYS, SCHEDULER_DOW_KEYS, SCHEDULER_FIRE_MODES, SCHEDULER_FORBIDDEN_PAYLOAD_KEYS, SCHEDULER_LIMITS, SCHEDULER_ON_FAILURE, SCHEDULER_ON_MISSED, SCHEDULER_OUTCOMES, SCHEDULER_PAYLOAD_KINDS, SCHEDULER_PHASES, SCHEDULER_SCHEDULE_KINDS, SCHEDULER_TARGET_MODES, SCHEDULER_TEXT_LF, SCHEDULER_TEXT_SPACE, SCHEDULER_THREAD_TIERS, SCHEDULER_WORKDIR_CHARS, SchedulerHooks, describeSchedule, missedOccurrence, nextFireAt, normalizeSchedulerTask, occurrenceKey, parseCronExpr, schedulerClampInt, schedulerCleanBlock, schedulerCleanLine, schedulerCronDayMatches, schedulerCronField, schedulerCronNextFireAt, schedulerDaysInMonth, schedulerFail, schedulerFindForbiddenKey, schedulerLocalMs, schedulerParseHhMm, schedulerParseYmd, schedulerStripControl } = require('./backend/scheduler-core.cjs').createSchedulerCore();
 
-// ============================================================================
-// 架构还债批 2 B2:配置补丁的落盘与副作用 —— 配置域的业务规则,不是传输层的事。
-//
-// applyConfigPatch 原先住在 13-http-router.js:掩码密钥冲突检测、toolbox- 服务商归属、服务商缩水自动备份 +
-// 审计事件、Claude CLI / agent roles / MCP 同步触发,全是配置域的规矩;13l 的 steward_config_set 为了走同一条
-// 落盘路径,只能回头伸进路由文件里调它。现在它住在这里,路由层只剩 body 解析与错误翻译。
-//
-// 为什么是一个排在 06j 之后的独立模块、而不是塞进 01-config.js:
-//   · 它要调 02(rememberLastUsedEngineRoute / sessionEngineRouteFromConfig)、05(掩码三件)、06i(StewardHooks):
-//     放在 01 里就是 01->02、01->06i 两条新前向边;放在这里全是后向边。
-//   · 两个调用方(13、13l)若直接引用 applyConfigPatch,本模块就会经 13 -> 06k -> 01 被卷进唯一的大 SCC(已在
-//     上限 32)。所以调用方经 01 的 ConfigPatchHooks 调(与 06j / 13t 同一个模具),本模块零入边、不进任何环。
-// ============================================================================
+const applyConfigPatch = require('./backend/config-patch.cjs').createConfigPatch({
+  policy: {
+    PERMISSION_MODES_REQUIRING_CONFIRM, maskedSecretConflictMessage, maskedSecretConflicts, unmaskSecrets,
+  },
+  storage: { mutateConfig, paths, logEvent },
+  hooks: { StewardHooks, ToolboxHooks },
+  cli: {
+    invalidateAgentCliPathCaches, rememberLastUsedEngineRoute, sessionEngineRouteFromConfig,
+    syncAgentCliMcpManifests, syncAgentRolesToClaude, syncClaudeCliSettings,
+  },
+  mcp: { invalidateMcpRuntime, syncMcpServersToClaude },
+});
 
-// 第 116 波 116-2e:POST /api/config 的落盘与全部副作用,零行为抽出为 applyConfigPatch(body)。
-// 为什么抽:`steward_config_set`(§3.5「如意设置」行)必须经【同一个落盘函数】写入 —— 116h 的
-// arbiterRefresh、Claude CLI settings 同步、agent roles 同步、MCP 同步都挂在这条路径上,管家走
-// 另一条路就会静默漏掉它们(「改了上限要等下一条线程跑完才生效」正是这种漏的样子)。
-// 入参 body = 用户/管家提交的 patch(未 normalize);返回 writeConfig 之后已 normalize 的 next。
-// 路由层(13 的 POST /api/config)只剩 body 解析与错误翻译、掩码回包;13l 的 steward_config_set 同样调它。
-// 架构还债批 2 B2:从 13-http-router.js 原样搬到这里(同名、同行为)。两个调用方都经 01 的 ConfigPatchHooks 调,
-// 不直接引用本模块的符号 —— 本模块因此零入边、挂在唯一大 SCC 之外(见文件头)。
-async function applyConfigPatch(rawBody, options = {}) {
-  // 116-3 B1(会话/权限口径子审查):把全局默认权限切到「全自动」此前【没有服务端门】——
-  // §8.6 那条二次确认只由界面出,任何别的调用方(脚本、117 壳、管家自己)一个 POST 就能把全局
-  // 默认档改成 auto/bypass。13d 的 PATCH /api/sessions/:id 早就有这道门(同一张
-  // PERMISSION_MODES_REQUIRING_CONFIRM、同一个 permission.confirm_required 错误码),这里补齐另一半。
-  // `confirm` 是请求级信号不是配置键,判完就从 patch 里剥掉,绝不能跟着 merged 落进 config.json。
-  const raw = (rawBody && typeof rawBody === 'object' && !Array.isArray(rawBody)) ? rawBody : {};
-  const confirmed = raw.confirm === true;
-  const body = { ...raw };
-  delete body.confirm;
-  if (['privacyModeV1', 'privacyTechnicalV1', 'privacyRulesV1', 'privacyPolicyRecoveryRequiredV1', 'credentialEncryptionV1'].some(key => Object.hasOwn(body, key))) {
-    throw Object.assign(new Error('Use the dedicated privacy settings endpoint.'), { code: 'privacy.dedicated_settings_required', statusCode: 409 });
-  }
-  if (Object.prototype.hasOwnProperty.call(body, 'permissionMode')) {
-    const requested = body.permissionMode == null ? '' : String(body.permissionMode);
-    if (PERMISSION_MODES_REQUIRING_CONFIRM.includes(requested) && !confirmed) {
-      throw Object.assign(new Error('switching the global default to full-auto requires an explicit confirm:true (it can change files and run commands while you are away)'), {
-        code: 'permission.confirm_required', statusCode: 409, permissionMode: requested,
-      });
-    }
-  }
-  // 117n-M2:整段「读 current -> merge -> 落盘」搬进 mutateConfig 的临界区。外部契约与顺序不变
-  // (确认门仍在读之前、三路同步仍在写之后),变的只是这段临界区不再能被并发的另一次配置改动
-  //  穿插 —— 此前 /api/config 与 storage/policy、agent-roles、连接器启停彼此吞字段。
-  const patched = await mutateConfig(async (current) => {
-    // 设置回执的撤销与提议使用同一写锁比对现值，不能以锁外快照覆盖用户后来改的值。
-    const expected = options.expected ? unmaskSecrets(options.expected, current) : null;
-    if (expected && Object.keys(expected).some(key => JSON.stringify(current[key]) !== JSON.stringify(expected[key]))) {
-      throw Object.assign(new Error('settings changed since this receipt; read the current values before changing them again'), { code: 'config.conflict', statusCode: 409 });
-    }
-    const merged = { ...current, ...body };
-    // F2 (安全·防掩码覆盖): if the payload carries providers[] or searchBackend, any apiKey still the mask
-    // (`••••…`) means the UI round-tripped the masked value from GET /api/status — restore the real key
-    // from the same-id provider (or on-disk searchBackend) before persisting, so a save never wipes the
-    // stored key. unmaskSecrets covers BOTH secret sites in one pass (v0.9-S9).
-    // 107-S0:modelsApiKey 也在 GET /api/status 里掩码下发了,设置页把掩码原样回传 —— 同一处还原,否则一次保存就把
-    // 真密钥写成「••••末四位」。
-    // 107-S0b:externalMcpServers 的 env／headers／args 也在 GET /api/status(与 steward_config_get)里掩码下发了 ——
-    // 调用方原样回传时同一处按 id＋键名还原;不还原的话残留掩码会被 sanitize 那道闸清空,等于一次保存抹掉连接器密钥。
-    // 107-S2(46 号文 §5 ⑦b M5):启动向量闸。掩码回传只有在「密钥会去的地址一个都没变」时才算
-    // 「用户没动这个框」;地址变了(或压根没有同 id 那一条)就整份拒绝、零写入,并如实告诉用户要重填
-    // 哪几条的密钥 —— 不静默把旧密钥贴到新端点上(那是 M5 的洞),也不静默清空(那是用户看不见的丢失)。
-    // 判据在 05 的 maskedSecretConflicts;它与 unmaskSecrets 读的是【同一份 current】(都在这个临界区里),
-    // 所以不存在「检查用的是旧快照、落盘用的是新快照」那一类竞态。
-    const conflicts = maskedSecretConflicts(body, current);
-    if (conflicts.length) {
-      throw Object.assign(new Error(maskedSecretConflictMessage(conflicts)), {
-        code: 'config.masked_secret_vector_changed', statusCode: 409, conflicts,
-      });
-    }
-    // 107-S2:modelsApiBase 也进这一组 —— 它自己可能带凭据(`?api_key=…`),下发时被 safeUrlForDisplay
-    // 遮过,原样回传要对回真值;不写回的话一次保存就把它写成脱敏形(且 normalizeConfig 那道闸会清空它)。
-    if ((body && Array.isArray(body.providers)) || (body && body.searchBackend && typeof body.searchBackend === 'object')
-      || (body && typeof body.modelsApiKey === 'string') || (body && typeof body.modelsApiBase === 'string')
-      || (body && Array.isArray(body.externalMcpServers))) {
-      const restored = unmaskSecrets(body, current);
-      if (Array.isArray(body.providers)) merged.providers = restored.providers;
-      if (body.searchBackend && typeof body.searchBackend === 'object') merged.searchBackend = restored.searchBackend;
-      if (typeof body.modelsApiKey === 'string') merged.modelsApiKey = restored.modelsApiKey;
-      if (typeof body.modelsApiBase === 'string') merged.modelsApiBase = restored.modelsApiBase;
-      if (Array.isArray(body.externalMcpServers)) merged.externalMcpServers = restored.externalMcpServers;
-    }
-    // 2026-09-21(用户真机,日志 config_providers_shrunk lost:['toolbox-asr-shim']):`toolbox-` 前缀的服务商归自动发现所有 ——
-    // 04f syncToolboxProviders 增删它们,走 mutateConfig 不经这里。设置页整份保存上传的是一份【草稿快照】:页面加载时播种,
-    // 而 toolbox 组件要晚一两秒才起好、才把自己的条目写进配置;快照里没有它,一次保存就把它撤掉,normalizeConfig 随即把
-    // 指着它的语音识别选择清空 —— 用户看到的是「本地语音识别突然没了、设置里也不见、再配也配不上」。所以来件里的
-    // toolbox- 条目一律以【现值】为准:改不了、造不出、也撤不掉(现值有、来件没有的补回末尾,位置照 04f)。
-    // 停用／卸载才是撤走它的正途,那条路(04f)不经过本函数。只在来件真带了 providers 时做,别的保存一字不动。
-    if (Array.isArray(body.providers) && Array.isArray(merged.providers)) {
-      const isToolbox = p => Boolean(p && typeof p === 'object' && String(p.id || '').startsWith('toolbox-'));
-      const owned = (Array.isArray(current.providers) ? current.providers : []).filter(isToolbox);
-      const foreign = merged.providers.filter(p => !isToolbox(p));
-      if (owned.length || foreign.length !== merged.providers.length) merged.providers = [...foreign, ...owned];
-    }
-    // Remember an explicitly-chosen model so it persists in the list even if the proxy later drops it.
-    if (body && typeof body.model === 'string' && body.model && !(merged.knownModels || []).includes(body.model)) {
-      merged.knownModels = [...(merged.knownModels || []), body.model];
-    }
-    // 2026-09-06 事故(用户的五个 Provider 连同密钥被一次整份保存写成 providers: [])后的服务端保险:
-    // 现值有 Provider、来件要把它清成空数组时,先把当前 config 原样另存一份(config.json.bak-providers-
-    // <时间戳>,与既有 config.json.bak-<日期> 同一目录同一命名族),并记一条审计事件。【不拦截】——
-    // 逐个删除到最后一个也是合法的 [],这里只保证永远有得救。备份失败不阻塞写入。
-    // 设置弹窗子审查追加：不只「清空」，任何【缩水】（现值里某个 id 在来件里没了）都先备份——用户以为在
-    // 原有列表上加一条、实际把整份换成只剩一条，正是那种既不为空也没告警的丢法。
-    if (Array.isArray(current.providers) && current.providers.length > 0 && Array.isArray(merged.providers)) {
-      const nextIds = new Set(merged.providers.map(p => String((p && p.id) || '')));
-      const lost = current.providers.map(p => String((p && p.id) || '')).filter(id => id && !nextIds.has(id));
-      if (lost.length) {
-        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupName = `config.json.bak-providers-${stamp}`;
-        try {
-          const backupPath = path.join(path.dirname(paths.config), backupName);
-          await fsp.copyFile(paths.config, backupPath);
-          await fsp.chmod(backupPath, 0o600).catch(() => {});   // 安全走查 S11:备份里是真 apiKey,只给属主读写
-        } catch { /* 备份失败不阻塞写入 */ }
-        logEvent({ kind: merged.providers.length === 0 ? 'config_providers_cleared' : 'config_providers_shrunk', before: current.providers.length, after: merged.providers.length, lost, backup: backupName });
-      }
-    }
-    return { next: merged, value: current };
-  });
-  const next = patched.config;
-  const current = patched.value; // 落盘前那一份(锁内读到的),下面的三路同步判「改没改」要用它
-  // 133(用户 2026-09-21「切走了大模型就立刻从显存里卸掉」):整段识别的选择换了(换模型／换服务商／关掉)→ 04f 去打
-  // 原来那个组件的 unload 路。fire-and-forget:保存的回包不等它;没登记 unload 路的组件只靠自己的空闲卸载。
-  if (typeof ToolboxHooks.asrSelectionChanged === 'function') void ToolboxHooks.asrSelectionChanged(current, next).catch(() => {});
-  // 116h(27 号文 §8.10「并发上限就地可调,改完立即生效,不需重启」):配置落盘后立刻唤醒线程仲裁器
-  // 的队列 —— 仲裁器每次唤醒都重读配置(不缓存),但唤醒本身只由「入队/释放/插队」触发,没有这一行
-  // 的话调大上限要等下一条线程跑完才生效。队列为空(含管家关着)时是无操作。
-  if (typeof StewardHooks.arbiterRefresh === 'function') { try { StewardHooks.arbiterRefresh(); } catch { /* best-effort */ } }
-  if (body && ['agentCliType', 'claudePath', 'kimiPath'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
-    invalidateAgentCliPathCaches();
-  }
-  // 123-N2 合并复核（主会话）：用户在设置里改全局引擎（activeProvider／agentCliType／model）也是一次
-  // 【显式选择】，要成为「上次用的」—— 否则改完全局、新开一条线程，仍跟着改之前的那一路走
-  // （agent-team-mode.e2e 合并后串行必红：切回 Claude 驱动后新会话仍走上一轮的 fake 端点）。
-  // 只在这三个键真的在 body 里时记；与现值相同则 rememberLastUsedEngineRoute 自己短路不落盘。
-  // 【await 而不是 void】：保存请求回 200 之前记录就得落盘——调用方（设置页、e2e）改完全局马上
-  // 新开线程是常见序列，fire-and-forget 会让那条新线程仍跟着上一路走（本机实测 agent-team-mode 就这么红）。
-  if (body && ['activeProvider', 'agentCliType', 'model'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
-    await rememberLastUsedEngineRoute(sessionEngineRouteFromConfig(next), next);
-  }
-  // v1.4.3: keep ~/.claude/ in sync — settings.json + agent roles + MCP servers
-  if (body && (Object.prototype.hasOwnProperty.call(body, 'permissionMode') || Object.prototype.hasOwnProperty.call(body, 'model') || Object.prototype.hasOwnProperty.call(body, 'thinkingBudget') || Object.prototype.hasOwnProperty.call(body, 'appendSystemPrompt'))) {
-    await syncClaudeCliSettings(next);
-  }
-  if (body && (Object.prototype.hasOwnProperty.call(body, 'agentRoleOverrides') || Object.prototype.hasOwnProperty.call(body, 'permissionMode'))) {
-    await syncAgentRolesToClaude(next.defaultWorkspace || os.homedir(), next);
-  }
-  if (body && Object.prototype.hasOwnProperty.call(body, 'externalMcpServers')) {
-    // hunt2-mcp:设置页整份保存改了哪条连接器(改命令 / 停用 / 删除 / 新增同 id),就作废那条的活进程、在途启动与
-    // 60s 失败冷却 —— 修前只有启停/删除路由会作废,在这里改好一个坏连接器,旧冷却期内照样「连不上」,删掉的进程也还活着。
-    const mcpById = list => new Map((Array.isArray(list) ? list : []).filter(x => x && x.id).map(x => [x.id, JSON.stringify(x)]));
-    const beforeMcp = mcpById(current && current.externalMcpServers);
-    const afterMcp = mcpById(next && next.externalMcpServers);
-    for (const id of new Set([...beforeMcp.keys(), ...afterMcp.keys()])) {
-      if (beforeMcp.get(id) !== afterMcp.get(id)) invalidateMcpRuntime(id);
-    }
-    await syncMcpServersToClaude(next);
-    await syncAgentCliMcpManifests(next, null, { requireWorkbenchMcp: true });
-  } else if (body && ['allowCommandTools', 'allowDesktopTools'].some(k => Object.prototype.hasOwnProperty.call(body, k)
-      && (current && current[k]) !== (next && next[k]))) {
-    // 2026-10 能力总闸:两个开关一变,写给 CLI 的直挂 ACC 条目里的 ACC_HIDE_TOOLS 就过时了 —— 推一次
-    // Claude 的用户级条目与 Kimi 的 mcp.json(同一次保存里 externalMcpServers 也改了的话上面那支已经推过)。不等它:claude mcp
-    // add-json 串行可达十几秒,开关的保存不该卡在这里;Kimi 每个回合起手还会再推一次(05b),这里只是把空窗缩短。
-    void syncMcpServersToClaude(next).catch(() => {});
-    void syncAgentCliMcpManifests(next, null, { requireWorkbenchMcp: true }).catch(() => {});
-  }
-  // 选中的 CLI 若从用户配置读 MCP(登记表 syncMcpManifest),推一次;从这样一家切走时把如意接管的条目清掉(见 01)。
-  if (body && (Object.prototype.hasOwnProperty.call(body, 'agentCliType') || Object.prototype.hasOwnProperty.call(body, 'includeWorkbenchMcp'))) {
-    await syncAgentCliMcpManifests(next, current);
-  }
-  return options.capture === true ? { config: next, previous: current } : next;
-}
-
-// 加载即登记:13 / 13l 只经这个键调(见 01 的 ConfigPatchHooks)。
 ConfigPatchHooks.applyConfigPatch = applyConfigPatch;
 
 const { fetchOpenAiModels, probeProviderCompletion } = require('./backend/provider-probes.cjs').createProviderProbes({
@@ -3160,144 +2996,21 @@ const {
   providerTurnQuotaKey, STEWARD_NOTIFY_WINDOW_MS, STEWARD_EXEMPT_DELEGATION_WINDOW_MS,
 });
 
-// 3.x 第四轮：只读交付投影。证据随既有 turnSummary 保存，不另建成果或验收账本。
-// 引擎及工具通过 StewardHooks 迟绑定，避免给既有依赖环增加成员。
-const STEWARD_DELIVERY_LIMITS = Object.freeze({ files: 20, checks: 50, fileBytes: 8 * 1024 * 1024, totalBytes: 32 * 1024 * 1024 });
-function stewardDeliveryRows(session, turnSeq) {
-  return (Array.isArray(session.messages) ? session.messages : []).filter(row => Number(row && row.turnSeq) === turnSeq);
-}
-function stewardDeliveryFiles(summary, cwd) {
-  const pathsByKey = new Map();
-  for (const row of [...(Array.isArray(summary.artifacts) ? summary.artifacts : []), ...(Array.isArray(summary.filesChanged) ? summary.filesChanged : [])]) {
-    if (!row || typeof row.path !== 'string' || !row.path.trim()) continue;
-    const absolute = path.resolve(cwd || '', row.path);
-    const key = absolute;
-    pathsByKey.set(key, { path: absolute, name: path.basename(absolute), kind: kindForPath(absolute) });
-  }
-  return [...pathsByKey.values()];
-}
-function stewardDeliveryReferencedFiles(session, summary, text) {
-  const keyFor = value => value;
-  const files = new Map(stewardDeliveryFiles(summary, session.cwd).map(file => [keyFor(file.path), file]));
-  // 只接受本任务此前执行记录中已有的产物，且本轮原文用行内代码或 Markdown 链接明确引用路径。
-  // 不扫描任意路径、不把用户文字或导入摘要变成本机产物证据，也不凭文件同名猜测。
-  const references = new Set();
-  const prose = String(text || '').slice(0, 200000).replace(/```[^]*?(?:```|$)/g, '');
-  const addReference = (raw, encoded = false) => {
-    let value = raw.trim();
-    if (encoded) { try { value = decodeURIComponent(value); } catch { return; } }
-    if (!value || /[\x00-\x1f]/.test(value) || /^\/\//.test(value)) return;
-    if (/^[a-z][a-z0-9+.-]*:/i.test(value) && !/^[a-z]:[\\/]/i.test(value)) return;
-    references.add(keyFor(path.resolve(session.cwd || '', value)));
-  };
-  for (const match of prose.matchAll(/`([^`\r\n]{1,4096})`/g)) addReference(match[1]);
-  for (const match of prose.matchAll(/\[[^\]\r\n]{0,4096}\]\(\s*(?:<([^>\r\n]{1,4096})>|([^\s()]{1,4096}))(?:\s+["'][^\r\n]*?["'])?\s*\)/g)) addReference(match[1] || match[2], true);
-  if (!references.size) return [...files.values()];
-  for (const row of Array.isArray(session.messages) ? session.messages : []) {
-    if (row.role !== 'assistant' || row.meta?.imported || !row.turnSummary || !(Number(row.turnSeq) < Number(summary.turnSeq))) continue;
-    for (const file of stewardDeliveryFiles(row.turnSummary, session.cwd)) {
-      const key = keyFor(file.path);
-      if (references.has(key) && !files.has(key)) files.set(key, { ...file, referenced: true });
-    }
-  }
-  return [...files.values()];
-}
-async function stewardDeliveryInspect(file, session, config, budget, keepBytes = false) {
-  const target = file.path;
-  try {
-    if (await remoteUncDenialResolved([target], session, config)) return { ...file, status: 'blocked' };
-    const real = await fsp.realpath(target).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
-    if (!real) return { ...file, status: 'missing' };
-    await ensureDataRootReal();
-    const roots = await Promise.all(fileAllowedRoots(session, config).map(root => fsp.realpath(root).catch(() => root)));
-    if (!pathWithinAnyRoot(real, roots) || isSensitiveDataPath(target) || isSensitiveDataPath(real) || await isSensitiveHardlinkAlias(real)) return { ...file, status: 'blocked' };
-    const handle = await fsp.open(real, 'r');
-    try {
-      const before = await handle.stat();
-      if (!before.isFile()) return { ...file, status: 'unavailable' };
-      if (before.size > STEWARD_DELIVERY_LIMITS.fileBytes || budget.bytes + before.size > STEWARD_DELIVERY_LIMITS.totalBytes) return { ...file, status: 'unverified', size: before.size };
-      budget.bytes += before.size;
-      // 限额读取而不是 readFile：文件在 stat 之后增长也不能越过预算。
-      const buffer = Buffer.alloc(before.size + 1);
-      let read = 0;
-      while (read < buffer.length) {
-        const got = await handle.read(buffer, read, buffer.length - read, read);
-        if (!got.bytesRead) break;
-        read += got.bytesRead;
-      }
-      const after = await handle.stat();
-      if (read !== before.size || before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) return { ...file, status: 'unavailable' };
-      return { ...file, status: 'available', size: read, fingerprint: crypto.createHash('sha256').update(buffer.subarray(0, read)).digest('hex'), ...(keepBytes ? { bytes: buffer.subarray(0, read) } : {}) };
-    } finally { await handle.close(); }
-  } catch { return { ...file, status: 'unavailable' }; }
-}
-async function stewardCaptureDelivery(session, summary, options = {}) {
-  if (stewardRawKind(session) === 'steward') return;
-  const config = await readConfig();
-  if (config.stewardEnabledV1 !== true) return;
-  const all = stewardDeliveryReferencedFiles(session, summary, options.finalText);
-  const budget = { bytes: 0 }, files = [];
-  for (const file of all.slice(0, STEWARD_DELIVERY_LIMITS.files)) files.push(await stewardDeliveryInspect(file, session, config, budget));
-  const missionId = sessionMissionId(session);
-  const container = missionId && missionId !== session.id ? await readMissionContainer(missionId).catch(() => null) : null;
-  const acceptance = buildMissionAcceptanceProjection(session.mission, container);
-  const checks = acceptance.items.slice(0, STEWARD_DELIVERY_LIMITS.checks).map(item => {
-    const humanAt = item.provenance === 'human' ? acceptance.container?.items.find(row => row.done && row.text.trim() === item.desc.trim())?.doneAt : '';
-    const checkedAt = item.provenance === 'human' ? humanAt || '' : item.checkedAt || '';
-    return { ...item, checkedAt, currentTurn: !!checkedAt && Date.parse(checkedAt) >= Number(options.startedAt || Infinity) };
-  });
-  if (!acceptance.ledger && acceptance.container) {
-    for (const item of acceptance.container.items.slice(0, STEWARD_DELIVERY_LIMITS.checks)) checks.push({ id: item.id, desc: item.text,
-      status: item.done ? 'done' : 'pending', provenance: item.done ? 'human' : 'open', checkState: 'none', checkedAt: item.doneAt,
-      currentTurn: !!item.doneAt && Date.parse(item.doneAt) >= Number(options.startedAt || Infinity) });
-  }
-  summary.deliveryEvidence = { schema: 1, capturedAt: nowIso(), files, filesTruncated: all.length > files.length,
-    checks: checks.slice(0, STEWARD_DELIVERY_LIMITS.checks), checksRecorded: acceptance.ledger || !!(acceptance.container && acceptance.container.total) };
-}
-function stewardDeliverySource(session, turnSeq) {
-  const rows = stewardDeliveryRows(session, turnSeq);
-  if (!rows.length) return null;
-  const summaryRow = [...rows].reverse().find(row => row.role === 'assistant' && row.turnSummary && Number(row.turnSummary.turnSeq) === turnSeq);
-  const summary = summaryRow ? summaryRow.turnSummary : { artifacts: [], filesChanged: [] };
-  // 导入内容不是本机执行证据；旧回合没有快照时也不能借当前任务的检查充数。
-  const evidence = summaryRow && !summaryRow.meta?.imported && summary.deliveryEvidence?.schema === 1 ? summary.deliveryEvidence : null;
-  const stamp = crypto.createHash('sha256').update(JSON.stringify({ sessionId: session.id, cwd: session.cwd, rewindGen: session.rewindGen || 0,
-    turnSeq, rows: rows.map(row => ({ role: row.role, content: row.content, segments: row.segments, turnSummary: row.turnSummary })) })).digest('hex');
-  return { rows, summary, evidence, stamp };
-}
-async function stewardDeliveryProjection(sessionId, turnSeq, config) {
-  const session = await loadSession(sessionId, { omitProviderHistory: true });
-  if (!session || stewardRawKind(session) === 'steward') return stewardFail('not_found', '交付来源任务不存在');
-  const source = stewardDeliverySource(session, turnSeq);
-  if (!source) return stewardFail('delivery_not_found', '指定回合已不存在,没有使用其它回合代替');
-  const recorded = source.evidence;
-  const all = stewardDeliveryReferencedFiles(session, source.summary, source.rows.filter(row => row.role === 'assistant' && !row.meta?.imported).map(row => row.content || '').join('\n'));
-  const files = [], budget = { bytes: 0 };
-  for (const file of all.slice(0, STEWARD_DELIVERY_LIMITS.files)) {
-    const current = await stewardDeliveryInspect(file, session, config, budget);
-    const previous = recorded && recorded.files.find(row => row.path === file.path);
-    const version = current.status === 'available' ? (!previous?.fingerprint ? 'unverified' : current.fingerprint === previous.fingerprint ? 'same' : 'changed') : current.status;
-    files.push({ ...current, status: version });
-  }
-  const allFilesSame = files.every(file => file.status === 'same') && !(recorded && recorded.filesTruncated);
-  const inProgress = !!sessionExecutionSnapshot(sessionId);
-  const fileStamp = crypto.createHash('sha256').update(JSON.stringify(files.map(file => [file.path, file.status, file.fingerprint || '', file.size]))).digest('hex');
-  const checks = recorded ? recorded.checks.map(item => ({ ...item,
-    applicable: item.currentTurn === true && allFilesSame && !inProgress && Number(session.turnSeq) === turnSeq })) : [];
-  return { ok: true, sessionId, title: sessionDisplayTitle(session), turnSeq, latestTurnSeq: Number(session.turnSeq) || 0,
-    sourceStamp: source.stamp, fileStamp, capturedAt: recorded?.capturedAt || '', evidenceRecorded: !!recorded,
-    files, filesTruncated: all.length > files.length, checks, checksRecorded: recorded?.checksRecorded === true,
-    unfinished: checks.filter(item => item.status !== 'done').map(item => ({ id: item.id, desc: item.desc, status: item.status })),
-    outdated: Number(session.turnSeq) > turnSeq, inProgress };
-}
-async function stewardValidateDeliveryReference(sessionId, reference, config) {
-  if (!reference || !Number.isSafeInteger(reference.turnSeq) || reference.turnSeq <= 0 || !/^[a-f0-9]{64}$/.test(reference.sourceStamp || '') || !Number.isSafeInteger(reference.latestTurnSeq)) return stewardFail('invalid_request', '修订来源无效,请重新打开交付卡');
-  const current = await stewardDeliveryProjection(sessionId, reference.turnSeq, config);
-  if (!current.ok) return current;
-  if (current.sourceStamp !== reference.sourceStamp || current.fileStamp !== reference.fileStamp || current.latestTurnSeq !== reference.latestTurnSeq) return stewardFail('delivery_changed', '来源、文件或任务已有变化,请刷新交付卡并重新发起修订');
-  return { ok: true, reference: { sessionId, turnSeq: reference.turnSeq, sourceStamp: reference.sourceStamp,
-    latestTurnSeq: reference.latestTurnSeq, fileStamp: reference.fileStamp, files: current.files.map(file => file.path) } };
-}
+const {
+  stewardCaptureDelivery, stewardDeliveryFiles, stewardDeliveryInspect, stewardDeliveryProjection,
+  stewardValidateDeliveryReference,
+} = require('./backend/steward-delivery-evidence.cjs').createStewardDeliveryEvidence({
+  files: {
+    ensureDataRootReal, fileAllowedRoots, isSensitiveDataPath, isSensitiveHardlinkAlias, kindForPath,
+    pathWithinAnyRoot, remoteUncDenialResolved,
+  },
+  sessions: {
+    loadSession, readMissionContainer, sessionDisplayTitle, sessionExecutionSnapshot, sessionMissionId,
+    stewardRawKind,
+  },
+  evidence: { buildMissionAcceptanceProjection, nowIso, readConfig, stewardFail },
+});
+
 DeliveryHooks.capture = stewardCaptureDelivery;
 StewardHooks.deliveryProjection = stewardDeliveryProjection;
 StewardHooks.validateDeliveryReference = stewardValidateDeliveryReference;
@@ -3642,339 +3355,36 @@ Object.assign(StewardHooks, {
   quickClosed: stewardQuickClosed,
 });
 
-// ============================================================================
-// 第 117 波 T2(32 号文 §5「13h-steward-runner.js 2522 行」):管家回合运行器的共享底座。
-//
-// 落点(transport 层,manifest 中位于 13g-steward.js 之后、13n-steward-arbiter.js 之前)。
-// T2 拆分:原 13h-steward-runner.js 已 2522 行 —— 比 T1 拆之前的 13g 还长,而 31 号文七轴的
-// 回合层改动(污染打标、代答/代批、通知)全要往它里面加。按「谁被谁引用」把它拆成六个
-// 文件,拼接顺序即依赖方向,零新增前向边:
-//   · 13m-steward-runner-base.js —— 六个文件都要用的共享面:落盘面常量、回合层数值口径、
-//     自理动作与到访摘要的文本表、可由 actions 执行的写工具白名单、运行时内存态
-//     stewardRunnerRuntime、停机/唤醒/中止,以及管家会话单例(引擎解析 + 懒创建);
-//   · 13n-steward-arbiter.js —— 116h 线程间仲裁(并发位 / 同 cwd 写锁 / 预算 / 可解释的排队 / 饥饿提升)。
-//     它排在提示词之前,因为总览行与递话通道都要读它的等待原因(stewardArbiterWait);
-//   · 13o-steward-runner-prompt.js —— 提示词装配(记忆块 / 线程摘要 / 递话预判 / 总览 /
-//     两个分叉入口)与 {say,acts,actions,why} 输出契约解析;
-//   · 13p-steward-runner-actions.js —— actions 执行与降级、116-2b 确定性自理动作、id 人话化、
-//     熔断、收件箱消息装配、输入区预判归一;
-//   · 13q-steward-runner-turn.js —— 回合入口 runStewardTurn、收件箱去抖驱动、到访与归档、
-//     117l D2 递话通道、117l D7 线程分档落盘、acts 落定;
-//   · 13h-steward-runner.js —— 两个「够不着才落在这里」的工具实现(thread_prioritize /
-//     thread_stop)、三条路由、运行器状态与 StewardHooks 注册表(排在最后:注册表要引用
-//     上面五个文件里的实现,排在后面才是后向边)。
-// 本次拆分是【纯搬家】:所有函数体逐字节不变,新写的只有各文件的头部注释。
-//
-// 依赖纪律(§11.3「不得新增前向边」):本文件只引用拼接顺序在它之前的模块符号
-// (00/01/02/04/06b/06i/08/09/10/13e/13g 族 …),全部后向边;它自己的符号只被排在它之后的
-// 管家运行器族文件与 14-main.js 的 e2e 导出面引用,同样是后向边。
-// ============================================================================
-// ── 落盘面(唯一新增:到访归档;已登记进 durable-state-inventory)────────────────────────────────
-const STEWARD_VISITS_DIR = 'visits';
-const STEWARD_VISIT_SCHEMA = 1;
-const STEWARD_VISITS_KEEP = 200;              // 归档文件保留个数(超出从最旧删起)
-
-// ── 回合层数值口径(§11.2)────────────────────────────────────────────────────────────────────
-const STEWARD_INBOX_EVENTS_PER_TURN = 30;     // 一个收件箱回合最多带 30 条事件
-const STEWARD_INBOX_EVENT_CHARS = 400;        // 每条事件 ≤400 字
-// 117s-H1(27 号文 §11.13.3):事件行仍是那 400 字的标题行,交付正文另起一个【受预算的引用块】
-// 跟在它后面 —— 于是模型不必再花一次 steward_thread_read 配额去读它自己刚被通知的那份交付。
-const STEWARD_INBOX_DELIVERABLE_CHARS = 4000; // 单条交付正文在收件箱消息里的上限
-const STEWARD_INBOX_MESSAGE_CHARS = 12000;    // 一条收件箱消息的总预算(标题行永不丢,正文从最旧的丢起)
-const STEWARD_MEMORY_BLOCK_CHARS = 3000;      // 记忆块 ≤3000 字符
-// 128h-J12:被否决条目在提示词里自带一份【独立】预算,排在生效清单之后。不与上面那 3000 字共用:
-// 那是「按这些办」的清单,这是「别再写回去」的清单,后者挤掉前者就本末倒置了。8 条够用 ——
-// 否决是个罕见动作,真到了几十条,模型要的是最近否的那几条,不是全表。
-const STEWARD_MEMORY_VETOED_BLOCK_CHARS = 600; // 否决清单 ≤600 字符
-const STEWARD_MEMORY_VETOED_MAX = 8;           // 否决清单最多 8 条(按 updatedAt 取最近的)
-// 117y-S1(27 号文 §11.18.2):原来这里只有一个 say 上限常量(600),它同时扮演两个角色 ——
-// 06b 输出契约里写给模型看的「≤600 字」,和 13o 解析时那把裸 slice。用户第十一轮拍板:
-// 「得保证话能说全,不要硬截…通过提示词去约束说的话长度」。于是两个角色拆开:
-//   · TARGET  = 600  —— 只说给模型听的目标(06b 输出契约那一行)。**运行期不再据此裁剪。**
-//   · CEILING = 4000 —— 只防病态载荷(尤其 13o 那条 JSON 解析失败的兜底会把整份原始模型输出
-//     灌进来)。约为目标的 6.7 倍,守规矩的回复永远碰不到;触到了也走 06i 的
-//     stewardTrimSayAtSentence 在句末标点处切并明说,不裸切。
-// 旧名直接删掉而不留别名:全仓消费方只有 13o 的那两处(其余命中全是生成物
-// module-contracts.json / module-dependency-graph 与 27 号文的病灶描述),不存在被静默改语义的第三方。
-const STEWARD_SAY_TARGET = 600;               // say 的提示词目标(不是运行期上限)
-const STEWARD_SAY_CEILING = 4000;             // say 的病态载荷天花板(触顶按句界裁剪并明说)
-const STEWARD_WHY_MAX = 400;
-const STEWARD_ACT_LABEL_MAX = 12;             // 按钮文字 ≤12 字
-// 107-S1 ④(46 号文 §5 ⑦b H1):confirm 族(改设置 / 改技能 / 给线程开桌面)的按钮【另有一个天花板】。
-// 12 字是「按钮上写用户要做的那件事」的预算,装不下「改设置:permissionMode=auto」—— 而这一族的整个修法
-// 就是「按钮上必须写清要改哪个键、改成什么」,不能让模型自己命名它。32 字够一条「键=值」,
-// 多于一个键时按钮只写第一个键＋「等 N 项」,整份清单在确认面板里逐条列(值另有 40 字的裁剪)。
-// 只对这一族生效:其余 act 的标签口径与预算逐字节不变。
-const STEWARD_ACT_CONFIRM_LABEL_MAX = 32;     // confirm 族按钮文字 ≤32 字(要写得下「键=值」)
-const STEWARD_ACT_CONFIRM_VALUE_CHARS = 40;   // 确认面板里每个值的裁剪长度
-const STEWARD_ACTS_MAX = 3;                   // 一次回合按钮 ≤3 个
-const STEWARD_ACTIONS_MAX = 5;                // 一次回合最多执行 5 条 action(其余丢弃并如实标注)
-const STEWARD_DEBOUNCE_MS = 5000;             // 收件箱去抖窗口
-// 116-4(27 号文 §11.7 第 2 项「速查闭环」):速查线程的答案是【用户正在等的那一句】。让它也压满
-// 5 秒去抖,用户的体感就是「问一次要等两趟」。带 quick:true 的 done 行把本次去抖压到 0,其余事件
-// 仍走 5 秒 —— 它们是通知,不是有人正等着的答案。
-const STEWARD_QUICK_DEBOUNCE_MS = 0;          // 速查答案:不去抖,立刻起回合
-// 2026-10(智能自动的应答速度):队列里有【线程正卡在上面等】的权限/提问待决时,去抖压到 1 秒。
-// 那条线程此刻停着,5 秒去抖加上轮询间隔是「管家代批要等半分钟」的大头;1 秒仍够把同一阵涌来的
-// 几条待决并成一个回合(真机里一个回合内连发的工具请求彼此相隔远小于 1 秒)。其余通知照旧 5 秒。
-const STEWARD_BLOCKING_DEBOUNCE_MS = 1000;
-// 2026-10(用户:「用户在看提问、权限,管家被立刻唤醒也不要插手」):用户正看着的那几条待决,回合排空器先扣在
-// 回合队列外(13q stewardHoldViewedEvents),每 5 s 拿当时的在场重判一次;扣着的条数有上限(老的先丢 —— 丢的
-// 只是「管家替你处理」的那次机会,收件箱里的那一行与安静卡都还在)。
-const STEWARD_VIEW_RECHECK_MS = 5000;
-const STEWARD_VIEW_HELD_MAX = 200;
-const STEWARD_NO_PROGRESS_MAX = 5;            // 连续 5 次收件箱回合零 acts 零 actions -> 退避
-const STEWARD_VISIT_DIGEST_MAX = 5;           // 到访摘要 ≤5 条人话
-const STEWARD_PENDING_LIST_MAX = 20;          // 到访返回的待决列表上限
-const { STEWARD_TURN_WINDOW_MS, STEWARD_TURN_DAY_MS } = require('./backend/steward-core.cjs');
-const STEWARD_PREEMPT_WAIT_MS = 15000;        // 抢占后等在途回合收尾的上限
-// 117l D3(§11.9;用户第四轮走查第 6 条「为啥输出完了还显示『在忙上一件』;要能让用户连续发消息」):
-// 用户回合撞用户回合时【真】排队等前一个收尾的上限。修前是一发 Promise.race(15s) 之后【不复查】,
-// 超时就带着一个还在写正文的回合再开一个 —— 两个回合同时写管家会话正文,后一条把前一条盖掉。
-const STEWARD_USER_QUEUE_WAIT_MS = 5 * 60 * 1000;
-// ── 116-2b 自理动作(§3.3 自理清单的【真实执行】)──────────────────────────────────────────
-const STEWARD_SELF_SERVE_ATTEMPT_MAX = 2;    // 同一目标连续 2 次自理动作后仍失败 -> 停自动、只提议
-const STEWARD_SELF_SERVE_RETRY_WINDOW_MS = 60 * 60 * 1000; // 同一目标本小时只自动重试一次
-const STEWARD_SELF_SERVE_PER_TURN_MAX = 3;   // 一个收件箱回合最多自理 3 个目标(其余进回合层)
-// ── 「回合收了但任务没做完」的自动续跑(stewardAutoActions.continueUnfinished)的上限 ─────────────────
-// 防死循环烧钱,两道,都按【同一条线程连续自动续跑】数,线程自己正常收工(不再未完成)就清零:
-//   · 有计划(todo)的线程:最多连续续 STEWARD_CONTINUE_PLAN_MAX 次,且【每一次续跑之后计划都要往前走】
-//     (已完成步数增加)—— 续了一轮计划纹丝不动就停,不再续;
-//   · 没有计划、只靠「上次任务未完成」横幅判据(回合被工具次数/预算截断)的线程:没有进度可量,
-//     只续 STEWARD_CONTINUE_NOPLAN_MAX 次。
-// 超过上限的那一次不是静默放弃:降级成一条提议按钮,并落一行行动流水(见 stewardContinueUnfinishedGate)。
-const STEWARD_CONTINUE_PLAN_MAX = 5;
-const STEWARD_CONTINUE_NOPLAN_MAX = 2;
-const STEWARD_CONTINUE_FRESH_MS = 6 * 60 * 60 * 1000;   // 上次自动续跑过去这么久,再遇到没做完就当全新的一次,账从 0 数
-const STEWARD_CONTINUE_PROMPT = '请继续完成上一个未完成的任务。';   // 与前端「继续」横幅发的那一句同文(chat.resume.prompt)
-
-// ── 到访摘要的五类人话(确定性归纳,不调模型;§8.9「每次打开只汇报」)──────────────────────────
-const STEWARD_DIGEST_KIND_TEXT = Object.freeze({
-  needs_you: n => `${n} 条线程在等你拿主意`,
-  failed: n => `${n} 条线程出错了`,
-  done: n => `${n} 条线程收工了`,
-  stalled: n => `${n} 条线程停住了`,
-  budget: n => `${n} 条线程用完了预算`,
-  // 121-K3(34 号文 §4.4「交接」):第六类。措辞用「交给你盯」而不是「交给你」—— 交接的是注意力,
-  // 不是所有权:用户随时可以再坐回那条线程,那时 §4.5 的在场门会让管家自动松手。
-  adopted: n => `${n} 条线程刚交给你盯`,
-  // 123-M2(37 号文 §3.5):第七类。措辞是「到点了」而不是「有 N 条提醒」—— 这一类不需要用户
-  // 回答任何东西,它只是把「你自己排的那件事发生了」说一遍(到点提醒、错过跳过、连败熔断三件
-  // 都走它,共同点就是「一句事实」)。
-  reminder: n => `${n} 件定时任务到点了`,
+const {
+  STEWARD_VISITS_DIR, STEWARD_VISIT_SCHEMA, STEWARD_VISITS_KEEP, STEWARD_INBOX_EVENTS_PER_TURN,
+  STEWARD_INBOX_EVENT_CHARS, STEWARD_INBOX_DELIVERABLE_CHARS, STEWARD_INBOX_MESSAGE_CHARS,
+  STEWARD_MEMORY_BLOCK_CHARS, STEWARD_MEMORY_VETOED_BLOCK_CHARS, STEWARD_MEMORY_VETOED_MAX, STEWARD_SAY_TARGET,
+  STEWARD_SAY_CEILING, STEWARD_WHY_MAX, STEWARD_ACT_LABEL_MAX, STEWARD_ACT_CONFIRM_LABEL_MAX,
+  STEWARD_ACT_CONFIRM_VALUE_CHARS, STEWARD_ACTS_MAX, STEWARD_ACTIONS_MAX, STEWARD_DEBOUNCE_MS,
+  STEWARD_QUICK_DEBOUNCE_MS, STEWARD_BLOCKING_DEBOUNCE_MS, STEWARD_VIEW_RECHECK_MS, STEWARD_VIEW_HELD_MAX,
+  STEWARD_NO_PROGRESS_MAX, STEWARD_VISIT_DIGEST_MAX, STEWARD_PENDING_LIST_MAX, STEWARD_TURN_WINDOW_MS,
+  STEWARD_TURN_DAY_MS, STEWARD_PREEMPT_WAIT_MS, STEWARD_USER_QUEUE_WAIT_MS, STEWARD_SELF_SERVE_ATTEMPT_MAX,
+  STEWARD_SELF_SERVE_RETRY_WINDOW_MS, STEWARD_SELF_SERVE_PER_TURN_MAX, STEWARD_CONTINUE_PLAN_MAX,
+  STEWARD_CONTINUE_NOPLAN_MAX, STEWARD_CONTINUE_FRESH_MS, STEWARD_CONTINUE_PROMPT, STEWARD_DIGEST_KIND_TEXT,
+  stewardFailureExplain, STEWARD_ACTION_HOOKS, STEWARD_DECIDE_LABELS, STEWARD_RUN_ACTION_LABELS,
+  STEWARD_TOOL_LABELS,
+} = require('./backend/steward-runner-policy.cjs').createStewardRunnerPolicy({
+  labels: { ERROR_CLASSES, stewardSanitizeText },
 });
 
-// ── 可由 actions 执行的写工具 -> StewardHooks 实现键。白名单即闸门:不在表里的工具名一律拒绝
-//    (读类工具没有出现在这里的理由 —— 模型要读就自己在回合里调工具,不该经 actions 绕一圈)。
-// ── 125-P1(42 号文 §1 ②):失败的原因与下一步,由工作台给,不由模型编 ────────────────────────
-// 取证:`errorClass` 在 13o(提示词)、13p(动作)、13m(共享面)与整个管家前端里 grep 零命中 ——
-// 它唯一的去处是收件箱事件那句摘要里的一个括号,于是模型看见的是 `会话第 3 回合失败(idle_timeout)`
-// 这串原始机器词,「这是什么意思、该怎么办」全靠它自己编。而工作台自己有一张写好了「下一步」的
-// 表(06 的 ERROR_CLASSES,已经上 /api/status 给 2.0 的错误卡用),就在隔壁。
-//
-// 本函数是管家侧唯一的取话口:查既有表,查不到就【如实说未知】并把原词带上 —— 不许在这里
-// 编第二套解释,也不许把不认识的类悄悄说成「执行失败」(那是把不知道说成知道)。
-// 返回 '' 表示这条事件根本没带类别(不是「不知道」,是「没这回事」),调用方据此整段不出现。
-function stewardFailureExplain(errorClass) {
-  const raw = stewardSanitizeText(errorClass);
-  if (!raw) return '';
-  const row = (ERROR_CLASSES && Object.prototype.hasOwnProperty.call(ERROR_CLASSES, raw)) ? ERROR_CLASSES[raw] : null;
-  // 「表里没这一条」与「表里有但没写人话」是同一件事:我们说不出它是什么。合成一个出口,
-  // 于是这句话在全仓只有一种写法(静态锁 ⑧f 按「恰一处」数它)。
-  const zh = row ? stewardSanitizeText(row.zh) : '';
-  if (!zh) return `未知类别(${raw})`;
-  const next = row ? stewardSanitizeText(row.next) : '';
-  return next ? `${zh} · 下一步:${next}` : zh;
-}
-
-// 落点说明:本函数原想放在 06i(管家纯函数都住那儿),但 06i 排在 06 之前 —— 06/07/09/10/13* 都依赖
-// 06i,让 06i 反过来读 06 的 ERROR_CLASSES 会造出一圈循环边(依赖图 --check 当场报了 7 条)。
-// 于是落在 13m 这个「管家运行器共享面」:它本来就是回合层文本表的家,读 06 是干净的后向边。
-const STEWARD_ACTION_HOOKS = Object.freeze({
-  steward_thread_new: 'threadNew',
-  steward_thread_continue: 'threadContinue',
-  steward_thread_rename: 'threadRename',
-  // 129e:它在非 auto 档一定回 propose_required -> 被降级成一枚按钮 -> 用户按下走这张表找实现。
-  // 不进表 = 「管家提了『换个目录』,按下去报 not_allowed」(静态锁 ①e 正是为这个坑立的)。
-  steward_thread_workspace: 'threadWorkspace',
-  steward_thread_prioritize: 'threadPrioritize',   // 116h:§8.10 看板每行的「提升优先级」按钮
-  steward_decide: 'decide',
-  steward_run_action: 'runAction',
-  steward_thread_stop: 'threadStop',               // 117m-A4:线程级停止(不在表里 = 按钮按下去 4xx)
-  // 2026-10 工具走查:插话补充在无人值守时也过 relay + 权限档两道闸,会回 propose_required → 进表(①e)。
-  steward_thread_note: 'threadNote',
-  steward_memory_write: 'memoryWrite',
-  steward_memory_veto: 'memoryVeto',
-  // 116-2e:两个「须确认」的写工具。它们在模型回合里一定回 propose_required(ctx 里没有
-  // userPressed),被 stewardDowngradeActions 降级成一个按钮;用户按下那个按钮走
-  // POST /api/steward/act,那条路径才置 ctx.userPressed = true。
-  steward_config_set: 'configSet',
-  steward_skill_toggle: 'skillToggle',
-  // 117z-E2b 提交①(27 号文 §11.21.7 债 ①):线程权限。E-手① 时它只降档、从不 propose_required,
-  // 不进表没关系;E-手② 给它加了 capabilities.desktop,desktop:true 在【任何】档位都回 propose_required
-  // -> 被降级成按钮 -> 用户按下去经这张表找实现;不在表里 = 13q 查不到 -> not_allowed 4xx,
-  // 生产形状是「管家说要开桌面,按钮出来,按了报错」。与 config_set / skill_toggle 同一个「须确认」
-  // 模具:只有 13q 那条路置 ctx.userPressed = true,13k 只在 desktop:true 那一支上读它。
-  steward_thread_permission: 'threadPermission',
-  // 124 走查(用户 2026-09-15 真机:「就按这个排」按下去 —— 没做成: steward_schedule_create
-  // 不能作为 act 执行)。123-M2 新增六个定时任务工具时登记了 schema(13f)/handler(12)/tier 与
-  // pack(07)【三处】,漏了这第四处 —— 而 create 与 delete 自己在无人值守时就回 propose_required,
-  // 被 stewardDowngradeActions 降级成按钮,按下去必然 not_allowed。**同一个坑这是第三次**
-  // (thread_stop 117m-A4、thread_permission 117z-E2b),所以这一刀连带加了一把机械锁:
-  // steward-tools.static ①e —— 实现里会回 propose_required 的管家工具必须在本表里。
-  // 五个【写类】都进表(list 是只读,按表头那条纪律「读类工具没有出现在这里的理由」不进):
-  // pause/resume/run_now 不回 propose_required,锁不要求它们,但模型照样能把它们提成一枚按钮
-  // (acts 不经这张表过滤),不进表就是同一种「按了报错」。
-  steward_schedule_create: 'scheduleCreate',
-  steward_schedule_pause: 'schedulePause',
-  steward_schedule_resume: 'scheduleResume',
-  steward_schedule_run_now: 'scheduleRunNow',
-  steward_schedule_delete: 'scheduleDelete',
+const {
+  stewardRunnerRuntime, stewardStopRunner, stewardResumeRunner, stewardAbortInflight, stewardResolveRoute,
+  ensureStewardSession,
+} = require('./backend/steward-runner-lifecycle.cjs').createStewardRunnerLifecycle({
+  sessions: {
+    SESSION_SCHEMA, STEWARD_SESSION_ID, STEWARD_SESSION_TITLE, STEWARD_PERMISSION_MODE, loadSession,
+    saveSession, stopSession,
+  },
+  routing: {
+    AGENT_CLI_TYPES, normalizeAgentCliType, normalizeSessionEngineRoute, sessionEngineRouteFromConfig,
+  },
+  runtime: { paths, nowIso, logEvent },
 });
-
-// 降级成按钮时的人话标签(§8.4「话＋一行按钮」:按钮上写用户要做的那件事,不写工具名)。
-const STEWARD_DECIDE_LABELS = Object.freeze({ allow: '允许', deny: '拒绝', approve: '批准', reject: '驳回', answer: '回答' });
-const STEWARD_RUN_ACTION_LABELS = Object.freeze({ pause: '暂停', resume: '继续', stop: '停止', retry_node: '重试', steer_node: '插话' });
-const STEWARD_TOOL_LABELS = Object.freeze({
-  steward_thread_new: '新开线程', steward_thread_continue: '接着办', steward_thread_rename: '改标题',
-  steward_thread_workspace: '换工作目录',
-  steward_memory_write: '记下', steward_memory_veto: '别记',
-  steward_thread_prioritize: '插到最前',
-  steward_thread_stop: '暂停这条线程',                            // 117m-A4
-  steward_thread_note: '补一句',
-  steward_config_set: '改设置', steward_skill_toggle: '改技能',   // 116-2e
-  // 117z-E2b 提交①:这是行动流水与兜底用的总称;真正降级成按钮的只有 capabilities.desktop === true
-  // 那一支,13o 的 stewardActLabel 按 args 把它写成「给它开桌面」(按钮上写用户要做的那件事,§8.4)。
-  steward_thread_permission: '改线程权限',
-  // 124 走查:降级按钮与 ※ 脚注上写用户要做的那件事,不吐 steward_schedule_* 这些内部 id。
-  steward_schedule_create: '排上', steward_schedule_pause: '先停一停', steward_schedule_resume: '继续排',
-  steward_schedule_run_now: '现在就跑一次', steward_schedule_delete: '删掉这条定时',
-});
-
-// ────────────────────────────────────────────────────────────────────────────
-// 运行时状态。全部【只在内存】—— 管家的持久化面只有 13g 登记的四个 + 本切片的 visits 归档,
-// 到访状态本身不落盘(进程重启 = 新到访,与 §11.1 第 7 项「一次到访 = 页面重开或静默 60 分钟」一致)。
-// ────────────────────────────────────────────────────────────────────────────
-const stewardRunnerRuntime = {
-  conversationGeneration: 0,
-  // 123-M2:fireSeq 是【承诺三项】的第二个水位。为什么不能复用 inboxSeq:fires-v1.ndjson 有它
-  // 自己的一条单调 seq(13s 的账本),与收件箱那条各走各的 —— 拿收件箱的行号去筛 fires 的行
-  // 会漏掉/重复算「上次到访以来跳过或结果未知的那几次」。
-  visit: { startedAt: '', lastActivityAt: '', inboxSeq: 0, fireSeq: 0, previousStartedAt: '' },
-  turns: [],            // 已跑回合的时间戳(ms),滑动窗口用
-  noProgress: 0,        // 连续零进展的收件箱回合数
-  inflight: null,       // { kind:'user'|'inbox', promise, controller, cancelled, events }
-  queue: [],            // 待处理的收件箱事件(抢占时回排在这里)
-  viewHeld: [],         // 2026-10:用户正看着的待决,先不起回合(见 STEWARD_VIEW_RECHECK_MS)
-  viewHeldTimer: null,
-  debounceTimer: null,
-  debounceMs: -1,       // 116-4:当前那个定时器排的是多久(用来判「该不该重排成更快的」)
-  lastReply: null,      // 最近一次 steward_reply 的精简副本(供 /api/steward/state)
-  circuit: null,        // 最近一次触发的熔断 { kind, at, detail }
-  stopped: false,       // 一键停机:停轮询的同时停回合队列
-  // 116-2b:自理动作的每目标账。targetKey = sessionId|runId。只在内存(进程重启 = 重新开始数;
-  // 与 §11.1 第 7 项「重启即新到访」同一立场:重启后第一次仍值得试一次,连着失败才该停手)。
-  selfServe: new Map(),  // targetKey -> { attempts, lastRetryAt, lastActionAt }
-  // 「没做完就续一轮」的每线程账:sessionId -> { count, doneAt, turnSeq, at }。count = 连续自动续跑次数;
-  // doneAt = 上次续跑那一刻计划已完成的步数(下一次到访拿它判「计划有没有往前走」);turnSeq = 续跑前的回合号。
-  // 只在内存,与上面 selfServe 同一立场(重启即重新数)。线程恢复正常收工时删除该条。
-  continueUnfinished: new Map(),
-};
-
-function stewardStopRunner() {
-  stewardRunnerRuntime.stopped = true;
-  if (stewardRunnerRuntime.debounceTimer) { clearTimeout(stewardRunnerRuntime.debounceTimer); stewardRunnerRuntime.debounceTimer = null; }
-  stewardRunnerRuntime.queue = [];
-  const inflight = stewardRunnerRuntime.inflight;
-  if (inflight) {
-    inflight.cancelled = 'stopped';
-    stewardAbortInflight(inflight);
-  }
-  return { ok: true, stopped: true };
-}
-function stewardResumeRunner() {
-  stewardRunnerRuntime.stopped = false;
-  return { ok: true, stopped: false };
-}
-
-// 停一个在途管家回合:先 stopSession(既有停止原语 —— 它拿到 activeChildren 里的 abort 句柄直接掐
-// 在途 fetch,不依赖 killOnDisconnect 配置),再 abort 我们自己的 signal(双保险;runSessionTurn 的
-// 断线语义走的是这条)。线程自己的回合不受影响 —— 这里停的只有管家会话。
-function stewardAbortInflight(inflight) {
-  try { stopSession(STEWARD_SESSION_ID, 'steward-preempt'); } catch { /* 没有在途子进程即无操作 */ }
-  try { if (inflight && inflight.controller) inflight.controller.abort(); } catch { /* 无 AbortController 环境 */ }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// 管家会话(单例)。
-// ────────────────────────────────────────────────────────────────────────────
-
-// 引擎解析:stewardProviderId/stewardModel 为空则跟随主端点(§11.1 第 5 项)。
-// 返回 { ok:true, route } 或 { ok:false, error:'steward.unsupported_engine', engine }。
-function stewardResolveRoute(config) {
-  const cfg = (config && typeof config === 'object') ? config : {};
-  const explicitId = String(cfg.stewardProviderId || '').trim();
-  if (explicitId) {
-    const provider = (cfg.providers || []).find(p => p && p.id === explicitId);
-    if (!provider) {
-      return { ok: false, error: 'steward.unsupported_engine', engine: explicitId, message: `管家要用的模型服务「${explicitId}」已经不在了,请到设置 › 管家里重新挑一个` };
-    }
-    const route = normalizeSessionEngineRoute({ engine: 'openai', providerId: explicitId, model: String(cfg.stewardModel || '').trim() || provider.model || '' });
-    return route ? { ok: true, route } : { ok: false, error: 'steward.unsupported_engine', engine: explicitId, message: `管家要用的模型服务「${explicitId}」不是 OpenAI 兼容的,请到设置 › 管家里换一个` };
-  }
-  // 跟随主端点。CLI 引擎(Claude / Kimi)在本切片不支持:管家回合的事件流与工具协议要另接一套,
-  // 属 116-2。fail-closed 返回稳定信封,而不是悄悄换成别的端点跑起来。
-  const route = sessionEngineRouteFromConfig(cfg);
-  if (!route || route.engine !== 'openai') {
-    const engine = route ? (route.agentCliType || 'claude') : 'none';
-    return { ok: false, error: 'steward.unsupported_engine', engine, message: (engine === 'none' || !(cfg.providers || []).some(p => p && (!p.type || String(p.type).startsWith('openai')))) ? '还没接上能用的模型,管家暂时回不了话。先在向导或设置里接一个模型(本机或云端都行)' : `管家要用一个 OpenAI 兼容的模型服务才能回话,现在的主模型走的是命令行引擎(${AGENT_CLI_TYPES[normalizeAgentCliType(engine)].label})。请到设置 › 管家里给它单独挑一个` };   // 走查 #1:不出配置键名
-  }
-  const model = String(cfg.stewardModel || '').trim();
-  return { ok: true, route: model ? { ...route, model } : route };
-}
-
-// 懒创建管家会话。不用 createSession(它生成 sess_* 随机 id;管家要的是固定 id,见 06i 的注释),
-// 但字段形状与 createSession 逐条对齐,以便所有既有会话原语(load/save/rewind/压缩)照常可用。
-async function ensureStewardSession(config) {
-  const resolved = stewardResolveRoute(config);
-  if (!resolved.ok) return resolved;
-  const existing = await loadSession(STEWARD_SESSION_ID).catch(() => null);
-  if (existing && existing.id === STEWARD_SESSION_ID) {
-    // 引擎/模型可能在设置里被改过 —— 每次唤醒对齐一次(会话头是路由的权威源,configForSessionEngineRoute
-    // 读它)。kind 一旦被外部改坏就纠回来:身份判据全靠它。
-    let dirty = false;
-    if (existing.kind !== 'steward') { existing.kind = 'steward'; dirty = true; }
-    if (JSON.stringify(existing.engineRoute || null) !== JSON.stringify(resolved.route)) { existing.engineRoute = resolved.route; dirty = true; }
-    if (dirty) await saveSession(existing).catch(() => {});
-    return { ok: true, session: existing, route: resolved.route };
-  }
-  const now = nowIso();
-  const session = {
-    id: STEWARD_SESSION_ID,
-    schemaVersion: SESSION_SCHEMA,
-    turnSeq: 0,
-    title: STEWARD_SESSION_TITLE,
-    summary: '',
-    pinned: false,
-    // cwd = 数据根:管家没有工作目录的概念(它不动文件),但回合机器要一个存在的目录做 workingDir。
-    cwd: paths.data,
-    createdAt: now,
-    updatedAt: now,
-    claudeSessionId: null,
-    messages: [],
-    providerHistory: [],
-    providerHistoryCursor: 0,
-    attachments: [],
-    engineRoute: resolved.route,
-    mission: null,
-    missionId: STEWARD_SESSION_ID,
-    kind: 'steward',                 // 身份:所有排除面按【这个原始值】判定
-    permissionMode: STEWARD_PERMISSION_MODE, // 独立模式,不进 PERMISSION_MODES
-  };
-  await saveSession(session);
-  logEvent({ kind: 'steward_session_created', sessionId: STEWARD_SESSION_ID, providerId: resolved.route.providerId, model: resolved.route.model });
-  return { ok: true, session, route: resolved.route };
-}
 
 const {
   stewardAcquireTurnSlot, stewardArbiterWait, stewardArbiterPrioritize, stewardArbiterState,

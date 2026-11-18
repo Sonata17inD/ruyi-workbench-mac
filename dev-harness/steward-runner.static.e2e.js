@@ -31,7 +31,7 @@ const providerServices = ['thread-brief', 'playbooks', 'provider-raw-completion'
   .map(name => [name + '.cjs', read('../backend/' + name + '.cjs')]);
 const src06b = read('../backend/prompt-registry.cjs');
 const src06i = read('../backend/steward-core.cjs');
-const src06k = read('06k-config-patch.js'); // 架构还债批 2 B2:applyConfigPatch(消费 StewardHooks.arbiterRefresh)从 13 搬到这里
+const configPatch = read('../backend/config-patch.cjs');
 const providerTurn = read('../backend/provider-turn.cjs');
 const src10 = read('10-context-governance.js');
 const sessionCompaction = read('../backend/session-compaction.cjs');
@@ -95,7 +95,8 @@ const actionContract = '../backend/steward-action-contract.cjs';
 const systemPrompt = '../backend/steward-system-prompt.cjs';
 const stewardToolAdmission = read('../backend/steward-tool-admission.cjs');
 const stewardThreadControl = '../backend/steward-thread-control.cjs';
-const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+const runnerPolicy = '../backend/steward-runner-policy.cjs';
+const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', runnerPolicy, '../backend/steward-runner-lifecycle.cjs', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
   '../backend/steward-prompt-memory.cjs', '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
   '../backend/steward-workspace-overview.cjs', systemPrompt, actionContract,
   '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, stewardThreadControl, '../backend/steward-runner-state.cjs', '13h-steward-runner.js'];
@@ -165,7 +166,7 @@ const src01b = read('../backend/http-route-policy.cjs');
     ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
     ...threadServices, ...toolServices,
-    ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['06k-config-patch.js', src06k]];
+    ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['config-patch.cjs', configPatch]];
   const leaks = [];
   for (const [name, text] of consumers) {
     for (const symbol of runnerSymbols) {
@@ -230,7 +231,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + configPatch + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -344,7 +345,7 @@ const srv = require(path.join(APP, 'server.js'));
   //   (d) 06b 输出契约里写给模型看的那个数字与 STEWARD_SAY_TARGET 是同一个 600(不另立第二套数字)。
   const actionSource = read(actionContract);
   const promptSource = read(systemPrompt);
-  const src13m = read('13m-steward-runner-base.js');
+  const src13m = read(runnerPolicy);
   const sayMaxHits = (srcRunnerFamily.match(/STEWARD_SAY_MAX/g) || []).length;
   ok(sayMaxHits === 0, `③ 117y-S1(a) 旧名 STEWARD_SAY_MAX 在运行器族里绝迹(got ${sayMaxHits} 处)`);
   const bareSliceHits = (actionSource.match(/slice\(0, STEWARD_SAY/g) || []).length;
@@ -360,7 +361,7 @@ const srv = require(path.join(APP, 'server.js'));
   ok(/stewardContextBudgetRatio/.test(promptSource) && /Math\.min\(0\.95, Math\.max\(0\.3, ratioRaw\)\)/.test(promptSource),
     '③ 136 系统提示词预算系数从 stewardContextBudgetRatio 读,缺省回 0.6 并按 [0.3,0.95] 再夹一道');
   ok(/const STEWARD_SAY_TARGET = 600;/.test(src13m) && /const STEWARD_SAY_CEILING = 4000;/.test(src13m),
-    '③ 117y-S1 两个常量拆开定在 13m(TARGET 600 只是提示词目标 / CEILING 4000 只防病态载荷)');
+    '③ 117y-S1 运行器策略分别定义两个常量(TARGET 600 只是提示词目标 / CEILING 4000 只防病态载荷)');
   ok(/function stewardTrimSayAtSentence\(/.test(src06i) && !/function stewardTrimSayAtSentence\(/.test(srcRunnerFamily),
     '③ 117y-S1(c) 句界裁剪的纯函数只在 06i 定义一份,运行器族不另抄');
   // (d) 契约里那句 ≤600 与常量同源:中英两包都写着 600,且 13m 的 TARGET 也是 600。
@@ -636,11 +637,11 @@ const srv = require(path.join(APP, 'server.js'));
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
   const eventSource = read('../backend/steward-inbox-events.cjs');
-  const src13m = read('13m-steward-runner-base.js');
+  const src13m = read(runnerPolicy);
   const promptSource = read(inboxPrompt);
 
   ok((src13m.match(/function stewardFailureExplain\(/g) || []).length === 1,
-    '⑧a 取话口 stewardFailureExplain 的函数体恰一处,且在 13m(它读 06 是干净的后向边;放 06i 会造循环边)');
+    '⑧a 取话口 stewardFailureExplain 的函数体恰一处,由运行器策略模块持有');
   for (const [name, text] of [
     ['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource],
     ['13p-steward-runner-actions.js', read('13p-steward-runner-actions.js')], ...runnerActionServices.map(file => [file, read(file)]),
@@ -648,7 +649,7 @@ const srv = require(path.join(APP, 'server.js'));
     ok(!/function stewardFailureExplain\(/.test(text), `⑧a2 ${name} 没有自己那一份取话口`);
     ok(!/ERROR_CLASSES/.test(codeOnly(text)), `⑧b ${name} 不直接翻那张表(只能经取话口;直接翻 = 迟早长出第二套口径)`);
   }
-  ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 13m 确实引用了 06 的既有表(而不是自己抄一张)');
+  ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 运行器策略使用已有错误分类表(而不是自己抄一张)');
   ok([eventSource, inboxComposition, inboxSource, ...runnerActionServices.map(read)].every(text => !/zh: '/.test(codeOnly(text))),
     '⑧c 管家侧零第二张「机器类 → 人话」表');
 

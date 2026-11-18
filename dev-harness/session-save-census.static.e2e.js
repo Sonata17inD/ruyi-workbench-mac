@@ -35,7 +35,7 @@ const CENSUS = {
   '../backend/desktop-execution-runtime.cjs': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
   '../backend/intervention-routes.cjs': 1,// 权限暂停计时器的纯重写
   '../backend/steward-thread-create.cjs': 2,   // 建会话
-  '13m-steward-runner-base.js': 2, // ensureStewardSession(建/补管家会话)
+  '../backend/steward-runner-lifecycle.cjs': 2, // ensureStewardSession(建/补管家会话)
   '../backend/scheduler-runtime.cjs': 1,         // 定时触发建会话
 };
 const actual = {};

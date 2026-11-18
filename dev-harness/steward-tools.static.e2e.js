@@ -148,7 +148,7 @@ const admissionSource = read(toolAdmission);
 // 与 STEWARD_TOOL_LABELS)随共享常量块搬进 13m;⑦ 的 userPressed 三处分落 13m(注释)/13q(唯一置 true)
 // /13h(act 路由那段「不置」的注释)。故这两组判据改读确切的那个文件与整族,期望值一字未改。
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-  actionContract, workspaceOverview, preroute, promptMemory,
+  '../backend/steward-runner-policy.cjs', actionContract, workspaceOverview, preroute, promptMemory,
   '../backend/steward-system-prompt.cjs', '../backend/steward-thread-overview.cjs',
   '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', actReceipts, '13h-steward-runner.js'];
 

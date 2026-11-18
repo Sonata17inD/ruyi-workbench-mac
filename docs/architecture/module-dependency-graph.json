@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2056,
-    "requiredSymbols": 3095,
+    "providedSymbols": 2052,
+    "requiredSymbols": 3088,
     "edges": 596,
     "forwardEdges": 14,
     "duplicateProvides": 0,
@@ -5845,42 +5845,21 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "maskedSecretConflictMessage",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "maskedSecretConflicts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
+          "symbol": "maskedSecretConflicts",
           "kinds": [
             "read"
           ]
@@ -5896,7 +5875,7 @@
           "provider": "00-boot.js",
           "symbol": "unmaskSecrets",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5910,42 +5889,42 @@
           "provider": "01-config.js",
           "symbol": "invalidateAgentCliPathCaches",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncAgentCliMcpManifests",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncAgentRolesToClaude",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncClaudeCliSettings",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncMcpServersToClaude",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5959,21 +5938,21 @@
           "provider": "02-session-store.js",
           "symbol": "rememberLastUsedEngineRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateMcpRuntime",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14313,24 +14292,13 @@
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
-        "STEWARD_DELIVERY_LIMITS",
         "stewardCaptureDelivery",
         "stewardDeliveryFiles",
         "stewardDeliveryInspect",
         "stewardDeliveryProjection",
-        "stewardDeliveryReferencedFiles",
-        "stewardDeliveryRows",
-        "stewardDeliverySource",
         "stewardValidateDeliveryReference"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "DeliveryHooks",
@@ -14342,13 +14310,6 @@
           "provider": "00-boot.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
             "read"
           ]
         },
@@ -14356,26 +14317,19 @@
           "provider": "00-boot.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -14384,13 +14338,6 @@
           "provider": "00-boot.js",
           "symbol": "pathWithinAnyRoot",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
             "read"
           ]
         },
@@ -14398,70 +14345,70 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "buildMissionAcceptanceProjection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "kindForPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "remoteUncDenialResolved",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14475,14 +14422,14 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardRawKind",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -16859,7 +16806,6 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -16867,7 +16813,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16930,7 +16876,7 @@
           "provider": "01f-agent-cli-types.js",
           "symbol": "normalizeAgentCliType",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16944,7 +16890,7 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16965,7 +16911,7 @@
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16993,14 +16939,14 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17014,7 +16960,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17049,7 +16995,6 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -26028,12 +25973,9 @@
       "from": "06k-config-patch.js",
       "to": "00-boot.js",
       "symbols": [
-        "fsp",
         "logEvent",
         "maskedSecretConflictMessage",
         "maskedSecretConflicts",
-        "os",
-        "path",
         "paths",
         "unmaskSecrets"
       ],
@@ -28169,15 +28111,11 @@
       "to": "00-boot.js",
       "symbols": [
         "DeliveryHooks",
-        "crypto",
         "ensureDataRootReal",
-        "fsp",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",
         "nowIso",
-        "path",
-        "pathWithinAnyRoot",
-        "text"
+        "pathWithinAnyRoot"
       ],
       "direction": "backward"
     },

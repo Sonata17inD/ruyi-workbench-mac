@@ -237,15 +237,18 @@ const baseConfig = extra => ({
   console.log('── S 段: 静态锁 ──');
   const src = fs.readFileSync(SERVER, 'utf8');
   const configStore = fs.readFileSync(path.join(WB, 'app/backend/config-store.cjs'), 'utf8');
+  const configPatch = fs.readFileSync(path.join(WB, 'app/backend/config-patch.cjs'), 'utf8');
   const connectors = fs.readFileSync(path.join(WB, 'app/backend/mcp-connector-settings.cjs'), 'utf8');
   // mutateConfig 不是 async 函数:它必须【同步】把自己接到 configMutateChain 上再返回,
   // 否则两个并发调用会在各自的第一个 await 之后才排队,临界区就漏了。两条一起钉。
   ok(/^\s*function mutateConfig\(mutator(?:,\s*options\s*=\s*\{\})?\)/m.test(configStore) && /configMutateChain/.test(configStore), 'S1 mutateConfig(全程持锁的读-改-写)+ 独立队列 configMutateChain 在');
   ok(/async function mutateMcpConnector\(/.test(connectors), 'S2 连接器设置由 mutateMcpConnector 统一写入');
   ok(/function mcpConnectorMutateError\(/.test(connectors), 'S3 连接器设置由 mcpConnectorMutateError 检查');
-  const bare = ((src + configStore).match(/await writeConfig\(/g) || []).length;
+  const bare = ((src + configStore + configPatch).match(/await writeConfig\(/g) || []).length;
   ok(bare === 1, 'S4 裸 writeConfig 调用点收敛到 1 个(mutateConfig 自己),实测 ' + bare);
-  ok(/applyConfigPatch/.test(src) && /mutateConfig\(/.test(src), 'S5 applyConfigPatch 与 mutateConfig 都在产物里');
+  ok(/ConfigPatchHooks\.applyConfigPatch = applyConfigPatch/.test(src) &&
+    /async function applyConfigPatch\(/.test(configPatch) && /await mutateConfig\(/.test(configPatch),
+  'S5 生产入口挂载配置补丁模块，补丁通过 mutateConfig 写入');
 
   console.log(fail ? `\nFAILED (${fail})` : '\nALL PASS');
   process.exit(fail ? 1 : 0);
