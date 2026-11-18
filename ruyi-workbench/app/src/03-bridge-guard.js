@@ -119,13 +119,6 @@ function bridgedOfficeScriptGate(bridgedName, args) {
   return null;
 }
 
-function normalizeCwd(cwd, fallback) {
-  // cwd 多直接取自请求体:非字符串(数字/对象)当没传,否则 path.resolve 抛 TypeError → 500(/api/memory* 等)。
-  const pick = v => (typeof v === 'string' && v ? v : '');
-  const base = pick(cwd) || pick(fallback) || os.homedir();
-  return path.resolve(base);
-}
-
 // v0.8-S0 cwd guardrail: a resolved working dir sitting AT the user's home or its Desktop/Documents/
 // Downloads root is the highest-risk "tidy this folder" target (it acts on everything the user owns).
 // Returns { path, reason } to attach to the turn's meta event, or null when the dir is task-specific.
@@ -441,28 +434,6 @@ async function resolveContainmentPath(rawPath) {
 async function realpathForContainment(rawPath) {
   return (await resolveContainmentPath(rawPath)).path;
 }
-// 审计 P1: dataRoot 是文件工具的允许根之一(fileAllowedRoots),本意只为读写【应用产物】(uploads/checkpoints
-// 内容/generated 产物)。但它同时罩住了应用自身的【控制面文件】:config.json(明文 provider 密钥)、sessions/
-// (完整对话记录,含 file_read 读回的文件内容与讨论到的密钥)、memory/(跨会话记忆)、usage/(计费台账)、logs/
-// (审计,含路径/命令)、agent-runs/(工作流状态)、generated/(内含带 WCW_TOKEN 的会话 MCP 配置)。提示注入的
-// 模型只需 file_read 这些文件再经 web_fetch 外传,即绕过 HTTP 层的 maskProviders 脱敏(GET /api/status 从不回明文
-// 密钥,文件工具层却能读原始字节)。这里对【解析后的真实路径】做二次拒绝:命中这些敏感子树的文件工具访问一律
-// 拒绝(读写都拒),不影响读 uploads/ 产物或 checkpoints/ 内容。用 realpath 比对,故工作区内指向敏感文件的符号链接也拒。
-// 对抗轮扩展(3 处补漏): ①加入 runtime.json —— 它在 dataRoot 顶层明文存 WCW_TOKEN(RUNTIME.token),原表漏掉 →
-// file_read 拿 token → 打 /api/file/preview 读 config.json 的链成立;②遍历类工具(file_list/file_search/glob)会
-// 【递归进】dataRoot 子树返回文件内容,原来只校验 root 参数不校验被遍历文件 → 敏感文件内容仍外泄(见 walkFiles 内跳过);
-// ③realpath 对称性: dataRoot 祖先若为 junction/符号链接/8.3 短名,realpath(target) 与【未解析】的 paths.* 永不相等,
-// 门被绕过 → 同时对【词法 dataRoot】与【realpath 后 dataRoot】两种根前缀比对,调用方传词法或 realpath 路径都能命中。
-// _dataRootReal 由 ensureDataRootReal 缓存(dataRoot 必存在,ensureDirs);同步 isSensitiveDataPath 供遍历热路径逐项调用。
-let _dataRootReal = null;
-async function ensureDataRootReal() {
-  if (!_dataRootReal) { const r = dataRoot(); _dataRootReal = await fsp.realpath(r).catch(() => r); }
-  return _dataRootReal;
-}
-const { isSensitiveDataPath, sensitiveFileIdentities, isSensitiveHardlinkStat,
-  isSensitiveHardlinkAlias, sensitiveGlobsForRg } = require('./backend/sensitive-paths.cjs').createSensitivePaths({
-  dataRoot, dataRootAliases, realDataRoot: () => _dataRootReal, pathWithinRoot,
-});
 // 安全审计 #1/#8(数据根里会被【自动加载 / 执行 / 信任】的状态):dataRoot 是文件工具的写根,isSensitiveDataPath
 // 只挡了「读出来会泄密」的那一批。下面这批读是无害的(或本来就要能读:检查点内容、个人工作流模板),但【写】进去
 // 就等于在下一回合 / 下一次启动时让工作台替模型执行它:
@@ -483,7 +454,7 @@ function isWriteProtectedDataPath(p) {
   if (isSensitiveDataPath(p)) return true;
   // 同 isSensitiveDataPath 开头那一行:剥 NTFS 流后缀与尾随点 / 空格(`mcp.d::$INDEX_ALLOCATION\x.json`、`scheduler.\tasks.json`)。
   p = String(p).split(/([\\/])/).map(seg => (/^[a-z]:$/i.test(seg) || seg === '/' || seg === '\\') ? seg : seg.replace(/:.*$/, '').replace(/([^. ])[. ]+$/, '$1')).join('');
-  const bases = [...new Set([dataRoot(), ...(_dataRootReal ? [_dataRootReal] : []), ...dataRootAliases()])];
+  const bases = sensitiveDataRoots();
   for (const b of bases) {
     for (const n of WRITE_PROTECTED_DATA_DIRS) if (pathWithinRoot(p, path.join(b, n))) return true;
     for (const n of WRITE_PROTECTED_DATA_FILES) if (pathWithinRoot(p, path.join(b, n))) return true;
@@ -592,46 +563,6 @@ function providerIsLocal(config) {
 //   • out of bounds + WRITE  → DENY always (destructive / exfil-staging), audit-logged.
 //   • out of bounds + READ   → allow only for a LOCAL provider (providerIsLocal); a remote/cloud model → DENY.
 //   • allowOutsideWorkspace === true → bypass (still audit-logged so an operator can see the crossings).
-// 第31波B(autonomy-shell-sandbox L1): 工具层 autoexec 路径黑名单 —— 从授权书层(consumeGrant)下沉到
-// guardFileToolPath,让 bypass/plan/default 全模式都受 autoexec 保护,不再依赖"是否有授权书"。
-// 117q-B2(30 号文 §4.2 拍板口径): 本表是 autoexec 条目的【唯一事实源】——授权书层 06f 的
-// GRANT_EDIT_AUTOEXEC_DENY 不再自维护副本,而是 [...本条整条 .git/ 规则, ...AUTOEXEC_DENYLIST] 取并集
-// (无人值守面更严:授权书层挡整条 .git/;工具层是有人值守面,保持只挡 hooks/config,扩严会误伤
-// .git/COMMIT_EDITMSG 这类日常写)。改条目只改这里。
-// 精确匹配 .git/hooks/ 等自动执行入口(不误伤 .gitignore/.gitattributes 等工作区根级文件)。
-const AUTOEXEC_DENYLIST = [
-  // git hooks（.git/hooks/ 内的任何文件，.githooks/，.husky/）；.git/config 可通过 core.hooksPath 把 hook 重定向到任意目录。
-  /(^|[\\/])\.git[\\/]hooks[\\/]/i, /(^|[\\/])\.git[\\/]config(?:\.worktree)?$/i, /(^|[\\/])\.githooks[\\/]/i, /(^|[\\/])\.husky[\\/]/i,
-  // IDE 任务
-  /(^|[\\/])\.vscode[\\/]tasks\.json$/i, /(^|[\\/])\.vscode[\\/]launch\.json$/i,
-  // CI/CD 配置（非高频开发编辑）
-  /(^|[\\/])\.github[\\/]workflows[\\/]/i, /(^|[\\/])\.gitlab-ci\.yml$/i, /(^|[\\/])Jenkinsfile$/i,
-  // 安全审计 #1:agent CLI / 工具箱【不经审批自动加载】的启动配置 —— 写进去就等于下一回合替模型起任意进程。
-  //   Claude Code:.claude/settings(.local).json 的 hooks、项目 .mcp.json、~/.claude.json 的 mcpServers(工作台还会
-  //   自动导入它);Kimi Code:.kimi/mcp.json 与 ~/.kimi-code/mcp.json;ruyi-toolbox 组件登记 ~/.ruyi-toolbox/components/。
-  /(^|[\\/])\.claude[\\/]settings(?:\.local)?\.json$/i, /(^|[\\/])\.mcp\.json$/i, /(^|[\\/])\.claude\.json$/i,
-  /(^|[\\/])\.kimi(?:-code)?[\\/]mcp\.json$/i, /(^|[\\/])\.ruyi-toolbox[\\/]components[\\/]/i,
-  // 走查 W1·F2:子模块 / 链接工作树的 git 目录不在 .git 的直接子项下,而在 .git/modules/<名字,名字里可以有斜杠>/ 与 .git/worktrees/<id>/ ——
-  // 它们各带一套 hooks/ 与 config(.worktree)。上面 .git/hooks/、.git/config 两条只认 .git 的直接子项,可写的 hook 或
-  // core.hooksPath 就从这里绕过去(子模块里一次 git commit 即触发)。按段匹配,嵌套子模块(modules/a/modules/b/)也在内。
-  /(^|[\\/])\.git[\\/]modules[\\/](?:[^\\/]+[\\/])*(?:hooks[\\/]|config(?:\.worktree)?$)/i,
-  /(^|[\\/])\.git[\\/]worktrees[\\/][^\\/]+[\\/](?:hooks[\\/]|config(?:\.worktree)?$)/i,
-  // 安全走查 S4:用户级【自启动 / 登录即执行 / 全局信任配置】落点。auto / bypass 宽写 + 出厂「家目录就是工作区」时,一次 file_write
-  // 就能在这些位置留下下次登录 / 下次开终端 / 下次开 agent CLI 就替攻击者执行或改写提示词的东西。这里是【形状】判据(与路径在
-  // 不在家目录下无关,Windows 形:大小写不敏感、\ / 都认,调用方已按 abs 与 realpath 各判一遍);必须挂在用户家目录根下才算的那批
-  // (~/.bashrc、~/.gitconfig、~/.claude/CLAUDE.md、~/.codex/ 等)认的是真实家目录,见下面的 userHomePersistenceHit。
-  //   · Windows 启动文件夹:%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup 与 %ProgramData%\…\StartUp(登录即运行);
-  //   · PowerShell profile(WindowsPowerShell\ 与 PowerShell\ 下的 profile.ps1 / Microsoft.PowerShell_profile.ps1 等,每次开 PowerShell 都执行);
-  //   · .ssh\authorized_keys(2)/ config / rc / environment(后门登录、ProxyCommand 执行、登录时执行);
-  //   · XDG 自启动 .config/autostart/、用户级 systemd 单元 .config/systemd/user/、macOS LaunchAgents;
-  //   · 计划任务目录 Windows\System32\Tasks(经文件直写注册任务,绕过 schtasks 的审计)。
-  /(^|[\\/])start menu[\\/]programs[\\/]startup([\\/]|$)/i,
-  /(^|[\\/])(?:windowspowershell|powershell)[\\/](?:[^\\/]+[\\/])?(?:[a-z0-9.]+_)?profile\.ps1$/i,
-  /(^|[\\/])\.ssh[\\/](?:authorized_keys2?|config|rc|environment)$/i,
-  /(^|[\\/])\.config[\\/](?:autostart|systemd[\\/]user)([\\/]|$)/i,
-  /(^|[\\/])library[\\/]launchagents([\\/]|$)/i,
-  /(^|[\\/])windows[\\/]system32[\\/]tasks(?:_migrated)?([\\/]|$)/i,   // 只认 system32\Tasks(Ansible 的 roles/windows/tasks/ 之类工程目录不能误伤)
-];
 // 安全走查 S4(续):必须落在【用户真实家目录】下才算的持久化落点 —— 这批文件名(.bashrc / .profile / AGENTS.md / .gitconfig …)在工作区里
 // 是普通工程文件(dotfiles 仓库、项目自己的 AGENTS.md),按「任何位置的同名路径」拦会误伤;只有挂在家目录根(或 ~/.claude/ 之类的
 // 固定子目录)下才是 shell / git / agent CLI 自己会读的那一份。家目录取 os.homedir() 与 USERPROFILE / HOME 三者(Windows 上可能不同),

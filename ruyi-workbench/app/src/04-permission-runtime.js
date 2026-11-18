@@ -49,27 +49,6 @@ async function makeAttachmentRecord(input) {
   };
 }
 
-// --- Structured NDJSON logging: record lengths/metadata, never raw content. ---
-let logStream = null;
-let logStreamDay = '';
-function logEvent(record) {
-  try {
-    const day = nowIso().slice(0, 10);
-    if (day !== logStreamDay && logStream) {
-      logStream.end();
-      logStream = null;
-    }
-    if (!logStream) {
-      logStreamDay = day;
-      logStream = fs.createWriteStream(path.join(paths.logs, `workbench-${day}.ndjson`), { flags: 'a' });
-      logStream.on('error', () => { logStream = null; });
-    }
-    logStream.write(`${JSON.stringify({ ts: nowIso(), ...record })}\n`);
-  } catch {
-    // logging must never break a turn
-  }
-}
-
 // --- Active claude child registry keyed by session id, for stop/restart/interrupt + disconnect kill. ---
 // 第 117 波 117l D4(27 号文 §11.9;用户第四轮走查第 3 条「『它刚说』更新不够及时」):活回合尾巴的累加器。
 // 两个引擎(09 的 provider 回合与 05 的 Claude 回合)在各自的 reg.onEvent 包装里调它 —— 同一份口径、

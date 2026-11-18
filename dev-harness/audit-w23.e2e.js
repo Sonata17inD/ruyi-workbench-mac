@@ -96,11 +96,10 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
     const { createSensitivePaths } = require('../ruyi-workbench/app/backend/sensitive-paths.cjs');
     {
       const D = path.join(os.tmpdir(), 'audit-sensitive-data');
-      const make = (root, aliases = [], real = null) => createSensitivePaths({
-        dataRoot: () => root, dataRootAliases: () => aliases, realDataRoot: () => real,
-        pathWithinRoot: mod.pathWithinRoot,
-      }).isSensitiveDataPath;
-      const sens = make(D);
+      const make = (root, aliases = []) => createSensitivePaths({
+        dataRoot: () => root, dataRootAliases: () => aliases,
+      });
+      const { isSensitiveDataPath: sens } = make(D);
       ok(sens(path.join(D, 'config.json')) === true, 'P1#2 config.json(明文 provider 密钥)拒');
       ok(sens(path.join(D, 'runtime.json')) === true, 'P1#2 runtime.json(明文 WCW_TOKEN)拒 ← 对抗轮补漏');
       ok(sens(path.join(D, 'sessions', 's1.json')) === true, 'P1#2 sessions/ 完整 transcript 拒');
@@ -108,14 +107,23 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
       ok(sens(path.join(D, 'generated', 'workbench.mcp.sess.json')) === true, 'P1#2 generated/ 会话 MCP 配置(含 token)拒');
       ok(sens(path.join(D, 'uploads', 'u.png')) === false, 'P1#2 uploads/ 产物 允许(不误伤合法读)');
       ok(sens(path.join(D, 'checkpoints', 'c.gz')) === false, 'P1#2 checkpoints/ 内容 允许');
-      // realpath 对称: 注入一个把 junction 根 L 解析到真实根 D 的 _dataRootReal,验证以真实根表达的敏感文件仍被命中。
-      const L = path.join(os.tmpdir(), 'audit-sensitive-link');
-      const sens2 = make(L, [], D);
-      ok(sens2(path.join(D, 'config.json')) === true, 'P1#2 junction 部署: 以 realpath 后根表达的 config.json 仍拒 ← 对抗轮补漏');
-      ok(sens2(path.join(L, 'config.json')) === true, 'P1#2 junction 部署: 以词法根表达的 config.json 仍拒(双根前缀)');
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-sensitive-root-'));
+      try {
+        const directory = path.join(root, 'data');
+        const alias = path.join(root, 'link');
+        fs.mkdirSync(directory);
+        fs.symlinkSync(directory, alias);
+        const paths = make(alias);
+        const canonicalRoot = await paths.ensureDataRootReal();
+        ok(canonicalRoot === fs.realpathSync(directory), 'P1#2 读取数据根的实际路径');
+        ok(paths.isSensitiveDataPath(path.join(canonicalRoot, 'config.json')), 'P1#2 真实根表达的 config.json 仍拒');
+        ok(paths.isSensitiveDataPath(path.join(alias, 'config.json')), 'P1#2 词法根表达的 config.json 仍拒');
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
       // 3.0 数据目录改名:旧目录名 ~/.win-claude-workbench 是指回新目录的联接(dataRootAliases),经它的词法路径同样拒。
       const A = path.join(os.tmpdir(), 'audit-sensitive-legacy');
-      const sens3 = make(D, [A]);
+      const { isSensitiveDataPath: sens3 } = make(D, [A]);
       ok(sens3(path.join(A, 'config.json')) === true && sens3(path.join(A, 'sessions', 's.json')) === true, 'P1#2 3.0 改名: 经旧目录名联接(dataRootAliases)的词法路径同样拒');
       ok(sens3(path.join(A, 'uploads', 'u.png')) === false, 'P1#2 3.0 改名: 经旧目录名的 uploads/ 产物照样允许');
     }

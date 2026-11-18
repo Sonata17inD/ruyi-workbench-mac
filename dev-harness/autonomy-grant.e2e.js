@@ -143,31 +143,18 @@ ok(grantBlock.length > 1000
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] 所属授权模块直测──');
 
-// 路径匹配直接引用模块；pathWithinRoot 使用既有路径边界夹具。
-const { globToRegExp } = require('../ruyi-workbench/app/backend/path-patterns.cjs');
-const pathWithinRoot = srv.pathWithinRoot;
-
 // 抽授权书核心块(autonomyGrants 声明 → listGrantsView 结束)。
 const mm = grantBlock ? [grantBlock] : null;
 ok(!!mm, 'P 源抽取授权书核心块');
 if (!mm) { console.log('\nAUTONOMY-GRANT E2E: FAIL (源抽取失败)'); process.exit(1); }
 
-const NATIVE_TOOL_TIER_STUB = {
-  file_read: 'read', file_list: 'read', file_write: 'edit', file_edit: 'edit', file_delete: 'edit',
-  file_move: 'edit', file_copy: 'edit', archive_zip: 'edit', archive_unzip: 'edit', http_download: 'edit',
-  shell_run: 'exec', script_run: 'exec', git_commit: 'exec', spawn_agent: 'exec', orchestrate_agents: 'exec',
-};
-const nativeToolTier = name => NATIVE_TOOL_TIER_STUB[name] || 'exec';
 const isSensitiveDataPath = p => /SENSITIVE_MARK/.test(String(p || ''));
-const normalizeCwd = (cwd, fb) => path.resolve(cwd || fb || '.');
 let _idc = 0; const makeId = pfx => pfx + '_' + (++_idc);
 
 
 
-// 03 工具层 AUTOEXEC_DENYLIST(117q-B2 起 06f 的 GRANT_EDIT_AUTOEXEC_DENY 派生自它,授权书块运行需要这个符号)。
-const AUTOEXEC_DENYLIST = srv.AUTOEXEC_DENYLIST;
-ok(Array.isArray(AUTOEXEC_DENYLIST), 'P 取到 AUTOEXEC_DENYLIST(03 工具层表,产物导出)');
-if (!Array.isArray(AUTOEXEC_DENYLIST)) { console.log('\nAUTONOMY-GRANT E2E: FAIL (AUTOEXEC_DENYLIST 未导出)'); process.exit(1); }
+const { AUTOEXEC_DENYLIST } = require('../ruyi-workbench/app/backend/autoexec-paths.cjs');
+ok(srv.AUTOEXEC_DENYLIST === AUTOEXEC_DENYLIST, 'P 文件护栏和授权书共用 AUTOEXEC_DENYLIST');
 
 // 真 hashArgs(00-boot.js,117q-B7(P2-16)单一事实源;consumeGrant 现在调它算 argsHash,不再手写 sha1 字面量)。
 const hashArgs = srv.hashArgs;
@@ -175,9 +162,7 @@ ok(typeof hashArgs === 'function', 'P 取到 hashArgs(00-boot.js 单一事实源
 if (typeof hashArgs !== 'function') { console.log('\nAUTONOMY-GRANT E2E: FAIL (hashArgs 未导出)'); process.exit(1); }
 
 const createGrantService = () => require('../ruyi-workbench/app/backend/autonomy-grants.cjs').createAutonomyGrants({
-  nativeTierFor: tool => Object.hasOwn(NATIVE_TOOL_TIER_STUB, tool) ? NATIVE_TOOL_TIER_STUB[tool] : null,
-  nativeToolTier, globToRegExp, isSensitiveDataPath, pathWithinRoot, normalizeCwd, makeId,
-  logEvent() {}, AUTOEXEC_DENYLIST, hashArgs,
+  isSensitiveDataPath, makeId, logEvent() {}, hashArgs,
 });
 let G = createGrantService();
 

@@ -5,15 +5,14 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('vm');
 const { readServerSource } = require('../src-reader');
-const { sliceBlock, constBlock, functionBlock } = require('../lib/source-slice');
+const { sliceBlock } = require('../lib/source-slice');
+const { nativeToolTier } = require('../../ruyi-workbench/app/backend/native-tool-tiers.cjs');
 
 const source = readServerSource();
 const block = sliceBlock(source, '// ── 压缩后重取守卫(回合内)', '// True shadow evaluation for 20-C1');
-// 工具档位用真表(07 NATIVE_TOOL_TIER + nativeToolTier),不另写一份假的
-const tierBlock = constBlock(source, 'NATIVE_TOOL_TIER') + '\n' + functionBlock(source, 'nativeToolTier');
 function load() {
-  const ctx = vm.createContext({ EVAPORATED_PREFIX: '[已省略:' });
-  vm.runInContext(tierBlock + '\n' + block + '\nglobalThis.__limits = COMPACTION_REFETCH_LIMITS;', ctx);
+  const ctx = vm.createContext({ EVAPORATED_PREFIX: '[已省略:', nativeToolTier });
+  vm.runInContext(block + '\nglobalThis.__limits = COMPACTION_REFETCH_LIMITS;', ctx);
   return ctx;
 }
 const call = (id, name, args) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });

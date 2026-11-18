@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 86,
-    "providedSymbols": 3260,
-    "requiredSymbols": 3450,
-    "edges": 608,
-    "forwardEdges": 42,
+    "providedSymbols": 3258,
+    "requiredSymbols": 3452,
+    "edges": 598,
+    "forwardEdges": 41,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -32,6 +32,7 @@
       "provides": [
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
+        "AUTOEXEC_DENYLIST",
         "BRIDGED_WRITE_PATH_ARGS",
         "BUNDLED_PYTHON_RUNTIME",
         "CLAUDE_ENDPOINT_PRESETS",
@@ -49,6 +50,7 @@
         "MAX_BODY_BYTES",
         "MCP_TOOLS",
         "MigrationHooks",
+        "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
         "RUYI_DATA_DIR_NAME",
@@ -98,6 +100,7 @@
         "decodeConsoleText",
         "decodeTextFileBytes",
         "defaultDataRoots",
+        "ensureDataRootReal",
         "ensureDirs",
         "estimateContentTokens",
         "estimateHistoryTokens",
@@ -117,8 +120,12 @@
         "http",
         "isContextOverflowError",
         "isDirectServeInvocation",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
+        "isSensitiveHardlinkStat",
         "json",
         "localTurnTimeParts",
+        "logEvent",
         "lstatOrNull",
         "macPathAnchor",
         "makeId",
@@ -130,8 +137,10 @@
         "maskedSecretConflicts",
         "mcpArgsForDisplay",
         "migrateLegacyDataRoot",
+        "nativeToolTier",
         "neutralizeFenceTag",
         "normalizeApiErrorPayload",
+        "normalizeCwd",
         "normalizePricing",
         "nowIso",
         "os",
@@ -161,6 +170,9 @@
         "sanitizeExternalMcpServer",
         "send",
         "sendError",
+        "sensitiveDataRoots",
+        "sensitiveFileIdentities",
+        "sensitiveGlobsForRg",
         "setEstimateBucketsV1",
         "spawnDetachedChecked",
         "text",
@@ -1036,6 +1048,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "normalizePricing",
           "kinds": [
             "call"
@@ -1268,13 +1294,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
             "call"
@@ -1325,13 +1344,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -1940,6 +1952,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -2300,14 +2320,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
             "call",
@@ -2379,7 +2391,6 @@
       "layer": "foundation",
       "note": "桥接写族覆盖审计/工作区护栏",
       "provides": [
-        "AUTOEXEC_DENYLIST",
         "BRIDGED_READ_PATH_ARGS",
         "BRIDGED_SCRIPT_TOOLS",
         "BRIDGED_WRITE_AUDIT_EXEMPT",
@@ -2412,7 +2423,6 @@
         "WRITE_PROTECTED_DATA_DIRS",
         "WRITE_PROTECTED_DATA_FILES",
         "WriteBoundaryHooks",
-        "_dataRootReal",
         "_gitCliProbe",
         "_homeRealCache",
         "auditBridgedWriteCoverage",
@@ -2427,7 +2437,6 @@
         "cleanupExternalDiffCache",
         "cwdWarning",
         "deviceNamespaceIsLocalVolume",
-        "ensureDataRootReal",
         "existsExecutable",
         "existsExecutableAsync",
         "fileAllowedRoots",
@@ -2439,9 +2448,6 @@
         "isBrowserDocumentTarget",
         "isMacManagedPath",
         "isOsCriticalPath",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
-        "isSensitiveHardlinkStat",
         "isWriteProtectedDataPath",
         "journalBridgedWrite",
         "launchCodeEditor",
@@ -2450,7 +2456,6 @@
         "materializeCheckpointEditorDiff",
         "nameSetJaccard",
         "normalizeAutoexecPath",
-        "normalizeCwd",
         "normalizeGuardPath",
         "preflightWriteBoundary",
         "probeGitCli",
@@ -2466,8 +2471,6 @@
         "resolveExecCwd",
         "resolvePreferredCodeEditor",
         "resolveWorkspace",
-        "sensitiveFileIdentities",
-        "sensitiveGlobsForRg",
         "statTimed",
         "stripWin32VerbatimPrefix",
         "uncHostAndPath",
@@ -2483,6 +2486,13 @@
           "symbol": "agentCliHomes",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "AUTOEXEC_DENYLIST",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -2510,21 +2520,19 @@
           "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRootAliases",
-          "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "decodeTextFileBytes",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
           "kinds": [
             "call"
           ]
@@ -2548,6 +2556,34 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkStat",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -2582,8 +2618,7 @@
           "provider": "00-boot.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -2596,6 +2631,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveDataRoots",
           "kinds": [
             "call"
           ]
@@ -2680,13 +2722,6 @@
         {
           "provider": "02f-turn-effect-kinds.js",
           "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -2814,9 +2849,6 @@
         "kimiModelList",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
-        "logEvent",
-        "logStream",
-        "logStreamDay",
         "makeAttachmentRecord",
         "mcpCallToolParams",
         "mcpChildExitResult",
@@ -2943,6 +2975,14 @@
           "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -3262,6 +3302,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "read"
@@ -3298,13 +3345,6 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -3456,6 +3496,20 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -3782,13 +3836,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
           "kinds": [
@@ -3910,13 +3957,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "lastSuccessfulClaudeModel",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -4499,6 +4539,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -4509,6 +4563,13 @@
           "symbol": "MAX_BODY_BYTES",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -4803,20 +4864,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
             "call",
@@ -4883,13 +4930,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -5191,6 +5231,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
             "call"
@@ -5423,13 +5470,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -5987,6 +6027,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -5998,6 +6046,13 @@
           "symbol": "neutralizeFenceTag",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6144,21 +6199,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
@@ -6187,7 +6227,21 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "read"
           ]
@@ -6256,20 +6310,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
@@ -6308,56 +6348,21 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "AUTOEXEC_DENYLIST",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
+          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "07-autonomy.js",
-          "symbol": "NATIVE_TOOL_TIER",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
+          "provider": "00-boot.js",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
@@ -6464,6 +6469,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6587,13 +6599,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
           "kinds": [
             "read"
@@ -6649,7 +6654,6 @@
         "NATIVE_COMMAND_TOOL_NAMES",
         "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
-        "NATIVE_TOOL_TIER",
         "POOL_CHAIN_MAX",
         "POOL_GRACE_MS",
         "POOL_MAX_TOTAL",
@@ -6721,7 +6725,6 @@
         "nativeToolDisabledByPolicy",
         "nativeToolGate",
         "nativeToolSchema",
-        "nativeToolTier",
         "nativeToolsAcceptingArgKeys",
         "neutralizeInjectedPrefixes",
         "normalizeToolSearchText",
@@ -6861,6 +6864,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -6872,6 +6882,20 @@
           "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7170,24 +7194,10 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -7540,7 +7550,29 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -7824,13 +7856,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
@@ -7862,14 +7887,6 @@
           "symbol": "getBridgedClient",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -8128,13 +8145,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -8483,6 +8493,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -8490,7 +8508,22 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -8981,13 +9014,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
@@ -9082,14 +9108,6 @@
           "symbol": "installActiveChildEventFanout",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -9673,14 +9691,6 @@
           "symbol": "nativeToolGate",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -10634,7 +10644,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -11082,13 +11106,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "recordSessionExecutionOwner",
           "kinds": [
             "call"
@@ -11263,13 +11280,6 @@
           ]
         },
         {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "09-workflow.js",
           "symbol": "runOpenAiTurn",
           "kinds": [
@@ -11361,7 +11371,35 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -11418,6 +11456,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "ruyiVendorBinDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveFileIdentities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveGlobsForRg",
           "kinds": [
             "read"
           ]
@@ -11487,42 +11539,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveGlobsForRg",
           "kinds": [
             "read"
           ]
@@ -11539,13 +11556,6 @@
           "symbol": "collectBridgedTools",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11835,7 +11845,37 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call",
             "read"
@@ -11888,6 +11928,13 @@
           "symbol": "safeJsonParse",
           "kinds": [
             "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveFileIdentities",
+          "kinds": [
             "read"
           ]
         },
@@ -12232,31 +12279,9 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "journalBridgedWrite",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -12296,13 +12321,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
           "kinds": [
             "read"
@@ -12334,14 +12352,6 @@
           "symbol": "getBridgedClient",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -13133,6 +13143,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
             "call",
@@ -13199,7 +13216,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "json",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -13250,6 +13288,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "migrateLegacyDataRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -13968,13 +14013,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "existsExecutable",
           "kinds": [
             "call",
@@ -14004,20 +14042,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "launchCodeEditor",
           "kinds": [
             "call"
@@ -14026,13 +14050,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "materializeCheckpointEditorDiff",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -14085,13 +14102,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -15083,6 +15093,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "maskExternalMcpServerForDisplay",
           "kinds": [
             "call"
@@ -15315,13 +15332,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateMcpRuntime",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -15629,9 +15639,30 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -16156,13 +16187,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "resolveContainmentPath",
           "kinds": [
             "call"
@@ -16199,13 +16223,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "interventionCommandFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -16396,13 +16413,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -17121,6 +17131,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -17220,13 +17237,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -17602,9 +17612,30 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -17721,28 +17752,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
             "call"
           ]
@@ -17899,6 +17909,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -18121,13 +18138,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -19796,6 +19806,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -19855,13 +19872,6 @@
           "symbol": "PrivacyGateway",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -20366,6 +20376,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -20423,13 +20440,6 @@
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -20544,6 +20554,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "OVERLAY_ID",
           "kinds": [
             "read"
@@ -20634,13 +20651,6 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06i-steward-core.js",
           "symbol": "STEWARD_SESSION_ID",
           "kinds": [
@@ -20712,6 +20722,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -20801,13 +20818,6 @@
         {
           "provider": "02d-session-overrides.js",
           "symbol": "applySessionPermissionModeOverride",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -21223,6 +21233,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -21322,13 +21339,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -21733,6 +21743,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -21853,13 +21870,6 @@
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -22838,6 +22848,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "read"
@@ -22923,13 +22940,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -23379,6 +23389,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
@@ -23555,13 +23572,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "_tomlKeyPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -24260,6 +24270,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "AUTOEXEC_DENYLIST",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
@@ -24373,6 +24390,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "maskSecrets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "NATIVE_TOOL_TIER",
           "kinds": [
             "read"
           ]
@@ -25319,13 +25343,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "auditBridgedWriteCoverage",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "AUTOEXEC_DENYLIST",
           "kinds": [
             "read"
           ]
@@ -27124,13 +27141,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "NATIVE_TOOL_TIER",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
             "read"
@@ -28402,6 +28412,8 @@
         "findRuyiPackageRootFor",
         "fs",
         "fsp",
+        "logEvent",
+        "nativeToolTier",
         "normalizePricing",
         "nowIso",
         "os",
@@ -28486,7 +28498,6 @@
       "from": "01-config.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "resolveExternalMcpServers",
         "scanMcpSources"
       ],
@@ -28516,8 +28527,7 @@
         "TOOL_PACK_DESCRIPTIONS",
         "accPolicyHiddenToolNames",
         "claudePermissionMode",
-        "getAgentRoleLibrary",
-        "nativeToolTier"
+        "getAgentRoleLibrary"
       ],
       "direction": "forward"
     },
@@ -28627,6 +28637,7 @@
         "SessionExecutionHooks",
         "ensureDirs",
         "fsp",
+        "logEvent",
         "makeId",
         "nowIso",
         "os",
@@ -28736,7 +28747,6 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "lastAssistantEngine",
-        "logEvent",
         "stopSession"
       ],
       "direction": "forward"
@@ -28838,17 +28848,22 @@
       "from": "03-bridge-guard.js",
       "to": "00-boot.js",
       "symbols": [
+        "AUTOEXEC_DENYLIST",
         "BRIDGED_WRITE_PATH_ARGS",
         "URL",
         "agentCliHomes",
         "collectBridgedWriteTargets",
         "crypto",
         "dataRoot",
-        "dataRootAliases",
         "decodeTextFileBytes",
+        "ensureDataRootReal",
         "externalRoot",
         "fs",
         "fsp",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
+        "isSensitiveHardlinkStat",
+        "logEvent",
         "macPathAnchor",
         "os",
         "path",
@@ -28856,6 +28871,7 @@
         "pathWithinRoot",
         "sameFileIdentity",
         "samePathKey",
+        "sensitiveDataRoots",
         "spawnDetachedChecked",
         "zlib"
       ],
@@ -28902,7 +28918,6 @@
       "from": "03-bridge-guard.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "mcpDropInDirs",
         "toolboxComponentsDir"
       ],
@@ -28951,6 +28966,7 @@
         "externalRoot",
         "fs",
         "fsp",
+        "logEvent",
         "makeId",
         "maskKey",
         "mcpArgsForDisplay",
@@ -29038,6 +29054,7 @@
       "from": "04f-toolbox-services.js",
       "to": "00-boot.js",
       "symbols": [
+        "logEvent",
         "redact",
         "safeJsonParse"
       ],
@@ -29066,8 +29083,7 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "ToolboxHooks",
-        "ToolboxRegistry",
-        "logEvent"
+        "ToolboxRegistry"
       ],
       "direction": "backward"
     },
@@ -29135,6 +29151,8 @@
         "createNdjsonLineFeeder",
         "crypto",
         "fsp",
+        "logEvent",
+        "normalizeCwd",
         "nowIso",
         "path",
         "paths",
@@ -29249,8 +29267,7 @@
       "symbols": [
         "buildAttachmentPrompt",
         "buildDeliveryRevisionPrompt",
-        "cwdWarning",
-        "normalizeCwd"
+        "cwdWarning"
       ],
       "direction": "backward"
     },
@@ -29284,7 +29301,6 @@
         "kimiModelList",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
-        "logEvent",
         "nativeClaudeAgentResultInfo",
         "parseClaudeEvent",
         "parseKimiStreamJsonEvent",
@@ -29434,7 +29450,10 @@
         "fs",
         "fsp",
         "http",
+        "isSensitiveDataPath",
+        "logEvent",
         "makeId",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
@@ -29508,8 +29527,6 @@
         "fileAllowedRoots",
         "guardFileToolPath",
         "guardWorkspaceExecute",
-        "isSensitiveDataPath",
-        "normalizeCwd",
         "realpathForContainment",
         "workspaceWriteRoots"
       ],
@@ -29534,7 +29551,6 @@
         "clearPendingQuestions",
         "discoverKimiModels",
         "hasPendingPermissionForSession",
-        "logEvent",
         "permissionWaitMs",
         "registerSessionExecutionChild",
         "requestUserQuestion",
@@ -29596,6 +29612,7 @@
         "externalRoot",
         "fs",
         "fsp",
+        "logEvent",
         "neutralizeFenceTag",
         "nowIso",
         "path",
@@ -29696,7 +29713,6 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "collectBridgedTools",
-        "logEvent",
         "mcpClients",
         "resolveExternalMcpServers",
         "sanitizeServerId"
@@ -29785,8 +29801,10 @@
         "crypto",
         "fsp",
         "json",
+        "logEvent",
         "makeId",
         "neutralizeFenceTag",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
@@ -29839,22 +29857,6 @@
     },
     {
       "from": "06d-memory-domain.js",
-      "to": "03-bridge-guard.js",
-      "symbols": [
-        "normalizeCwd"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06d-memory-domain.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06d-memory-domain.js",
       "to": "04i-provider-wire.js",
       "symbols": [
         "activeOpenAiProvider"
@@ -29873,7 +29875,9 @@
       "from": "06e-mission-domain.js",
       "to": "00-boot.js",
       "symbols": [
+        "logEvent",
         "neutralizeFenceTag",
+        "normalizeCwd",
         "nowIso"
       ],
       "direction": "backward"
@@ -29895,22 +29899,6 @@
     },
     {
       "from": "06e-mission-domain.js",
-      "to": "03-bridge-guard.js",
-      "symbols": [
-        "normalizeCwd"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06e-mission-domain.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06e-mission-domain.js",
       "to": "06b-prompt-registry.js",
       "symbols": [
         "getPromptPack"
@@ -29922,37 +29910,11 @@
       "to": "00-boot.js",
       "symbols": [
         "hashArgs",
-        "makeId",
-        "pathWithinRoot"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06f-autonomy-grants.js",
-      "to": "03-bridge-guard.js",
-      "symbols": [
-        "AUTOEXEC_DENYLIST",
         "isSensitiveDataPath",
-        "normalizeCwd"
+        "logEvent",
+        "makeId"
       ],
       "direction": "backward"
-    },
-    {
-      "from": "06f-autonomy-grants.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06f-autonomy-grants.js",
-      "to": "07-autonomy.js",
-      "symbols": [
-        "NATIVE_TOOL_TIER",
-        "nativeToolTier"
-      ],
-      "direction": "forward"
     },
     {
       "from": "06g-resource-leases.js",
@@ -29976,6 +29938,7 @@
       "to": "00-boot.js",
       "symbols": [
         "fsp",
+        "logEvent",
         "maskedSecretConflictMessage",
         "maskedSecretConflicts",
         "os",
@@ -30028,8 +29991,7 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "ToolboxHooks",
-        "invalidateMcpRuntime",
-        "logEvent"
+        "invalidateMcpRuntime"
       ],
       "direction": "backward"
     },
@@ -30062,7 +30024,10 @@
         "extractContextLength",
         "fsp",
         "isContextOverflowError",
+        "logEvent",
         "makeId",
+        "nativeToolTier",
+        "normalizeCwd",
         "nowIso",
         "path",
         "pathWithinRoot",
@@ -30164,8 +30129,7 @@
       "to": "03-bridge-guard.js",
       "symbols": [
         "buildAttachmentPrompt",
-        "existsExecutableAsync",
-        "normalizeCwd"
+        "existsExecutableAsync"
       ],
       "direction": "backward"
     },
@@ -30182,7 +30146,6 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "PermissionWaitHooks",
-        "logEvent",
         "parseClaudeEvent",
         "promptWaitMs",
         "resolveBridge",
@@ -30267,7 +30230,10 @@
         "estimateHistoryTokens",
         "fsp",
         "isContextOverflowError",
+        "logEvent",
         "makeId",
+        "nativeToolTier",
+        "normalizeCwd",
         "nowIso",
         "path",
         "paths",
@@ -30353,7 +30319,6 @@
         "bridgedReadPathGate",
         "guardWorkspacePath",
         "journalBridgedWrite",
-        "normalizeCwd",
         "preflightWriteBoundary"
       ],
       "direction": "backward"
@@ -30373,7 +30338,6 @@
         "bridgedServerUnavailableMessage",
         "collectBridgedTools",
         "getBridgedClient",
-        "logEvent",
         "permissionWaitMs",
         "resolveBridge",
         "runAutomaticInterventionDecision"
@@ -30460,7 +30424,6 @@
         "loopAbortExempt",
         "loopWarnOnly",
         "nativeToolGate",
-        "nativeToolTier",
         "neutralizeInjectedPrefixes",
         "openAiStreamOnce",
         "requestNativePermission",
@@ -30536,8 +30499,11 @@
         "fsp",
         "isContextOverflowError",
         "localTurnTimeParts",
+        "logEvent",
         "makeId",
+        "nativeToolTier",
         "neutralizeFenceTag",
+        "normalizeCwd",
         "nowIso",
         "redact",
         "safeJsonParse",
@@ -30660,7 +30626,6 @@
         "buildDeliveryRevisionPrompt",
         "cwdWarning",
         "journalBridgedWrite",
-        "normalizeCwd",
         "preflightWriteBoundary"
       ],
       "direction": "backward"
@@ -30689,7 +30654,6 @@
         "hasPendingPermissionForSession",
         "hasPendingQuestionForSession",
         "installActiveChildEventFanout",
-        "logEvent",
         "permissionWaitMs",
         "registerSessionExecutionChild",
         "requestUserQuestion",
@@ -30846,7 +30810,6 @@
         "loopAbortExempt",
         "loopWarnOnly",
         "nativeToolGate",
-        "nativeToolTier",
         "openAiStreamOnce",
         "projectActionModelView",
         "requestNativePermission",
@@ -30995,7 +30958,9 @@
         "fmtTokensServer",
         "fsp",
         "isContextOverflowError",
+        "logEvent",
         "makeId",
+        "nativeToolTier",
         "nowIso",
         "path",
         "paths",
@@ -31127,7 +31092,6 @@
       "symbols": [
         "assertSessionExecutionOwner",
         "driverAutoSessions",
-        "logEvent",
         "recordSessionExecutionOwner",
         "requestSessionExecutionStop",
         "sessionExecutionSnapshot",
@@ -31208,8 +31172,7 @@
       "to": "07-autonomy.js",
       "symbols": [
         "buildOpenAiTools",
-        "fetchOpenAiModels",
-        "nativeToolTier"
+        "fetchOpenAiModels"
       ],
       "direction": "backward"
     },
@@ -31229,11 +31192,17 @@
         "MCP_TOOLS",
         "RUYI_EVENTS",
         "RUYI_PATH_BEFORE_VENDOR",
+        "ensureDataRootReal",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
+        "logEvent",
         "nowIso",
         "pathWithinRoot",
         "paths",
         "redact",
-        "ruyiVendorBinDir"
+        "ruyiVendorBinDir",
+        "sensitiveFileIdentities",
+        "sensitiveGlobsForRg"
       ],
       "direction": "backward"
     },
@@ -31278,12 +31247,7 @@
       "from": "11-native-tools.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "ensureDataRootReal",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
-        "realpathForContainment",
-        "sensitiveFileIdentities",
-        "sensitiveGlobsForRg"
+        "realpathForContainment"
       ],
       "direction": "backward"
     },
@@ -31299,8 +31263,7 @@
       "from": "11-native-tools.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "collectBridgedTools",
-        "logEvent"
+        "collectBridgedTools"
       ],
       "direction": "backward"
     },
@@ -31368,13 +31331,18 @@
         "externalRoot",
         "fs",
         "fsp",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
+        "logEvent",
         "makeId",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
         "pathWithinRoot",
         "paths",
         "safeJsonParse",
+        "sensitiveFileIdentities",
         "spawnDetachedChecked",
         "text"
       ],
@@ -31479,14 +31447,10 @@
         "guardFileToolPath",
         "guardWorkspaceExecute",
         "isBrowserDocumentTarget",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
         "journalBridgedWrite",
-        "normalizeCwd",
         "realpathForContainment",
         "remoteUncDenialResolved",
-        "resolveExecCwd",
-        "sensitiveFileIdentities"
+        "resolveExecCwd"
       ],
       "direction": "backward"
     },
@@ -31505,7 +31469,6 @@
         "bridgedServerUnavailableMessage",
         "configureMcpFromTool",
         "getBridgedClient",
-        "logEvent",
         "resolveBridge",
         "resolveExternalMcpServers",
         "safeMcpInventory"
@@ -31716,6 +31679,7 @@
         "crypto",
         "dataRootAliases",
         "defaultDataRoots",
+        "ensureDataRootReal",
         "ensureDirs",
         "exePath",
         "externalRoot",
@@ -31723,13 +31687,17 @@
         "fsp",
         "http",
         "isDirectServeInvocation",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
         "json",
+        "logEvent",
         "lstatOrNull",
         "makeId",
         "maskProviders",
         "maskedSecretConflictMessage",
         "maskedSecretConflicts",
         "migrateLegacyDataRoot",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
@@ -31919,16 +31887,12 @@
         "PREVIEW_TEXT_EXTS",
         "buildCodeEditorSpawn",
         "buildRevealSpawn",
-        "ensureDataRootReal",
         "existsExecutable",
         "existsExecutableAsync",
         "fileAllowedRoots",
         "guardWorkspacePath",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
         "launchCodeEditor",
         "materializeCheckpointEditorDiff",
-        "normalizeCwd",
         "readFilePreview",
         "remoteUncDenialResolved",
         "resolvePreferredCodeEditor",
@@ -31950,7 +31914,6 @@
       "symbols": [
         "ToolboxHooks",
         "killAllMcpClients",
-        "logEvent",
         "makeAttachmentRecord",
         "requestSessionExecutionStop",
         "resolveExternalMcpServers",
@@ -32221,7 +32184,10 @@
         "apiFailure",
         "apiSessionNotFound",
         "crypto",
+        "ensureDataRootReal",
         "fsp",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
         "json",
         "nowIso",
         "path",
@@ -32258,10 +32224,7 @@
       "from": "13aa-steward-delivery.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "ensureDataRootReal",
         "fileAllowedRoots",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
         "readFilePreview",
         "remoteUncDenialResolved"
       ],
@@ -32486,6 +32449,7 @@
         "crypto",
         "fsp",
         "json",
+        "logEvent",
         "maskExternalMcpServerForDisplay",
         "nowIso",
         "os",
@@ -32555,7 +32519,6 @@
         "getBridgedClient",
         "hasPendingQuestionForSession",
         "invalidateMcpRuntime",
-        "logEvent",
         "mutateMcpConnector",
         "probeMcpConnector",
         "resolveBridge",
@@ -32646,7 +32609,10 @@
         "dataRootAliases",
         "fsp",
         "json",
+        "logEvent",
         "makeId",
+        "nativeToolTier",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
@@ -32775,7 +32741,6 @@
       "to": "03-bridge-guard.js",
       "symbols": [
         "bridgedReadPathGate",
-        "normalizeCwd",
         "resolveContainmentPath"
       ],
       "direction": "backward"
@@ -32796,7 +32761,6 @@
         "driverAutoSessions",
         "extendUserQuestion",
         "interventionCommandFailure",
-        "logEvent",
         "normalizeQuestionAnswer",
         "permissionWaitMs",
         "requestUserQuestion",
@@ -32853,7 +32817,6 @@
         "cleanupAgentWorktree",
         "getAgentRoleLibrary",
         "nativeToolGate",
-        "nativeToolTier",
         "toolDisabledByPolicy",
         "toolDisabledResult",
         "toolIsRevertible"
@@ -33021,6 +32984,7 @@
         "URL",
         "apiFailure",
         "json",
+        "logEvent",
         "nowIso",
         "readJsonBody",
         "send",
@@ -33050,14 +33014,6 @@
       "to": "03a-privacy-gateway.js",
       "symbols": [
         "PrivacyGateway"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13g-steward.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
       ],
       "direction": "backward"
     },
@@ -33327,6 +33283,7 @@
         "RUYI_EVENTS",
         "fs",
         "fsp",
+        "logEvent",
         "nowIso",
         "path",
         "paths",
@@ -33369,7 +33326,6 @@
       "from": "13i-steward-inbox.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "turnOutcomePending"
       ],
       "direction": "backward"
@@ -33500,6 +33456,7 @@
         "dataRootAliases",
         "decodeTextFileBytes",
         "fsp",
+        "logEvent",
         "nowIso",
         "path",
         "pathWithinRoot",
@@ -33589,7 +33546,6 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "PermissionWaitHooks",
-        "logEvent",
         "sanitizeFsSegmentName",
         "sessionExecutionSnapshot"
       ],
@@ -34021,6 +33977,7 @@
       "to": "00-boot.js",
       "symbols": [
         "SESSION_SCHEMA",
+        "logEvent",
         "nowIso",
         "paths"
       ],
@@ -34057,7 +34014,6 @@
       "from": "13m-steward-runner-base.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "stopSession"
       ],
       "direction": "backward"
@@ -34089,6 +34045,7 @@
         "RUYI_EVENTS",
         "crypto",
         "fs",
+        "logEvent",
         "path"
       ],
       "direction": "backward"
@@ -34127,8 +34084,7 @@
       "from": "13n-steward-arbiter.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "assertSessionExecutionOwner",
-        "logEvent"
+        "assertSessionExecutionOwner"
       ],
       "direction": "backward"
     },
@@ -34156,6 +34112,7 @@
       "to": "00-boot.js",
       "symbols": [
         "fsp",
+        "logEvent",
         "path",
         "redact",
         "text"
@@ -34197,14 +34154,6 @@
       "to": "02d-session-overrides.js",
       "symbols": [
         "applySessionPermissionModeOverride"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13o-steward-runner-prompt.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
       ],
       "direction": "backward"
     },
@@ -34348,6 +34297,7 @@
       "from": "13p-steward-runner-actions.js",
       "to": "00-boot.js",
       "symbols": [
+        "logEvent",
         "text"
       ],
       "direction": "backward"
@@ -34384,14 +34334,6 @@
         "usageDayKey",
         "usageDayKeyMemo",
         "usageRangeLowerMs"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13p-steward-runner-actions.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "logEvent"
       ],
       "direction": "backward"
     },
@@ -34506,6 +34448,7 @@
         "RUYI_EVENTS",
         "crypto",
         "fsp",
+        "logEvent",
         "makeId",
         "nowIso",
         "path"
@@ -34557,7 +34500,6 @@
       "from": "13q-steward-runner-turn.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "normalizeQuestionAnswer",
         "promptDeadlineIsReal",
         "stopSession"
@@ -34803,6 +34745,7 @@
       "to": "00-boot.js",
       "symbols": [
         "RUYI_EVENTS",
+        "logEvent",
         "makeId",
         "nowIso",
         "paths",
@@ -34843,7 +34786,6 @@
       "from": "13s-scheduler.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "logEvent",
         "stopSession"
       ],
       "direction": "backward"
@@ -35002,6 +34944,7 @@
         "findRuyiPackageRootFor",
         "fs",
         "fsp",
+        "logEvent",
         "nowIso",
         "os",
         "path",
@@ -35046,7 +34989,6 @@
       "symbols": [
         "_parseTomlMcpServers",
         "_tomlKeyPath",
-        "logEvent",
         "parseMcpConfigFile"
       ],
       "direction": "backward"
@@ -35194,10 +35136,12 @@
       "from": "14-main.js",
       "to": "00-boot.js",
       "symbols": [
+        "AUTOEXEC_DENYLIST",
         "BRIDGED_WRITE_PATH_ARGS",
         "CONFIG_SCHEMA",
         "CONTEXT_WINDOW_FALLBACK",
         "EventStreamHooks",
+        "NATIVE_TOOL_TIER",
         "RUYI_EVENTS",
         "adaptiveMetaToolSchemas",
         "classifyTextForEstimate",
@@ -35437,7 +35381,6 @@
       "from": "14-main.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "AUTOEXEC_DENYLIST",
         "auditBridgedWriteCoverage",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
@@ -35770,7 +35713,6 @@
       "symbols": [
         "ACC_POLICY_TOOL_FAMILIES",
         "NATIVE_TOOL_PACKS",
-        "NATIVE_TOOL_TIER",
         "accPolicyHiddenToolNames",
         "applyAgentWorktree",
         "bridgedToolTier",
@@ -36092,7 +36034,6 @@
       "06-provider-engine.js",
       "06d-memory-domain.js",
       "06e-mission-domain.js",
-      "06f-autonomy-grants.js",
       "07-autonomy.js",
       "08-agent-runs.js",
       "09-workflow.js",
@@ -36109,7 +36050,6 @@
     "02-session-store.js->01-config.js",
     "02-session-store.js->03-bridge-guard.js",
     "02-session-store.js->04-permission-runtime.js",
-    "02-session-store.js->06f-autonomy-grants.js",
     "02-session-store.js->07-autonomy.js",
     "02-session-store.js->08-agent-runs.js",
     "02-session-store.js->11-native-tools.js",
@@ -36149,15 +36089,8 @@
     "06-provider-engine.js->11-native-tools.js",
     "06d-memory-domain.js->01-config.js",
     "06d-memory-domain.js->02-session-store.js",
-    "06d-memory-domain.js->03-bridge-guard.js",
-    "06d-memory-domain.js->04-permission-runtime.js",
     "06d-memory-domain.js->06-provider-engine.js",
     "06e-mission-domain.js->02-session-store.js",
-    "06e-mission-domain.js->03-bridge-guard.js",
-    "06e-mission-domain.js->04-permission-runtime.js",
-    "06f-autonomy-grants.js->03-bridge-guard.js",
-    "06f-autonomy-grants.js->04-permission-runtime.js",
-    "06f-autonomy-grants.js->07-autonomy.js",
     "07-autonomy.js->01-config.js",
     "07-autonomy.js->02-session-store.js",
     "07-autonomy.js->03-bridge-guard.js",
@@ -36180,7 +36113,6 @@
     "09-workflow.js->04-permission-runtime.js",
     "09-workflow.js->06-provider-engine.js",
     "09-workflow.js->06d-memory-domain.js",
-    "09-workflow.js->06f-autonomy-grants.js",
     "09-workflow.js->07-autonomy.js",
     "09-workflow.js->08-agent-runs.js",
     "09-workflow.js->10-context-governance.js",
@@ -36191,7 +36123,6 @@
     "10-context-governance.js->05-claude-engine.js",
     "10-context-governance.js->06-provider-engine.js",
     "10-context-governance.js->06e-mission-domain.js",
-    "10-context-governance.js->06f-autonomy-grants.js",
     "10-context-governance.js->07-autonomy.js",
     "10-context-governance.js->09-workflow.js",
     "11-native-tools.js->01-config.js",
@@ -36241,7 +36172,6 @@
     "06-provider-engine.js->06e-mission-domain.js",
     "06-provider-engine.js->07-autonomy.js",
     "06-provider-engine.js->11-native-tools.js",
-    "06f-autonomy-grants.js->07-autonomy.js",
     "07-autonomy.js->08-agent-runs.js",
     "08-agent-runs.js->09-workflow.js",
     "08-agent-runs.js->10-context-governance.js",

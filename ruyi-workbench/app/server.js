@@ -241,7 +241,7 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
-const { macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
+const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
 const { BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg } = require('./backend/bridged-write-targets.cjs');
 const { redact } = require('./backend/secret-redaction.cjs');
 const {
@@ -415,6 +415,14 @@ function hashArgs(args) {
     return '';
   }
 }
+
+const { AUTOEXEC_DENYLIST } = require('./backend/autoexec-paths.cjs');
+const { NATIVE_TOOL_TIER, nativeToolTier } = require('./backend/native-tool-tiers.cjs');
+const {
+  ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
+  isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,
+} = require('./backend/sensitive-paths.cjs').createSensitivePaths({ dataRoot, dataRootAliases });
+const logEvent = require('./backend/audit-log.cjs').createAuditLog({ logsDirectory: paths.logs, nowIso });
 
 async function ensureDirs() {
   await Promise.all([
@@ -5772,13 +5780,6 @@ function bridgedOfficeScriptGate(bridgedName, args) {
   return null;
 }
 
-function normalizeCwd(cwd, fallback) {
-  // cwd 多直接取自请求体:非字符串(数字/对象)当没传,否则 path.resolve 抛 TypeError → 500(/api/memory* 等)。
-  const pick = v => (typeof v === 'string' && v ? v : '');
-  const base = pick(cwd) || pick(fallback) || os.homedir();
-  return path.resolve(base);
-}
-
 // v0.8-S0 cwd guardrail: a resolved working dir sitting AT the user's home or its Desktop/Documents/
 // Downloads root is the highest-risk "tidy this folder" target (it acts on everything the user owns).
 // Returns { path, reason } to attach to the turn's meta event, or null when the dir is task-specific.
@@ -6094,28 +6095,6 @@ async function resolveContainmentPath(rawPath) {
 async function realpathForContainment(rawPath) {
   return (await resolveContainmentPath(rawPath)).path;
 }
-// 审计 P1: dataRoot 是文件工具的允许根之一(fileAllowedRoots),本意只为读写【应用产物】(uploads/checkpoints
-// 内容/generated 产物)。但它同时罩住了应用自身的【控制面文件】:config.json(明文 provider 密钥)、sessions/
-// (完整对话记录,含 file_read 读回的文件内容与讨论到的密钥)、memory/(跨会话记忆)、usage/(计费台账)、logs/
-// (审计,含路径/命令)、agent-runs/(工作流状态)、generated/(内含带 WCW_TOKEN 的会话 MCP 配置)。提示注入的
-// 模型只需 file_read 这些文件再经 web_fetch 外传,即绕过 HTTP 层的 maskProviders 脱敏(GET /api/status 从不回明文
-// 密钥,文件工具层却能读原始字节)。这里对【解析后的真实路径】做二次拒绝:命中这些敏感子树的文件工具访问一律
-// 拒绝(读写都拒),不影响读 uploads/ 产物或 checkpoints/ 内容。用 realpath 比对,故工作区内指向敏感文件的符号链接也拒。
-// 对抗轮扩展(3 处补漏): ①加入 runtime.json —— 它在 dataRoot 顶层明文存 WCW_TOKEN(RUNTIME.token),原表漏掉 →
-// file_read 拿 token → 打 /api/file/preview 读 config.json 的链成立;②遍历类工具(file_list/file_search/glob)会
-// 【递归进】dataRoot 子树返回文件内容,原来只校验 root 参数不校验被遍历文件 → 敏感文件内容仍外泄(见 walkFiles 内跳过);
-// ③realpath 对称性: dataRoot 祖先若为 junction/符号链接/8.3 短名,realpath(target) 与【未解析】的 paths.* 永不相等,
-// 门被绕过 → 同时对【词法 dataRoot】与【realpath 后 dataRoot】两种根前缀比对,调用方传词法或 realpath 路径都能命中。
-// _dataRootReal 由 ensureDataRootReal 缓存(dataRoot 必存在,ensureDirs);同步 isSensitiveDataPath 供遍历热路径逐项调用。
-let _dataRootReal = null;
-async function ensureDataRootReal() {
-  if (!_dataRootReal) { const r = dataRoot(); _dataRootReal = await fsp.realpath(r).catch(() => r); }
-  return _dataRootReal;
-}
-const { isSensitiveDataPath, sensitiveFileIdentities, isSensitiveHardlinkStat,
-  isSensitiveHardlinkAlias, sensitiveGlobsForRg } = require('./backend/sensitive-paths.cjs').createSensitivePaths({
-  dataRoot, dataRootAliases, realDataRoot: () => _dataRootReal, pathWithinRoot,
-});
 // 安全审计 #1/#8(数据根里会被【自动加载 / 执行 / 信任】的状态):dataRoot 是文件工具的写根,isSensitiveDataPath
 // 只挡了「读出来会泄密」的那一批。下面这批读是无害的(或本来就要能读:检查点内容、个人工作流模板),但【写】进去
 // 就等于在下一回合 / 下一次启动时让工作台替模型执行它:
@@ -6136,7 +6115,7 @@ function isWriteProtectedDataPath(p) {
   if (isSensitiveDataPath(p)) return true;
   // 同 isSensitiveDataPath 开头那一行:剥 NTFS 流后缀与尾随点 / 空格(`mcp.d::$INDEX_ALLOCATION\x.json`、`scheduler.\tasks.json`)。
   p = String(p).split(/([\\/])/).map(seg => (/^[a-z]:$/i.test(seg) || seg === '/' || seg === '\\') ? seg : seg.replace(/:.*$/, '').replace(/([^. ])[. ]+$/, '$1')).join('');
-  const bases = [...new Set([dataRoot(), ...(_dataRootReal ? [_dataRootReal] : []), ...dataRootAliases()])];
+  const bases = sensitiveDataRoots();
   for (const b of bases) {
     for (const n of WRITE_PROTECTED_DATA_DIRS) if (pathWithinRoot(p, path.join(b, n))) return true;
     for (const n of WRITE_PROTECTED_DATA_FILES) if (pathWithinRoot(p, path.join(b, n))) return true;
@@ -6245,46 +6224,6 @@ function providerIsLocal(config) {
 //   • out of bounds + WRITE  → DENY always (destructive / exfil-staging), audit-logged.
 //   • out of bounds + READ   → allow only for a LOCAL provider (providerIsLocal); a remote/cloud model → DENY.
 //   • allowOutsideWorkspace === true → bypass (still audit-logged so an operator can see the crossings).
-// 第31波B(autonomy-shell-sandbox L1): 工具层 autoexec 路径黑名单 —— 从授权书层(consumeGrant)下沉到
-// guardFileToolPath,让 bypass/plan/default 全模式都受 autoexec 保护,不再依赖"是否有授权书"。
-// 117q-B2(30 号文 §4.2 拍板口径): 本表是 autoexec 条目的【唯一事实源】——授权书层 06f 的
-// GRANT_EDIT_AUTOEXEC_DENY 不再自维护副本,而是 [...本条整条 .git/ 规则, ...AUTOEXEC_DENYLIST] 取并集
-// (无人值守面更严:授权书层挡整条 .git/;工具层是有人值守面,保持只挡 hooks/config,扩严会误伤
-// .git/COMMIT_EDITMSG 这类日常写)。改条目只改这里。
-// 精确匹配 .git/hooks/ 等自动执行入口(不误伤 .gitignore/.gitattributes 等工作区根级文件)。
-const AUTOEXEC_DENYLIST = [
-  // git hooks（.git/hooks/ 内的任何文件，.githooks/，.husky/）；.git/config 可通过 core.hooksPath 把 hook 重定向到任意目录。
-  /(^|[\\/])\.git[\\/]hooks[\\/]/i, /(^|[\\/])\.git[\\/]config(?:\.worktree)?$/i, /(^|[\\/])\.githooks[\\/]/i, /(^|[\\/])\.husky[\\/]/i,
-  // IDE 任务
-  /(^|[\\/])\.vscode[\\/]tasks\.json$/i, /(^|[\\/])\.vscode[\\/]launch\.json$/i,
-  // CI/CD 配置（非高频开发编辑）
-  /(^|[\\/])\.github[\\/]workflows[\\/]/i, /(^|[\\/])\.gitlab-ci\.yml$/i, /(^|[\\/])Jenkinsfile$/i,
-  // 安全审计 #1:agent CLI / 工具箱【不经审批自动加载】的启动配置 —— 写进去就等于下一回合替模型起任意进程。
-  //   Claude Code:.claude/settings(.local).json 的 hooks、项目 .mcp.json、~/.claude.json 的 mcpServers(工作台还会
-  //   自动导入它);Kimi Code:.kimi/mcp.json 与 ~/.kimi-code/mcp.json;ruyi-toolbox 组件登记 ~/.ruyi-toolbox/components/。
-  /(^|[\\/])\.claude[\\/]settings(?:\.local)?\.json$/i, /(^|[\\/])\.mcp\.json$/i, /(^|[\\/])\.claude\.json$/i,
-  /(^|[\\/])\.kimi(?:-code)?[\\/]mcp\.json$/i, /(^|[\\/])\.ruyi-toolbox[\\/]components[\\/]/i,
-  // 走查 W1·F2:子模块 / 链接工作树的 git 目录不在 .git 的直接子项下,而在 .git/modules/<名字,名字里可以有斜杠>/ 与 .git/worktrees/<id>/ ——
-  // 它们各带一套 hooks/ 与 config(.worktree)。上面 .git/hooks/、.git/config 两条只认 .git 的直接子项,可写的 hook 或
-  // core.hooksPath 就从这里绕过去(子模块里一次 git commit 即触发)。按段匹配,嵌套子模块(modules/a/modules/b/)也在内。
-  /(^|[\\/])\.git[\\/]modules[\\/](?:[^\\/]+[\\/])*(?:hooks[\\/]|config(?:\.worktree)?$)/i,
-  /(^|[\\/])\.git[\\/]worktrees[\\/][^\\/]+[\\/](?:hooks[\\/]|config(?:\.worktree)?$)/i,
-  // 安全走查 S4:用户级【自启动 / 登录即执行 / 全局信任配置】落点。auto / bypass 宽写 + 出厂「家目录就是工作区」时,一次 file_write
-  // 就能在这些位置留下下次登录 / 下次开终端 / 下次开 agent CLI 就替攻击者执行或改写提示词的东西。这里是【形状】判据(与路径在
-  // 不在家目录下无关,Windows 形:大小写不敏感、\ / 都认,调用方已按 abs 与 realpath 各判一遍);必须挂在用户家目录根下才算的那批
-  // (~/.bashrc、~/.gitconfig、~/.claude/CLAUDE.md、~/.codex/ 等)认的是真实家目录,见下面的 userHomePersistenceHit。
-  //   · Windows 启动文件夹:%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup 与 %ProgramData%\…\StartUp(登录即运行);
-  //   · PowerShell profile(WindowsPowerShell\ 与 PowerShell\ 下的 profile.ps1 / Microsoft.PowerShell_profile.ps1 等,每次开 PowerShell 都执行);
-  //   · .ssh\authorized_keys(2)/ config / rc / environment(后门登录、ProxyCommand 执行、登录时执行);
-  //   · XDG 自启动 .config/autostart/、用户级 systemd 单元 .config/systemd/user/、macOS LaunchAgents;
-  //   · 计划任务目录 Windows\System32\Tasks(经文件直写注册任务,绕过 schtasks 的审计)。
-  /(^|[\\/])start menu[\\/]programs[\\/]startup([\\/]|$)/i,
-  /(^|[\\/])(?:windowspowershell|powershell)[\\/](?:[^\\/]+[\\/])?(?:[a-z0-9.]+_)?profile\.ps1$/i,
-  /(^|[\\/])\.ssh[\\/](?:authorized_keys2?|config|rc|environment)$/i,
-  /(^|[\\/])\.config[\\/](?:autostart|systemd[\\/]user)([\\/]|$)/i,
-  /(^|[\\/])library[\\/]launchagents([\\/]|$)/i,
-  /(^|[\\/])windows[\\/]system32[\\/]tasks(?:_migrated)?([\\/]|$)/i,   // 只认 system32\Tasks(Ansible 的 roles/windows/tasks/ 之类工程目录不能误伤)
-];
 // 安全走查 S4(续):必须落在【用户真实家目录】下才算的持久化落点 —— 这批文件名(.bashrc / .profile / AGENTS.md / .gitconfig …)在工作区里
 // 是普通工程文件(dotfiles 仓库、项目自己的 AGENTS.md),按「任何位置的同名路径」拦会误伤;只有挂在家目录根(或 ~/.claude/ 之类的
 // 固定子目录)下才是 shell / git / agent CLI 自己会读的那一份。家目录取 os.homedir() 与 USERPROFILE / HOME 三者(Windows 上可能不同),
@@ -7117,27 +7056,6 @@ async function makeAttachmentRecord(input) {
     ...(audioLike ? { kind: 'audio' } : {}),
     ...(imageLike ? { kind: 'image' } : {}),
   };
-}
-
-// --- Structured NDJSON logging: record lengths/metadata, never raw content. ---
-let logStream = null;
-let logStreamDay = '';
-function logEvent(record) {
-  try {
-    const day = nowIso().slice(0, 10);
-    if (day !== logStreamDay && logStream) {
-      logStream.end();
-      logStream = null;
-    }
-    if (!logStream) {
-      logStreamDay = day;
-      logStream = fs.createWriteStream(path.join(paths.logs, `workbench-${day}.ndjson`), { flags: 'a' });
-      logStream.on('error', () => { logStream = null; });
-    }
-    logStream.write(`${JSON.stringify({ ts: nowIso(), ...record })}\n`);
-  } catch {
-    // logging must never break a turn
-  }
 }
 
 // --- Active claude child registry keyed by session id, for stop/restart/interrupt + disconnect kill. ---
@@ -17427,8 +17345,7 @@ const { buildMissionPromptSection, runMissionDriver, MISSION_DIGEST_CAP } = requ
 
 // Explicit authority service: grants and driver bindings stay private and ephemeral.
 const { grantIssueTierInfo, resolveToolPermissionContext, normalizeGrant, consumeGrant, revokeGrant, revokeAllGrants, revokeGrantsForRun, bindDriverRun, listGrantsView, dryRunGrantFiles, installGrant, activeDriverRunOf, endDriverRun } = require('./backend/autonomy-grants.cjs').createAutonomyGrants({
-  hashArgs, makeId, AUTOEXEC_DENYLIST, isSensitiveDataPath, normalizeCwd, pathWithinRoot, logEvent, nativeToolTier,
-  nativeTierFor: tool => Object.hasOwn(NATIVE_TOOL_TIER, tool) ? NATIVE_TOOL_TIER[tool] : null,
+  hashArgs, makeId, isSensitiveDataPath, logEvent,
 });
 
 // Resource scheduling is an explicit service; lease state is private to this runtime.
@@ -17975,101 +17892,6 @@ function buildOpenAiTools(config, caps, opts) {
   if (stewardSession) return out.filter(t => isStewardToolName(t && t.function && t.function.name));
   return out;
 }
-// Risk tier per tool → drives permission gating in the native loop (read = auto-allow).
-const NATIVE_TOOL_TIER = {
-  threads_search: 'read', thread_read: 'read',
-  permission_prompt: 'exec', // CLI 权限桥(由 --permission-prompt-tool 触达);原靠 unknown→exec 兜底,第41波显式化
-  workbench_memory_list: 'read', workbench_memory_read: 'read', workbench_memory_propose: 'read',
-  workbench_memory_relation_propose: 'read', workbench_memory_revise: 'read', workbench_memory_relation_revoke: 'read',
-  observation_recall: 'read', // 105a: 只读当前会话快照,授权来自 ctx 会话归属 → auto-allow
-  checkpoint_list: 'read', // C4: 只读当前会话的检查点索引与撤销记录(会话取自 ctx,不触文件路径、不回滚;撤销只能由用户在界面做)→ auto-allow
-  list_tools: 'read', tool_search: 'read', tool_load: 'read', tool_invoke_read: 'read', tool_invoke_edit: 'edit', tool_invoke_exec: 'exec',
-  propose_task: 'read', send_to_agent: 'read', // 本地协作元工具：提案/消息入队及账本记账，不改变外部文件或用户授权。
-  request_user_input: 'read', // waits for an explicit UI answer; no filesystem/exec side effect
-  file_read: 'read', file_list: 'read', file_search: 'read', glob: 'read', project_snapshot: 'read', git_status: 'read',
-  git_diff: 'read', git_log: 'read', // v1.0-S4: read-only git inspection → auto-allow
-  git_commit: 'exec', // v1.0-S4: commit triggers .git/hooks (arbitrary code) → must be exec (never lower)
-  dependency_inventory: 'read', code_review_scan: 'read', frontend_audit: 'read', claude_md_audit: 'read', docs_search: 'read', codebase_symbol_search: 'read', debug_hypothesis: 'read', data_profile: 'read',
-  mcp_list: 'read', mcp_configure: 'exec',
-  todo_write: 'read', // v0.8-S3: writing the task list is a planning act, not a filesystem/exec mutation → auto-allow
-  mission_update: 'read', // 第26波b: 更新任务账本是规划/元数据写,非文件/exec 变更 → auto-allow
-  // C2(61 号文):会话草稿本与 todo_write 同类 —— 只写工作台自有的会话旁车(sessions/<id>.scratchpad.json),不碰用户文件、
-  // 不执行任何东西,会话只取回合 ctx(12 handler) → read 档 auto-allow。计划阶段也放行(见 09 PLAN_DISCOVERY_BLOCKED_TOOLS 头注)。
-  scratchpad_write: 'read',
-  thread_title_update: 'read',
-  workbench_self_status: 'read', // 108c: 只读自状态(版本/位置/端口/健康/计数/设置掩码),不触文件路径 → auto-allow
-  // 116c(27 号文 §3.5 tier 分档):管家工具族。观察族 read(只读如意自身账面,零副作用);线程族 edit
-  // (建线程/递话/改名,全部返回 undoRef 可撤销);决策族 exec(替用户答复待决、控制班组运行,最高危)。
-  // 记忆族按「管家记忆自由」定 edit —— 写的是管家自己的记忆文件,不触外部世界。
-  steward_self_status: 'read', steward_threads_search: 'read', steward_thread_status: 'read',
-  steward_thread_read: 'read', steward_runs_status: 'read', steward_inbox_read: 'read',
-  steward_usage: 'read', steward_health: 'read', steward_audit_tail: 'read',
-  // 116g: 事项级只读视图归观察族 read —— 它只读事项文件与既有投影,零副作用。
-  steward_missions: 'read',
-  // 129b: 三张「有哪些可选」的只读清单同归 read —— 只读如意自己的注册表/配置/模板目录,
-  // 零副作用、零外部内容(与 129d 的「眼睛」那四件分界线就在这一句上)。
-  steward_skills: 'read', steward_providers: 'read', steward_playbooks: 'read',
-  // 129d: 眼睛四件也是 read —— 它们只读、不改世界。「读了之后不能再自己动手」由污染闸管,
-  // 不是靠把它们归成 edit(归成 edit 只会让读本身变难,挡不住读完之后的那个写)。
-  steward_web_search: 'read', steward_web_fetch: 'read', steward_file_read: 'read',
-  steward_thread_artifact_read: 'read',
-  // 129f: 叫人归 read —— 它不改世界,只是把一句话送到屏幕上(三档都可用)。
-  steward_notify: 'read',
-  steward_thread_new: 'edit', steward_thread_continue: 'edit', steward_thread_rename: 'edit',
-  // 129e: 改工作目录归线程族 edit(它改的是线程元数据,不执行任何东西)。
-  steward_thread_workspace: 'edit',
-  // 116-2a: 线程权限收紧归线程族 edit —— 它只能【降】档(放宽是永久豁免第 2 条,机器上就走不通),
-  // 收紧本身是保守动作,且返回 undoRef 可一键改回;给 exec 反而会让「先收紧再动手」在低档线程上失效。
-  steward_thread_permission: 'edit',
-  // 116-2b: 插话补充归线程族 edit —— 它只是往【已在跑】的回合里补一句上下文(不新起回合、不放宽
-  // 任何权限,目标回合自己的权限门一字未动),与递话/改名同一档。
-  steward_thread_note: 'edit',
-  steward_thread_prioritize: 'edit',   // 116h:插队只动队列顺序,不改文件不动世界,归线程族 edit
-  steward_decide: 'exec', steward_run_action: 'exec',
-  // 117m-A4: 线程级停止与 run_action 同族(决策族 exec)—— 它真的去掐一个在跑的子进程/在途请求。
-  // 归 exec 是按「动作强度」定档,不是按「危险方向」:它是收紧类,13g 内部对任何权限档都放行。
-  steward_thread_stop: 'exec',
-  // 记忆族整族 edit(含只读的 search):27 号文 §3.5「内容管理」按族定档,116c 交办单同口径。
-  // search 本身零副作用,给 edit 只是让整族在权限面上同进同退,不额外放宽任何东西。
-  steward_memory_write: 'edit', steward_memory_veto: 'edit', steward_memory_search: 'edit',
-  // 116-2e(§3.5 工具面表「如意设置」/「内容管理」两行):config_get 只读掩码后的配置、零副作用,归
-  // read(与观察族同档);config_set 真的改工作台的行为,exec。内容管理:playbook 起草只出草稿不落盘,
-  // 归 edit;技能启停改的是那条线程下一回合的工具面与提示词、速查开的是一条真会动世界的线程,两者 exec。
-  steward_config_get: 'read', steward_config_set: 'exec',
-  steward_bot_setup: 'edit', // inspect or prepare a disabled inbox only; activation is a separate local UI operation
-  steward_playbook_draft: 'edit', steward_skill_toggle: 'exec', steward_quick_ask: 'exec',
-  // 123-M2(37 号文 §3.5):定时任务六件归「如意设置」族 —— list 只读、零副作用,归 read;
-  // 另五件都改的是【如意自己账面上的一张表】(任务定义),不动文件、不动外部世界,归 edit。
-  // 特别是 run_now:它自己不动世界,真正会动世界的是那一次回合,而那一次回合走的是任务自带的
-  // permissionMode(天花板 = 全局档,永不含 bypass),边界在那儿,不在这张分档表上。
-  steward_schedule_list: 'read',
-  steward_schedule_create: 'edit', steward_schedule_pause: 'edit', steward_schedule_resume: 'edit',
-  steward_schedule_run_now: 'edit', steward_schedule_delete: 'edit',
-  skill_read: 'read', // v1 技能体系: 只读已启用技能的 SKILL.md + 目录清单(路径受限该技能目录内)→ auto-allow
-  // 61 号文 C1:Playbook / 技能清单与 Playbook 步骤文本 —— 只读如意自己的注册表与模板目录,零副作用 → auto-allow。
-  // 「读到模板」不等于「被授权照做」:照做须用户点名或明确同意,由结果 note + 系统提示尾行讲明,不靠把它们归成 edit。
-  playbook_list: 'read', playbook_read: 'read', skill_list: 'read',
-  web_search: 'read', web_fetch: 'read', // v0.9-S9: read-only network reads (no local mutation) → auto-allow (SSRF-guarded)
-  file_write: 'edit', file_edit: 'edit', file_delete: 'edit', // v0.8-S4a: delete is journaled (revertible) → edit tier
-  // v1.1-W2 (T1): 移动/复制/压缩/解压/下载 —— 均落盘且经检查点(可撤销) → edit tier。
-  file_move: 'edit', file_copy: 'edit', archive_zip: 'edit', archive_unzip: 'edit', http_download: 'edit',
-  shell_run: 'exec', script_run: 'exec', browser_open: 'exec', office_open: 'exec',
-  desktop_screenshot: 'exec', http_request: 'exec',
-  // 127-114c③(26 号文 §3):读本地音频后出网转写 —— 用户文件内容离开本进程,与「文件出网」同档 exec。
-  audio_transcribe: 'exec',
-  audio_inspect: 'read', media_probe: 'read', code_check: 'read', acceptance_report: 'edit',
-  orchestrate_agents: 'exec', // 代理模式 v2:委派子代理是最高特权的原生动作 → exec 档(旧 spawn_agent 已并入)
-  spawn_agent: 'exec', // 137 集成:兼容口仍在注册表(旧模型调它 → MCP 子进程翻译成单节点 orchestrate),档位必须与 orchestrate_agents 同为 exec,不能因缺声明落到低档
-  wait_agents: 'read',
-  agent_result: 'read',
-  // v0.8-S2 shell session族: listing is read-only; start/send/poll/kill mutate state → exec.
-  shell_list: 'read', shell_start: 'exec', shell_send: 'exec', shell_poll: 'exec', shell_kill: 'exec',
-};
-// P2-9(30号文§3 总表 + §8.9②): 工具分级排序表 TOOL_TIER_RANK 117q-B7 已迁往 00-boot.js —— 117q-B5 曾把它
-// 落在本文件,但 09b-replan-ledger.js 此前从未消费本文件的任何符号,那次收编因此新增了一条循环边
-// 09b-replan-ledger.js->07-autonomy.js,被迫登记进白名单;07/08/09b 三个消费者其实全部已经依赖
-// 00-boot.js,落回那里新增边数为零。定义与说明见 00-boot.js。
-function nativeToolTier(name) { return NATIVE_TOOL_TIER[name] || 'exec'; } // unknown → safest (treat as exec)
 // v2.6 (loop guard 分层): 同签名连击(连续相同 name+rawArgs)对「无副作用」工具不应 abort ——
 // 轮询/等待原语(相同参数反复调用是其设计语义: wait_agents 等后台 run 结束、shell_poll 读增量输出)
 // 完全豁免同签名连击(不累计/不 warn/不 abort),无进展由语义指纹判定;只读工具(重复读无害)只 warn

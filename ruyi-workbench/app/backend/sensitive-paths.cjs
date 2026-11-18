@@ -1,6 +1,7 @@
 'use strict';
 const path = require('node:path');
 const fsp = require('node:fs/promises');
+const { pathWithinRoot } = require('./path-containment.cjs');
 const SENSITIVE_NAMES = Object.freeze(['config.json', 'runtime.json', 'sessions', 'memory', 'usage', 'logs', 'generated', 'agent-runs',
     'steward', 'missions', 'scheduler', 'migrations', 'engine-transcripts.json', 'credential-vault-v1.json', 'credential-import-v1.json', 'privacy-scopes', 'external-bot-credentials.json', 'external-bots', 'desktop']);
 const BACKUP_FILES = Object.freeze(['config.json', 'credential-vault-v1.json', 'credential-import-v1.json', 'external-bot-credentials.json']);
@@ -8,10 +9,17 @@ function isBackupName(name, includeOriginal = true) {
   const value = String(name).toLowerCase();
   return BACKUP_FILES.some(file => (includeOriginal && value === file) || value.startsWith(file + '.'));
 }
-function createSensitivePaths({ dataRoot, dataRootAliases, realDataRoot, pathWithinRoot }) {
-function dataRoots() {
-  const real = realDataRoot();
-  return [...new Set([dataRoot(), ...(real ? [real] : []), ...dataRootAliases()])];
+function createSensitivePaths({ dataRoot, dataRootAliases }) {
+let dataRootReal = null;
+async function ensureDataRootReal() {
+  if (!dataRootReal) {
+    const root = dataRoot();
+    dataRootReal = await fsp.realpath(root).catch(() => root);
+  }
+  return dataRootReal;
+}
+function sensitiveDataRoots() {
+  return [...new Set([dataRoot(), ...(dataRootReal ? [dataRootReal] : []), ...dataRootAliases()])];
 }
 function isSensitiveDataPath(p) {
   if (!p) return false;
@@ -32,7 +40,7 @@ function isSensitiveDataPath(p) {
   // 且只在写侧受保护(WRITE_PROTECTED_DATA_DIRS);unit/write-guard-autoload.test.js 钉着「检查点内容仍可 file_read」。
   const names = SENSITIVE_NAMES;
   // 3.0:迁移后旧目录名是指回数据根的联接(00-boot dataRootAliases),经它的词法路径同样要命中。
-  const bases = dataRoots();
+  const bases = sensitiveDataRoots();
   for (const b of bases) for (const n of names) if (pathWithinRoot(p, path.join(b, n))) return true;
   // 2026-09-06：config.json 的备份族（config.json.prev / config.json.bak-<日期> / config.json.bak-providers-<ts>）
   // 与正本一样含明文密钥；audit-w23 P1#2 探针实测 file_search 能把 .prev 里的 apiKey 搜出来。
@@ -95,7 +103,7 @@ function sensitiveGlobsForRg(base) {
   try {
     // Search exclusion and direct access share SENSITIVE_NAMES and the same root aliases.
     // 遍历根已换成 guardFileToolPath 给的 realpath,词法数据根与它不一定同一拼法(联接 / 短名 / 大小写),只认词法会让 !glob 落空。
-    const roots = dataRoots();
+    const roots = sensitiveDataRoots();
     for (const r of roots) {
       for (const n of SENSITIVE_NAMES) {
         const rel = path.relative(base, path.join(r, n));
@@ -111,6 +119,6 @@ function sensitiveGlobsForRg(base) {
   return globs;
 }
 
-return { isSensitiveDataPath, sensitiveFileIdentities, isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg };
+return { ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities, isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg };
 }
 module.exports = { createSensitivePaths };

@@ -18,6 +18,7 @@
       "provides": [
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
+        "AUTOEXEC_DENYLIST",
         "BRIDGED_WRITE_PATH_ARGS",
         "BUNDLED_PYTHON_RUNTIME",
         "CLAUDE_ENDPOINT_PRESETS",
@@ -35,6 +36,7 @@
         "MAX_BODY_BYTES",
         "MCP_TOOLS",
         "MigrationHooks",
+        "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
         "RUYI_DATA_DIR_NAME",
@@ -84,6 +86,7 @@
         "decodeConsoleText",
         "decodeTextFileBytes",
         "defaultDataRoots",
+        "ensureDataRootReal",
         "ensureDirs",
         "estimateContentTokens",
         "estimateHistoryTokens",
@@ -103,8 +106,12 @@
         "http",
         "isContextOverflowError",
         "isDirectServeInvocation",
+        "isSensitiveDataPath",
+        "isSensitiveHardlinkAlias",
+        "isSensitiveHardlinkStat",
         "json",
         "localTurnTimeParts",
+        "logEvent",
         "lstatOrNull",
         "macPathAnchor",
         "makeId",
@@ -116,8 +123,10 @@
         "maskedSecretConflicts",
         "mcpArgsForDisplay",
         "migrateLegacyDataRoot",
+        "nativeToolTier",
         "neutralizeFenceTag",
         "normalizeApiErrorPayload",
+        "normalizeCwd",
         "normalizePricing",
         "nowIso",
         "os",
@@ -147,6 +156,9 @@
         "sanitizeExternalMcpServer",
         "send",
         "sendError",
+        "sensitiveDataRoots",
+        "sensitiveFileIdentities",
+        "sensitiveGlobsForRg",
         "setEstimateBucketsV1",
         "spawnDetachedChecked",
         "text",
@@ -986,6 +998,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "normalizePricing",
           "kinds": [
             "call"
@@ -1218,13 +1244,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
             "call"
@@ -1275,13 +1294,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -1872,6 +1884,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -2232,14 +2252,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
             "call",
@@ -2309,7 +2321,6 @@
       "file": "03-bridge-guard.js",
       "layer": "foundation",
       "provides": [
-        "AUTOEXEC_DENYLIST",
         "BRIDGED_READ_PATH_ARGS",
         "BRIDGED_SCRIPT_TOOLS",
         "BRIDGED_WRITE_AUDIT_EXEMPT",
@@ -2342,7 +2353,6 @@
         "WRITE_PROTECTED_DATA_DIRS",
         "WRITE_PROTECTED_DATA_FILES",
         "WriteBoundaryHooks",
-        "_dataRootReal",
         "_gitCliProbe",
         "_homeRealCache",
         "auditBridgedWriteCoverage",
@@ -2357,7 +2367,6 @@
         "cleanupExternalDiffCache",
         "cwdWarning",
         "deviceNamespaceIsLocalVolume",
-        "ensureDataRootReal",
         "existsExecutable",
         "existsExecutableAsync",
         "fileAllowedRoots",
@@ -2369,9 +2378,6 @@
         "isBrowserDocumentTarget",
         "isMacManagedPath",
         "isOsCriticalPath",
-        "isSensitiveDataPath",
-        "isSensitiveHardlinkAlias",
-        "isSensitiveHardlinkStat",
         "isWriteProtectedDataPath",
         "journalBridgedWrite",
         "launchCodeEditor",
@@ -2380,7 +2386,6 @@
         "materializeCheckpointEditorDiff",
         "nameSetJaccard",
         "normalizeAutoexecPath",
-        "normalizeCwd",
         "normalizeGuardPath",
         "preflightWriteBoundary",
         "probeGitCli",
@@ -2396,8 +2401,6 @@
         "resolveExecCwd",
         "resolvePreferredCodeEditor",
         "resolveWorkspace",
-        "sensitiveFileIdentities",
-        "sensitiveGlobsForRg",
         "statTimed",
         "stripWin32VerbatimPrefix",
         "uncHostAndPath",
@@ -2413,6 +2416,13 @@
           "symbol": "agentCliHomes",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "AUTOEXEC_DENYLIST",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -2440,21 +2450,19 @@
           "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRootAliases",
-          "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "decodeTextFileBytes",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
           "kinds": [
             "call"
           ]
@@ -2478,6 +2486,34 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkStat",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -2512,8 +2548,7 @@
           "provider": "00-boot.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -2526,6 +2561,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveDataRoots",
           "kinds": [
             "call"
           ]
@@ -2610,13 +2652,6 @@
         {
           "provider": "02f-turn-effect-kinds.js",
           "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -2740,9 +2775,6 @@
         "kimiModelList",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
-        "logEvent",
-        "logStream",
-        "logStreamDay",
         "makeAttachmentRecord",
         "mcpCallToolParams",
         "mcpChildExitResult",
@@ -2869,6 +2901,14 @@
           "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -3186,6 +3226,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "read"
@@ -3222,13 +3269,6 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -3372,6 +3412,20 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -3698,13 +3752,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
           "kinds": [
@@ -3826,13 +3873,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "lastSuccessfulClaudeModel",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -4413,6 +4453,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -4423,6 +4477,13 @@
           "symbol": "MAX_BODY_BYTES",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -4717,20 +4778,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
             "call",
@@ -4797,13 +4844,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -5103,6 +5143,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
             "call"
@@ -5335,13 +5382,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -5891,6 +5931,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -5902,6 +5950,13 @@
           "symbol": "neutralizeFenceTag",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6048,21 +6103,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
@@ -6089,7 +6129,21 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "read"
           ]
@@ -6158,20 +6212,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
@@ -6208,56 +6248,21 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "AUTOEXEC_DENYLIST",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
+          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "07-autonomy.js",
-          "symbol": "NATIVE_TOOL_TIER",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
+          "provider": "00-boot.js",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
@@ -6358,6 +6363,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6481,13 +6493,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
           "kinds": [
             "read"
@@ -6541,7 +6546,6 @@
         "NATIVE_COMMAND_TOOL_NAMES",
         "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
-        "NATIVE_TOOL_TIER",
         "POOL_CHAIN_MAX",
         "POOL_GRACE_MS",
         "POOL_MAX_TOTAL",
@@ -6613,7 +6617,6 @@
         "nativeToolDisabledByPolicy",
         "nativeToolGate",
         "nativeToolSchema",
-        "nativeToolTier",
         "nativeToolsAcceptingArgKeys",
         "neutralizeInjectedPrefixes",
         "normalizeToolSearchText",
@@ -6753,6 +6756,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call",
@@ -6764,6 +6774,20 @@
           "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7062,24 +7086,10 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -7430,7 +7440,29 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -7714,13 +7746,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
@@ -7752,14 +7777,6 @@
           "symbol": "getBridgedClient",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -8018,13 +8035,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -8369,6 +8379,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -8376,7 +8394,22 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -8867,13 +8900,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
@@ -8968,14 +8994,6 @@
           "symbol": "installActiveChildEventFanout",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -9559,14 +9577,6 @@
           "symbol": "nativeToolGate",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -10518,7 +10528,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -10966,13 +10990,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "recordSessionExecutionOwner",
           "kinds": [
             "call"
@@ -11147,13 +11164,6 @@
           ]
         },
         {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "09-workflow.js",
           "symbol": "runOpenAiTurn",
           "kinds": [
@@ -11243,7 +11253,35 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -11300,6 +11338,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "ruyiVendorBinDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveFileIdentities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveGlobsForRg",
           "kinds": [
             "read"
           ]
@@ -11369,42 +11421,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveGlobsForRg",
           "kinds": [
             "read"
           ]
@@ -11421,13 +11438,6 @@
           "symbol": "collectBridgedTools",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11709,7 +11719,37 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call",
             "read"
@@ -11762,6 +11802,13 @@
           "symbol": "safeJsonParse",
           "kinds": [
             "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sensitiveFileIdentities",
+          "kinds": [
             "read"
           ]
         },
@@ -12106,31 +12153,9 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "journalBridgedWrite",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -12170,13 +12195,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "UNC_DENIED_ERROR",
           "kinds": [
             "read"
@@ -12208,14 +12226,6 @@
           "symbol": "getBridgedClient",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -13005,6 +13015,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
             "call",
@@ -13071,7 +13088,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "json",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -13122,6 +13160,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "migrateLegacyDataRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -13840,13 +13885,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "existsExecutable",
           "kinds": [
             "call",
@@ -13876,20 +13914,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "launchCodeEditor",
           "kinds": [
             "call"
@@ -13898,13 +13922,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "materializeCheckpointEditorDiff",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
           "kinds": [
             "call"
           ]
@@ -13957,13 +13974,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14953,6 +14963,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "maskExternalMcpServerForDisplay",
           "kinds": [
             "call"
@@ -15185,13 +15202,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateMcpRuntime",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -15497,9 +15507,30 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -16024,13 +16055,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "resolveContainmentPath",
           "kinds": [
             "call"
@@ -16067,13 +16091,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "interventionCommandFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -16264,13 +16281,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -16985,6 +16995,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -17084,13 +17101,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -17462,9 +17472,30 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ensureDataRootReal",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveHardlinkAlias",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -17581,28 +17612,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "ensureDataRootReal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
             "call"
           ]
@@ -17757,6 +17767,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -17979,13 +17996,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -19650,6 +19660,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -19709,13 +19726,6 @@
           "symbol": "PrivacyGateway",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -20218,6 +20228,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -20275,13 +20292,6 @@
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -20394,6 +20404,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "OVERLAY_ID",
           "kinds": [
             "read"
@@ -20484,13 +20501,6 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06i-steward-core.js",
           "symbol": "STEWARD_SESSION_ID",
           "kinds": [
@@ -20560,6 +20570,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -20649,13 +20666,6 @@
         {
           "provider": "02d-session-overrides.js",
           "symbol": "applySessionPermissionModeOverride",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -21069,6 +21079,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -21168,13 +21185,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -21577,6 +21587,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "call"
@@ -21697,13 +21714,6 @@
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -22676,6 +22686,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
             "read"
@@ -22761,13 +22778,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "read"
           ]
@@ -23213,6 +23223,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
@@ -23389,13 +23406,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "_tomlKeyPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
           "kinds": [
             "call"
           ]
@@ -24078,6 +24088,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "AUTOEXEC_DENYLIST",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
@@ -24191,6 +24208,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "maskSecrets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "NATIVE_TOOL_TIER",
           "kinds": [
             "read"
           ]
@@ -25137,13 +25161,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "auditBridgedWriteCoverage",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "AUTOEXEC_DENYLIST",
           "kinds": [
             "read"
           ]
@@ -26936,13 +26953,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "NATIVE_TOOL_PACKS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "NATIVE_TOOL_TIER",
           "kinds": [
             "read"
           ]

@@ -223,7 +223,7 @@
     {
       "id": "audit-log",
       "pattern": "<data>/logs/workbench-YYYY-MM-DD.ndjson",
-      "owner": "04-permission-runtime.js",
+      "owner": "../backend/audit-log.cjs",
       "anchor": "workbench-",
       "schema": "NDJSON events",
       "writePrimitive": "single append stream",

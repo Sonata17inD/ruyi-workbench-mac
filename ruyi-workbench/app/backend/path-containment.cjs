@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 
 function macPathAnchor(input) {
   let current = path.resolve(input);
@@ -73,4 +74,11 @@ function pathWithinAnyRoot(target, roots) {
   return roots.some(r => pathWithinRoot(target, r));
 }
 
-module.exports = { macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot };
+function normalizeCwd(cwd, fallback) {
+  // cwd 多直接取自请求体:非字符串(数字/对象)当没传,否则 path.resolve 抛 TypeError → 500(/api/memory* 等)。
+  const pick = v => (typeof v === 'string' && v ? v : '');
+  const base = pick(cwd) || pick(fallback) || os.homedir();
+  return path.resolve(base);
+}
+
+module.exports = { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot };

@@ -237,7 +237,7 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
-const { macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
+const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
 const { BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg } = require('./backend/bridged-write-targets.cjs');
 const { redact } = require('./backend/secret-redaction.cjs');
 const {
@@ -411,6 +411,14 @@ function hashArgs(args) {
     return '';
   }
 }
+
+const { AUTOEXEC_DENYLIST } = require('./backend/autoexec-paths.cjs');
+const { NATIVE_TOOL_TIER, nativeToolTier } = require('./backend/native-tool-tiers.cjs');
+const {
+  ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
+  isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,
+} = require('./backend/sensitive-paths.cjs').createSensitivePaths({ dataRoot, dataRootAliases });
+const logEvent = require('./backend/audit-log.cjs').createAuditLog({ logsDirectory: paths.logs, nowIso });
 
 async function ensureDirs() {
   await Promise.all([

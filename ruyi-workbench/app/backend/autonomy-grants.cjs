@@ -2,9 +2,11 @@
 const path = require('node:path');
 const { globToRegExp } = require('./path-patterns.cjs');
 const fsp = require('node:fs/promises');
+const { AUTOEXEC_DENYLIST } = require('./autoexec-paths.cjs');
+const { normalizeCwd, pathWithinRoot } = require('./path-containment.cjs');
+const { knownNativeToolTier, nativeToolTier } = require('./native-tool-tiers.cjs');
 // Ephemeral grants are owned by one runtime, never by session persistence.
-function createAutonomyGrants({ hashArgs, makeId, AUTOEXEC_DENYLIST, isSensitiveDataPath,
-  normalizeCwd, pathWithinRoot, logEvent, nativeTierFor, nativeToolTier }) {
+function createAutonomyGrants({ hashArgs, makeId, isSensitiveDataPath, logEvent }) {
 // ════════════════════════════════════════════════════════════════════════════════════════════════════
 // 第27波(AUTONOMY-PLAN §27):自主性授权书(Autonomy Grant)—— 现有权限系统的严格【子集缓存】,不是新权限来源。
 // 只做一件事:在用户【预先经 UI header token 明示】的「工具 × 路径 × 命令 × 次数 × 时长」笼子内,把工具决策点
@@ -58,7 +60,7 @@ function grantIssueTierInfo(tool) {
   const t = String(tool || '');
   if (t === 'spawn_agent' || t === 'orchestrate_agents' || t === '*' || !t) return null;
   let info = null;
-  const nativeTier = nativeTierFor(t);
+  const nativeTier = knownNativeToolTier(t);
   if (nativeTier) info = { entrypoint: 'native', tier: nativeTier };
   else if (Object.prototype.hasOwnProperty.call(CLI_TOOL_TIER, t)) info = { entrypoint: 'cli', tier: CLI_TOOL_TIER[t] };
   if (!info) return null;
