@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3401,
-    "requiredSymbols": 3468,
-    "edges": 656,
-    "forwardEdges": 66,
+    "providedSymbols": 3366,
+    "requiredSymbols": 3467,
+    "edges": 653,
+    "forwardEdges": 63,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -33,6 +33,7 @@
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
         "BUNDLED_PYTHON_RUNTIME",
+        "CLAUDE_ENDPOINT_PRESETS",
         "CONFIG_SCHEMA",
         "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
@@ -40,8 +41,6 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "ExternalBotHooks",
-        "INSTALL_REGISTRY_MAX",
-        "INSTALL_REGISTRY_SCHEMA",
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
         "MigrationHooks",
@@ -58,13 +57,6 @@
         "SubAgentMemoryHooks",
         "TOOL_TIER_RANK",
         "URL",
-        "USAGE_CACHE_CHECK_BYTES",
-        "USAGE_CACHE_ROW_BYTES",
-        "USAGE_CACHE_YIELD_LINES",
-        "USAGE_CACHE_YIELD_ROWS",
-        "USAGE_CHANGE_LOG_MAX",
-        "USAGE_DICT_COLUMNS",
-        "UsageRowView",
         "VERSION",
         "_dataRootMemo",
         "agentCliHomes",
@@ -72,12 +64,8 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
-        "appendUsageLedger",
-        "buildUsageSummary",
         "cachedInputTokensFromUsage",
         "claudeCostFields",
-        "claudeLedgerSource",
-        "computeCostFromPricing",
         "computeProviderCost",
         "contentTypeFor",
         "copyOrdinaryJsonData",
@@ -99,13 +87,10 @@
         "exposeVendorBinOnPath",
         "externalRoot",
         "findRuyiPackageRootFor",
-        "flushUsageLedgerSync",
-        "forEachUsageRow",
         "fs",
         "fsp",
         "hashArgs",
         "http",
-        "installRegistryPath",
         "isDirectServeInvocation",
         "json",
         "localTurnTimeParts",
@@ -122,13 +107,8 @@
         "paths",
         "pidAlive",
         "readBody",
-        "readInstallRegistry",
         "readJsonBody",
-        "readUsageRows",
         "readline",
-        "recordInstallLaunch",
-        "refreshUsageLedgerCache",
-        "refreshUsageLedgerCacheNow",
         "resolveDataRootUncached",
         "runKeyedChain",
         "ruyiPackageInfo",
@@ -142,33 +122,6 @@
         "spawnDetachedChecked",
         "text",
         "tildePath",
-        "usageColsSessionIds",
-        "usageColumns",
-        "usageColumnsAppend",
-        "usageColumnsDictMemo",
-        "usageColumnsGrow",
-        "usageColumnsParseText",
-        "usageColumnsPushLine",
-        "usageColumnsShrink",
-        "usageDayKey",
-        "usageDayKeyMemo",
-        "usageDictId",
-        "usageDictIdMemo",
-        "usageLedgerCache",
-        "usageLedgerCacheDisabled",
-        "usageLedgerCacheStats",
-        "usageLedgerChain",
-        "usageLedgerChangesSince",
-        "usageLedgerPending",
-        "usageMonthFullParse",
-        "usageMonthIncremental",
-        "usageNextCheck",
-        "usageNoteChange",
-        "usageParseTail",
-        "usageRangeLowerMs",
-        "usageSplitComplete",
-        "usageTsDateMemo",
-        "usageTsIsCanonical",
         "zlib"
       ],
       "requires": [
@@ -177,48 +130,6 @@
           "symbol": "platformRuntimeEnvironment",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bumpMissionChangeSeq",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "overlayUnflushedSessionIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readSessionIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "CLAUDE_ENDPOINT_PRESETS",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -596,7 +507,9 @@
         "readDesktopPythonDiskEntries",
         "readDesktopPythonDiskEntry",
         "readFileTail",
+        "readInstallRegistry",
         "readUserJsonObjectForMerge",
+        "recordInstallLaunch",
         "refreshInBackground",
         "requestIsLoopback",
         "resolveKimiNpmEntry",
@@ -625,6 +538,7 @@
         "writeConfig",
         "writeConfigAtomic",
         "writeDesktopPythonDiskEntry",
+        "writeInstallRegistry",
         "writeToChild"
       ],
       "requires": [
@@ -708,6 +622,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "os",
           "kinds": [
             "read"
@@ -752,7 +673,8 @@
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1397,6 +1319,7 @@
         "appendDisplayMessagesToProviderHistory",
         "appendIntervention",
         "appendMissionChangeRecord",
+        "appendUsageLedger",
         "applyMissionUpdate",
         "applySessionTitleOverride",
         "archiveMissionResult",
@@ -1426,10 +1349,12 @@
         "finalizeMissionAfterTurn",
         "flushSessionIndex",
         "flushSessionIndexSync",
+        "flushUsageLedgerSync",
         "foldInterventionJournalText",
         "foldMissionChangeJournalText",
         "foldTurnSummaries",
         "followupAcceptanceCriterion",
+        "forEachUsageRow",
         "getSessionBodyState",
         "getSessionTitleOverride",
         "healStalePendingSegments",
@@ -1504,6 +1429,7 @@
         "readSessionNotes",
         "readSessionRouteHead",
         "readSessionScratchpad",
+        "readUsageRows",
         "rebaseStaleSessionBody",
         "reconcileWorkspaceTurnBaseline",
         "recordMissionBudgetTrippedChange",
@@ -1566,6 +1492,11 @@
         "transitionInterventionState",
         "updateSessionMeta",
         "updateSessionScratchpad",
+        "usageDayKey",
+        "usageDayKeyMemo",
+        "usageLedgerCacheStats",
+        "usageLedgerChangesSince",
+        "usageRangeLowerMs",
         "waitMissionTurnSettled",
         "withJournalWriteLock",
         "withMissionContainerLock",
@@ -3308,7 +3239,6 @@
         "ASR_FIX_MODES",
         "ASR_FIX_SYSTEM_MERGE",
         "ASR_FIX_SYSTEM_TEXT",
-        "CLAUDE_ENDPOINT_PRESETS",
         "KEY_MASK_PREFIX",
         "MCP_ARG_REDACTED_MARK",
         "PROVIDER_MODEL_CAPS",
@@ -3378,13 +3308,6 @@
         "voiceLexiconUpdate"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "claudeCostFields",
@@ -3628,6 +3551,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -5336,14 +5266,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call",
@@ -5557,6 +5479,14 @@
           "provider": "01o-execution-state.js",
           "symbol": "activeChildren",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -6202,13 +6132,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -6384,6 +6307,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7043,13 +6973,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
             "call"
@@ -7285,6 +7208,13 @@
           "symbol": "pendingPlans",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7736,13 +7666,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -7918,6 +7841,13 @@
           "symbol": "pendingPermissions",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8707,13 +8637,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -8956,6 +8879,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -10878,13 +10808,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call",
@@ -11155,6 +11078,13 @@
           "symbol": "turnSettlers",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -13353,6 +13283,7 @@
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
         "buildModelHint",
+        "buildUsageSummary",
         "consumeStartError",
         "discoverKimiModels",
         "discoverModels",
@@ -13420,9 +13351,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "buildUsageSummary",
+          "symbol": "CLAUDE_ENDPOINT_PRESETS",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13521,13 +13452,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "flushUsageLedgerSync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -13620,13 +13544,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "recordInstallLaunch",
           "kinds": [
             "call"
           ]
@@ -13869,6 +13786,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "recordInstallLaunch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "requestIsLoopback",
           "kinds": [
             "call"
@@ -14102,6 +14026,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "flushUsageLedgerSync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "invalidateSessionIndex",
           "kinds": [
             "call"
@@ -14179,6 +14117,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "overlayUnflushedSessionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readSessionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readSessionRouteHead",
           "kinds": [
             "call"
@@ -14189,6 +14141,20 @@
           "symbol": "recordMissionCheckResult",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -14458,13 +14424,6 @@
           "symbol": "agentCliAdapter",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "CLAUDE_ENDPOINT_PRESETS",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -15408,13 +15367,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
           "kinds": [
             "read"
@@ -15572,6 +15524,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -17062,13 +17021,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -17119,13 +17071,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageLedgerChangesSince",
           "kinds": [
             "call"
           ]
@@ -17209,6 +17154,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "interventionFilePath",
           "kinds": [
             "call"
@@ -17238,6 +17190,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageLedgerChangesSince",
           "kinds": [
             "call"
           ]
@@ -19135,13 +19094,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
@@ -19190,20 +19142,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "ConfigPatchHooks",
           "kinds": [
@@ -19247,6 +19185,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -19255,6 +19200,20 @@
         {
           "provider": "02-session-store.js",
           "symbol": "readInterventions",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
           "kinds": [
             "call"
           ]
@@ -20858,13 +20817,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -20892,27 +20844,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
@@ -20935,6 +20866,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readInterventions",
           "kinds": [
             "call"
@@ -20943,6 +20881,27 @@
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionBudgetTrippedChange",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
           "kinds": [
             "call"
           ]
@@ -21544,37 +21503,9 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21601,6 +21532,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
           "kinds": [
             "call"
           ]
@@ -21643,6 +21581,27 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionTodosSignature",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
           "kinds": [
             "call"
           ]
@@ -23700,13 +23659,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "installRegistryPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
@@ -23738,13 +23690,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readInstallRegistry",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -23841,6 +23786,20 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readInstallRegistry",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "writeInstallRegistry",
           "kinds": [
             "call"
           ]
@@ -24574,20 +24533,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "buildUsageSummary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
           "kinds": [
             "read"
@@ -24609,20 +24554,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "flushUsageLedgerSync",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "hashArgs",
           "kinds": [
             "read"
@@ -24637,13 +24568,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readUsageRows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -24652,13 +24576,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageLedgerCacheStats",
           "kinds": [
             "read"
           ]
@@ -25093,6 +25010,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
@@ -25178,6 +25102,20 @@
         {
           "provider": "02-session-store.js",
           "symbol": "flushSessionIndexSync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "flushUsageLedgerSync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
           "kinds": [
             "read"
           ]
@@ -25324,6 +25262,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "readUsageRows",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "reconcileWorkspaceTurnBaseline",
           "kinds": [
             "read"
@@ -25437,6 +25382,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageLedgerCacheStats",
           "kinds": [
             "read"
           ]
@@ -28355,6 +28307,13 @@
         },
         {
           "provider": "13-http-router.js",
+          "symbol": "buildUsageSummary",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
           "symbol": "doctor",
           "kinds": [
             "call"
@@ -28703,33 +28662,6 @@
       "direction": "backward"
     },
     {
-      "from": "00-boot.js",
-      "to": "01-config.js",
-      "symbols": [
-        "atomicWriteJson",
-        "readConfig"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "00-boot.js",
-      "to": "02-session-store.js",
-      "symbols": [
-        "bumpMissionChangeSeq",
-        "overlayUnflushedSessionIndex",
-        "readSessionIndex"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "00-boot.js",
-      "to": "05-claude-engine.js",
-      "symbols": [
-        "CLAUDE_ENDPOINT_PRESETS"
-      ],
-      "direction": "forward"
-    },
-    {
       "from": "01-config.js",
       "to": "00-boot.js",
       "symbols": [
@@ -28749,6 +28681,7 @@
         "fs",
         "fsp",
         "normalizePricing",
+        "nowIso",
         "os",
         "path",
         "paths",
@@ -29514,7 +29447,6 @@
         "EventStreamHooks",
         "RUYI_EVENTS",
         "URL",
-        "appendUsageLedger",
         "claudeCostFields",
         "computeProviderCost",
         "createCappedDiagnosticText",
@@ -29594,6 +29526,7 @@
       "from": "05-claude-engine.js",
       "to": "02-session-store.js",
       "symbols": [
+        "appendUsageLedger",
         "buildTurnSummary",
         "bumpMissionChangeSeq",
         "captureWorkspaceTurnBaseline",
@@ -30071,7 +30004,6 @@
         "OVERLAY_ID",
         "RUYI_EVENTS",
         "VERSION",
-        "appendUsageLedger",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "cp",
@@ -30149,6 +30081,7 @@
         "SESSION_BRIEF_GIST_CHARS",
         "SESSION_BRIEF_TITLE_CHARS",
         "SESSION_INDEX_FILE",
+        "appendUsageLedger",
         "getSessionTitleOverride",
         "loadSession",
         "setSessionTitleOverride",
@@ -30280,7 +30213,6 @@
         "SKILL_ID_RE",
         "agentCliHomes",
         "apiFailure",
-        "appendUsageLedger",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
@@ -30333,6 +30265,7 @@
       "from": "06d-memory-domain.js",
       "to": "02-session-store.js",
       "symbols": [
+        "appendUsageLedger",
         "loadSession"
       ],
       "direction": "backward"
@@ -30572,7 +30505,6 @@
         "TOOL_TIER_RANK",
         "URL",
         "apiFailure",
-        "appendUsageLedger",
         "claudeCostFields",
         "cp",
         "createNdjsonLineFeeder",
@@ -30647,6 +30579,7 @@
       "to": "02-session-store.js",
       "symbols": [
         "BRIDGED_WRITE_PATH_ARGS",
+        "appendUsageLedger",
         "loadSession",
         "registerIntervention",
         "repairProviderHistoryPairing",
@@ -30803,7 +30736,6 @@
         "RUYI_EVENTS",
         "SubAgentMemoryHooks",
         "TOOL_TIER_RANK",
-        "appendUsageLedger",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
@@ -30860,6 +30792,7 @@
       "to": "02-session-store.js",
       "symbols": [
         "MISSION_STALL_SIGNAL_WINDOW_MS",
+        "appendUsageLedger",
         "bridgedWriteRelativePathArg",
         "isProviderToolArgsObject",
         "missionSignalThrottleAllow",
@@ -31091,7 +31024,6 @@
         "RUYI_EVENTS",
         "SubAgentMemoryHooks",
         "TOOL_TIER_RANK",
-        "appendUsageLedger",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
@@ -31156,6 +31088,7 @@
       "from": "09-workflow.js",
       "to": "02-session-store.js",
       "symbols": [
+        "appendUsageLedger",
         "applyMissionUpdate",
         "bridgedWriteRelativePathArg",
         "buildTurnSummary",
@@ -31594,7 +31527,6 @@
         "SessionExecutionHooks",
         "URL",
         "apiSessionIdInvalid",
-        "appendUsageLedger",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
@@ -31672,6 +31604,7 @@
       "from": "10-context-governance.js",
       "to": "02-session-store.js",
       "symbols": [
+        "appendUsageLedger",
         "createSession",
         "journalBytesAdjust",
         "journalDir",
@@ -32326,6 +32259,7 @@
       "to": "00-boot.js",
       "symbols": [
         "APP_NAME",
+        "CLAUDE_ENDPOINT_PRESETS",
         "CONFIG_SCHEMA",
         "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
@@ -32339,7 +32273,6 @@
         "apiFailure",
         "apiSessionIdInvalid",
         "apiSessionNotFound",
-        "buildUsageSummary",
         "contentTypeFor",
         "crypto",
         "dataRootAliases",
@@ -32347,7 +32280,6 @@
         "ensureDirs",
         "exePath",
         "externalRoot",
-        "flushUsageLedgerSync",
         "fs",
         "fsp",
         "http",
@@ -32361,7 +32293,6 @@
         "path",
         "paths",
         "readJsonBody",
-        "recordInstallLaunch",
         "safeJsonParse",
         "samePathKey",
         "send",
@@ -32414,6 +32345,7 @@
         "mutateConfig",
         "prepareAgentCliSpawn",
         "readConfig",
+        "recordInstallLaunch",
         "requestIsLoopback",
         "safeSessionId",
         "selectedAgentCli",
@@ -32503,6 +32435,8 @@
         "bumpMissionChangeSeq",
         "evaluateMissionCheck",
         "flushSessionIndexSync",
+        "flushUsageLedgerSync",
+        "forEachUsageRow",
         "invalidateSessionIndex",
         "journalDir",
         "journalReadIndex",
@@ -32513,8 +32447,12 @@
         "mutateSession",
         "normalizeMission",
         "normalizeTodoItems",
+        "overlayUnflushedSessionIndex",
+        "readSessionIndex",
         "readSessionRouteHead",
         "recordMissionCheckResult",
+        "usageDayKeyMemo",
+        "usageRangeLowerMs",
         "workspaceBaselineIsCodePath",
         "workspaceBaselinePathKey"
       ],
@@ -32614,7 +32552,6 @@
       "from": "13-http-router.js",
       "to": "05-claude-engine.js",
       "symbols": [
-        "CLAUDE_ENDPOINT_PRESETS",
         "PROVIDER_PRESETS",
         "activeOpenAiProvider",
         "agentCliAdapter",
@@ -33126,7 +33063,6 @@
         "URL",
         "apiFailure",
         "apiSessionIdInvalid",
-        "appendUsageLedger",
         "computeProviderCost",
         "crypto",
         "fsp",
@@ -33168,6 +33104,7 @@
       "from": "13b-api-domain-routes.js",
       "to": "02-session-store.js",
       "symbols": [
+        "appendUsageLedger",
         "bumpMissionChangeSeq",
         "journalRevertLogRecord",
         "journalRollback",
@@ -33558,14 +33495,12 @@
         "URL",
         "apiFailure",
         "crypto",
-        "forEachUsageRow",
         "fs",
         "fsp",
         "nowIso",
         "path",
         "paths",
-        "safeJsonParse",
-        "usageLedgerChangesSince"
+        "safeJsonParse"
       ],
       "direction": "backward"
     },
@@ -33598,11 +33533,13 @@
       "to": "02-session-store.js",
       "symbols": [
         "compactInterventionJournal",
+        "forEachUsageRow",
         "interventionFilePath",
         "interventionJournalWorthCompacting",
         "readInterventionsWithMeta",
         "sessionKind",
-        "sessionMissionId"
+        "sessionMissionId",
+        "usageLedgerChangesSince"
       ],
       "direction": "backward"
     },
@@ -34395,15 +34332,12 @@
       "to": "00-boot.js",
       "symbols": [
         "RUYI_EVENTS",
-        "forEachUsageRow",
         "fsp",
         "makeId",
         "nowIso",
         "path",
         "safeJsonParse",
-        "text",
-        "usageDayKey",
-        "usageDayKeyMemo"
+        "text"
       ],
       "direction": "backward"
     },
@@ -34445,8 +34379,11 @@
       "from": "13l-steward-ops.js",
       "to": "02-session-store.js",
       "symbols": [
+        "forEachUsageRow",
         "loadSession",
-        "readInterventions"
+        "readInterventions",
+        "usageDayKey",
+        "usageDayKeyMemo"
       ],
       "direction": "backward"
     },
@@ -34749,12 +34686,8 @@
         "OVERLAY_ID",
         "RUYI_EVENTS",
         "crypto",
-        "forEachUsageRow",
         "fs",
-        "path",
-        "usageDayKey",
-        "usageDayKeyMemo",
-        "usageRangeLowerMs"
+        "path"
       ],
       "direction": "backward"
     },
@@ -34779,8 +34712,12 @@
       "from": "13n-steward-arbiter.js",
       "to": "02-session-store.js",
       "symbols": [
+        "forEachUsageRow",
         "readInterventions",
-        "recordMissionBudgetTrippedChange"
+        "recordMissionBudgetTrippedChange",
+        "usageDayKey",
+        "usageDayKeyMemo",
+        "usageRangeLowerMs"
       ],
       "direction": "backward"
     },
@@ -35009,11 +34946,7 @@
       "from": "13p-steward-runner-actions.js",
       "to": "00-boot.js",
       "symbols": [
-        "forEachUsageRow",
-        "text",
-        "usageDayKey",
-        "usageDayKeyMemo",
-        "usageRangeLowerMs"
+        "text"
       ],
       "direction": "backward"
     },
@@ -35040,11 +34973,15 @@
       "symbols": [
         "SESSION_LOAD_OMIT_PROVIDER",
         "detectDanglingTurn",
+        "forEachUsageRow",
         "loadSession",
         "mutateSession",
         "readInterventions",
         "sessionDisplayTitle",
-        "sessionTodosSignature"
+        "sessionTodosSignature",
+        "usageDayKey",
+        "usageDayKeyMemo",
+        "usageRangeLowerMs"
       ],
       "direction": "backward"
     },
@@ -35663,12 +35600,10 @@
         "findRuyiPackageRootFor",
         "fs",
         "fsp",
-        "installRegistryPath",
         "nowIso",
         "os",
         "path",
         "paths",
-        "readInstallRegistry",
         "ruyiPackageInfo",
         "safeJsonParse",
         "samePathKey",
@@ -35687,7 +35622,9 @@
         "generateMcpConfig",
         "kimiMcpManagedIds",
         "mutateConfig",
-        "readConfig"
+        "readConfig",
+        "readInstallRegistry",
+        "writeInstallRegistry"
       ],
       "direction": "backward"
     },
@@ -35865,16 +35802,10 @@
         "CONFIG_SCHEMA",
         "EventStreamHooks",
         "RUYI_EVENTS",
-        "appendUsageLedger",
-        "buildUsageSummary",
         "createNdjsonLineFeeder",
-        "flushUsageLedgerSync",
-        "forEachUsageRow",
         "hashArgs",
         "neutralizeFenceTag",
-        "readUsageRows",
-        "spawnDetachedChecked",
-        "usageLedgerCacheStats"
+        "spawnDetachedChecked"
       ],
       "direction": "backward"
     },
@@ -35994,6 +35925,7 @@
       "symbols": [
         "BRIDGED_WRITE_PATH_ARGS",
         "MISSION_CONTAINER_MAX_FILES",
+        "appendUsageLedger",
         "buildTurnSummary",
         "bumpMissionChangeSeq",
         "captureWorkspaceTurnBaseline",
@@ -36006,6 +35938,8 @@
         "detectDanglingTurn",
         "flushSessionIndex",
         "flushSessionIndexSync",
+        "flushUsageLedgerSync",
+        "forEachUsageRow",
         "invalidateSessionIndex",
         "isUntitledSessionTitle",
         "journalGc",
@@ -36025,6 +35959,7 @@
         "readMissionContainer",
         "readSessionHeadResilient",
         "readSessionNotes",
+        "readUsageRows",
         "reconcileWorkspaceTurnBaseline",
         "registerIntervention",
         "repairMissionChangeTornTail",
@@ -36042,6 +35977,7 @@
         "setSessionIndexRebuildScanHookForTest",
         "transitionInterventionState",
         "updateSessionMeta",
+        "usageLedgerCacheStats",
         "writeSessionNotes"
       ],
       "direction": "backward"
@@ -36633,6 +36569,7 @@
       "from": "14-main.js",
       "to": "13-http-router.js",
       "symbols": [
+        "buildUsageSummary",
         "doctor",
         "installIntegration",
         "parseArgs",
@@ -36758,7 +36695,6 @@
   "duplicateProvides": [],
   "stronglyConnectedComponents": [
     [
-      "00-boot.js",
       "01-config.js",
       "02-session-store.js",
       "03-bridge-guard.js",
@@ -36777,7 +36713,6 @@
       "07-autonomy.js",
       "08-agent-runs.js",
       "09-workflow.js",
-      "09b-replan-ledger.js",
       "09d-token-estimation.js",
       "10-context-governance.js",
       "11-native-tools.js",
@@ -36791,17 +36726,12 @@
     ]
   ],
   "cycleEdgeKeys": [
-    "00-boot.js->01-config.js",
-    "00-boot.js->02-session-store.js",
-    "00-boot.js->05-claude-engine.js",
-    "01-config.js->00-boot.js",
     "01-config.js->03-bridge-guard.js",
     "01-config.js->04-desktop-shell.js",
     "01-config.js->04-permission-runtime.js",
     "01-config.js->05-claude-engine.js",
     "01-config.js->06-provider-engine.js",
     "01-config.js->07-autonomy.js",
-    "02-session-store.js->00-boot.js",
     "02-session-store.js->01-config.js",
     "02-session-store.js->03-bridge-guard.js",
     "02-session-store.js->04-desktop-shell.js",
@@ -36810,21 +36740,17 @@
     "02-session-store.js->07-autonomy.js",
     "02-session-store.js->08-agent-runs.js",
     "02-session-store.js->11-native-tools.js",
-    "03-bridge-guard.js->00-boot.js",
     "03-bridge-guard.js->01-config.js",
     "03-bridge-guard.js->02-session-store.js",
     "03-bridge-guard.js->04-permission-runtime.js",
     "03-bridge-guard.js->05-claude-engine.js",
-    "04-desktop-shell.js->00-boot.js",
     "04-desktop-shell.js->04-permission-runtime.js",
-    "04-permission-runtime.js->00-boot.js",
     "04-permission-runtime.js->01-config.js",
     "04-permission-runtime.js->02-session-store.js",
     "04-permission-runtime.js->05-claude-engine.js",
     "04-permission-runtime.js->06d-memory-domain.js",
     "04-permission-runtime.js->13d-core-domain-routes.js",
     "04-permission-runtime.js->13f-native-tool-schemas.js",
-    "05-claude-engine.js->00-boot.js",
     "05-claude-engine.js->01-config.js",
     "05-claude-engine.js->02-session-store.js",
     "05-claude-engine.js->03-bridge-guard.js",
@@ -36838,7 +36764,6 @@
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
     "05-claude-engine.js->13-http-router.js",
-    "05b-kimi-bridge.js->00-boot.js",
     "05b-kimi-bridge.js->01-config.js",
     "05b-kimi-bridge.js->02-session-store.js",
     "05b-kimi-bridge.js->03-bridge-guard.js",
@@ -36851,11 +36776,8 @@
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->13-http-router.js",
-    "05c-kimi-search-policy.js->00-boot.js",
     "05c-kimi-search-policy.js->03-bridge-guard.js",
-    "05d-kimi-prompt-parts.js->00-boot.js",
     "05d-kimi-prompt-parts.js->03-bridge-guard.js",
-    "06-provider-engine.js->00-boot.js",
     "06-provider-engine.js->01-config.js",
     "06-provider-engine.js->02-session-store.js",
     "06-provider-engine.js->03-bridge-guard.js",
@@ -36865,27 +36787,21 @@
     "06-provider-engine.js->06e-mission-domain.js",
     "06-provider-engine.js->07-autonomy.js",
     "06-provider-engine.js->11-native-tools.js",
-    "06c-agent-loop-hooks.js->00-boot.js",
     "06c-agent-loop-hooks.js->04-permission-runtime.js",
-    "06d-memory-domain.js->00-boot.js",
     "06d-memory-domain.js->01-config.js",
     "06d-memory-domain.js->02-session-store.js",
     "06d-memory-domain.js->03-bridge-guard.js",
     "06d-memory-domain.js->04-permission-runtime.js",
     "06d-memory-domain.js->05-claude-engine.js",
     "06d-memory-domain.js->06-provider-engine.js",
-    "06e-mission-domain.js->00-boot.js",
     "06e-mission-domain.js->02-session-store.js",
     "06e-mission-domain.js->03-bridge-guard.js",
     "06e-mission-domain.js->04-permission-runtime.js",
-    "06f-autonomy-grants.js->00-boot.js",
     "06f-autonomy-grants.js->03-bridge-guard.js",
     "06f-autonomy-grants.js->04-permission-runtime.js",
     "06f-autonomy-grants.js->07-autonomy.js",
-    "06g-resource-leases.js->00-boot.js",
     "06g-resource-leases.js->02-session-store.js",
     "06g-resource-leases.js->03-bridge-guard.js",
-    "07-autonomy.js->00-boot.js",
     "07-autonomy.js->01-config.js",
     "07-autonomy.js->02-session-store.js",
     "07-autonomy.js->03-bridge-guard.js",
@@ -36895,7 +36811,6 @@
     "07-autonomy.js->09d-token-estimation.js",
     "07-autonomy.js->10-context-governance.js",
     "07-autonomy.js->13f-native-tool-schemas.js",
-    "08-agent-runs.js->00-boot.js",
     "08-agent-runs.js->01-config.js",
     "08-agent-runs.js->02-session-store.js",
     "08-agent-runs.js->03-bridge-guard.js",
@@ -36910,7 +36825,6 @@
     "08-agent-runs.js->11-native-tools.js",
     "08-agent-runs.js->12-tool-dispatch.js",
     "08-agent-runs.js->13-http-router.js",
-    "09-workflow.js->00-boot.js",
     "09-workflow.js->01-config.js",
     "09-workflow.js->02-session-store.js",
     "09-workflow.js->03-bridge-guard.js",
@@ -36923,15 +36837,12 @@
     "09-workflow.js->06g-resource-leases.js",
     "09-workflow.js->07-autonomy.js",
     "09-workflow.js->08-agent-runs.js",
-    "09-workflow.js->09b-replan-ledger.js",
     "09-workflow.js->09d-token-estimation.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
     "09-workflow.js->13-http-router.js",
-    "09b-replan-ledger.js->00-boot.js",
     "09d-token-estimation.js->07-autonomy.js",
     "09d-token-estimation.js->10-context-governance.js",
-    "10-context-governance.js->00-boot.js",
     "10-context-governance.js->01-config.js",
     "10-context-governance.js->02-session-store.js",
     "10-context-governance.js->04-permission-runtime.js",
@@ -36942,14 +36853,12 @@
     "10-context-governance.js->07-autonomy.js",
     "10-context-governance.js->09-workflow.js",
     "10-context-governance.js->09d-token-estimation.js",
-    "11-native-tools.js->00-boot.js",
     "11-native-tools.js->01-config.js",
     "11-native-tools.js->03-bridge-guard.js",
     "11-native-tools.js->04-permission-runtime.js",
     "11-native-tools.js->06-provider-engine.js",
     "11-native-tools.js->07-autonomy.js",
     "11-native-tools.js->13f-native-tool-schemas.js",
-    "12-tool-dispatch.js->00-boot.js",
     "12-tool-dispatch.js->01-config.js",
     "12-tool-dispatch.js->02-session-store.js",
     "12-tool-dispatch.js->03-bridge-guard.js",
@@ -36962,7 +36871,6 @@
     "12-tool-dispatch.js->08-agent-runs.js",
     "12-tool-dispatch.js->10-context-governance.js",
     "12-tool-dispatch.js->11-native-tools.js",
-    "13-http-router.js->00-boot.js",
     "13-http-router.js->01-config.js",
     "13-http-router.js->02-session-store.js",
     "13-http-router.js->03-bridge-guard.js",
@@ -36984,14 +36892,12 @@
     "13-http-router.js->13e-pretender-index.js",
     "13-http-router.js->13f-native-tool-schemas.js",
     "13-http-router.js->13s-scheduler.js",
-    "13b-api-domain-routes.js->00-boot.js",
     "13b-api-domain-routes.js->01-config.js",
     "13b-api-domain-routes.js->02-session-store.js",
     "13b-api-domain-routes.js->04-permission-runtime.js",
     "13b-api-domain-routes.js->05-claude-engine.js",
     "13b-api-domain-routes.js->06-provider-engine.js",
     "13b-api-domain-routes.js->07-autonomy.js",
-    "13d-core-domain-routes.js->00-boot.js",
     "13d-core-domain-routes.js->01-config.js",
     "13d-core-domain-routes.js->02-session-store.js",
     "13d-core-domain-routes.js->03-bridge-guard.js",
@@ -37000,9 +36906,7 @@
     "13d-core-domain-routes.js->07-autonomy.js",
     "13d-core-domain-routes.js->08-agent-runs.js",
     "13d-core-domain-routes.js->09-workflow.js",
-    "13d-core-domain-routes.js->09b-replan-ledger.js",
     "13d-core-domain-routes.js->13e-pretender-index.js",
-    "13e-pretender-index.js->00-boot.js",
     "13e-pretender-index.js->01-config.js",
     "13e-pretender-index.js->02-session-store.js",
     "13e-pretender-index.js->04-permission-runtime.js",
@@ -37010,7 +36914,6 @@
     "13e-pretender-index.js->08-agent-runs.js",
     "13e-pretender-index.js->13d-core-domain-routes.js",
     "13f-native-tool-schemas.js->07-autonomy.js",
-    "13s-scheduler.js->00-boot.js",
     "13s-scheduler.js->01-config.js",
     "13s-scheduler.js->02-session-store.js",
     "13s-scheduler.js->04-permission-runtime.js",
@@ -37018,9 +36921,6 @@
     "13s-scheduler.js->10-context-governance.js"
   ],
   "forwardEdgeKeys": [
-    "00-boot.js->01-config.js",
-    "00-boot.js->02-session-store.js",
-    "00-boot.js->05-claude-engine.js",
     "01-config.js->03-bridge-guard.js",
     "01-config.js->04-desktop-shell.js",
     "01-config.js->04-permission-runtime.js",

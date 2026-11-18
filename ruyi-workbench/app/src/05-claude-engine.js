@@ -1196,20 +1196,6 @@ const PROVIDER_PRESETS = [
   },
 ];
 
-// Third-party Anthropic-兼容端点 presets for the CLAUDE CLI engine itself (not a Provider — these fill
-// modelsApiBase/modelsApiKey/claudeAuthMode/model, which buildClaudeCliEnv turns into the ACTUAL
-// ANTHROPIC_BASE_URL/ANTHROPIC_AUTH_TOKEN(or API_KEY)/ANTHROPIC_MODEL env for the spawned `claude` child).
-// One-click "应用预设" in Settings → Claude CLI fills these instead of requiring manual setx per
-// docs/manuals/ADMIN-GUIDE_CN.md §2.1.1. `authKeyHint`/`defaultModelHint` are UI-only placeholders (never
-// a real secret) — apiKey always stays whatever the user types.
-const CLAUDE_ENDPOINT_PRESETS = [
-  // 用户 2026-09-27:火山方舟 Ark Coding Plan 预设已删(厂商预设一律不内置),只留「自定义」。
-  {
-    id: 'anthropic-compatible', label: '自定义（其它 Anthropic 兼容 / 内网自建端点）',
-    baseUrl: '', authMode: 'auto', authKeyHint: '', defaultModel: '', defaultModelHint: '', models: [],
-  },
-];
-
 // 114a(45 号文 §7): PROVIDER_MODEL_CAPS —— models[].caps 的取值白名单。【模型能力标签】:这个模型
 // 会什么(asr=可语音识别 / embedding=可向量化)。它与 06-provider-engine 的 getCapabilities()【运行
 // 环境能力矩阵】(PLAYBOOK_REQUIRES: network/desktopMcp/vision —— 这台机器有什么)是【两个正交

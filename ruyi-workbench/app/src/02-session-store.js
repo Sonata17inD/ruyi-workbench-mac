@@ -851,3 +851,19 @@ const { missionAttachThread, missionDetachThread, missionMergeInto, missionSplit
   sessions: { readHead: readMissionSessionHead, updateMeta: updateSessionMeta, list: listSessions, recordChange: bumpMissionChangeSeq, missionId: sessionMissionId },
   events: RUYI_EVENTS, logEvent, safeSessionId,
 });
+
+// Usage storage reports committed rows through this workbench composition boundary.
+const {
+  appendUsageLedger, flushUsageLedgerSync, forEachUsageRow, readUsageRows, usageLedgerCacheStats,
+  usageLedgerChangesSince, usageDayKey, usageDayKeyMemo, usageRangeLowerMs,
+} = require('./backend/usage-ledger.cjs').createUsageLedger({
+  directory: paths.usage,
+  onAppend(rec) {
+    RUYI_EVENTS.emit('projection.invalidated', { sessionId: rec.sessionId, reason: 'usage' });
+    if (rec.kind === 'turn') bumpMissionChangeSeq(rec.sessionId, {
+      type: 'budget',
+      cursor: { turnSeq: rec.turnSeq, engine: rec.engine },
+      detail: { inTok: rec.inTok, outTok: rec.outTok, cachedInTok: rec.cachedInTok, cost: rec.cost, currency: rec.currency || '', estimated: rec.estimated },
+    });
+  },
+});

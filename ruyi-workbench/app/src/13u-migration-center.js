@@ -934,7 +934,7 @@ async function migrationRememberPackages(roots) {
   }
   if (!added) return 0;
   await fsp.mkdir(paths.data, { recursive: true });
-  await atomicWriteJson(installRegistryPath(), { schema: reg.schema, updatedAt: nowIso(), packages: reg.packages });
+  await writeInstallRegistry(reg.packages);
   return added;
 }
 
@@ -944,7 +944,7 @@ async function migrationForgetPackage(root) {
   const reg = readInstallRegistry();
   const packages = reg.packages.filter(r => samePathKey(r.packageRoot) !== key);
   if (packages.length === reg.packages.length) return;
-  await atomicWriteJson(installRegistryPath(), { schema: reg.schema, updatedAt: nowIso(), packages });
+  await writeInstallRegistry(packages);
 }
 // Registry/reference paths address workbench; disposing a Mac installation must move its
 // enclosing App, never remove a signed Resources subtree and leave a broken App behind.

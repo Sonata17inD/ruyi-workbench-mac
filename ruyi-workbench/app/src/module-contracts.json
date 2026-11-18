@@ -19,6 +19,7 @@
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
         "BUNDLED_PYTHON_RUNTIME",
+        "CLAUDE_ENDPOINT_PRESETS",
         "CONFIG_SCHEMA",
         "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
@@ -26,8 +27,6 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "ExternalBotHooks",
-        "INSTALL_REGISTRY_MAX",
-        "INSTALL_REGISTRY_SCHEMA",
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
         "MigrationHooks",
@@ -44,13 +43,6 @@
         "SubAgentMemoryHooks",
         "TOOL_TIER_RANK",
         "URL",
-        "USAGE_CACHE_CHECK_BYTES",
-        "USAGE_CACHE_ROW_BYTES",
-        "USAGE_CACHE_YIELD_LINES",
-        "USAGE_CACHE_YIELD_ROWS",
-        "USAGE_CHANGE_LOG_MAX",
-        "USAGE_DICT_COLUMNS",
-        "UsageRowView",
         "VERSION",
         "_dataRootMemo",
         "agentCliHomes",
@@ -58,12 +50,8 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
-        "appendUsageLedger",
-        "buildUsageSummary",
         "cachedInputTokensFromUsage",
         "claudeCostFields",
-        "claudeLedgerSource",
-        "computeCostFromPricing",
         "computeProviderCost",
         "contentTypeFor",
         "copyOrdinaryJsonData",
@@ -85,13 +73,10 @@
         "exposeVendorBinOnPath",
         "externalRoot",
         "findRuyiPackageRootFor",
-        "flushUsageLedgerSync",
-        "forEachUsageRow",
         "fs",
         "fsp",
         "hashArgs",
         "http",
-        "installRegistryPath",
         "isDirectServeInvocation",
         "json",
         "localTurnTimeParts",
@@ -108,13 +93,8 @@
         "paths",
         "pidAlive",
         "readBody",
-        "readInstallRegistry",
         "readJsonBody",
-        "readUsageRows",
         "readline",
-        "recordInstallLaunch",
-        "refreshUsageLedgerCache",
-        "refreshUsageLedgerCacheNow",
         "resolveDataRootUncached",
         "runKeyedChain",
         "ruyiPackageInfo",
@@ -128,33 +108,6 @@
         "spawnDetachedChecked",
         "text",
         "tildePath",
-        "usageColsSessionIds",
-        "usageColumns",
-        "usageColumnsAppend",
-        "usageColumnsDictMemo",
-        "usageColumnsGrow",
-        "usageColumnsParseText",
-        "usageColumnsPushLine",
-        "usageColumnsShrink",
-        "usageDayKey",
-        "usageDayKeyMemo",
-        "usageDictId",
-        "usageDictIdMemo",
-        "usageLedgerCache",
-        "usageLedgerCacheDisabled",
-        "usageLedgerCacheStats",
-        "usageLedgerChain",
-        "usageLedgerChangesSince",
-        "usageLedgerPending",
-        "usageMonthFullParse",
-        "usageMonthIncremental",
-        "usageNextCheck",
-        "usageNoteChange",
-        "usageParseTail",
-        "usageRangeLowerMs",
-        "usageSplitComplete",
-        "usageTsDateMemo",
-        "usageTsIsCanonical",
         "zlib"
       ],
       "requires": [
@@ -163,48 +116,6 @@
           "symbol": "platformRuntimeEnvironment",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bumpMissionChangeSeq",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "overlayUnflushedSessionIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readSessionIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "CLAUDE_ENDPOINT_PRESETS",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -554,7 +465,9 @@
         "readDesktopPythonDiskEntries",
         "readDesktopPythonDiskEntry",
         "readFileTail",
+        "readInstallRegistry",
         "readUserJsonObjectForMerge",
+        "recordInstallLaunch",
         "refreshInBackground",
         "requestIsLoopback",
         "resolveKimiNpmEntry",
@@ -583,6 +496,7 @@
         "writeConfig",
         "writeConfigAtomic",
         "writeDesktopPythonDiskEntry",
+        "writeInstallRegistry",
         "writeToChild"
       ],
       "requires": [
@@ -666,6 +580,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "os",
           "kinds": [
             "read"
@@ -710,7 +631,8 @@
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1337,6 +1259,7 @@
         "appendDisplayMessagesToProviderHistory",
         "appendIntervention",
         "appendMissionChangeRecord",
+        "appendUsageLedger",
         "applyMissionUpdate",
         "applySessionTitleOverride",
         "archiveMissionResult",
@@ -1366,10 +1289,12 @@
         "finalizeMissionAfterTurn",
         "flushSessionIndex",
         "flushSessionIndexSync",
+        "flushUsageLedgerSync",
         "foldInterventionJournalText",
         "foldMissionChangeJournalText",
         "foldTurnSummaries",
         "followupAcceptanceCriterion",
+        "forEachUsageRow",
         "getSessionBodyState",
         "getSessionTitleOverride",
         "healStalePendingSegments",
@@ -1444,6 +1369,7 @@
         "readSessionNotes",
         "readSessionRouteHead",
         "readSessionScratchpad",
+        "readUsageRows",
         "rebaseStaleSessionBody",
         "reconcileWorkspaceTurnBaseline",
         "recordMissionBudgetTrippedChange",
@@ -1506,6 +1432,11 @@
         "transitionInterventionState",
         "updateSessionMeta",
         "updateSessionScratchpad",
+        "usageDayKey",
+        "usageDayKeyMemo",
+        "usageLedgerCacheStats",
+        "usageLedgerChangesSince",
+        "usageRangeLowerMs",
         "waitMissionTurnSettled",
         "withJournalWriteLock",
         "withMissionContainerLock",
@@ -3222,7 +3153,6 @@
         "ASR_FIX_MODES",
         "ASR_FIX_SYSTEM_MERGE",
         "ASR_FIX_SYSTEM_TEXT",
-        "CLAUDE_ENDPOINT_PRESETS",
         "KEY_MASK_PREFIX",
         "MCP_ARG_REDACTED_MARK",
         "PROVIDER_MODEL_CAPS",
@@ -3292,13 +3222,6 @@
         "voiceLexiconUpdate"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "claudeCostFields",
@@ -3542,6 +3465,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -5242,14 +5172,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call",
@@ -5463,6 +5385,14 @@
           "provider": "01o-execution-state.js",
           "symbol": "activeChildren",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -6098,13 +6028,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -6280,6 +6203,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6927,13 +6857,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
             "call"
@@ -7169,6 +7092,13 @@
           "symbol": "pendingPlans",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7618,13 +7548,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -7800,6 +7723,13 @@
           "symbol": "pendingPermissions",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8583,13 +8513,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -8832,6 +8755,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -10752,13 +10682,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call",
@@ -11029,6 +10952,13 @@
           "symbol": "turnSettlers",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -13213,6 +13143,7 @@
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
         "buildModelHint",
+        "buildUsageSummary",
         "consumeStartError",
         "discoverKimiModels",
         "discoverModels",
@@ -13280,9 +13211,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "buildUsageSummary",
+          "symbol": "CLAUDE_ENDPOINT_PRESETS",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13381,13 +13312,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "flushUsageLedgerSync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -13480,13 +13404,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "recordInstallLaunch",
           "kinds": [
             "call"
           ]
@@ -13729,6 +13646,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "recordInstallLaunch",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "requestIsLoopback",
           "kinds": [
             "call"
@@ -13962,6 +13886,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "flushUsageLedgerSync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "invalidateSessionIndex",
           "kinds": [
             "call"
@@ -14039,6 +13977,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "overlayUnflushedSessionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readSessionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readSessionRouteHead",
           "kinds": [
             "call"
@@ -14049,6 +14001,20 @@
           "symbol": "recordMissionCheckResult",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -14318,13 +14284,6 @@
           "symbol": "agentCliAdapter",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "CLAUDE_ENDPOINT_PRESETS",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -15266,13 +15225,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
           "kinds": [
             "read"
@@ -15430,6 +15382,13 @@
           "symbol": "activeChildren",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -16916,13 +16875,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -16973,13 +16925,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageLedgerChangesSince",
           "kinds": [
             "call"
           ]
@@ -17063,6 +17008,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "interventionFilePath",
           "kinds": [
             "call"
@@ -17092,6 +17044,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageLedgerChangesSince",
           "kinds": [
             "call"
           ]
@@ -18979,13 +18938,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
@@ -19034,20 +18986,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "ConfigPatchHooks",
           "kinds": [
@@ -19091,6 +19029,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -19099,6 +19044,20 @@
         {
           "provider": "02-session-store.js",
           "symbol": "readInterventions",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
           "kinds": [
             "call"
           ]
@@ -20696,13 +20655,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fs",
           "kinds": [
             "read"
@@ -20730,27 +20682,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
@@ -20773,6 +20704,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readInterventions",
           "kinds": [
             "call"
@@ -20781,6 +20719,27 @@
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionBudgetTrippedChange",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
           "kinds": [
             "call"
           ]
@@ -21378,37 +21337,9 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21435,6 +21366,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
           "kinds": [
             "call"
           ]
@@ -21477,6 +21415,27 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionTodosSignature",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
           "kinds": [
             "call"
           ]
@@ -23522,13 +23481,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "installRegistryPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
@@ -23560,13 +23512,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readInstallRegistry",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -23663,6 +23608,20 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readInstallRegistry",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "writeInstallRegistry",
           "kinds": [
             "call"
           ]
@@ -24380,20 +24339,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendUsageLedger",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "buildUsageSummary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
           "kinds": [
             "read"
@@ -24415,20 +24360,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "flushUsageLedgerSync",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "hashArgs",
           "kinds": [
             "read"
@@ -24443,13 +24374,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readUsageRows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -24458,13 +24382,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "usageLedgerCacheStats",
           "kinds": [
             "read"
           ]
@@ -24899,6 +24816,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
@@ -24984,6 +24908,20 @@
         {
           "provider": "02-session-store.js",
           "symbol": "flushSessionIndexSync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "flushUsageLedgerSync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
           "kinds": [
             "read"
           ]
@@ -25130,6 +25068,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "readUsageRows",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "reconcileWorkspaceTurnBaseline",
           "kinds": [
             "read"
@@ -25243,6 +25188,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageLedgerCacheStats",
           "kinds": [
             "read"
           ]
@@ -28155,6 +28107,13 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "withToolArgsGuide",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "buildUsageSummary",
           "kinds": [
             "read"
           ]

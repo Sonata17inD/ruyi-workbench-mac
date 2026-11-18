@@ -281,11 +281,11 @@ function readLedgerLines() { try { return fs.readFileSync(LEDGER, 'utf8').split(
     // 读盘出错那一刻端回一个形状不同的载荷,就是「返回什么取决于走了哪条分支」—— 本仓最贵的一类坑。
     // 钉的是【事实】不是字面量:两边各自抽出 by* 标识符集合再比,重排序/改注释/加非维度键都不会误红,
     // 只有「加了第 N 个维度却忘了兜底」才红。M1 加 byModel 时兜底就漏了,这条锁是为下一次准备的。
-    const bootSrc = fs.readFileSync(path.join(WB, 'app', 'src', '00-boot.js'), 'utf8');
+    const { functionBlock } = require('./lib/source-slice.js');
+    const summarySrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'usage-summary.cjs'), 'utf8');
     const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
     const dimsOf = text => new Set((text.match(/\bby[A-Z][A-Za-z0-9]*\s*:/g) || []).map(x => x.replace(/\s*:$/, '')));
-    const fnStart = bootSrc.indexOf('async function buildUsageSummary');
-    const okDims = dimsOf(bootSrc.slice(fnStart, bootSrc.indexOf('\n}', fnStart)));
+    const okDims = dimsOf(functionBlock(summarySrc, 'buildUsageSummary'));
     const fbStart = routerSrc.indexOf('Old install with no ledger');
     const fbDims = dimsOf(routerSrc.slice(fbStart, fbStart + 900));
     const missing = [...okDims].filter(k => !fbDims.has(k));

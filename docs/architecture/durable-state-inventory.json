@@ -209,7 +209,7 @@
     {
       "id": "usage-ledger",
       "pattern": "<data>/usage/YYYY-MM.jsonl",
-      "owner": "00-boot.js",
+      "owner": "../backend/usage-ledger.cjs",
       "anchor": "'.jsonl'",
       "schema": "NDJSON rows",
       "writePrimitive": "appendFile through usage chain",
@@ -629,7 +629,7 @@
     {
       "id": "install-registry",
       "pattern": "<data>/install-registry.json",
-      "owner": "00-boot.js",
+      "owner": "../backend/install-registry.cjs",
       "anchor": "'install-registry.json'",
       "schema": "object / schema 1 (packages[{packageRoot,version,launchMode,firstSeenAt,lastLaunchedAt,pid}])",
       "writePrimitive": "atomicWriteJson (boot upsert; migration center remembers reference-discovered packages and forgets recycled ones)",

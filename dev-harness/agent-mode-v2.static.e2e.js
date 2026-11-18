@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     一次投递的三个登记点(drainBackgroundJobs 同一张 seen 表 / markAgentEnvelopeDelivered / notifyAgentRunEnvelope)。
 //  ④ 界面零泄漏:04 appendLiveTail 对 subagentId 早退;chat-stream-runtime 的 compact 分支先判 subagentId、tool_use 无子卡
 //     不画到顶层;turn-activity 的 compact/subagent/agent_workflow 三处过滤;静态重绘有 narrativeWorkflowCard(信封摘要)。
-//  ⑤ 账本:recordCompactUsage 带 subagentId/runId 归属;00 appendUsageLedger 保留 runId。
+//  ⑤ 账本:recordCompactUsage 带 subagentId/runId 归属;usage-ledger 保留 runId。
 //  ⑥ 窗口一致:agentNodeContextWindow —— Claude 节点未知模型 1M(不再 200K)、手填优先;09 runNode 不再出现 `|| 200000`。
 //  ⑦ 旧会话兼容:interaction-prompts 工具动词表仍认 spawn_agent;两份 locale 保留 tools.verb.spawn_agent 且新增 agent_result。
 //  ⑧ 提示词:06b 四段子代理文字(zh/en)不再提 spawn_agent;09 volatile 规则提 background:true / agent_result。
@@ -90,13 +90,17 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const s02c = src('../backend/turn-segments.cjs');
   ok(/if \(seg\.background === true && \(seg\.type === 'subagent' \|\| seg\.type === 'workflow'\)\) \{\s*if \(seg\.status === 'running' \|\| seg\.status === 'paused'\) seg\.status = 'background';\s*continue;/.test(s02c), '③ 02c finalizeAll:后台段标 background 不标 cancelled');
   const s11 = src('11-native-tools.js');
-  ok(/EventStreamHooks\.markAgentEnvelopeDelivered = \(session, runId\)/.test(s11) && /EventStreamHooks\.notifyAgentRunEnvelope = \(sessionId, run, envelope\)/.test(s11) && /EventStreamHooks\.drainAgentEnvelopesText = session =>/.test(s11), '③ 11 一次投递三件套(登记已读 / 完成入账 / Claude 侧文本 drain)');
+  const jobs = src('../backend/background-jobs.cjs');
+  const jobBindings = ['markAgentEnvelopeDelivered', 'notifyAgentRunEnvelope', 'drainAgentEnvelopesText'];
+  ok(jobBindings.every(name => s11.includes(`EventStreamHooks.${name} = BackgroundJobs.${name};`) && jobs.includes(`const ${name} =`)),
+    '③ 后台账本连接一次投递三件套(登记已读 / 完成入账 / Claude 侧文本 drain)');
   // wave137 集成期竞态:通知先到、wait 后到 → wait 只回短回执;wait 先到 → 登记已读。两种先后顺序都恰好一次。
-  ok(/EventStreamHooks\.isAgentEnvelopeDelivered = \(session, runId\)/.test(s11), '③ 11 已读查询钩子 isAgentEnvelopeDelivered');
+  ok(s11.includes('EventStreamHooks.isAgentEnvelopeDelivered = BackgroundJobs.isAgentEnvelopeDelivered;') && /const isAgentEnvelopeDelivered = \(session, runId\)/.test(jobs),
+    '③ 后台账本连接已读查询钩子 isAgentEnvelopeDelivered');
   ok(/function settleWaitEnvelopes\(session, out\)/.test(s09) && /kind: 'agent_envelope_receipt', runId: env\.runId, status: env\.status, delivered: 'already'/.test(s09) && /resultObj = settleWaitEnvelopes\(session, await waitForAgentRunResults\(session\.id, requestedRunIds/.test(s09), '③ 09 wait_agents 经 settleWaitEnvelopes 结算:已送达 → 短回执,否则登记已读');
   ok(/if \(liveReg && liveReg\.session\) settleWaitEnvelopes\(liveReg\.session, out\);/.test(src('13-http-router.js')) && /settleWaitEnvelopes\(snapshot, out\);/.test(src('13-http-router.js')), '③ 13 MCP 回环 wait 同一套结算(活回合内存会话 / 无活回合读快照 + mutateSession 落已读)');
   ok(!/function markDeliveredEnvelopes\(/.test(s09), '③ 09 旧的单向登记 markDeliveredEnvelopes 已被结算函数取代');
-  ok(/const prefix = job\.kind === 'agent'/.test(s11) && /\[代理完成通知；以下是交付信封/.test(s11), '③ 11 drainBackgroundJobs 对代理 job 用信封口径');
+  ok(/const prefix = job\.kind === 'agent'/.test(jobs) && /\[代理完成通知；以下是交付信封/.test(jobs), '③ 后台账本 drainBackgroundJobs 对代理 job 用信封口径');
   const s05 = src('05-claude-engine.js');
   ok(/EventStreamHooks\.drainAgentEnvelopesText\(session\)/.test(s05) && /\[recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope\]/.test(s05), '③ 05 Claude/Kimi 下一回合开头拼入未读信封(同一张已读表)');
   const s13 = src('13-http-router.js');
@@ -126,7 +130,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(/function recordCompactUsage\(session, provider, sc, attribution\)/.test(s10) && /attr && attr\.subagentId \? \{ subagentId/.test(s10) && /attr && attr\.runId \? \{ runId/.test(s10), '⑤ recordCompactUsage 带 subagentId/runId 归属');
   ok(/recordCompactUsage\(parentSession, r\.summaryProvider, r\.sc, \{ subagentId, runId \}\)/.test(s10), '⑤ 子代理自动压缩记账带归属');
   ok(/recordCompactUsage\(parentSession, provider, forced\.sc, \{ subagentId, runId \}\)/.test(src('08-agent-runs.js')), '⑤ 子代理 forced_400 压缩记账带归属');
-  ok(/rec\.runId = String\(entry\.runId\)\.slice\(0, 120\)/.test(src('00-boot.js')), '⑤ 00 appendUsageLedger 保留 runId');
+  ok(/rec\.runId = String\(entry\.runId\)\.slice\(0, 120\)/.test(src('../backend/usage-ledger.cjs')), '⑤ usage-ledger 保留 runId');
   ok(/kind: 'subagent', agentKey, subagentId, runId,/.test(src('08-agent-runs.js')), '⑤ 子代理主行也带 runId');
 }
 

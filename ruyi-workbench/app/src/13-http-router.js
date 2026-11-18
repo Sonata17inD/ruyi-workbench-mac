@@ -1,3 +1,18 @@
+const buildUsageSummary = require('./backend/usage-summary.cjs').createUsageSummary({
+  readConfig, forEachUsageRow, usageRangeLowerMs, usageDayKeyMemo,
+  async readSessionTitles() {
+    // Include pending index writes so a just-renamed session already has its current title.
+    const index = await readSessionIndex();
+    const entries = new Map((Array.isArray(index) ? index : [])
+      .filter(entry => entry && entry.id).map(entry => [String(entry.id), entry]));
+    const titles = new Map();
+    for (const [id, entry] of overlayUnflushedSessionIndex(entries)) {
+      titles.set(String(id), (entry && entry.title) || '');
+    }
+    return titles;
+  },
+});
+
 const { HELP_DOC_FILES, HELP_DOC_LANGS, HELP_DOC_MAX_BYTES, helpDocsDir, helpDocTitle, OPEN_PATH_TARGETS, LOG_TAIL_MAX_LINES, LOG_TAIL_DEFAULT_LINES, LOG_TAIL_MAX_BYTES, openPathTargetDir, latestLogFile, tailLinesFromBuffer } = require('./backend/local-support.cjs').createLocalSupport({
   externalRoot, manualsDirectory: path.join(__dirname, '..', 'docs', 'manuals'), paths,
 });
