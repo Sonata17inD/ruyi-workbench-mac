@@ -18,7 +18,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *    不受影响)+ 启用回连 + desktop/drop-in 409 拒 + 未知 404 + 参数 400 + 无 token 拒。
  *  J 段(55b)DELETE /api/mcp/connectors:删除全路径(落盘/清单消失/探针 404)+ desktop/drop-in 409 拒 + 无 token 拒。
  *  K 段(55b)重启一致性:同 HOME 重启后停用仍停用、删除不复活、无关条目不受影响(退出条件#3)。
- *  S 段 静态锁:四函数/路由表/路由接线在 server.js。
+ *  S 段 静态锁:MCP 客户端生命周期、连接器设置与路由接线。
  *
  * Run: node dev-harness/mcp-ops-closure.e2e.js
  */
@@ -461,9 +461,10 @@ function startLegacySseMcp(port, state) {
 
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const src = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-client-runtime.cjs'), 'utf8');
+  const settings = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-connector-settings.cjs'), 'utf8');
   const routes = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-routes.cjs'), 'utf8');
-  ok(/function classifyMcpError/.test(src) && /function probeMcpConnector/.test(src) && /function buildMcpConnectorInventory/.test(src), 'S1 三函数在 server.js');
+  ok(/function classifyMcpError/.test(src) && /function probeMcpConnector/.test(src) && /function buildMcpConnectorInventory/.test(src), 'S1 MCP 客户端模块负责错误、探针和清册');
   ok(/const MCP_COMPAT_MATRIX/.test(src) && /supportsListChanged/.test(src), 'S2 兼容矩阵在');
   ok(/GET \/api\/mcp\/connectors/.test(routes) || /'\/api\/mcp\/connectors'/.test(routes), 'S3 GET /api/mcp/connectors 路由');
   ok(/POST \/api\/mcp\/connectors\/health/.test(routes) || /'\/api\/mcp\/connectors\/health'/.test(routes), 'S4 POST /api/mcp/connectors/health 路由');
@@ -472,17 +473,17 @@ function startLegacySseMcp(port, state) {
   ok(/mcpClientPending/.test(src) && /复用同一个 start Promise/.test(src), 'S7 getMcpClient 并发互斥在(防孤儿子进程)');
   const { safeUrlForDisplay } = require('../ruyi-workbench/app/backend/config-secrets.cjs');
   ok(srv.safeUrlForDisplay === safeUrlForDisplay
-    && /url: safeUrlForDisplay\(entry\.url/.test(src)
+    && /url: safeUrlForDisplay\(entry\.url/.test(settings)
     && /: safeUrlForDisplay\(spec\.url\)/.test(src), 'S8 两个 MCP 清单使用统一的 URL 脱敏规则');
   // 55b: 启停/删除持久化
-  ok(/'\/api\/mcp\/connectors\/toggle'/.test(routes) && /mcp_connector_toggle/.test(src), 'S9 toggle 路由 + 审计事件在');
-  ok(/req\.method === 'DELETE' && pathname === '\/api\/mcp\/connectors'/.test(routes) && /mcp_connector_delete/.test(src), 'S10 DELETE 路由 + 审计事件在');
-  ok(/function mcpConnectorMutateError/.test(src) && /ai-computer-control\).*(不可|启停)/.test(src), 'S11 源守卫(desktop/drop-in 拒绝)在');
+  ok(/'\/api\/mcp\/connectors\/toggle'/.test(routes) && /mcp_connector_toggle/.test(settings), 'S9 toggle 路由 + 审计事件在');
+  ok(/req\.method === 'DELETE' && pathname === '\/api\/mcp\/connectors'/.test(routes) && /mcp_connector_delete/.test(settings), 'S10 DELETE 路由 + 审计事件在');
+  ok(/function mcpConnectorMutateError/.test(settings) && /ai-computer-control\).*(不可|启停)/.test(settings), 'S11 源守卫(desktop/drop-in 拒绝)在');
   const { ROUTE_AUTH } = require('../ruyi-workbench/app/backend/http-route-policy.cjs');
   const toggleAuth = ROUTE_AUTH.find(rule => rule.m === 'POST' && rule.p === '/api/mcp/connectors/toggle');
   const deleteAuth = ROUTE_AUTH.find(rule => rule.m === 'DELETE' && rule.p === '/api/mcp/connectors');
   ok(toggleAuth?.auth === 'token' && deleteAuth?.auth === 'token', 'S12 ROUTE_AUTH 两条 token 级');
-  ok(/invalidateMcpRuntime\(id\)/.test(src), 'S13 启停/删除后 invalidateMcpRuntime(杀活客户端/清冷却)');
+  ok(/invalidateMcpRuntime\(wantId\)/.test(settings), 'S13 启停/删除后 invalidateMcpRuntime(杀活客户端/清冷却)');
 
   await sleep(150);
   console.log('\nMCP OPS CLOSURE E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));

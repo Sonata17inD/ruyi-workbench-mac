@@ -10,7 +10,7 @@
 //      (修复前落盘的旧会话);
 //   3) 桥接超时表给 ACC `wait`(cap 300s) 310s,不再用默认 120s 杀掉合法 wait(300)。
 // 纯静态:vm 加载 02c-turn-segments.js 的 builder 片段 + 02-session-store.js 的 heal 片段
-// + 04-permission-runtime.js 的超时表,不启服务器。
+// 并直接调用 MCP 超时模块,不启服务器。
 
 const fs = require('fs');
 const path = require('path');
@@ -116,23 +116,21 @@ const live = { messages: [{ segments: [{ type: 'permission', requestId: 'live-pe
 ctx.healStalePendingSegments(live);
 ok(live.messages[0].segments[0].status === 'pending', 'F6 活待决 permission 不被误标 (决策仍会到达)');
 
-// --- F7: bridge timeout table gives `wait` 310s, run_command 650s, default 120s -------------
-const perm = read(path.join(SRC, '04-permission-runtime.js'));
-const tStart = perm.indexOf('const BRIDGED_TOOL_TIMEOUTS = {');
-const fnStart = perm.indexOf('function bridgedToolTimeoutMs(name)', tStart);
-const fnEnd = perm.indexOf('\n}', fnStart) + 2;
-ok(tStart >= 0 && fnEnd > fnStart, 'F7 桥超时表 + 函数在源码');
-const tctx = { process: { env: {} } };
-// Load: the timeout table const + the default const + bridgedToolTimeoutMs (all contiguous in source).
-vm.runInNewContext(perm.slice(tStart, fnEnd) + '\nthis.bridgedToolTimeoutMs = bridgedToolTimeoutMs;', tctx);
-ok(typeof tctx.bridgedToolTimeoutMs === 'function', 'F7 bridgedToolTimeoutMs 可调用');
-if (typeof tctx.bridgedToolTimeoutMs === 'function') {
-  ok(tctx.bridgedToolTimeoutMs('wait') === 310000, `F7a wait -> 310000ms (got ${tctx.bridgedToolTimeoutMs('wait')})`);
-  ok(tctx.bridgedToolTimeoutMs('run_command') === 650000, 'F7b run_command -> 650000ms');
-  ok(tctx.bridgedToolTimeoutMs('file_read') === 900000, 'F7c 未知长工具默认 -> 900000ms');
-  // override env path
-  tctx.process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE = 'wait:5000';
-  ok(tctx.bridgedToolTimeoutMs('wait') === 5000, 'F7d WCW_BRIDGED_TIMEOUT_OVERRIDE 覆盖 wait -> 5000ms');
+// --- F7: production bridge deadlines include the tool ceiling and request-specific grace ---
+const { bridgedToolCallTimeoutMs } = require('../ruyi-workbench/app/backend/mcp-tool-timeouts.cjs');
+const previousOverride = process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE;
+try {
+  delete process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE;
+  ok(bridgedToolCallTimeoutMs('wait') === 310000, 'F7a wait -> 310000ms');
+  ok(bridgedToolCallTimeoutMs('launch_application') === 650000, 'F7b launch_application -> 650000ms');
+  ok(bridgedToolCallTimeoutMs('file_read') === 900000, 'F7c 未知长工具默认 -> 900000ms');
+  ok(bridgedToolCallTimeoutMs('run_command', { timeout: 600 }) === 610000, 'F7d run_command 采用本次请求上限加传输宽限');
+  process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE = 'wait:5000,run_command:8000';
+  ok(bridgedToolCallTimeoutMs('wait') === 5000, 'F7e WCW_BRIDGED_TIMEOUT_OVERRIDE 覆盖 wait -> 5000ms');
+  ok(bridgedToolCallTimeoutMs('run_command', { timeout: 600 }) === 8000, 'F7f 显式覆盖限制本次命令的桥超时');
+} finally {
+  if (previousOverride === undefined) delete process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE;
+  else process.env.WCW_BRIDGED_TIMEOUT_OVERRIDE = previousOverride;
 }
 
 // --- summary ---------------------------------------------------------------------------------

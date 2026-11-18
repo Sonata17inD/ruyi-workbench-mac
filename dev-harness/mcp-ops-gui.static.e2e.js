@@ -21,7 +21,7 @@ const zh = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 
 const en = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'en-US.json'), 'utf8'));
 const zhDoc = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
 const enDoc = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json'), 'utf8'));
-const server = fs.readFileSync(path.join(WB, 'app', 'server.js'), 'utf8');
+const runtime = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-client-runtime.cjs'), 'utf8');
 let failures = 0;
 const ok = (v, label) => { if (v) console.log('PASS ' + label); else { failures++; console.error('FAIL ' + label); } };
 
@@ -97,7 +97,7 @@ for (const k of ['settings.mcp.count.one', 'settings.mcp.count.other', 'settings
 ok(zh['settings.mcp.retestOk'].includes('{{p1}}') && zh['settings.mcp.retestOk'].includes('{{p2}}') && en['settings.mcp.retestOk'].includes('{{p1}}') && en['settings.mcp.retestOk'].includes('{{p2}}'), 'M18 retestOk 占位符 {{p1}}/{{p2}} 中英对称');
 // 8 类错误归类键与后端 classifyMcpError 类别一一对应(55a 契约)。
 for (const c of ['auth', 'startup', 'network', 'timeout', 'security', 'tool_registration', 'protocol', 'unknown']) {
-  ok(server.includes(`category: '${c}'`), `M19 后端类别 ${c} 在(server.js)`);
+  ok(runtime.includes(`category: '${c}'`), `M19 MCP 客户端模块声明类别 ${c}`);
 }
 const mcpRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-routes.cjs'), 'utf8');
 ok(mcpRoutes.includes("'/api/mcp/connectors/toggle'") && mcpRoutes.includes("'/api/mcp/connectors/health'"), 'M20 MCP 路由含 GUI 的启停和探针入口');

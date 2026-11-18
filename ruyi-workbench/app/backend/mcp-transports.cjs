@@ -2,8 +2,22 @@
 const http = require('node:http');
 const { copyOrdinaryJsonData } = require('./ordinary-json.cjs');
 const { bridgedServerSpawnEnv } = require('./mcp-child-env.cjs');
+const { bridgedToolCallTimeoutMs } = require('./mcp-tool-timeouts.cjs');
+
+function mcpChildExitResult(client, toolName, info) {
+  const id = client && client.id ? String(client.id) : 'mcp';
+  const isDesktop = id === 'ai-computer-control';
+  const who = isDesktop ? `desktop control component (${id})` : `MCP server '${id}'`;
+  const how = `code ${info && info.code != null ? info.code : 'null'}${info && info.signal ? `, signal ${info.signal}` : ''}`;
+  const tail = info && info.stderrTail ? ` Last stderr: ${info.stderrTail.replace(/\s+/g, ' ').slice(-300)}` : '';
+  return {
+    ok: false, code: 'mcp-child-exited', retryable: true, serverId: id, tool: String(toolName || ''),
+    error: `tool '${toolName}' was interrupted: the ${who} process exited unexpectedly (${how}). It restarts automatically on the next call: retry the call once; any state it held in memory (open browser pages, recording, thinking chain) is lost, and if the same call kills it again, stop retrying and report the failure.${tail}`,
+  };
+}
+
 // Transport instances receive host policy and process ownership explicitly.
-function createMcpTransports({ safeJsonParse, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION }) {
+function createMcpTransports({ safeJsonParse, DesktopExecutionHooks, ProcessRuntime, killChildTree, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION }) {
 const MCP_STDIO_LINE_MAX_CHARS = 64 * 1024 * 1024;
 // tools/list 分页(nextCursor)最多跟这么多页 —— 防对端回同一个游标/无限翻页把握手拖死。
 const MCP_TOOLS_LIST_MAX_PAGES = 20;
@@ -726,4 +740,4 @@ class McpHttpClient {
 
 return { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, mcpCallToolParams };
 }
-module.exports = { createMcpTransports };
+module.exports = { createMcpTransports, mcpChildExitResult };

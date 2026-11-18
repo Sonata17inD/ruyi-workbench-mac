@@ -244,9 +244,9 @@ describe('[F6] 审计行摘要本地化', () => {
 
 describe('[F7] MCP 兼容性框的本地化键', () => {
   it('服务端 MCP_COMPAT_MATRIX 的每个 transport 都有 capabilities / limitations 两键', () => {
-    const src = fs.readFileSync(path.join(APP, 'src', '04-permission-runtime.js'), 'utf8');
+    const src = fs.readFileSync(path.join(APP, 'backend', 'mcp-client-runtime.cjs'), 'utf8');
     const block = constBlock(src, 'MCP_COMPAT_MATRIX');
-    const transports = [...block.matchAll(/^ {2}(\w+): \{/gm)].map(m => m[1]);
+    const transports = [...block.matchAll(/^ {4}(\w+): \{/gm)].map(m => m[1]);
     assert.deepEqual(transports.sort(), ['http', 'sse', 'stdio']);
     for (const k of transports) {
       for (const field of ['capabilities', 'limitations']) {

@@ -2454,62 +2454,35 @@
       "file": "04-permission-runtime.js",
       "layer": "foundation",
       "provides": [
-        "ACTIVE_CHILD_EVENT_TAPS",
         "AGENT_CLI_CONTEXT_WINDOW_PROBES",
         "AgentLoopHooks",
-        "BRIDGED_CATALOG_INCOMPLETE_TTL_MS",
-        "BRIDGED_CATALOG_SCAN_TIMEOUT_MS",
-        "BRIDGED_ENTRY_START_TIMEOUT_MS",
-        "BRIDGED_TOOL_TIMEOUTS",
-        "BRIDGED_TOOL_TIMEOUT_DEFAULT_MS",
-        "CLAUDE_RECOVERY_HISTORY_CHARS",
-        "CLAUDE_RECOVERY_MESSAGE_CHARS",
-        "CLAUDE_TASK_NOTIFICATION_MAX_CHARS",
-        "LIVE_FULL_CHARS",
-        "LIVE_TAIL_CHARS",
-        "LIVE_TOOLS_MAX",
         "MCP_COMPAT_MATRIX",
-        "MCP_CONNECTOR_ID_RE",
-        "MCP_DROPIN_SHADOW_WARNING",
-        "MCP_FAILURE_COOLDOWN_MS",
         "McpHttpClient",
         "McpStdioClient",
-        "NATIVE_CLAUDE_AGENT_RESULT_MAX_CHARS",
-        "PROMPT_DEADLINE_HORIZON_MS",
-        "PROMPT_WAIT_UNLIMITED_MS",
         "PermissionWaitHooks",
         "ToolboxHooks",
         "appendLiveTail",
         "assertSessionExecutionOwner",
-        "bridgedCatalogCache",
-        "bridgedCatalogInflight",
         "bridgedServerUnavailableMessage",
-        "bridgedToolCallTimeoutMs",
-        "bridgedToolFunctionName",
-        "bridgedToolTimeoutMs",
         "buildClaudeRecoveryHistory",
         "buildMcpConnectorInventory",
         "classifyMcpError",
         "claudeProviderTailSince",
         "claudeResumeRouteKey",
-        "claudeTaskNotificationTag",
         "clearPendingPermissions",
         "clearPendingPlans",
         "clearPendingQuestions",
         "collectBridgedTools",
-        "collectBridgedToolsScan",
         "configureMcpFromTool",
         "createAttachmentStore",
         "createInterventionDecisions",
+        "createMcpTransports",
         "decideInterventionCommand",
-        "decodeClaudeTaskXmlText",
-        "deltaOf",
         "discoverKimiModels",
         "driverAutoSessions",
         "extendUserQuestion",
         "formatQuestionGuidance",
         "getBridgedClient",
-        "getMcpClient",
         "hasPendingPermissionForSession",
         "hasPendingQuestionForSession",
         "installActiveChildEventFanout",
@@ -2523,14 +2496,7 @@
         "makeAttachmentRecord",
         "mcpCallToolParams",
         "mcpChildExitResult",
-        "mcpClientFailures",
-        "mcpClientFingerprints",
-        "mcpClientGen",
-        "mcpClientPending",
         "mcpClients",
-        "mcpConnectorMutateError",
-        "mcpEntryFingerprint",
-        "mcpShortHash",
         "mcpStartingClients",
         "mcpToolAllowed",
         "mutateMcpConnector",
@@ -2539,7 +2505,6 @@
         "normalizeQuestionAnswer",
         "normalizeQuestionContext",
         "normalizeUserQuestions",
-        "notifyActiveChildTaps",
         "parseAgentCliEvent",
         "parseClaudeEvent",
         "parseClaudeTaskNotification",
@@ -2549,7 +2514,6 @@
         "probeMcpConnector",
         "promptDeadlineIsReal",
         "promptWaitMs",
-        "reconcileMcpEntryFingerprint",
         "recordSessionExecutionOwner",
         "registerSessionExecutionChild",
         "registerUserQuestion",
@@ -2565,11 +2529,9 @@
         "sessionExecutionCheckRewind",
         "sessionExecutionObservation",
         "sessionExecutionSnapshot",
-        "splitMcpArgsString",
         "stopSession",
         "subscribeActiveChildEvents",
-        "turnOutcomePending",
-        "validateBrowserTargetPatch"
+        "turnOutcomePending"
       ],
       "requires": [
         {
@@ -2582,13 +2544,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "collectDisplayUrlRestores",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -2611,21 +2566,21 @@
           "provider": "00-boot.js",
           "symbol": "executionArgumentsDigest",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -2633,34 +2588,26 @@
           "provider": "00-boot.js",
           "symbol": "maskKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "mcpArgsForDisplay",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "OVERLAY_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -2683,14 +2630,13 @@
           "provider": "00-boot.js",
           "symbol": "restoreExternalMcpServerSecrets",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -2698,14 +2644,14 @@
           "provider": "00-boot.js",
           "symbol": "safeUrlForDisplay",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "sanitizeExternalMcpServer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2713,20 +2659,6 @@
           "symbol": "SessionExecutionHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -2740,7 +2672,7 @@
           "provider": "00b-ruyi-names.js",
           "symbol": "isRuyiMcpServerId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2761,42 +2693,42 @@
           "provider": "01-config.js",
           "symbol": "detectDesktopMcp",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "enabledToolboxComponents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "ensureDesktopMcpWarm",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "invalidateMcpDropInCache",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2810,14 +2742,14 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2831,14 +2763,13 @@
           "provider": "01-config.js",
           "symbol": "scanMcpDropIns",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -2846,7 +2777,6 @@
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -2910,7 +2840,7 @@
           "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2924,7 +2854,7 @@
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

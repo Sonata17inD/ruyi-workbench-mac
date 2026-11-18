@@ -27,7 +27,7 @@ const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
 const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
 const read = file => fs.readFileSync(file, 'utf8');
-const runtime = read(path.join(SRC, '04-permission-runtime.js'));
+const runtime = read(path.join(SRC, '../backend/active-child-events.cjs'));
 const routes = read(path.join(SRC, '../backend/session-routes.cjs'));
 const envelope = read(path.join(SRC, '../backend/session-envelope.cjs'));
 const experience = read(path.join(PUBLIC, 'js', 'session-experience.js'));

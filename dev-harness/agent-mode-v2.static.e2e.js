@@ -111,8 +111,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ④ 界面零泄漏
 {
-  const s04 = src('04-permission-runtime.js');
-  ok(/function appendLiveTail\(reg, evt\) \{\s*if \(!reg \|\| !evt\) return;\s*\/\/[^\n]*\n\s*if \(evt\.subagentId\) return;/.test(s04), '④ 04 appendLiveTail 对 subagentId 事件早退');
+  const liveEvents = src('../backend/active-child-events.cjs');
+  ok(/function appendLiveTail\(reg, evt\) \{\s*if \(!reg \|\| !evt\) return;\s*\/\/[^\n]*\n\s*if \(evt\.subagentId\) return;/.test(liveEvents), '④ appendLiveTail 对 subagentId 事件早退');
   const csr = pub('js/chat-stream-runtime.js');
   ok(/case 'compact': \{\s*\/\/[^\n]*\n\s*if \(evt\.subagentId\) \{/.test(csr), '④ chat-stream-runtime:compact 先判 subagentId(不改父电量表/不进父叙事)');
   ok(/\} else if \(!evt\.subagentId\) \{\s*registerNarrativeTool\(live, evt, card\);/.test(csr), '④ chat-stream-runtime:带 subagentId 又没子卡的 tool_use 不画到顶层');

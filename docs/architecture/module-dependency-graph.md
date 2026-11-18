@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2227 | 3155 | 601 | 15 | 0 | 0 |
+| 87 | 2189 | 3151 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -47,7 +47,7 @@
 | 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 68 | 28 | 5 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 32 | `04-permission-runtime.js` | foundation | 116 | 51 | 6 |
+| 32 | `04-permission-runtime.js` | foundation | 78 | 47 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 35 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
@@ -146,7 +146,7 @@
 | `03-bridge-guard.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `03a-privacy-gateway.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
-| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `_expandMcpVar`, `collectDisplayUrlRestores`, `crypto`, `ensureDirs`, `executionArgumentsDigest`, `logEvent`, `makeId`, `maskKey`, `mcpArgsForDisplay`, `nowIso`, `path`, `paths`, `redact`, `restoreExternalMcpServerSecrets`, `safeJsonParse`, `safeUrlForDisplay`, `sanitizeExternalMcpServer`, `text` |
+| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `OVERLAY_ID`, `SessionExecutionHooks`, `VERSION`, `_expandMcpVar`, `collectDisplayUrlRestores`, `ensureDirs`, `executionArgumentsDigest`, `logEvent`, `makeId`, `maskKey`, `mcpArgsForDisplay`, `nowIso`, `paths`, `redact`, `restoreExternalMcpServerSecrets`, `safeJsonParse`, `safeUrlForDisplay`, `sanitizeExternalMcpServer` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
 | `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `detectDesktopMcp`, `enabledToolboxComponents`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `invalidateMcpDropInCache`, `mutateConfig`, `prepareAgentCliSpawn`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `scanMcpDropIns`, `selectedAgentCli` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
