@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2277 | 3170 | 601 | 15 | 0 | 0 |
+| 87 | 2244 | 3163 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -79,7 +79,7 @@
 | 61 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 62 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 63 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 64 | `12-tool-dispatch.js` | tools | 87 | 171 | 26 |
+| 64 | `12-tool-dispatch.js` | tools | 54 | 164 | 26 |
 | 65 | `13-http-router.js` | transport | 26 | 183 | 28 |
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
@@ -364,7 +364,7 @@
 | `11-native-tools.js` | `07-autonomy.js` | backward | `MAIL_TEXT_MAX`, `buildToolCatalog`, `dropPolicyDisabledBridgedTools`, `neutralizeInjectedPrefixes` |
 | `11c-file-visual-io.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
 | `11d-media-inspection.js` | `01h-process-runtime.js` | backward | `ProcessRuntime` |
-| `12-tool-dispatch.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `DesktopExecutionHooks`, `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `OVERLAY_ID`, `TOOL_TIER_RANK`, `URL`, `bridgedWriteRelativePathArg`, `crypto`, `externalRoot`, `fs`, `fsp`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `logEvent`, `makeId`, `nativeToolDisabledByPolicy`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `runtimeToolRequirementsMet`, `safeJsonParse`, `sensitiveFileIdentities`, `spawnDetachedChecked`, `text`, `toolDisabledByPolicy` |
+| `12-tool-dispatch.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `DesktopExecutionHooks`, `NATIVE_COMMAND_TOOL_NAMES`, `NATIVE_DESKTOP_TOOL_NAMES`, `OVERLAY_ID`, `TOOL_TIER_RANK`, `bridgedWriteRelativePathArg`, `externalRoot`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `logEvent`, `makeId`, `nativeToolDisabledByPolicy`, `normalizeCwd`, `nowIso`, `pathWithinRoot`, `paths`, `runtimeToolRequirementsMet`, `safeJsonParse`, `sensitiveFileIdentities`, `spawnDetachedChecked`, `toolDisabledByPolicy` |
 | `12-tool-dispatch.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherOk`, `commandForSelfMcp`, `defaultConfig`, `ensureDesktopMcpWarm`, `externalServerJs`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `selectedAgentCli`, `staticBase` |
 | `12-tool-dispatch.js` | `01c-runtime-flags.js` | backward | `execResultCacheEnabled`, `execResultCacheMaxEntries`, `observationRecallEnabled` |
 | `12-tool-dispatch.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `ProcessRuntime`, `probeRgAsync` |

@@ -275,7 +275,11 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       '../backend/steward-thread-create.cjs', '../backend/steward-thread-edits.cjs',
       '../backend/steward-decision-tools.cjs', '../backend/steward-memory-tools.cjs', '../backend/steward-status-tools.cjs',
       '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs',
-      '../backend/steward-external-read-tools.cjs', '../backend/steward-notification-tool.cjs'];
+      '../backend/steward-external-read-tools.cjs', '../backend/steward-notification-tool.cjs',
+      '../backend/adaptive-tool-invocation.cjs', '../backend/workbench-core-tools.cjs',
+      '../backend/steward-tool-handlers.cjs', '../backend/agent-tool-handlers.cjs',
+      '../backend/code-tool-handlers.cjs', '../backend/desktop-tool-handlers.cjs',
+      '../backend/integration-tool-handlers.cjs', '../backend/network-tool-handlers.cjs', '../backend/shell-tool-handlers.cjs'];
     const leaked = toolFacing.filter(name => /(createMissionContainer|patchMissionContainer|missionMergeInto)\(/.test(readSrc(name)));
     ok(leaked.length === 0, 'f3 模型工具面零处写容器验收项(实 ' + JSON.stringify(leaked) + ')');
     // f4:四态的判据只许有一份 —— 前端不许自己按 checkType 推。

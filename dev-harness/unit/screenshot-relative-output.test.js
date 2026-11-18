@@ -1,8 +1,7 @@
 'use strict';
 // Unit(走查 W1·F1):desktop_screenshot 的 outputPath 与 file_write 同一条解析链 ——
 // 相对路径接在【会话工作区】下(不再落到服务进程 cwd),~ / %USERPROFILE% 先展开。
-// 判据只看写闸的去留与报错里的 path(平台无关):越界的相对路径在 PowerShell 起来之前就被拒,
-// 报出来的路径必须是「工作区 + 相对段」,不是进程 cwd 下的某个路径。
+// 越界路径在原生截图请求前被拒，报错路径按工作区解析。
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -14,9 +13,14 @@ process.env.RUYI_HOME = path.join(root, 'data');
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
-// Exercise the existing Windows screenshot path guard; Mac rejects this tool before its handler.
-const srv = require('../lib/server-internals').loadServerInternals(['toolCall', 'killAllMcpClients'], { testPlatform: 'win32' });
+const srv = require('../lib/server-internals').loadServerInternals(['toolCall', 'killAllMcpClients', 'MacDesktopAutomation']);
 const { toolCall } = srv;
+let captureRequests = 0;
+srv.MacDesktopAutomation.request = async ({ op }) => {
+  assert.equal(op, 'capture');
+  captureRequests++;
+  return { ok: false, code: 'synthetic_capture_denied' };
+};
 after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { /* ignore */ } try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ } });
 
 const ws = path.join(root, 'ws');
@@ -29,12 +33,15 @@ test('[F1] desktop_screenshot 相对 outputPath 按工作区解析:越界相对�
   assert.equal(r.code, 'not-allowed', `越界写恒拒(got ${JSON.stringify(r).slice(0, 200)})`);
   assert.equal(r.path, path.resolve(ws, '..', 'escape-shot.png'),
     `报出的路径应是工作区解析的结果;修前是 path.resolve('../escape-shot.png') 落到进程 cwd(${process.cwd()})`);
+  assert.equal(captureRequests, 0, 'path rejection happens before capture');
 });
 
-test('[F1] desktop_screenshot 工作区内的相对 outputPath 不再被判越界(非目标平台明确拒绝执行)', { skip: process.platform === 'win32' }, async () => {
+test('[F1] desktop_screenshot 接受工作区内的相对 outputPath', async () => {
   const r = await toolCall('desktop_screenshot', { outputPath: 'shots/inside.png' }, ctx);
   assert.notEqual(r.code, 'not-allowed', `工作区内的相对路径不该被写闸拒(got ${JSON.stringify(r).slice(0, 200)})`);
-  assert.equal(r.code, 'platform_unsupported', 'path guard accepts the workspace path before platform rejection');
+  const mac = process.platform === 'darwin';
+  assert.equal(r.code, mac ? 'synthetic_capture_denied' : 'platform_unsupported');
+  assert.equal(captureRequests, mac ? 1 : 0);
   assert.equal(r.ok, false);
 });
 

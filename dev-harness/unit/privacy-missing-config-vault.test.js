@@ -45,14 +45,17 @@ function setup(t, seed = initial(true)) {
     mod.paths = Module._nodeModulePaths(path.dirname(SERVER));
     const source = fs.readFileSync(CANDIDATE, 'utf8');
     const probeStubs = 'detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";'
-      + 'desktopMcpDetectionPending=()=>true;computeHealth=async()=>({health:{},manifest:{}});'
-      + 'probeRgAsync=async()=>null;';
+      + 'desktopMcpDetectionPending=()=>true;probeRgAsync=async()=>null;';
+    const syntheticHealth = 'async()=>({health:{},manifest:{}})';
     const statusComposition = "const handleStatusApiRoutes = require('./backend/status-routes.cjs')";
-    // The status factory captures its probe capabilities during composition.
-    const fixtureSource = source.replace(statusComposition, probeStubs + '\n' + statusComposition);
+    const healthPort = 'computeHealth, getCapabilities, probeRgAsync,';
+    const statusStart = source.indexOf(statusComposition);
+    const fixtureSource = statusStart < 0 ? source : source.slice(0, statusStart) + probeStubs + '\n'
+      + source.slice(statusStart).replace(healthPort, 'computeHealth: ' + syntheticHealth + ', getCapabilities, probeRgAsync,');
+    if (statusStart >= 0) assert.ok(fixtureSource.includes('computeHealth: ' + syntheticHealth));
     mod._compile(fixtureSource + '\n;module.exports.__review = { CredentialVault, PrivacyCore, PrivacyGateway, readConfig, mutateConfig, handleApi, __eval: code => eval(code) };', SERVER);
     const app = mod.exports.__review;
-    if (fixtureSource === source) app.__eval(probeStubs);
+    if (statusStart < 0) app.__eval(probeStubs + 'computeHealth=' + syntheticHealth + ';');
     app.__eval('RUNTIME.token="synthetic-missing-config-token";');
     let wraps = 0;
     const vault = app.CredentialVault.create({ core: app.PrivacyCore,

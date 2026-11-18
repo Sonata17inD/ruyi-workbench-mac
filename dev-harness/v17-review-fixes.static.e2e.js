@@ -49,7 +49,8 @@ ok(!server.includes('function freeStalePort(') && !startNotices.includes('functi
   && startNotices.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
 
 // ── S4: desktop_screenshot 输出路径写闸 ─────────────────────────────────────
-ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(server), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');
+const desktopTools = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/desktop-tool-handlers.cjs'), 'utf8');
+ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(desktopTools), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');
 
 // ── S5: uiMode 回退 'simple' ────────────────────────────────────────────────
 ok(/config\.uiMode : 'simple'/.test(configSchema), "S5: uiMode 非法值回退 'simple'");

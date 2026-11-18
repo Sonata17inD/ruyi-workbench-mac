@@ -32,7 +32,7 @@ const moduleSrc = fs.readFileSync(modulePath, 'utf8');
 const providerSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'provider-settings.js'), 'utf8');
 const sessionSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'session-experience.js'), 'utf8');
 const helpViewerSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'help-viewer.js'), 'utf8');
-const dispatchSrc = fs.readFileSync(path.join(SRC, '12-tool-dispatch.js'), 'utf8');
+const healthSource = fs.readFileSync(path.join(SRC, '..', 'backend', 'workbench-health.cjs'), 'utf8');
 const mainSrc = fs.readFileSync(path.join(SRC, '14-main.js'), 'utf8');
 // 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
@@ -43,10 +43,8 @@ const layoutCss = fs.readFileSync(path.join(PUBLIC, 'css', 'layout.css'), 'utf8'
 
 // computeHealth() 段落里 push('<id>', ...) 的 id 清单 —— 事实源是服务端源码,不是这份测试里的手抄表。
 function healthIdsFromServer() {
-  // 128f-③:签名多了第二个参数({ desktopPending }),按前缀认函数头,不钉参数表。
-  const start = dispatchSrc.indexOf('async function computeHealth(config');
-  const end = dispatchSrc.indexOf('\nfunction parseFrontmatter(', start);
-  const body = dispatchSrc.slice(start, end > start ? end : undefined);
+  const { functionBlock } = require('./lib/source-slice');
+  const body = functionBlock(healthSource, 'computeHealth');
   return [...new Set([...body.matchAll(/\bpush\('([a-z0-9-]+)'/g)].map(m => m[1]))];
 }
 
@@ -194,7 +192,7 @@ function healthIdsFromServer() {
     'F9 侧栏「设置」入口带摘要计数(没进设置也看得见)');
 
   /* ═══════════ ⑥ 前后端状态词典一致 + 载荷/样式登记 ═══════════ */
-  const declared = dispatchSrc.match(/DESKTOP_CONTROL_DETAILS = Object\.freeze\(\{([\s\S]*?)\}\);/);
+  const declared = healthSource.match(/DESKTOP_CONTROL_DETAILS = Object\.freeze\(\{([\s\S]*?)\}\);/);
   const serverTokens = declared ? [...new Set([...declared[1].matchAll(/'([a-z-]+):\s/g)].map(m => m[1]))] : [];
   ok(serverTokens.length === mod.DESKTOP_CONTROL_STATES.length
     && serverTokens.every(token => mod.DESKTOP_CONTROL_STATES.includes(token)),
@@ -206,17 +204,17 @@ function healthIdsFromServer() {
   const rgServerStates = rgRow ? [...rgRow[1].matchAll(/([a-z]+):\s*'/g)].map(m => m[1]) : [];
   ok(Array.isArray(mod.SEARCH_RIPGREP_STATES) && rgServerStates.length === mod.SEARCH_RIPGREP_STATES.length
     && rgServerStates.every(s => mod.SEARCH_RIPGREP_STATES.includes(s))
-    && /push\('search-ripgrep', Boolean\(rgInfo\), rgInfo\s*\?\s*`\$\{rgInfo\.source\}: /.test(dispatchSrc)
-    && dispatchSrc.includes("'absent: file_search falls back"),
+    && /push\('search-ripgrep', Boolean\(rgInfo\), rgInfo\s*\?\s*`\$\{rgInfo\.source\}: /.test(healthSource)
+    && healthSource.includes("'absent: file_search falls back"),
     `G1b search-ripgrep 来源词典前端/CLI doctor/服务端 detail 前缀一致(${rgServerStates.join(', ')})`);
   ok(['bundled', 'system', 'env'].every(s => mod.healthSeverity({ id: 'search-ripgrep', ok: true, detail: s + ': x' }) === 'ok')
     && mod.healthSeverity({ id: 'search-ripgrep', ok: false, detail: 'absent: x' }) === 'warn'
     && mod.healthVariant({ id: 'search-ripgrep', ok: true, detail: 'weird: x' }) === 'absent',
     'G1c search-ripgrep:有 rg(随包/系统/环境变量)=ok,缺席=warn(不挡主功能),认不出的前缀按缺席处理(不谎报就绪)');
   // 安装器日志只允许出现在注释里(说明「为什么不读它」);一旦落到代码行就是新造了跨组件路径耦合。
-  const accLogInCode = dispatchSrc.split('\n').filter(line => line.includes('acc-install-latest') && !line.trim().startsWith('//'));
-  ok(dispatchSrc.includes("push('desktop-control'") && dispatchSrc.includes('function desktopControlState(config')
-    && dispatchSrc.includes('peekCapabilities()') && accLogInCode.length === 0,
+  const accLogInCode = healthSource.split('\n').filter(line => line.includes('acc-install-latest') && !line.trim().startsWith('//'));
+  ok(healthSource.includes("push('desktop-control'") && healthSource.includes('function desktopControlState(config')
+    && healthSource.includes('peekCapabilities()') && accLogInCode.length === 0,
     'G2 服务端 desktop-control 只用工作台已有的数据(config + 只读能力缓存 + 桥接解析),不去读安装器日志');
   ok(doctorSrc.includes('function doctorHumanLines(') && doctorSrc.includes("argv.human === true")
     && doctorSrc.includes('doctorLocaleCatalog(') && mainSrc.includes('doctor(argv)'),

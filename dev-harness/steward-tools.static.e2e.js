@@ -132,7 +132,6 @@ const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
-const src12 = read('12-tool-dispatch.js');
 const statusRoutes = read('../backend/status-routes.cjs');
 const src13f = read('../backend/native-tool-schemas.cjs');
 const src13g = read('13g-steward.js');

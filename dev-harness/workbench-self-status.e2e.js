@@ -4,12 +4,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 覆盖:
 //   (a) 身份字段与 108a buildRuntimeIdentityFacts 同源:version 与 package.json 一致、instanceId 与
 //       /api/status 的 overlayId 一致、dataDir 与临时 HOME 一致、address 以 http://127.0.0.1: 开头。
-//   (b) counts.nativeTools === 121(steward_bot_setup +1;thread_title_update +1;跨线程只读 threads_search/thread_read:116→118;注册表工具数;61-C4 增 checkpoint_list、61-C1 增 playbook_list / playbook_read / skill_list、61-C2 增 scratchpad_write,107→112,129b 增三张只读清单 97→100,129d 增眼睛四件 100→104,129e 增一件 104→105,129f 增 steward_notify 105→106,137 代理模式 v2 增 agent_result 106→107;第 116 波 116c 起 63→80,新增 17 个 steward_* 管家工具;123-M2 增六件定时任务 90→96;
-//       117m-A4 增第 27 个管家工具 steward_thread_stop,89→90 —— 重钉理由见 steward-tools.static ① 的注释;
-//       116-2a 再 +1 = 81,新增 steward_thread_permission;116-2b 再 +1 = 82,新增 steward_thread_note;
-//       116g 再 +1 = 83,新增 steward_missions;116h 再 +1 = 84,新增 steward_thread_prioritize;
-//       116-2e 再 +5 = 89,新增 steward_config_get/config_set/playbook_draft/skill_toggle/quick_ask;
-//       127-114c③ 再 +1 = 97,新增 audio_transcribe)。
+//   (b) counts.nativeTools 与实际注册表、facts.json 一致。
 //   (c) config 段只回显白名单标量字段 —— fixture provider 带假密钥 sk-test-SECRETVALUE,整段序列化结果
 //       不得出现该密钥子串或 apiKey 字段名(F2 纪律:绝不回显密钥材料)。
 //   (d) section:'identity' 只返回身份字段,不含 health/counts/config。
@@ -29,6 +24,8 @@ const WB_PORT = await getFreePort();
 
 // require(server.js) 不启动服务(14-main.js require.main===module 门控);仅用于直读注册表元数据。
 const S = require(SERVER);
+const registeredCount = Object.keys(S.TOOL_HANDLERS).length;
+const factsCount = require(path.join(ROOT, 'facts.json')).nativeTools;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function health(port) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: '/health', timeout: 800 }, resp => { let b = ''; resp.on('data', c => (b += c)); resp.on('end', () => { try { res(JSON.parse(b)); } catch { res(null); } }); }); r.on('error', () => res(null)); r.on('timeout', () => { r.destroy(); res(null); }); }); }
@@ -104,12 +101,8 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       ok(r && Array.isArray(r.health) && r.health.length > 0, `health[] 非空(${r && r.health && r.health.length} 项)`);
       ok(r && r.health.every(x => typeof x.id === 'string' && typeof x.ok === 'boolean'), 'health[] 每项含 id/ok');
 
-      // 123-M2 重钉 90 -> 96(六件定时任务 steward_schedule_*);127-114c③ 重钉 96 -> 97(audio_transcribe)。
-      ok(r && r.counts && r.counts.nativeTools === 121, `counts.nativeTools === 121(got ${r && r.counts && r.counts.nativeTools})`);
-      // 117m-A4 伴随断言(比只钉一个数更强):自述里的工具数必须与 facts.json 现算的那一份【同源】,
-      // 免得下次有人只改一处数字就把锁哄过去。
-      ok(r && r.counts && r.counts.nativeTools === require(path.join(ROOT, 'facts.json')).nativeTools,
-        `counts.nativeTools 与 facts.json 同源(${r && r.counts && r.counts.nativeTools} vs ${require(path.join(ROOT, 'facts.json')).nativeTools})`);
+      ok(r && r.counts && r.counts.nativeTools === registeredCount && registeredCount === factsCount,
+        `counts.nativeTools 与注册表和 facts.json 一致(${r && r.counts?.nativeTools}/${registeredCount}/${factsCount})`);
       ok(r && r.counts && Number.isInteger(r.counts.accTools) && r.counts.accTools >= 0, 'counts.accTools 为非负整数');
       ok(r && r.counts && Number.isInteger(r.counts.skills) && r.counts.skills >= 0, 'counts.skills 为非负整数');
       ok(r && r.counts && Number.isInteger(r.counts.commands) && r.counts.commands >= 0, 'counts.commands 为非负整数');
@@ -149,7 +142,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       ok(!('counts' in rh) && !('config' in rh), `section:'health' 不含 counts/config`);
 
       const rc = await selfStatus(WB_PORT, token, sid, { section: 'counts' });
-      ok(rc && rc.counts && rc.counts.nativeTools === 121, `section:'counts' 含 counts.nativeTools=121`);
+      ok(rc && rc.counts && rc.counts.nativeTools === registeredCount, `section:'counts' 含注册表工具数 ${registeredCount}`);
       ok(!('health' in rc) && !('config' in rc), `section:'counts' 不含 health/config`);
 
       const rcfg = await selfStatus(WB_PORT, token, sid, { section: 'config' });

@@ -50,9 +50,9 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(!/if \(t\.name === 'spawn_agent'\) return false;/.test(src('../backend/mcp-server.cjs')), '① MCP tools/list 无需过滤 spawn_agent');
   ok(/pathname === '\/api\/agent-workflow\/wait'\) return agentWorkflowLoopbackRoute\(req, res, 'wait'\)/.test(workflowRoutes) && /pathname === '\/api\/agent-workflow\/result'\) return agentWorkflowLoopbackRoute\(req, res, 'result'\)/.test(workflowRoutes) && /async function agentWorkflowLoopbackRoute\(req, res, kind\)/.test(workflowRoutes), '① 工作流路由持有 wait/result 回环');
   ok(/\{ m: 'POST', p: '\/api\/agent-workflow\/wait', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')) && /\{ m: 'POST', p: '\/api\/agent-workflow\/result', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')), '① 01b 两条回环路由登记 body-token 门(同 launch)');
-  const s12 = src('12-tool-dispatch.js');
-  ok(/function agentToolLoopback\(route, payload\)/.test(s12) && /'\/api\/agent-workflow\/wait'/.test(s12) && /'\/api\/agent-workflow\/result'/.test(s12) && /envelope: true/.test(s12), '① 12 MCP 子进程:launch(envelope:true)/wait/result 三路回环');
-  ok(/spawn_agent 已并入 orchestrate_agents/.test(s12), '① 12 旧 spawn_agent:MCP 子进程翻译成单节点、直调清晰拒绝');
+  const agentTools = src('../backend/agent-tool-handlers.cjs');
+  ok(/function agentToolLoopback\(route, payload\)/.test(agentTools) && /'\/api\/agent-workflow\/wait'/.test(agentTools) && /'\/api\/agent-workflow\/result'/.test(agentTools) && /envelope: true/.test(agentTools), '① MCP 子进程:launch(envelope:true)/wait/result 三路回环');
+  ok(/spawn_agent 已并入 orchestrate_agents/.test(agentTools), '① 旧 spawn_agent:MCP 子进程翻译成单节点、直调清晰拒绝');
   const short = srv.singleAgentShorthandNode({ task: 't', role: 'Worker', toolTier: 'edit', agentKey: 'k-1' });
   ok(short && short.id === 'k-1' && short.role === 'worker' && short.toolTier === 'edit', '① singleAgentShorthandNode:顶层简写 → 单节点');
   ok(srv.singleAgentShorthandNode({}) === null && srv.singleAgentShorthandNode({ task: 'x', agentKey: 'bad key!' }).id === 'agent', '① 简写:无 task 为 null;非法 agentKey 回落 agent');

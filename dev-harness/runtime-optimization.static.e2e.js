@@ -108,7 +108,8 @@ for (const flag of ['runtimeObservationReducerV1', 'runtimeObservationRecallV1']
   ok(new RegExp("config\\[key\\] === true").test(src), `S strict boolean normalization present (${flag})`);
 }
 ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(toolCatalogSource), 'S OpenAI catalog uses shared T1 ranker');
-ok(/searchToolCatalog\(catalog, args, config/.test(src), 'S Claude\/MCP catalog uses shared T1 ranker');
+const coreToolSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/workbench-core-tools.cjs'), 'utf8');
+ok(/searchToolCatalog\(catalog, args, config/.test(coreToolSource), 'S Claude\/MCP catalog uses shared T1 ranker');
 ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(providerTurn) && /kind: 'runtime_failure_classified'/.test(providerTurn), 'S F1 classification runs under the master shadow switch');
 ok(![src, providerTurn].some(code => /function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(code)), 'S F1 shadow slice contains no recovery executor');
 
