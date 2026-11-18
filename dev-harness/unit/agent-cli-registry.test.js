@@ -187,6 +187,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const configSchema = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
   const compactionRouting = fs.readFileSync(path.join(app, 'backend', 'compaction-routing.cjs'), 'utf8');
   const cliMcp = fs.readFileSync(path.join(app, 'backend', 'cli-mcp-sync.cjs'), 'utf8');
+  const discovery = fs.readFileSync(path.join(app, 'backend', 'agent-cli-discovery.cjs'), 'utf8');
   const code = text => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
   // 判据:与 'kimi' 字面量比较(kimi 只可能是 CLI 类型);agentCliType 与任何字面量比较;旧的 kind === 'claude';
   // ['claude', 'kimi'] 白名单;`? 'kimi' : 'claude'` 二选一。`engine === 'claude'` 不算 —— 那是引擎族的历史 id(CLI 族 vs provider 族)。
@@ -194,7 +195,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const blocks = {
     sanitizeLastUsedEngineRoute: functionBlock(configSchema, 'sanitizeLastUsedEngineRoute'),
     normalizeSessionEngineRoute: functionBlock(src, 'normalizeSessionEngineRoute'),
-    agentCliInstallCandidates: functionBlock(src, 'agentCliInstallCandidates'),
+    agentCliInstallCandidates: functionBlock(discovery, 'agentCliInstallCandidates'),
     selectedAgentCli: functionBlock(src, 'selectedAgentCli'),
     prepareAgentCliSpawn: functionBlock(src, 'prepareAgentCliSpawn'),
     syncAgentCliMcpManifests: functionBlock(cliMcp, 'syncAgentCliMcpManifests'),

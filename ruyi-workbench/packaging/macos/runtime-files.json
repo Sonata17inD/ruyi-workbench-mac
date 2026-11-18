@@ -8,6 +8,8 @@
     "app/backend/voice-learn.cjs",
     "app/backend/mcp-server.cjs",
     "app/backend/agent-cli-types.cjs",
+    "app/backend/agent-cli-discovery.cjs",
+    "app/backend/claude-cli-env.cjs",
     "app/backend/cli-tool-tiers.cjs",
     "app/backend/bridged-write-journal.cjs",
     "app/backend/bridged-write-targets.cjs",

@@ -26,13 +26,17 @@ function setup(t, explicit = true) {
     desktopMcp: { enabled: false, autodetect: false },
     ...(explicit ? { claudePath: 'configured-claude', kimiPath: 'configured-kimi' } : {}),
   }));
-  const s = loadServerInternals(['beginBootCliPathProbes', 'finishBootCliPathProbes', 'readConfig', 'detectClaudePath', 'detectKimiPath', 'invalidateClaudePathCache'], { withEval: true });
-  const pending = s.__eval(`(() => {
-    const pending = [];
-    detectClaudePathUncachedAsync = () => new Promise(resolve => pending.push({ kind: 'claude', resolve }));
-    detectAgentCliPathUncachedAsync = () => new Promise(resolve => pending.push({ kind: 'kimi', resolve }));
-    return pending;
-  })()`);
+  process.env.CLAUDE_CLI_PATH = 'found-claude';
+  process.env.KIMI_CLI_PATH = 'found-kimi';
+  const s = loadServerInternals([
+    'AgentCliDiscovery', 'cliDiscoveryProbes', 'beginBootCliPathProbes',
+    'finishBootCliPathProbes', 'readConfig', 'detectClaudePath', 'detectKimiPath', 'invalidateClaudePathCache',
+  ]);
+  const pending = [];
+  s.cliDiscoveryProbes.spawnProbeAsync = command => new Promise(resolve => {
+    pending.push({ command, resolve: () => resolve({ status: 0 }) });
+  });
+  s.cliDiscoveryProbes.spawnProbeSync = () => ({ status: 0 });
   t.after(() => {
     for (const key of Object.keys(process.env)) if (!(key in envBefore)) delete process.env[key];
     Object.assign(process.env, envBefore);
@@ -46,7 +50,7 @@ test('first CLI checks run concurrently; boot reads retain explicit paths and AP
   const { s, pending } = setup(t);
   s.beginBootCliPathProbes(); s.beginBootCliPathProbes();
   await tick();
-  assert.deepEqual(pending.map(p => p.kind), ['claude', 'kimi']);
+  assert.deepEqual(pending.map(p => p.command), ['found-claude', 'found-kimi']);
   const boot = await s.readConfig();
   assert.equal(boot.claudePath, 'configured-claude');
   assert.equal(boot.kimiPath, 'configured-kimi');
@@ -54,9 +58,9 @@ test('first CLI checks run concurrently; boot reads retain explicit paths and AP
   let settled = false;
   const api = s.readConfig().then(c => { settled = true; return c; });
   await tick(); assert.equal(settled, false);
-  pending[0].resolve('found-claude');
+  pending[0].resolve();
   await tick(); assert.equal(settled, false);
-  pending[1].resolve('found-kimi');
+  pending[1].resolve();
   const config = await api;
   assert.equal(config.claudePath, 'configured-claude');
   assert.equal(config.kimiPath, 'configured-kimi');
@@ -70,7 +74,7 @@ test('auto paths use completed findings after listen instead of persisting provi
   const boot = await s.readConfig();
   assert.equal(boot.claudePath, ''); assert.equal(boot.kimiPath, '');
   s.finishBootCliPathProbes();
-  pending[0].resolve('found-claude'); pending[1].resolve('found-kimi');
+  pending[0].resolve(); pending[1].resolve();
   const config = await s.readConfig();
   assert.equal(config.claudePath, 'found-claude'); assert.equal(config.kimiPath, 'found-kimi');
   const disk = JSON.parse(fs.readFileSync(path.join(dir, 'data/config.json'), 'utf8'));
@@ -81,11 +85,13 @@ test('probe invalidation prevents outstanding startup discoveries from overwriti
   const { s, pending } = setup(t);
   s.beginBootCliPathProbes(); await tick();
   s.invalidateClaudePathCache(); s.finishBootCliPathProbes();
-  pending[0].resolve('stale-claude'); pending[1].resolve('stale-kimi');
-  await tick();
-  assert.equal(s.__eval('_claudePathProbe'), null);
-  assert.equal(s.__eval("_agentCliPathProbe.has('kimi')"), false);
-  assert.equal(s.__eval('bootCliPathProbes.pending.size'), 0);
+  process.env.CLAUDE_CLI_PATH = 'current-claude';
+  process.env.KIMI_CLI_PATH = 'current-kimi';
+  pending[0].resolve(); pending[1].resolve();
+  await s.AgentCliDiscovery.waitForBootCliPathProbes();
+  assert.equal(s.AgentCliDiscovery.waitForConfigCliProbes(), undefined);
+  assert.equal(s.detectClaudePath(), 'current-claude');
+  assert.equal(s.detectKimiPath(), 'current-kimi');
 });
 
 test('post-listen config waits for a verification job queued after the initial pending snapshot', async t => {
@@ -93,13 +99,10 @@ test('post-listen config waits for a verification job queued after the initial p
   s.beginBootCliPathProbes(); await tick(); s.finishBootCliPathProbes();
   let settled = false;
   const api = s.readConfig().then(config => { settled = true; return config; });
-  const release = s.__eval(`(() => {
-    let release;
-    queueBootCliPathProbe(() => new Promise(resolve => { release = resolve; }));
-    return () => release();
-  })()`);
+  let release;
+  s.AgentCliDiscovery.queueBootCliPathProbe(() => new Promise(resolve => { release = resolve; }));
   await tick();
-  pending[0].resolve('found-claude'); pending[1].resolve('found-kimi');
+  pending[0].resolve(); pending[1].resolve();
   await tick(); assert.equal(settled, false);
   release();
   assert.equal((await api).claudePath, 'configured-claude');

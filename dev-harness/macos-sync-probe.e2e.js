@@ -14,7 +14,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP requires macOS supervisor'); return; }
-    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'desktopPythonCache', 'detectClaudePathUncached', 'ProcessRuntime', 'ProcessRuntimeHooks'], { withEval: true });
+    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'desktopPythonCache', 'detectClaudePathUncached', 'ProcessRuntime', 'ProcessRuntimeHooks', 'cliDiscoveryProbes']);
     const cli = path.join(root, '假 CLI 😀');
     const write = source => fs.writeFileSync(cli, '#!' + process.execPath + '\n' + source, { mode: 0o700 });
     const beat = path.join(root, 'heartbeat');
@@ -84,9 +84,18 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       try { S.spawnProbeSync(cli, [], { timeout: 1000 }); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete, 'trailing blank control frame is rejected consistently with async parser');
       fake(frames.slice(0,-1));
-      S.__eval('claudeProbeCandidates = () => [{command:' + JSON.stringify(cli) + ',mustExist:false},{command:' + JSON.stringify(second) + ',mustExist:false}]');
-      error = null; try { S.detectClaudePathUncached(); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && !fs.existsSync(marker), 'sync Claude candidate scan stops on cleanup uncertainty');
+      process.env.CLAUDE_CLI_PATH = cli;
+      const probeSync = S.cliDiscoveryProbes.spawnProbeSync;
+      const probed = [];
+      S.cliDiscoveryProbes.spawnProbeSync = (command, ...args) => {
+        probed.push(command);
+        return probeSync(command, ...args);
+      };
+      error = null;
+      try { S.detectClaudePathUncached(); } catch (caught) { error = caught; }
+      finally { S.cliDiscoveryProbes.spawnProbeSync = probeSync; }
+      t.ok(error?.cleanupIncomplete && probed.length === 1 && probed[0] === cli && !fs.existsSync(marker),
+        'sync Claude candidate scan stops on cleanup uncertainty');
       error = null; try { S.pickPython(root, {}, { candidates: [candidate, {command:second,args:[],source:'second'}] }); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete && !S.desktopPythonCache.has(root+'\n') && !fs.existsSync(marker), 'sync Python scan stops without caching or trying a later candidate');
       rg = createRgProbe({ ProcessRuntime: S.ProcessRuntime, candidates: () => [{ command: cli, source: 'env' }, { command: second, source: 'system' }] });

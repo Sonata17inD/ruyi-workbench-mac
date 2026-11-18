@@ -150,4 +150,44 @@ function profileGb18030Decoder() {
   return _profileGb18030 || null;
 }
 
-module.exports = { profileGb18030Decoder, decodeConsoleText, createConsoleLineDecoder, decodeTextFileBytes, createNdjsonLineFeeder, createCappedDiagnosticText };
+// CLI diagnostics can include UTF-8 chunks split across a character or legacy GB18030 text.
+// Flush pending stream bytes by passing a null chunk when the child exits.
+function decodeClaudeCliText(chunk, stream) {
+  if (stream && typeof stream === 'object') return decodeClaudeCliStream(chunk, stream);
+  const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk || '');
+  if (!bytes.length) return '';
+  const utf8 = bytes.toString('utf8');
+  if (!utf8.includes('\uFFFD')) return utf8;
+  try {
+    const decoded = new TextDecoder('gb18030', { fatal: true }).decode(bytes);
+    return decoded || utf8;
+  } catch {
+    return utf8;
+  }
+}
+
+function decodeClaudeCliStream(chunk, stream) {
+  if (!stream.utf8) stream.utf8 = new StringDecoder('utf8');
+  if (chunk === null) {
+    const rest = stream.gb ? stream.gb.decode() : stream.utf8.end();
+    stream.gb = null;
+    return rest;
+  }
+  const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk || '');
+  if (!bytes.length) return '';
+  if (stream.gb) {
+    try { return stream.gb.decode(bytes, { stream: true }); } catch { stream.gb = null; return bytes.toString('utf8'); }
+  }
+  const utf8 = stream.utf8.write(bytes);
+  if (!utf8.includes('\uFFFD')) return utf8;
+  try {
+    const gb = new TextDecoder('gb18030', { fatal: true });
+    const decoded = gb.decode(bytes, { stream: true });
+    stream.gb = gb;
+    return decoded || utf8;
+  } catch {
+    return utf8;
+  }
+}
+
+module.exports = { decodeClaudeCliText, profileGb18030Decoder, decodeConsoleText, createConsoleLineDecoder, decodeTextFileBytes, createNdjsonLineFeeder, createCappedDiagnosticText };

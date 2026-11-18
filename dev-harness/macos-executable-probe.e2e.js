@@ -15,7 +15,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP requires macOS supervisor'); return; }
-    const S = loadServerInternals(['spawnProbeAsync', 'probeAgentCliLauncherVerdictAsync', 'detectClaudePathUncachedAsync', 'agentCliProbeVerdict', 'ProcessRuntime', 'ProcessRuntimeHooks'], { withEval: true });
+    const S = loadServerInternals(['spawnProbeAsync', 'probeAgentCliLauncherVerdictAsync', 'detectClaudePathUncachedAsync', 'agentCliProbeVerdict', 'ProcessRuntime', 'ProcessRuntimeHooks']);
     cp.spawn = function(...args) { const child = originalSpawn.apply(this, args); children.push(child); return child; };
     const cli = path.join(root, '假 CLI 😀');
     const write = source => fs.writeFileSync(cli, '#!' + process.execPath + '\n' + source, { mode: 0o700 });
@@ -62,7 +62,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       let blocked = false;
       try { await S.probeAgentCliLauncherVerdictAsync(cli); } catch (error) { blocked = error.cleanupIncomplete; }
       t.ok(blocked, 'agent CLI discovery propagates cleanup uncertainty to stop candidate scanning');
-      S.__eval('claudeProbeCandidates = () => [{command:' + JSON.stringify(cli) + ',mustExist:false},{command:' + JSON.stringify(cli) + ',mustExist:false}]');
+      process.env.CLAUDE_CLI_PATH = cli;
       const before = children.filter(c => S.ProcessRuntime.handle(c)).length;
       blocked = false;
       try { await S.detectClaudePathUncachedAsync(); } catch (error) { blocked = error.cleanupIncomplete; }
