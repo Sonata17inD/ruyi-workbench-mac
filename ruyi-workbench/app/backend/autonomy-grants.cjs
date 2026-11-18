@@ -5,6 +5,7 @@ const fsp = require('node:fs/promises');
 const { AUTOEXEC_DENYLIST } = require('./autoexec-paths.cjs');
 const { normalizeCwd, pathWithinRoot } = require('./path-containment.cjs');
 const { knownNativeToolTier, nativeToolTier } = require('./native-tool-tiers.cjs');
+const { knownCliToolTier } = require('./cli-tool-tiers.cjs');
 // Ephemeral grants are owned by one runtime, never by session persistence.
 function createAutonomyGrants({ hashArgs, makeId, isSensitiveDataPath, logEvent }) {
 // ════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -42,13 +43,6 @@ const GRANT_NET_PATTERN = /(^|[\s"'`])(curl|wget|iwr|invoke-webrequest|invoke-re
 const GRANT_EDIT_AUTOEXEC_DENY = [
   /(^|[\\/])\.git[\\/]/i, ...AUTOEXEC_DENYLIST,
 ];
-// Claude CLI 桥的工具名 → 档位(CLI 弹窗以 Claude 名 Edit/Write/Bash 显示;签发卡片以同名列出,口径一致)。
-// 与 NATIVE_TOOL_TIER(工作台原生名)【不重叠】——故一张 grant 的 entrypoint 由其 tool 名唯一确定,消耗点重算 tier 必一致。
-const CLI_TOOL_TIER = {
-  Read: 'read', Glob: 'read', Grep: 'read', LS: 'read',
-  Edit: 'edit', Write: 'edit', MultiEdit: 'edit', NotebookEdit: 'edit',
-  Bash: 'exec',
-};
 // 对抗轮 P1(field-shadow)防线:可签 exec 授权的工具白名单 + 各自【真正被执行的命令字段】。shell_run 执行 args.command
 //(runShellCommand(args.command));Claude Bash 执行 args.command。二者命令可前缀化且校验字段=执行字段。script_run 执行 args.code
 //(整段脚本体)、shell_*/git_commit/http_request/office_open/browser_open/keyboard_send_keys/desktop_screenshot 等语义不符 → 不入表。
@@ -61,8 +55,9 @@ function grantIssueTierInfo(tool) {
   if (t === 'spawn_agent' || t === 'orchestrate_agents' || t === '*' || !t) return null;
   let info = null;
   const nativeTier = knownNativeToolTier(t);
+  const cliTier = knownCliToolTier(t);
   if (nativeTier) info = { entrypoint: 'native', tier: nativeTier };
-  else if (Object.prototype.hasOwnProperty.call(CLI_TOOL_TIER, t)) info = { entrypoint: 'cli', tier: CLI_TOOL_TIER[t] };
+  else if (cliTier) info = { entrypoint: 'cli', tier: cliTier };
   if (!info) return null;
   // 对抗轮 P1(field-shadow):exec 授权只允许【命令可前缀化 且 校验字段=执行字段】的工具。script_run 执行 args.code
   // (整段脚本体,非可前缀化命令)、shell_*/git_commit/http_request 等执行字段与 cmdAllow 语义不符 → 一律不可签 exec 授权
@@ -82,7 +77,7 @@ function resolveToolPermissionContext(name, args, entrypoint) {
   let cmdArg = null, cwdArg = null, tier = 'exec', fileFamily = false;
   const pushPath = v => { if (typeof v === 'string' && v.trim()) pathArgs.push(v.trim()); };
   if (entrypoint === 'cli') {
-    tier = CLI_TOOL_TIER[tool] || 'exec';
+    tier = knownCliToolTier(tool) || 'exec';
     fileFamily = CLI_FILE_FAMILY.has(tool);
     // Claude CLI 形状:Edit/Write/Read → file_path;NotebookEdit → notebook_path;LS → path;Bash → command。
     for (const k of ['file_path', 'notebook_path', 'path']) pushPath(input[k]);

@@ -601,7 +601,7 @@
     {
       "id": "memory-import-marker",
       "pattern": "<data>/memory/.acc-memory-import-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/acc-memory-import-marker.cjs",
       "anchor": "'.acc-memory-import-v1.json'",
       "schema": "object / schema 1",
       "writePrimitive": "DurableJsonStore (quarantine:false, cache:false) -> atomicWriteJson",
@@ -755,7 +755,7 @@
     {
       "id": "project-agents",
       "pattern": "<workspace>/.ruyi/agents.json",
-      "owner": "07-autonomy.js",
+      "owner": "../backend/agent-role-library.cjs",
       "anchor": "'agents.json'",
       "schema": "object / external-compatible",
       "writePrimitive": "atomicWriteJson",

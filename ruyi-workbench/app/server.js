@@ -241,6 +241,9 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
+const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');
+const { _expandMcpVar, _tomlKeyPath, _parseTomlMcpServers, parseMcpConfigFile, scanMcpSources } = require('./backend/mcp-config-import.cjs');
 const { ssrfCheck } = require('./backend/network-policy.cjs');
 const { httpGetGuarded } = require('./backend/http-transport.cjs');
 const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
@@ -420,6 +423,7 @@ function hashArgs(args) {
 
 const { AUTOEXEC_DENYLIST } = require('./backend/autoexec-paths.cjs');
 const { NATIVE_TOOL_TIER, nativeToolTier } = require('./backend/native-tool-tiers.cjs');
+const { cliBridgeToolTier } = require('./backend/cli-tool-tiers.cjs');
 const {
   ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
   isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,
@@ -596,7 +600,7 @@ const { ROUTE_AUTH } = require('./backend/http-route-policy.cjs');
 
 const { observationRecallEnabled, evaporateBudgetBoundaryEnabled, historyReadDedupEnabled, reseedTailUnitsEnabled, reseedReattachFilesEnabled, summaryPromptI18nEnabled, sessionNotesEnabled, sessionNotesInjectEnabled, sessionNotesMergeEnabled, summaryEntityCheckEnabled, estimateBucketsEnabled, summarySingleShotEnabled, summaryFactTableEnabled, summaryFactTableCap, summaryRefineEnabled, budgetGuardEnabled, budgetGuardTurnTokens, budgetGuardWarnRatio, budgetGuardDecision, toolTimeBudgetEnabled, toolTimeBudgetShadowEnabled, toolTimeBudgetWarnMs, toolTimeBudgetHardMs, toolByteBudgetShadowBytes, volatileTailLayoutEnabled, appendOnlyToolSchemasEnabled, execResultCacheMaxEntries, execResultCacheEnabled, memoryVectorRecallEnabled, sessionSearchIndexEnabled, coreMemoryMaxItems, coreMemoryCharBudget, memoryRelevanceMax, MEMORY_FIXED_SELECTION_HARD_MAX, memoryFixedSelectionMax, memoryIndexCharCap } = require('./backend/runtime-policy.cjs');
 
-const { BUILTIN_AGENT_ROLES, CLAUDE_PERMISSION_MODE_MAP, PERMISSION_MODES, PERMISSION_MODES_REQUIRING_CONFIRM, PERMISSION_MODE_ALIASES, agentRoleIsUntrusted, annotateAgentRoleEffective, clampAgentRoleToParent, mergeAgentRole, normalizeAgentRole, permissionModeFrom, resolvePermissionMode } = require('./backend/agent-role-policy.cjs');
+const { claudePermissionMode, BUILTIN_AGENT_ROLES, CLAUDE_PERMISSION_MODE_MAP, PERMISSION_MODES, PERMISSION_MODES_REQUIRING_CONFIRM, PERMISSION_MODE_ALIASES, agentRoleIsUntrusted, annotateAgentRoleEffective, clampAgentRoleToParent, mergeAgentRole, normalizeAgentRole, permissionModeFrom, resolvePermissionMode } = require('./backend/agent-role-policy.cjs');
 
 // Explicit agent-cli-types module.
 const { AGENT_CLI_DEFAULT_TYPE, AGENT_CLI_TYPES, isAgentCliType, normalizeAgentCliType } = require('./backend/agent-cli-types.cjs');
@@ -634,6 +638,8 @@ const RgProbe = require('./backend/rg-probe.cjs').createRgProbe({
   ProcessRuntime, vendorBinDir: ruyiVendorBinDir, pathBeforeVendor: RUYI_PATH_BEFORE_VENDOR,
 });
 let { probeRgAsync, probeRgInfoSync, peekRgProbe, probeRg, hasRg, hasRgAsync, rgProbeCandidates } = RgProbe;
+
+const { spawnProbeSync, spawnProbeAsync, existsExecutable, existsExecutableAsync, probeGitCli, probeGitCliAsync } = require('./backend/executable-probes.cjs').createExecutableProbes({ ProcessRuntime });
 
 // 81-P1: Versioned offline rule extensions. Input and matching budgets are enforced by PrivacyCore;
 // built-in delimiter runs are linear, and no user regex runs here.
@@ -2398,6 +2404,18 @@ async function readFileTail(file, maxBytes) {
 //   read()           —— readSync 的异步版(fsp.readFile),同一套 prepare/回落/缓存规则,给本来就在 async 路径上的存储用。
 const DurableJsonStore = require('./backend/durable-json-store.cjs').createDurableJsonStore({ fs, fsp, path, atomicWriteJson });
 
+const { ACC_MEMORY_IMPORT_SCHEMA, accMemoryImportStore, legacyAccMemoryMigrationComplete } = require('./backend/acc-memory-import-marker.cjs').createAccMemoryImportMarker({
+  DurableJsonStore, memoryDirectory: paths.memory,
+});
+
+const ToolboxRegistry = require('./backend/toolbox-registry.cjs').createToolboxRegistry({ logEvent, safeJsonParse });
+const { enabled: enabledToolboxComponents, directory: toolboxComponentsDir } = ToolboxRegistry;
+const { mcpDropInDirs, scanMcpDropIns, invalidateMcpDropInCache, isEquivalentDesktopAccServer, resolveExternalMcpServers } = require('./backend/mcp-sources.cjs').createMcpSources({
+  externalRoot, dataRoot, enabledToolboxComponents, detectDesktopMcp, legacyAccMemoryMigrationComplete, logEvent,
+});
+
+const { projectAgentRoleFile, readProjectAgentRoles, readClaudeProjectAgentRoles, getAgentRoleLibrary, saveProjectAgentRoles, buildClaudeAgentDefinitions } = require('./backend/agent-role-library.cjs').createAgentRoleLibrary({ atomicWriteJson });
+
 
 // v1.4.1 (audit #4): config.json 原子写 —— 此前用裸 fsp.writeFile,崩溃/断电中途会留下截断文件,下次读
 // safeJsonParse→null → normalizeConfig 把【整份用户配置静默重置为默认】(密钥/服务商/工作区全丢)。
@@ -3165,28 +3183,6 @@ function refreshInBackground(key, probe) {
   _cliProbeRefreshing.add(key);
   Promise.resolve().then(probe).catch(() => {}).finally(() => { _cliProbeRefreshing.delete(key); });
   return true;
-}
-// 异步版的「跑一发 <cmd> --version 看退出码」:与各处 spawnSync 同一组参数(stdio 全忽略、隐藏窗口、超时即杀
-// 直接子进程),回同形 { error, status } —— 超时被杀时 status 为 null,与 spawnSync 超时同判。
-function spawnProbeSync(command, args, options = {}) {
-  if (process.platform !== 'darwin') return cp.spawnSync(command, args, options);
-  const result = ProcessRuntime.probeSync(command, args, options);
-  if (result.cleanupIncomplete) throw Object.assign(result.error, { cleanupIncomplete: true, cleanupScope: result.cleanupScope,
-    cleanupEscapeCoverage: result.cleanupEscapeCoverage, cleanupUnconfirmed: result.cleanupUnconfirmed });
-  return result;
-}
-function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
-  if (process.platform === 'darwin') return ProcessRuntime.probe(command, args, spawnOpts, timeout);
-  return new Promise(resolve => {
-    let settled = false;
-    const done = result => { if (!settled) { settled = true; resolve(result); } };
-    let child = null;
-    try {
-      child = cp.spawn(command, args, { stdio: 'ignore', timeout, ...spawnOpts });
-    } catch (error) { done({ error, status: null }); return; }
-    child.once('error', error => done({ error, status: null }));
-    child.once('close', code => done({ error: null, status: code }));
-  });
 }
 function claudeProbeCandidates() {
   // 先 PATH 上的裸名(快、常见),再常见安装位置(必须真的存在才探)。
@@ -6928,49 +6924,6 @@ async function readFilePreview(absPath, snapshot = null) {
   return { ok: true, kind: 'binary', canOpen: true, size: st.size, ext };
 }
 
-function existsExecutable(command) {
-  if (!command) return false;
-  const s = { command, args: ['--version'], opts: {} };
-  const result = spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 6000, ...s.opts });
-  if (result.error) return false;
-  return result.status !== null;
-}
-// 128f-⑬:同一个判据的异步版。服务在跑的时候(请求路径、回合入口、能力矩阵刷新)一律用它 —— 同步那一发会把整个
-// 服务钉住一次 CLI 冷启动(node 起一个进程,几百毫秒到秒级),期间所有请求与推送一起等。同步版只留给启动期与 CLI 子命令。
-async function existsExecutableAsync(command) {
-  if (!command) return false;
-  const s = { command, args: ['--version'], opts: {} };
-  const result = await spawnProbeAsync(s.command, s.args, s.opts, 6000);
-  if (result.error) return false;
-
-  return true;
-}
-
-// v1.0-S4: `gitCli` capability — is `git` installed & runnable? Probes `git --version` (execFile, 3s), result
-// cached ~60s (its own cache, so getCapabilities' 60s matrix cache and this stay in step without coupling).
-// Feeds the capability matrix's `gitCli` boolean → TOOL_REQUIRES filters the four git tools when git is absent.
-let _gitCliProbe = null; // { at, value }
-const GITCLI_CACHE_MS = 60000;
-async function probeGitCliAsync() {   // 128f-⑬:能力矩阵过期重算时用(同一张 60 s 记忆表,判据逐字相同)
-  const now = Date.now();
-  if (_gitCliProbe && (now - _gitCliProbe.at) < GITCLI_CACHE_MS) return _gitCliProbe.value;
-  const result = await spawnProbeAsync('git', ['--version'], {}, 3000);
-  const value = !result.error && result.status === 0;
-  _gitCliProbe = { at: Date.now(), value };
-  return value;
-}
-function probeGitCli() {
-  const now = Date.now();
-  if (_gitCliProbe && (now - _gitCliProbe.at) < GITCLI_CACHE_MS) return _gitCliProbe.value;
-  let value = false;
-  try {
-    const result = spawnProbeSync('git', ['--version'], { stdio: 'ignore', timeout: 3000 });
-    value = !result.error && result.status === 0;
-  } catch (error) { if (error.cleanupIncomplete) throw error; value = false; }
-  _gitCliProbe = { at: now, value };
-  return value;
-}
-
 function buildDeliveryRevisionPrompt(meta) {
   const ref = meta && meta.revisionOf;
   if (!ref || !Number.isSafeInteger(ref.turnSeq) || ref.turnSeq <= 0 || typeof ref.sessionId !== 'string') return '';
@@ -7530,408 +7483,7 @@ function reconcileMcpEntryFingerprint(entry) {
   mcpClientFingerprints.set(entry.id, fp);
 }
 
-// ============================================================================
-// v1.1-W2 (T2) — MCP drop-in 自动扫描。
-// ============================================================================
-// 扫描两个位置的 `*/ruyi-mcp.json` 清单并「运行时合并」进 externalMcpServers 视图(见 resolveExternalMcpServers):
-//   ① <repo>/mcp/*/ruyi-mcp.json      —— 随发行包分发的即插即用连接器(externalRoot()/mcp)。
-//   ② <dataRoot>/mcp/*/ruyi-mcp.json  —— 用户自装(dataRoot()/mcp)。
-// 与 /api/mcp/import-folder(v1.0.2-S5)的关系【互补,非重复】:
-//   • import-folder 走「持久化」路径 —— 把清单写进 config.externalMcpServers(删条目=卸载,重启保留)。
-//   • drop-in 走「运行时合并」路径 —— 绝不写回 config;存在性由文件夹本身表达,删文件夹即卸载。
-//   两者互不覆盖:id 冲突时 config 里的显式条目(含 import-folder 写入的)优先,drop-in 跳过并审计一条 warn。
-// cwd 缺省 = 清单所在文件夹(与 import-folder 同语义)。drop-in 数量上限 10。
-// 同步 I/O(readdirSync/readFileSync):调用点是请求期且频繁,故加 2s 缓存;扫描量小(≤两目录各 ≤10 子文件夹)。
-const MCP_DROPIN_MAX = 10;
-let _dropInCache = { at: 0, list: null };
-const MCP_DROPIN_CACHE_MS = 2000;
-function mcpDropInDirs() {
-  return [
-    { root: path.join(externalRoot(), 'mcp'), source: 'repo' },
-    { root: path.join(dataRoot(), 'mcp'), source: 'dataRoot' },
-  ];
-}
-// 扫描并返回清洗后的 drop-in 条目数组 [{id,label,command,args,cwd,env,enabled,_dropInSource}]。纯读盘,不改 config。
-// 坏清单(缺失/超限/解析失败/清洗后无效)静默跳过(审计一条 warn),绝不抛。总数封顶 MCP_DROPIN_MAX。
-function scanMcpDropIns() {
-  const now = Date.now();
-  if (_dropInCache.list && (now - _dropInCache.at) < MCP_DROPIN_CACHE_MS) return _dropInCache.list;
-  const out = [];
-  const seen = new Set();
-  for (const { root, source } of mcpDropInDirs()) {
-    let subdirs;
-    try { subdirs = fs.readdirSync(root, { withFileTypes: true }); }
-    catch { continue; } // mcp/ 目录不存在 → 正常,跳过
-    for (const ent of subdirs) {
-      if (out.length >= MCP_DROPIN_MAX) break;
-      const folder = path.join(root, ent.name);
-      // 链进来的连接器目录(符号链接 / junction)也认:Dirent 对链接不报目录,stat 跟随一次(hunt2-mcp,同 readSkillDir)。
-      if (!ent.isDirectory()) {
-        if (!ent.isSymbolicLink()) continue;
-        try { if (!fs.statSync(folder).isDirectory()) continue; } catch { continue; }
-      }
-      const manifestPath = path.join(folder, 'ruyi-mcp.json');
-      let raw = null;
-      try {
-        const st = fs.statSync(manifestPath);
-        if (!st.isFile() || st.size > 32 * 1024) throw new Error('too large / not a file');
-        raw = safeJsonParse(fs.readFileSync(manifestPath, 'utf8'), null);
-      } catch { continue; } // 无清单 → 该文件夹不是 drop-in,跳过(不审计,常态)
-      if (!raw || typeof raw !== 'object') { logEvent({ kind: 'mcp_dropin_skip', reason: 'bad-manifest', folder, source }); continue; }
-      // cwd 缺省 = 清单所在文件夹(与 import-folder 同)。
-      const withCwd = { ...raw, cwd: (typeof raw.cwd === 'string' && raw.cwd.trim()) ? raw.cwd : folder };
-      const cleaned = sanitizeExternalMcpServer(withCwd);
-      if (!cleaned) { logEvent({ kind: 'mcp_dropin_skip', reason: 'invalid', folder, source }); continue; }
-      if (cleaned.enabled === false) continue; // 清单显式禁用 → 跳过
-      if (seen.has(cleaned.id)) { logEvent({ kind: 'mcp_dropin_skip', reason: 'dup-dropin-id', id: cleaned.id, folder, source }); continue; }
-      seen.add(cleaned.id);
-      out.push({ ...cleaned, _dropInSource: source, _dropInFolder: folder });
-    }
-    if (out.length >= MCP_DROPIN_MAX) break;
-  }
-  _dropInCache = { at: now, list: out };
-  return out;
-}
-// 测试可用:强制下次扫描重读盘(e2e 造完清单后调用)。
-function invalidateMcpDropInCache() { _dropInCache = { at: 0, list: null }; }
-
-const ToolboxRegistry = require('./backend/toolbox-registry.cjs').createToolboxRegistry({ logEvent, safeJsonParse });
-const enabledToolboxComponents = ToolboxRegistry.enabled;
-const toolboxComponentsDir = ToolboxRegistry.directory;
 const ToolboxHooks = {};
-
-// Merge the desktop MCP (detected/explicit) + user externalMcpServers (enabled) into one list of
-// {id,label,command,args,cwd,env}. desktopMcp always uses id 'ai-computer-control'.
-// v1.1-W2 (T2): also merges drop-in connectors scanned from <repo>/mcp/*/ and <dataRoot>/mcp/*/ (runtime
-// merge, never written back to config). config/desktop entries win on id collision; drop-in is skipped+warned.
-function mcpRuntimeCommon(entry) {
-  const out = {};
-  for (const key of ['startupTimeoutMs', 'toolTimeoutMs']) {
-    if (Number.isInteger(entry && entry[key]) && entry[key] >= 1 && entry[key] <= 2147483647) out[key] = entry[key];
-  }
-  for (const key of ['enabledTools', 'disabledTools']) {
-    if (Array.isArray(entry && entry[key])) out[key] = entry[key].slice();
-  }
-  return out;
-}
-
-function isEquivalentDesktopAccServer(entry) {
-  if (!entry || entry.transport || !entry.command) return false;
-  const args = Array.isArray(entry.args) ? entry.args.map(value => String(value).trim().toLowerCase()) : [];
-  if (args.includes('ai_computer_control.server')) return true;
-  const executable = path.basename(String(entry.command)).toLowerCase().replace(/\.(exe|cmd|bat)$/i, '');
-  return executable === 'ai-computer-control' || executable === 'ai_computer_control';
-}
-
-function resolveExternalMcpServers(config) {
-  const out = [];
-  const dm = config && config.desktopMcp;
-  if (dm && dm.enabled) {
-    let command = String(dm.command || '').trim();
-    let args = Array.isArray(dm.args) ? dm.args.slice() : [];
-    let cwd = String(dm.cwd || '').trim() || undefined;
-    let env = {};
-    let pythonSource = '';
-    if (command) {
-      // Explicit override — trust the user's command/args/cwd; default UTF-8 for a python launch.
-      env = { PYTHONUTF8: '1' };
-    } else if (dm.autodetect) {
-      const det = detectDesktopMcp();
-      if (det) { command = det.command; args = det.args; cwd = det.cwd; env = det.env || {}; pythonSource = det.pythonSource || ''; }
-    }
-    if (command) {
-      const browser = (config && config.browserAutomation) || {};
-      env = { ...env,
-        ACC_BROWSER_MODE: String(browser.mode || 'system'),
-        ACC_BROWSER_EXECUTABLE: String(browser.executable || ''),
-        ACC_BROWSER_CDP_URL: String(browser.cdpUrl || 'http://127.0.0.1:9222'),
-      };
-      // 工作台记忆迁移成功（或确认标准位置没有旧库）后，ACC 不再注册同名 memory 工具；若旧库
-      // 损坏/迁移失败则标记不存在，工具继续可见，避免数据尚未接管就把唯一入口藏掉。
-      if (legacyAccMemoryMigrationComplete()) env.ACC_HIDE_MEMORY = '1';
-      out.push({ id: 'ai-computer-control', label: '桌面控制 (ai-computer-control)', command, args, cwd, env,
-      pythonSource });
-    }
-  }
-  const ext = (config && Array.isArray(config.externalMcpServers)) ? config.externalMcpServers : [];
-  for (const s of ext) {
-    if (!s || s.enabled === false) continue;
-    if (out.some(o => o.id === s.id)) continue;   // desktop entry wins on id collision
-    if (out.some(o => o.id === 'ai-computer-control') && isEquivalentDesktopAccServer(s)) {
-      logEvent({ kind: 'mcp_external_skip', reason: 'duplicate-desktop-acc', id: s.id });
-      continue;
-    }
-    // 49c:远程条目(sse/http)按 transport+url 直通(headers 引用不展开,连接时才展开)。
-    if (s.transport === 'sse' || s.transport === 'http') {
-      if (!s.url) continue;
-      out.push({
-        id: s.id, label: s.label || s.id, transport: s.transport, url: s.url, headers: s.headers || {},
-        ...(s.bearerTokenEnvVar ? { bearerTokenEnvVar: s.bearerTokenEnvVar } : {}), ...mcpRuntimeCommon(s),
-      });
-      continue;
-    }
-    if (!s.command) continue;
-    out.push({
-      id: s.id, label: s.label || s.id, command: s.command, args: s.args || [], cwd: s.cwd || undefined,
-      env: s.env || {}, ...mcpRuntimeCommon(s),
-    });
-  }
-  // v1.1-W2 (T2): merge drop-in connectors LAST → any id already claimed by a desktop/config entry wins;
-  // the drop-in is skipped and a warn is audited (config 显式条目优先，与 import-folder 持久化路径互补)。
-  // enableMcpDropIn 缺省开;显式 false 可关(normalizeConfig 清洗后的布尔)。
-  if (!config || config.enableMcpDropIn !== false) {
-    for (const d of scanMcpDropIns()) {
-      if (out.some(o => o.id === d.id)) { logEvent({ kind: 'mcp_dropin_skip', reason: 'id-conflict-config-wins', id: d.id, folder: d._dropInFolder, source: d._dropInSource }); continue; }
-      if (d.transport === 'sse' || d.transport === 'http') {
-        if (!d.url) continue;
-        out.push({
-          id: d.id, label: d.label || d.id, transport: d.transport, url: d.url, headers: d.headers || {},
-          ...(d.bearerTokenEnvVar ? { bearerTokenEnvVar: d.bearerTokenEnvVar } : {}), ...mcpRuntimeCommon(d),
-        });
-        continue;
-      }
-      if (out.some(o => o.id === 'ai-computer-control') && isEquivalentDesktopAccServer(d)) {
-        logEvent({ kind: 'mcp_dropin_skip', reason: 'duplicate-desktop-acc', id: d.id, folder: d._dropInFolder, source: d._dropInSource });
-        continue;
-      }
-      out.push({
-        id: d.id, label: d.label || d.id, command: d.command, args: d.args || [], cwd: d.cwd || undefined,
-        env: d.env || {}, ...mcpRuntimeCommon(d),
-      });
-    }
-  }
-  // ruyi-toolbox 登记的 MCP 组件排在最后:内部 id 一律 `toolbox-<id>`(前缀保留给自动发现),显式配置／drop-in 撞 id 时让路。
-  // 生命周期、工具清单、权限分级全走现有 MCP 机制 —— 这里只是又一个条目来源,与 drop-in 一样【绝不写回 config】。
-  for (const c of enabledToolboxComponents(config)) {
-    if (c.kind !== 'mcp') continue;
-    const id = 'toolbox-' + c.id;
-    if (out.some(o => o.id === id)) { logEvent({ kind: 'toolbox_component_skip', file: c.id + '.json', reason: 'mcp-id-conflict' }); continue; }
-    const cleaned = sanitizeExternalMcpServer({ id, label: c.name, command: c.run.command, args: c.run.args, cwd: c.run.cwd, env: c.run.env });
-    if (!cleaned) continue;
-    out.push({ id: cleaned.id, label: cleaned.label, command: cleaned.command, args: cleaned.args, cwd: cleaned.cwd || undefined, env: cleaned.env, _toolbox: c.id });
-  }
-  return out;
-}
-
-// 48c: MCP 配置导入器 v1 -- 从 Claude Code .mcp.json / ~/.claude.json / Codex config.toml 导入(03 §4.1)。
-// 零依赖:JSON 直解;TOML 用行级状态机迷你 parser(只解 [mcp_servers.X] 段的 command/args/env/cwd,够 Codex 用)。
-// ${VAR}/%VAR% 双向插值(从 process.env,未定义保留原样)。sse/http 标 unsupported(远程 transport 03 §4.2 后续波)。
-function _expandMcpVar(s) {
-  return String(s == null ? '' : s)
-    .replace(/\$\{([A-Z_][A-Z0-9_]*)\}/gi, (_, n) => (process.env[n] != null ? String(process.env[n]) : '${' + n + '}'))
-    .replace(/%([A-Z_][A-Z0-9_]*)%/gi, (_, n) => (process.env[n] != null ? String(process.env[n]) : '%' + n + '%'));
-}
-// hunt2-mcp:Codex config.toml 的迷你 parser 重写。修前逐行正则,真实配置里常见的写法全部静默丢字段:
-// 多行数组(args = [ 换行 "-y", 换行 ... ])、[mcp_servers.X.env] 子表、行尾 # 注释、单引号字面串的 env 值、
-// 远程条目(url / bearer_token_env_var / http_headers / env_http_headers)。仍是零依赖小状态机,只解我们认的键;
-// 既没有 command 也没有 url 的段【不再静默丢】,标 unsupported 交给导入界面如实显示。
-// 引号状态机:回调拿到每个【引号外】的字符(引号内的跳过),三个小工具共用。
-function _tomlScan(text, onOutside) {
-  let q = '';
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (q) {
-      if (q === '"' && c === '\\') { i++; continue; }
-      if (c === q) q = '';
-      continue;
-    }
-    if (c === '"' || c === "'") { q = c; continue; }
-    if (onOutside(c, i) === false) return;
-  }
-}
-function _tomlStripComment(line) {
-  let cut = -1;
-  _tomlScan(line, (c, i) => { if (c === '#') { cut = i; return false; } return true; });
-  return cut >= 0 ? line.slice(0, cut) : line;
-}
-function _tomlDepth(text) {
-  let depth = 0;
-  _tomlScan(text, c => { if (c === '[' || c === '{') depth++; else if (c === ']' || c === '}') depth--; });
-  return depth;
-}
-// 按顶层分隔符切(引号与括号内的不算)。
-function _tomlSplitTop(text, sep) {
-  const cuts = [];
-  let depth = 0;
-  _tomlScan(text, (c, i) => {
-    if (c === '[' || c === '{') depth++;
-    else if (c === ']' || c === '}') depth--;
-    else if (c === sep && depth === 0) cuts.push(i);
-  });
-  const out = [];
-  let from = 0;
-  for (const i of cuts) { out.push(text.slice(from, i)); from = i + 1; }
-  out.push(text.slice(from));
-  return out;
-}
-function _tomlKeyPath(k) {
-  return _tomlSplitTop(String(k).trim(), '.').map(part => {
-    const t = part.trim();
-    if (/^".*"$/.test(t)) { try { return JSON.parse(t); } catch { return t.slice(1, -1); } }
-    if (/^'.*'$/.test(t)) return t.slice(1, -1);
-    return t;
-  });
-}
-function _tomlValue(raw) {
-  const v = String(raw).trim();
-  if (v.startsWith('"""') || v.startsWith("'''")) return undefined;   // 多行字符串:不解,当没写(该段缺 command 时会被标 unsupported)
-  if (/^"[\s\S]*"$/.test(v)) { try { return JSON.parse(v); } catch { return v.slice(1, -1); } }
-  if (/^'[\s\S]*'$/.test(v)) return v.slice(1, -1);
-  if (v === 'true') return true;
-  if (v === 'false') return false;
-  if (/^[+-]?\d[\d_]*(\.\d+)?$/.test(v)) return Number(v.replace(/_/g, ''));
-  if (v.startsWith('[') && v.endsWith(']')) {
-    return _tomlSplitTop(v.slice(1, -1), ',').map(x => x.trim()).filter(Boolean).map(_tomlValue);
-  }
-  if (v.startsWith('{') && v.endsWith('}')) {
-    const obj = {};
-    for (const pair of _tomlSplitTop(v.slice(1, -1), ',')) {
-      const kv = _tomlSplitTop(pair, '=');
-      if (kv.length < 2) continue;
-      const key = _tomlKeyPath(kv[0]).join('.');
-      if (key) obj[key] = _tomlValue(kv.slice(1).join('='));
-    }
-    return obj;
-  }
-  return undefined;   // 认不出的值(多行字符串、日期等):当没写
-}
-function _parseTomlMcpServers(text) {
-  const byId = new Map();
-  const serverFor = id => {
-    if (!byId.has(id)) byId.set(id, { id, label: id, type: 'stdio', command: '', args: [], env: {}, cwd: '' });
-    return byId.get(id);
-  };
-  const strList = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : null);
-  const setKey = (cur, sub, key, val) => {
-    if (val === undefined) return;
-    if (sub === 'env') { if (typeof val === 'string' || typeof val === 'number') cur.env[key] = String(val); return; }
-    if (sub === 'http_headers') { if (typeof val === 'string') (cur.headers = cur.headers || {})[key] = val; return; }
-    // env_http_headers:头名 -> 环境变量名。存成 ${VAR} 引用,连接时才展开(密钥不落盘明文,与 headers 同纪律)。
-    if (sub === 'env_http_headers') { if (typeof val === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(val)) (cur.headers = cur.headers || {})[key] = '${' + val + '}'; return; }
-    if (sub) return;   // 其它子表(如 tools.*)不认
-    if (key === 'command' && typeof val === 'string') cur.command = val;
-    else if (key === 'cwd' && typeof val === 'string') cur.cwd = val;
-    else if (key === 'url' && typeof val === 'string') cur.url = val;
-    else if (key === 'enabled') cur.enabled = val !== false;
-    else if (key === 'bearer_token_env_var' && typeof val === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(val.trim())) cur.bearerTokenEnvVar = val.trim();
-    else if ((key === 'startup_timeout_sec' || key === 'tool_timeout_sec') && Number.isFinite(val) && val > 0) {
-      cur[key === 'startup_timeout_sec' ? 'startupTimeoutMs' : 'toolTimeoutMs'] = Math.min(2147483647, Math.round(val * 1000));
-    } else if (key === 'startup_timeout_ms' && Number.isFinite(val) && val > 0) cur.startupTimeoutMs = Math.min(2147483647, Math.round(val));
-    else if (key === 'args') { const l = strList(val); if (l) cur.args = l; }
-    else if (key === 'enabled_tools') { const l = strList(val); if (l) cur.enabledTools = l; }
-    else if (key === 'disabled_tools') { const l = strList(val); if (l) cur.disabledTools = l; }
-    else if ((key === 'env' || key === 'http_headers' || key === 'env_http_headers') && val && typeof val === 'object' && !Array.isArray(val)) {
-      for (const [k2, v2] of Object.entries(val)) setKey(cur, key, k2, v2);
-    }
-  };
-  let cur = null, sub = '';
-  let pending = '';
-  for (const physical of String(text).split(/\r?\n/)) {
-    let line = _tomlStripComment(physical);
-    if (pending) {
-      pending += '\n' + line;
-      if (_tomlDepth(pending) > 0) continue;
-      line = pending; pending = '';
-    } else if (!line.trim()) continue;
-    const trimmed = line.trim();
-    if (/^\[\[/.test(trimmed)) { cur = null; sub = ''; continue; }   // 表数组:不是我们的段
-    const sec = /^\[\s*([^=]+?)\s*\]$/.exec(trimmed);
-    if (sec) {
-      const keyPath = _tomlKeyPath(sec[1]);
-      if (keyPath[0] === 'mcp_servers' && keyPath.length >= 2 && keyPath[1]) {
-        cur = serverFor(keyPath[1]);
-        sub = keyPath.length === 2 ? '' : (keyPath.length === 3 ? keyPath[2] : '#deeper');   // 更深的子表不认
-      } else { cur = null; sub = ''; }
-      continue;
-    }
-    const eq = _tomlSplitTop(line, '=');
-    if (eq.length < 2) continue;
-    const valueText = eq.slice(1).join('=');
-    if (_tomlDepth(valueText) > 0) { pending = line; continue; }   // 多行数组 / 内联表:拼到括号配平
-    if (!cur) continue;
-    const keyPath = _tomlKeyPath(eq[0]);
-    const val = _tomlValue(valueText);
-    if (keyPath.length === 1) setKey(cur, sub, keyPath[0], val);
-    else if (keyPath.length === 2 && !sub) setKey(cur, keyPath[0], keyPath[1], val);   // env.FOO = "x" 点号键
-  }
-  const out = [];
-  for (const srv of byId.values()) {
-    if (srv.url) srv.type = 'http';
-    if (!srv.command && !srv.url) srv.unsupported = 'config.toml 段缺 command/url(或写法无法解析)';
-    out.push(srv);
-  }
-  return out;
-}
-const MCP_CONFIG_JSON_MAX_BYTES = 32 * 1024 * 1024;
-const MCP_CONFIG_OTHER_MAX_BYTES = 1024 * 1024;
-// 解析单个 MCP 配置文件。返回 { servers, error? }。从不抛(缺失/格式错 -> error,供 UI 明示)。
-function parseMcpConfigFile(filePath) {
-  // hunt2-mcp:~/.claude.json 里 projects 历史动辄几 MB,修前一律 256KB 封顶 → 重度用户的 Claude Code 连接器
-  // 永远导不进来。JSON 放宽到 32MB(与该文件的真实规模同档),其它格式 1MB;先 stat 再读,不把超大文件整个读进内存。
-  const lower = String(filePath || '').toLowerCase();
-  const maxBytes = lower.endsWith('.json') ? MCP_CONFIG_JSON_MAX_BYTES : MCP_CONFIG_OTHER_MAX_BYTES;
-  let text;
-  try {
-    const st = fs.statSync(filePath);
-    if (st.isFile() && st.size > maxBytes) return { servers: [], error: `文件过大(>${Math.round(maxBytes / 1048576)}MB,跳过)` };
-    text = fs.readFileSync(filePath, 'utf8');
-  } catch (e) { return { servers: [], error: '读失败: ' + (e.code === 'ENOENT' ? '文件不存在' : e.message) }; }
-  if (lower.endsWith('.json')) {
-    let j; try { j = JSON.parse(text); } catch (e) { return { servers: [], error: 'JSON 解析失败: ' + e.message }; }
-    const ms = (j && j.mcpServers && typeof j.mcpServers === 'object') ? j.mcpServers : null;
-    if (!ms) return { servers: [], error: '未找到 mcpServers 字段' };
-    const servers = [];
-    for (const [id, raw] of Object.entries(ms)) {
-      if (!raw || typeof raw !== 'object') continue;
-      const importedType = String(raw.type || raw.transport || (raw.url ? 'http' : 'stdio')).toLowerCase();
-      const type = importedType === 'streamable-http' ? 'http' : importedType;
-      // 48c:解析即插值规范化(${VAR}/%VAR%),apply 拿到的已是终值。
-      // 49c:sse/http 不再是 unsupported —— 映射为远程条目;但 headers 值【不展开】(密钥引用 ${VAR}
-      //   原样保留进 config,连接时才从 process.env 展开,防明文落盘)。
-      const srv = {
-        id: String(id), label: String(id), type, command: _expandMcpVar(String(raw.command || '')),
-        args: Array.isArray(raw.args) ? raw.args.map(a => _expandMcpVar(String(a))) : [], env: {}, cwd: _expandMcpVar(String(raw.cwd || '')),
-        enabled: raw.enabled !== false,
-      };
-      for (const key of ['startupTimeoutMs', 'toolTimeoutMs']) {
-        const value = Number(raw[key]);
-        if (Number.isInteger(value) && value >= 1 && value <= 2147483647) srv[key] = value;
-      }
-      for (const key of ['enabledTools', 'disabledTools']) if (Array.isArray(raw[key])) srv[key] = raw[key].filter(value => typeof value === 'string');
-      if (raw.env && typeof raw.env === 'object') for (const [k, v] of Object.entries(raw.env)) srv.env[k] = _expandMcpVar(String(v));
-      if (type === 'sse' || type === 'http') {
-        srv.url = String(raw.url || '');
-        if (raw.headers && typeof raw.headers === 'object') {
-          srv.headers = {};
-          for (const [k, v] of Object.entries(raw.headers)) if (typeof v === 'string') srv.headers[k] = v;
-        }
-        if (typeof raw.bearerTokenEnvVar === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(raw.bearerTokenEnvVar.trim())) srv.bearerTokenEnvVar = raw.bearerTokenEnvVar.trim();
-        if (!srv.url) srv.unsupported = '远程条目缺 url';
-      }
-      servers.push(srv);
-    }
-    return { servers };
-  }
-  if (lower.endsWith('.toml') || /\[mcp_servers\./.test(text)) {
-    return { servers: _parseTomlMcpServers(text).map(s => ({ ...s, command: _expandMcpVar(s.command), args: s.args.map(_expandMcpVar), env: Object.fromEntries(Object.entries(s.env).map(([k, v]) => [k, _expandMcpVar(v)])), cwd: _expandMcpVar(s.cwd) })) };
-  }
-  return { servers: [], error: '未知格式(需 .json 含 mcpServers,或 .toml 含 [mcp_servers.X])' };
-}
-// 扫描多个源文件,插值 + 标冲突。返回 { servers, errors }。servers 每条带 source + conflict(撞 config 已有 id)。
-async function scanMcpSources(filePaths, config) {
-  const servers = [], errors = [];
-  const existingIds = new Set((Array.isArray(config && config.externalMcpServers) ? config.externalMcpServers : []).map(s => s && s.id).filter(Boolean));
-  for (const fp of filePaths) {
-    const r = parseMcpConfigFile(fp);
-    for (const s of r.servers) {
-      s.source = fp;
-      s.conflict = existingIds.has(s.id);
-      servers.push(s);
-    }
-    if (r.error) errors.push({ path: fp, error: r.error });
-  }
-  return { servers, errors };
-}
 
 function safeMcpInventory(config) {
   return resolveExternalMcpServers(config).map(entry => ({
@@ -13948,17 +13500,6 @@ async function buildOpsMetrics(days) {
 const STORAGE_STEWARD = { sweeping: false, lastAt: null, lastResult: null };
 const STORAGE_ARCHIVE_TERMINAL = new Set(['completed', 'failed', 'stopped', 'cancelled']);
 
-function normalizeStoragePolicy(raw) {
-  const r = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
-  const clampInt = (v, lo, hi, dflt) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : dflt; };
-  return {
-    logsKeepDays: clampInt(r.logsKeepDays, 7, 365, 30),
-    agentRunEventsCompressDays: clampInt(r.agentRunEventsCompressDays, 0, 365, 14),
-    webcacheMaxEntries: clampInt(r.webcacheMaxEntries, 0, 100000, 0),
-    engineTranscriptDays: clampInt(r.engineTranscriptDays, 0, 365, 30), // 0=关(不自动清转录);默认 30 天
-  };
-}
-
 // 递归占用统计(字节 + 文件数)。cap 防爆(异常巨大的树截断并标记,不拖死请求);任何节点读不到即跳过,
 // 整体永不抛 —— 统计是展示辅助,不是审计依据。
 const { dirStat } = require('./backend/storage-stat.cjs');
@@ -15608,29 +15149,6 @@ async function moveMemoryScope(mem, fromScope, cwd) {
   return { ok: true, memory: saved.memory, moved: { from, to: toScope, relationsDropped, usageMoved: !!prevUsage } };
 }
 
-// ACC 曾自带一套直接写 memory.json 的跨会话记忆。工作台记忆成为唯一入口后，在首次启动时把
-// 标准 ACC 数据目录中的旧条目幂等导入 global；只有迁移完成标记存在时才隐藏 ACC 的 memory 工具。
-// 稳定 hash id + 不覆盖已有文件使中途失败可安全重试，原 ACC 文件始终保留不改。
-const ACC_MEMORY_IMPORT_SCHEMA = 1;
-function accMemoryImportMarker() { return path.join(paths.memory, '.acc-memory-import-v1.json'); }
-// 架构还债批 2 B3:完成标记走 DurableJsonStore(01),盘上字节与恢复口径与手写版逐字节相同:
-//   · 缺失 / 读不动 / 不是 JSON / 根不是对象 / schema 不是 1(含缺 schema)= 「还没做完」,幂等导入下次重跑;
-//     坏文件原样留着、不复制成 .corrupt(quarantine:false),不记事件 —— 与手写版一样安静;
-//   · 不缓存(cache:false):04 拼 ACC 的环境变量时每次都同步重读盘(测试与迁移中心会删它);
-//   · 写:mkdir memory 目录 + atomicWriteJson(pretty JSON),键序就是调用方给的那份。
-const accMemoryImportStore = DurableJsonStore.create({
-  id: 'acc-memory-import-marker',
-  file: () => accMemoryImportMarker(),
-  schemaVersion: ACC_MEMORY_IMPORT_SCHEMA,
-  cache: false,
-  quarantine: false,
-  defaultValue: () => ({ schema: ACC_MEMORY_IMPORT_SCHEMA }),
-  // 缺 schema 的也不认(prepare 只拒「有且不等」,缺的这一半在这里拒)—— 手写版判的是 marker.schema === 1。
-  sanitize: value => (value.schema === ACC_MEMORY_IMPORT_SCHEMA ? value : { schema: ACC_MEMORY_IMPORT_SCHEMA }),
-});
-function legacyAccMemoryMigrationComplete() {
-  try { return accMemoryImportStore.readSync().status === 'complete'; } catch { return false; }
-}
 function legacyAccMemoryCandidates() {
   const candidates = [];
   const add = p => { if (p && !candidates.includes(path.resolve(p))) candidates.push(path.resolve(p)); };
@@ -17648,17 +17166,6 @@ const AGENT_TOOL_NAMES = new Set(['orchestrate_agents', 'wait_agents', 'agent_re
 // 写了就占掉主模型的槽(同回合先到者胜,主模型反而得到 alreadyPending),卡片上还看不出是谁提的。list / read 是只读,留着。
 // offer 面(buildOpenAiTools 的 opts.noMemoryWriteTools)与分发面(08 子代理循环的拒绝分支)共用这一张表。
 const MEMORY_WRITE_TOOL_NAMES = new Set(['workbench_memory_propose', 'workbench_memory_revise', 'workbench_memory_relation_propose', 'workbench_memory_relation_revoke']);
-// 审计 N4:allowCommandTools / allowDesktopTools 不只是「不 offer」—— 分发点也按同一判据拒绝(bypass/auto 下 gate 恒 allow,
-// 光藏 schema 拦不住模型直接吐出的 script_run)。offer 面(buildOpenAiTools)与分发面(09 主循环 / 08 子代理 / 12 toolCall)共用本函数。
-// 返回空串 = 放行;否则是给模型看的中文原因。desktopOverride 语义同 buildOpenAiTools(null = 跟随全局)。
-const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
-const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot']);
-// 桌面闸的唯一判法(原生与桥接共用):会话级覆盖 desktopOverride 非 null 时以它为准,否则跟随全局 allowDesktopTools。
-function desktopToolsDisabledReason(cfg, desktopOverride) {
-  const allowDesk = desktopOverride == null ? (cfg || {}).allowDesktopTools !== false : desktopOverride === true;
-  if (allowDesk) return '';
-  return desktopOverride === false ? 'desktopTools=false (this session)' : 'allowDesktopTools=false';
-}
 // 能力总闸(allowDesktopTools 的会话级覆盖)要的会话头:回合内的调用 ctx 带 session;MCP 子进程(Claude / Kimi CLI 经如意 MCP)
 // 里 ctx 为空,按注入的 WCW_SESSION_ID 装(与下面桥接分支的 sidSession、journalSessionCtx 同一个来源)。装不到 = null = 跟随全局。
 async function policySessionFor(ctx) {
@@ -17672,76 +17179,6 @@ async function policyDesktopOverrideFor(ctx) {
   return session ? sessionDesktopToolsOf(session) : null;
 }
 
-function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
-  const cfg = config || {};
-  if (NATIVE_COMMAND_TOOL_NAMES.has(name) && cfg.allowCommandTools === false) return 'allowCommandTools=false';
-  if (NATIVE_DESKTOP_TOOL_NAMES.has(name)) return desktopToolsDisabledReason(cfg, desktopOverride);
-  return '';
-}
-// 2026-10 能力总闸补上桥接面。设置页承诺「关掉之后,对应的工具在所有线程里既不提供给模型、也不会执行」,修前只兑现了上面
-// 两张原生名单 —— 内置桌面 MCP(ACC:serverId 'ai-computer-control',桥接名前缀 ai_computer_control__)的 run_command /
-// screenshot / mouse_click 等在两个开关都关掉之后照常提供、照常执行。下面按 ACC 的【裸工具名】补两族(逐个对过
-// mcp/ai-computer-control/src/ai_computer_control/tools/*.py:平台源码注册名并集 109 件里收 56 件),【只认内置桌面 MCP】—— 外部 MCP 服务器
-// 哪怕有同名工具也不受影响(它们的语义由用户接入时自己负责,工作台不替它猜)。判据收在 toolDisabledByPolicy 一个函数里,
-// offer 面(09 目录 / 08 子代理 / 11 MCP 子进程目录 / 07 createToolLoadingState)与分发面(09 / 08 / 12 代理 / 13d CLI 权限桥)
-// 都调它;CLI 直挂 ACC 的那一路(01 addExternalMcpServersToMap / syncMcpServersToClaude)按同一张表算出 ACC_HIDE_TOOLS 交给
-// ACC 自己在注册表里摘掉。
-//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 shell_run / script_run / shell_* 同一类能力。
-//     list_processes 只读进程表、不执行任何东西,不收。
-//   桌面族(随 allowDesktopTools 与会话级 desktopTools 覆盖,判法与 NATIVE_DESKTOP_TOOL_NAMES 是同一个 desktopToolsDisabledReason):
-//     按「作用于真实桌面」归类 ——
-//     · screen / capture / mouse / keyboard / window / uia / vision / sync / observe / act_and_verify 全族:读屏、点屏、动键鼠、摆窗口;
-//     · ocr 只收读屏的 ocr_screen / ocr_click / ocr_find_text(后者内部就是 ocr_screen);ocr_image 读的是图片文件、
-//       ocr_available_languages 只列语言包,不收;
-//     · desktop_extra 的像素 / 窗口等待 / 显示器与 DPI 查询;它的 get_clipboard_image / set_clipboard_image 与 clipboard
-//       模块一起按剪贴板算(剪贴板是桌面会话的共享状态,原生 keyboard_send_keys 同族);
-//     · record 全族:record_start 装全局键鼠钩子录下用户的真实输入;macro_list 只列宏文件,但它唯一的用途是喂给 macro_run 回放,随宏族一起关。
-//     名单外的(文件、Office、浏览器自动化、提示音 / 通知弹窗、系统信息、诊断、记忆、fetch)不受影响。
-//   转调器(两个开关【任一】关掉都关):batch_actions / macro_run 按步骤名转调 ACC 实时注册表里的【任意】工具(batch.py
-//     _tool_map,含 run_command / launch_application)—— 只随桌面闸关,它就是命令族的后门;只随命令闸关,反过来也一样。
-const DESKTOP_MCP_SERVER_ID = 'ai-computer-control';
-const ACC_POLICY_TOOL_FAMILIES = Object.freeze({
-  command: Object.freeze(['run_command', 'launch_application', ]),
-  desktop: Object.freeze([
-    'screenshot', 'screenshot_region', 'get_screen_info', // screen
-    'window_screenshot',                                                                                       // capture
-    'mouse_click', 'mouse_move', 'mouse_drag', 'mouse_scroll', 'scroll_at', 'get_mouse_position',              // mouse
-    'type_text', 'press_key', 'hotkey', 'input_sequence', // keyboard
-    'list_windows', 'get_active_window', 'focus_window', 'resize_window', 'move_window',                       // window
-    'minimize_window', 'maximize_window', 'close_window', 'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
-    'find_template', 'find_all_templates', 'vision_click', 'wait_for_image',                                   // vision
-    'ocr_screen', 'ocr_click', 'ocr_find_text',                                                                // ocr(只收读屏的)
-    // sync
-    'list_monitors', 'get_dpi_info',             // desktop_extra
-    'observe', 'act_and_verify',                                                                               // observe / act_and_verify
-    'record_start', 'record_stop', 'macro_list',                                                               // record
-    'get_clipboard', 'set_clipboard', 'get_clipboard_image', 'set_clipboard_image',                            // clipboard
-  ]),
-  dispatcher: Object.freeze(['batch_actions', 'macro_run']),
-});
-const ACC_COMMAND_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.command);
-const ACC_DESKTOP_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.desktop);
-const ACC_DISPATCHER_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.dispatcher);
-// bridge = resolveBridge 的结果 { serverId, toolName }(toolName 是裸名)。不是内置桌面 MCP 的一律放行。
-function bridgedToolDisabledByPolicy(bridge, config, desktopOverride = null) {
-  if (!bridge || bridge.serverId !== DESKTOP_MCP_SERVER_ID) return '';
-  const cfg = config || {};
-  const bare = String(bridge.toolName || '');
-  const commandOff = cfg.allowCommandTools === false;
-  if (ACC_COMMAND_TOOL_NAMES.has(bare)) return commandOff ? 'allowCommandTools=false' : '';
-  if (ACC_DESKTOP_TOOL_NAMES.has(bare)) return desktopToolsDisabledReason(cfg, desktopOverride);
-  if (ACC_DISPATCHER_TOOL_NAMES.has(bare)) return desktopToolsDisabledReason(cfg, desktopOverride) || (commandOff ? 'allowCommandTools=false' : '');
-  return '';
-}
-// 唯一入口:bridge 为空 = 原生工具(按名字判),否则按桥接目标判。返回空串 = 放行,否则是原因(给 toolDisabledResult)。
-function toolDisabledByPolicy(name, config, desktopOverride = null, bridge = null) {
-  return bridge ? bridgedToolDisabledByPolicy(bridge, config, desktopOverride) : nativeToolDisabledByPolicy(name, config, desktopOverride);
-}
-// 这份配置(+ 会话覆盖)下内置桌面 MCP 里被关掉的裸工具名(升序)—— 交给 ACC 的 ACC_HIDE_TOOLS 在注册表里摘掉(CLI 直挂面)。
-function accPolicyHiddenToolNames(config, desktopOverride = null) {
-  const names = [...ACC_POLICY_TOOL_FAMILIES.command, ...ACC_POLICY_TOOL_FAMILIES.desktop, ...ACC_POLICY_TOOL_FAMILIES.dispatcher];
-  return names.filter(n => bridgedToolDisabledByPolicy({ serverId: DESKTOP_MCP_SERVER_ID, toolName: n }, config, desktopOverride)).sort();
-}
 // offer 面:从 [openai fn schema] 里去掉被设置关掉的【桥接】工具(原生工具由 buildOpenAiTools 自己滤)。route 不动 ——
 // 分发面要靠它认出「这是被关掉的 ACC 工具」,回 tool-disabled 而不是 unknown-tool。
 function dropPolicyDisabledBridgedTools(tools, bridgedRoute, config, desktopOverride = null) {
@@ -17988,24 +17425,6 @@ function bridgedToolTierByName(unprefixedName, config) {
   return 'exec';
 }
 
-const TOOL_PACK_DESCRIPTIONS = Object.freeze({
-  core: 'planning, user questions, Workbench Memory, mission metadata and tool discovery',
-  files_read: 'read, list, search and inspect workspace files',
-  files_write: 'write, edit, delete, copy and move files',
-  code: 'project inspection, code review and git operations',
-  shell: 'Bash, Python/Node scripts and persistent shell sessions',
-  web: 'web search, fetch, HTTP requests and downloads',
-  desktop: 'screenshots, UI inspection and desktop control',
-  office: 'Excel, Word, PowerPoint and PDF document operations',
-  archive: 'zip and unzip archives',
-  agents: 'sub-agents and workflow orchestration',
-  skills: 'list installed skills and Playbooks, read enabled skill instructions and Playbook steps',
-  integrations: 'inspect and configure MCP connectors and browser targets',
-  memory: 'Workbench Memory maintenance: propose relations between memories, revise a confirmed memory, revoke a relation (plus external memory_save/read/list/delete)',
-  thinking: 'step-by-step reasoning chains and sequential thinking',
-  // 116c: 管家专属包。只对 kind==='steward' 的会话 offer(四个 offer 面各自门控),普通会话永不进入。
-  steward: 'workbench steward: observe threads, delegate work, decide pending items and keep steward memory',
-});
 // 2026-10 起手工具:模型服务商回合的按需装载里,不论这句话分到哪些包,第一发就带上的几个原生工具(相当于给 core 扩一小圈;
 // 不改 core 包本身 —— core 同时决定 Claude CLI 的 MCP 工具清单,而 CLI 有自己的 Read/WebSearch/WebFetch/Bash)。
 // 依据(本机 4 天真实调用):联网 web_search + web_fetch 占全部工具调用的六成多(147/230),3 个会话里 2 个用到;
@@ -19593,60 +19012,6 @@ function neutralizeInjectedPrefixes(s) {
   } catch { return String(s == null ? '' : s); }
 }
 
-function projectAgentRoleFile(cwd) { return path.join(path.resolve(cwd), '.ruyi', 'agents.json'); }
-async function readProjectAgentRoles(cwd) {
-  const file = projectAgentRoleFile(cwd);
-  try {
-    const st = await fsp.stat(file); if (!st.isFile() || st.size > 512 * 1024) return [];
-    const parsed = safeJsonParse(await fsp.readFile(file, 'utf8'), null);
-    const rawRoles = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.roles) ? parsed.roles : []);
-    return rawRoles.map(r => normalizeAgentRole(r, { source: 'project' })).filter(Boolean).slice(0, 32);
-  } catch { return []; }
-}
-function parseSimpleYamlValue(value) {
-  const s = String(value || '').trim();
-  if (s.startsWith('[') && s.endsWith(']')) return s.slice(1, -1).split(',').map(v => v.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
-  if (/^(true|false)$/i.test(s)) return s.toLowerCase() === 'true';
-  if (/^\d+$/.test(s)) return Number(s);
-  return s.replace(/^['"]|['"]$/g, '');
-}
-async function readClaudeProjectAgentRoles(cwd) {
-  const dir = path.join(path.resolve(cwd), '.claude', 'agents');
-  let files = []; try { files = await fsp.readdir(dir); } catch { return []; }
-  const out = [];
-  for (const file of files.filter(f => /\.md$/i.test(f)).slice(0, 32)) {
-    try {
-      const raw = await fsp.readFile(path.join(dir, file), 'utf8'); if (raw.length > 128 * 1024) continue;
-      const m = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n([\s\S]*)$/m.exec(raw); if (!m) continue;
-      const fm = {};
-      for (const line of m[1].split(/\r?\n/)) { const hit = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line); if (hit) fm[hit[1]] = parseSimpleYamlValue(hit[2]); }
-      const role = normalizeAgentRole({
-        id: fm.name || path.basename(file, '.md'), label: fm.name || path.basename(file, '.md'), description: fm.description || '', prompt: m[2].trim(),
-        claudeModel: fm.model || 'inherit', claudeTools: Array.isArray(fm.tools) ? fm.tools : (typeof fm.tools === 'string' ? fm.tools.split(',').map(s => s.trim()) : []),
-        permissionMode: fm.permissionMode === 'bypassPermissions' ? 'bypass' : fm.permissionMode, maxTurns: fm.maxTurns, mcpServers: Array.isArray(fm.mcpServers) ? fm.mcpServers : [], isolation: fm.isolation,
-      }, { source: 'claude-project' });
-      if (role) { role.nativeClaude = true; role.file = path.join(dir, file); out.push(role); }
-    } catch { /* malformed native agent stays Claude's concern */ }
-  }
-  return out;
-}
-// 安全走查 S3:opts.parentMode = 调用方认的父回合档位(缺省取 config.permissionMode —— 回合内的 config 已解析成这条线程的档)。
-// 项目来源的角色(.ruyi/agents.json / .claude/agents)在返回时带上【有效档位】标注(effectivePermissionMode / effectiveToolTier / roleClamped),
-// 角色自己声明的 permissionMode / toolTier 原样保留(设置页编辑器原样存回);真正的夹紧在子代理起跑处(08 / 07)按那一刻的父档再算一次。
-async function getAgentRoleLibrary(cwd, config, opts) {
-  const merged = new Map();
-  for (const raw of BUILTIN_AGENT_ROLES) { const role = normalizeAgentRole(raw, { source: 'builtin', builtin: true }); merged.set(role.id, role); }
-  for (const role of (Array.isArray(config.agentRoleOverrides) ? config.agentRoleOverrides : [])) {
-    const current = merged.get(role.id); merged.set(role.id, current ? mergeAgentRole(current, role, 'global') : normalizeAgentRole(role, { source: 'global' }));
-  }
-  for (const role of await readProjectAgentRoles(cwd)) {
-    const current = merged.get(role.id); merged.set(role.id, current ? mergeAgentRole(current, role, 'project') : role);
-  }
-  const claudeNative = await readClaudeProjectAgentRoles(cwd);
-  for (const role of claudeNative) if (!merged.has(role.id)) merged.set(role.id, role);
-  const parentMode = (opts && opts.parentMode) || (config && config.permissionMode) || 'default';
-  return [...merged.values()].filter(Boolean).map(role => annotateAgentRoleEffective(role, parentMode));
-}
 // 项目级写入(.ruyi/agents.json、.ruyi/workflows.json)的 cwd 来自请求体:目录不存在或是个文件时,下面的 mkdir 会抛
 // ENOTDIR / EEXIST,路由兜底成 500,还把带宿主路径的 errno 原文回给前端。写前先 stat 一下:不是目录就回 400 人话
 // (不回显路径)。返回 null = 可写;否则是一份 apiFailure 响应,调用方直接 send。
@@ -19654,46 +19019,6 @@ async function projectCwdDirectoryFailure(cwd) {
   try { if ((await fsp.stat(path.resolve(String(cwd || '')))).isDirectory()) return null; } catch { /* 不存在:同样按「不是目录」答 */ }
   return apiFailure('project.cwd_not_directory', {}, '工作文件夹不存在或不是目录,无法保存项目级配置', 400);
 }
-async function saveProjectAgentRoles(cwd, roles) {
-  const file = projectAgentRoleFile(cwd), dir = path.dirname(file);
-  await fsp.mkdir(dir, { recursive: true });
-  const payload = { schemaVersion: 1, roles: roles.map(r => normalizeAgentRole(r, { source: 'project' })).filter(Boolean).slice(0, 32) };
-  await atomicWriteJson(file, payload);   // 25.1 收编
-  return payload.roles;
-}
-function claudePermissionMode(mode) {
-  // v1.4.3: use the unified CLAUDE_PERMISSION_MODE_MAP; 'inherit' maps to undefined (omit from agent JSON)
-  if (mode === 'inherit') return undefined;
-  return CLAUDE_PERMISSION_MODE_MAP[mode] || mode;
-}
-async function buildClaudeAgentDefinitions(cwd, config, jsonBudget = 6000) {
-  const roles = (await getAgentRoleLibrary(cwd, config)).filter(r => !r.nativeClaude);
-  const definitions = {};
-  for (const role of roles) {
-    const d = { description: role.description || role.label, prompt: role.prompt || role.description || role.label };
-    if (role.claudeTools && role.claudeTools.length) d.tools = role.claudeTools;
-    if (role.models && role.models.claude && role.models.claude !== 'inherit') d.model = role.models.claude;
-    // 安全走查 S3:项目来源的角色把权限档夹到不高于这一回合的线程档位再交给 CLI(CLI 的 --agents 子代理按这个档起跑,不夹就能靠项目角色放宽)。
-    const pm = claudePermissionMode(clampAgentRoleToParent(role, role.toolTier, config && config.permissionMode).permissionMode || role.permissionMode); if (pm) d.permissionMode = pm;
-    if (role.mcpServers && role.mcpServers.length) d.mcpServers = role.mcpServers;
-    if (role.budgets && role.budgets.claude) d.maxTurns = role.budgets.claude;
-    if (role.isolation === 'worktree') d.isolation = 'worktree';
-    if (role.color) d.color = role.color;
-    definitions[role.id] = d;
-  }
-  // Windows .cmd launchers go through cmd.exe, whose command-line limit is small. Keep definitions
-  // deterministic and bounded; project-native .claude/agents remain available independently.
-  // cmd8191 防线: jsonBudget 由调用方按整行剩余预算动态给出(默认 6000 维持原契约);预算收紧时按角色
-  // 库顺序确定性取舍,放不下的进 omitted(meta 事件上报,用户可见)。
-  const budget = Math.max(0, Math.min(6000, Math.floor(Number(jsonBudget) || 0)));
-  const selected = {}, omitted = [];
-  for (const [id, def] of Object.entries(definitions)) {
-    const candidate = { ...selected, [id]: def };
-    if (JSON.stringify(candidate).length <= budget) selected[id] = def; else omitted.push(id);
-  }
-  return { definitions: selected, omitted, roles };
-}
-
 // Tool-tier → Claude native tool allowlist for a DAG node with no explicit role (or a role that leaves
 // claudeTools empty), mirroring the OpenAI subagent's tierFilter hard cap (buildOpenAiTools): 'read' can
 // never mutate, 'edit' adds file writes, 'exec' is intentionally unrestricted — the same shape as the
@@ -36324,7 +35649,7 @@ async function handleInterventionApiRoutes(req, res, pathname) {
     // 「无法自动撤销」(correct: CLI-native edits don't pass through toolCall → aren't journaled).
     // 第27波:CLI 桥授权书消耗点。命中直接 allow —— 连 permission_request 事件都不发(免弹窗静默放行)。工具名按 CLI
     // 弹窗实际显示的 Claude 名(Bash/Edit/Write)匹配,与签发卡片同名口径。范围外回落到下方正常弹窗。session 仅需 .id。
-    const bridgeTier = Object.prototype.hasOwnProperty.call(CLI_TOOL_TIER, String(body.toolName || '')) ? CLI_TOOL_TIER[String(body.toolName)] : nativeToolTier(String(body.toolName || ''));   // CLI 报的是 Claude 名(Edit/Write/Bash),查 CLI 表;修前查原生表,一律落成 exec
+    const bridgeTier = cliBridgeToolTier(String(body.toolName || ''));
     // 117m-A3(配 A1 的 D1):高风险判据要吃到工具名与入参,否则 CLI 桥这一侧的 auto 档还是老口径。
     // 审计 C:按【这一回合】的实效档判,不按全局档。runClaudeTurn 登记活回合时记下了 spawn CLI 用的解析档
     // (请求级 > 会话级 > 全局,10 runSessionTurn 解析);修前读 config.permissionMode —— 全局 auto 时,一条被

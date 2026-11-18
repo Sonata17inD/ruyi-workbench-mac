@@ -107,29 +107,6 @@ async function moveMemoryScope(mem, fromScope, cwd) {
   return { ok: true, memory: saved.memory, moved: { from, to: toScope, relationsDropped, usageMoved: !!prevUsage } };
 }
 
-// ACC 曾自带一套直接写 memory.json 的跨会话记忆。工作台记忆成为唯一入口后，在首次启动时把
-// 标准 ACC 数据目录中的旧条目幂等导入 global；只有迁移完成标记存在时才隐藏 ACC 的 memory 工具。
-// 稳定 hash id + 不覆盖已有文件使中途失败可安全重试，原 ACC 文件始终保留不改。
-const ACC_MEMORY_IMPORT_SCHEMA = 1;
-function accMemoryImportMarker() { return path.join(paths.memory, '.acc-memory-import-v1.json'); }
-// 架构还债批 2 B3:完成标记走 DurableJsonStore(01),盘上字节与恢复口径与手写版逐字节相同:
-//   · 缺失 / 读不动 / 不是 JSON / 根不是对象 / schema 不是 1(含缺 schema)= 「还没做完」,幂等导入下次重跑;
-//     坏文件原样留着、不复制成 .corrupt(quarantine:false),不记事件 —— 与手写版一样安静;
-//   · 不缓存(cache:false):04 拼 ACC 的环境变量时每次都同步重读盘(测试与迁移中心会删它);
-//   · 写:mkdir memory 目录 + atomicWriteJson(pretty JSON),键序就是调用方给的那份。
-const accMemoryImportStore = DurableJsonStore.create({
-  id: 'acc-memory-import-marker',
-  file: () => accMemoryImportMarker(),
-  schemaVersion: ACC_MEMORY_IMPORT_SCHEMA,
-  cache: false,
-  quarantine: false,
-  defaultValue: () => ({ schema: ACC_MEMORY_IMPORT_SCHEMA }),
-  // 缺 schema 的也不认(prepare 只拒「有且不等」,缺的这一半在这里拒)—— 手写版判的是 marker.schema === 1。
-  sanitize: value => (value.schema === ACC_MEMORY_IMPORT_SCHEMA ? value : { schema: ACC_MEMORY_IMPORT_SCHEMA }),
-});
-function legacyAccMemoryMigrationComplete() {
-  try { return accMemoryImportStore.readSync().status === 'complete'; } catch { return false; }
-}
 function legacyAccMemoryCandidates() {
   const candidates = [];
   const add = p => { if (p && !candidates.includes(path.resolve(p))) candidates.push(path.resolve(p)); };

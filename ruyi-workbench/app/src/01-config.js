@@ -1723,6 +1723,18 @@ async function readFileTail(file, maxBytes) {
 //   read()           —— readSync 的异步版(fsp.readFile),同一套 prepare/回落/缓存规则,给本来就在 async 路径上的存储用。
 const DurableJsonStore = require('./backend/durable-json-store.cjs').createDurableJsonStore({ fs, fsp, path, atomicWriteJson });
 
+const { ACC_MEMORY_IMPORT_SCHEMA, accMemoryImportStore, legacyAccMemoryMigrationComplete } = require('./backend/acc-memory-import-marker.cjs').createAccMemoryImportMarker({
+  DurableJsonStore, memoryDirectory: paths.memory,
+});
+
+const ToolboxRegistry = require('./backend/toolbox-registry.cjs').createToolboxRegistry({ logEvent, safeJsonParse });
+const { enabled: enabledToolboxComponents, directory: toolboxComponentsDir } = ToolboxRegistry;
+const { mcpDropInDirs, scanMcpDropIns, invalidateMcpDropInCache, isEquivalentDesktopAccServer, resolveExternalMcpServers } = require('./backend/mcp-sources.cjs').createMcpSources({
+  externalRoot, dataRoot, enabledToolboxComponents, detectDesktopMcp, legacyAccMemoryMigrationComplete, logEvent,
+});
+
+const { projectAgentRoleFile, readProjectAgentRoles, readClaudeProjectAgentRoles, getAgentRoleLibrary, saveProjectAgentRoles, buildClaudeAgentDefinitions } = require('./backend/agent-role-library.cjs').createAgentRoleLibrary({ atomicWriteJson });
+
 
 // v1.4.1 (audit #4): config.json 原子写 —— 此前用裸 fsp.writeFile,崩溃/断电中途会留下截断文件,下次读
 // safeJsonParse→null → normalizeConfig 把【整份用户配置静默重置为默认】(密钥/服务商/工作区全丢)。
@@ -2490,28 +2502,6 @@ function refreshInBackground(key, probe) {
   _cliProbeRefreshing.add(key);
   Promise.resolve().then(probe).catch(() => {}).finally(() => { _cliProbeRefreshing.delete(key); });
   return true;
-}
-// 异步版的「跑一发 <cmd> --version 看退出码」:与各处 spawnSync 同一组参数(stdio 全忽略、隐藏窗口、超时即杀
-// 直接子进程),回同形 { error, status } —— 超时被杀时 status 为 null,与 spawnSync 超时同判。
-function spawnProbeSync(command, args, options = {}) {
-  if (process.platform !== 'darwin') return cp.spawnSync(command, args, options);
-  const result = ProcessRuntime.probeSync(command, args, options);
-  if (result.cleanupIncomplete) throw Object.assign(result.error, { cleanupIncomplete: true, cleanupScope: result.cleanupScope,
-    cleanupEscapeCoverage: result.cleanupEscapeCoverage, cleanupUnconfirmed: result.cleanupUnconfirmed });
-  return result;
-}
-function spawnProbeAsync(command, args, spawnOpts = {}, timeout = 4000) {
-  if (process.platform === 'darwin') return ProcessRuntime.probe(command, args, spawnOpts, timeout);
-  return new Promise(resolve => {
-    let settled = false;
-    const done = result => { if (!settled) { settled = true; resolve(result); } };
-    let child = null;
-    try {
-      child = cp.spawn(command, args, { stdio: 'ignore', timeout, ...spawnOpts });
-    } catch (error) { done({ error, status: null }); return; }
-    child.once('error', error => done({ error, status: null }));
-    child.once('close', code => done({ error: null, status: code }));
-  });
 }
 function claudeProbeCandidates() {
   // 先 PATH 上的裸名(快、常见),再常见安装位置(必须真的存在才探)。

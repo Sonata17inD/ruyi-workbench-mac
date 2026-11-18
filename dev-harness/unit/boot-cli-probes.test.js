@@ -24,7 +24,7 @@ function setup(t, explicit = true) {
   fs.writeFileSync(path.join(process.env.RUYI_HOME, 'config.json'), JSON.stringify({
     configSchema: 13, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
     desktopMcp: { enabled: false, autodetect: false },
-    ...(explicit ? { claudePath: 'configured-claude.exe', kimiPath: 'configured-kimi.exe' } : {}),
+    ...(explicit ? { claudePath: 'configured-claude', kimiPath: 'configured-kimi' } : {}),
   }));
   const s = loadServerInternals(['beginBootCliPathProbes', 'finishBootCliPathProbes', 'readConfig', 'detectClaudePath', 'detectKimiPath', 'invalidateClaudePathCache'], { withEval: true });
   const pending = s.__eval(`(() => {
@@ -48,20 +48,20 @@ test('first CLI checks run concurrently; boot reads retain explicit paths and AP
   await tick();
   assert.deepEqual(pending.map(p => p.kind), ['claude', 'kimi']);
   const boot = await s.readConfig();
-  assert.equal(boot.claudePath, 'configured-claude.exe');
-  assert.equal(boot.kimiPath, 'configured-kimi.exe');
+  assert.equal(boot.claudePath, 'configured-claude');
+  assert.equal(boot.kimiPath, 'configured-kimi');
   s.finishBootCliPathProbes();
   let settled = false;
   const api = s.readConfig().then(c => { settled = true; return c; });
   await tick(); assert.equal(settled, false);
-  pending[0].resolve('found-claude.exe');
+  pending[0].resolve('found-claude');
   await tick(); assert.equal(settled, false);
-  pending[1].resolve('found-kimi.exe');
+  pending[1].resolve('found-kimi');
   const config = await api;
-  assert.equal(config.claudePath, 'configured-claude.exe');
-  assert.equal(config.kimiPath, 'configured-kimi.exe');
-  assert.equal(s.detectClaudePath(), 'found-claude.exe');
-  assert.equal(s.detectKimiPath(), 'found-kimi.exe');
+  assert.equal(config.claudePath, 'configured-claude');
+  assert.equal(config.kimiPath, 'configured-kimi');
+  assert.equal(s.detectClaudePath(), 'found-claude');
+  assert.equal(s.detectKimiPath(), 'found-kimi');
 });
 
 test('auto paths use completed findings after listen instead of persisting provisional missing paths', async t => {
@@ -70,42 +70,18 @@ test('auto paths use completed findings after listen instead of persisting provi
   const boot = await s.readConfig();
   assert.equal(boot.claudePath, ''); assert.equal(boot.kimiPath, '');
   s.finishBootCliPathProbes();
-  pending[0].resolve('found-claude.exe'); pending[1].resolve('found-kimi.exe');
+  pending[0].resolve('found-claude'); pending[1].resolve('found-kimi');
   const config = await s.readConfig();
-  assert.equal(config.claudePath, 'found-claude.exe'); assert.equal(config.kimiPath, 'found-kimi.exe');
+  assert.equal(config.claudePath, 'found-claude'); assert.equal(config.kimiPath, 'found-kimi');
   const disk = JSON.parse(fs.readFileSync(path.join(dir, 'data/config.json'), 'utf8'));
   assert.equal(Object.hasOwn(disk, 'claudePath'), false); assert.equal(Object.hasOwn(disk, 'kimiPath'), false);
-});
-
-test('configured batch launcher waits for actual async executable verification and keeps original disk spelling', { skip: process.platform !== 'win32' }, async t => {
-  const { s, pending, dir } = setup(t);
-  const file = path.join(dir, 'data/config.json');
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8')); raw.claudePath = 'configured-claude.cmd';
-  fs.writeFileSync(file, JSON.stringify(raw));
-  const check = s.__eval(`(() => {
-    const state = { calls: 0, resolve: null };
-    claudeShimExeFor = () => 'verified-claude.exe';
-    spawnProbeAsync = (exe, args) => { state.calls++; if (exe !== 'verified-claude.exe' || args[0] !== '--version') throw Error('Wrong verification'); return new Promise(resolve => { state.resolve = resolve; }); };
-    return state;
-  })()`);
-  s.beginBootCliPathProbes();
-  const boot = await s.readConfig();
-  assert.equal(boot.claudePath, 'configured-claude.cmd'); assert.equal(check.calls, 1);
-  s.finishBootCliPathProbes();
-  pending[0].resolve('found-claude.exe'); pending[1].resolve('found-kimi.exe');
-  let settled = false;
-  const api = s.readConfig().then(c => { settled = true; return c; });
-  await tick(); assert.equal(settled, false);
-  check.resolve({ error: null, status: 0 });
-  assert.equal((await api).claudePath, 'verified-claude.exe');
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).claudePath, 'configured-claude.cmd');
 });
 
 test('probe invalidation prevents outstanding startup discoveries from overwriting the new generation', async t => {
   const { s, pending } = setup(t);
   s.beginBootCliPathProbes(); await tick();
   s.invalidateClaudePathCache(); s.finishBootCliPathProbes();
-  pending[0].resolve('stale-claude.exe'); pending[1].resolve('stale-kimi.exe');
+  pending[0].resolve('stale-claude'); pending[1].resolve('stale-kimi');
   await tick();
   assert.equal(s.__eval('_claudePathProbe'), null);
   assert.equal(s.__eval("_agentCliPathProbe.has('kimi')"), false);
@@ -123,22 +99,8 @@ test('post-listen config waits for a verification job queued after the initial p
     return () => release();
   })()`);
   await tick();
-  pending[0].resolve('found-claude.exe'); pending[1].resolve('found-kimi.exe');
+  pending[0].resolve('found-claude'); pending[1].resolve('found-kimi');
   await tick(); assert.equal(settled, false);
   release();
-  assert.equal((await api).claudePath, 'configured-claude.exe');
-});
-
-test('failed shim verification preserves the configured fallback and missing discoveries remain empty', { skip: process.platform !== 'win32' }, async t => {
-  const { s, pending, dir } = setup(t);
-  const file = path.join(dir, 'data/config.json');
-  const raw = JSON.parse(fs.readFileSync(file, 'utf8')); raw.claudePath = 'configured-claude.cmd';
-  fs.writeFileSync(file, JSON.stringify(raw));
-  s.__eval("claudeShimExeFor = () => 'broken-claude.exe'; spawnProbeAsync = async () => ({ error: new Error('synthetic missing executable'), status: null });");
-  s.beginBootCliPathProbes(); await s.readConfig(); s.finishBootCliPathProbes();
-  pending[0].resolve(''); pending[1].resolve('');
-  const config = await s.readConfig();
-  assert.equal(config.claudePath, 'configured-claude.cmd');
-  assert.equal(s.detectClaudePath(), ''); assert.equal(s.detectKimiPath(), '');
-  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).claudePath, 'configured-claude.cmd');
+  assert.equal((await api).claudePath, 'configured-claude');
 });

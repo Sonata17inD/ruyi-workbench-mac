@@ -113,7 +113,10 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   console.log('── S 段: 静态锁 ──');
   const src = fs.readFileSync(SERVER, 'utf8');
   ok(src.includes("pathname === '/api/mcp/import-config/scan'") && src.includes("pathname === '/api/mcp/import-config/apply'"), 'S1 scan/apply handler 在');
-  ok(src.includes("{ m: 'POST', p: '/api/mcp/import-config/scan', auth: 'token' }"), 'S2 ROUTE_AUTH scan/apply token 条目在');
+  const { ROUTE_AUTH } = require('../ruyi-workbench/app/backend/http-route-policy.cjs');
+  ok(['scan', 'apply'].every(action => ROUTE_AUTH.some(rule =>
+    rule.m === 'POST' && rule.p === '/api/mcp/import-config/' + action && rule.auth === 'token'
+  )), 'S2 scan 和 apply 均受 token 鉴权');
   ok(typeof srv.scanMcpSources === 'function' && typeof srv.parseMcpConfigFile === 'function', 'S3 解析器 export(scanMcpSources/parseMcpConfigFile)');
 
   // ── H 段: HTTP 全路径 ──

@@ -101,17 +101,6 @@ const AGENT_TOOL_NAMES = new Set(['orchestrate_agents', 'wait_agents', 'agent_re
 // 写了就占掉主模型的槽(同回合先到者胜,主模型反而得到 alreadyPending),卡片上还看不出是谁提的。list / read 是只读,留着。
 // offer 面(buildOpenAiTools 的 opts.noMemoryWriteTools)与分发面(08 子代理循环的拒绝分支)共用这一张表。
 const MEMORY_WRITE_TOOL_NAMES = new Set(['workbench_memory_propose', 'workbench_memory_revise', 'workbench_memory_relation_propose', 'workbench_memory_relation_revoke']);
-// 审计 N4:allowCommandTools / allowDesktopTools 不只是「不 offer」—— 分发点也按同一判据拒绝(bypass/auto 下 gate 恒 allow,
-// 光藏 schema 拦不住模型直接吐出的 script_run)。offer 面(buildOpenAiTools)与分发面(09 主循环 / 08 子代理 / 12 toolCall)共用本函数。
-// 返回空串 = 放行;否则是给模型看的中文原因。desktopOverride 语义同 buildOpenAiTools(null = 跟随全局)。
-const NATIVE_COMMAND_TOOL_NAMES = new Set(['shell_run', 'script_run', 'shell_start', 'shell_send', 'shell_poll', 'shell_kill', 'shell_list']);
-const NATIVE_DESKTOP_TOOL_NAMES = new Set(['desktop_screenshot']);
-// 桌面闸的唯一判法(原生与桥接共用):会话级覆盖 desktopOverride 非 null 时以它为准,否则跟随全局 allowDesktopTools。
-function desktopToolsDisabledReason(cfg, desktopOverride) {
-  const allowDesk = desktopOverride == null ? (cfg || {}).allowDesktopTools !== false : desktopOverride === true;
-  if (allowDesk) return '';
-  return desktopOverride === false ? 'desktopTools=false (this session)' : 'allowDesktopTools=false';
-}
 // 能力总闸(allowDesktopTools 的会话级覆盖)要的会话头:回合内的调用 ctx 带 session;MCP 子进程(Claude / Kimi CLI 经如意 MCP)
 // 里 ctx 为空,按注入的 WCW_SESSION_ID 装(与下面桥接分支的 sidSession、journalSessionCtx 同一个来源)。装不到 = null = 跟随全局。
 async function policySessionFor(ctx) {
@@ -125,76 +114,6 @@ async function policyDesktopOverrideFor(ctx) {
   return session ? sessionDesktopToolsOf(session) : null;
 }
 
-function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
-  const cfg = config || {};
-  if (NATIVE_COMMAND_TOOL_NAMES.has(name) && cfg.allowCommandTools === false) return 'allowCommandTools=false';
-  if (NATIVE_DESKTOP_TOOL_NAMES.has(name)) return desktopToolsDisabledReason(cfg, desktopOverride);
-  return '';
-}
-// 2026-10 能力总闸补上桥接面。设置页承诺「关掉之后,对应的工具在所有线程里既不提供给模型、也不会执行」,修前只兑现了上面
-// 两张原生名单 —— 内置桌面 MCP(ACC:serverId 'ai-computer-control',桥接名前缀 ai_computer_control__)的 run_command /
-// screenshot / mouse_click 等在两个开关都关掉之后照常提供、照常执行。下面按 ACC 的【裸工具名】补两族(逐个对过
-// mcp/ai-computer-control/src/ai_computer_control/tools/*.py:平台源码注册名并集 109 件里收 56 件),【只认内置桌面 MCP】—— 外部 MCP 服务器
-// 哪怕有同名工具也不受影响(它们的语义由用户接入时自己负责,工作台不替它猜)。判据收在 toolDisabledByPolicy 一个函数里,
-// offer 面(09 目录 / 08 子代理 / 11 MCP 子进程目录 / 07 createToolLoadingState)与分发面(09 / 08 / 12 代理 / 13d CLI 权限桥)
-// 都调它;CLI 直挂 ACC 的那一路(01 addExternalMcpServersToMap / syncMcpServersToClaude)按同一张表算出 ACC_HIDE_TOOLS 交给
-// ACC 自己在注册表里摘掉。
-//   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 shell_run / script_run / shell_* 同一类能力。
-//     list_processes 只读进程表、不执行任何东西,不收。
-//   桌面族(随 allowDesktopTools 与会话级 desktopTools 覆盖,判法与 NATIVE_DESKTOP_TOOL_NAMES 是同一个 desktopToolsDisabledReason):
-//     按「作用于真实桌面」归类 ——
-//     · screen / capture / mouse / keyboard / window / uia / vision / sync / observe / act_and_verify 全族:读屏、点屏、动键鼠、摆窗口;
-//     · ocr 只收读屏的 ocr_screen / ocr_click / ocr_find_text(后者内部就是 ocr_screen);ocr_image 读的是图片文件、
-//       ocr_available_languages 只列语言包,不收;
-//     · desktop_extra 的像素 / 窗口等待 / 显示器与 DPI 查询;它的 get_clipboard_image / set_clipboard_image 与 clipboard
-//       模块一起按剪贴板算(剪贴板是桌面会话的共享状态,原生 keyboard_send_keys 同族);
-//     · record 全族:record_start 装全局键鼠钩子录下用户的真实输入;macro_list 只列宏文件,但它唯一的用途是喂给 macro_run 回放,随宏族一起关。
-//     名单外的(文件、Office、浏览器自动化、提示音 / 通知弹窗、系统信息、诊断、记忆、fetch)不受影响。
-//   转调器(两个开关【任一】关掉都关):batch_actions / macro_run 按步骤名转调 ACC 实时注册表里的【任意】工具(batch.py
-//     _tool_map,含 run_command / launch_application)—— 只随桌面闸关,它就是命令族的后门;只随命令闸关,反过来也一样。
-const DESKTOP_MCP_SERVER_ID = 'ai-computer-control';
-const ACC_POLICY_TOOL_FAMILIES = Object.freeze({
-  command: Object.freeze(['run_command', 'launch_application', ]),
-  desktop: Object.freeze([
-    'screenshot', 'screenshot_region', 'get_screen_info', // screen
-    'window_screenshot',                                                                                       // capture
-    'mouse_click', 'mouse_move', 'mouse_drag', 'mouse_scroll', 'scroll_at', 'get_mouse_position',              // mouse
-    'type_text', 'press_key', 'hotkey', 'input_sequence', // keyboard
-    'list_windows', 'get_active_window', 'focus_window', 'resize_window', 'move_window',                       // window
-    'minimize_window', 'maximize_window', 'close_window', 'ui_inspect', 'ui_find', 'ui_invoke',                                                                      // uia
-    'find_template', 'find_all_templates', 'vision_click', 'wait_for_image',                                   // vision
-    'ocr_screen', 'ocr_click', 'ocr_find_text',                                                                // ocr(只收读屏的)
-    // sync
-    'list_monitors', 'get_dpi_info',             // desktop_extra
-    'observe', 'act_and_verify',                                                                               // observe / act_and_verify
-    'record_start', 'record_stop', 'macro_list',                                                               // record
-    'get_clipboard', 'set_clipboard', 'get_clipboard_image', 'set_clipboard_image',                            // clipboard
-  ]),
-  dispatcher: Object.freeze(['batch_actions', 'macro_run']),
-});
-const ACC_COMMAND_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.command);
-const ACC_DESKTOP_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.desktop);
-const ACC_DISPATCHER_TOOL_NAMES = new Set(ACC_POLICY_TOOL_FAMILIES.dispatcher);
-// bridge = resolveBridge 的结果 { serverId, toolName }(toolName 是裸名)。不是内置桌面 MCP 的一律放行。
-function bridgedToolDisabledByPolicy(bridge, config, desktopOverride = null) {
-  if (!bridge || bridge.serverId !== DESKTOP_MCP_SERVER_ID) return '';
-  const cfg = config || {};
-  const bare = String(bridge.toolName || '');
-  const commandOff = cfg.allowCommandTools === false;
-  if (ACC_COMMAND_TOOL_NAMES.has(bare)) return commandOff ? 'allowCommandTools=false' : '';
-  if (ACC_DESKTOP_TOOL_NAMES.has(bare)) return desktopToolsDisabledReason(cfg, desktopOverride);
-  if (ACC_DISPATCHER_TOOL_NAMES.has(bare)) return desktopToolsDisabledReason(cfg, desktopOverride) || (commandOff ? 'allowCommandTools=false' : '');
-  return '';
-}
-// 唯一入口:bridge 为空 = 原生工具(按名字判),否则按桥接目标判。返回空串 = 放行,否则是原因(给 toolDisabledResult)。
-function toolDisabledByPolicy(name, config, desktopOverride = null, bridge = null) {
-  return bridge ? bridgedToolDisabledByPolicy(bridge, config, desktopOverride) : nativeToolDisabledByPolicy(name, config, desktopOverride);
-}
-// 这份配置(+ 会话覆盖)下内置桌面 MCP 里被关掉的裸工具名(升序)—— 交给 ACC 的 ACC_HIDE_TOOLS 在注册表里摘掉(CLI 直挂面)。
-function accPolicyHiddenToolNames(config, desktopOverride = null) {
-  const names = [...ACC_POLICY_TOOL_FAMILIES.command, ...ACC_POLICY_TOOL_FAMILIES.desktop, ...ACC_POLICY_TOOL_FAMILIES.dispatcher];
-  return names.filter(n => bridgedToolDisabledByPolicy({ serverId: DESKTOP_MCP_SERVER_ID, toolName: n }, config, desktopOverride)).sort();
-}
 // offer 面:从 [openai fn schema] 里去掉被设置关掉的【桥接】工具(原生工具由 buildOpenAiTools 自己滤)。route 不动 ——
 // 分发面要靠它认出「这是被关掉的 ACC 工具」,回 tool-disabled 而不是 unknown-tool。
 function dropPolicyDisabledBridgedTools(tools, bridgedRoute, config, desktopOverride = null) {
@@ -441,24 +360,6 @@ function bridgedToolTierByName(unprefixedName, config) {
   return 'exec';
 }
 
-const TOOL_PACK_DESCRIPTIONS = Object.freeze({
-  core: 'planning, user questions, Workbench Memory, mission metadata and tool discovery',
-  files_read: 'read, list, search and inspect workspace files',
-  files_write: 'write, edit, delete, copy and move files',
-  code: 'project inspection, code review and git operations',
-  shell: 'Bash, Python/Node scripts and persistent shell sessions',
-  web: 'web search, fetch, HTTP requests and downloads',
-  desktop: 'screenshots, UI inspection and desktop control',
-  office: 'Excel, Word, PowerPoint and PDF document operations',
-  archive: 'zip and unzip archives',
-  agents: 'sub-agents and workflow orchestration',
-  skills: 'list installed skills and Playbooks, read enabled skill instructions and Playbook steps',
-  integrations: 'inspect and configure MCP connectors and browser targets',
-  memory: 'Workbench Memory maintenance: propose relations between memories, revise a confirmed memory, revoke a relation (plus external memory_save/read/list/delete)',
-  thinking: 'step-by-step reasoning chains and sequential thinking',
-  // 116c: 管家专属包。只对 kind==='steward' 的会话 offer(四个 offer 面各自门控),普通会话永不进入。
-  steward: 'workbench steward: observe threads, delegate work, decide pending items and keep steward memory',
-});
 // 2026-10 起手工具:模型服务商回合的按需装载里,不论这句话分到哪些包,第一发就带上的几个原生工具(相当于给 core 扩一小圈;
 // 不改 core 包本身 —— core 同时决定 Claude CLI 的 MCP 工具清单,而 CLI 有自己的 Read/WebSearch/WebFetch/Bash)。
 // 依据(本机 4 天真实调用):联网 web_search + web_fetch 占全部工具调用的六成多(147/230),3 个会话里 2 个用到;
@@ -2046,60 +1947,6 @@ function neutralizeInjectedPrefixes(s) {
   } catch { return String(s == null ? '' : s); }
 }
 
-function projectAgentRoleFile(cwd) { return path.join(path.resolve(cwd), '.ruyi', 'agents.json'); }
-async function readProjectAgentRoles(cwd) {
-  const file = projectAgentRoleFile(cwd);
-  try {
-    const st = await fsp.stat(file); if (!st.isFile() || st.size > 512 * 1024) return [];
-    const parsed = safeJsonParse(await fsp.readFile(file, 'utf8'), null);
-    const rawRoles = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.roles) ? parsed.roles : []);
-    return rawRoles.map(r => normalizeAgentRole(r, { source: 'project' })).filter(Boolean).slice(0, 32);
-  } catch { return []; }
-}
-function parseSimpleYamlValue(value) {
-  const s = String(value || '').trim();
-  if (s.startsWith('[') && s.endsWith(']')) return s.slice(1, -1).split(',').map(v => v.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
-  if (/^(true|false)$/i.test(s)) return s.toLowerCase() === 'true';
-  if (/^\d+$/.test(s)) return Number(s);
-  return s.replace(/^['"]|['"]$/g, '');
-}
-async function readClaudeProjectAgentRoles(cwd) {
-  const dir = path.join(path.resolve(cwd), '.claude', 'agents');
-  let files = []; try { files = await fsp.readdir(dir); } catch { return []; }
-  const out = [];
-  for (const file of files.filter(f => /\.md$/i.test(f)).slice(0, 32)) {
-    try {
-      const raw = await fsp.readFile(path.join(dir, file), 'utf8'); if (raw.length > 128 * 1024) continue;
-      const m = /^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n([\s\S]*)$/m.exec(raw); if (!m) continue;
-      const fm = {};
-      for (const line of m[1].split(/\r?\n/)) { const hit = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line); if (hit) fm[hit[1]] = parseSimpleYamlValue(hit[2]); }
-      const role = normalizeAgentRole({
-        id: fm.name || path.basename(file, '.md'), label: fm.name || path.basename(file, '.md'), description: fm.description || '', prompt: m[2].trim(),
-        claudeModel: fm.model || 'inherit', claudeTools: Array.isArray(fm.tools) ? fm.tools : (typeof fm.tools === 'string' ? fm.tools.split(',').map(s => s.trim()) : []),
-        permissionMode: fm.permissionMode === 'bypassPermissions' ? 'bypass' : fm.permissionMode, maxTurns: fm.maxTurns, mcpServers: Array.isArray(fm.mcpServers) ? fm.mcpServers : [], isolation: fm.isolation,
-      }, { source: 'claude-project' });
-      if (role) { role.nativeClaude = true; role.file = path.join(dir, file); out.push(role); }
-    } catch { /* malformed native agent stays Claude's concern */ }
-  }
-  return out;
-}
-// 安全走查 S3:opts.parentMode = 调用方认的父回合档位(缺省取 config.permissionMode —— 回合内的 config 已解析成这条线程的档)。
-// 项目来源的角色(.ruyi/agents.json / .claude/agents)在返回时带上【有效档位】标注(effectivePermissionMode / effectiveToolTier / roleClamped),
-// 角色自己声明的 permissionMode / toolTier 原样保留(设置页编辑器原样存回);真正的夹紧在子代理起跑处(08 / 07)按那一刻的父档再算一次。
-async function getAgentRoleLibrary(cwd, config, opts) {
-  const merged = new Map();
-  for (const raw of BUILTIN_AGENT_ROLES) { const role = normalizeAgentRole(raw, { source: 'builtin', builtin: true }); merged.set(role.id, role); }
-  for (const role of (Array.isArray(config.agentRoleOverrides) ? config.agentRoleOverrides : [])) {
-    const current = merged.get(role.id); merged.set(role.id, current ? mergeAgentRole(current, role, 'global') : normalizeAgentRole(role, { source: 'global' }));
-  }
-  for (const role of await readProjectAgentRoles(cwd)) {
-    const current = merged.get(role.id); merged.set(role.id, current ? mergeAgentRole(current, role, 'project') : role);
-  }
-  const claudeNative = await readClaudeProjectAgentRoles(cwd);
-  for (const role of claudeNative) if (!merged.has(role.id)) merged.set(role.id, role);
-  const parentMode = (opts && opts.parentMode) || (config && config.permissionMode) || 'default';
-  return [...merged.values()].filter(Boolean).map(role => annotateAgentRoleEffective(role, parentMode));
-}
 // 项目级写入(.ruyi/agents.json、.ruyi/workflows.json)的 cwd 来自请求体:目录不存在或是个文件时,下面的 mkdir 会抛
 // ENOTDIR / EEXIST,路由兜底成 500,还把带宿主路径的 errno 原文回给前端。写前先 stat 一下:不是目录就回 400 人话
 // (不回显路径)。返回 null = 可写;否则是一份 apiFailure 响应,调用方直接 send。
@@ -2107,46 +1954,6 @@ async function projectCwdDirectoryFailure(cwd) {
   try { if ((await fsp.stat(path.resolve(String(cwd || '')))).isDirectory()) return null; } catch { /* 不存在:同样按「不是目录」答 */ }
   return apiFailure('project.cwd_not_directory', {}, '工作文件夹不存在或不是目录,无法保存项目级配置', 400);
 }
-async function saveProjectAgentRoles(cwd, roles) {
-  const file = projectAgentRoleFile(cwd), dir = path.dirname(file);
-  await fsp.mkdir(dir, { recursive: true });
-  const payload = { schemaVersion: 1, roles: roles.map(r => normalizeAgentRole(r, { source: 'project' })).filter(Boolean).slice(0, 32) };
-  await atomicWriteJson(file, payload);   // 25.1 收编
-  return payload.roles;
-}
-function claudePermissionMode(mode) {
-  // v1.4.3: use the unified CLAUDE_PERMISSION_MODE_MAP; 'inherit' maps to undefined (omit from agent JSON)
-  if (mode === 'inherit') return undefined;
-  return CLAUDE_PERMISSION_MODE_MAP[mode] || mode;
-}
-async function buildClaudeAgentDefinitions(cwd, config, jsonBudget = 6000) {
-  const roles = (await getAgentRoleLibrary(cwd, config)).filter(r => !r.nativeClaude);
-  const definitions = {};
-  for (const role of roles) {
-    const d = { description: role.description || role.label, prompt: role.prompt || role.description || role.label };
-    if (role.claudeTools && role.claudeTools.length) d.tools = role.claudeTools;
-    if (role.models && role.models.claude && role.models.claude !== 'inherit') d.model = role.models.claude;
-    // 安全走查 S3:项目来源的角色把权限档夹到不高于这一回合的线程档位再交给 CLI(CLI 的 --agents 子代理按这个档起跑,不夹就能靠项目角色放宽)。
-    const pm = claudePermissionMode(clampAgentRoleToParent(role, role.toolTier, config && config.permissionMode).permissionMode || role.permissionMode); if (pm) d.permissionMode = pm;
-    if (role.mcpServers && role.mcpServers.length) d.mcpServers = role.mcpServers;
-    if (role.budgets && role.budgets.claude) d.maxTurns = role.budgets.claude;
-    if (role.isolation === 'worktree') d.isolation = 'worktree';
-    if (role.color) d.color = role.color;
-    definitions[role.id] = d;
-  }
-  // Windows .cmd launchers go through cmd.exe, whose command-line limit is small. Keep definitions
-  // deterministic and bounded; project-native .claude/agents remain available independently.
-  // cmd8191 防线: jsonBudget 由调用方按整行剩余预算动态给出(默认 6000 维持原契约);预算收紧时按角色
-  // 库顺序确定性取舍,放不下的进 omitted(meta 事件上报,用户可见)。
-  const budget = Math.max(0, Math.min(6000, Math.floor(Number(jsonBudget) || 0)));
-  const selected = {}, omitted = [];
-  for (const [id, def] of Object.entries(definitions)) {
-    const candidate = { ...selected, [id]: def };
-    if (JSON.stringify(candidate).length <= budget) selected[id] = def; else omitted.push(id);
-  }
-  return { definitions: selected, omitted, roles };
-}
-
 // Tool-tier → Claude native tool allowlist for a DAG node with no explicit role (or a role that leaves
 // claudeTools empty), mirroring the OpenAI subagent's tierFilter hard cap (buildOpenAiTools): 'read' can
 // never mutate, 'edit' adds file writes, 'exec' is intentionally unrestricted — the same shape as the

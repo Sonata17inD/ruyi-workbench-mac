@@ -144,4 +144,10 @@ function mergeAgentRole(base, override, source) {
   return merged;
 }
 
-module.exports = { BUILTIN_AGENT_ROLES, CLAUDE_PERMISSION_MODE_MAP, PERMISSION_MODES, PERMISSION_MODES_REQUIRING_CONFIRM, PERMISSION_MODE_ALIASES, agentRoleIsUntrusted, annotateAgentRoleEffective, clampAgentRoleToParent, mergeAgentRole, normalizeAgentRole, permissionModeFrom, resolvePermissionMode };
+function claudePermissionMode(mode) {
+  // v1.4.3: use the unified CLAUDE_PERMISSION_MODE_MAP; 'inherit' maps to undefined (omit from agent JSON)
+  if (mode === 'inherit') return undefined;
+  return CLAUDE_PERMISSION_MODE_MAP[mode] || mode;
+}
+
+module.exports = { claudePermissionMode, BUILTIN_AGENT_ROLES, CLAUDE_PERMISSION_MODE_MAP, PERMISSION_MODES, PERMISSION_MODES_REQUIRING_CONFIRM, PERMISSION_MODE_ALIASES, agentRoleIsUntrusted, annotateAgentRoleEffective, clampAgentRoleToParent, mergeAgentRole, normalizeAgentRole, permissionModeFrom, resolvePermissionMode };

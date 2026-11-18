@@ -237,6 +237,9 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
+const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');
+const { _expandMcpVar, _tomlKeyPath, _parseTomlMcpServers, parseMcpConfigFile, scanMcpSources } = require('./backend/mcp-config-import.cjs');
 const { ssrfCheck } = require('./backend/network-policy.cjs');
 const { httpGetGuarded } = require('./backend/http-transport.cjs');
 const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
@@ -416,6 +419,7 @@ function hashArgs(args) {
 
 const { AUTOEXEC_DENYLIST } = require('./backend/autoexec-paths.cjs');
 const { NATIVE_TOOL_TIER, nativeToolTier } = require('./backend/native-tool-tiers.cjs');
+const { cliBridgeToolTier } = require('./backend/cli-tool-tiers.cjs');
 const {
   ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
   isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,

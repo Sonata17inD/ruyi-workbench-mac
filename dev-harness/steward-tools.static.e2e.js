@@ -299,7 +299,8 @@ const tierBad = STEWARD_TOOLS.filter(n => srv.NATIVE_TOOL_TIER[n] !== EXPECTED_T
 ok(tierBad.length === 0, '④ tier 分档符合 §3.5(观察 read / 线程 edit / 决策 exec / 记忆 edit)' + (tierBad.length ? ' → ' + tierBad.map(n => `${n}:${srv.NATIVE_TOOL_TIER[n]}`).join(',') : ''));
 const packBad = STEWARD_TOOLS.filter(n => srv.NATIVE_TOOL_PACKS[n] !== 'steward');
 ok(packBad.length === 0, "④ 全部 steward_* 归 pack 'steward'" + (packBad.length ? ' → ' + packBad.join(',') : ''));
-ok(/steward: 'workbench steward:/.test(src07), "④ TOOL_PACK_DESCRIPTIONS 含 steward 包说明");
+const { TOOL_PACK_DESCRIPTIONS } = require('../ruyi-workbench/app/backend/tool-access-policy.cjs');
+ok(typeof TOOL_PACK_DESCRIPTIONS.steward === 'string' && TOOL_PACK_DESCRIPTIONS.steward.startsWith('workbench steward:'), '④ TOOL_PACK_DESCRIPTIONS 含 steward 包说明');
 // 普通会话的 pack 路由永远不会命中 steward 包(四个 offer 面在包路由之前就拦掉了);这里锁「包名唯一来源」。
 ok(srv.toolPackForName('steward_decide', {}) === 'steward', "④ toolPackForName('steward_decide') === 'steward'");
 

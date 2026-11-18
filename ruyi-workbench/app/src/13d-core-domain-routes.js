@@ -1629,7 +1629,7 @@ async function handleInterventionApiRoutes(req, res, pathname) {
     // 「无法自动撤销」(correct: CLI-native edits don't pass through toolCall → aren't journaled).
     // 第27波:CLI 桥授权书消耗点。命中直接 allow —— 连 permission_request 事件都不发(免弹窗静默放行)。工具名按 CLI
     // 弹窗实际显示的 Claude 名(Bash/Edit/Write)匹配,与签发卡片同名口径。范围外回落到下方正常弹窗。session 仅需 .id。
-    const bridgeTier = Object.prototype.hasOwnProperty.call(CLI_TOOL_TIER, String(body.toolName || '')) ? CLI_TOOL_TIER[String(body.toolName)] : nativeToolTier(String(body.toolName || ''));   // CLI 报的是 Claude 名(Edit/Write/Bash),查 CLI 表;修前查原生表,一律落成 exec
+    const bridgeTier = cliBridgeToolTier(String(body.toolName || ''));
     // 117m-A3(配 A1 的 D1):高风险判据要吃到工具名与入参,否则 CLI 桥这一侧的 auto 档还是老口径。
     // 审计 C:按【这一回合】的实效档判,不按全局档。runClaudeTurn 登记活回合时记下了 spawn CLI 用的解析档
     // (请求级 > 会话级 > 全局,10 runSessionTurn 解析);修前读 config.permissionMode —— 全局 auto 时,一条被

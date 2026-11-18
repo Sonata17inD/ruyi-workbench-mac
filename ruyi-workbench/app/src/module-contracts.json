@@ -16,6 +16,7 @@
       "file": "00-boot.js",
       "layer": "bootstrap",
       "provides": [
+        "ACC_POLICY_TOOL_FAMILIES",
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
         "AUTOEXEC_DENYLIST",
@@ -27,6 +28,7 @@
         "CONTEXT_WINDOW_FALLBACK",
         "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
+        "DESKTOP_MCP_SERVER_ID",
         "DeliveryHooks",
         "DesktopExecutionHooks",
         "EventStreamHooks",
@@ -36,6 +38,8 @@
         "MAX_BODY_BYTES",
         "MCP_TOOLS",
         "MigrationHooks",
+        "NATIVE_COMMAND_TOOL_NAMES",
+        "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
@@ -49,22 +53,29 @@
         "SessionExecutionHooks",
         "StringDecoder",
         "SubAgentMemoryHooks",
+        "TOOL_PACK_DESCRIPTIONS",
         "TOOL_TIER_RANK",
         "URL",
         "VERSION",
         "_dataRootMemo",
+        "_expandMcpVar",
+        "_parseTomlMcpServers",
+        "_tomlKeyPath",
+        "accPolicyHiddenToolNames",
         "adaptiveMetaToolSchemas",
         "agentCliHomes",
         "apiFailure",
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
+        "bridgedToolDisabledByPolicy",
         "bridgedWriteRelativePathArg",
         "cacheContextLength",
         "cachedContextLength",
         "cachedInputTokensFromUsage",
         "classifyTextForEstimate",
         "claudeCostFields",
+        "cliBridgeToolTier",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
         "collectDisplayUrlRestores",
@@ -124,13 +135,16 @@
         "maskedSecretConflicts",
         "mcpArgsForDisplay",
         "migrateLegacyDataRoot",
+        "nativeToolDisabledByPolicy",
         "nativeToolTier",
         "neutralizeFenceTag",
         "normalizeApiErrorPayload",
         "normalizeCwd",
         "normalizePricing",
+        "normalizeStoragePolicy",
         "nowIso",
         "os",
+        "parseMcpConfigFile",
         "path",
         "pathToFileURL",
         "pathWithinAnyRoot",
@@ -155,6 +169,7 @@
         "samePathEntry",
         "samePathKey",
         "sanitizeExternalMcpServer",
+        "scanMcpSources",
         "send",
         "sendError",
         "sensitiveDataRoots",
@@ -166,6 +181,7 @@
         "text",
         "tildePath",
         "tokensFromTextCounts",
+        "toolDisabledByPolicy",
         "unmaskProviders",
         "unmaskSecrets",
         "zlib"
@@ -269,6 +285,7 @@
         "agentRoleIsUntrusted",
         "annotateAgentRoleEffective",
         "clampAgentRoleToParent",
+        "claudePermissionMode",
         "mergeAgentRole",
         "normalizeAgentRole",
         "permissionModeFrom",
@@ -313,18 +330,24 @@
         "ProcessRuntime",
         "ProcessRuntimeHooks",
         "RgProbe",
+        "existsExecutable",
+        "existsExecutableAsync",
         "gitReadOnlyGuard",
         "hasRg",
         "hasRgAsync",
         "killChildTree",
         "killPosixChildTree",
         "peekRgProbe",
+        "probeGitCli",
+        "probeGitCliAsync",
         "probeRg",
         "probeRgAsync",
         "probeRgInfoSync",
         "processHelperPath",
         "rgProbeCandidates",
-        "runGit"
+        "runGit",
+        "spawnProbeAsync",
+        "spawnProbeSync"
       ],
       "requires": [
         {
@@ -735,6 +758,7 @@
       "file": "01-config.js",
       "layer": "foundation",
       "provides": [
+        "ACC_MEMORY_IMPORT_SCHEMA",
         "AGENT_CLI_HOST",
         "BRIDGED_CLI_ENV_BLANK_KEYS",
         "BRIDGED_ENV_DROP",
@@ -765,6 +789,7 @@
         "THREAD_INDEX_RECENT_DEFAULT",
         "THREAD_INDEX_RECENT_MAX",
         "THREAD_INDEX_RECENT_MIN",
+        "ToolboxRegistry",
         "WORKSPACE_NOTE_MAX",
         "WORKSPACE_TABLE_CAP",
         "_agentCliLauncherOk",
@@ -773,6 +798,7 @@
         "_claudePathProbe",
         "_cliProbeGeneration",
         "_cliProbeRefreshing",
+        "accMemoryImportStore",
         "addExternalMcpServersToMap",
         "agentCliInstallCandidates",
         "agentCliLauncherOk",
@@ -790,6 +816,7 @@
         "bootCliPathProbes",
         "bridgedCliServerEnv",
         "bridgedEnvKeyStripped",
+        "buildClaudeAgentDefinitions",
         "buildClaudeCliEnv",
         "buildModelHint",
         "buildUserEnvelope",
@@ -851,6 +878,7 @@
         "detectKimiPath",
         "discoverModels",
         "effectiveAnthropicEnv",
+        "enabledToolboxComponents",
         "ensureDesktopMcpWarm",
         "ensureDirsForConfigRead",
         "externalServerJs",
@@ -860,12 +888,15 @@
         "generateAgentNodeMcpConfig",
         "generateMcpConfig",
         "generateSessionMcpConfig",
+        "getAgentRoleLibrary",
         "getProxyModelsCache",
         "hostAllowed",
         "invalidateAgentCliPathCaches",
         "invalidateClaudePathCache",
+        "invalidateMcpDropInCache",
         "isAskUserTool",
         "isDesktopMcpRepo",
+        "isEquivalentDesktopAccServer",
         "isKimiCodingEndpoint",
         "isLoopbackAddress",
         "isLoopbackBindHost",
@@ -873,8 +904,10 @@
         "kimiMcpSyncChains",
         "lastGoodConfig",
         "lastGoodCredentialEncryptionV1",
+        "legacyAccMemoryMigrationComplete",
         "looksLikeRuyiSelfMcp",
         "mcpConfigFilePath",
+        "mcpDropInDirs",
         "modelCapabilityTier",
         "mutateConfig",
         "normalizeConfig",
@@ -894,29 +927,33 @@
         "probeAgentCliLauncherVerdictAsync",
         "probeDesktopPython",
         "probeDesktopPythonAsync",
+        "projectAgentRoleFile",
         "queueBootCliPathProbe",
+        "readClaudeProjectAgentRoles",
         "readConfig",
         "readConfigPrev",
         "readDesktopPythonDiskEntries",
         "readDesktopPythonDiskEntry",
         "readFileTail",
         "readInstallRegistry",
+        "readProjectAgentRoles",
         "readUserJsonObjectForMerge",
         "recordInstallLaunch",
         "refreshInBackground",
         "requestIsLoopback",
+        "resolveExternalMcpServers",
         "resolveKimiNpmEntry",
         "resolveNodeModel",
         "safeSessionId",
         "sanitizeLastUsedEngineRoute",
+        "saveProjectAgentRoles",
+        "scanMcpDropIns",
         "selectedAgentCli",
         "serveStatic",
         "sessionMcpConfigSweepDone",
         "sessionPath",
         "sessionsDirOwnWriteSeq",
         "setProxyModelsCache",
-        "spawnProbeAsync",
-        "spawnProbeSync",
         "staticBase",
         "stewardManagedWorkspaceKey",
         "sweepStaleScriptFiles",
@@ -930,6 +967,7 @@
         "tierModelForNode",
         "tokenMatches",
         "tokenOk",
+        "toolboxComponentsDir",
         "waitForBootCliPathProbes",
         "writeConfig",
         "writeConfigAtomic",
@@ -938,6 +976,13 @@
         "writeToChild"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "accPolicyHiddenToolNames",
+          "kinds": [
+            "call"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
@@ -982,7 +1027,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "dataRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "DEFAULT_PORT",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "DESKTOP_MCP_SERVER_ID",
           "kinds": [
             "read"
           ]
@@ -1027,7 +1086,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1040,6 +1100,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "normalizePricing",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeStoragePolicy",
           "kinds": [
             "call"
           ]
@@ -1097,7 +1164,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1111,6 +1179,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "sanitizeExternalMcpServer",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "scanMcpSources",
           "kinds": [
             "call"
           ]
@@ -1132,6 +1207,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "text",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "TOOL_PACK_DESCRIPTIONS",
           "kinds": [
             "read"
           ]
@@ -1183,6 +1265,13 @@
           "symbol": "CLAUDE_PERMISSION_MODE_MAP",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01e-permission-modes.js",
+          "symbol": "claudePermissionMode",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -1250,9 +1339,30 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "spawnProbeAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "spawnProbeSync",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -1263,73 +1373,10 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "scanMcpSources",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "sanitizeProvider",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "accPolicyHiddenToolNames",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "claudePermissionMode",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "DESKTOP_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "TOOL_PACK_DESCRIPTIONS",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -2353,7 +2400,6 @@
         "BRIDGED_WRITE_AUDIT_EXEMPT",
         "BRIDGED_WRITE_NAME_PATTERN",
         "EXTERNAL_DIFF_CACHE_TTL_MS",
-        "GITCLI_CACHE_MS",
         "MAC_MANAGED_ROOTS",
         "OFFICE_WRITER_LIB_RE",
         "OS_CRITICAL_ROOTS",
@@ -2380,7 +2426,6 @@
         "WRITE_PROTECTED_DATA_DIRS",
         "WRITE_PROTECTED_DATA_FILES",
         "WriteBoundaryHooks",
-        "_gitCliProbe",
         "_homeRealCache",
         "auditBridgedWriteCoverage",
         "bridgedOfficeScriptGate",
@@ -2394,8 +2439,6 @@
         "cleanupExternalDiffCache",
         "cwdWarning",
         "deviceNamespaceIsLocalVolume",
-        "existsExecutable",
-        "existsExecutableAsync",
         "fileAllowedRoots",
         "guardFileToolPath",
         "guardWorkspaceExecute",
@@ -2415,8 +2458,6 @@
         "normalizeAutoexecPath",
         "normalizeGuardPath",
         "preflightWriteBoundary",
-        "probeGitCli",
-        "probeGitCliAsync",
         "providerIsLocal",
         "readFilePreview",
         "readdirTimed",
@@ -2629,6 +2670,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "mcpDropInDirs",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "call"
@@ -2636,14 +2684,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "spawnProbeAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "spawnProbeSync",
+          "symbol": "toolboxComponentsDir",
           "kinds": [
             "call"
           ]
@@ -2684,20 +2725,6 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "mcpDropInDirs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "toolboxComponentsDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
@@ -2732,11 +2759,7 @@
         "LIVE_TAIL_CHARS",
         "LIVE_TOOLS_MAX",
         "MCP_COMPAT_MATRIX",
-        "MCP_CONFIG_JSON_MAX_BYTES",
-        "MCP_CONFIG_OTHER_MAX_BYTES",
         "MCP_CONNECTOR_ID_RE",
-        "MCP_DROPIN_CACHE_MS",
-        "MCP_DROPIN_MAX",
         "MCP_DROPIN_SHADOW_WARNING",
         "MCP_FAILURE_COOLDOWN_MS",
         "McpHttpClient",
@@ -2746,17 +2769,7 @@
         "PROMPT_WAIT_UNLIMITED_MS",
         "PermissionWaitHooks",
         "ToolboxHooks",
-        "ToolboxRegistry",
-        "_dropInCache",
-        "_expandMcpVar",
         "_nativeToolNameSet",
-        "_parseTomlMcpServers",
-        "_tomlDepth",
-        "_tomlKeyPath",
-        "_tomlScan",
-        "_tomlSplitTop",
-        "_tomlStripComment",
-        "_tomlValue",
         "appendLiveTail",
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
@@ -2784,7 +2797,6 @@
         "deltaOf",
         "discoverKimiModels",
         "driverAutoSessions",
-        "enabledToolboxComponents",
         "extendUserQuestion",
         "formatQuestionGuidance",
         "getBridgedClient",
@@ -2793,10 +2805,8 @@
         "hasPendingQuestionForSession",
         "installActiveChildEventFanout",
         "interventionCommandFailure",
-        "invalidateMcpDropInCache",
         "invalidateMcpRuntime",
         "isClaudeResumeMissingError",
-        "isEquivalentDesktopAccServer",
         "isNativeToolName",
         "killAllMcpClients",
         "kimiModelList",
@@ -2811,9 +2821,7 @@
         "mcpClientPending",
         "mcpClients",
         "mcpConnectorMutateError",
-        "mcpDropInDirs",
         "mcpEntryFingerprint",
-        "mcpRuntimeCommon",
         "mcpShortHash",
         "mcpStartingClients",
         "mcpToolAllowed",
@@ -2828,7 +2836,6 @@
         "parseClaudeEvent",
         "parseClaudeTaskNotification",
         "parseKimiStreamJsonEvent",
-        "parseMcpConfigFile",
         "permissionWaitMs",
         "probeDesktopExecutionReceipts",
         "probeMcpConnector",
@@ -2841,14 +2848,11 @@
         "requestSessionExecutionStop",
         "requestUserQuestion",
         "resolveBridge",
-        "resolveExternalMcpServers",
         "runAutomaticInterventionDecision",
         "safeMcpInventory",
         "sameClaudeResumeCwd",
         "sanitizeFsSegmentName",
         "sanitizeServerId",
-        "scanMcpDropIns",
-        "scanMcpSources",
         "sessionExecutionCheck",
         "sessionExecutionCheckRewind",
         "sessionExecutionObservation",
@@ -2856,11 +2860,17 @@
         "splitMcpArgsString",
         "stopSession",
         "subscribeActiveChildEvents",
-        "toolboxComponentsDir",
         "turnOutcomePending",
         "validateBrowserTargetPatch"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "_expandMcpVar",
+          "kinds": [
+            "read"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "collectDisplayUrlRestores",
@@ -2873,13 +2883,6 @@
           "symbol": "crypto",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -2912,20 +2915,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "externalRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
@@ -2935,8 +2924,7 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -3097,6 +3085,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "enabledToolboxComponents",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "ensureDesktopMcpWarm",
           "kinds": [
             "call"
@@ -3105,6 +3100,13 @@
         {
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "invalidateMcpDropInCache",
           "kinds": [
             "call"
           ]
@@ -3132,9 +3134,23 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "scanMcpDropIns",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -3236,13 +3252,6 @@
           "kinds": [
             "read"
           ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "legacyAccMemoryMigrationComplete",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
@@ -3287,6 +3296,13 @@
           ]
         },
         {
+          "provider": "01-config.js",
+          "symbol": "ToolboxRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
@@ -3303,13 +3319,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "ToolboxRegistry",
           "kinds": [
             "read"
           ]
@@ -3521,6 +3530,13 @@
         {
           "provider": "01-config.js",
           "symbol": "agentCliLauncherUsable",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
             "call"
           ]
@@ -4243,13 +4259,6 @@
         {
           "provider": "06e-mission-domain.js",
           "symbol": "buildMissionPromptSection",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
             "call"
           ]
@@ -5043,7 +5052,6 @@
         "neutralizeAuthoredText",
         "normalizeMetricsPath",
         "normalizePlaybook",
-        "normalizeStoragePolicy",
         "parseThreadBrief",
         "peekCapabilities",
         "playbookReuseSources",
@@ -5184,6 +5192,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "normalizeStoragePolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call",
@@ -5279,6 +5294,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "RUNTIME",
           "kinds": [
             "read"
@@ -5309,6 +5331,20 @@
         {
           "provider": "01f-agent-cli-types.js",
           "symbol": "isAgentCliType",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeGitCliAsync",
           "kinds": [
             "call"
           ]
@@ -5393,20 +5429,6 @@
           ]
         },
         {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "probeGitCliAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
           "kinds": [
@@ -5425,13 +5447,6 @@
           "symbol": "mcpClients",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5744,7 +5759,6 @@
       "file": "06d-memory-domain.js",
       "layer": "engine",
       "provides": [
-        "ACC_MEMORY_IMPORT_SCHEMA",
         "AGENT_INSTRUCTION_CHUNK_CHARS",
         "AGENT_INSTRUCTION_CORE_PARTS",
         "AGENT_INSTRUCTION_IMPORT_SCHEMA",
@@ -5775,8 +5789,6 @@
         "MemoryRecall",
         "MemoryRelations",
         "MemoryStore",
-        "accMemoryImportMarker",
-        "accMemoryImportStore",
         "agentInstructionChain",
         "agentInstructionImportFile",
         "agentInstructionImportStore",
@@ -5812,7 +5824,6 @@
         "inspectAgentInstructionEntries",
         "isMemoryRelationType",
         "legacyAccMemoryCandidates",
-        "legacyAccMemoryMigrationComplete",
         "listMemoryProjectGroups",
         "listMemoryRelations",
         "listWorkbenchMemories",
@@ -6053,6 +6064,20 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "ACC_MEMORY_IMPORT_SCHEMA",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "accMemoryImportStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
             "call",
@@ -6064,6 +6089,13 @@
           "symbol": "DurableJsonStore",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "legacyAccMemoryMigrationComplete",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6538,10 +6570,6 @@
       "file": "07-autonomy.js",
       "layer": "orchestration",
       "provides": [
-        "ACC_COMMAND_TOOL_NAMES",
-        "ACC_DESKTOP_TOOL_NAMES",
-        "ACC_DISPATCHER_TOOL_NAMES",
-        "ACC_POLICY_TOOL_FAMILIES",
         "ACTION_VIEW_MIN_CHARS",
         "ACTION_VIEW_TOOLS",
         "AGENT_TOOL_NAMES",
@@ -6559,7 +6587,6 @@
         "CLAUDE_SUBAGENT_TIER_DENY",
         "CLAUDE_SUBAGENT_TIER_RANK",
         "CLAUDE_SUBAGENT_TIER_TOOLS",
-        "DESKTOP_MCP_SERVER_ID",
         "FAILOVER_CONNECT_CODES",
         "FAILOVER_HTTP_STATUSES",
         "LOOP_GUARD_LIMITS",
@@ -6569,8 +6596,6 @@
         "MAIL_QUEUE_MAX",
         "MAIL_TEXT_MAX",
         "MEMORY_WRITE_TOOL_NAMES",
-        "NATIVE_COMMAND_TOOL_NAMES",
-        "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
         "POOL_CHAIN_MAX",
         "POOL_GRACE_MS",
@@ -6586,7 +6611,6 @@
         "STEER_QUEUE_MAX",
         "TOOL_ARGS_BRIEF_CHARS",
         "TOOL_ARG_ENUM_VALUE_CHARS",
-        "TOOL_PACK_DESCRIPTIONS",
         "TOOL_RETRIEVAL_HINTS",
         "TOOL_SCHEMA_NAMES_MAX",
         "TOOL_SEARCH_EMPTY_NOTE",
@@ -6595,35 +6619,29 @@
         "WEB_PAYLOAD_QUERY_TOOLS",
         "WEB_PAYLOAD_URL_TOOLS",
         "_nativeToolSchemaByName",
-        "accPolicyHiddenToolNames",
         "actionTargetMeta",
         "agentRunDir",
         "agentRunFile",
         "bridgedCallTierFloor",
         "bridgedShadowNative",
         "bridgedToolAliases",
-        "bridgedToolDisabledByPolicy",
         "bridgedToolTier",
         "bridgedToolTierByName",
         "buildActionEnvelope",
         "buildCallHint",
-        "buildClaudeAgentDefinitions",
         "buildOpenAiTools",
         "buildToolCatalog",
         "classifyClaudeSubagentFailure",
         "classifyRuntimeToolFailure",
         "classifyToolPacks",
-        "claudePermissionMode",
         "claudeSubagentPermission",
         "compareToolRetrievalShadow",
         "createToolLoadingState",
-        "desktopToolsDisabledReason",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
         "failoverConnectReason",
         "failoverStickyBase",
         "fetchOpenAiModels",
-        "getAgentRoleLibrary",
         "hasInterruptingSteer",
         "httpRequestInternalTargetReason",
         "legacyToolCatalogSearch",
@@ -6631,7 +6649,6 @@
         "looksLikePlan",
         "loopAbortExempt",
         "loopWarnOnly",
-        "nativeToolDisabledByPolicy",
         "nativeToolGate",
         "nativeToolSchema",
         "nativeToolsAcceptingArgKeys",
@@ -6639,16 +6656,12 @@
         "normalizeToolSearchText",
         "openAiStreamOnce",
         "packDescriptionsFor",
-        "parseSimpleYamlValue",
         "policyDesktopOverrideFor",
         "policySessionFor",
         "probeProviderCompletion",
         "projectActionModelView",
-        "projectAgentRoleFile",
         "projectCwdDirectoryFailure",
         "rankToolCatalog",
-        "readClaudeProjectAgentRoles",
-        "readProjectAgentRoles",
         "requestNativePermission",
         "requestPlanApproval",
         "resumeInFlight",
@@ -6656,7 +6669,6 @@
         "runClaudeSubAgentOnce",
         "runtimeToolBlockedReason",
         "sanitizeToolSchemaNames",
-        "saveProjectAgentRoles",
         "schedulerAskWaitOverrideMs",
         "schedulerAskWaitSessions",
         "searchToolCatalog",
@@ -6665,7 +6677,6 @@
         "toolArgTypeText",
         "toolArgsResolveRef",
         "toolArgsSkeleton",
-        "toolDisabledByPolicy",
         "toolDisabledResult",
         "toolIsRevertible",
         "toolPackForName",
@@ -6699,6 +6710,13 @@
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "bridgedToolDisabledByPolicy",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6788,6 +6806,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nativeToolTier",
           "kinds": [
             "call"
@@ -6845,6 +6870,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "TOOL_PACK_DESCRIPTIONS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "TOOL_TIER_RANK",
           "kinds": [
             "read"
@@ -6853,13 +6885,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
           "kinds": [
             "call"
           ]
@@ -6929,20 +6954,6 @@
         },
         {
           "provider": "01e-permission-modes.js",
-          "symbol": "annotateAgentRoleEffective",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "BUILTIN_AGENT_ROLES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
           "symbol": "clampAgentRoleToParent",
           "kinds": [
             "call"
@@ -6950,21 +6961,14 @@
         },
         {
           "provider": "01e-permission-modes.js",
-          "symbol": "CLAUDE_PERMISSION_MODE_MAP",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "mergeAgentRole",
+          "symbol": "claudePermissionMode",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "01e-permission-modes.js",
-          "symbol": "normalizeAgentRole",
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
           "kinds": [
             "call"
           ]
@@ -7063,13 +7067,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "buildAttachmentPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
           "kinds": [
             "call"
           ]
@@ -7546,6 +7543,13 @@
           "symbol": "TOOL_TIER_RANK",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8078,13 +8082,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "toolDisabledByPolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "toolDisabledResult",
           "kinds": [
             "call"
@@ -8466,8 +8463,22 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "buildModelHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "getAgentRoleLibrary",
           "kinds": [
             "call"
           ]
@@ -9471,13 +9482,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "hasInterruptingSteer",
           "kinds": [
             "call"
@@ -9600,13 +9604,6 @@
           "symbol": "resumeInFlight",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolDisabledByPolicy",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -11278,6 +11275,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -11484,13 +11488,6 @@
           "symbol": "MAIL_TEXT_MAX",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolDisabledByPolicy",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -11732,6 +11729,27 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "NATIVE_COMMAND_TOOL_NAMES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "NATIVE_DESKTOP_TOOL_NAMES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "normalizeCwd",
           "kinds": [
             "call",
@@ -11825,6 +11843,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
             "call"
@@ -11871,6 +11896,13 @@
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -12227,13 +12259,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "safeMcpInventory",
           "kinds": [
             "call"
@@ -12446,27 +12471,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "NATIVE_COMMAND_TOOL_NAMES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "NATIVE_DESKTOP_TOOL_NAMES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolDisabledByPolicy",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "nativeToolsAcceptingArgKeys",
           "kinds": [
             "call"
@@ -12504,13 +12508,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "toolArgsSkeleton",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolDisabledByPolicy",
           "kinds": [
             "call"
           ]
@@ -13149,6 +13146,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "normalizeCwd",
           "kinds": [
             "call"
@@ -13353,6 +13358,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "buildClaudeAgentDefinitions",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "ConfigPatchHooks",
           "kinds": [
             "read"
@@ -13418,6 +13430,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "getAgentRoleLibrary",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "hostAllowed",
           "kinds": [
             "call"
@@ -13446,10 +13465,31 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "projectAgentRoleFile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readClaudeProjectAgentRoles",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readProjectAgentRoles",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -13468,6 +13508,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "RUNTIME",
           "kinds": [
             "read"
@@ -13476,6 +13523,13 @@
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "saveProjectAgentRoles",
           "kinds": [
             "call"
           ]
@@ -13647,6 +13701,21 @@
           "symbol": "DesktopShell",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutable",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -13875,21 +13944,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutable",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
           "kinds": [
             "call"
@@ -13976,13 +14030,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
           "kinds": [
             "call"
           ]
@@ -14439,31 +14486,9 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "buildClaudeAgentDefinitions",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolDisabledByPolicy",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -14482,35 +14507,7 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "projectAgentRoleFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "projectCwdDirectoryFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "readClaudeProjectAgentRoles",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "readProjectAgentRoles",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "saveProjectAgentRoles",
           "kinds": [
             "call"
           ]
@@ -14967,6 +14964,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "normalizeStoragePolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -15023,6 +15027,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "scanMcpSources",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "send",
           "kinds": [
             "call"
@@ -15066,6 +15077,13 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
           "kinds": [
             "call"
           ]
@@ -15219,21 +15237,7 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "sanitizeFsSegmentName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "scanMcpSources",
           "kinds": [
             "call"
           ]
@@ -15352,13 +15356,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "storageSweep",
           "kinds": [
             "call"
@@ -15455,6 +15452,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "cliBridgeToolTier",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -15465,6 +15469,13 @@
           "symbol": "dataRootAliases",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "DESKTOP_MCP_SERVER_ID",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -15498,13 +15509,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nativeToolTier",
           "kinds": [
             "call"
           ]
@@ -15610,6 +15614,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
             "call"
@@ -15627,6 +15638,13 @@
           "symbol": "atomicWriteJson",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "getAgentRoleLibrary",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -16235,20 +16253,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "DESKTOP_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
           "kinds": [
             "call"
@@ -16259,13 +16263,6 @@
           "symbol": "STEER_QUEUE_MAX",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolDisabledByPolicy",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -23164,6 +23161,20 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "_parseTomlMcpServers",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "_tomlKeyPath",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "agentCliHomes",
           "kinds": [
             "call"
@@ -23230,6 +23241,13 @@
           "symbol": "os",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "parseMcpConfigFile",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -23377,27 +23395,6 @@
           "symbol": "DesktopShell",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "_parseTomlMcpServers",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "_tomlKeyPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "parseMcpConfigFile",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -23956,6 +23953,13 @@
           ]
         },
         {
+          "provider": "01-config.js",
+          "symbol": "isEquivalentDesktopAccServer",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "01g-server-ownership.js",
           "symbol": "ServerOwnership",
           "kinds": [
@@ -24020,13 +24024,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "isEquivalentDesktopAccServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "mcpClients",
           "kinds": [
             "read"
@@ -24062,6 +24059,20 @@
         "main"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "ACC_POLICY_TOOL_FAMILIES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "accPolicyHiddenToolNames",
+          "kinds": [
+            "read"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "adaptiveMetaToolSchemas",
@@ -24204,7 +24215,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nativeToolDisabledByPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeStoragePolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "parseMcpConfigFile",
           "kinds": [
             "read"
           ]
@@ -24267,6 +24299,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "scanMcpSources",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "setEstimateBucketsV1",
           "kinds": [
             "read"
@@ -24288,6 +24327,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "unmaskProviders",
           "kinds": [
             "read"
@@ -24303,6 +24349,13 @@
         {
           "provider": "01-config.js",
           "symbol": "autoImportClaudeCodeMcp",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
             "read"
           ]
@@ -24393,6 +24446,27 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "getAgentRoleLibrary",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "invalidateMcpDropInCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "legacyAccMemoryMigrationComplete",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
             "read"
@@ -24435,6 +24509,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "readClaudeProjectAgentRoles",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "call",
@@ -24444,6 +24525,20 @@
         {
           "provider": "01-config.js",
           "symbol": "readFileTail",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "saveProjectAgentRoles",
           "kinds": [
             "read"
           ]
@@ -25304,13 +25399,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "invalidateMcpDropInCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "killAllMcpClients",
           "kinds": [
             "read"
@@ -25381,13 +25469,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "parseMcpConfigFile",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
             "read"
@@ -25409,21 +25490,7 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "safeMcpInventory",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "scanMcpSources",
           "kinds": [
             "read"
           ]
@@ -25934,13 +26001,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "parseThreadBrief",
           "kinds": [
             "read"
@@ -26124,13 +26184,6 @@
         {
           "provider": "06d-memory-domain.js",
           "symbol": "extractMemoryRelationProposals",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "legacyAccMemoryMigrationComplete",
           "kinds": [
             "read"
           ]
@@ -26837,28 +26890,7 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "ACC_POLICY_TOOL_FAMILIES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "accPolicyHiddenToolNames",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
             "read"
           ]
@@ -26928,21 +26960,7 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "NATIVE_TOOL_PACKS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
             "read"
           ]
@@ -26970,21 +26988,7 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "readClaudeProjectAgentRoles",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "requestNativePermission",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "saveProjectAgentRoles",
           "kinds": [
             "read"
           ]
@@ -27006,13 +27010,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "toolArgsSkeleton",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolDisabledByPolicy",
           "kinds": [
             "read"
           ]

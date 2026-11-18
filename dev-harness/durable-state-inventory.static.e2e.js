@@ -19,12 +19,15 @@ try {
   ok(/DurableJsonStore\.create/.test(source) && !/const tmp = file \+ '\.tmp'/.test(source), 'context calibration no longer carries a private tmp/quarantine/write chain');
   // 架构还债批 2 B3:06d 的两个「坏了就当空」小存储迁到 DurableJsonStore(quarantine:false + cache:false),
   // 不再各自手写 read/parse/schema/mkdir/atomicWriteJson;清册里记的写原语跟着改。
-  const src06d = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '06d-memory-domain.js'), 'utf8');
   for (const [id, storeName, fileFn] of [['memory-import-marker', 'accMemoryImportStore', 'accMemoryImportMarker'], ['agent-instructions-import', 'agentInstructionImportStore', 'agentInstructionImportFile']]) {
     const entry = data.entries.find(item => item.id === id);
     ok(entry && /DurableJsonStore/.test(entry.writePrimitive) && entry.lifecycle === 'shared-lifecycle', `${id} is recorded on the DurableJsonStore lifecycle`);
-    ok(new RegExp('const ' + storeName + ' = DurableJsonStore\\.create\\(').test(src06d) && !new RegExp('atomicWriteJson\\(' + fileFn + '\\(').test(src06d),
-      `${id}: 06d writes it only through ${storeName} (no private atomicWriteJson on that file)`);
+    const owner = fs.readFileSync(path.resolve(ROOT, 'ruyi-workbench', 'app', 'src', entry.owner), 'utf8');
+    const importer = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '06d-memory-domain.js'), 'utf8');
+    ok(new RegExp('const ' + storeName + ' = DurableJsonStore\\.create\\(').test(owner)
+      && new RegExp(storeName + '\\.write\\(').test(importer)
+      && !new RegExp('atomicWriteJson\\(' + fileFn + '\\(').test(owner + importer),
+      `${id}: the importer writes through ${storeName}`);
   }
   const server = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'), 'utf8');
   // 5 处固定 tmp 写点与 autonomy-durability 的白名单同源:④ 处既有豁免 + 134 后台任务台账
