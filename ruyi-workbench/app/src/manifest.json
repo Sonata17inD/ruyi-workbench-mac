@@ -512,51 +512,45 @@
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环"
     },
     {
-      "file": "13v-external-channel-protocols.js",
-      "startLine": 25871,
-      "endLine": 26081,
-      "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers"
-    },
-    {
       "file": "13x-external-channel-delivery.js",
-      "startLine": 26082,
-      "endLine": 26217,
+      "startLine": 25871,
+      "endLine": 26006,
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes"
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "startLine": 26218,
-      "endLine": 26220,
+      "startLine": 26007,
+      "endLine": 26009,
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS"
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "startLine": 26221,
-      "endLine": 26316,
+      "startLine": 26010,
+      "endLine": 26105,
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted"
     },
     {
       "file": "13ab-privacy-api.js",
-      "startLine": 26317,
-      "endLine": 26335,
+      "startLine": 26106,
+      "endLine": 26124,
       "note": "81-P2: token-authenticated security settings and recovery API"
     },
     {
       "file": "13w-external-bots.js",
-      "startLine": 26336,
-      "endLine": 27085,
+      "startLine": 26125,
+      "endLine": 26135,
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker"
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "startLine": 27086,
-      "endLine": 27539,
+      "startLine": 26136,
+      "endLine": 26589,
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open"
     },
     {
       "file": "14-main.js",
-      "startLine": 27540,
-      "endLine": 28305,
+      "startLine": 26590,
+      "endLine": 27355,
       "note": "main()/module.exports"
     }
   ]

@@ -73,7 +73,7 @@ const ROUTER_FILES = [
   // 第 123 波 M1（37 号文 §3.3）：定时任务六条 /api/scheduler/tasks（13s 拼接顺序在 13 之后，
   // 经 handleApi 里一行 `await handleSchedulerApiRoutes(...)` 直调委派，同 13b/13c/13d）。
   '../backend/scheduler-routes.cjs',
-  '13w-external-bots.js',
+  '../backend/external-bot-routes.cjs',
   '../backend/privacy-routes.cjs',
 ];
 const ROUTE_AUTH_FILE = '../backend/http-route-policy.cjs';

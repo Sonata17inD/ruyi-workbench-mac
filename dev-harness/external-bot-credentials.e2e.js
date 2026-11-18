@@ -9,11 +9,9 @@ const os = require('node:os');
 const vm = require('node:vm');
 const cp = require('node:child_process');
 const crypto = require('node:crypto');
-const { constBlock, functionBlock } = require('./lib/source-slice');
 const { fixtureChildEnv } = require('./lib/fixture-home');
 const { killOwnTree } = require('./lib/kill-own-tree');
 const { createRunner } = require('./lib/harness');
-const readSource = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/src', name), 'utf8');
 async function worker() {
   const input = []; for await (const chunk of process.stdin) input.push(chunk);
   const task = JSON.parse(Buffer.concat(input));
@@ -42,7 +40,6 @@ async function worker() {
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/local-crypto.cjs'), 'utf8'), owned);
   context.LocalSecretCrypto = owned.module.exports.createLocalSecretCrypto({ process: context.process, hooks: { helperPath: () => task.helper } });
   context.DurableJsonStore = require('../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
-  context.runKeyedChain = vm.runInNewContext(functionBlock(readSource('00-boot.js'), 'runKeyedChain') + '\nrunKeyedChain', context);
   const api = require('../ruyi-workbench/app/backend/external-bot-credentials.cjs').createExternalBotCredentials(context);
   const started = Date.now(); let answer;
   try {

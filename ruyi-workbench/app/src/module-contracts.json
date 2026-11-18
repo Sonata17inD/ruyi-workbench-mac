@@ -20980,36 +20980,6 @@
       ]
     },
     {
-      "file": "13v-external-channel-protocols.js",
-      "layer": "transport",
-      "provides": [
-        "ExternalChannelProtocols"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "13x-external-channel-delivery.js",
       "layer": "transport",
       "provides": [
@@ -21202,89 +21172,10 @@
       "file": "13w-external-bots.js",
       "layer": "transport",
       "provides": [
-        "EXTERNAL_BOT_CONNECTION_KEYS",
-        "EXTERNAL_BOT_DISCOVERY_LIMITS",
-        "EXTERNAL_BOT_LIMITS",
-        "EXTERNAL_BOT_SETUP_KEYS",
-        "EXTERNAL_BOT_SETUP_PATHS",
-        "externalBotAcceptCallback",
-        "externalBotActiveActors",
-        "externalBotActors",
-        "externalBotCapturePairing",
-        "externalBotChains",
-        "externalBotConfigured",
-        "externalBotConnectionFingerprint",
-        "externalBotCredentialSnapshot",
-        "externalBotCurrentPairing",
-        "externalBotDecodeJson",
-        "externalBotDeliveries",
-        "externalBotDiscoverOperation",
-        "externalBotDiscoveryBusy",
-        "externalBotDiscoveryFailure",
-        "externalBotDiscoveryProbe",
-        "externalBotDiscoveryRate",
-        "externalBotDrain",
-        "externalBotEnvReference",
-        "externalBotError",
-        "externalBotFinishJob",
-        "externalBotIdentity",
-        "externalBotInflight",
-        "externalBotNextJob",
-        "externalBotNormalizeConnection",
-        "externalBotOutcome",
-        "externalBotOwnerMatches",
-        "externalBotPairings",
-        "externalBotPublicConnection",
-        "externalBotPublicConnections",
-        "externalBotPublicItem",
-        "externalBotRate",
-        "externalBotReadBody",
-        "externalBotReadState",
-        "externalBotRecover",
-        "externalBotRecoveryDone",
-        "externalBotReplyText",
-        "externalBotResultUncertain",
-        "externalBotSafeCredentialError",
-        "externalBotSaveCredentials",
-        "externalBotSecrets",
-        "externalBotSetupHttpOperation",
-        "externalBotSetupOperation",
-        "externalBotSetupReceipt",
-        "externalBotSetupSnapshot",
-        "externalBotSetupToken",
-        "externalBotStewardSetup",
-        "externalBotStore",
-        "externalBotString",
-        "externalBotUnsettled",
-        "externalBotUpdateConnection",
-        "externalBotValidControlState",
-        "externalBotValidItem",
-        "externalBotValidSetupReceipt",
-        "externalBotValidState",
-        "externalBotValidateActor",
-        "externalBotWakeWorker",
-        "externalBotWorkerAgain",
-        "externalBotWorkerBusy",
-        "externalBotWorkerError",
-        "externalBotWorkerStopped",
-        "externalBotWriteState",
-        "handleExternalBotApiRoutes"
+        "ExternalBotInbox",
+        "ExternalBotLedger"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "ExternalBotHooks",
@@ -21294,30 +21185,16 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21329,44 +21206,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21380,14 +21222,14 @@
           "provider": "01-config.js",
           "symbol": "originOk",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21400,13 +21242,6 @@
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "runStewardTurn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13v-external-channel-protocols.js",
-          "symbol": "ExternalChannelProtocols",
           "kinds": [
             "read"
           ]

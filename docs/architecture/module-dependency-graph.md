@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 93 | 2705 | 3252 | 625 | 17 | 0 | 0 |
+| 92 | 2639 | 3239 | 623 | 17 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -100,14 +100,13 @@
 | 82 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 83 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
 | 84 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
-| 85 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
-| 86 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 87 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
-| 88 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 89 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
-| 90 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
-| 91 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
-| 92 | `14-main.js` | entrypoint | 10 | 662 | 55 |
+| 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
+| 86 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
+| 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
+| 88 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
+| 89 | `13w-external-bots.js` | transport | 2 | 13 | 7 |
+| 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
+| 91 | `14-main.js` | entrypoint | 10 | 662 | 55 |
 
 ## 模块边
 
@@ -670,12 +669,10 @@
 | `13t-steward-schedule.js` | `13k-steward-threads.js` | backward | `stewardCanonWorkspacePath`, `stewardDeriveThreadCwd`, `stewardUnattendedByModel`, `stewardValidateCwd` |
 | `13t-steward-schedule.js` | `13q-steward-runner-turn.js` | backward | `stewardEnsureOpenAiRoute` |
 | `13t-steward-schedule.js` | `13s-scheduler.js` | backward | `SchedulerRuntime` |
-| `13v-external-channel-protocols.js` | `00-boot.js` | backward | `crypto`, `json`, `text` |
-| `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `URL`, `apiFailure`, `crypto`, `fsp`, `json`, `makeId`, `nowIso`, `path`, `paths`, `runKeyedChain`, `send`, `text` |
+| `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `makeId`, `nowIso`, `paths` |
 | `13w-external-bots.js` | `01-config.js` | backward | `DurableJsonStore`, `originOk`, `tokenOk` |
 | `13w-external-bots.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `13w-external-bots.js` | `13q-steward-runner-turn.js` | backward | `runStewardTurn` |
-| `13w-external-bots.js` | `13v-external-channel-protocols.js` | backward | `ExternalChannelProtocols` |
 | `13w-external-bots.js` | `13x-external-channel-delivery.js` | backward | `ExternalChannelDelivery` |
 | `13w-external-bots.js` | `13y-external-bot-credentials.js` | backward | `ExternalBotCredentials` |
 | `13w-external-bots.js` | `13z-external-bot-discovery.js` | backward | `ExternalBotDiscovery` |

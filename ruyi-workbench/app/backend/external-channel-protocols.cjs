@@ -1,3 +1,7 @@
+'use strict';
+
+const crypto = require('node:crypto');
+
 // Original protocol implementation from the platform wire specifications, using Node crypto only.
 // QQ: https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/interface-framework/sign.html
 //     https://bot.q.qq.com/wiki/develop/api-v2/dev-prepare/interface-framework/event-emit.html
@@ -208,3 +212,5 @@ const ExternalChannelProtocols = (() => {
   }
   return Object.freeze({ verifyAndNormalize });
 })();
+
+module.exports = ExternalChannelProtocols;

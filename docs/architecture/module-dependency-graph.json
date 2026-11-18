@@ -3,10 +3,10 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 93,
-    "providedSymbols": 2705,
-    "requiredSymbols": 3252,
-    "edges": 625,
+    "modules": 92,
+    "providedSymbols": 2639,
+    "requiredSymbols": 3239,
+    "edges": 623,
     "forwardEdges": 17,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -21160,40 +21160,8 @@
       ]
     },
     {
-      "file": "13v-external-channel-protocols.js",
-      "order": 85,
-      "layer": "transport",
-      "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
-      "provides": [
-        "ExternalChannelProtocols"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "13x-external-channel-delivery.js",
-      "order": 86,
+      "order": 85,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -21218,7 +21186,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 87,
+      "order": 86,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -21257,7 +21225,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 88,
+      "order": 87,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -21267,7 +21235,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 89,
+      "order": 88,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -21390,93 +21358,14 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 90,
+      "order": 89,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
-        "EXTERNAL_BOT_CONNECTION_KEYS",
-        "EXTERNAL_BOT_DISCOVERY_LIMITS",
-        "EXTERNAL_BOT_LIMITS",
-        "EXTERNAL_BOT_SETUP_KEYS",
-        "EXTERNAL_BOT_SETUP_PATHS",
-        "externalBotAcceptCallback",
-        "externalBotActiveActors",
-        "externalBotActors",
-        "externalBotCapturePairing",
-        "externalBotChains",
-        "externalBotConfigured",
-        "externalBotConnectionFingerprint",
-        "externalBotCredentialSnapshot",
-        "externalBotCurrentPairing",
-        "externalBotDecodeJson",
-        "externalBotDeliveries",
-        "externalBotDiscoverOperation",
-        "externalBotDiscoveryBusy",
-        "externalBotDiscoveryFailure",
-        "externalBotDiscoveryProbe",
-        "externalBotDiscoveryRate",
-        "externalBotDrain",
-        "externalBotEnvReference",
-        "externalBotError",
-        "externalBotFinishJob",
-        "externalBotIdentity",
-        "externalBotInflight",
-        "externalBotNextJob",
-        "externalBotNormalizeConnection",
-        "externalBotOutcome",
-        "externalBotOwnerMatches",
-        "externalBotPairings",
-        "externalBotPublicConnection",
-        "externalBotPublicConnections",
-        "externalBotPublicItem",
-        "externalBotRate",
-        "externalBotReadBody",
-        "externalBotReadState",
-        "externalBotRecover",
-        "externalBotRecoveryDone",
-        "externalBotReplyText",
-        "externalBotResultUncertain",
-        "externalBotSafeCredentialError",
-        "externalBotSaveCredentials",
-        "externalBotSecrets",
-        "externalBotSetupHttpOperation",
-        "externalBotSetupOperation",
-        "externalBotSetupReceipt",
-        "externalBotSetupSnapshot",
-        "externalBotSetupToken",
-        "externalBotStewardSetup",
-        "externalBotStore",
-        "externalBotString",
-        "externalBotUnsettled",
-        "externalBotUpdateConnection",
-        "externalBotValidControlState",
-        "externalBotValidItem",
-        "externalBotValidSetupReceipt",
-        "externalBotValidState",
-        "externalBotValidateActor",
-        "externalBotWakeWorker",
-        "externalBotWorkerAgain",
-        "externalBotWorkerBusy",
-        "externalBotWorkerError",
-        "externalBotWorkerStopped",
-        "externalBotWriteState",
-        "handleExternalBotApiRoutes"
+        "ExternalBotInbox",
+        "ExternalBotLedger"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "ExternalBotHooks",
@@ -21486,30 +21375,16 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21521,44 +21396,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21572,14 +21412,14 @@
           "provider": "01-config.js",
           "symbol": "originOk",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21592,13 +21432,6 @@
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "runStewardTurn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13v-external-channel-protocols.js",
-          "symbol": "ExternalChannelProtocols",
           "kinds": [
             "read"
           ]
@@ -21628,7 +21461,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 91,
+      "order": 90,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -21793,7 +21626,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 92,
+      "order": 91,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -32908,33 +32741,14 @@
       "direction": "backward"
     },
     {
-      "from": "13v-external-channel-protocols.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "crypto",
-        "json",
-        "text"
-      ],
-      "direction": "backward"
-    },
-    {
       "from": "13w-external-bots.js",
       "to": "00-boot.js",
       "symbols": [
         "ExternalBotHooks",
         "OVERLAY_ID",
-        "URL",
-        "apiFailure",
-        "crypto",
-        "fsp",
-        "json",
         "makeId",
         "nowIso",
-        "path",
-        "paths",
-        "runKeyedChain",
-        "send",
-        "text"
+        "paths"
       ],
       "direction": "backward"
     },
@@ -32961,14 +32775,6 @@
       "to": "13q-steward-runner-turn.js",
       "symbols": [
         "runStewardTurn"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13w-external-bots.js",
-      "to": "13v-external-channel-protocols.js",
-      "symbols": [
-        "ExternalChannelProtocols"
       ],
       "direction": "backward"
     },

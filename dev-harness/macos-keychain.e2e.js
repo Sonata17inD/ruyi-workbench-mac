@@ -23,7 +23,7 @@ let disposable;
       stewardEnabledV1: false, schedulerEnabledV1: false, autoImportClaudeCodeMcp: false, includeWorkbenchMcp: false,
       providers: [{ id: 'fixture', type: 'openai-compat', apiKey: 'SYNTHETIC-API-KEY', baseUrl: 'https://fixture.invalid', model: 'fixture' }],
       desktopMcp: { enabled: false, autodetect: false } }));
-    const S = loadServerInternals(['LocalSecretCrypto', 'LocalSecretCryptoHooks', 'CredentialVault', 'PrivacyCore', 'ExternalBotCredentials', 'CredentialRecovery', 'readConfig', 'externalBotPublicConnections']);
+    const S = loadServerInternals(['LocalSecretCrypto', 'LocalSecretCryptoHooks', 'CredentialVault', 'PrivacyCore', 'ExternalBotCredentials', 'CredentialRecovery', 'readConfig', 'ExternalBotInbox']);
     S.LocalSecretCryptoHooks.helperPath = () => helper;
     const secret = Buffer.from('SYNTHETIC-中文-SECRET'), entropy = Buffer.from('fixture-owner');
     const sealed = await S.LocalSecretCrypto.run('protect', secret, entropy);
@@ -66,7 +66,8 @@ let disposable;
       await S.ExternalBotCredentials.save(row, { set: { botSecret: 'SYNTHETIC-BOT-SECRET' }, expectedRevision });
       connections.push(row);
     }
-    const listed = await S.externalBotPublicConnections(connections);
+    for (const row of connections) await S.ExternalBotInbox.updateConnection({ op: 'upsert', connection: row });
+    const { connections: listed } = await S.ExternalBotInbox.listConnections();
     t.ok(listed.length === 5 && listed.every(row => row.configured && !row.credentialError),
       'an ordinary five-connection list does not exceed the Keychain process budget or misreport healthy credentials');
     // Exercise the real vault persistence shape, cold load and portable recovery using this protector.

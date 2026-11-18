@@ -125,7 +125,7 @@
     {
       "id": "external-bots",
       "pattern": "<data>/external-bots/state-v1.json",
-      "owner": "13w-external-bots.js",
+      "owner": "../backend/external-bot-ledger.cjs",
       "anchor": "externalBotStore",
       "schema": "object / schema 1 (connections, retiredConnectionIds, items with control/execution/delivery receipts; optional bounded setupReceipts semantic hashes, no pairing plaintext)",
       "writePrimitive": "DurableJsonStore strictRead, cache:false, quarantine:false; runKeyedChain shared by configuration, pairing-only receipts, activation, admission and worker transitions",

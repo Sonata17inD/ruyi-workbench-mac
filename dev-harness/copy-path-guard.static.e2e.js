@@ -169,7 +169,7 @@ ok(botSetupCopy.length > 0 && JSON.stringify(botCopyArgs) === JSON.stringify(['v
   && /clipboard\??\.writeText\(value\)/.test(botSetupCopy)
   && !/(passwords|credentials|\.value|body|localStorage|sessionStorage|filePath|absolutePath)/i.test(botSetupCopy),
   '② 机器人复制例外严格限于服务端回调地址与配对挑战；秘密、文件路径、命令和表单内容无剪贴板出口');
-const botSetupSnapshot = functionBlock(read(WB, 'app', 'src', '13w-external-bots.js'), 'externalBotSetupSnapshot');
+const botSetupSnapshot = functionBlock(read(WB, 'app', 'backend', 'external-bot-inbox.cjs'), 'externalBotSetupSnapshot');
 ok(botSetupSnapshot.includes("callbackPath: '/api/external-bots/callback/' + connection.platform + '?connectionId=' + encodeURIComponent(connection.id)"),
   '② 机器人回调复制来源固定为平台协议相对HTTP地址，不能替换成本机文件路径');
 ok(!/clipboard/i.test(wizardSrc) && !/clipboard/i.test(viewerSrc),
