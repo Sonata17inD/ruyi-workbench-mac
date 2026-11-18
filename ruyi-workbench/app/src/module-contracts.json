@@ -7792,50 +7792,6 @@
       ]
     },
     {
-      "file": "09b-replan-ledger.js",
-      "layer": "orchestration",
-      "provides": [
-        "REPLAN_CHANGE_OPS",
-        "REPLAN_PATCH_MAX",
-        "REPLAN_TRIGGER_TYPES",
-        "applyReplanPatch",
-        "proposeReplanPatch",
-        "recordNodeContinuation",
-        "rollbackReplanPatch",
-        "validateReplanPatch"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "hashArgs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "TOOL_TIER_RANK",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "09-workflow.js",
       "layer": "orchestration",
       "provides": [
@@ -7847,18 +7803,22 @@
         "WAIT_AGENTS_DEFAULT_MS",
         "WAIT_AGENTS_MAX_MS",
         "agentWorkflowPorts",
+        "applyReplanPatch",
         "canonicalToolInvokeCall",
         "deliverAgentRunEnvelope",
         "launchPersistedAgentRun",
         "legacySpawnToOrchestrateArgs",
         "planDiscoveryToolBatchAllowed",
         "planParallelReadIsland",
+        "proposeReplanPatch",
+        "recordNodeContinuation",
         "resolveWaitAgentsMs",
         "retierToolInvokeCall",
         "runAgentWorkflow",
         "runOpenAiTurn",
         "settleWaitEnvelopes",
         "unwrapProxiedControlCall",
+        "validateReplanPatch",
         "waitAgentsMaxMs",
         "waitForAgentRunResults"
       ],
@@ -7908,6 +7868,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "hashArgs",
           "kinds": [
             "read"
           ]
@@ -9114,27 +9081,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "workflowProgressFingerprint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "proposeReplanPatch",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "recordNodeContinuation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "validateReplanPatch",
           "kinds": [
             "read"
           ]
@@ -14239,14 +14185,14 @@
         },
         {
           "provider": "09-workflow.js",
-          "symbol": "launchPersistedAgentRun",
+          "symbol": "applyReplanPatch",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "applyReplanPatch",
+          "provider": "09-workflow.js",
+          "symbol": "launchPersistedAgentRun",
           "kinds": [
             "read"
           ]

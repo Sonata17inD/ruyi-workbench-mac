@@ -375,6 +375,7 @@
     "app/backend/memory-relations.cjs",
     "app/backend/memory-store.cjs",
     "app/backend/runtime-policy.cjs",
+    "app/backend/replan-ledger.cjs",
     "app/backend/runtime-tool-telemetry.cjs",
     "app/backend/text-codecs.cjs",
     "app/backend/user-question-protocol.cjs",

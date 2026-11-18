@@ -122,10 +122,10 @@ ok(typeof hashArgs === 'function', '① server.js 导出了 hashArgs');
   ok(!/crypto\.createHash\('sha1'\)\.update\(JSON\.stringify\(args \|\| \{\}\)\)/.test(grants),
     '⑦c autonomy-grants.cjs 不再残留手写的 sha1(JSON.stringify(args||{})) 字面量');
 
-  const ledger = fs.readFileSync(path.join(app, 'src', '09b-replan-ledger.js'), 'utf8');
-  ok(ledger.includes('hashArgs(argsStr)'), '⑦d 09b-replan-ledger.js::recordNodeContinuation 已改调 hashArgs(argsStr)');
+  const ledger = fs.readFileSync(path.join(app, 'backend', 'replan-ledger.cjs'), 'utf8');
+  ok(ledger.includes('hashArgs(argsStr)'), '⑦d replan-ledger.cjs::recordNodeContinuation 已改调 hashArgs(argsStr)');
   ok(!/crypto\.createHash\('sha1'\)\.update\(argsStr\)/.test(ledger),
-    '⑦e 09b-replan-ledger.js 不再残留手写的 sha1(argsStr) 字面量');
+    '⑦e replan-ledger.cjs 不再残留手写的 sha1(argsStr) 字面量');
 }
 
 console.log('\nHASH-ARGS UNIT: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));

@@ -3,10 +3,10 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 88,
-    "providedSymbols": 2558,
-    "requiredSymbols": 3217,
-    "edges": 606,
+    "modules": 87,
+    "providedSymbols": 2554,
+    "requiredSymbols": 3211,
+    "edges": 603,
     "forwardEdges": 16,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -7914,54 +7914,8 @@
       ]
     },
     {
-      "file": "09b-replan-ledger.js",
-      "order": 56,
-      "layer": "orchestration",
-      "note": "110-4a: 节点续点与重规划补丁账本(自 09-workflow.js 纯搬家)",
-      "provides": [
-        "REPLAN_CHANGE_OPS",
-        "REPLAN_PATCH_MAX",
-        "REPLAN_TRIGGER_TYPES",
-        "applyReplanPatch",
-        "proposeReplanPatch",
-        "recordNodeContinuation",
-        "rollbackReplanPatch",
-        "validateReplanPatch"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "hashArgs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "TOOL_TIER_RANK",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "09-workflow.js",
-      "order": 57,
+      "order": 56,
       "layer": "orchestration",
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
@@ -7973,18 +7927,22 @@
         "WAIT_AGENTS_DEFAULT_MS",
         "WAIT_AGENTS_MAX_MS",
         "agentWorkflowPorts",
+        "applyReplanPatch",
         "canonicalToolInvokeCall",
         "deliverAgentRunEnvelope",
         "launchPersistedAgentRun",
         "legacySpawnToOrchestrateArgs",
         "planDiscoveryToolBatchAllowed",
         "planParallelReadIsland",
+        "proposeReplanPatch",
+        "recordNodeContinuation",
         "resolveWaitAgentsMs",
         "retierToolInvokeCall",
         "runAgentWorkflow",
         "runOpenAiTurn",
         "settleWaitEnvelopes",
         "unwrapProxiedControlCall",
+        "validateReplanPatch",
         "waitAgentsMaxMs",
         "waitForAgentRunResults"
       ],
@@ -8034,6 +7992,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "hashArgs",
           "kinds": [
             "read"
           ]
@@ -9245,27 +9210,6 @@
           ]
         },
         {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "proposeReplanPatch",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "recordNodeContinuation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "validateReplanPatch",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "10-context-governance.js",
           "symbol": "agentNodeContextWindow",
           "kinds": [
@@ -9360,7 +9304,7 @@
     },
     {
       "file": "09b-agent-recovery.js",
-      "order": 58,
+      "order": 57,
       "layer": "orchestration",
       "note": "Workflow restart and interrupted-run recovery composition",
       "provides": [
@@ -9506,7 +9450,7 @@
     },
     {
       "file": "10-context-governance.js",
-      "order": 59,
+      "order": 58,
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
@@ -9799,7 +9743,7 @@
     },
     {
       "file": "10a-session-turn.js",
-      "order": 60,
+      "order": 59,
       "layer": "orchestration",
       "note": "Session execution admission and wake composition",
       "provides": [
@@ -10128,7 +10072,7 @@
     },
     {
       "file": "11-native-tools.js",
-      "order": 61,
+      "order": 60,
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
@@ -10512,7 +10456,7 @@
     },
     {
       "file": "11b-file-text-io.js",
-      "order": 62,
+      "order": 61,
       "layer": "tools",
       "note": "单文件工具的文本 I/O 内核:编码嗅探/GB18030 编码、有界流式读、原子写、file_edit 未命中诊断;零出边(冻结对象 FileTextIo),不进依赖环",
       "provides": [
@@ -10522,7 +10466,7 @@
     },
     {
       "file": "11c-file-visual-io.js",
-      "order": 63,
+      "order": 62,
       "layer": "tools",
       "note": "",
       "provides": [
@@ -10540,7 +10484,7 @@
     },
     {
       "file": "11d-media-inspection.js",
-      "order": 64,
+      "order": 63,
       "layer": "tools",
       "note": "Local dependency discovery, bounded audio measurement and parse-only syntax validation; built-ins only",
       "provides": [
@@ -10558,7 +10502,7 @@
     },
     {
       "file": "12-tool-dispatch.js",
-      "order": 65,
+      "order": 64,
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
@@ -11863,7 +11807,7 @@
     },
     {
       "file": "13-http-router.js",
-      "order": 66,
+      "order": 65,
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
@@ -13187,7 +13131,7 @@
     },
     {
       "file": "13b-api-domain-routes.js",
-      "order": 67,
+      "order": 66,
       "layer": "transport",
       "note": "迁移、MCP、插话、语音路由与附件处理的装配",
       "provides": [
@@ -13627,7 +13571,7 @@
     },
     {
       "file": "13d-core-domain-routes.js",
-      "order": 68,
+      "order": 67,
       "layer": "transport",
       "note": "会话、Agent Run、事项与干预服务的装配",
       "provides": [
@@ -14387,14 +14331,14 @@
         },
         {
           "provider": "09-workflow.js",
-          "symbol": "launchPersistedAgentRun",
+          "symbol": "applyReplanPatch",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "09b-replan-ledger.js",
-          "symbol": "applyReplanPatch",
+          "provider": "09-workflow.js",
+          "symbol": "launchPersistedAgentRun",
           "kinds": [
             "read"
           ]
@@ -14494,7 +14438,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 69,
+      "order": 68,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -14872,7 +14816,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 70,
+      "order": 69,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -15175,7 +15119,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 71,
+      "order": 70,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -15426,7 +15370,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 72,
+      "order": 71,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -15606,7 +15550,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 73,
+      "order": 72,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -16559,7 +16503,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 74,
+      "order": 73,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -17554,7 +17498,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 75,
+      "order": 74,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -18032,7 +17976,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 76,
+      "order": 75,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -18302,7 +18246,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 77,
+      "order": 76,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -18803,7 +18747,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 78,
+      "order": 77,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -19289,7 +19233,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 79,
+      "order": 78,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -19947,7 +19891,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 80,
+      "order": 79,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -20396,7 +20340,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 81,
+      "order": 80,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -20535,7 +20479,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 82,
+      "order": 81,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -20754,7 +20698,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 83,
+      "order": 82,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -20977,7 +20921,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 84,
+      "order": 83,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -21100,7 +21044,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 85,
+      "order": 84,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -21190,7 +21134,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 86,
+      "order": 85,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -21355,7 +21299,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 87,
+      "order": 86,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -28134,6 +28078,7 @@
         "estimateContentTokens",
         "estimateHistoryTokens",
         "estimateToolSchemaTokens",
+        "hashArgs",
         "isContextOverflowError",
         "localTurnTimeParts",
         "logEvent",
@@ -28448,16 +28393,6 @@
     },
     {
       "from": "09-workflow.js",
-      "to": "09b-replan-ledger.js",
-      "symbols": [
-        "proposeReplanPatch",
-        "recordNodeContinuation",
-        "validateReplanPatch"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "09-workflow.js",
       "to": "10-context-governance.js",
       "symbols": [
         "agentNodeContextWindow",
@@ -28555,17 +28490,6 @@
       "to": "09-workflow.js",
       "symbols": [
         "launchPersistedAgentRun"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "09b-replan-ledger.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "TOOL_TIER_RANK",
-        "hashArgs",
-        "makeId",
-        "nowIso"
       ],
       "direction": "backward"
     },
@@ -30342,15 +30266,8 @@
       "from": "13d-core-domain-routes.js",
       "to": "09-workflow.js",
       "symbols": [
+        "applyReplanPatch",
         "launchPersistedAgentRun"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13d-core-domain-routes.js",
-      "to": "09b-replan-ledger.js",
-      "symbols": [
-        "applyReplanPatch"
       ],
       "direction": "backward"
     },
