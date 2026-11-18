@@ -1,6 +1,7 @@
 'use strict';
 require('./lib/self-isolate-home');
 const fs = require('fs');
+const http = require('http');
 const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -12,20 +13,30 @@ process.env.RUYI_HOME = path.join(root, 'data');
 fs.mkdirSync(process.env.RUYI_HOME);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
+  let networkProbe;
   try {
     if (process.platform !== 'darwin') { console.log('SKIP Mac capability integration requires macOS'); return; }
     const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'getCapabilities', 'toolRequirementsMet',
-      'buildOpenAiTools', 'buildProviderSystemPrompt', 'defaultConfig', 'computeHealth', 'doctorHealthSeverity', 'toolCall', 'MacDesktopAutomationHooks'], { withEval: true });
+      'buildOpenAiTools', 'buildProviderSystemPrompt', 'defaultConfig', 'computeHealth', 'doctorHealthSeverity', 'toolCall', 'MacDesktopAutomationHooks']);
     S.MacDesktopAutomationHooks.helperPath = () => path.join(root,'missing-capture-helper');
     const realHelper = S.ProcessRuntimeHooks.helperPath();
     const helper = path.join(root, 'helper');
     fs.copyFileSync(realHelper, helper); fs.chmodSync(helper, 0o700);
     S.ProcessRuntimeHooks.helperPath = () => helper;
+    let networkProbes = 0;
+    networkProbe = http.createServer((req, res) => {
+      networkProbes++;
+      res.writeHead(204).end();
+    });
+    await new Promise((resolve, reject) => {
+      networkProbe.once('error', reject);
+      networkProbe.listen(0, '127.0.0.1', resolve);
+    });
     const config = { ...S.defaultConfig(), permissionMode: 'bypass', desktopMcp:{enabled:false,autodetect:false},
-      enableMcpDropIn:false, externalMcpServers:[] };
-    // Keep unrelated network/desktop capabilities warm; helper readiness must refresh independently.
-    S.__eval('_capCache = { at: Date.now(), value: { network: {online:true}, binaries:{git:true}, gitCli:true, desktopMcp:{present:false}, engine:"openai" } };');
+      enableMcpDropIn:false, externalMcpServers:[],
+      capabilityProbeUrl: `http://127.0.0.1:${networkProbe.address().port}/probe` };
     const ready = await S.getCapabilities(config);
+    t.ok(ready.network.online && networkProbes === 1, 'the actual capability probe warms the network cache');
     t.ok(ready.runtime.capabilities['process.supervisor'].ready && ready.runtime.capabilities['shell.exec'].ready,
       'capability matrix carries the real versioned native supervisor and default shell snapshot');
     t.ok(S.toolRequirementsMet('shell_run', ready, false, config).met && S.toolRequirementsMet('git_status', ready, false, config).met,
@@ -48,7 +59,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     t.ok(!S.toolRequirementsMet('shell_run', {}, false, config).met, 'unknown Mac supervisor state cannot advertise execution readiness');
     fs.unlinkSync(helper);
     const missing = await S.getCapabilities(config);
-    t.ok(!missing.runtime.capabilities['process.supervisor'].ready && missing.network.online,
+    t.ok(!missing.runtime.capabilities['process.supervisor'].ready && missing.network === ready.network && networkProbes === 1,
       'removing helper invalidates runtime readiness despite a warm 60-second capability matrix');
     const names = S.buildOpenAiTools(config, missing).map(tool => tool.function.name);
     t.ok(!names.includes('shell_run') && !names.includes('script_run') && !names.includes('shell_start') && !names.includes('git_status'),
@@ -97,8 +108,13 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     t.ok(!changed.ready && changed.reasonCode === 'platform.dependency_changed', 'helper replacement during asynchronous probe cannot publish stale readiness');
     fs.copyFileSync(realHelper, helper); fs.chmodSync(helper, 0o700);
     const restored = await S.getCapabilities(config);
-    t.ok(restored.runtime.capabilities['process.supervisor'].ready && S.toolRequirementsMet('shell_run', restored, false, config).met,
+    t.ok(restored.runtime.capabilities['process.supervisor'].ready && S.toolRequirementsMet('shell_run', restored, false, config).met
+      && restored.network === ready.network && networkProbes === 1,
       'restoring helper re-enables discovery without restarting or expiring network cache');
   } catch (error) { t.fail(error.stack || String(error)); }
-  finally { fs.rmSync(root, { recursive: true, force: true }); t.done(); }
+  finally {
+    if (networkProbe?.listening) await new Promise(resolve => networkProbe.close(resolve));
+    fs.rmSync(root, { recursive: true, force: true });
+    t.done();
+  }
 })();

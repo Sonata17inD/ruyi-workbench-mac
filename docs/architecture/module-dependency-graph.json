@@ -3,10 +3,10 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 93,
-    "providedSymbols": 3177,
-    "requiredSymbols": 3529,
-    "edges": 640,
+    "modules": 94,
+    "providedSymbols": 3169,
+    "requiredSymbols": 3532,
+    "edges": 650,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -4021,8 +4021,118 @@
       ]
     },
     {
-      "file": "05-claude-engine.js",
+      "file": "06w-capability-service.js",
       "order": 43,
+      "layer": "engine",
+      "note": "Shared capability probes and keyed hot snapshot",
+      "provides": [
+        "CAP_UNKNOWN_TTL_MS",
+        "createCapabilityService",
+        "getCapabilities",
+        "invalidateCapabilityCache",
+        "markNetworkOnline",
+        "networkAnchors",
+        "peekCapabilities",
+        "probeAny",
+        "probeDesktopMcp"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "DesktopExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeGitCliAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "ProcessRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "collectBridgedTools",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "mcpClients",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "sanitizeServerId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseIsLocalOrLan",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseWithV1",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "05-claude-engine.js",
+      "order": 44,
       "layer": "engine",
       "note": "runClaudeTurn/stream-json 解析/spawn 环境/权限桥接线",
       "provides": [
@@ -4727,21 +4837,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -4873,6 +4969,20 @@
           ]
         },
         {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "07-autonomy.js",
           "symbol": "classifyToolPacks",
           "kinds": [
@@ -4883,7 +4993,7 @@
     },
     {
       "file": "05b-kimi-bridge.js",
-      "order": 44,
+      "order": 45,
       "layer": "engine",
       "note": "Kimi Code ACP 驱动：会话/流式/工具/权限/提问/排队 steer；Server API 原生压缩与 wire 状态补强",
       "provides": [
@@ -5562,18 +5672,13 @@
     },
     {
       "file": "06-provider-engine.js",
-      "order": 45,
+      "order": 46,
       "layer": "engine",
       "note": "provider 引擎助手/能力探测/metrics/转录 GC/存储管家/playbooks",
       "provides": [
-        "CAP_CACHE_MS",
-        "CAP_PROBE_STALL_SLACK_MS",
-        "CAP_PROBE_TIMEOUT_MS",
-        "CAP_UNKNOWN_TTL_MS",
         "ENGINE_BRIEF_CLOSE",
         "ENGINE_BRIEF_OPEN",
         "ERROR_CLASSES",
-        "NETWORK_ANCHORS",
         "PROJECT_MEMORY_CAP",
         "RUYI_MCP_TOOL_PREFIX",
         "THREAD_BRIEF_FIRST_TURN_TRIES",
@@ -5582,9 +5687,6 @@
         "THREAD_BRIEF_REPLY_CHARS",
         "THREAD_BRIEF_RETRY_BACKOFF_MS",
         "TOOL_ITERATION_BUDGETS",
-        "_capCache",
-        "_capInflight",
-        "_capRequestedKey",
         "_engineBriefMemo",
         "buildBrowserAutomationHint",
         "buildEngineEnvBrief",
@@ -5600,23 +5702,15 @@
         "draftPlaybookFromSession",
         "engineBriefFacts",
         "evalPlaybookAvailability",
-        "getCapabilities",
-        "invalidateCapabilityCache",
         "isLongToolTask",
         "listPlaybooksWithAvailability",
         "loadAllPlaybooks",
-        "markNetworkOnline",
         "matchServiceEntry",
         "maybeWriteThreadBrief",
-        "networkAnchors",
         "neutralizeAuthoredText",
         "normalizePlaybook",
         "parseThreadBrief",
-        "peekCapabilities",
         "playbookReuseSources",
-        "probeAny",
-        "probeDesktopMcp",
-        "probeNetwork",
         "providerEnvLines",
         "readProjectMemory",
         "reassertThreadBrief",
@@ -5635,8 +5729,7 @@
         "threadBriefOnce",
         "threadBriefProvider",
         "threadBriefRateLimited",
-        "updateAutomaticThreadTitle",
-        "withRuntimeCapabilities"
+        "updateAutomaticThreadTitle"
       ],
       "requires": [
         {
@@ -5664,13 +5757,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -5686,13 +5772,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "DEFAULT_PORT",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "DesktopExecutionHooks",
           "kinds": [
             "read"
           ]
@@ -5814,15 +5893,7 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5870,30 +5941,9 @@
         },
         {
           "provider": "01h-process-runtime.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "probeGitCliAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -5955,45 +6005,9 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "collectBridgedTools",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "mcpClients",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "sanitizeServerId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseIsLocalOrLan",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseWithV1",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -6041,6 +6055,13 @@
           ]
         },
         {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "07-autonomy.js",
           "symbol": "toolPackForName",
           "kinds": [
@@ -6051,7 +6072,7 @@
     },
     {
       "file": "06h-retrieval-index.js",
-      "order": 46,
+      "order": 47,
       "layer": "engine",
       "note": "113a:离线检索原语(特征哈希向量/TF-IDF/余弦/RRF),记忆召回与会话搜索共用",
       "provides": [
@@ -6064,7 +6085,7 @@
     },
     {
       "file": "06i-steward-core.js",
-      "order": 47,
+      "order": 48,
       "layer": "engine",
       "note": "第116波116a:管家(Steward)引擎侧纯函数与延迟绑定命名空间 StewardHooks(不实现,契约声明)",
       "provides": [
@@ -6248,7 +6269,7 @@
     },
     {
       "file": "06d-memory-domain.js",
-      "order": 48,
+      "order": 49,
       "layer": "engine",
       "note": "第104波：跨会话记忆、提议、关系图与检索",
       "provides": [
@@ -6672,7 +6693,7 @@
     },
     {
       "file": "06e-mission-domain.js",
-      "order": 49,
+      "order": 50,
       "layer": "engine",
       "note": "第104波：Mission 提示摘要与 until-done 驱动",
       "provides": [
@@ -6922,7 +6943,7 @@
     },
     {
       "file": "06g-resource-leases.js",
-      "order": 50,
+      "order": 51,
       "layer": "engine",
       "note": "第104波：Agent 资源归一化、冲突检测与租约",
       "provides": [
@@ -6955,7 +6976,7 @@
     },
     {
       "file": "06j-scheduler-core.js",
-      "order": 51,
+      "order": 52,
       "layer": "engine",
       "note": "第123波 M1(37 号文 §3.1;设计权威 29 号文 §3):定时任务纯函数内核 —— normalizeSchedulerTask / nextFireAt / parseCronExpr / describeSchedule / occurrenceKey / missedOccurrence(零 I/O、零全局状态、时间全由入参喂)",
       "provides": [
@@ -7008,7 +7029,7 @@
     },
     {
       "file": "06k-config-patch.js",
-      "order": 52,
+      "order": 53,
       "layer": "engine",
       "note": "架构还债批 2 B2: 从 13-http-router.js 搬出 applyConfigPatch(配置补丁落盘与副作用;纯搬家,零行为变更),经 01 的 ConfigPatchHooks 调用、零入边",
       "provides": [
@@ -7166,7 +7187,7 @@
     },
     {
       "file": "07-autonomy.js",
-      "order": 53,
+      "order": 54,
       "layer": "orchestration",
       "note": "Provider 工具目录、权限 gate、failover 与 Agent 角色支撑",
       "provides": [
@@ -7820,7 +7841,7 @@
     },
     {
       "file": "08-agent-runs.js",
-      "order": 54,
+      "order": 55,
       "layer": "orchestration",
       "note": "run 事件日志/恢复分级/runSubAgentCore",
       "provides": [
@@ -8369,13 +8390,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "readProjectMemory",
           "kinds": [
             "call"
@@ -8447,6 +8461,13 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskReason",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
           "kinds": [
             "call"
           ]
@@ -8665,7 +8686,7 @@
     },
     {
       "file": "09b-replan-ledger.js",
-      "order": 55,
+      "order": 56,
       "layer": "orchestration",
       "note": "110-4a: 节点续点与重规划补丁账本(自 09-workflow.js 纯搬家)",
       "provides": [
@@ -8711,7 +8732,7 @@
     },
     {
       "file": "09-workflow.js",
-      "order": 56,
+      "order": 57,
       "layer": "orchestration",
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
@@ -9709,13 +9730,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
           "kinds": [
             "call"
@@ -9985,6 +9999,13 @@
           "symbol": "StewardHooks",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -10674,7 +10695,7 @@
     },
     {
       "file": "09b-agent-recovery.js",
-      "order": 57,
+      "order": 58,
       "layer": "orchestration",
       "note": "Workflow restart and interrupted-run recovery composition",
       "provides": [
@@ -10820,7 +10841,7 @@
     },
     {
       "file": "10-context-governance.js",
-      "order": 58,
+      "order": 59,
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
@@ -11449,7 +11470,7 @@
     },
     {
       "file": "10a-session-turn.js",
-      "order": 59,
+      "order": 60,
       "layer": "orchestration",
       "note": "Session execution admission and wake composition",
       "provides": [
@@ -11778,7 +11799,7 @@
     },
     {
       "file": "11-native-tools.js",
-      "order": 60,
+      "order": 61,
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
@@ -12103,29 +12124,29 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06i-steward-core.js",
+          "symbol": "isStewardToolName",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
           "symbol": "markNetworkOnline",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06w-capability-service.js",
           "symbol": "networkAnchors",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06w-capability-service.js",
           "symbol": "probeAny",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "isStewardToolName",
           "kinds": [
             "call"
           ]
@@ -12162,7 +12183,7 @@
     },
     {
       "file": "11b-file-text-io.js",
-      "order": 61,
+      "order": 62,
       "layer": "tools",
       "note": "单文件工具的文本 I/O 内核:编码嗅探/GB18030 编码、有界流式读、原子写、file_edit 未命中诊断;零出边(冻结对象 FileTextIo),不进依赖环",
       "provides": [
@@ -12172,7 +12193,7 @@
     },
     {
       "file": "11c-file-visual-io.js",
-      "order": 62,
+      "order": 63,
       "layer": "tools",
       "note": "",
       "provides": [
@@ -12190,7 +12211,7 @@
     },
     {
       "file": "11d-media-inspection.js",
-      "order": 63,
+      "order": 64,
       "layer": "tools",
       "note": "Local dependency discovery, bounded audio measurement and parse-only syntax validation; built-ins only",
       "provides": [
@@ -12208,7 +12229,7 @@
     },
     {
       "file": "12-tool-dispatch.js",
-      "order": 64,
+      "order": 65,
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
@@ -13061,13 +13082,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
             "call"
@@ -13082,21 +13096,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "markNetworkOnline",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "neutralizeAuthoredText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -13189,6 +13189,27 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardPlaybookMissingInputs",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "markNetworkOnline",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -13514,7 +13535,7 @@
     },
     {
       "file": "13-http-router.js",
-      "order": 65,
+      "order": 66,
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
@@ -14836,13 +14857,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
             "call"
@@ -15200,6 +15214,13 @@
           ]
         },
         {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
           "kinds": [
@@ -15520,7 +15541,7 @@
     },
     {
       "file": "13b-api-domain-routes.js",
-      "order": 66,
+      "order": 67,
       "layer": "transport",
       "note": "第49波49f(A1): handleApi 域分组拆分第一批 — MCP/checkpoint·storage/steer 三组域路由",
       "provides": [
@@ -16047,7 +16068,7 @@
     },
     {
       "file": "13d-core-domain-routes.js",
-      "order": 67,
+      "order": 68,
       "layer": "transport",
       "note": "第65波 EC-D 收口:session CRUD、question/permission/plan 干预、Agent Run 查询/事件/控制三组后端域路由",
       "provides": [
@@ -17159,7 +17180,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 68,
+      "order": 69,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -17537,7 +17558,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 69,
+      "order": 70,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -17840,7 +17861,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 70,
+      "order": 71,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -18091,7 +18112,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 71,
+      "order": 72,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -18328,7 +18349,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 72,
+      "order": 73,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -19287,7 +19308,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 73,
+      "order": 74,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -20282,7 +20303,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 74,
+      "order": 75,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -20844,7 +20865,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 75,
+      "order": 76,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -21015,7 +21036,7 @@
     },
     {
       "file": "13n-steward-arbiter.js",
-      "order": 76,
+      "order": 77,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):116h 线程间仲裁 —— 并发位/同 cwd 写锁/预算/可解释排队/饥饿提升(零行为搬家自 13h)",
       "provides": [
@@ -21214,7 +21235,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 77,
+      "order": 78,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -21715,7 +21736,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 78,
+      "order": 79,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -22201,7 +22222,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 79,
+      "order": 80,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -22859,7 +22880,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 80,
+      "order": 81,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -23220,7 +23241,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 81,
+      "order": 82,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -23359,7 +23380,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 82,
+      "order": 83,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -23578,7 +23599,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 83,
+      "order": 84,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -23801,7 +23822,7 @@
     },
     {
       "file": "13u-migration-center.js",
-      "order": 84,
+      "order": 85,
       "layer": "transport",
       "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环",
       "provides": [
@@ -24126,7 +24147,7 @@
     },
     {
       "file": "13v-external-channel-protocols.js",
-      "order": 85,
+      "order": 86,
       "layer": "transport",
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
       "provides": [
@@ -24158,7 +24179,7 @@
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "order": 86,
+      "order": 87,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -24183,7 +24204,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 87,
+      "order": 88,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -24222,7 +24243,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 88,
+      "order": 89,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -24232,7 +24253,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 89,
+      "order": 90,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -24376,7 +24397,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 90,
+      "order": 91,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -24614,7 +24635,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 91,
+      "order": 92,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -24779,7 +24800,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 92,
+      "order": 93,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -26644,13 +26665,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "CAP_UNKNOWN_TTL_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "ERROR_CLASSES",
           "kinds": [
             "read"
@@ -26659,20 +26673,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "evalPlaybookAvailability",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "invalidateCapabilityCache",
           "kinds": [
             "read"
           ]
@@ -26693,13 +26693,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "networkAnchors",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "normalizePlaybook",
           "kinds": [
             "read"
@@ -26708,20 +26701,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "parseThreadBrief",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "probeAny",
           "kinds": [
             "read"
           ]
@@ -27723,6 +27702,48 @@
         {
           "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "CAP_UNKNOWN_TTL_MS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "invalidateCapabilityCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "networkAnchors",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "probeAny",
           "kinds": [
             "read"
           ]
@@ -29948,9 +29969,7 @@
         "buildSkillsPromptSection",
         "buildToolCustomizationHint",
         "evalPlaybookAvailability",
-        "getCapabilities",
         "loadAllPlaybooks",
-        "peekCapabilities",
         "resolveEngineEnvBrief"
       ],
       "direction": "forward"
@@ -30004,6 +30023,15 @@
       "to": "06v-operational-services.js",
       "symbols": [
         "engineTranscriptCwd"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "05-claude-engine.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities",
+        "peekCapabilities"
       ],
       "direction": "backward"
     },
@@ -30181,14 +30209,12 @@
       "symbols": [
         "APP_NAME",
         "DEFAULT_PORT",
-        "DesktopExecutionHooks",
         "OVERLAY_ID",
         "RUYI_EVENTS",
         "TOOL_REQUIRES",
         "VERSION",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
-        "cp",
         "crypto",
         "dataRoot",
         "externalRoot",
@@ -30219,7 +30245,6 @@
         "RUNTIME",
         "atomicWriteJson",
         "readConfig",
-        "resolveExternalMcpServers",
         "safeSessionId"
       ],
       "direction": "backward"
@@ -30246,9 +30271,6 @@
       "from": "06-provider-engine.js",
       "to": "01h-process-runtime.js",
       "symbols": [
-        "ProcessRuntime",
-        "existsExecutableAsync",
-        "probeGitCliAsync",
         "probeRgAsync"
       ],
       "direction": "backward"
@@ -30272,25 +30294,6 @@
       "to": "03a-privacy-gateway.js",
       "symbols": [
         "PrivacyGateway"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "04-permission-runtime.js",
-      "symbols": [
-        "collectBridgedTools",
-        "mcpClients",
-        "sanitizeServerId"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "04h-provider-http.js",
-      "symbols": [
-        "providerBaseIsLocalOrLan",
-        "providerBaseWithV1"
       ],
       "direction": "backward"
     },
@@ -30328,6 +30331,14 @@
         "buildMissionPromptSection"
       ],
       "direction": "forward"
+    },
+    {
+      "from": "06-provider-engine.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities"
+      ],
+      "direction": "backward"
     },
     {
       "from": "06-provider-engine.js",
@@ -30649,6 +30660,54 @@
         "collectBridgedTools",
         "mcpClients",
         "sanitizeServerId"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06w-capability-service.js",
+      "to": "00-boot.js",
+      "symbols": [
+        "DesktopExecutionHooks",
+        "nowIso"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06w-capability-service.js",
+      "to": "01-config.js",
+      "symbols": [
+        "readConfig",
+        "resolveExternalMcpServers"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06w-capability-service.js",
+      "to": "01h-process-runtime.js",
+      "symbols": [
+        "ProcessRuntime",
+        "existsExecutableAsync",
+        "probeGitCliAsync",
+        "probeRgAsync"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06w-capability-service.js",
+      "to": "04-permission-runtime.js",
+      "symbols": [
+        "collectBridgedTools",
+        "mcpClients",
+        "sanitizeServerId"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06w-capability-service.js",
+      "to": "04h-provider-http.js",
+      "symbols": [
+        "providerBaseIsLocalOrLan",
+        "providerBaseWithV1"
       ],
       "direction": "backward"
     },
@@ -31008,7 +31067,6 @@
       "symbols": [
         "TOOL_ITERATION_BUDGETS",
         "buildProviderSystemPrompt",
-        "getCapabilities",
         "readProjectMemory",
         "resolveToolIterationBudget",
         "shouldExtendToolIterationBudget"
@@ -31047,6 +31105,14 @@
       "to": "06i-steward-core.js",
       "symbols": [
         "stewardAutoAskReason"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "08-agent-runs.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities"
       ],
       "direction": "backward"
     },
@@ -31347,7 +31413,6 @@
         "buildStableSystemPrompt",
         "buildVolatileParts",
         "evalPlaybookAvailability",
-        "getCapabilities",
         "loadAllPlaybooks",
         "neutralizeAuthoredText",
         "readProjectMemory",
@@ -31429,6 +31494,14 @@
       "symbols": [
         "StewardHooks",
         "isStewardToolName"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "09-workflow.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities"
       ],
       "direction": "backward"
     },
@@ -32062,19 +32135,19 @@
     },
     {
       "from": "11-native-tools.js",
-      "to": "06-provider-engine.js",
+      "to": "06i-steward-core.js",
       "symbols": [
-        "markNetworkOnline",
-        "networkAnchors",
-        "probeAny"
+        "isStewardToolName"
       ],
       "direction": "backward"
     },
     {
       "from": "11-native-tools.js",
-      "to": "06i-steward-core.js",
+      "to": "06w-capability-service.js",
       "symbols": [
-        "isStewardToolName"
+        "markNetworkOnline",
+        "networkAnchors",
+        "probeAny"
       ],
       "direction": "backward"
     },
@@ -32328,12 +32401,9 @@
       "to": "06-provider-engine.js",
       "symbols": [
         "buildRuntimeIdentityFacts",
-        "getCapabilities",
         "listPlaybooksWithAvailability",
         "loadAllPlaybooks",
-        "markNetworkOnline",
         "neutralizeAuthoredText",
-        "peekCapabilities",
         "updateAutomaticThreadTitle"
       ],
       "direction": "backward"
@@ -32368,6 +32438,16 @@
         "isStewardToolName",
         "stewardAssemblePlaybookPrompt",
         "stewardPlaybookMissingInputs"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities",
+        "markNetworkOnline",
+        "peekCapabilities"
       ],
       "direction": "backward"
     },
@@ -32782,7 +32862,6 @@
         "ERROR_CLASSES",
         "deleteUserPlaybook",
         "draftPlaybookFromSession",
-        "getCapabilities",
         "listPlaybooksWithAvailability",
         "matchServiceEntry",
         "normalizePlaybook",
@@ -32876,6 +32955,14 @@
         "maybeRecordStorageTrend",
         "recordRequestMetric",
         "storageSweep"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13-http-router.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "getCapabilities"
       ],
       "direction": "backward"
     },
@@ -36394,7 +36481,6 @@
       "from": "14-main.js",
       "to": "06-provider-engine.js",
       "symbols": [
-        "CAP_UNKNOWN_TTL_MS",
         "ERROR_CLASSES",
         "TOOL_ITERATION_BUDGETS",
         "buildBrowserAutomationHint",
@@ -36406,15 +36492,10 @@
         "buildToolCustomizationHint",
         "buildVolatileParts",
         "evalPlaybookAvailability",
-        "getCapabilities",
-        "invalidateCapabilityCache",
         "matchServiceEntry",
         "maybeWriteThreadBrief",
-        "networkAnchors",
         "normalizePlaybook",
         "parseThreadBrief",
-        "peekCapabilities",
-        "probeAny",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
         "shouldExtendToolIterationBudget"
@@ -36613,6 +36694,19 @@
         "recordEngineTranscript",
         "recordRequestMetric",
         "storageSweep"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "14-main.js",
+      "to": "06w-capability-service.js",
+      "symbols": [
+        "CAP_UNKNOWN_TTL_MS",
+        "getCapabilities",
+        "invalidateCapabilityCache",
+        "networkAnchors",
+        "peekCapabilities",
+        "probeAny"
       ],
       "direction": "backward"
     },

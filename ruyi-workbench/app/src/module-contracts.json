@@ -3925,6 +3925,114 @@
       ]
     },
     {
+      "file": "06w-capability-service.js",
+      "layer": "engine",
+      "provides": [
+        "CAP_UNKNOWN_TTL_MS",
+        "createCapabilityService",
+        "getCapabilities",
+        "invalidateCapabilityCache",
+        "markNetworkOnline",
+        "networkAnchors",
+        "peekCapabilities",
+        "probeAny",
+        "probeDesktopMcp"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "DesktopExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutableAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeGitCliAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "ProcessRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "collectBridgedTools",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "mcpClients",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "sanitizeServerId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseIsLocalOrLan",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseWithV1",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "05-claude-engine.js",
       "layer": "engine",
       "provides": [
@@ -4629,21 +4737,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -4770,6 +4864,20 @@
         {
           "provider": "06v-operational-services.js",
           "symbol": "engineTranscriptCwd",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -5464,14 +5572,9 @@
       "file": "06-provider-engine.js",
       "layer": "engine",
       "provides": [
-        "CAP_CACHE_MS",
-        "CAP_PROBE_STALL_SLACK_MS",
-        "CAP_PROBE_TIMEOUT_MS",
-        "CAP_UNKNOWN_TTL_MS",
         "ENGINE_BRIEF_CLOSE",
         "ENGINE_BRIEF_OPEN",
         "ERROR_CLASSES",
-        "NETWORK_ANCHORS",
         "PROJECT_MEMORY_CAP",
         "RUYI_MCP_TOOL_PREFIX",
         "THREAD_BRIEF_FIRST_TURN_TRIES",
@@ -5480,9 +5583,6 @@
         "THREAD_BRIEF_REPLY_CHARS",
         "THREAD_BRIEF_RETRY_BACKOFF_MS",
         "TOOL_ITERATION_BUDGETS",
-        "_capCache",
-        "_capInflight",
-        "_capRequestedKey",
         "_engineBriefMemo",
         "buildBrowserAutomationHint",
         "buildEngineEnvBrief",
@@ -5498,23 +5598,15 @@
         "draftPlaybookFromSession",
         "engineBriefFacts",
         "evalPlaybookAvailability",
-        "getCapabilities",
-        "invalidateCapabilityCache",
         "isLongToolTask",
         "listPlaybooksWithAvailability",
         "loadAllPlaybooks",
-        "markNetworkOnline",
         "matchServiceEntry",
         "maybeWriteThreadBrief",
-        "networkAnchors",
         "neutralizeAuthoredText",
         "normalizePlaybook",
         "parseThreadBrief",
-        "peekCapabilities",
         "playbookReuseSources",
-        "probeAny",
-        "probeDesktopMcp",
-        "probeNetwork",
         "providerEnvLines",
         "readProjectMemory",
         "reassertThreadBrief",
@@ -5533,8 +5625,7 @@
         "threadBriefOnce",
         "threadBriefProvider",
         "threadBriefRateLimited",
-        "updateAutomaticThreadTitle",
-        "withRuntimeCapabilities"
+        "updateAutomaticThreadTitle"
       ],
       "requires": [
         {
@@ -5562,13 +5653,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -5584,13 +5668,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "DEFAULT_PORT",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "DesktopExecutionHooks",
           "kinds": [
             "read"
           ]
@@ -5712,15 +5789,7 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "resolveExternalMcpServers",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5768,30 +5837,9 @@
         },
         {
           "provider": "01h-process-runtime.js",
-          "symbol": "existsExecutableAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "probeGitCliAsync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -5853,45 +5901,9 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "collectBridgedTools",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "mcpClients",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "sanitizeServerId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseIsLocalOrLan",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseWithV1",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5936,6 +5948,13 @@
           "symbol": "buildMissionPromptSection",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -8249,13 +8268,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "readProjectMemory",
           "kinds": [
             "call"
@@ -8327,6 +8339,13 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskReason",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
           "kinds": [
             "call"
           ]
@@ -9585,13 +9604,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
           "kinds": [
             "call"
@@ -9861,6 +9873,13 @@
           "symbol": "StewardHooks",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -11971,29 +11990,29 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06i-steward-core.js",
+          "symbol": "isStewardToolName",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
           "symbol": "markNetworkOnline",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06w-capability-service.js",
           "symbol": "networkAnchors",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06w-capability-service.js",
           "symbol": "probeAny",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "isStewardToolName",
           "kinds": [
             "call"
           ]
@@ -12921,13 +12940,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
             "call"
@@ -12942,21 +12954,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "markNetworkOnline",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "neutralizeAuthoredText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -13049,6 +13047,27 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardPlaybookMissingInputs",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "markNetworkOnline",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
           "kinds": [
             "call"
           ]
@@ -14694,13 +14713,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
             "call"
@@ -15053,6 +15065,13 @@
         {
           "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
           "kinds": [
             "call"
           ]
@@ -26448,13 +26467,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "CAP_UNKNOWN_TTL_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "ERROR_CLASSES",
           "kinds": [
             "read"
@@ -26463,20 +26475,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "evalPlaybookAvailability",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "getCapabilities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "invalidateCapabilityCache",
           "kinds": [
             "read"
           ]
@@ -26497,13 +26495,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "networkAnchors",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "normalizePlaybook",
           "kinds": [
             "read"
@@ -26512,20 +26503,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "parseThreadBrief",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "peekCapabilities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "probeAny",
           "kinds": [
             "read"
           ]
@@ -27527,6 +27504,48 @@
         {
           "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "CAP_UNKNOWN_TTL_MS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "getCapabilities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "invalidateCapabilityCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "networkAnchors",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "peekCapabilities",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06w-capability-service.js",
+          "symbol": "probeAny",
           "kinds": [
             "read"
           ]

@@ -361,7 +361,9 @@
     "app/backend/voice-service.cjs",
     "app/backend/audit-timeline.cjs",
     "app/backend/runtime-metrics.cjs",
-    "app/backend/storage-steward.cjs"
+    "app/backend/storage-steward.cjs",
+    "app/backend/capability-service.cjs",
+    "app/backend/desktop-capability-probe.cjs"
   ],
   "acc": [
     "LICENSE",
