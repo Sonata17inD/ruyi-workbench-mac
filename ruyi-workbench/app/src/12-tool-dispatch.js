@@ -17,13 +17,6 @@ const FileMutationQueue = require('./backend/file-mutation-queue.cjs').createFil
 function fileToolWriteLockKey(filePath) { return path.resolve(String(filePath || '')); }
 function withFileToolWriteLock(filePaths, signal, work) { return FileMutationQueue.run(signal, work); }
 
-const FileToolPaths = require('./backend/file-tool-paths.cjs').createFileToolPaths({
-  loadSession, readConfig, normalizeCwd, getMcpSessionId: () => process.env.WCW_SESSION_ID || '',
-});
-function fileToolWorkspaceDir(...args) { return FileToolPaths.fileToolWorkspaceDir(...args); }
-function resolveFileToolRoot(...args) { return FileToolPaths.resolveFileToolRoot(...args); }
-function resolveFileToolPath(...args) { return FileToolPaths.resolveFileToolPath(...args); }
-
 // 未知档一律按 exec 算(与 nativeToolTier 的 unknown → exec 同口径);代理档本身只会是 read/edit/exec。
 function toolInvokeTierCovers(proxyTier, targetTier) {
   const rank = t => (Object.prototype.hasOwnProperty.call(TOOL_TIER_RANK, t) ? TOOL_TIER_RANK[t] : TOOL_TIER_RANK.exec);

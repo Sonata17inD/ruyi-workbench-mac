@@ -1493,23 +1493,6 @@ function buildClaudeRecoveryHistory(messages) {
   ].filter(Boolean).join('\n');
 }
 
-// E3 (dual-engine continuity) helpers. See the injection site in runClaudeTurn.
-// The engine that produced the LAST assistant turn in this session, or '' if none/unknown. Messages are
-// stamped with `engine` ('openai' | 'claude') since v0.8; legacy claude messages only carry source:'claude-cli'.
-function lastAssistantEngine(messages) {
-  const arr = Array.isArray(messages) ? messages : [];
-  for (let i = arr.length - 1; i >= 0; i--) {
-    const m = arr[i];
-    if (!m || m.role !== 'assistant') continue;
-    if (m.engine) return m.engine;
-    if (m.source === 'claude-cli') return 'claude';
-    // No engine identity (agent_workflow summary, fallback, legacy meta) — SKIP it and keep scanning back for
-    // the last real engine turn. Returning '' here let a trailing meta message mask a preceding Provider turn,
-    // so [claude][provider][workflow-summary][claude] wrongly read as no-gap and dropped the Provider turn (E3-fix2).
-    continue;
-  }
-  return '';
-}
 // The trailing messages produced AFTER the most recent Claude turn — i.e. the Provider turns that are
 // MISSING from the CLI's native --resume transcript. If no Claude turn is found, return the whole list.
 function claudeProviderTailSince(messages) {

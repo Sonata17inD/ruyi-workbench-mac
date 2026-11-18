@@ -237,6 +237,9 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./backend/attachment-prompt.cjs');
+const { lastAssistantEngine } = require('./backend/provider-history.cjs');
+const { PREVIEW_TEXT_EXTS, readFilePreview } = require('./backend/file-preview.cjs');
 const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
 const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');
 const { _expandMcpVar, _tomlKeyPath, _parseTomlMcpServers, parseMcpConfigFile, scanMcpSources } = require('./backend/mcp-config-import.cjs');

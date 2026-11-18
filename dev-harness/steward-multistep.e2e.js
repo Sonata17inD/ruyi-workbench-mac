@@ -18,7 +18,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
       const text = String(req.messages.findLast(m => m.role === 'user')?.content || '');
       const hasTool = req.messages.slice(req.messages.findLastIndex(m => m.role === 'user') + 1).some(m => m.role === 'tool');
       if (text.includes('NODE_TIGHTEN_FIRST')) return new Promise(resolve => { releaseTighten = () => resolve('EVIDENCE_42 前序完成。'); });
-      if (text.includes('NODE_DISABLED')) return hasTool ? '不会继续执行。' : toolCallFrames('powershell_run', { command: 'Write-Output fixture-disabled' });
+      if (text.includes('NODE_DISABLED')) return hasTool ? '不会继续执行。' : toolCallFrames('shell_run', { command: 'echo fixture-disabled' });
       if (text.includes('NODE_BRIDGE_WRITE')) return hasTool ? '检查点后不可执行。' : toolCallFrames('mcp__fixture__write', { path: 'late.txt' });
       if (text.includes('NODE_DENY_BATCH')) return toolCallFrames([{ name: 'file_write', args: { path: 'denied-first.txt', content: 'not allowed' }, id: 'batch_first' }, { name: 'file_write', args: { path: 'denied-second.txt', content: 'not allowed' }, id: 'batch_second' }]);
       if (text.includes('NODE_WRITE')) return hasTool ? '已写入 organized.txt。' : toolCallFrames('file_write', { path: 'organized.txt', content: 'EVIDENCE_42\n' });
@@ -33,7 +33,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, stewardPollMs: 120000, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
       permissionMode: 'auto', toolLoadingMode: 'full', defaultWorkspace: home, workspaces: [{ path: home }], subagentMaxPerTurn: 8, subagentMaxConcurrent: 2,
       providers: [{ id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'fixture', model: 'fake-model' }], activeProvider: 'fake' }));
-    s = loadServerInternals(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchingTurns', 'activeAgentRuns', 'runSessionTurn', 'classifyRunResumeTier', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks'], { withEval: true });
+    s = loadServerInternals(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchingTurns', 'activeAgentRuns', 'runSessionTurn', 'AgentRecovery', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks'], { withEval: true });
     const ctx = { sessionId: 'steward', trigger: 'user', session: { id: 'steward', kind: 'steward', providerHistory: [] } };
     const make = (title, tasks) => s.StewardHooks.threadNew({ title, cwd: home, brief: { userText: title + '，按前后顺序办理并统一交付。' }, steps: tasks.map(task => ({ task })) }, ctx);
     const settle = async id => { await until(() => !s.stewardLaunchingTurns.has(id), 'settle ' + id); return s.loadSession(id); };
@@ -81,7 +81,16 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     fs.unlinkSync(path.join(home, 'organized.txt'));
     await s.mutateConfig(c => { c.permissionMode = 'default'; });
     const pending = await s.StewardHooks.threadNew({ title: '权限待决', cwd: home, brief: { userText: '写文件前请让我确认。' }, steps: [{ task: 'NODE_WRITE 等确认再写', toolTier: 'edit' }, { task: 'NODE_AFTER' }] }, ctx);
-    await until(async () => (await s.readInterventions(pending.sessionId)).some(iv => iv.status === 'pending' && iv.type === 'permission'), 'permission');
+    if (!pending.ok) throw new Error('delegation was rejected: ' + JSON.stringify(pending));
+    await until(async () => {
+      if ((await s.readInterventions(pending.sessionId)).some(iv => iv.status === 'pending' && iv.type === 'permission')) return true;
+      if (s.stewardLaunchingTurns.has(pending.sessionId)) return false;
+      const run = (await s.listAgentRuns(pending.sessionId))[0];
+      throw new Error('delegation ended before permission: ' + JSON.stringify({
+        mode: (await s.readConfig()).permissionMode, status: run?.status,
+        nodes: run?.nodes.map(node => ({ status: node.status, error: node.error })),
+      }));
+    }, 'permission');
     ok(!fs.existsSync(path.join(home, 'organized.txt')) && (await s.listAgentRuns(pending.sessionId))[0].nodes[1].attempts === 0, '步骤内权限照常待决，确认前零写盘且后序未启动');
     const pendingIv = (await s.readInterventions(pending.sessionId)).find(iv => iv.status === 'pending');
     const denied = await s.decideIntervention({ missionId: pending.sessionId, interventionId: pendingIv.id, expectedVersion: pendingIv.interventionVersion || 0, idempotencyKey: 'deny-' + pendingIv.id, payload: { action: 'deny' } });
@@ -182,7 +191,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     await s.markInterruptedAgentRuns(); await s.autoResumeInterruptedRuns();
     const recovered = (await s.listAgentRuns(crash.sessionId)).find(r => r.id === crash.id);
     ok(recovered.status === 'paused' && recovered.resumeTierReasons.some(r => r.reason === 'delegation_result_unknown') && !s.activeAgentRuns.has(crash.id), '重启且开启自动恢复，未知步骤仍暂停核对，不重放纯读步骤');
-    ok(s.classifyRunResumeTier({ kind: 'orchestrate_agents', permissionModeAtLaunch: 'auto', nodes: [{ status: 'queued', toolTier: 'read' }] }, 'auto').tier === 'auto_resumable', '普通工作流原有恢复分级保持可用');
+    ok(s.AgentRecovery.classifyRunResumeTier({ kind: 'orchestrate_agents', permissionModeAtLaunch: 'auto', nodes: [{ status: 'queued', toolTier: 'read' }] }, 'auto').tier === 'auto_resumable', '普通工作流原有恢复分级保持可用');
   } catch (error) { t.fail(error.stack || String(error)); }
   finally { if (fake) await fake.close(); t.done({ exit: true }); }
 })();

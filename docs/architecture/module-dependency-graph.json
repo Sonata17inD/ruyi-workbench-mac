@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 86,
-    "providedSymbols": 3237,
-    "requiredSymbols": 3452,
-    "edges": 588,
+    "providedSymbols": 3229,
+    "requiredSymbols": 3446,
+    "edges": 586,
     "forwardEdges": 31,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -56,6 +56,7 @@
         "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
+        "PREVIEW_TEXT_EXTS",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
         "RUYI_DATA_DIR_NAME",
         "RUYI_EVENTS",
@@ -84,6 +85,8 @@
         "appRoot",
         "bridgedToolDisabledByPolicy",
         "bridgedWriteRelativePathArg",
+        "buildAttachmentPrompt",
+        "buildDeliveryRevisionPrompt",
         "cacheContextLength",
         "cachedContextLength",
         "cachedInputTokensFromUsage",
@@ -136,6 +139,7 @@
         "isSensitiveHardlinkAlias",
         "isSensitiveHardlinkStat",
         "json",
+        "lastAssistantEngine",
         "localTurnTimeParts",
         "logEvent",
         "lstatOrNull",
@@ -167,6 +171,7 @@
         "pidAlive",
         "providerLaunchVectorKey",
         "readBody",
+        "readFilePreview",
         "readJsonBody",
         "readline",
         "redact",
@@ -1835,6 +1840,7 @@
         "dropSessionBodyState",
         "dropSessionTitleOverride",
         "evaluateMissionCheck",
+        "fileToolWorkspaceDir",
         "finalizeMissionAfterTurn",
         "flushSessionIndex",
         "flushSessionIndexSync",
@@ -1852,6 +1858,7 @@
         "invalidateSessionIndex",
         "isProviderToolArgsObject",
         "isUntitledSessionTitle",
+        "journalBridgedWrite",
         "journalBytesAdjust",
         "journalDir",
         "journalDropEntries",
@@ -1875,6 +1882,7 @@
         "loadSession",
         "markInterruptedInterventions",
         "markSessionDeleted",
+        "materializeCheckpointEditorDiff",
         "maybeFinalizeMission",
         "mergeMissionBeforeSave",
         "missionAttachThread",
@@ -1905,6 +1913,7 @@
         "overlayUnflushedSessionIndex",
         "patchMissionContainer",
         "planSessionBodyAppend",
+        "preflightWriteBoundary",
         "projectBridgedIrreversible",
         "providerHistoryToolCalls",
         "readInterventions",
@@ -1930,6 +1939,8 @@
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
         "repairProviderHistoryToolArgs",
+        "resolveFileToolPath",
+        "resolveFileToolRoot",
         "rewindSession",
         "safeMissionId",
         "sanitizeImportedSessionMessages",
@@ -2037,6 +2048,13 @@
           "symbol": "makeId",
           "kinds": [
             "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "normalizeCwd",
+          "kinds": [
             "read"
           ]
         },
@@ -2167,7 +2185,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -2373,21 +2392,14 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "buildAttachmentPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildDeliveryRevisionPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "guardWorkspacePath",
           "kinds": [
             "read"
           ]
@@ -2397,13 +2409,6 @@
           "symbol": "realpathForContainment",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "lastAssistantEngine",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -2469,17 +2474,12 @@
         "BRIDGED_SCRIPT_TOOLS",
         "BRIDGED_WRITE_AUDIT_EXEMPT",
         "BRIDGED_WRITE_NAME_PATTERN",
-        "EXTERNAL_DIFF_CACHE_TTL_MS",
         "MAC_MANAGED_ROOTS",
         "OFFICE_WRITER_LIB_RE",
         "OS_CRITICAL_ROOTS",
         "OS_CRITICAL_ROOT_FILES",
         "OUTSIDE_WORKSPACE_READ_ERROR",
         "OUTSIDE_WORKSPACE_WRITE_ERROR",
-        "PREVIEW_IMAGE_MAX",
-        "PREVIEW_IMG_MIME",
-        "PREVIEW_TEXT_EXTS",
-        "PREVIEW_TEXT_MAX",
         "READDIR_TIMEOUT",
         "REALPATH_LINK_DEPTH_MAX",
         "REVEAL_OPEN_SAFE_EXTS",
@@ -2492,21 +2492,16 @@
         "WORKSPACE_DIR_TIMEOUT_MS",
         "WORKSPACE_MATCH_THRESHOLD",
         "WORKSPACE_RESOLVE_BUDGET_MS",
-        "WRITE_PATH_ARGS",
         "WRITE_PROTECTED_DATA_DIRS",
         "WRITE_PROTECTED_DATA_FILES",
-        "WriteBoundaryHooks",
         "_homeRealCache",
         "auditBridgedWriteCoverage",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
-        "buildAttachmentPrompt",
         "buildBrowserOpenSpawn",
         "buildCodeEditorSpawn",
-        "buildDeliveryRevisionPrompt",
         "buildOpenSpawn",
         "buildRevealSpawn",
-        "cleanupExternalDiffCache",
         "cwdWarning",
         "deviceNamespaceIsLocalVolume",
         "fileAllowedRoots",
@@ -2519,17 +2514,13 @@
         "isMacManagedPath",
         "isOsCriticalPath",
         "isWriteProtectedDataPath",
-        "journalBridgedWrite",
         "launchCodeEditor",
         "listChildDirs",
         "macSystemPolicyPath",
-        "materializeCheckpointEditorDiff",
         "nameSetJaccard",
         "normalizeAutoexecPath",
         "normalizeGuardPath",
-        "preflightWriteBoundary",
         "providerIsLocal",
-        "readFilePreview",
         "readdirTimed",
         "realUncWorkspaceRoots",
         "realpathForContainment",
@@ -2572,28 +2563,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "collectBridgedWriteTargets",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "dataRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "decodeTextFileBytes",
           "kinds": [
             "call"
           ]
@@ -2725,13 +2695,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "00-platform-runtime.js",
           "symbol": "platformOpenSpawn",
           "kinds": [
@@ -2755,34 +2718,6 @@
         {
           "provider": "01-config.js",
           "symbol": "toolboxComponentsDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalRecord",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalSessionCtx",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "kindForPath",
           "kinds": [
             "call"
           ]
@@ -2884,7 +2819,6 @@
         "isNativeToolName",
         "killAllMcpClients",
         "kimiModelList",
-        "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
         "makeAttachmentRecord",
         "mcpCallToolParams",
@@ -3473,6 +3407,21 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "buildAttachmentPrompt",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "buildDeliveryRevisionPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
             "call"
@@ -3532,6 +3481,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "lastAssistantEngine",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -3858,21 +3814,6 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "buildAttachmentPrompt",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildDeliveryRevisionPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
           "kinds": [
             "call"
@@ -3986,13 +3927,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "kimiModelList",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "lastAssistantEngine",
           "kinds": [
             "call"
           ]
@@ -6829,6 +6763,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "buildAttachmentPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cacheContextLength",
           "kinds": [
             "call"
@@ -7168,13 +7109,6 @@
         {
           "provider": "02f-turn-effect-kinds.js",
           "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildAttachmentPrompt",
           "kinds": [
             "call"
           ]
@@ -7757,6 +7691,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "journalBridgedWrite",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "MISSION_STALL_SIGNAL_WINDOW_MS",
           "kinds": [
             "read"
@@ -7772,6 +7713,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
           ]
@@ -7856,20 +7804,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "journalBridgedWrite",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
           ]
@@ -8401,6 +8335,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "buildAttachmentPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "buildDeliveryRevisionPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -8796,6 +8744,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "journalBridgedWrite",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
             "call"
@@ -8846,6 +8801,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "normalizeTodoItems",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
           ]
@@ -8992,35 +8954,7 @@
         },
         {
           "provider": "03-bridge-guard.js",
-          "symbol": "buildAttachmentPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildDeliveryRevisionPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "journalBridgedWrite",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "preflightWriteBoundary",
           "kinds": [
             "call"
           ]
@@ -11679,7 +11613,6 @@
         "DESKTOP_TOOL_HANDLERS",
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
-        "FileToolPaths",
         "INTEGRATION_TOOL_HANDLERS",
         "LAUNCH_MODE",
         "MANIFEST_FULL_VERIFY_MS",
@@ -11721,7 +11654,6 @@
         "fileToolBeforeForCheckpoint",
         "fileToolFsFailure",
         "fileToolPrivacySourceOptions",
-        "fileToolWorkspaceDir",
         "fileToolWriteLockKey",
         "guardDownloadDest",
         "guardedWalkRoot",
@@ -11743,8 +11675,6 @@
         "observationRecallQuotaTake",
         "openToolUncDenied",
         "resolveEnabledSkillEntries",
-        "resolveFileToolPath",
-        "resolveFileToolRoot",
         "resolveGitToolCwd",
         "respellWalkPaths",
         "runPythonScript",
@@ -11878,8 +11808,7 @@
           "provider": "00-boot.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -12110,6 +12039,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "fileToolWorkspaceDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "JOURNAL_KEEP_TURNS",
           "kinds": [
             "read"
@@ -12120,6 +12056,13 @@
           "symbol": "JOURNAL_MAX_BEFORE_BYTES",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "journalBridgedWrite",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -12205,6 +12148,22 @@
           "symbol": "readSessionScratchpad",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "resolveFileToolPath",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "resolveFileToolRoot",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -12295,13 +12254,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "isBrowserDocumentTarget",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "journalBridgedWrite",
           "kinds": [
             "call"
           ]
@@ -13338,6 +13290,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "PREVIEW_TEXT_EXTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "readFilePreview",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "readJsonBody",
           "kinds": [
             "call"
@@ -13953,6 +13919,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "materializeCheckpointEditorDiff",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "maybeFinalizeMission",
           "kinds": [
             "call"
@@ -14087,27 +14060,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "launchCodeEditor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "materializeCheckpointEditorDiff",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "PREVIEW_TEXT_EXTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "readFilePreview",
           "kinds": [
             "call"
           ]
@@ -17648,6 +17600,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "readFilePreview",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "send",
           "kinds": [
             "call"
@@ -17733,13 +17692,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "readFilePreview",
           "kinds": [
             "call"
           ]
@@ -28594,6 +28546,7 @@
         "fsp",
         "logEvent",
         "makeId",
+        "normalizeCwd",
         "nowIso",
         "os",
         "path",
@@ -28692,9 +28645,8 @@
       "from": "02-session-store.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "buildAttachmentPrompt",
-        "buildDeliveryRevisionPrompt",
         "guardFileToolPath",
+        "guardWorkspacePath",
         "realpathForContainment"
       ],
       "direction": "forward"
@@ -28703,7 +28655,6 @@
       "from": "02-session-store.js",
       "to": "04-permission-runtime.js",
       "symbols": [
-        "lastAssistantEngine",
         "stopSession"
       ],
       "direction": "forward"
@@ -28800,10 +28751,7 @@
         "BRIDGED_WRITE_PATH_ARGS",
         "URL",
         "agentCliHomes",
-        "collectBridgedWriteTargets",
-        "crypto",
         "dataRoot",
-        "decodeTextFileBytes",
         "ensureDataRootReal",
         "externalRoot",
         "fs",
@@ -28820,8 +28768,7 @@
         "sameFileIdentity",
         "samePathKey",
         "sensitiveDataRoots",
-        "spawnDetachedChecked",
-        "zlib"
+        "spawnDetachedChecked"
       ],
       "direction": "backward"
     },
@@ -28840,17 +28787,6 @@
         "mcpDropInDirs",
         "readConfig",
         "toolboxComponentsDir"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "03-bridge-guard.js",
-      "to": "02-session-store.js",
-      "symbols": [
-        "journalDir",
-        "journalRecord",
-        "journalSessionCtx",
-        "kindForPath"
       ],
       "direction": "backward"
     },
@@ -29078,12 +29014,15 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "RUYI_EVENTS",
+        "buildAttachmentPrompt",
+        "buildDeliveryRevisionPrompt",
         "claudeCostFields",
         "computeProviderCost",
         "createCappedDiagnosticText",
         "createNdjsonLineFeeder",
         "crypto",
         "fsp",
+        "lastAssistantEngine",
         "logEvent",
         "normalizeCwd",
         "nowIso",
@@ -29199,8 +29138,6 @@
       "from": "05-claude-engine.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "buildAttachmentPrompt",
-        "buildDeliveryRevisionPrompt",
         "cwdWarning"
       ],
       "direction": "backward"
@@ -29233,7 +29170,6 @@
         "installActiveChildEventFanout",
         "isClaudeResumeMissingError",
         "kimiModelList",
-        "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
         "nativeClaudeAgentResultInfo",
         "parseClaudeEvent",
@@ -29941,6 +29877,7 @@
         "adaptiveMetaToolSchemas",
         "apiFailure",
         "bridgedToolDisabledByPolicy",
+        "buildAttachmentPrompt",
         "cacheContextLength",
         "claudeCostFields",
         "createNdjsonLineFeeder",
@@ -30039,14 +29976,6 @@
       "to": "02f-turn-effect-kinds.js",
       "symbols": [
         "unprefixedBridgedName"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "07-autonomy.js",
-      "to": "03-bridge-guard.js",
-      "symbols": [
-        "buildAttachmentPrompt"
       ],
       "direction": "backward"
     },
@@ -30210,8 +30139,10 @@
         "MISSION_STALL_SIGNAL_WINDOW_MS",
         "appendUsageLedger",
         "isProviderToolArgsObject",
+        "journalBridgedWrite",
         "missionSignalThrottleAllow",
         "mutateSession",
+        "preflightWriteBoundary",
         "providerHistoryToolCalls",
         "readInterventions",
         "readSessionHeadResilient",
@@ -30237,9 +30168,7 @@
       "symbols": [
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
-        "guardWorkspacePath",
-        "journalBridgedWrite",
-        "preflightWriteBoundary"
+        "guardWorkspacePath"
       ],
       "direction": "backward"
     },
@@ -30400,6 +30329,8 @@
         "SubAgentMemoryHooks",
         "TOOL_TIER_RANK",
         "bridgedWriteRelativePathArg",
+        "buildAttachmentPrompt",
+        "buildDeliveryRevisionPrompt",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
@@ -30485,6 +30416,7 @@
         "finalizeMissionAfterTurn",
         "isProviderToolArgsObject",
         "isUntitledSessionTitle",
+        "journalBridgedWrite",
         "journalReadIndex",
         "journalRevertNoticesAck",
         "journalRevertNoticesPeek",
@@ -30493,6 +30425,7 @@
         "mutateSession",
         "normalizeMetaToolArgs",
         "normalizeTodoItems",
+        "preflightWriteBoundary",
         "projectBridgedIrreversible",
         "providerHistoryToolCalls",
         "readSessionNotes",
@@ -30534,11 +30467,7 @@
       "symbols": [
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
-        "buildAttachmentPrompt",
-        "buildDeliveryRevisionPrompt",
-        "cwdWarning",
-        "journalBridgedWrite",
-        "preflightWriteBoundary"
+        "cwdWarning"
       ],
       "direction": "backward"
     },
@@ -31315,6 +31244,8 @@
         "JOURNAL_KEEP_TURNS",
         "JOURNAL_MAX_BEFORE_BYTES",
         "SESSION_SCRATCHPAD_LIMITS",
+        "fileToolWorkspaceDir",
+        "journalBridgedWrite",
         "journalDropEntries",
         "journalReadIndex",
         "journalRecord",
@@ -31327,6 +31258,8 @@
         "normalizeScratchpadText",
         "normalizeTodoItems",
         "readSessionScratchpad",
+        "resolveFileToolPath",
+        "resolveFileToolRoot",
         "scratchpadTotalChars",
         "updateSessionScratchpad"
       ],
@@ -31363,7 +31296,6 @@
         "guardFileToolPath",
         "guardWorkspaceExecute",
         "isBrowserDocumentTarget",
-        "journalBridgedWrite",
         "realpathForContainment",
         "remoteUncDenialResolved",
         "resolveExecCwd"
@@ -31577,6 +31509,7 @@
         "ExternalBotHooks",
         "MCP_TOOLS",
         "OVERLAY_ID",
+        "PREVIEW_TEXT_EXTS",
         "SKILL_ID_RE",
         "URL",
         "VERSION",
@@ -31615,6 +31548,7 @@
         "pathWithinAnyRoot",
         "pathWithinRoot",
         "paths",
+        "readFilePreview",
         "readJsonBody",
         "redact",
         "resolveContextWindow",
@@ -31777,6 +31711,7 @@
         "journalReadIndex",
         "loadSession",
         "markInterruptedInterventions",
+        "materializeCheckpointEditorDiff",
         "maybeFinalizeMission",
         "missionControlCommand",
         "mutateSession",
@@ -31805,14 +31740,11 @@
       "from": "13-http-router.js",
       "to": "03-bridge-guard.js",
       "symbols": [
-        "PREVIEW_TEXT_EXTS",
         "buildCodeEditorSpawn",
         "buildRevealSpawn",
         "fileAllowedRoots",
         "guardWorkspacePath",
         "launchCodeEditor",
-        "materializeCheckpointEditorDiff",
-        "readFilePreview",
         "remoteUncDenialResolved",
         "resolvePreferredCodeEditor",
         "resolveWorkspace"
@@ -32102,6 +32034,7 @@
         "nowIso",
         "path",
         "pathWithinAnyRoot",
+        "readFilePreview",
         "send",
         "text"
       ],
@@ -32135,7 +32068,6 @@
       "to": "03-bridge-guard.js",
       "symbols": [
         "fileAllowedRoots",
-        "readFilePreview",
         "remoteUncDenialResolved"
       ],
       "direction": "backward"
@@ -35936,7 +35868,6 @@
   "stronglyConnectedComponents": [
     [
       "02-session-store.js",
-      "03-bridge-guard.js",
       "04-permission-runtime.js",
       "05-claude-engine.js",
       "05b-kimi-bridge.js",
@@ -35952,14 +35883,11 @@
     ]
   ],
   "cycleEdgeKeys": [
-    "02-session-store.js->03-bridge-guard.js",
     "02-session-store.js->04-permission-runtime.js",
     "02-session-store.js->07-autonomy.js",
     "02-session-store.js->08-agent-runs.js",
-    "03-bridge-guard.js->02-session-store.js",
     "04-permission-runtime.js->02-session-store.js",
     "05-claude-engine.js->02-session-store.js",
-    "05-claude-engine.js->03-bridge-guard.js",
     "05-claude-engine.js->04-permission-runtime.js",
     "05-claude-engine.js->05b-kimi-bridge.js",
     "05-claude-engine.js->06-provider-engine.js",
@@ -35969,7 +35897,6 @@
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->02-session-store.js",
-    "05b-kimi-bridge.js->03-bridge-guard.js",
     "05b-kimi-bridge.js->04-permission-runtime.js",
     "05b-kimi-bridge.js->06-provider-engine.js",
     "05b-kimi-bridge.js->07-autonomy.js",
@@ -35985,11 +35912,9 @@
     "06d-memory-domain.js->06-provider-engine.js",
     "06e-mission-domain.js->02-session-store.js",
     "07-autonomy.js->02-session-store.js",
-    "07-autonomy.js->03-bridge-guard.js",
     "07-autonomy.js->04-permission-runtime.js",
     "07-autonomy.js->06-provider-engine.js",
     "08-agent-runs.js->02-session-store.js",
-    "08-agent-runs.js->03-bridge-guard.js",
     "08-agent-runs.js->04-permission-runtime.js",
     "08-agent-runs.js->06-provider-engine.js",
     "08-agent-runs.js->07-autonomy.js",
@@ -35997,7 +35922,6 @@
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->02-session-store.js",
-    "09-workflow.js->03-bridge-guard.js",
     "09-workflow.js->04-permission-runtime.js",
     "09-workflow.js->06-provider-engine.js",
     "09-workflow.js->06d-memory-domain.js",
@@ -36012,12 +35936,10 @@
     "10-context-governance.js->06e-mission-domain.js",
     "10-context-governance.js->07-autonomy.js",
     "10-context-governance.js->09-workflow.js",
-    "11-native-tools.js->03-bridge-guard.js",
     "11-native-tools.js->04-permission-runtime.js",
     "11-native-tools.js->06-provider-engine.js",
     "11-native-tools.js->07-autonomy.js",
     "12-tool-dispatch.js->02-session-store.js",
-    "12-tool-dispatch.js->03-bridge-guard.js",
     "12-tool-dispatch.js->04-permission-runtime.js",
     "12-tool-dispatch.js->05-claude-engine.js",
     "12-tool-dispatch.js->06-provider-engine.js",

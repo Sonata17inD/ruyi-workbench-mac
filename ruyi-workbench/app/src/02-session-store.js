@@ -463,12 +463,7 @@ function detectDanglingTurn(session) {
 }
 // detectDanglingTurn 的判定本体:只看 providerHistory 的尾巴,at(i) 取第 i 条(数组下标,或 02 正文记录按行惰性解析)。
 
-const ProviderHistory = require('./backend/provider-history.cjs').createProviderHistory({
-  logEvent,
-  buildAttachmentPrompt: (...args) => buildAttachmentPrompt(...args),
-  buildDeliveryRevisionPrompt: (...args) => buildDeliveryRevisionPrompt(...args),
-  lastAssistantEngine: (...args) => lastAssistantEngine(...args),
-});
+const ProviderHistory = require('./backend/provider-history.cjs').createProviderHistory({ logEvent });
 function repairProviderHistoryPairing(...args) { return ProviderHistory.repairProviderHistoryPairing(...args); }
 function isProviderToolArgsObject(...args) { return ProviderHistory.isProviderToolArgsObject(...args); }
 function providerHistoryToolCalls(...args) { return ProviderHistory.providerHistoryToolCalls(...args); }
@@ -674,6 +669,16 @@ async function checkpointRollbackContext(sessionId) {
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
   paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit, safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
 });
+
+const { fileToolWorkspaceDir, resolveFileToolRoot, resolveFileToolPath } = require('./backend/file-tool-paths.cjs').createFileToolPaths({
+  loadSession, readConfig, normalizeCwd, getMcpSessionId: () => process.env.WCW_SESSION_ID || '',
+});
+const preflightWriteBoundary = require('./backend/file-write-preflight.cjs').createWriteBoundaryPreflight({ resolveFileToolPath, guardFileToolPath });
+
+let journalBridgedWrite = require('./backend/bridged-write-journal.cjs').createBridgedWriteJournal({
+  journalSessionCtx, guardWorkspacePath, journalRecord,
+});
+const materializeCheckpointEditorDiff = require('./backend/checkpoint-editor-diff.cjs').createCheckpointEditorDiff({ journalDir });
 
 // v0.8-S4b B2 — conversation REWIND (Claude Code-style "back up to just before this message"). Truncates
 // the session to the state right BEFORE `targetTurnSeq` began: removes that turn's user message and

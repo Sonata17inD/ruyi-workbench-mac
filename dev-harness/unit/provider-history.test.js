@@ -4,8 +4,7 @@ const assert = require('node:assert/strict');
 const { createProviderHistory } = require('../../ruyi-workbench/app/backend/provider-history.cjs');
 function fixture() {
   const logs = [];
-  return { logs, ...createProviderHistory({ logEvent: e => logs.push(e), buildAttachmentPrompt: () => '[attachment reference]',
-    buildDeliveryRevisionPrompt: () => '', lastAssistantEngine: messages => messages.findLast(m => m.role === 'assistant')?.engine }) };
+  return { logs, ...createProviderHistory({ logEvent: e => logs.push(e) }) };
 }
 test('large interrupted histories preserve original objects, order, uncertainty and repair idempotently', () => {
   const service = fixture(); const history = [], originals = [];
@@ -34,9 +33,11 @@ test('valid arguments retain exact bytes; malformed fragments are repaired witho
 });
 test('engine switching mirrors new display messages once without embedding historical image bytes', () => {
   const service = fixture();
-  const session = { messages: [{ role: 'user', content: 'question', attachments: [{ data: 'pixel-secret' }] }, { role: 'assistant', content: 'answer', engine: 'claude' }] };
+  const attachment = { path: '/fixture/photo.png', data: 'pixel-secret' };
+  const session = { messages: [{ role: 'user', content: 'question', attachments: [attachment] }, { role: 'assistant', content: 'answer', engine: 'claude' }] };
   service.syncProviderHistoryFromDisplay(session); service.syncProviderHistoryFromDisplay(session);
   assert.equal(session.providerHistory.length, 2); assert.equal(JSON.stringify(session.providerHistory).includes('pixel-secret'), false);
+  assert.match(session.providerHistory[0].content, /photo\.png/);
   session.messages.push({ role: 'user', content: 'followup' }); service.syncProviderHistoryFromDisplay(session);
   assert.equal(session.providerHistory.length, 3); assert.equal(session.providerHistoryCursor, 3);
 });

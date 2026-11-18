@@ -1,6 +1,27 @@
 'use strict';
+
+const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./attachment-prompt.cjs');
+
+// E3 (dual-engine continuity) helpers. See the injection site in runClaudeTurn.
+// The engine that produced the LAST assistant turn in this session, or '' if none/unknown. Messages are
+// stamped with `engine` ('openai' | 'claude') since v0.8; legacy claude messages only carry source:'claude-cli'.
+function lastAssistantEngine(messages) {
+  const arr = Array.isArray(messages) ? messages : [];
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const m = arr[i];
+    if (!m || m.role !== 'assistant') continue;
+    if (m.engine) return m.engine;
+    if (m.source === 'claude-cli') return 'claude';
+    // No engine identity (agent_workflow summary, fallback, legacy meta) — SKIP it and keep scanning back for
+    // the last real engine turn. Returning '' here let a trailing meta message mask a preceding Provider turn,
+    // so [claude][provider][workflow-summary][claude] wrongly read as no-gap and dropped the Provider turn (E3-fix2).
+    continue;
+  }
+  return '';
+}
+
 // Provider history transformations share one boundary across storage and engines.
-function createProviderHistory({ logEvent, buildAttachmentPrompt, buildDeliveryRevisionPrompt, lastAssistantEngine }) {
+function createProviderHistory({ logEvent }) {
 // 配对铁律自愈(strict provider 400 永久卡死会话的修复面):detectDanglingTurn 只【检测】悬挂,而
 // runOpenAiTurn 回合开始会无条件 push 新 user 消息 —— 若持久化的 providerHistory 里某个
 // assistant.tool_calls 有未应答 id(进程在工具块中途被杀/崩溃,abort 路径的 skip 填充来不及跑),
@@ -158,4 +179,4 @@ function syncProviderHistoryFromDisplay(session) {
 
 return { repairProviderHistoryPairing, isProviderToolArgsObject, providerHistoryToolCalls, repairProviderHistoryToolArgs, appendDisplayMessagesToProviderHistory, syncProviderHistoryFromDisplay };
 }
-module.exports = { createProviderHistory };
+module.exports = { createProviderHistory, lastAssistantEngine };
