@@ -9,8 +9,9 @@ const candidate = process.argv.find(value => value.startsWith('--candidate='))?.
 const names = ['PrivacyCore', 'PrivacyGateway', 'runSessionTurn', 'runSubAgentCore', 'createSession', 'loadSession', 'readConfig', 'mutateConfig'];
 let app;
 if (candidate) {
+  const { resolveRuntimeComposition } = require('../src-reader');
   const mod = new Module(server, module); mod.filename = server; mod.paths = Module._nodeModulePaths(path.dirname(server));
-  mod._compile(fs.readFileSync(path.resolve(candidate), 'utf8') + '\nmodule.exports.__internals={' + names.join(',') + '};module.exports.__internals.__eval=code=>eval(code);', server);
+  mod._compile(fs.readFileSync(resolveRuntimeComposition(candidate), 'utf8') + '\nmodule.exports.__internals={' + names.join(',') + '};module.exports.__internals.__eval=code=>eval(code);', server);
   app = mod.exports.__internals;
 } else app = require('../lib/server-internals').loadServerInternals(names, { withEval: true });
 const f = require('../lib/privacy-test-fixture').fixture();

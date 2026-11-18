@@ -16,11 +16,11 @@
 const fs = require('fs');
 const path = require('path');
 const Module = require('module');
-const { COMPOSITION_FILE } = require('../src-reader');
+const { COMPOSITION_FILE, resolveRuntimeComposition } = require('../src-reader');
 
 // RUYI_TEST_SERVER_JS:反向验证用 —— 指到修前的 server.js(从基线提交导出一份),确认新测试在旧码上确实红。
 const SERVER = process.env.RUYI_TEST_SERVER_JS
-  ? path.resolve(process.env.RUYI_TEST_SERVER_JS)
+  ? resolveRuntimeComposition(process.env.RUYI_TEST_SERVER_JS)
   : COMPOSITION_FILE;
 
 function readTestRuntimeSource() {

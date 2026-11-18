@@ -37,6 +37,10 @@ function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
   const modes = [];
   try {
     const manifest = verifyPackage(candidate);
+    ok(!manifest.files.some(file => file.type !== 'directory' && /\.(exe|dll|pyd|cmd|bat|ps1|psm1|msi|ocx)$/i.test(file.path)),
+      'packaged App has no Windows launchers or native loaders');
+    ok(!manifest.files.some(file => file.path.startsWith('Contents/Resources/workbench/mcp/ai-computer-control/wheels/')),
+      'packaged App omits the build wheelhouse');
     const expectedSigning = process.env.RUYI_OFFLINE_EXPECT_SIGNING || 'ad-hoc-development';
     if (!['ad-hoc-development', 'ad-hoc-internal-trial'].includes(expectedSigning)) throw new Error('Invalid expected signing policy');
     ok(manifest.signing === expectedSigning && manifest.notarized === false && !manifest.minimumSystemRuntimeVerified,
@@ -124,6 +128,12 @@ console.log(JSON.stringify(result));})().catch(e=>{console.error(e);process.exit
       }
       const [pythonCommand, pythonArgs] = sandbox(path.join(acc, 'runtime/python/bin/python'), ['-c', 'import sys;print(sys.version_info[:2])']);
       ok(run(pythonCommand, pythonArgs, { env: environment, cwd: scratch }).includes('(3, 12)'), 'portable python alias selects the bundled CPython3.12');
+      const venv = path.join(scratch, 'offline-venv');
+      const [bootstrapCommand, bootstrapArgs] = sandbox(python, ['-m', 'venv', venv]);
+      run(bootstrapCommand, bootstrapArgs, { env: environment, cwd: scratch });
+      const [pipCommand, pipArgs] = sandbox(path.join(venv, 'bin/python'), ['-m', 'pip', '--version']);
+      ok(run(pipCommand, pipArgs, { env: environment, cwd: scratch }).includes(venv),
+        'bundled Python still bootstraps pip into an isolated Mac venv without a wheelhouse or network');
       const S = require(serverJs); cleanupMcp = S.killAllMcpClients;
       const session = (await request('/api/sessions', { title: 'P6 offline package', cwd: workspace }, token)).session;
       const [mcpCommand, mcpArgs] = sandbox(node, [serverJs, 'mcp']);

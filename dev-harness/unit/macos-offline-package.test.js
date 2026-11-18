@@ -74,5 +74,11 @@ test('native audit handles parenthesis paths and rejects a real missing loader-r
   run('/usr/bin/xcrun', ['clang', '-arch', 'arm64', '-mmacosx-version-min=14.0', main, '-L' + root, '-lsample', '-o', executable]);
   assert.ok(nativeAudit(root).length >= 2);
   assert.equal(run(executable, []), '');
+  const foreign = path.join(root, 'foreign-launcher');
+  const disguisedPe = Buffer.alloc(68);
+  disguisedPe.write('MZ'); disguisedPe.writeUInt32LE(64, 60); disguisedPe.write('PE\0\0', 64);
+  fs.writeFileSync(foreign, disguisedPe);
+  assert.throws(() => nativeAudit(root), /Windows PE image/);
+  fs.unlinkSync(foreign);
   fs.unlinkSync(path.join(root, 'libsample.dylib')); assert.throws(() => nativeAudit(root), /Unresolved/);
 });

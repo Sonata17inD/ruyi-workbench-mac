@@ -14,6 +14,7 @@ const { buildMacAutomationHelper } = require('./build-macos-automation-helper');
 const root = path.resolve(__dirname, '..');
 const repo = path.dirname(root);
 const lockFile = path.join(repo, 'ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json');
+const windowsLauncherSuffixes = new Set(['.exe', '.dll', '.pyd', '.cmd', '.bat', '.ps1', '.psm1', '.msi', '.ocx']);
 
 function writeJson(file, value) { fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n'); }
 function buildMacOffline({ assets, output, variant = 'full' }) {
@@ -68,7 +69,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
       const pythonRoot = path.join(acc, 'runtime/python');
       copyTree(inputs.python.directory, pythonRoot);
       const python = path.join(pythonRoot, 'bin/python3');
-      const wheels = path.join(acc, 'wheels');
+      const wheels = path.join(staging, 'wheels');
       copyTree(inputs.wheels.directory, wheels);
       const requirementFile = path.join(acc, 'requirements.lock.txt');
       fs.copyFileSync(path.join(repo, lock.requirements), requirementFile);
@@ -85,6 +86,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
         path.join(root, 'packaging/macos/runtime-files.json')], { env, cwd: staging });
       run(python, ['-m', 'pip', 'install', '--no-index', '--find-links', wheels, '--no-deps', '--no-compile',
         'ai-computer-control==' + accWheel.split('-')[1]], { env, cwd: staging });
+      const pythonPackager = path.join(__dirname, 'macos-offline-python.py');
+      run(python, [pythonPackager, '--runtime', pythonRoot, '--prune-windows-launchers', ...windowsLauncherSuffixes], { env, cwd: staging });
       run(python, ['-m', 'pip', 'check'], { env, cwd: staging });
       run(python, [path.join(__dirname, 'macos-offline-python.py'), '--runtime', pythonRoot, '--entrypoints'], { env, cwd: staging });
       const browsers = path.join(acc, 'playwright_browsers/chromium-' + lock.chromiumRevision);
@@ -110,6 +113,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', bundle]);
     run('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle]);
     const files = inventory(bundle);
+    const foreign = files.find(file => file.type !== 'directory' && windowsLauncherSuffixes.has(path.extname(file.path).toLowerCase()));
+    if (foreign) throw new Error('Windows runtime file in Mac package: ' + foreign.path);
     writeJson(path.join(candidate, 'package-manifest.json'), { schemaVersion: 1, app: 'Ruyi.app',
       version: require('../package.json').version, variant, platform: 'darwin', arch: 'arm64', sourceCommit: source,
       sourceFingerprint, assetsLockSha256: sha256(lockFile), capabilities, signing: 'ad-hoc-development', notarized: false,

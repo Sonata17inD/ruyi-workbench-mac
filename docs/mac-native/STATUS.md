@@ -1403,3 +1403,9 @@
 ## 集成交付：历史回归日志归档
 
 - P6 前次发布的 2,432 份原始回归日志及结果已压缩归档，逐文件以 SHA-256 对账。保留文档直接链接的原始文件和既有结果清册，构建及测试无此批文件依赖。 [归档与核验说明](../../MACOS-PORTING/evidence/P6/archives/README.md)
+
+## 集成交付：裁剪第三方 Windows 启动载荷
+
+- 同源 `2d85f29a` Full／Slim 试构建成功。清单复查在 Full 的 CPython、pip、greenlet 和 Playwright 中发现 17 个 Windows 启动器和脚本，Slim 未发现。`ensurepip` 引导 wheel 里另含 6 个用于 Windows 的 pip 启动器。
+- wheelhouse 改在构建暂存目录；裁剪已安装 Python 目录及 `ensurepip` 引导 wheel，仅删除 Windows 启动文件并同步 `RECORD`。最终清单拒绝 Windows 启动文件扩展名，原生闭包检查拒绝伪装文件名的 PE 映像。锁定资产、Python 导入路径和已安装授权文件保留。
+- 打包单元 7 项与 ACC 离线静态契约通过。用了真实 `ensurepip` wheel 的隔离裁剪探针核验 pip 模块字节和 `RECORD`。已迁移启动入口的 19 项候选内省相关单元通过。新版 Full／Slim 产物重建及隔离验收待完成。

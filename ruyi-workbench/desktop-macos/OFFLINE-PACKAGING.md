@@ -9,7 +9,7 @@ P6-01 将 AppKit/WKWebView 宿主、Node/Web 程序、运行时与许可放在�
 | 变体 | 包内依赖 | 能力边界 |
 |---|---|---|
 | Slim | Node24、ripgrep、宿主与三个原生 helper、Web UI、配置模板、内置资源 | 工作台、Provider API、文件/搜索/Shell；不随附 Python/ACC、Office 与浏览器自动化依赖 |
-| Full | Slim 加独立 CPython3.12、非 editable ACC、锁定的 Office/图表/视觉/Playwright wheels、完整 arm64 Chrome for Testing | 增加文档、图表、浏览器及已验范围内的桌面 MCP；桌面能力仍需要用户授予相应系统权限 |
+| Full | Slim 加独立 CPython3.12、安装好的 ACC 和锁定的 Office／图表／视觉／Playwright 依赖、arm64 Chrome for Testing | 增加文档、图表、浏览器及已验范围内的桌面 MCP；桌面能力仍需要用户授予相应系统权限 |
 
 两种变体均不打包官方 Agent CLI、Git、模型权重、Homebrew、Xcode 或用户凭据。模型服务需用户配置；本地/内网模型可无公网运行，云 API 需要网络。Git/CLI 集成需要用户另行安装相应工具。Full 的离线浏览器在工作台浏览器设置中选择 **bundled**；保留用户已有 system/custom/CDP 等选择，不自动接管默认浏览器。
 
@@ -40,6 +40,8 @@ node ruyi-workbench/tools/package-macos-offline.js \
 
 Full 使用隔离 HOME、临时目录和固定构建环境，从当前候选源码构建 ACC wheel，再用 `--no-index`、hash 锁定的 requirements 安装到独立 Python 中并执行 `pip check`。build isolation 也只使用同一锁定 wheelhouse 的 setuptools/wheel。构建中不运行 Playwright 下载器。浏览器的 credits/terms 从实际包内 `chrome://` 页面提取保存；Python 原始许可和各分发包元数据随包保留。
 
+Wheelhouse 只用于构建。打包器从已安装的 Python 依赖和 `ensurepip` 引导包中裁掉 Windows 启动器与脚本，并同步更新文件清单。Mac 上仍可用 `venv` 和 `ensurepip`。
+
 ## 布局
 
 ```text
@@ -53,7 +55,7 @@ Ruyi-full-candidate/
       runtime/macos/ruyi-{process,keychain,automation}-helper
       mcp/ai-computer-control/                 # Full only
         runtime/python/                      # standalone, not a copied venv
-        wheels/, requirements.lock.txt
+        requirements.lock.txt
         playwright_browsers/chromium-1248/
       resources/offline-manifest.json
       native-dependencies.json

@@ -13,6 +13,15 @@ const MANIFEST = path.join(APP, 'src', 'manifest.json');
 
 let cache = null; // 单测进程内只读一次(源码在测试运行期不变)
 
+function resolveRuntimeComposition(entryFile) {
+  const entry = path.resolve(entryFile);
+  if (path.basename(entry) === 'server.js'
+    && fs.readFileSync(entry, 'utf8').includes("require('./workbench-runtime.cjs')")) {
+    return path.join(path.dirname(entry), 'workbench-runtime.cjs');
+  }
+  return entry;
+}
+
 function readServerSource() {
   if (cache) return cache;
   if (fs.existsSync(MANIFEST)) {
@@ -31,4 +40,4 @@ function readServerSource() {
   return cache;
 }
 
-module.exports = { readServerSource, SINGLE_FILE, COMPOSITION_FILE, MANIFEST };
+module.exports = { readServerSource, resolveRuntimeComposition, SINGLE_FILE, COMPOSITION_FILE, MANIFEST };
