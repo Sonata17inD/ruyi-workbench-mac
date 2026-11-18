@@ -14429,87 +14429,26 @@
       "file": "13i-steward-inbox.js",
       "layer": "transport",
       "provides": [
-        "STEWARD_ACTIVE_WINDOW_MS",
-        "STEWARD_ADOPTED_DEDUPE_MS",
-        "STEWARD_ADOPTED_QUEUE_MAX",
-        "STEWARD_CARRY_MAX_EVENTS",
-        "STEWARD_CURSOR_FILE",
-        "STEWARD_CURSOR_MAX_PENDING",
-        "STEWARD_CURSOR_MAX_RUNS",
-        "STEWARD_CURSOR_MAX_SESSIONS",
-        "STEWARD_CURSOR_MEM_MAX_RUNS",
-        "STEWARD_CURSOR_MEM_MAX_SESSIONS",
-        "STEWARD_CURSOR_SCHEMA",
-        "STEWARD_DEDUPE_TAIL_ROWS",
-        "STEWARD_DIR_NAME",
-        "STEWARD_FIRST_SIGHT_MAX_EVENT_SEQ",
-        "STEWARD_FIRST_SIGHT_MAX_REVISION",
-        "STEWARD_FIRST_SIGHT_MAX_TURNS",
-        "STEWARD_INBOX_FILE",
-        "STEWARD_INBOX_FULL_READ_BYTES",
-        "STEWARD_INBOX_HISTORY_MAX",
-        "STEWARD_INBOX_LIMIT_DEFAULT",
-        "STEWARD_INBOX_LIMIT_MAX",
-        "STEWARD_INBOX_MAINTENANCE_MS",
-        "STEWARD_INBOX_RETENTION_MS",
-        "STEWARD_INBOX_TAIL_BYTES",
-        "STEWARD_MERGE_WINDOW_MS",
-        "STEWARD_RUN_EVENT_PAGE",
-        "STEWARD_RUN_TERMINAL",
-        "STEWARD_SEEN_MAX_KEYS",
         "STEWARD_SOURCE_EVENT_MAP",
-        "STEWARD_TICK_MAX_EVENTS",
-        "STEWARD_WAKE_DELAYS_MS",
-        "STEWARD_WAKE_EVENTS",
+        "StewardInboxEvents",
         "createStewardInboxEvents",
         "startStewardInbox",
-        "stewardAppendChain",
         "stewardAppendInboxRows",
-        "stewardApplyPresenceGate",
-        "stewardClearWake",
         "stewardClipSummary",
-        "stewardCollectEvents",
-        "stewardCollectSessionTurn",
-        "stewardConsistencyMs",
-        "stewardCursorPath",
         "stewardDir",
         "stewardEventDedupeKey",
-        "stewardHeldTurnSessions",
-        "stewardInboxCounts",
-        "stewardInboxCountsMemo",
-        "stewardInboxPath",
         "stewardInboxPendingState",
         "stewardInboxRead",
         "stewardInboxRowDedupeKeys",
         "stewardInboxState",
         "stewardIsoAt",
-        "stewardLoadState",
-        "stewardMaintainInbox",
         "stewardMergeInboxEvents",
         "stewardNormalizeBudgetExhausted",
         "stewardNormalizeMissionChange",
         "stewardNormalizePendingIntervention",
         "stewardNormalizeRunEvent",
-        "stewardNormalizeSessionTurn",
-        "stewardNormalizeThreadAdopted",
-        "stewardParseInboxText",
-        "stewardPendingKeyOf",
         "stewardPendingStillOpen",
         "stewardPresenceRows",
-        "stewardQueueThreadAdopted",
-        "stewardReadInboxRows",
-        "stewardReadInboxText",
-        "stewardReadStateFromDisk",
-        "stewardReadTurnHead",
-        "stewardResetRuntimeState",
-        "stewardRunTick",
-        "stewardRuntime",
-        "stewardSaveCursor",
-        "stewardScheduleWake",
-        "stewardStateLoad",
-        "stewardThreadBackgroundBusy",
-        "stewardTickOnce",
-        "stewardTrimCursorMap",
         "stewardViewingSessionIds",
         "stopStewardInbox"
       ],
@@ -14523,35 +14462,14 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -14574,13 +14492,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
             "read"
           ]
         },
@@ -14588,28 +14499,28 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14637,28 +14548,28 @@
           "provider": "02-session-store.js",
           "symbol": "listAgentRuns",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readAgentRunEvents",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14707,14 +14618,14 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardWatchedThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -19152,13 +19063,6 @@
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardInboxRead",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
-          "symbol": "stewardPendingKeyOf",
           "kinds": [
             "call"
           ]

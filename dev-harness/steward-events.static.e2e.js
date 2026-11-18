@@ -174,17 +174,15 @@ function typeExpressionLiterals(text) {
   ok(!/\bstartStewardInbox\b/.test(router), 'D5 API 分派不直接启动管家收件箱');
 
   const steward = read('13g-steward.js');
-  // 116-2e 重钉(只改读哪个文件,断言语义与文本不变):收件箱轮询与游标整体前移到 13i-steward-inbox.js,
-  // 13g 只留路由/决策日志/记忆/工具管道。故下面四条读的是 13i,Object.assign 那条仍读 13g。
-  const inbox = read('13i-steward-inbox.js');
+  const inbox = read('../backend/steward-inbox.cjs');
   ok(/Object\.assign\(StewardHooks, \{/.test(steward), 'D5 13g 用 Object.assign(StewardHooks, {...}) 延迟绑定填充');
   ok(/function startStewardInbox\(config\)[\s\S]{0,400}stewardEnabledV1 !== true\) return \{ ok: false, running: false/.test(inbox),
     'D5 开关关(stewardEnabledV1 !== true)时 startStewardInbox 立即返回:零 interval、零目录、零写入');
-  ok(!/setInterval/.test(inbox.slice(0, inbox.indexOf('async function startStewardInbox'))),
+  ok(!/\bsetInterval\s*\(/.test(inbox.slice(0, inbox.indexOf('async function startStewardInbox'))),
     'D5 模块加载期不起任何 interval(轮询只能由 startStewardInbox 起)');
   ok(inbox.includes("path.join(paths.data, STEWARD_DIR_NAME)") && !inbox.includes("paths.steward"),
     'D5 <data>/steward 不进 paths 常量表(否则 ensureDirs 会在开关关时也建目录)');
-  ok(inbox.includes('repairMissionChangeTornTail'), 'D5 inbox 追加复用 session-changes 同款 NDJSON 原语(不新造)');
+  ok(inbox.includes('await repairMissionChangeTornTail(file)'), 'D5 inbox 追加复用 session-changes 同款 NDJSON 原语(不新造)');
   ok(inbox.includes('atomicWriteJson(stewardCursorPath()'), 'D5 游标经 atomicWriteJson 落盘');
 
   const main = read('14-main.js');
@@ -239,7 +237,7 @@ function typeExpressionLiterals(text) {
   const st = STEWARD_SOURCE_EVENT_MAP.sessionTurn || {};
   ok(Object.prototype.hasOwnProperty.call(st, 'turn_settled') && st.turn_settled === '@sessionTurn',
     "D7 sessionTurn.turn_settled 登记为 '@sessionTurn'(语义由会话头上的 stewardLastTurn 决定)");
-  const src13i = read('13i-steward-inbox.js');
+  const inboxSource = read('../backend/steward-inbox.cjs');
   const eventSource = read('../backend/steward-inbox-events.cjs');
   ok(eventSource.includes('function stewardResolveSessionTurnKind('), 'D7 收件箱事件模块持有回合解析器');
   ok(eventSource.includes("'@sessionTurn': stewardResolveSessionTurnKind"), 'D7 解析器登记进 STEWARD_KIND_RESOLVERS');
@@ -266,8 +264,8 @@ function typeExpressionLiterals(text) {
   ok(src06i.indexOf('if (head.stewardWatch === false) return false;')
     < src06i.indexOf('if (head.launchedBy === ' + Q + 'steward' + Q + ') return true;'),
     'D7 121-K3:显式开关排在原三条判据【之前】(否则写 false 收不回管家开的线程)');
-  ok(!src13i.includes('function stewardWatchedThread(') && src13i.includes('stewardWatchedThread(head, sid, missionId)'),
-    'D7 13i 只【消费】那份判据,不留第二份实现');
+  ok(!inboxSource.includes('function stewardWatchedThread(') && inboxSource.includes('stewardWatchedThread(head, sid, missionId)'),
+    'D7 收件箱服务复用 stewardWatchedThread 的唯一实现');
   // 121-K3(§4.2):13e 的卡片产生条件从「只看 watched」换成 threadVisible 的四条并集,但 watched
   // 仍然是其中一条,而且仍然是【同一份实现】—— 13e 自己不许再判一遍「管家关不关心」。
   ok(read('13e-pretender-index.js').includes('stewardWatchedThread(head, sid, missionId)'),
@@ -276,14 +274,14 @@ function typeExpressionLiterals(text) {
     'D7 121-K3:13e 的卡片产生条件用 06i 的 threadVisible(可见与关心是两个判据,不是一个)');
   // 位置纪律:第四源必须排在「不活跃就 continue」之前 —— 速查线程没有 mission 卡片,
   // recent 恒 false,放在后面等于它只在会话首见那一轮生效。
-  const collectAt = src13i.indexOf('const turnEvt = await stewardCollectSessionTurn(');
-  const continueAt = src13i.indexOf('{ idleSessionIds.push(sid); continue; }');
+  const collectAt = inboxSource.indexOf('const turnEvt = await stewardCollectSessionTurn(');
+  const continueAt = inboxSource.indexOf('{ idleSessionIds.push(sid); continue; }');
   ok(collectAt > 0 && continueAt > 0 && collectAt < continueAt,
     'D7 第四源的收集点排在「不活跃就 continue」之前(否则第二轮起就再也看不到速查线程)');
   // 游标:新字段不改 schema 号(老游标缺这段 = 每条会话都算首见,由首见纪律兜住)。
-  ok(src13i.includes('sources: { missionChanges, agentRuns, pendingIds, budgetSeen, sessionTurns },'),
+  ok(inboxSource.includes('sources: { missionChanges, agentRuns, pendingIds, budgetSeen, sessionTurns },'),
     'D7 游标落盘带上 sessionTurns 段');
-  ok(src13i.includes('const STEWARD_CURSOR_SCHEMA = 1;'), 'D7 游标 schema 号仍是 1(向后兼容,不做迁移)');
+  ok(inboxSource.includes('const STEWARD_CURSOR_SCHEMA = 1;'), 'D7 游标 schema 号仍是 1(向后兼容,不做迁移)');
   // 写入端:管家族必须真的在会话头上写这两个标,否则第四源的判据永远为假。
   // 117 波 T1 重钉:派活原语与 thread_new / quick_ask 随 T1 一起搬进了 13k-steward-threads.js
   // (逐字节不变)。原断言读的是「13g 这个文件」,钉的是落点;改成读整个 13g 族(13g/13j/13k/13l)
@@ -309,15 +307,15 @@ function typeExpressionLiterals(text) {
   // 117p①(用户第七轮走查「2.0 回合已经跑完了,管家没有收到体现也没收工」):活回合分支的基线不能是
   // 「正在跑的那一回合」本身 —— turnSeq 在回合【开始】那一刻就落盘,首见就撞上活回合时拿它当基线
   // 等于把这一回合算成已报过,回合真跑完时 turnSeq 没再前进,唯一那条 done 被永久吞掉。
-  ok(src13i.includes("turnSeq: known ? known.turnSeq : Math.max(0, turnSeq - 1), stamp: '' };"),
+  ok(inboxSource.includes("turnSeq: known ? known.turnSeq : Math.max(0, turnSeq - 1), stamp: '' };"),
     'D7 117p① 活回合分支的基线是「这一回合之前」那个号(Math.max(0, turnSeq - 1)),不是正在跑的那个 turnSeq');
   // 117p②:首见分支还要堵住「回合已起手、还没登记进 activeChildren」那个窗口 —— 判据是
   // stewardLastTurn 落盘(last.seq >= turnSeq),且只能在 known == null 这一次生效(之后 known != null,
   // 普通的 turnSeq > baseline 就够了;放开范围会把用户自己接着聊的回合永久判成「还没结束」)。
   {
-    const knownNullAt = src13i.indexOf('if (known == null) {');
-    const inFlightAt = src13i.indexOf("const inFlight = String(head.launchedBy || '') === 'steward'");
-    const backfillInFlightAt = src13i.indexOf('if (backfill && inFlight) {');
+    const knownNullAt = inboxSource.indexOf('if (known == null) {');
+    const inFlightAt = inboxSource.indexOf("const inFlight = String(head.launchedBy || '') === 'steward'");
+    const backfillInFlightAt = inboxSource.indexOf('if (backfill && inFlight) {');
     ok(knownNullAt > 0 && inFlightAt > knownNullAt && backfillInFlightAt > inFlightAt,
       'D7 117p② 首见分支(known == null)里有 stewardLastTurn 的 in-flight 判据,且被 backfill && inFlight 一起把关');
   }

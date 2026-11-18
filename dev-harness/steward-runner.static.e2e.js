@@ -50,8 +50,8 @@ const src13g = read('13g-steward.js');
 const src13j = read('13j-steward-tool-base.js');
 const src13k = read('13k-steward-threads.js');
 const src13l = read('13l-steward-ops.js');
-// 116-2e:收件箱轮询与游标前移到 13i-steward-inbox.js(零行为搬家),⑤ 的收件箱断言随之改读 13i。
-const src13i = read('13i-steward-inbox.js');
+const inboxComposition = read('13i-steward-inbox.js');
+const inboxSource = read('../backend/steward-inbox.cjs');
 const src13h = read('13h-steward-runner.js');
 const stewardRoutes = read('../backend/steward-routes.cjs');
 // 117 波 T2(32 号文 §5):13h 已 2522 行(比 T1 拆之前的 13g 还长),按「谁被谁引用」拆成六个文件
@@ -124,7 +124,7 @@ const src01b = read('../backend/http-route-policy.cjs');
     ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
-    ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];
+    ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['06k-config-patch.js', src06k]];
   const leaks = [];
   for (const [name, text] of consumers) {
     for (const symbol of runnerSymbols) {
@@ -189,7 +189,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -450,7 +450,7 @@ const srv = require(path.join(APP, 'server.js'));
   ok(rows.some(r => (r.id || r.name) === 'steward-visits'), '⑤ 到访归档面已登记进 durable-state-inventory');
   ok(/stewardEnabledV1 !== true/.test(stewardRoutes), '⑤ 管家路由在开关关闭时返回 409，且不写入');
   ok(/STEWARD_SESSION_ID = 'steward'/.test(src06i), '⑤ 管家会话固定 id 定在 06i(13g 与 13h 共用同一常量)');
-  ok(/if \(sid === STEWARD_SESSION_ID\) continue;/.test(src13i), '⑤ 收件箱轮询排除管家会话自己(防回合自激励成环)');
+  ok(/if \(sid === STEWARD_SESSION_ID\) continue;/.test(inboxSource), '⑤ 收件箱轮询排除管家会话自己(防回合自激励成环)');
   // 123-N1 ①(34 号文;用户 2026-09-13 真机走查「同一段对话出现两遍」):回执带落盘时刻。
   // 钉的是三件必须同时成立的事实,不是某一行的写法:
   //   · 取值来自【最后一条助手消息的 createdAt】—— 与 stewardStampReply 盖章的是同一条消息,
@@ -605,12 +605,12 @@ const srv = require(path.join(APP, 'server.js'));
 
   ok((src13m.match(/function stewardFailureExplain\(/g) || []).length === 1,
     '⑧a 取话口 stewardFailureExplain 的函数体恰一处,且在 13m(它读 06 是干净的后向边;放 06i 会造循环边)');
-  for (const [name, text] of [['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', src13i], ['13p-steward-runner-actions.js', src13p]]) {
+  for (const [name, text] of [['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['13p-steward-runner-actions.js', src13p]]) {
     ok(!/function stewardFailureExplain\(/.test(text), `⑧a2 ${name} 没有自己那一份取话口`);
     ok(!/ERROR_CLASSES/.test(codeOnly(text)), `⑧b ${name} 不直接翻那张表(只能经取话口;直接翻 = 迟早长出第二套口径)`);
   }
   ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 13m 确实引用了 06 的既有表(而不是自己抄一张)');
-  ok([eventSource, src13i, src13p].every(text => !/zh: '/.test(codeOnly(text))),
+  ok([eventSource, inboxComposition, inboxSource, src13p].every(text => !/zh: '/.test(codeOnly(text))),
     '⑧c 管家侧零第二张「机器类 → 人话」表');
 
   // 事件行只有一处调用:两处调用就意味着两种拼法,用户会在不同地方看到不同措辞。

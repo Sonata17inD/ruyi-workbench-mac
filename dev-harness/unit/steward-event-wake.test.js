@@ -1,64 +1,115 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { createRequire } = require('node:module');
 const { createStewardCore } = require('../../ruyi-workbench/app/backend/steward-core.cjs');
-const appRequire = createRequire(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn } = createStewardCore({});
-const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13i-steward-inbox.js'), 'utf8');
-function harness() {
-  const listeners = [], timers = new Set();
-  const context = vm.createContext({
-    require: appRequire, STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn,
+const { createStewardInboxEvents } = require('../../ruyi-workbench/app/backend/steward-inbox-events.cjs');
+const { createStewardInbox } = require('../../ruyi-workbench/app/backend/steward-inbox.cjs');
+
+const rules = createStewardCore({});
+const inboxEvents = createStewardInboxEvents(rules);
+const config = { stewardEnabledV1: true, stewardPollMs: 5000 };
+
+function harness(getPretenderProjectionIndex = async () => ({ sessions: [] })) {
+  const listeners = [];
+  const wake = new Set();
+  const consistency = new Set();
+  const missing = async () => { throw Object.assign(new Error('fixture file missing'), { code: 'ENOENT' }); };
+  function addTimer(group, fn, ms) {
+    const timer = { fn, ms, unref() {} };
+    group.add(timer);
+    return timer;
+  }
+  const inbox = createStewardInbox({
+    paths: { data: '/unused' },
+    io: { fsp: { stat: missing, readFile: missing, async mkdir() {} }, async atomicWriteJson() {} },
+    sources: { getPretenderProjectionIndex }, execution: {}, rules, inboxEvents,
+    safeSessionId: value => String(value || ''), nowIso: () => new Date().toISOString(),
+    EventStreamHooks: {}, StewardHooks: {}, logEvent() {},
     RUYI_EVENTS: { subscribe(fn) { listeners.push(fn); } },
-    safeSessionId: value => String(value || ''), STEWARD_SESSION_ID: 'steward',
-    StewardHooks: {}, nowIso: () => new Date().toISOString(),
-    setTimeout(fn, ms) { const timer = { fn, ms, unref() {} }; timers.add(timer); return timer; },
-    clearTimeout(timer) { timers.delete(timer); },
-    setInterval(fn, ms) { const timer = { fn, ms, unref() {} }; timers.add(timer); return timer; },
-    clearInterval(timer) { timers.delete(timer); },
+    timers: {
+      setTimeout(fn, ms) { return addTimer(wake, fn, ms); },
+      clearTimeout(timer) { wake.delete(timer); },
+      setInterval(fn, ms) { return addTimer(consistency, fn, ms); },
+      clearInterval(timer) { consistency.delete(timer); },
+    },
   });
-  vm.runInContext(source, context);
-  const evaluate = code => vm.runInContext(code, context);
-  return { evaluate, timers, emit(name, sessionId = 'work') { for (const fn of listeners) fn(name, { sessionId, by: 'user' }); } };
+  return { ...inbox, wake, consistency, emit(name, sessionId = 'work') {
+    for (const fn of listeners) fn(name, { sessionId, by: 'user' });
+  } };
 }
-test('lifecycle events wake inbox, coalesce without deadline starvation, and stop clears wakeups', () => {
+
+test('lifecycle events wake inbox, coalesce without deadline starvation, and stop clears wakeups', async () => {
   for (const event of ['thread.needs_you', 'thread.done', 'thread.state', 'thread.created', 'thread.removed', 'thread.adopted', 'background.completed']) {
     const h = harness();
-    h.emit(event); assert.equal(h.timers.size, 0);
-    h.evaluate('stewardRuntime.running = true');
-    h.emit(event, 'steward'); assert.equal(h.timers.size, 0);
-    h.emit('thread.delta'); assert.equal(h.timers.size, 0);
+    h.emit(event);
+    assert.equal(h.wake.size, 0);
+    await h.startStewardInbox(config);
+    h.emit(event, 'steward');
+    assert.equal(h.wake.size, 0);
+    h.emit('thread.delta');
+    assert.equal(h.wake.size, 0);
     h.emit(event, 'work2');
-    assert.equal(h.timers.size, 2, event);
-    const original = [...h.timers];
+    assert.equal(h.wake.size, 2, event);
+    const original = [...h.wake];
     for (let n = 0; n < 50; n++) h.emit(event, 'work' + n);
-    assert.deepEqual([...h.timers], original);
-    h.evaluate('stopStewardInbox()'); assert.equal(h.timers.size, 0);
+    assert.deepEqual([...h.wake], original);
+    h.stopStewardInbox();
+    assert.equal(h.wake.size, 0);
+    assert.equal(h.consistency.size, 0);
   }
 });
+
 test('events received during an in-flight tick cause another pass after settlement', async () => {
-  const h = harness();
-  h.evaluate('stewardRuntime.running = true; var finish; stewardTickOnce = () => new Promise(resolve => { finish = resolve; });');
-  const tick = h.evaluate('stewardRunTick()');
+  let pause = false;
+  let finish;
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const h = harness(async () => {
+    if (!pause) return { sessions: [] };
+    return new Promise(resolve => { finish = resolve; started(); });
+  });
+  await h.startStewardInbox(config);
+  pause = true;
+  const tick = h.startStewardInbox(config);
+  await entered;
   h.emit('thread.done');
-  for (const timer of [...h.timers]) { h.timers.delete(timer); timer.fn(); }
-  assert.equal(h.timers.size, 0);
-  h.evaluate('finish({ written: 0 })');
+  for (const timer of [...h.wake]) {
+    h.wake.delete(timer);
+    timer.fn();
+  }
+  assert.equal(h.wake.size, 0);
+  finish({ sessions: [] });
   await tick;
-  assert.equal(h.timers.size, 2);
-  h.evaluate('stopStewardInbox()');
+  assert.equal(h.wake.size, 2);
+  h.stopStewardInbox();
 });
+
 test('consistency checks have a one-minute floor and startup still takes an immediate snapshot', async () => {
-  const h = harness();
-  h.evaluate('var ticks = 0; stewardTickOnce = async () => { ticks++; return { written: 0 }; };');
-  await h.evaluate('startStewardInbox({ stewardEnabledV1: true, stewardPollMs: 5000 })');
-  assert.equal(h.evaluate('ticks'), 1);
-  assert.equal([...h.timers][0].ms, 60000);
-  assert.equal(h.evaluate('stewardConsistencyMs(NaN)'), 60000);
-  assert.equal(h.evaluate('stewardConsistencyMs(999999)'), 120000);
-  h.evaluate('stopStewardInbox()'); assert.equal(h.timers.size, 0);
+  let ticks = 0;
+  const h = harness(async () => { ticks++; return { sessions: [] }; });
+  await h.startStewardInbox(config);
+  assert.equal(ticks, 1);
+  assert.equal([...h.consistency][0].ms, 60000);
+  assert.equal((await h.stewardInboxState({ stewardPollMs: NaN })).pollMs, 60000);
+  assert.equal((await h.stewardInboxState({ stewardPollMs: 999999 })).pollMs, 120000);
+  h.stopStewardInbox();
+  assert.equal(h.consistency.size, 0);
+});
+
+test('a stopped startup cannot install a second poller after a new startup', async () => {
+  let release;
+  let started;
+  const entered = new Promise(resolve => { started = resolve; });
+  const h = harness(() => new Promise(resolve => { release = resolve; started(); }));
+  const first = h.startStewardInbox(config);
+  await entered;
+  h.stopStewardInbox();
+  await h.startStewardInbox(config);
+  const [newPoller] = h.consistency;
+  assert.ok(newPoller);
+  release({ sessions: [] });
+  await first;
+  assert.deepEqual([...h.consistency], [newPoller]);
+  h.stopStewardInbox();
+  assert.equal(h.consistency.size, 0);
 });

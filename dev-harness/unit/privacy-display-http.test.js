@@ -26,7 +26,6 @@ const state = app.__eval(`(() => {
   loadSession = async id => state.session && state.session.id === id ? state.session : null;
   readSessionHeadResilient = async () => state.session;
   StewardHooks.runnerState = async () => state.runner;
-  stewardInboxState = async () => ({ enabled: true });
   return state;
 })()`);
 const streamChat = createHttpChatStream({

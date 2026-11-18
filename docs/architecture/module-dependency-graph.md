@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2452 | 3188 | 601 | 15 | 0 | 0 |
+| 87 | 2391 | 3183 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -84,7 +84,7 @@
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
-| 69 | `13i-steward-inbox.js` | transport | 83 | 29 | 7 |
+| 69 | `13i-steward-inbox.js` | transport | 22 | 25 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 61 | 126 | 18 |
@@ -93,7 +93,7 @@
 | 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
 | 76 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 16 |
 | 77 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
-| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 21 |
+| 78 | `13q-steward-runner-turn.js` | transport | 45 | 85 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
@@ -510,7 +510,7 @@
 | `13h-steward-runner.js` | `13o-steward-runner-prompt.js` | backward | `buildStewardSystemPrompt`, `stewardContextBudget`, `stewardPreroute`, `stewardVisitNotesPrompt` |
 | `13h-steward-runner.js` | `13p-steward-runner-actions.js` | backward | `stewardDayCost`, `stewardTurnsInWindow` |
 | `13h-steward-runner.js` | `13q-steward-runner-turn.js` | backward | `runStewardTurn`, `stewardApplyThreadTier`, `stewardOnInboxBatch`, `stewardRelayChannelFor`, `stewardRelayDeliver`, `stewardResetConversation`, `stewardRunAct`, `stewardVisit` |
-| `13i-steward-inbox.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `fs`, `fsp`, `logEvent`, `nowIso`, `path`, `paths`, `safeJsonParse`, `text` |
+| `13i-steward-inbox.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `logEvent`, `nowIso`, `paths`, `safeJsonParse` |
 | `13i-steward-inbox.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig`, `safeSessionId`, `sessionPath` |
 | `13i-steward-inbox.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `activeChildren`, `turnSettlers` |
 | `13i-steward-inbox.js` | `02-session-store.js` | backward | `listAgentRuns`, `readAgentRunEvents`, `readMissionChangesWithMeta`, `repairMissionChangeTornTail` |
@@ -616,7 +616,7 @@
 | `13q-steward-runner-turn.js` | `13d-core-domain-routes.js` | backward | `decideIntervention` |
 | `13q-steward-runner-turn.js` | `13e-pretender-index.js` | backward | `getPretenderProjectionIndex` |
 | `13q-steward-runner-turn.js` | `13g-steward.js` | backward | `stewardAuthorizeExternalContext` |
-| `13q-steward-runner-turn.js` | `13i-steward-inbox.js` | backward | `stewardDir`, `stewardInboxRead`, `stewardPendingKeyOf`, `stewardPendingStillOpen`, `stewardPresenceRows`, `stewardViewingSessionIds` |
+| `13q-steward-runner-turn.js` | `13i-steward-inbox.js` | backward | `stewardDir`, `stewardInboxRead`, `stewardPendingStillOpen`, `stewardPresenceRows`, `stewardViewingSessionIds` |
 | `13q-steward-runner-turn.js` | `13j-steward-tool-base.js` | backward | `_stewardReadBudget`, `stewardFail`, `stewardReadSessionHead` |
 | `13q-steward-runner-turn.js` | `13k-steward-threads.js` | backward | `stewardErrorDetail`, `stewardLaunchingTurns`, `stewardMediatesPermissions` |
 | `13q-steward-runner-turn.js` | `13l-steward-ops.js` | backward | `stewardDecideAttempted` |

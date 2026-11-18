@@ -154,6 +154,7 @@
     "app/backend/server-ownership.cjs",
     "app/backend/steward-core.cjs",
     "app/backend/steward-inbox-events.cjs",
+    "app/backend/steward-inbox.cjs",
     "app/backend/steward-thread-arbiter.cjs",
     "app/backend/steward-routes.cjs",
     "app/backend/session-bodies.cjs",

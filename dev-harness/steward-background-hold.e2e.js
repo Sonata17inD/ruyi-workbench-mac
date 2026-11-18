@@ -103,11 +103,11 @@ try {
 
 // 源码锁
 {
-  const src13i = fs.readFileSync(path.join(WB, 'app', 'src', '13i-steward-inbox.js'), 'utf8');
-  const busyFn = (src13i.match(/function stewardThreadBackgroundBusy\(sid\) \{[\s\S]*?\n\}/) || [''])[0];
+  const inboxSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox.cjs'), 'utf8');
+  const busyFn = require('./lib/source-slice').functionBlock(inboxSource, 'stewardThreadBackgroundBusy');
   ok(/EventStreamHooks\.backgroundShells/.test(busyFn) && /activeAgentRuns/.test(busyFn),
     'S1 「后台还在跑」读进程内真值:后台命令表 + 活着的 agent run(不读盘、不猜时间)');
-  ok(/if \(normalized && normalized\.kind === 'done' && \(turnEvt \|\| stewardHeldTurnSessions\.has\(sid\)\)\) continue;/.test(src13i),
+  ok(/if \(normalized && normalized\.kind === 'done' && \(turnEvt \|\| stewardHeldTurnSessions\.has\(sid\)\)\) continue;/.test(inboxSource),
     'S2 班组收工与本线程回合报告是同一件事:回合报告在箱里或被按住时,done 不单独叫醒管家');
   const conv = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'steward-conversation.js'), 'utf8');
   ok(/if \(!\(Number\(source\.turnSeq\) > 0\)\) return null;/.test(conv)
