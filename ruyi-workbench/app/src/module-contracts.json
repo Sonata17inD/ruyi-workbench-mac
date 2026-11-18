@@ -1388,42 +1388,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -1432,7 +1397,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1446,7 +1411,7 @@
           "provider": "02g-desktop-executions.js",
           "symbol": "prepareDesktopExecutionArguments",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -19751,49 +19716,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -19809,14 +19732,14 @@
           "provider": "00-boot.js",
           "symbol": "sessionSaveIsTombstoned",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "isEquivalentDesktopAccServer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19844,21 +19767,21 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionObjectIsStale",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19893,7 +19816,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "probeDesktopExecutionReceipts",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

@@ -13,7 +13,7 @@
     {
       "id": "desktop-executions-v1",
       "pattern": "<data>/desktop-executions-v1/state.json (default-off main and foreground-node candidate)",
-      "owner": "02h-desktop-ledger.js",
+      "owner": "../backend/desktop-execution-ledger.cjs",
       "anchor": "'desktop-executions-v1'",
       "schema": "schema 1 root id, invocation digests/worker/result flags, delivery digests/closed-turn watermarks; optional typed nodeDelivery locator/scope and committed history/binding hashes",
       "writePrimitive": "DurableJsonStore strictRead cache:false quarantine:false ordinaryJson canonicalRead ownedRegular; bounded private IO; root/session admission and full dispatch-to-delivery ticket",
@@ -27,7 +27,7 @@
     {
       "id": "desktop-node-history",
       "pattern": "<data>/desktop-executions-v1/{intent-<scopehash>,delivery-<invocation>}.json",
-      "owner": "02h-desktop-ledger.js",
+      "owner": "../backend/desktop-execution-ledger.cjs",
       "anchor": "'desktop-node-history'",
       "schema": "schema 1 private projected node history with actual identity, batch/call, row and distinct image-position bindings; prepared node reservation replaced exactly once",
       "writePrimitive": "shared strict bounded canonical owned JSON store in the checked ledger directory; serialized immutable snapshot/readback, then typed node acknowledgement",

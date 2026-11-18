@@ -5,7 +5,7 @@
   "summary": {
     "modules": 87,
     "providedSymbols": 2077,
-    "requiredSymbols": 3111,
+    "requiredSymbols": 3100,
     "edges": 597,
     "forwardEdges": 14,
     "duplicateProvides": 0,
@@ -1454,42 +1454,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -1498,7 +1463,7 @@
           "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1512,7 +1477,7 @@
           "provider": "02g-desktop-executions.js",
           "symbol": "prepareDesktopExecutionArguments",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -19933,49 +19898,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -19991,14 +19914,14 @@
           "provider": "00-boot.js",
           "symbol": "sessionSaveIsTombstoned",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "isEquivalentDesktopAccServer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -20026,21 +19949,21 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionObjectIsStale",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -20075,7 +19998,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "probeDesktopExecutionReceipts",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -25075,12 +24998,7 @@
       "from": "02h-desktop-ledger.js",
       "to": "00-boot.js",
       "symbols": [
-        "copyOrdinaryJsonData",
-        "crypto",
-        "fsp",
-        "json",
         "nowIso",
-        "path",
         "runKeyedChain"
       ],
       "direction": "backward"
@@ -28506,12 +28424,6 @@
       "to": "00-boot.js",
       "symbols": [
         "DesktopExecutionHooks",
-        "copyOrdinaryJsonData",
-        "crypto",
-        "fs",
-        "fsp",
-        "json",
-        "path",
         "paths",
         "sessionSaveIsTombstoned"
       ],

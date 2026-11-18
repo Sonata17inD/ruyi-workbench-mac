@@ -31,7 +31,7 @@ const CENSUS = {
   '../backend/session-compaction.cjs': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
   // session-execution-routes.cjs 0:Kimi 状态 GET 回写用量走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。
   '../backend/session-steering.cjs': 1, // 插话路由往活回合那份对象里追加(回合自存)
-  '13ac-desktop-execution-runtime.js': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
+  '../backend/desktop-execution-runtime.cjs': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
   '../backend/intervention-routes.cjs': 1,// 权限暂停计时器的纯重写
   '../backend/steward-thread-create.cjs': 2,   // 建会话
   '13m-steward-runner-base.js': 2, // ensureStewardSession(建/补管家会话)

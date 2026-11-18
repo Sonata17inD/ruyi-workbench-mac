@@ -47,6 +47,8 @@
     "app/backend/mcp-sources.cjs",
     "app/backend/mcp-transports.cjs",
     "app/backend/active-child-events.cjs",
+    "app/backend/desktop-execution-ledger.cjs",
+    "app/backend/desktop-execution-runtime.cjs",
     "app/backend/steward-prompt-memory.cjs",
     "app/backend/steward-thread-overview.cjs",
     "app/backend/steward-preroute.cjs",

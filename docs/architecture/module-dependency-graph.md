@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2077 | 3111 | 597 | 14 | 0 | 0 |
+| 87 | 2077 | 3100 | 597 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -42,7 +42,7 @@
 | 24 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
 | 25 | `02f-turn-effect-kinds.js` | foundation | 4 | 0 | 0 |
 | 26 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
-| 27 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
+| 27 | `02h-desktop-ledger.js` | foundation | 1 | 4 | 3 |
 | 28 | `06f-autonomy-grants.js` | engine | 13 | 4 | 1 |
 | 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 25 | 16 | 3 |
@@ -100,7 +100,7 @@
 | 82 | `13t-steward-schedule.js` | transport | 10 | 26 | 10 |
 | 83 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
 | 84 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
-| 85 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
+| 85 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 16 | 8 |
 | 86 | `14-main.js` | entrypoint | 10 | 662 | 55 |
 
 ## 模块边
@@ -136,7 +136,7 @@
 | `02d-session-overrides.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
 | `02e-session-engine-route.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
 | `02g-desktop-executions.js` | `00-boot.js` | backward | `copyOrdinaryJsonData`, `crypto`, `executionArgumentsDigest`, `json` |
-| `02h-desktop-ledger.js` | `00-boot.js` | backward | `copyOrdinaryJsonData`, `crypto`, `fsp`, `json`, `nowIso`, `path`, `runKeyedChain` |
+| `02h-desktop-ledger.js` | `00-boot.js` | backward | `nowIso`, `runKeyedChain` |
 | `02h-desktop-ledger.js` | `01-config.js` | backward | `DurableJsonStore` |
 | `02h-desktop-ledger.js` | `02g-desktop-executions.js` | backward | `prepareDesktopExecutionArguments` |
 | `03-bridge-guard.js` | `00-boot.js` | backward | `AUTOEXEC_DENYLIST`, `agentCliHomes`, `dataRoot`, `ensureDataRootReal`, `externalRoot`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `isSensitiveHardlinkStat`, `logEvent`, `samePathKey`, `sensitiveDataRoots`, `spawnDetachedChecked` |
@@ -434,7 +434,7 @@
 | `13ab-privacy-api.js` | `07-autonomy.js` | backward | `nativeToolSchema` |
 | `13ab-privacy-api.js` | `12-tool-dispatch.js` | backward | `TOOL_HANDLERS` |
 | `13ab-privacy-api.js` | `13j-steward-tool-base.js` | backward | `stewardAppendDecision` |
-| `13ac-desktop-execution-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `copyOrdinaryJsonData`, `crypto`, `fs`, `fsp`, `json`, `path`, `paths`, `sessionSaveIsTombstoned` |
+| `13ac-desktop-execution-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `paths`, `sessionSaveIsTombstoned` |
 | `13ac-desktop-execution-runtime.js` | `01-config.js` | backward | `isEquivalentDesktopAccServer` |
 | `13ac-desktop-execution-runtime.js` | `01g-server-ownership.js` | backward | `ServerOwnership` |
 | `13ac-desktop-execution-runtime.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `turnSettlers` |
