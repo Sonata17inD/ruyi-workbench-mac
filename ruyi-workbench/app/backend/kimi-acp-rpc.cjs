@@ -129,4 +129,27 @@ function createKimiAcpRpc(child, handlers = {}, assertCliAllowed) {
   };
 }
 
-module.exports = { createKimiAcpRpc, kimiAcpContentText };
+function kimiAcpRequestError(code, message) {
+  const error = new Error(String(message || 'Kimi ACP request failed'));
+  error.code = code;
+  return error;
+}
+
+function kimiAcpAssertSession(params, context) {
+  const expected = String(context && context.reg && context.reg.nativeSessionId || '');
+  const actual = String(params && params.sessionId || '');
+  if (!actual) throw kimiAcpRequestError(-32602, 'sessionId is required');
+  if (expected && actual !== expected) throw kimiAcpRequestError(-32602, 'sessionId does not match the active Kimi session');
+}
+
+function awaitKimiAcpWithSignal(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(kimiAcpRequestError(-32800, 'Request cancelled'));
+  return new Promise((resolve, reject) => {
+    const cancel = () => reject(kimiAcpRequestError(-32800, 'Request cancelled'));
+    signal.addEventListener('abort', cancel, { once: true });
+    promise.then(value => { signal.removeEventListener('abort', cancel); resolve(value); }, error => { signal.removeEventListener('abort', cancel); reject(error); });
+  });
+}
+
+module.exports = { createKimiAcpRpc, kimiAcpContentText, kimiAcpRequestError, kimiAcpAssertSession, awaitKimiAcpWithSignal };

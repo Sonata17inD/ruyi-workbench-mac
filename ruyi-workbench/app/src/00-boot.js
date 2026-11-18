@@ -17,7 +17,6 @@ const os = require('os');
 const crypto = require('crypto');
 const cp = require('child_process');
 const readline = require('readline');
-const { StringDecoder } = require('string_decoder');
 const zlib = require('zlib'); // v0.8-S4a: checkpoint journal gzips `before` content with the built-in zlib (gzipSync/gunzipSync) — NO npm.
 const { URL, pathToFileURL } = require('url');
 

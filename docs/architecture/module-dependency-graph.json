@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2929,
-    "requiredSymbols": 3376,
+    "providedSymbols": 2910,
+    "requiredSymbols": 3374,
     "edges": 638,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -66,7 +66,6 @@
         "SESSION_SCHEMA",
         "SKILL_ID_RE",
         "SessionExecutionHooks",
-        "StringDecoder",
         "SubAgentMemoryHooks",
         "TOOL_PACK_DESCRIPTIONS",
         "TOOL_REQUIRES",
@@ -4724,7 +4723,6 @@
         "agentAutoCompactBackingOff",
         "agentAutoCompactFailures",
         "agentAutoCompactTrigger",
-        "appendKimiAcpTerminalOutput",
         "applyKimiAcpTurnConfig",
         "applyKimiStatusToSession",
         "awaitKimiAcpWithSignal",
@@ -4740,17 +4738,13 @@
         "createKimiAcpRpc",
         "ensureKimiAcpOperationPermission",
         "ensureKimiServer",
-        "ensureKimiWireSubagent",
-        "fileURLToPath",
         "freeLoopbackPort",
         "friendlyKimiAcpError",
         "handleKimiAcpElicitation",
         "handleKimiAcpFsRequest",
         "handleKimiAcpPermissionRequest",
-        "handleKimiAcpTerminalCreate",
         "handleKimiAcpTerminalRequest",
         "isKimiAcpPlanFilePath",
-        "isKimiAcpPlanFilename",
         "killKimiAcpTerminal",
         "kimiAcpActivatedActualConfigValue",
         "kimiAcpApplyPlan",
@@ -4789,10 +4783,8 @@
         "kimiAcpPlanApprovalGrantsCurrentTurn",
         "kimiAcpPlanFileFromUpdate",
         "kimiAcpPlanIdFromUpdate",
-        "kimiAcpPlanMarkdownFromItems",
         "kimiAcpPlanSnapshotFromUpdate",
         "kimiAcpQuestionKind",
-        "kimiAcpReadPlanSnapshotFile",
         "kimiAcpRememberConfigActual",
         "kimiAcpRequestError",
         "kimiAcpRestoreSession",
@@ -4801,11 +4793,8 @@
         "kimiAcpStoreConfigOptions",
         "kimiAcpSuccessfulEnterPlanMode",
         "kimiAcpSyncActualConfig",
-        "kimiAcpTerminal",
         "kimiAcpTerminalDisplayResult",
-        "kimiAcpTerminalOutputText",
         "kimiAcpTerminalRef",
-        "kimiAcpTextLines",
         "kimiAcpToolTier",
         "kimiAcpToolUpdateHasError",
         "kimiAcpToolUpdateSucceeded",
@@ -4821,11 +4810,6 @@
         "kimiSessionStatus",
         "kimiStatusFingerprint",
         "kimiUsageFromStatus",
-        "kimiWireFile",
-        "kimiWireLoopEvent",
-        "kimiWireSessionDir",
-        "kimiWireSubagentId",
-        "kimiWireSubagentStart",
         "maybeAutoCompactAgentSession",
         "normalizeKimiStatus",
         "noteAgentAutoCompactFailure",
@@ -4833,16 +4817,13 @@
         "parseKimiWireCompaction",
         "prepareKimiAcpSpawn",
         "readKimiWireRuntime",
-        "rememberKimiAcpTerminal",
         "replaceSessionObject",
         "resolveKimiAcpPlanFilePath",
         "runKimiAcpTurnPrepared",
         "runKimiCompact",
-        "settleKimiAcpTerminal",
         "stopKimiServer",
         "syncKimiSessionUsage",
         "syncKimiTurnPreferences",
-        "trimKimiAcpTerminalOutput",
         "watchKimiWire"
       ],
       "requires": [
@@ -4914,13 +4895,7 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "MAX_BODY_BYTES",
-          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -5005,13 +4980,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "StringDecoder",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -5077,7 +5045,8 @@
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5161,7 +5130,7 @@
           "provider": "02-session-store.js",
           "symbol": "normalizeTodoItems",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5219,7 +5188,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspaceExecute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -28657,9 +28626,7 @@
       "from": "05b-kimi-bridge.js",
       "to": "00-boot.js",
       "symbols": [
-        "MAX_BODY_BYTES",
         "RUYI_EVENTS",
-        "StringDecoder",
         "URL",
         "appRoot",
         "createCappedDiagnosticText",

@@ -70,9 +70,9 @@ describe('M4 stewardAskText：「等你放行」按界面语言拼', () => {
 });
 
 describe('M4 子代理进度 noteCode ＋ 新词条', () => {
-  it('服务端 subagent_progress 的字面量都带 noteCode（源码与产物各一份）', () => {
-    const need = { 'src/08-agent-runs.js': ['init', 'streaming'], 'src/07-autonomy.js': ['generating'], 'src/05b-kimi-bridge.js': ['kimiRunning', 'kimiRunningFor', 'kimiPaused'],
-      'server.js': ['init', 'streaming', 'generating', 'kimiRunning', 'kimiRunningFor', 'kimiPaused'] };
+  it('服务端子代理进度事件在各自实现中带有 noteCode', () => {
+    const need = { 'src/08-agent-runs.js': ['init', 'streaming'], 'src/07-autonomy.js': ['generating'],
+      'backend/kimi-wire.cjs': ['kimiRunning', 'kimiRunningFor', 'kimiPaused'], 'server.js': ['init', 'streaming', 'generating'] };
     for (const [file, codes] of Object.entries(need)) {
       const text = read(path.join(ROOT, 'ruyi-workbench', 'app', file));
       for (const code of codes) assert.ok(text.includes(`noteCode: '${code}'`) || (code === 'kimiPaused' && text.includes("'kimiPaused'")), `${file} 缺 noteCode ${code}`);

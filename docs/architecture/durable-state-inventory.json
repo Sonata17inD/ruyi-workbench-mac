@@ -475,7 +475,7 @@
     {
       "id": "kimi-session-index",
       "pattern": "<kimi-home>/session_index.jsonl",
-      "owner": "05b-kimi-bridge.js",
+      "owner": "../backend/kimi-wire.cjs",
       "anchor": "'session_index.jsonl'",
       "schema": "external JSONL",
       "writePrimitive": "Kimi-owned append",
@@ -489,7 +489,7 @@
     {
       "id": "kimi-wire",
       "pattern": "<kimi-session>/agents/*/wire.jsonl",
-      "owner": "05b-kimi-bridge.js",
+      "owner": "../backend/kimi-wire.cjs",
       "anchor": "'wire.jsonl'",
       "schema": "external JSONL",
       "writePrimitive": "Kimi-owned append",
