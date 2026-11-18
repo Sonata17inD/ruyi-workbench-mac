@@ -17,6 +17,7 @@ const html = read(path.join(PUBLIC, 'index.html'));
 const manifest = JSON.parse(read(path.join(SRC, 'manifest.json')));
 const httpRouter = read(path.join(SRC, '13-http-router.js'));
 const coreDomainRoutes = read(path.join(SRC, '13d-core-domain-routes.js'));
+const agentRunRoutes = read(path.join(SRC, '../backend/agent-run-routes.cjs'));
 const performanceGate = read(path.join(__dirname, 'ec-d-performance.e2e.js'));
 let failures = 0;
 const ok = (condition, label) => {
@@ -81,8 +82,11 @@ ok(CHAT_CSS_ROUTES.length === 5
 const backendFiles = new Set(manifest.modules.map(module => module.file));
 ok(['02-session-store.js', '04-permission-runtime.js', '08-agent-runs.js', '13b-api-domain-routes.js', '13d-core-domain-routes.js']
   .every(file => backendFiles.has(file))
-  && ['handleSessionApiRoutes', 'handleInterventionApiRoutes', 'handleAgentRunApiRoutes']
+  && ['handleSessionApiRoutes', 'handleInterventionApiRoutes']
     .every(name => coreDomainRoutes.includes(`function ${name}(`) && httpRouter.includes(`await ${name}(`))
+  && agentRunRoutes.includes('function handleAgentRunApiRoutes(')
+  && coreDomainRoutes.includes("require('./backend/agent-run-routes.cjs').createAgentRunRoutes(")
+  && httpRouter.includes('await handleAgentRunApiRoutes(')
   && !/pathname === '\/api\/(sessions|permission\/request|agent-runs)'/.test(httpRouter),
 'E8 session、permission、agent-runs 实现与 API 编排均完成后端物理拆域');
 

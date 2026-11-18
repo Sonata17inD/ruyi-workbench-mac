@@ -14311,7 +14311,6 @@
       "file": "13d-core-domain-routes.js",
       "layer": "transport",
       "provides": [
-        "BACKGROUND_RUN_DONE",
         "MISSION_FAILURE_PARAM_KEYS",
         "NDJSON_EDGE_EXTEND_CHUNK",
         "NDJSON_EDGE_EXTEND_MAX",
@@ -14504,7 +14503,8 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14524,13 +14524,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeDecodeURIComponent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "safeJsonParse",
           "kinds": [
             "call"
           ]
@@ -14596,7 +14589,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14617,7 +14611,8 @@
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14692,23 +14687,8 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "agentRunDigestRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "agentRunEventsFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "agentRunFile",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14723,7 +14703,6 @@
           "provider": "02-session-store.js",
           "symbol": "appendAgentRunEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14738,14 +14717,13 @@
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "bumpRunIntervention",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14787,13 +14765,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "listAgentRunDigests",
           "kinds": [
             "call"
           ]
@@ -14870,13 +14841,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "readAgentRunEvents",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
             "call"
@@ -14914,7 +14878,6 @@
           "provider": "02-session-store.js",
           "symbol": "saveAgentRun",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15286,14 +15249,14 @@
           "provider": "08-agent-runs.js",
           "symbol": "applyAgentWorktree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "cleanupAgentWorktree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15307,14 +15270,14 @@
           "provider": "08-agent-runs.js",
           "symbol": "nodeDeliveryEligibility",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "launchPersistedAgentRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

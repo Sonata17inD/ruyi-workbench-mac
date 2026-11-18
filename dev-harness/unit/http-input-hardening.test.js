@@ -294,7 +294,7 @@ test('[L2] NDJSON 合批按边界刷新，收尾后忽略迟到事件和异步�
 });
 
 test('[L3] agent-runs digest 轮询不再深拷贝 live run(只读标量,浅展开等值)', () => {
-  const block = functionBlock(readSrc('13d-core-domain-routes.js'), 'handleAgentRunApiRoutes');
+  const block = functionBlock(readSrc('../backend/agent-run-routes.cjs'), 'handleAgentRunApiRoutes');
   assert.ok(block.length > 200, '切到 handleAgentRunApiRoutes');
   assert.match(block, /digestView \? live\.run : JSON\.parse\(JSON\.stringify\(live\.run\)\)/);
 });
