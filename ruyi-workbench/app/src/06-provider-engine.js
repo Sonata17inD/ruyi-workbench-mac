@@ -38,7 +38,7 @@ const { buildEngineEnvBrief, resolveEngineEnvBrief } = require('./backend/engine
   appName: APP_NAME, buildRuntimeIdentityFacts, probeRgAsync,
 });
 const { buildStableSystemPrompt, buildVolatileParts, buildProviderSystemPrompt } = require('./backend/provider-prompt.cjs').createProviderPrompt({
-  buildRuntimeIdentityFacts, buildEngineEnvBrief, toolPackForName,
+  buildRuntimeIdentityFacts, buildEngineEnvBrief,
   buildMemoryCheckPrompt, buildMemoryPromptSection,
   buildMissionPromptSection: (...args) => buildMissionPromptSection(...args),
 });

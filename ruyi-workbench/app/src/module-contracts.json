@@ -50,7 +50,6 @@
         "SKILL_ID_RE",
         "SessionExecutionHooks",
         "SubAgentMemoryHooks",
-        "TOOL_PACK_DESCRIPTIONS",
         "TOOL_REQUIRES",
         "TOOL_TIER_RANK",
         "URL",
@@ -2483,7 +2482,6 @@
         "PROMPT_WAIT_UNLIMITED_MS",
         "PermissionWaitHooks",
         "ToolboxHooks",
-        "_nativeToolNameSet",
         "appendLiveTail",
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
@@ -2521,7 +2519,6 @@
         "interventionCommandFailure",
         "invalidateMcpRuntime",
         "isClaudeResumeMissingError",
-        "isNativeToolName",
         "killAllMcpClients",
         "kimiContextWindow",
         "kimiModelList",
@@ -2640,13 +2637,6 @@
           "symbol": "maskKey",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "MCP_TOOLS",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -5289,13 +5279,6 @@
           "kinds": [
             "read"
           ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolPackForName",
-          "kinds": [
-            "read"
-          ]
         }
       ]
     },
@@ -6392,13 +6375,6 @@
         "ACTION_VIEW_MIN_CHARS",
         "ACTION_VIEW_TOOLS",
         "AGENT_TOOL_NAMES",
-        "BRIDGED_NOT_READ",
-        "BRIDGED_READ_PREFIXES",
-        "BRIDGED_READ_TOOLS",
-        "BRIDGED_SHADOWED_BY_NATIVE",
-        "BRIDGED_TOOL_NAME_MODIFIERS",
-        "BRIDGED_TOOL_NAME_TERMS",
-        "BRIDGED_TOOL_NAME_TERM_MAX_WORDS",
         "CLAUDE_PROGRESS_CHAR_STEP",
         "CLAUDE_SUBAGENT_EDIT_TOOLS",
         "CLAUDE_SUBAGENT_EXEC_TOOLS",
@@ -6415,33 +6391,15 @@
         "MAIL_TEXT_MAX",
         "MEMORY_WRITE_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
-        "PROVIDER_STARTER_TOOLS",
         "REVERTIBLE_TOOLS",
-        "RUNTIME_CODE_BUDGET",
-        "RUNTIME_CODE_INVALID_ARGUMENTS",
-        "RUNTIME_CODE_NOT_FOUND",
-        "RUNTIME_FAILCLASS_TRANSPORT",
-        "RUNTIME_FAILURE_CLASSIFIER_VERSION",
-        "RUNTIME_TELEMETRY_KEY",
         "STEER_QUEUE_MAX",
-        "TOOL_ARGS_BRIEF_CHARS",
-        "TOOL_ARG_ENUM_VALUE_CHARS",
-        "TOOL_RETRIEVAL_HINTS",
-        "TOOL_SCHEMA_NAMES_MAX",
-        "TOOL_SEARCH_EMPTY_NOTE",
-        "TOOL_SEARCH_FULL_ARGS_TOP",
         "WEB_PAYLOAD_LIMITS",
         "WEB_PAYLOAD_QUERY_TOOLS",
         "WEB_PAYLOAD_URL_TOOLS",
         "_nativeToolSchemaByName",
         "actionTargetMeta",
-        "bridgedCallTierFloor",
-        "bridgedShadowNative",
-        "bridgedToolAliases",
         "bridgedToolTier",
-        "bridgedToolTierByName",
         "buildActionEnvelope",
-        "buildCallHint",
         "buildOpenAiTools",
         "buildToolCatalog",
         "classifyClaudeSubagentFailure",
@@ -6449,6 +6407,7 @@
         "classifyToolPacks",
         "claudeSubagentPermission",
         "compareToolRetrievalShadow",
+        "createToolLoader",
         "createToolLoadingState",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
@@ -6457,7 +6416,6 @@
         "fetchOpenAiModels",
         "hasInterruptingSteer",
         "httpRequestInternalTargetReason",
-        "legacyToolCatalogSearch",
         "listCompactTools",
         "looksLikePlan",
         "loopAbortExempt",
@@ -6466,41 +6424,26 @@
         "nativeToolSchema",
         "nativeToolsAcceptingArgKeys",
         "neutralizeInjectedPrefixes",
-        "normalizeToolSearchText",
         "openAiStreamOnce",
-        "packDescriptionsFor",
         "policyDesktopOverrideFor",
         "policySessionFor",
         "probeProviderCompletion",
         "projectActionModelView",
         "projectCwdDirectoryFailure",
-        "rankToolCatalog",
         "requestNativePermission",
         "requestPlanApproval",
-        "retrievalHintForTool",
         "runClaudeSubAgentOnce",
-        "runtimeToolBlockedReason",
-        "sanitizeToolSchemaNames",
         "schedulerAskWaitOverrideMs",
         "schedulerAskWaitSessions",
         "searchToolCatalog",
-        "tokenizeToolSearchText",
-        "toolArgEnumText",
-        "toolArgTypeText",
-        "toolArgsResolveRef",
         "toolArgsSkeleton",
         "toolDisabledResult",
         "toolIsRevertible",
         "toolPackForName",
-        "toolSchemaFreezeBySessionMap",
-        "toolSchemaFreezeFor",
-        "toolSchemaSearchText",
         "webLooksEncoded",
         "webPayloadReason",
         "webSafeDecode",
-        "webUrlPayloadReason",
-        "withShadowedBridgeHints",
-        "withToolArgSkeletons"
+        "webUrlPayloadReason"
       ],
       "requires": [
         {
@@ -6522,13 +6465,6 @@
           "symbol": "BRIDGED_WRITE_PATH_ARGS",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "bridgedToolDisabledByPolicy",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -6605,7 +6541,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6682,13 +6619,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "TOOL_PACK_DESCRIPTIONS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "TOOL_REQUIRES",
           "kinds": [
             "read"
@@ -6753,13 +6683,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "appendOnlyToolSchemasEnabled",
           "kinds": [
             "call"
           ]
@@ -6907,13 +6830,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "promptWaitMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "resolveBridge",
           "kinds": [
             "call"
           ]

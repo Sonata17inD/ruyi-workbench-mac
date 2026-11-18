@@ -1079,27 +1079,7 @@ async function buildMcpConnectorInventory(config, opts = {}) {
   return out;
 }
 
-// v1.4.1: 桥接工具带 `<serverId>__` 前缀(如 ai_computer_control__excel_read)。部分 provider 模型(实测 qwen)
-// 会【丢掉前缀】直接调裸名 `excel_read` → 命不中 bridgedRoute → 落到内建兜底报「Unknown tool: excel_read」。
-// 宽容解析:①精确前缀名优先;②内建工具名绝不被桥接遮蔽(返回 null 走内建路径);③裸名在所有桥接工具里
-// 【唯一】命中某 toolName 时路由过去(≥2 个同名歧义则不猜、返回 null)。纯加法:精确前缀路径行为不变。
-let _nativeToolNameSet = null;
-function isNativeToolName(name) {
-  if (!_nativeToolNameSet) { try { _nativeToolNameSet = new Set(MCP_TOOLS.map(t => t && t.name)); } catch { _nativeToolNameSet = new Set(); } }
-  return _nativeToolNameSet.has(name);
-}
-function resolveBridge(bridgedRoute, name) {
-  if (!name || !bridgedRoute) return null;
-  const valid = value => value && typeof value === 'object' && Object.hasOwn(value, 'serverId') && typeof value.serverId === 'string' && value.serverId.length > 0 && Object.hasOwn(value, 'toolName') && typeof value.toolName === 'string' && value.toolName.length > 0;
-  if (Object.hasOwn(bridgedRoute, name) && valid(bridgedRoute[name])) return bridgedRoute[name]; // ① 精确前缀名
-  if (isNativeToolName(name)) return null;                 // ② 内建优先,不被桥接遮蔽
-  let hit = null, count = 0;                               // ③ 裸名唯一命中桥接工具 → 容错路由
-  for (const k of Object.keys(bridgedRoute)) {
-    const r = bridgedRoute[k];
-    if (valid(r) && r.toolName === name) { hit = r; if (++count > 1) return null; }
-  }
-  return count === 1 ? hit : null;
-}
+const { resolveBridge } = require('./backend/bridged-tool-policy.cjs');
 
 function stopSession(sessionId, reason = 'stopped') {
   const entry = activeChildren.get(sessionId);

@@ -435,8 +435,8 @@ const srv = require(path.join(APP, 'server.js'));
     '④ 10 的预算分叉同样读原始 kind,且经 StewardHooks 延迟绑定');
   ok(/stewardSession\) return out\.filter\(t => isStewardToolName/.test(srv.buildOpenAiTools.toString()),
     '④ 07 的管家工具面收口在唯一出口(管家会话只拿 steward_*)');
-  ok(/activePacks\.add\('steward'\)/.test(read('07-autonomy.js')),
-    '④ 按需装载对管家豁免收口在 07 内部(09 的 createToolLoadingState 调用点逐字节不变)');
+  ok(/activePacks\.add\('steward'\)/.test(read('../backend/tool-catalog.cjs')),
+    '④ 工具目录保留管家的按需装载豁免');
 }
 
 /* ═════════════ ⑤ 路由与持久化面登记 ═════════════ */

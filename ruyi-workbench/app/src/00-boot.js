@@ -239,7 +239,7 @@ const { lastAssistantEngine, historyStartsWithCompactionSummary, compactionSumma
   require('./backend/provider-history.cjs');
 const { readFilePreview } = require('./backend/file-preview.cjs');
 const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
-const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');
+const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames } = require('./backend/tool-access-policy.cjs');
 const { _expandMcpVar, _tomlKeyPath, _parseTomlMcpServers, parseMcpConfigFile, scanMcpSources } = require('./backend/mcp-config-import.cjs');
 const { ssrfCheck } = require('./backend/network-policy.cjs');
 const { httpGetGuarded } = require('./backend/http-transport.cjs');

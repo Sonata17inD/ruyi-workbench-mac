@@ -1,6 +1,5 @@
 // E2E: 20-T1/20-C1/20-F1 runtime optimization pure logic + wiring locks. No ports, no model calls.
 'use strict';
-const crypto = require('crypto');
 const { isDeepStrictEqual } = require('node:util');
 const rules = require('../ruyi-workbench/app/backend/context-governance-rules.json');
 const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
@@ -13,6 +12,9 @@ const kernelSource = require('node:fs').readFileSync(require('node:path').join(_
 const compactionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
 const providerTurn = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
 const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
+const toolCatalogSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/tool-catalog.cjs'), 'utf8');
+const t1 = require('../ruyi-workbench/app/backend/tool-catalog.cjs');
+const { classifyRuntimeToolFailure } = require('../ruyi-workbench/app/backend/runtime-tool-telemetry.cjs');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
@@ -83,7 +85,7 @@ ok(/function volatileTailLayoutEnabled\(config\)/.test(src) && /function appendO
 ok(/if \(turnVolatile && volatileTail\) appendPromptToLastUserMessage\(msgs, turnVolatile\)/.test(providerTurn), 'S G1 尾部布局复用 appendPromptToLastUserMessage(与 recall/notes 同位)');
 ok(/const buildBodyWithLayout = \(withTools, layoutOverride\) =>/.test(providerTurn) && /buildBodyWithLayout\(useTools, altLayout\)/.test(providerTurn), 'S G1 shadow 双布局构建(candidate 只计量不发送)');
 ok(/econLog\('layout_shadow',/.test(providerTurn) && /stablePrefixCharsSent/.test(providerTurn) && /stablePrefixCharsAlt/.test(providerTurn), 'S G1 layout_shadow 事件含双布局 stablePrefixChars(E4 §7.3)');
-ok(/function toolSchemaFreezeFor\(freezeKey\)/.test(src) && /kind: 'tool_schema_freeze'/.test(src), 'S G2 会话级冻结表与冻结事件存在(init/append/cache_break)');
+ok(/function toolSchemaFreezeFor\(freezeKey\)/.test(toolCatalogSource) && /kind: 'tool_schema_freeze'/.test(toolCatalogSource), 'S G2 会话级冻结表与冻结事件存在(init/append/cache_break)');
 // 2026-10:调用点多了第 7 个参数 { restoredNames: session.toolSchemaNames }(会话工具表跨重启恢复);判据仍是 freezeKey=session.id。
 ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRoute, session\.id[,)]/.test(providerTurn), 'S G2 freezeKey=session.id 接入主循环唯一调用点');
 // 106 #2a: 受限执行结果缓存 —— 22 §6.1 白名单(首批仅 file_read)+ 版本验证失效 + 命中仍验权,
@@ -104,17 +106,12 @@ for (const flag of ['runtimeObservationReducerV1', 'runtimeObservationRecallV1']
   ok(new RegExp(flag + ': true').test(src), `S ${flag} defaults true after 105a real-history adoption gate`);
   ok(new RegExp("config\\[key\\] === true").test(src), `S strict boolean normalization present (${flag})`);
 }
-ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(src), 'S OpenAI catalog uses shared T1 ranker');
+ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(toolCatalogSource), 'S OpenAI catalog uses shared T1 ranker');
 ok(/searchToolCatalog\(catalog, args, config/.test(src), 'S Claude\/MCP catalog uses shared T1 ranker');
 ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(providerTurn) && /kind: 'runtime_failure_classified'/.test(providerTurn), 'S F1 classification runs under the master shadow switch');
 ok(![src, providerTurn].some(code => /function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(code)), 'S F1 shadow slice contains no recovery executor');
 
 console.log('\n── [T1] deterministic hybrid retrieval ──');
-const t1Start = src.indexOf('const TOOL_RETRIEVAL_HINTS = Object.freeze({');
-const t1End = src.indexOf('\nfunction listCompactTools(', t1Start);
-ok(t1Start >= 0 && t1End > t1Start, 'T1 source block found');
-const t1Block = src.slice(t1Start, t1End);
-const t1 = new Function('crypto', 'TOOL_PACK_DESCRIPTIONS', t1Block + '\nreturn { searchToolCatalog, compareToolRetrievalShadow, classifyRuntimeToolFailure };')(crypto, { core: 'core', code: 'code', files_read: 'files', files_write: 'writes', network: 'network' });
 const item = (name, pack, tier, aliases, capabilities, parameterText, description) => ({ name, pack, tier, aliases, capabilities, parameterText, description, bridged: false });
 const catalog = [
   item('file_read', 'files_read', 'read', ['读取文件', '查看文件'], ['workspace.file.read'], 'path offset limit', 'Read a workspace file'),
@@ -172,29 +169,29 @@ const shadowMetrics = c1.measureObservationReductionShadow(shadowHistory);
 ok(JSON.stringify(shadowHistory) === shadowBefore && shadowMetrics.candidateReducedCount === 1 && shadowMetrics.candidateVisibleChars < shadowMetrics.originalChars, 'C1 shadow measures a copied history without mutating the live prefix');
 
 console.log('\n── [F1] deterministic classification ──');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, error: 'ETIMEDOUT' }, { tier: 'read' }).failureClass === 'transient_read', 'F1 read timeout → transient_read');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'timeout after dispatch' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating timeout → side_effect_unknown');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, error: 'required property path is missing' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 schema error → invalid_arguments');
-ok(t1.classifyRuntimeToolFailure('file_write', { ok: false, error: 'denied by user' }, { tier: 'edit' }).recoverableHint === false, 'F1 permission denial is not auto-recoverable');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: true, content: 'ok' }, { tier: 'read' }) === null, 'F1 successful calls produce no failure record');
-const timedExec = t1.classifyRuntimeToolFailure('powershell_run', { ok: false, code: -1, timedOut: true, stderr: '[timed out; process tree killed]' }, { tier: 'exec' });
+ok(classifyRuntimeToolFailure('file_read', { ok: false, error: 'ETIMEDOUT' }, { tier: 'read' }).failureClass === 'transient_read', 'F1 read timeout → transient_read');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'timeout after dispatch' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating timeout → side_effect_unknown');
+ok(classifyRuntimeToolFailure('file_read', { ok: false, error: 'required property path is missing' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 schema error → invalid_arguments');
+ok(classifyRuntimeToolFailure('file_write', { ok: false, error: 'denied by user' }, { tier: 'edit' }).recoverableHint === false, 'F1 permission denial is not auto-recoverable');
+ok(classifyRuntimeToolFailure('file_read', { ok: true, content: 'ok' }, { tier: 'read' }) === null, 'F1 successful calls produce no failure record');
+const timedExec = classifyRuntimeToolFailure('shell_run', { ok: false, code: -1, timedOut: true, stderr: '[timed out; process tree killed]' }, { tier: 'exec' });
 ok(timedExec.failureClass === 'side_effect_unknown' && timedExec.allowedRepair === 'stop_for_effect_check', 'F1 structured exec timeout stays side-effect-safe');
-ok(t1.classifyRuntimeToolFailure('script_run', { ok: false, code: 1, stderr: 'Traceback (most recent call last)' }, { tier: 'exec' }).failureClass === 'execution_failed', 'F1 non-zero process result → execution_failed');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'oldText was not found' }, { tier: 'edit' }).failureClass === 'edit_conflict', 'F1 stale edit anchor → edit_conflict');
-ok(t1.classifyRuntimeToolFailure('web_search', { ok: false, error: 'query is required' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 required named input → invalid_arguments');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, code: 'not-allowed', error: '该路径属于应用内部数据，已禁止文件工具访问' }, { tier: 'read' }).failureClass === 'policy_blocked', 'F1 product guard → policy_blocked');
-ok(t1.classifyRuntimeToolFailure('shell_send', { ok: false, error: "未知 shellId 'gone'" }, { tier: 'exec' }).failureClass === 'resource_not_found', 'F1 expired runtime handle → resource_not_found');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'HTTP 503 Service Unavailable' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating transport ambiguity never becomes retry_once');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: true, error: 'warning field present' }, { tier: 'read' }) === null, 'F1 ok:true warning does not become a failure');
+ok(classifyRuntimeToolFailure('script_run', { ok: false, code: 1, stderr: 'Traceback (most recent call last)' }, { tier: 'exec' }).failureClass === 'execution_failed', 'F1 non-zero process result → execution_failed');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'oldText was not found' }, { tier: 'edit' }).failureClass === 'edit_conflict', 'F1 stale edit anchor → edit_conflict');
+ok(classifyRuntimeToolFailure('web_search', { ok: false, error: 'query is required' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 required named input → invalid_arguments');
+ok(classifyRuntimeToolFailure('file_read', { ok: false, code: 'not-allowed', error: '该路径属于应用内部数据，已禁止文件工具访问' }, { tier: 'read' }).failureClass === 'policy_blocked', 'F1 product guard → policy_blocked');
+ok(classifyRuntimeToolFailure('shell_send', { ok: false, error: "未知 shellId 'gone'" }, { tier: 'exec' }).failureClass === 'resource_not_found', 'F1 expired runtime handle → resource_not_found');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'HTTP 503 Service Unavailable' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating transport ambiguity never becomes retry_once');
+ok(classifyRuntimeToolFailure('file_read', { ok: true, error: 'warning field present' }, { tier: 'read' }) === null, 'F1 ok:true warning does not become a failure');
 ok(timedExec.classifierVersion === 'deterministic-v3' && !JSON.stringify(timedExec).includes('process tree killed'), 'F1 v3 telemetry exposes version but not raw stderr');
 // v3:读结构化 failClass / statusCode / blocked / argsInvalid;逐条正反例在 unit/runtime-failure-classifier.test.js,这里只钉住「最先判安全分支」与「403 不再是权限拒绝」两个不变量。
-const webForbidden = t1.classifyRuntimeToolFailure('web_fetch', { ok: false, error: '网站拒绝了请求(HTTP 403,可能反爬)', failClass: 'http', statusCode: 403 }, { tier: 'read' });
+const webForbidden = classifyRuntimeToolFailure('web_fetch', { ok: false, error: '网站拒绝了请求(HTTP 403,可能反爬)', failClass: 'http', statusCode: 403 }, { tier: 'read' });
 ok(webForbidden.failureClass === 'remote_blocked' && webForbidden.allowedRepair === 'use_alternative_source', 'F1 v3 web 403 → remote_blocked(不再是 permission_denied/request_authority)');
-ok(t1.classifyRuntimeToolFailure('web_fetch', { ok: false, error: '页面不存在(HTTP 404)', failClass: 'http', statusCode: 404 }, { tier: 'read' }).failureClass === 'resource_not_found', 'F1 v3 web 404 → resource_not_found');
-ok(t1.classifyRuntimeToolFailure('http_download', { ok: false, error: '对方服务器中断了连接(可能有反爬限制)', failClass: 'reset' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 v3 mutating disconnect stays side_effect_unknown before any new rule');
-ok(t1.classifyRuntimeToolFailure('tool_invoke_read', { ok: false, code: 'tier-mismatch', error: 'risk tier mismatch' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 v3 tier-mismatch → invalid_arguments');
+ok(classifyRuntimeToolFailure('web_fetch', { ok: false, error: '页面不存在(HTTP 404)', failClass: 'http', statusCode: 404 }, { tier: 'read' }).failureClass === 'resource_not_found', 'F1 v3 web 404 → resource_not_found');
+ok(classifyRuntimeToolFailure('http_download', { ok: false, error: '对方服务器中断了连接(可能有反爬限制)', failClass: 'reset' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 v3 mutating disconnect stays side_effect_unknown before any new rule');
+ok(classifyRuntimeToolFailure('tool_invoke_read', { ok: false, code: 'tier-mismatch', error: 'risk tier mismatch' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 v3 tier-mismatch → invalid_arguments');
 const v3Samples = [{ error: '网站拒绝了请求', statusCode: 403 }, { error: 'x', failClass: 'tls' }, { error: 'x', failClass: 'reset' }, { error: 'HTTP 500', statusCode: 500 }, { code: 'not_found', error: 'x' }];
-ok(['edit', 'exec'].every(tier => v3Samples.every(r => t1.classifyRuntimeToolFailure('t', { ok: false, ...r }, { tier }).allowedRepair !== 'retry_once')), 'F1 v3 no new rule maps an edit/exec result to retry_once');
+ok(['edit', 'exec'].every(tier => v3Samples.every(r => classifyRuntimeToolFailure('t', { ok: false, ...r }, { tier }).allowedRepair !== 'retry_once')), 'F1 v3 no new rule maps an edit/exec result to retry_once');
 
 console.log('\n── [E0] three-layer call ledger shadow (21) ──');
 ok(/toolEconomicsShadowV1: true/.test(src), 'E0 economics shadow defaults true (sampled)');
@@ -219,8 +216,8 @@ ok(!/boundedReadSchedulerV1: true/.test(src), 'E2 active flag is not defaulted o
 
 console.log('\n── [E5] meta-tool convergence wiring (21) ──');
 ok(/metaToolHintsV1: false/.test(src), 'E5 meta hints default false');
-ok(/function buildCallHint/.test(src) && /callHint/.test(src) && /requiredArgs/.test(src) && /'blocked'/.test(src), 'E5 search hint builder present (requiredArgs/callHint/state/blockedReason)');
-ok(/config\.metaToolHintsV1 === true/.test(src), 'E5 hints gated on strict boolean');
+ok(/function buildCallHint/.test(toolCatalogSource) && /callHint/.test(toolCatalogSource) && /requiredArgs/.test(toolCatalogSource) && /'blocked'/.test(toolCatalogSource), 'E5 search hint builder present (requiredArgs/callHint/state/blockedReason)');
+ok(/config\.metaToolHintsV1 === true/.test(toolCatalogSource), 'E5 hints gated on strict boolean');
 ok(/discoveryState = \{ seq: 0, openedAt: 0, awaitingOutcome: false \}/.test(providerTurn), 'E5 discoverySeq chain state present');
 ok(/searchSeq: discoveryState\.seq/.test(providerTurn) && /discoverySeq: discoveryState\.seq/.test(providerTurn), 'E5 searchSeq/discoverySeq emitted into the ledger');
 ok(/unchanged: true, note: '任务清单与当前状态一致/.test(providerTurn), 'E5 todo dedupe returns unchanged on identical content');

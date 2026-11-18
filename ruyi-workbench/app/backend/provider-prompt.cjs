@@ -3,10 +3,11 @@
 const { getPromptPack } = require('./prompt-registry.cjs');
 const { renderProviderStablePrompt } = require('./provider-stable-prompt.cjs');
 const { TOOL_REQUIRES, toolRequirementsMet } = require('./tool-capability-policy.cjs');
+const { toolPackForName } = require('./tool-catalog.cjs');
 const { buildBrowserAutomationHint, buildToolCustomizationHint, buildSkillsPromptSection, buildPlaybookIndexSection } = require('./prompt-context.cjs');
 
 function createProviderPrompt({
-  buildRuntimeIdentityFacts, buildEngineEnvBrief, toolPackForName,
+  buildRuntimeIdentityFacts, buildEngineEnvBrief,
   buildMemoryCheckPrompt, buildMemoryPromptSection, buildMissionPromptSection,
 }) {
   function buildStableSystemPrompt(provider, model, cwd, tools, identityOnly, config) {
