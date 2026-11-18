@@ -111,7 +111,7 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
 
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const src = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-routes.cjs'), 'utf8');
   ok(src.includes("pathname === '/api/mcp/import-config/scan'") && src.includes("pathname === '/api/mcp/import-config/apply'"), 'S1 scan/apply handler 在');
   const { ROUTE_AUTH } = require('../ruyi-workbench/app/backend/http-route-policy.cjs');
   ok(['scan', 'apply'].every(action => ROUTE_AUTH.some(rule =>

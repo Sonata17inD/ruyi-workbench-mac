@@ -126,7 +126,7 @@ async function runImportFolder(port) {
     // ③ 缺清单 → 报错含 template。
     const r3 = await postJson(port, '/api/mcp/import-folder', { path: EMPTY }, hdr);
     ok(r3.status === 200 && r3.json && r3.json.ok === false && r3.json.error?.code === 'api.request_failed' && /缺少有效/.test(r3.json.error?.message || ''), '③ 缺清单 → 结构化错误');
-    ok(r3.json && r3.json.template && r3.json.template.id && r3.json.template.command, '③ 报错附 template 示例对象');
+    ok(r3.json?.template?.id && r3.json.template.command === './server', '③ 报错附 Mac 本地可执行文件示例');
 
     // 107-S0b:远程清单的 headers 在回包里也要盖住(修前只遮 env);清单里残留的掩码不是值,落盘前清空。
     // 放在 ② 之后:这一条会让清单数变成 2,⑤ 的「填到 10」按实际余量填,不受影响。

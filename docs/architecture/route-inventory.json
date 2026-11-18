@@ -1,12 +1,11 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T09:12:50.375Z",
+  "generatedAt": "2026-11-18T09:25:21.254Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
       "ruyi-workbench/app/src/13-http-router.js",
-      "ruyi-workbench/app/src/13b-api-domain-routes.js",
       "ruyi-workbench/app/src/13d-core-domain-routes.js",
       "ruyi-workbench/app/src/13e-pretender-index.js",
       "ruyi-workbench/app/backend/local-support-routes.cjs",
@@ -16,6 +15,10 @@
       "ruyi-workbench/app/backend/session-routes.cjs",
       "ruyi-workbench/app/backend/mission-routes.cjs",
       "ruyi-workbench/app/backend/intervention-routes.cjs",
+      "ruyi-workbench/app/backend/migration-routes.cjs",
+      "ruyi-workbench/app/backend/mcp-routes.cjs",
+      "ruyi-workbench/app/backend/session-steering.cjs",
+      "ruyi-workbench/app/backend/audio-routes.cjs",
       "ruyi-workbench/app/backend/steward-routes.cjs",
       "ruyi-workbench/app/backend/event-stream.cjs",
       "ruyi-workbench/app/backend/scheduler-routes.cjs",
@@ -1215,6 +1218,179 @@
     },
     {
       "kind": "exact",
+      "path": "/api/audio/transcribe",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\asr-transcribe.e2e.js",
+        "dev-harness\\asr-warmup.e2e.js",
+        "dev-harness\\composer-voice-stream.browser.e2e.js",
+        "dev-harness\\composer-voice-warmup.browser.e2e.js",
+        "dev-harness\\composer-voice.browser.e2e.js",
+        "dev-harness\\macos-desktop-media.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/stream/sessions",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\composer-voice-stream.browser.e2e.js",
+        "dev-harness\\composer-voice-warmup.browser.e2e.js",
+        "dev-harness\\macos-desktop-media.e2e.js",
+        "dev-harness\\privacy-channels.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "prefix",
+      "path": "/api/audio/stream/sessions/",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\macos-desktop-media.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "prefix",
+      "path": "/api/audio/stream/sessions/",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "DELETE"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\macos-desktop-media.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/correct",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\asr-config-ui.static.e2e.js",
+        "dev-harness\\composer-voice-stream.browser.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/warmup",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\asr-warmup.e2e.js",
+        "dev-harness\\composer-voice-warmup.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/lexicon",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\data-root-migration.e2e.js",
+        "dev-harness\\unit\\voice-learn-front.test.js",
+        "dev-harness\\voice-learn.browser.e2e.js",
+        "dev-harness\\voice-learn.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/lexicon",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\data-root-migration.e2e.js",
+        "dev-harness\\unit\\voice-learn-front.test.js",
+        "dev-harness\\voice-learn.browser.e2e.js",
+        "dev-harness\\voice-learn.e2e.js",
+        "dev-harness\\voice-lexicon.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audio/lexicon/observe",
+      "file": "../backend/audio-routes.cjs",
+      "handler": "handleAudioApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "audio",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\unit\\voice-learn-front.test.js",
+        "dev-harness\\voice-learn.browser.e2e.js",
+        "dev-harness\\voice-learn.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
       "path": "/api/checkpoints",
       "file": "../backend/checkpoint-routes.cjs",
       "handler": "handleCheckpointQueryApiRoutes",
@@ -1893,6 +2069,216 @@
         "dev-harness\\macos-runtime-start.e2e.js",
         "dev-harness\\meta-guard.e2e.js",
         "dev-harness\\steward-delivery.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/import-folder",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\mcp-config.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/import-config/scan",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\mcp-import-config.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/import-config/apply",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\copy-path-guard.static.e2e.js",
+        "dev-harness\\mcp-import-config.e2e.js",
+        "dev-harness\\mcp-import-origin.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/connectors",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\config-mutate-mcp-parity.e2e.js",
+        "dev-harness\\mcp-ops-closure.e2e.js",
+        "dev-harness\\mcp-ops-gui.static.e2e.js",
+        "dev-harness\\repo-hygiene.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/connectors/health",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\mcp-ops-closure.e2e.js",
+        "dev-harness\\mcp-ops-gui.static.e2e.js",
+        "dev-harness\\repo-hygiene.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/connectors/toggle",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\config-mutate-mcp-parity.e2e.js",
+        "dev-harness\\mcp-ops-closure.e2e.js",
+        "dev-harness\\mcp-ops-gui.static.e2e.js",
+        "dev-harness\\repo-hygiene.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mcp/connectors",
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "methods": [
+        "DELETE"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mcp",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\config-mutate-mcp-parity.e2e.js",
+        "dev-harness\\mcp-ops-closure.e2e.js",
+        "dev-harness\\mcp-ops-gui.static.e2e.js",
+        "dev-harness\\repo-hygiene.e2e.js",
+        "dev-harness\\toolbox-discovery.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/migration/scan",
+      "file": "../backend/migration-routes.cjs",
+      "handler": "handleMigrationApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "migration",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\migration-center.browser.e2e.js",
+        "dev-harness\\migration-center.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/migration/apply",
+      "file": "../backend/migration-routes.cjs",
+      "handler": "handleMigrationApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "migration",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\migration-center.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/migration/undo",
+      "file": "../backend/migration-routes.cjs",
+      "handler": "handleMigrationApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "migration",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\migration-center.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/migration/recycle",
+      "file": "../backend/migration-routes.cjs",
+      "handler": "handleMigrationApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "migration",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\migration-center.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/migration/skills/copy",
+      "file": "../backend/migration-routes.cjs",
+      "handler": "handleMigrationApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "migration",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\migration-center.e2e.js"
       ]
     },
     {
@@ -3253,6 +3639,62 @@
         "dev-harness\\workbench-memory.e2e.js",
         "dev-harness\\workbench-thread-head.browser.e2e.js",
         "dev-harness\\workspace-resolve.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/steer",
+      "file": "../backend/session-steering.cjs",
+      "handler": "handleSteerApiRoute",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "steer",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\agent-steer-node.e2e.js",
+        "dev-harness\\classic-window-live-steer.e2e.js",
+        "dev-harness\\composer-session-races.browser.e2e.js",
+        "dev-harness\\kimi-agent-cli.e2e.js",
+        "dev-harness\\long-tool-liveness-steer.e2e.js",
+        "dev-harness\\provider-turnloop-hardening.e2e.js",
+        "dev-harness\\steer-interrupt.e2e.js",
+        "dev-harness\\steering-claude.e2e.js",
+        "dev-harness\\steering.e2e.js",
+        "dev-harness\\steward-drawer.static.e2e.js",
+        "dev-harness\\steward-walkthrough.static.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\steer-attachments.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/steer",
+      "file": "../backend/session-steering.cjs",
+      "handler": "handleSteerApiRoute",
+      "methods": [
+        "DELETE"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "steer",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\agent-steer-node.e2e.js",
+        "dev-harness\\classic-window-live-steer.e2e.js",
+        "dev-harness\\composer-session-races.browser.e2e.js",
+        "dev-harness\\kimi-agent-cli.e2e.js",
+        "dev-harness\\long-tool-liveness-steer.e2e.js",
+        "dev-harness\\provider-turnloop-hardening.e2e.js",
+        "dev-harness\\steer-interrupt.e2e.js",
+        "dev-harness\\steering-claude.e2e.js",
+        "dev-harness\\steering.e2e.js",
+        "dev-harness\\steward-drawer.static.e2e.js",
+        "dev-harness\\steward-walkthrough.static.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\steer-attachments.test.js"
       ]
     },
     {
@@ -5453,447 +5895,6 @@
     },
     {
       "kind": "exact",
-      "path": "/api/migration/scan",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMigrationApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\migration-center.browser.e2e.js",
-        "dev-harness\\migration-center.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/migration/apply",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMigrationApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\migration-center.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/migration/undo",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMigrationApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\migration-center.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/migration/recycle",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMigrationApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\migration-center.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/migration/skills/copy",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMigrationApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\migration-center.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/import-folder",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\mcp-config.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/import-config/scan",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\mcp-import-config.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/import-config/apply",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\copy-path-guard.static.e2e.js",
-        "dev-harness\\mcp-import-config.e2e.js",
-        "dev-harness\\mcp-import-origin.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/connectors",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\config-mutate-mcp-parity.e2e.js",
-        "dev-harness\\mcp-ops-closure.e2e.js",
-        "dev-harness\\mcp-ops-gui.static.e2e.js",
-        "dev-harness\\repo-hygiene.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/connectors/health",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\mcp-ops-closure.e2e.js",
-        "dev-harness\\mcp-ops-gui.static.e2e.js",
-        "dev-harness\\repo-hygiene.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/connectors/toggle",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\config-mutate-mcp-parity.e2e.js",
-        "dev-harness\\mcp-ops-closure.e2e.js",
-        "dev-harness\\mcp-ops-gui.static.e2e.js",
-        "dev-harness\\repo-hygiene.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mcp/connectors",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "methods": [
-        "DELETE"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\config-mutate-mcp-parity.e2e.js",
-        "dev-harness\\mcp-ops-closure.e2e.js",
-        "dev-harness\\mcp-ops-gui.static.e2e.js",
-        "dev-harness\\repo-hygiene.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/steer",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleSteerApiRoute",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\agent-steer-node.e2e.js",
-        "dev-harness\\classic-window-live-steer.e2e.js",
-        "dev-harness\\composer-session-races.browser.e2e.js",
-        "dev-harness\\kimi-agent-cli.e2e.js",
-        "dev-harness\\long-tool-liveness-steer.e2e.js",
-        "dev-harness\\provider-turnloop-hardening.e2e.js",
-        "dev-harness\\steer-interrupt.e2e.js",
-        "dev-harness\\steering-claude.e2e.js",
-        "dev-harness\\steering.e2e.js",
-        "dev-harness\\steward-drawer.static.e2e.js",
-        "dev-harness\\steward-walkthrough.static.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\steer-attachments.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/steer",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleSteerApiRoute",
-      "methods": [
-        "DELETE"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\agent-steer-node.e2e.js",
-        "dev-harness\\classic-window-live-steer.e2e.js",
-        "dev-harness\\composer-session-races.browser.e2e.js",
-        "dev-harness\\kimi-agent-cli.e2e.js",
-        "dev-harness\\long-tool-liveness-steer.e2e.js",
-        "dev-harness\\provider-turnloop-hardening.e2e.js",
-        "dev-harness\\steer-interrupt.e2e.js",
-        "dev-harness\\steering-claude.e2e.js",
-        "dev-harness\\steering.e2e.js",
-        "dev-harness\\steward-drawer.static.e2e.js",
-        "dev-harness\\steward-walkthrough.static.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\steer-attachments.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/transcribe",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\asr-transcribe.e2e.js",
-        "dev-harness\\asr-warmup.e2e.js",
-        "dev-harness\\composer-voice-stream.browser.e2e.js",
-        "dev-harness\\composer-voice-warmup.browser.e2e.js",
-        "dev-harness\\composer-voice.browser.e2e.js",
-        "dev-harness\\macos-desktop-media.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/stream/sessions",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\composer-voice-stream.browser.e2e.js",
-        "dev-harness\\composer-voice-warmup.browser.e2e.js",
-        "dev-harness\\macos-desktop-media.e2e.js",
-        "dev-harness\\privacy-channels.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "prefix",
-      "path": "/api/audio/stream/sessions/",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\macos-desktop-media.e2e.js",
-        "dev-harness\\privacy-channels.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "prefix",
-      "path": "/api/audio/stream/sessions/",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "DELETE"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\macos-desktop-media.e2e.js",
-        "dev-harness\\privacy-channels.e2e.js",
-        "dev-harness\\toolbox-discovery.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/correct",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\asr-config-ui.static.e2e.js",
-        "dev-harness\\composer-voice-stream.browser.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/warmup",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\asr-warmup.e2e.js",
-        "dev-harness\\composer-voice-warmup.browser.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/lexicon",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\data-root-migration.e2e.js",
-        "dev-harness\\unit\\voice-learn-front.test.js",
-        "dev-harness\\voice-learn.browser.e2e.js",
-        "dev-harness\\voice-learn.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/lexicon",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\data-root-migration.e2e.js",
-        "dev-harness\\unit\\voice-learn-front.test.js",
-        "dev-harness\\voice-learn.browser.e2e.js",
-        "dev-harness\\voice-learn.e2e.js",
-        "dev-harness\\voice-lexicon.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audio/lexicon/observe",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleAudioApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "mcp/checkpoint-storage/steer",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\unit\\voice-learn-front.test.js",
-        "dev-harness\\voice-learn.browser.e2e.js",
-        "dev-harness\\voice-learn.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
       "path": "/api/external-bots/callback/qq",
       "file": "13w-external-bots.js",
       "handler": "handleExternalBotApiRoutes",
@@ -6085,6 +6086,11 @@
   ],
   "delegations": [
     {
+      "file": "../backend/mcp-routes.cjs",
+      "handler": "handleMcpApiRoutes",
+      "target": "handleMigrationApiRoutes"
+    },
+    {
       "file": "../backend/steward-routes.cjs",
       "handler": "handleStewardApiRoutes",
       "target": "handleStewardRunnerApiRoutes"
@@ -6158,11 +6164,6 @@
       "file": "13-http-router.js",
       "handler": "handleApi",
       "target": "handleSchedulerApiRoutes"
-    },
-    {
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleMcpApiRoutes",
-      "target": "handleMigrationApiRoutes"
     }
   ],
   "problems": [],

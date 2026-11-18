@@ -99,7 +99,8 @@ ok(zh['settings.mcp.retestOk'].includes('{{p1}}') && zh['settings.mcp.retestOk']
 for (const c of ['auth', 'startup', 'network', 'timeout', 'security', 'tool_registration', 'protocol', 'unknown']) {
   ok(server.includes(`category: '${c}'`), `M19 后端类别 ${c} 在(server.js)`);
 }
-ok(server.includes("'/api/mcp/connectors/toggle'") && server.includes("'/api/mcp/connectors/health'"), 'M20 server.js 含 55a/55b 路由(GUI 调用目标)');
+const mcpRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-routes.cjs'), 'utf8');
+ok(mcpRoutes.includes("'/api/mcp/connectors/toggle'") && mcpRoutes.includes("'/api/mcp/connectors/health'"), 'M20 MCP 路由含 GUI 的启停和探针入口');
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAIL`);
 process.exit(failures === 0 ? 0 : 1);

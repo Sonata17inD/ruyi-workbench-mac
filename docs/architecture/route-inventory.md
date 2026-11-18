@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T09:12:50.375Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T09:25:21.254Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -28,6 +28,20 @@
 | POST | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 | DELETE | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 | GET | `/api/agent-runs/` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
+
+## audio(9)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/audio/transcribe` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | asr-transcribe.e2e.js, asr-warmup.e2e.js, composer-voice-stream.browser.e2e.js 等 8 件 |
+| POST | `/api/audio/stream/sessions` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | composer-voice-stream.browser.e2e.js, composer-voice-warmup.browser.e2e.js, macos-desktop-media.e2e.js 等 6 件 |
+| POST | `/api/audio/stream/sessions/` | prefix | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | macos-desktop-media.e2e.js, toolbox-discovery.e2e.js, voice-lexicon.e2e.js |
+| DELETE | `/api/audio/stream/sessions/` | prefix | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | macos-desktop-media.e2e.js, toolbox-discovery.e2e.js, voice-lexicon.e2e.js |
+| POST | `/api/audio/correct` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | asr-config-ui.static.e2e.js, composer-voice-stream.browser.e2e.js, voice-lexicon.e2e.js |
+| POST | `/api/audio/warmup` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | asr-warmup.e2e.js, composer-voice-warmup.browser.e2e.js |
+| GET | `/api/audio/lexicon` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
+| POST | `/api/audio/lexicon` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
+| POST | `/api/audio/lexicon/observe` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | voice-learn-front.test.js, voice-learn.browser.e2e.js, voice-learn.e2e.js |
 
 ## checkpoint-storage(7)
 
@@ -163,32 +177,23 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/mcp/import-folder` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | mcp-config.e2e.js |
-| POST | `/api/mcp/import-config/scan` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | mcp-import-config.e2e.js |
-| POST | `/api/mcp/import-config/apply` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | action-feedback.static.e2e.js, copy-path-guard.static.e2e.js, mcp-import-config.e2e.js 等 4 件 |
-| GET | `/api/mcp/connectors` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 5 件 |
-| POST | `/api/mcp/connectors/health` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js, repo-hygiene.e2e.js |
-| POST | `/api/mcp/connectors/toggle` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 4 件 |
-| DELETE | `/api/mcp/connectors` | exact | token | 13b-api-domain-routes.js · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 5 件 |
+| POST | `/api/mcp/import-folder` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | mcp-config.e2e.js |
+| POST | `/api/mcp/import-config/scan` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | mcp-import-config.e2e.js |
+| POST | `/api/mcp/import-config/apply` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | action-feedback.static.e2e.js, copy-path-guard.static.e2e.js, mcp-import-config.e2e.js 等 4 件 |
+| GET | `/api/mcp/connectors` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 5 件 |
+| POST | `/api/mcp/connectors/health` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js, repo-hygiene.e2e.js |
+| POST | `/api/mcp/connectors/toggle` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 4 件 |
+| DELETE | `/api/mcp/connectors` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 5 件 |
 
-## mcp/checkpoint-storage/steer(14)
+## migration(5)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/migration/scan` | exact | token | 13b-api-domain-routes.js · `handleMigrationApiRoutes` | memory-scope.e2e.js, migration-center.browser.e2e.js, migration-center.e2e.js |
-| POST | `/api/migration/apply` | exact | token | 13b-api-domain-routes.js · `handleMigrationApiRoutes` | migration-center.e2e.js |
-| POST | `/api/migration/undo` | exact | token | 13b-api-domain-routes.js · `handleMigrationApiRoutes` | migration-center.e2e.js |
-| POST | `/api/migration/recycle` | exact | token | 13b-api-domain-routes.js · `handleMigrationApiRoutes` | migration-center.e2e.js |
-| POST | `/api/migration/skills/copy` | exact | token | 13b-api-domain-routes.js · `handleMigrationApiRoutes` | migration-center.e2e.js |
-| POST | `/api/audio/transcribe` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | asr-transcribe.e2e.js, asr-warmup.e2e.js, composer-voice-stream.browser.e2e.js 等 8 件 |
-| POST | `/api/audio/stream/sessions` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | composer-voice-stream.browser.e2e.js, composer-voice-warmup.browser.e2e.js, macos-desktop-media.e2e.js 等 6 件 |
-| POST | `/api/audio/stream/sessions/` | prefix | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | macos-desktop-media.e2e.js, privacy-channels.e2e.js, toolbox-discovery.e2e.js 等 4 件 |
-| DELETE | `/api/audio/stream/sessions/` | prefix | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | macos-desktop-media.e2e.js, privacy-channels.e2e.js, toolbox-discovery.e2e.js 等 4 件 |
-| POST | `/api/audio/correct` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | asr-config-ui.static.e2e.js, composer-voice-stream.browser.e2e.js, voice-lexicon.e2e.js |
-| POST | `/api/audio/warmup` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | asr-warmup.e2e.js, composer-voice-warmup.browser.e2e.js |
-| GET | `/api/audio/lexicon` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
-| POST | `/api/audio/lexicon` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
-| POST | `/api/audio/lexicon/observe` | exact | token | 13b-api-domain-routes.js · `handleAudioApiRoutes` | voice-learn-front.test.js, voice-learn.browser.e2e.js, voice-learn.e2e.js |
+| GET | `/api/migration/scan` | exact | token | ../backend/migration-routes.cjs · `handleMigrationApiRoutes` | memory-scope.e2e.js, migration-center.browser.e2e.js, migration-center.e2e.js |
+| POST | `/api/migration/apply` | exact | token | ../backend/migration-routes.cjs · `handleMigrationApiRoutes` | migration-center.e2e.js |
+| POST | `/api/migration/undo` | exact | token | ../backend/migration-routes.cjs · `handleMigrationApiRoutes` | migration-center.e2e.js |
+| POST | `/api/migration/recycle` | exact | token | ../backend/migration-routes.cjs · `handleMigrationApiRoutes` | migration-center.e2e.js |
+| POST | `/api/migration/skills/copy` | exact | token | ../backend/migration-routes.cjs · `handleMigrationApiRoutes` | migration-center.e2e.js |
 
 ## mission(7)
 
@@ -228,8 +233,8 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/steer` | exact | token | 13b-api-domain-routes.js · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
-| DELETE | `/api/steer` | exact | token | 13b-api-domain-routes.js · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
+| POST | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
+| DELETE | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
 
 ## steward(20)
 
@@ -258,6 +263,7 @@
 
 ## 域路由委派(handleApi → 域 handler)
 
+- ../backend/mcp-routes.cjs · `handleMcpApiRoutes` → `handleMigrationApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardApiRoutes` → `handleStewardRunnerApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` → `handleStewardDeliveryApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSessionApiRoutes`
@@ -273,4 +279,3 @@
 - 13-http-router.js · `handleApi` → `handleSteerApiRoute`
 - 13-http-router.js · `handleApi` → `handleAudioApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSchedulerApiRoutes`
-- 13b-api-domain-routes.js · `handleMcpApiRoutes` → `handleMigrationApiRoutes`

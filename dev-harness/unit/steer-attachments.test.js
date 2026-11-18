@@ -7,10 +7,9 @@ const { fixture: composerFixture } = require('../lib/composer-race-fixture');
 const { killOwnTree } = require('../lib/kill-own-tree');
 const { pathWithinRoot } = require('../../ruyi-workbench/app/backend/path-containment.cjs');
 const { buildAttachmentPrompt } = require('../../ruyi-workbench/app/backend/attachment-prompt.cjs');
+const { createSessionSteering } = require('../../ruyi-workbench/app/backend/session-steering.cjs');
 const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const read = file => fs.readFileSync(path.join(src, file), 'utf8');
-const domain = read('13b-api-domain-routes.js');
-const steering = domain.slice(domain.indexOf('const STEER_REFUSAL ='), domain.indexOf('// ── steer 域:'));
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7ZzXcAAAAASUVORK5CYII=', 'base64');
 function backend(t, kind = 'openai') {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steer-images-'));
@@ -27,8 +26,9 @@ function backend(t, kind = 'openai') {
     writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
   });
   vm.runInContext(functionBlock(read('04-permission-runtime.js'), 'sanitizeFsSegmentName') + '\n' +
-    functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' + steering + '\n' +
+    functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' +
     functionBlock(read('07-autonomy.js'), 'drainSteerQueue'), c);
+  c.steerSessionCore = createSessionSteering(c).steerSessionCore;
   reg.onEvent = event => events.push(event);
   reg.buildSteerAttachmentPrompt = buildAttachmentPrompt;
   return { c, reg, session, regs, attachment, events, writes };

@@ -38,7 +38,6 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 // 路由判定点所在模块(顺序即 manifest 声明顺序;13e 只有索引助手、无判定点,扫出来是空,保留在口径里防漏)。
 const ROUTER_FILES = [
   '13-http-router.js',
-  '13b-api-domain-routes.js',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
   '../backend/local-support-routes.cjs',
@@ -48,6 +47,10 @@ const ROUTER_FILES = [
   '../backend/session-routes.cjs',
   '../backend/mission-routes.cjs',
   '../backend/intervention-routes.cjs',
+  '../backend/migration-routes.cjs',
+  '../backend/mcp-routes.cjs',
+  '../backend/session-steering.cjs',
+  '../backend/audio-routes.cjs',
   '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
@@ -97,7 +100,8 @@ const DOMAIN_BY_HANDLER = [
 ];
 const DOMAIN_BY_FILE = {
   '13-http-router.js': 'core-inline',
-  '13b-api-domain-routes.js': 'mcp/checkpoint-storage/steer',
+  '../backend/migration-routes.cjs': 'migration',
+  '../backend/audio-routes.cjs': 'audio',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
   '../backend/local-support-routes.cjs': 'local-support',

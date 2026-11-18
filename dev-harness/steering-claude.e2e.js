@@ -25,6 +25,7 @@ const cp = require('child_process');
 const { getFreePort } = require('./free-port.js');
 const { readFrontendSrc } = require('./read-frontend-src.js');
 const { fixture: composerFixture } = require('./lib/composer-race-fixture.js');
+const { functionBlock } = require('./lib/source-slice');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
@@ -83,15 +84,17 @@ async function getToken(port) {
   // ───────────────── S 段: 静态锁 ─────────────────
   console.log('── S 段: 静态锁(后端分派 + 前端去门 + i18n 双键) ──');
   const src = fs.readFileSync(SERVER, 'utf8');
+  const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name), 'utf8');
+  const steerRouteSrc = backend('session-steering.cjs');
   const app = readFrontendSrc();
   const net = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'net.js'), 'utf8');
   const zh = fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8');
   const en = fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'en-US.json'), 'utf8');
   ok(/kind: 'claude' \}/.test(src) || /kind: 'claude',/.test(src) || /kind: 'claude'$/.test(src.trim()) || src.includes("kind: 'claude'"), 'S1 claude 引擎 reg 带 kind 标记(/api/steer 分派依据)');
-  ok(src.includes("reg.kind === 'claude'"), 'S2 /api/steer 按引擎分派 claude 分支在');
-  ok(src.includes('hasPendingQuestionForSession'), 'S3 提问挂起分流函数在(防插话误收为答案)');
+  ok(steerRouteSrc.includes("reg.kind === 'claude'"), 'S2 /api/steer 按引擎分派 claude 分支在');
+  ok(steerRouteSrc.includes('hasPendingQuestionForSession(sessionId)'), 'S3 提问挂起分流函数在(防插话误收为答案)');
   ok(src.includes("'--input-format', 'stream-json'") && src.includes('drainSteers'), 'S4 Claude 工作流节点持续输入与插话 drain 在');
-  ok(src.includes('nodeDeliveryEligibility(live.run, nodeId, { allowClaude: true })'), 'S5 steer_node 为 Claude 工作流节点开启实时投递');
+  ok(backend('agent-run-control.cjs').includes('nodeDeliveryEligibility(live.run, nodeId, { allowClaude: true })'), 'S5 steer_node 为 Claude 工作流节点开启实时投递');
   ok(!app.includes('if (isProviderMode()) return steerPrompt(overrideText); return;'), 'S6 前端 sendPrompt 引擎静默门已去');
   ok(app.includes('r.injected') && app.includes("t('toast.steerInjected')") && app.includes("t('toast.steerQueued')"), 'S7 前端 toast 区分即时/下步生效(50c i18n:toast.steerInjected/Queued)');
   ok(!app.includes("isClaudeNode ? t('workflow.steerDeferred')"), 'S8 工作台 Claude 节点不再显示延迟插话');
@@ -99,10 +102,10 @@ async function getToken(port) {
   // 116-2b 重钉锚点:插话判定整段零行为抽出成 steerSessionCore(13b,路由体只剩 body 解析与两种应答
   // 形态的翻译),故顺序锁改从核心函数开头切片。判据本意一字未改 —— 仍是「kimi-acp → claude →
   // 通用 fallthrough」这条分派顺序,只是它现在住在核心里。
-  const steerRouteSrc = src.slice(src.indexOf('async function steerSessionCore'), src.indexOf('async function steerSessionCore') + 12000);
-  ok(steerRouteSrc.indexOf("reg.kind === 'kimi-acp'") > 0
-    && steerRouteSrc.indexOf("reg.kind === 'kimi-acp'") < steerRouteSrc.indexOf("reg.kind === 'claude'")
-    && steerRouteSrc.indexOf("reg.kind === 'claude'") < steerRouteSrc.indexOf("steerRefusal('engineUnsupported')"),
+  const steerCoreSrc = functionBlock(steerRouteSrc, 'steerSessionCore');
+  ok(steerCoreSrc.indexOf("reg.kind === 'kimi-acp'") > 0
+    && steerCoreSrc.indexOf("reg.kind === 'kimi-acp'") < steerCoreSrc.indexOf("reg.kind === 'claude'")
+    && steerCoreSrc.indexOf("reg.kind === 'claude'") < steerCoreSrc.indexOf("steerRefusal('engineUnsupported')"),
   'S10 Kimi ACP/Claude 分派均先于通用 fallthrough(不再一刀切)');
   // ── 124 真机 bug（用户 2026-09-15：「回合结束后新发送东西，却显示插话且插话失败」）────────
   // 三层各钉一条。根因是第三条：**发送门的信念会过期，而且没有自纠正。**
@@ -110,10 +113,9 @@ async function getToken(port) {
   // ① 拒绝理由要有稳定码。修前全是遗留字符串，00-boot 的 normalizeApiErrorPayload 一律派兜底码
   //    api.request_failed，前端 apiErrText 码优先 → 屏幕上只剩「请求失败。」。服务端说的
   //    「当前 Kimi 回合正在收尾，请作为下一条消息发送」把该怎么做都写了，却被吞掉。
-  const steerCoreSrc = src.slice(src.indexOf('async function steerSessionCore'), src.indexOf('async function steerSessionCore') + 12000);
-  ok(src.includes("noLiveTurn: { code: 'steer.no_live_turn'") && src.includes("kimiSettling: { code: 'steer.kimi_settling'"),
+  ok(steerRouteSrc.includes("noLiveTurn: { code: 'steer.no_live_turn'") && steerRouteSrc.includes("kimiSettling: { code: 'steer.kimi_settling'"),
     'S31 插话拒绝理由有稳定码表 STEER_REFUSAL（no_live_turn / kimi_settling 两条至少在）');
-  ok(!/error: '[^']+' \} \};/.test(steerCoreSrc.slice(0, steerCoreSrc.indexOf('\n}\n'))),
+  ok(steerCoreSrc.length > 200 && !/error: '[^']+' \} \};/.test(steerCoreSrc),
     'S32 steerSessionCore 里不再有遗留字符串错误（每一处拒绝都走 steerRefusal，否则真原因会被归一抹平）');
   // ② 服务端权威：回合已经结束时，前端不许把用户的话卡在框里 —— 当新回合发出去。
   //    判据是【码】不是中文句子（38 号文 §7 ④ 已裁决不搞关键词表）。
@@ -185,7 +187,8 @@ async function getToken(port) {
     && app.includes('hasLiveTurn: Boolean(liveForSession)')
     && app.includes('Number(message.turnSeq != null ? message.turnSeq : message.turnSummary && message.turnSummary.turnSeq)'), 'S21c EC-D 56/56b 共享消息可见性 helper 跳过插话独立行(活动 turn 或助手回合 segments 含 steer 段,防内嵌重复)');
   // EC-D 56b(持久化):后端 turnSegments.consume 把 steered 事件持久化为 steer segment -> 刷新后静态内嵌(消除 live↔静态差异)。
-  ok(src.includes("evt.type === 'steered'") && /segments\.push\(\{ id: nextId\(\), type: 'steer', text:/.test(src), 'S29 EC-D 56b 后端 consume steered->steer segment 持久化');
+  const segments = backend('turn-segments.cjs');
+  ok(segments.includes("evt.type === 'steered'") && /segments\.push\(\{ id: nextId\(\), type: 'steer', text:/.test(segments), 'S29 EC-D 56b 后端 consume steered->steer segment 持久化');
   ok(app.includes('function buildNarrativeSteerSegment') && /segment\.type === 'steer'/.test(app)
     && /narrative\.append\(buildNarrativeSteerSegment\(segment\.text, segment\.attachments \|\| \[\]\)\)/.test(app), 'S30 静态叙事渲染 steer 段与附件(buildNarrativeSteerSegment live/静态共享)');
   // EC-D 56(粘性自动滚动):上滑阅读不拽回,接近底部恢复跟随。

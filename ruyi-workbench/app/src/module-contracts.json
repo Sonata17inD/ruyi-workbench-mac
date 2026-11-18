@@ -13844,61 +13844,16 @@
       "file": "13b-api-domain-routes.js",
       "layer": "transport",
       "provides": [
-        "AUDIO_FIX_MAX_AUDIO_B64",
-        "AUDIO_FIX_MAX_TEXT",
-        "AUDIO_STREAM_CHUNK_MAX_BYTES",
-        "AUDIO_STREAM_IDLE_MS",
-        "AUDIO_STREAM_MAX_SESSIONS",
-        "AUDIO_STREAM_UPSTREAM_TIMEOUT_MS",
-        "AUDIO_WARMUP_SILENCE_MS",
-        "IMAGE_OCR_MAX_CHARS",
-        "IMAGE_SEND_MAX_BYTES",
-        "STEER_REFUSAL",
-        "appendAsrFixUsage",
-        "audioStreamFailure",
-        "audioStreamReap",
-        "audioStreamSessions",
-        "audioStreamUpstream",
-        "audioWarmupLoaded",
-        "audioWarmups",
-        "bridgedToolClient",
         "handleAudioApiRoutes",
-        "handleAudioCorrect",
-        "handleAudioLexiconGet",
-        "handleAudioLexiconObserve",
-        "handleAudioLexiconSave",
-        "handleAudioStreamOpen",
-        "handleAudioStreamSession",
-        "handleAudioTranscribe",
-        "handleAudioWarmup",
         "handleMcpApiRoutes",
         "handleMigrationApiRoutes",
         "handleSteerApiRoute",
         "maybeCompressImageAttachment",
         "maybeOcrImageAttachment",
         "maybeTranscribeAudioAttachment",
-        "readAudioBody",
-        "runAudioWarmup",
-        "silentWav16k",
-        "steerAttachments",
-        "steerRefusal",
         "steerSessionCore"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionIdInvalid",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
@@ -13908,44 +13863,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "maskExternalMcpServerForDisplay",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13959,20 +13879,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
             "read"
           ]
         },
@@ -13984,108 +13890,52 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "safeJsonParse",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "scanMcpSources",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "buildUserEnvelope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "writeToChild",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14099,14 +13949,14 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14120,35 +13970,35 @@
           "provider": "04-permission-runtime.js",
           "symbol": "buildMcpConnectorInventory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "getBridgedClient",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingQuestionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateMcpRuntime",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14162,28 +14012,28 @@
           "provider": "04-permission-runtime.js",
           "symbol": "mutateMcpConnector",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "probeMcpConnector",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "sanitizeFsSegmentName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14204,20 +14054,6 @@
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04j-voice-learn.js",
-          "symbol": "VoiceLearn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
-          "kinds": [
             "read"
           ]
         },
@@ -14225,77 +14061,77 @@
           "provider": "04m-voice-service.js",
           "symbol": "asrFixMessages",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "asrFixModeOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "asrFixSanity",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "providerFixCompletion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "resolveAsrFixProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "resolveAsrProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "resolveAsrStreamProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "transcribeAudioViaProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconAsrPromptFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconRead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconUpdate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
