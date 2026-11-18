@@ -13,3 +13,9 @@ verify_dir=$(mktemp -d)
 tar -xzf "$archive" -C "$verify_dir"
 (cd "$verify_dir" && shasum -a 256 -c SHA256SUMS)
 ```
+
+## Mac 清理迭代冻结候选
+
+`1ece927e` 的源码回归、Full／Slim 打包清单、隔离安装及升级回退、原生自动化和性能证据已归档。共 1,592 份文件，均已从归档逐件复算 SHA-256，并与冻结验收报告引用的哈希核对。归档 SHA-256 为 `3917babb89023913ab6faa1f901653a83c96bc3b632418b39c90c5df7c774209`。 [冻结候选自动化证据](macos-native-1ece927e-automated-validation.tar.gz)
+
+归档中的文件按仓库相对路径保存。按上面的命令替换 `archive` 路径即可解压核验。冻结候选的实机截图、输入和实际睡眠唤醒仍待验收。
