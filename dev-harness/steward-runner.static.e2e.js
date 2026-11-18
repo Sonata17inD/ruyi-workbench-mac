@@ -15,6 +15,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const APP = path.join(ROOT, 'ruyi-workbench', 'app');
@@ -77,8 +78,14 @@ const stewardRoutes = read('../backend/steward-routes.cjs');
 // (纯搬家,拼接顺序即依赖方向)。这六个合起来才是原来那个「13h」,故下面凡是钉【运行器里有这件事】
 // 的判据一律改读整族 —— 事实一个字没变,只是它现在住在族里的哪个文件由拆分决定;钉【落点】的那几条
 // (① 的顺序链、② 的注册表与 threadStop 实现)仍各自钉到确切的那个文件。
+const autonomousActions = '../backend/steward-autonomous-actions.cjs';
+const inboxPrompt = '../backend/steward-inbox-prompt.cjs';
+const runnerActionServices = [
+  '../backend/steward-action-execution.cjs', '../backend/steward-turn-circuit.cjs',
+  '../backend/steward-conversation-replies.cjs', autonomousActions, inboxPrompt,
+];
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js'];
+  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
 const src01b = read('../backend/http-route-policy.cjs');
 
@@ -209,7 +216,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + runnerActionServices.map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -560,16 +567,16 @@ const srv = require(path.join(APP, 'server.js'));
 // 它就会悄悄开始说谎而没人发现。
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13p = read('13p-steward-runner-actions.js');
+  const autoSource = read(autonomousActions);
   const stopConsumers = [['steward-thread-edits.cjs', threadEdits],
-    [decisionTools, read('../backend/' + decisionTools)], ['13p-steward-runner-actions.js', src13p]];
+    [decisionTools, read('../backend/' + decisionTools)], [autonomousActions, autoSource]];
 
   // (a) 判据唯一:函数体只有一处,且在 06i。
   ok((src06i.match(/function stewardStoppedTarget\(/g) || []).length === 1,
     '⑦a 判据 stewardStoppedTarget 的函数体恰一处,且在 06i(现算的判据不许有第二份)');
   for (const [name, text] of [
-    ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l], ['13p-steward-runner-actions.js', src13p],
-    ...threadServices, ...toolServices,
+    ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
+    ...threadServices, ...toolServices, ...runnerActionServices.map(file => [file, read(file)]),
   ]) {
     ok(!/function stewardStoppedTarget\(/.test(text), `⑦a2 ${name} 没有自己那一份判据(只调,不抄)`);
   }
@@ -587,13 +594,11 @@ const srv = require(path.join(APP, 'server.js'));
   }
   // (d) 一个 reason 码:三处拒绝都写 'target_stopped',前端与夹具按码认,不按中文认。
   for (const [name, text] of stopConsumers) {
-    if (name === '13p-steward-runner-actions.js') continue;   // 预闸回的是 {allowed:false,reason:<人话>},码由工具那两处发
+    if (name === autonomousActions) continue;   // 预闸回的是 {allowed:false,reason:<人话>},码由工具那两处发
     ok(text.includes("reason: 'target_stopped'"), `⑦d ${name} 用同一个稳定码 target_stopped`);
   }
   // (e) 预闸真的长在闸门函数体里,且排在【配额与计数之前】——切函数体来判,不是「这几个字出现过」。
-  const gateAt = src13p.indexOf('async function stewardSelfServeGate(plan, config) {');
-  const gateEnd = gateAt < 0 ? -1 : src13p.indexOf('\n}\n', gateAt);
-  const gateBody = gateAt < 0 ? '' : (gateEnd < 0 ? src13p.slice(gateAt) : src13p.slice(gateAt, gateEnd));
+  const gateBody = functionBlock(autoSource, 'stewardSelfServeGate');
   ok(gateBody.length > 400, `⑦e stewardSelfServeGate 函数体切得到(切不到 = 本组静默失效;实得 ${gateBody.length})`);
   const gateCode = codeOnly(gateBody);
   const atStop = gateCode.indexOf('stewardStoppedTarget(');
@@ -604,9 +609,7 @@ const srv = require(path.join(APP, 'server.js'));
     '⑦e3 预闸两面都读:班组快照与会话头(只读一面就会漏掉另一半的停)');
 
   // (f) 值域唯一:自理意图表只产出 retry / resume —— 替 42 号文 §1 ④「自动升档今天靠没实现」上保险。
-  const planAt = src13p.indexOf('function stewardSelfServePlan(evt) {');
-  const planEnd = planAt < 0 ? -1 : src13p.indexOf('\n}\n', planAt);
-  const planBody = planAt < 0 ? '' : (planEnd < 0 ? src13p.slice(planAt) : src13p.slice(planAt, planEnd));
+  const planBody = functionBlock(autoSource, 'stewardSelfServePlan');
   ok(planBody.length > 200, `⑦f stewardSelfServePlan 函数体切得到(实得 ${planBody.length})`);
   const intents = [...new Set((codeOnly(planBody).match(/intent: '([a-z_]+)'/g) || []).map(s => s.slice(9, -1)))].sort();
   // 2026-10 加了第三种 continue(回合收了、任务没做完 → 原模型原权限再续一轮,不换模型、不升档;闸与上限见 13p 的
@@ -623,24 +626,25 @@ const srv = require(path.join(APP, 'server.js'));
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
   const eventSource = read('../backend/steward-inbox-events.cjs');
   const src13m = read('13m-steward-runner-base.js');
-  const src13p = read('13p-steward-runner-actions.js');
+  const promptSource = read(inboxPrompt);
 
   ok((src13m.match(/function stewardFailureExplain\(/g) || []).length === 1,
     '⑧a 取话口 stewardFailureExplain 的函数体恰一处,且在 13m(它读 06 是干净的后向边;放 06i 会造循环边)');
-  for (const [name, text] of [['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['13p-steward-runner-actions.js', src13p]]) {
+  for (const [name, text] of [
+    ['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource],
+    ['13p-steward-runner-actions.js', read('13p-steward-runner-actions.js')], ...runnerActionServices.map(file => [file, read(file)]),
+  ]) {
     ok(!/function stewardFailureExplain\(/.test(text), `⑧a2 ${name} 没有自己那一份取话口`);
     ok(!/ERROR_CLASSES/.test(codeOnly(text)), `⑧b ${name} 不直接翻那张表(只能经取话口;直接翻 = 迟早长出第二套口径)`);
   }
   ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 13m 确实引用了 06 的既有表(而不是自己抄一张)');
-  ok([eventSource, inboxComposition, inboxSource, src13p].every(text => !/zh: '/.test(codeOnly(text))),
+  ok([eventSource, inboxComposition, inboxSource, ...runnerActionServices.map(read)].every(text => !/zh: '/.test(codeOnly(text))),
     '⑧c 管家侧零第二张「机器类 → 人话」表');
 
   // 事件行只有一处调用:两处调用就意味着两种拼法,用户会在不同地方看到不同措辞。
-  ok((codeOnly(src13p).match(/stewardFailureExplain\(/g) || []).length === 1,
-    `⑧d 事件行里只有一处取话(实得 ${(codeOnly(src13p).match(/stewardFailureExplain\(/g) || []).length})`);
-  const lineAt = src13p.indexOf('function stewardEventLine(row, titleOf) {');
-  const lineEnd = lineAt < 0 ? -1 : src13p.indexOf('\n}\n', lineAt);
-  const lineBody = lineAt < 0 ? '' : (lineEnd < 0 ? src13p.slice(lineAt) : src13p.slice(lineAt, lineEnd));
+  ok((codeOnly(promptSource).match(/stewardFailureExplain\(/g) || []).length === 1,
+    `⑧d 事件行里只有一处取话(实得 ${(codeOnly(promptSource).match(/stewardFailureExplain\(/g) || []).length})`);
+  const lineBody = functionBlock(promptSource, 'stewardEventLine');
   ok(lineBody.length > 200 && codeOnly(lineBody).includes('stewardFailureExplain(payload.errorClass)'),
     `⑧d2 取话就长在事件行那个函数体里(切不到 = 本条静默失效;实得 ${lineBody.length})`);
 

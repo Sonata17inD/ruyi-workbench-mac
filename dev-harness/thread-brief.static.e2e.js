@@ -50,7 +50,8 @@ const steward = readSrc('../backend/steward-thread-queries.cjs');
 // preroute 索引行都搬进了 13o-steward-runner-prompt.js。这里要钉的事实是「总览行带 displayTitle、
 // preroute 索引行的 title 仍是原话」,与它住哪个文件无关,故与上面 13g 族同办法 —— 改读整族。
 const runner = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js']
+  '13p-steward-runner-actions.js', '../backend/steward-conversation-replies.cjs', '../backend/steward-inbox-prompt.cjs',
+  '13q-steward-runner-turn.js', '13h-steward-runner.js']
   .map(readSrc).join('\n');
 
 /* ── ① 判据只有一处 ─────────────────────────────────────────────────────────── */
