@@ -6,8 +6,7 @@ const { apiFailure, json, readJsonBody, send } = require('./http-protocol.cjs');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 const { computeProviderCost } = require('./provider-pricing.cjs');
 const { redact } = require('./secret-redaction.cjs');
-const { VoiceLexicon } = require('./voice-lexicon.cjs');
-const { VoiceLearn } = require('./voice-learn.cjs');
+const getVoiceLexicon = () => require('./voice-lexicon.cjs').VoiceLexicon;
 
 function createAudioRoutes({
   ASR_MAX_BODY_BYTES, PrivacyGateway, ToolboxHooks, nowIso, logEvent, readConfig, appendUsageLedger,
@@ -93,6 +92,7 @@ function createAudioRoutes({
   // 学来的删掉留墓碑),base 开关原厂常用词,learn 开关「从我的修改里学」(59 号文 §6,缺省开);三样都没给 400。
   // 文本超长 413、条数超上限 400 —— 整份拒收,不静默截断。只记条数的审计。
   async function handleAudioLexiconGet(req, res) {
+    const VoiceLexicon = getVoiceLexicon();
     const withBase = new URL(req.url, 'http://x').searchParams.get('base') === '1';
     return send(res, json({ ok: true, ...VoiceLexicon.view(await voiceLexiconRead(), { withBase }) }));
   }
@@ -103,6 +103,7 @@ function createAudioRoutes({
     const hasBase = body && typeof body.base === 'boolean';
     const hasLearn = body && typeof body.learn === 'boolean';
     if (!hasText && !hasBase && !hasLearn) return send(res, apiFailure('voice.lexicon_bad_request', {}, 'text(字符串)、base(布尔)、learn(布尔)至少给一个', 400));
+    const VoiceLexicon = getVoiceLexicon();
     if (hasText && body.text.length > VoiceLexicon.MAX_TEXT_CHARS) {
       return send(res, apiFailure('voice.lexicon_too_large', { maxChars: VoiceLexicon.MAX_TEXT_CHARS }, '词库文本超过上限', 413));
     }
@@ -141,6 +142,7 @@ function createAudioRoutes({
     if (final == null || !Array.isArray(sentences) || sentences.some(x => !x || typeof x !== 'object' || typeof x.text !== 'string' || (x.first != null && typeof x.first !== 'string'))) {
       return send(res, apiFailure('voice.observe_bad_request', {}, 'final 是字符串,sentences 是 [{ text, first? }]', 400));
     }
+    const { VoiceLearn } = require('./voice-learn.cjs');
     if (final.length > VoiceLearn.MAX_FINAL_CHARS || sentences.length > VoiceLearn.MAX_SENTENCES
       || sentences.some(x => x.text.length > VoiceLearn.MAX_SENTENCE_CHARS || String(x.first || '').length > VoiceLearn.MAX_SENTENCE_CHARS)) {
       return send(res, apiFailure('voice.observe_too_large', { maxChars: VoiceLearn.MAX_FINAL_CHARS, maxSentences: VoiceLearn.MAX_SENTENCES }, '要学的文字超过上限', 413));
@@ -290,6 +292,7 @@ function createAudioRoutes({
     }
     let llmText = null, llmErr = '', glossaryLen = 0;
     if (canLlm && (text || audioText)) {
+      const VoiceLexicon = getVoiceLexicon();
       const glossary = VoiceLexicon.glossaryLines(VoiceLexicon.pick({ text: [text, audioText || ''].join('\n'), state: lexicon }));
       glossaryLen = glossary.length;
       const r = await providerFixCompletion(llmRes.provider, llmRes.model, asrFixMessages(text, audioText, context, glossary));
@@ -357,7 +360,7 @@ function createAudioRoutes({
     if (raw.length && (!parsed || typeof parsed !== 'object')) return send(res, apiFailure('asr.stream_bad_request', {}, '请求体不是合法 JSON', 400));
     let hotwords = Array.isArray(parsed.hotwords) ? parsed.hotwords.filter(w => typeof w === 'string').map(w => w.trim().slice(0, 40)).filter(Boolean).slice(0, 200) : [];
     // 59 号文:前端没给热词(今天它开会话只发 {})就用语音词库里的个人词。原厂通用词不当热词(52 号文 §2:几乎没用)。
-    if (!hotwords.length) hotwords = VoiceLexicon.hotwords(await voiceLexiconRead());
+    if (!hotwords.length) hotwords = getVoiceLexicon().hotwords(await voiceLexiconRead());
     audioStreamReap();
     if (audioStreamSessions.size >= AUDIO_STREAM_MAX_SESSIONS) return send(res, apiFailure('asr.stream_busy', { max: AUDIO_STREAM_MAX_SESSIONS }, '实时识别会话太多,稍后再试', 429));
     const upstream = String(resolved.provider.baseUrl || '').replace(/\/+$/, '');

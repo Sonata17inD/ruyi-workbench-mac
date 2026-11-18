@@ -6,7 +6,6 @@ const { safeJsonParse } = require('./ordinary-json.cjs');
 const { resolveProvider } = require('./provider-config.cjs');
 const { computeProviderCost } = require('./provider-pricing.cjs');
 const { redact } = require('./secret-redaction.cjs');
-const { VoiceLexicon } = require('./voice-lexicon.cjs');
 
 function createVoiceService({
   paths, DurableJsonStore, appendUsageLedger, readConfig, logEvent, PrivacyGateway, ToolboxHooks,
@@ -132,27 +131,35 @@ function createVoiceService({
   // 写面两处:设置页(13b POST /api/audio/lexicon)与从修改里学(13b POST /api/audio/lexicon/observe,59 号文 §6),
   // 都经 voiceLexiconUpdate 按同一个键串行「读-改-写」。日志只记条数,不记词。
   // 容量:词条 500(04j 学词时自己先腾位置,手加的不挤);还没攒够证据的候选 300(从最久没见的裁起)。
-  const voiceLexiconStore = DurableJsonStore.create({
-    id: 'voice-lexicon',
-    file: () => path.join(paths.data, 'voice-lexicon.json'),
-    schemaVersion: VoiceLexicon.SCHEMA,
-    defaultValue: () => VoiceLexicon.defaultState(),
-    sanitize: VoiceLexicon.sanitizeState,
-    validate: value => value.schema === VoiceLexicon.SCHEMA && Boolean(value.terms) && typeof value.terms === 'object',
-    capacity: [{ path: 'terms', max: VoiceLexicon.MAX_TERMS }, { path: 'pending', max: VoiceLexicon.MAX_PENDING }],
-    onCorrupt(error) {
-      try { logEvent({ kind: 'voice_lexicon_corrupt', error: String(error && error.message || error).slice(0, 200) }); } catch { /* 诊断永不阻断 */ }
-    },
-  });
+  let voiceLexicon;
+  function getVoiceLexicon() {
+    if (voiceLexicon) return voiceLexicon;
+    const { VoiceLexicon } = require('./voice-lexicon.cjs');
+    const store = DurableJsonStore.create({
+      id: 'voice-lexicon',
+      file: () => path.join(paths.data, 'voice-lexicon.json'),
+      schemaVersion: VoiceLexicon.SCHEMA,
+      defaultValue: VoiceLexicon.defaultState,
+      sanitize: VoiceLexicon.sanitizeState,
+      validate: value => value.schema === VoiceLexicon.SCHEMA && Boolean(value.terms) && typeof value.terms === 'object',
+      capacity: [{ path: 'terms', max: VoiceLexicon.MAX_TERMS }, { path: 'pending', max: VoiceLexicon.MAX_PENDING }],
+      onCorrupt(error) {
+        try { logEvent({ kind: 'voice_lexicon_corrupt', error: String(error && error.message || error).slice(0, 200) }); } catch { /* 诊断永不阻断 */ }
+      },
+    });
+    voiceLexicon = { store, VoiceLexicon };
+    return voiceLexicon;
+  }
   const voiceLexiconChains = new Map();
   function voiceLexiconRead() {
-    return voiceLexiconStore.read().catch(() => VoiceLexicon.defaultState());
+    const { store, VoiceLexicon } = getVoiceLexicon();
+    return store.read().catch(() => VoiceLexicon.defaultState());
   }
   // mutate(当前状态) → 新状态(或 null = 不写)。返回落盘后的状态。
   function voiceLexiconUpdate(mutate) {
     return runKeyedChain(voiceLexiconChains, 'voice-lexicon', async () => {
       const next = await mutate(await voiceLexiconRead());
-      return next ? voiceLexiconStore.write(next) : voiceLexiconRead();
+      return next ? getVoiceLexicon().store.write(next) : voiceLexiconRead();
     });
   }
   // 整段识别要带的 prompt(词库挑出来的词)。chat-audio 协议(MiMo 这类对话型识别)不带:那条路把 prompt 当一段文字塞进对话,
@@ -161,7 +168,10 @@ function createVoiceService({
   // 读不到词库就不带,绝不挡转写。
   async function voiceLexiconAsrPromptFor(provider, text, state) {
     if (!provider || provider.asrProtocol === 'chat-audio') return '';
-    try { return VoiceLexicon.asrPrompt(VoiceLexicon.pick({ text, state: state || await voiceLexiconRead() })); } catch { return ''; }
+    try {
+      const { VoiceLexicon } = getVoiceLexicon();
+      return VoiceLexicon.asrPrompt(VoiceLexicon.pick({ text, state: state || await voiceLexiconRead() }));
+    } catch { return ''; }
   }
   // 出参合理性:空 → 不用;带标签就剥掉;成对的引号剥掉;多行、或长度失控(> 2 倍 + 20)→ 不用 —— 那多半是模型在答题而不是改错。
   // 回空串 = 「这一发别用」,调用方回落到音频重听的结果或第一遍。

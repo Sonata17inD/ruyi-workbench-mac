@@ -1053,12 +1053,6 @@ Object.assign(ToolboxHooks, require('./backend/toolbox-services.cjs').createTool
   ProcessRuntime, killChildTree, readConfig, mutateConfig, registry: ToolboxRegistry, logEvent, redact, safeJsonParse,
 }));
 
-const { HanziPinyin } = require('./backend/hanzi-pinyin.cjs');
-
-const { VoiceLexicon } = require('./backend/voice-lexicon.cjs');
-
-const { VoiceLearn } = require('./backend/voice-learn.cjs');
-
 // Explicit shared prompt-registry service.
 const { PROMPT_EN, PROMPT_PACK_VERSION, PROMPT_ZH, getPromptPack, revertNoticeTurns } = require('./backend/prompt-registry.cjs');
 const { appendMemorySection, clampAppendWithSkills, fenceSafeSlice, shrinkFencedSection } = require('./backend/prompt-budget.cjs');

@@ -24,7 +24,10 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--baseline', default='931f9fa21972d8722ad027ca631877f2623ba462')
 parser.add_argument('--output', required=True)
+parser.add_argument('--runs', type=int, default=3)
 args = parser.parse_args()
+if args.runs < 3:
+    parser.error('--runs must be at least 3')
 root = Path(__file__).resolve().parents[1]
 node = shutil.which('node')
 
@@ -130,7 +133,7 @@ with tempfile.TemporaryDirectory(prefix='ruyi-paired-performance-') as directory
     warmups = {}
     for label, app in [('baseline', baseline), ('candidate', current)]:
         warmups[label] = measure(app, temp / (label + '-warmup'))
-    for i in range(3):
+    for i in range(args.runs):
         for label, app in ([('baseline', baseline), ('candidate', current)] if i % 2 == 0 else
                            [('candidate', current), ('baseline', baseline)]):
             value = measure(app, temp / (label + '-' + str(i)))

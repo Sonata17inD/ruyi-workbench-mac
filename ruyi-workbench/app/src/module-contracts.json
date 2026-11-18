@@ -2953,30 +2953,6 @@
       ]
     },
     {
-      "file": "04j-hanzi-pinyin.js",
-      "layer": "foundation",
-      "provides": [
-        "HanziPinyin"
-      ],
-      "requires": []
-    },
-    {
-      "file": "04j-voice-lexicon.js",
-      "layer": "foundation",
-      "provides": [
-        "VoiceLexicon"
-      ],
-      "requires": []
-    },
-    {
-      "file": "04j-voice-learn.js",
-      "layer": "foundation",
-      "provides": [
-        "VoiceLearn"
-      ],
-      "requires": []
-    },
-    {
       "file": "06b-prompt-registry.js",
       "layer": "engine",
       "provides": [

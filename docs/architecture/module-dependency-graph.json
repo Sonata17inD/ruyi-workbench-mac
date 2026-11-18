@@ -3,8 +3,8 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 87,
-    "providedSymbols": 2052,
+    "modules": 84,
+    "providedSymbols": 2049,
     "requiredSymbols": 3065,
     "edges": 594,
     "forwardEdges": 14,
@@ -3033,38 +3033,8 @@
       ]
     },
     {
-      "file": "04j-hanzi-pinyin.js",
-      "order": 35,
-      "layer": "foundation",
-      "note": "59 号文 §6(语音词库第二步):汉字 → 普通话读音(不带声调)的离线小表 —— Unicode Unihan(kMandarin 主读音 + kXHC1983 其余现代读音,Unicode License v3,THIRD-PARTY-NOTICES §4)经 dev-harness/hanzi-pinyin-generate.js 生成的生成物,不手改;冻结对象 HanziPinyin(readings),零出边、不进任何环",
-      "provides": [
-        "HanziPinyin"
-      ],
-      "requires": []
-    },
-    {
-      "file": "04j-voice-lexicon.js",
-      "order": 36,
-      "layer": "foundation",
-      "note": "59 号文(语音词库第一步):个人词 + 原厂常用词表的纯函数内核 —— 词条形状与清洗、设置页文本读写、按这一句挑词、给句尾改错 <glossary> / 整段识别 prompt / 实时识别热词各出一份形状;冻结对象 VoiceLexicon,零出边、不进任何环(同 11b 模具);落盘住 05、路由住 13b",
-      "provides": [
-        "VoiceLexicon"
-      ],
-      "requires": []
-    },
-    {
-      "file": "04j-voice-learn.js",
-      "order": 37,
-      "layer": "foundation",
-      "note": "59 号文 §6(语音词库第二步):从用户手改里学词的纯函数内核 —— 机器写的几句在发出去的字里定位与对齐、抽改动、读音像不像(拼音/辅音骨架/字母)、人名单字改动拼窗口、打字里抽专名英文词、请改字大模型复核的提示词与回体校验、落进词库(攒次数、先验、纠、墓碑、腾位置);冻结对象 VoiceLearn,只读 04j 的 VoiceLexicon 与 HanziPinyin(二者零出边),不进任何环;路由住 13b",
-      "provides": [
-        "VoiceLearn"
-      ],
-      "requires": []
-    },
-    {
       "file": "06b-prompt-registry.js",
-      "order": 38,
+      "order": 35,
       "layer": "engine",
       "note": "Shared prompt packs, fenced budgets and turn policies",
       "provides": [
@@ -3089,7 +3059,7 @@
     },
     {
       "file": "06c-agent-workflow-catalog.js",
-      "order": 39,
+      "order": 36,
       "layer": "engine",
       "note": "Built-in, project and personal workflow definitions",
       "provides": [
@@ -3124,7 +3094,7 @@
     },
     {
       "file": "04l-skill-registry.js",
-      "order": 40,
+      "order": 37,
       "layer": "foundation",
       "note": "Shared discovery and resolution of session skills",
       "provides": [
@@ -3180,7 +3150,7 @@
     },
     {
       "file": "04m-voice-service.js",
-      "order": 41,
+      "order": 38,
       "layer": "foundation",
       "note": "Provider speech, correction and lexicon state",
       "provides": [
@@ -3271,7 +3241,7 @@
     },
     {
       "file": "06v-operational-services.js",
-      "order": 42,
+      "order": 39,
       "layer": "engine",
       "note": "Audit, storage retention, transcript ownership, and runtime metrics",
       "provides": [
@@ -3387,7 +3357,7 @@
     },
     {
       "file": "06w-capability-service.js",
-      "order": 43,
+      "order": 40,
       "layer": "engine",
       "note": "Shared capability probes and keyed hot snapshot",
       "provides": [
@@ -3497,7 +3467,7 @@
     },
     {
       "file": "05-claude-engine.js",
-      "order": 44,
+      "order": 41,
       "layer": "engine",
       "note": "runClaudeTurn/stream-json 解析/spawn 环境/权限桥接线",
       "provides": [
@@ -4336,7 +4306,7 @@
     },
     {
       "file": "05b-kimi-bridge.js",
-      "order": 45,
+      "order": 42,
       "layer": "engine",
       "note": "Kimi Code ACP 驱动：会话/流式/工具/权限/提问/排队 steer；Server API 原生压缩与 wire 状态补强",
       "provides": [
@@ -4786,7 +4756,7 @@
     },
     {
       "file": "06-provider-engine.js",
-      "order": 46,
+      "order": 43,
       "layer": "engine",
       "note": "Provider prompt, playbooks, and auxiliary service composition",
       "provides": [
@@ -5023,7 +4993,7 @@
     },
     {
       "file": "06h-retrieval-index.js",
-      "order": 47,
+      "order": 44,
       "layer": "engine",
       "note": "113a:离线检索原语(特征哈希向量/TF-IDF/余弦/RRF),记忆召回与会话搜索共用",
       "provides": [
@@ -5036,7 +5006,7 @@
     },
     {
       "file": "06i-steward-core.js",
-      "order": 48,
+      "order": 45,
       "layer": "engine",
       "note": "第116波116a:管家(Steward)引擎侧纯函数与延迟绑定命名空间 StewardHooks(不实现,契约声明)",
       "provides": [
@@ -5220,7 +5190,7 @@
     },
     {
       "file": "06d-memory-domain.js",
-      "order": 49,
+      "order": 46,
       "layer": "engine",
       "note": "第104波：跨会话记忆、提议、关系图与检索",
       "provides": [
@@ -5439,7 +5409,7 @@
     },
     {
       "file": "06e-mission-domain.js",
-      "order": 50,
+      "order": 47,
       "layer": "engine",
       "note": "第104波：Mission 提示摘要与 until-done 驱动",
       "provides": [
@@ -5689,7 +5659,7 @@
     },
     {
       "file": "06g-resource-leases.js",
-      "order": 51,
+      "order": 48,
       "layer": "engine",
       "note": "第104波：Agent 资源归一化、冲突检测与租约",
       "provides": [
@@ -5722,7 +5692,7 @@
     },
     {
       "file": "06j-scheduler-core.js",
-      "order": 52,
+      "order": 49,
       "layer": "engine",
       "note": "第123波 M1(37 号文 §3.1;设计权威 29 号文 §3):定时任务纯函数内核 —— normalizeSchedulerTask / nextFireAt / parseCronExpr / describeSchedule / occurrenceKey / missedOccurrence(零 I/O、零全局状态、时间全由入参喂)",
       "provides": [
@@ -5775,7 +5745,7 @@
     },
     {
       "file": "06k-config-patch.js",
-      "order": 53,
+      "order": 50,
       "layer": "engine",
       "note": "架构还债批 2 B2: 从 13-http-router.js 搬出 applyConfigPatch(配置补丁落盘与副作用;纯搬家,零行为变更),经 01 的 ConfigPatchHooks 调用、零入边",
       "provides": [
@@ -5912,7 +5882,7 @@
     },
     {
       "file": "07-autonomy.js",
-      "order": 54,
+      "order": 51,
       "layer": "orchestration",
       "note": "Provider 工具目录、权限 gate、failover 与 Agent 角色支撑",
       "provides": [
@@ -6336,7 +6306,7 @@
     },
     {
       "file": "08-agent-runs.js",
-      "order": 55,
+      "order": 52,
       "layer": "orchestration",
       "note": "run 事件日志/恢复分级/runSubAgentCore",
       "provides": [
@@ -7105,7 +7075,7 @@
     },
     {
       "file": "09-workflow.js",
-      "order": 56,
+      "order": 53,
       "layer": "orchestration",
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
@@ -8480,7 +8450,7 @@
     },
     {
       "file": "09b-agent-recovery.js",
-      "order": 57,
+      "order": 54,
       "layer": "orchestration",
       "note": "Workflow restart and interrupted-run recovery composition",
       "provides": [
@@ -8626,7 +8596,7 @@
     },
     {
       "file": "10-context-governance.js",
-      "order": 58,
+      "order": 55,
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
@@ -8919,7 +8889,7 @@
     },
     {
       "file": "10a-session-turn.js",
-      "order": 59,
+      "order": 56,
       "layer": "orchestration",
       "note": "Session execution admission and wake composition",
       "provides": [
@@ -9248,7 +9218,7 @@
     },
     {
       "file": "11-native-tools.js",
-      "order": 60,
+      "order": 57,
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
@@ -9632,7 +9602,7 @@
     },
     {
       "file": "11b-file-text-io.js",
-      "order": 61,
+      "order": 58,
       "layer": "tools",
       "note": "单文件工具的文本 I/O 内核:编码嗅探/GB18030 编码、有界流式读、原子写、file_edit 未命中诊断;零出边(冻结对象 FileTextIo),不进依赖环",
       "provides": [
@@ -9642,7 +9612,7 @@
     },
     {
       "file": "11c-file-visual-io.js",
-      "order": 62,
+      "order": 59,
       "layer": "tools",
       "note": "",
       "provides": [
@@ -9660,7 +9630,7 @@
     },
     {
       "file": "11d-media-inspection.js",
-      "order": 63,
+      "order": 60,
       "layer": "tools",
       "note": "Local dependency discovery, bounded audio measurement and parse-only syntax validation; built-ins only",
       "provides": [
@@ -9678,7 +9648,7 @@
     },
     {
       "file": "12-tool-dispatch.js",
-      "order": 64,
+      "order": 61,
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
@@ -10890,7 +10860,7 @@
     },
     {
       "file": "13-http-router.js",
-      "order": 65,
+      "order": 62,
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
@@ -12207,7 +12177,7 @@
     },
     {
       "file": "13b-api-domain-routes.js",
-      "order": 66,
+      "order": 63,
       "layer": "transport",
       "note": "迁移、MCP、插话、语音路由与附件处理的装配",
       "provides": [
@@ -12647,7 +12617,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 67,
+      "order": 64,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -12935,7 +12905,7 @@
     },
     {
       "file": "13d-core-domain-routes.js",
-      "order": 68,
+      "order": 65,
       "layer": "transport",
       "note": "会话、Agent Run、事项与干预服务的装配",
       "provides": [
@@ -13802,7 +13772,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 69,
+      "order": 66,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -14017,7 +13987,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 70,
+      "order": 67,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -14227,7 +14197,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 71,
+      "order": 68,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -14375,7 +14345,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 72,
+      "order": 69,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -15289,7 +15259,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 73,
+      "order": 70,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -16216,7 +16186,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 74,
+      "order": 71,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -16680,7 +16650,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 75,
+      "order": 72,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -16948,7 +16918,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 76,
+      "order": 73,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -17420,7 +17390,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 77,
+      "order": 74,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -17887,7 +17857,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 78,
+      "order": 75,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -18491,7 +18461,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 79,
+      "order": 76,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -18935,7 +18905,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 80,
+      "order": 77,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -19074,7 +19044,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 81,
+      "order": 78,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -19293,7 +19263,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 82,
+      "order": 79,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -19495,7 +19465,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 83,
+      "order": 80,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -19618,7 +19588,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 84,
+      "order": 81,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -19708,7 +19678,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 85,
+      "order": 82,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -19831,7 +19801,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 86,
+      "order": 83,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [

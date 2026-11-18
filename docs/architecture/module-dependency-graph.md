@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2052 | 3065 | 594 | 14 | 0 | 0 |
+| 84 | 2049 | 3065 | 594 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -50,58 +50,55 @@
 | 32 | `04-permission-runtime.js` | foundation | 78 | 47 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
-| 35 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
-| 36 | `04j-voice-lexicon.js` | foundation | 1 | 0 | 0 |
-| 37 | `04j-voice-learn.js` | foundation | 1 | 0 | 0 |
-| 38 | `06b-prompt-registry.js` | engine | 16 | 0 | 0 |
-| 39 | `06c-agent-workflow-catalog.js` | engine | 11 | 2 | 2 |
-| 40 | `04l-skill-registry.js` | foundation | 4 | 6 | 2 |
-| 41 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
-| 42 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
-| 43 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
-| 44 | `05-claude-engine.js` | engine | 3 | 118 | 24 |
-| 45 | `05b-kimi-bridge.js` | engine | 41 | 57 | 11 |
-| 46 | `06-provider-engine.js` | engine | 38 | 27 | 8 |
-| 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
-| 48 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 49 | `06d-memory-domain.js` | engine | 62 | 21 | 6 |
-| 50 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
-| 51 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
-| 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
-| 53 | `06k-config-patch.js` | engine | 1 | 18 | 7 |
-| 54 | `07-autonomy.js` | orchestration | 50 | 52 | 14 |
-| 55 | `08-agent-runs.js` | orchestration | 59 | 100 | 23 |
-| 56 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
-| 57 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
-| 58 | `10-context-governance.js` | orchestration | 66 | 31 | 12 |
-| 59 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
-| 60 | `11-native-tools.js` | tools | 52 | 46 | 11 |
-| 61 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
-| 62 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
-| 63 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 64 | `12-tool-dispatch.js` | tools | 54 | 164 | 26 |
-| 65 | `13-http-router.js` | transport | 26 | 183 | 28 |
-| 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
-| 67 | `13e-pretender-index.js` | transport | 19 | 37 | 7 |
-| 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
-| 69 | `13i-steward-inbox.js` | transport | 23 | 26 | 7 |
-| 70 | `13j-steward-tool-base.js` | transport | 60 | 20 | 9 |
-| 71 | `13aa-steward-delivery.js` | unclassified | 5 | 19 | 7 |
-| 72 | `13k-steward-threads.js` | transport | 43 | 123 | 18 |
-| 73 | `13l-steward-ops.js` | transport | 28 | 127 | 22 |
-| 74 | `13g-steward.js` | transport | 9 | 63 | 11 |
-| 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
-| 76 | `13o-steward-runner-prompt.js` | transport | 14 | 64 | 16 |
-| 77 | `13p-steward-runner-actions.js` | transport | 16 | 63 | 12 |
-| 78 | `13q-steward-runner-turn.js` | transport | 13 | 83 | 21 |
-| 79 | `13h-steward-runner.js` | transport | 7 | 61 | 16 |
-| 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
-| 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
-| 82 | `13t-steward-schedule.js` | transport | 10 | 26 | 10 |
-| 83 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
-| 84 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
-| 85 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 16 | 8 |
-| 86 | `14-main.js` | entrypoint | 13 | 646 | 54 |
+| 35 | `06b-prompt-registry.js` | engine | 16 | 0 | 0 |
+| 36 | `06c-agent-workflow-catalog.js` | engine | 11 | 2 | 2 |
+| 37 | `04l-skill-registry.js` | foundation | 4 | 6 | 2 |
+| 38 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
+| 39 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
+| 40 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
+| 41 | `05-claude-engine.js` | engine | 3 | 118 | 24 |
+| 42 | `05b-kimi-bridge.js` | engine | 41 | 57 | 11 |
+| 43 | `06-provider-engine.js` | engine | 38 | 27 | 8 |
+| 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
+| 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
+| 46 | `06d-memory-domain.js` | engine | 62 | 21 | 6 |
+| 47 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
+| 48 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
+| 49 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
+| 50 | `06k-config-patch.js` | engine | 1 | 18 | 7 |
+| 51 | `07-autonomy.js` | orchestration | 50 | 52 | 14 |
+| 52 | `08-agent-runs.js` | orchestration | 59 | 100 | 23 |
+| 53 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
+| 54 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
+| 55 | `10-context-governance.js` | orchestration | 66 | 31 | 12 |
+| 56 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
+| 57 | `11-native-tools.js` | tools | 52 | 46 | 11 |
+| 58 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
+| 59 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
+| 60 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
+| 61 | `12-tool-dispatch.js` | tools | 54 | 164 | 26 |
+| 62 | `13-http-router.js` | transport | 26 | 183 | 28 |
+| 63 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
+| 64 | `13e-pretender-index.js` | transport | 19 | 37 | 7 |
+| 65 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
+| 66 | `13i-steward-inbox.js` | transport | 23 | 26 | 7 |
+| 67 | `13j-steward-tool-base.js` | transport | 60 | 20 | 9 |
+| 68 | `13aa-steward-delivery.js` | unclassified | 5 | 19 | 7 |
+| 69 | `13k-steward-threads.js` | transport | 43 | 123 | 18 |
+| 70 | `13l-steward-ops.js` | transport | 28 | 127 | 22 |
+| 71 | `13g-steward.js` | transport | 9 | 63 | 11 |
+| 72 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
+| 73 | `13o-steward-runner-prompt.js` | transport | 14 | 64 | 16 |
+| 74 | `13p-steward-runner-actions.js` | transport | 16 | 63 | 12 |
+| 75 | `13q-steward-runner-turn.js` | transport | 13 | 83 | 21 |
+| 76 | `13h-steward-runner.js` | transport | 7 | 61 | 16 |
+| 77 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
+| 78 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
+| 79 | `13t-steward-schedule.js` | transport | 10 | 26 | 10 |
+| 80 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
+| 81 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
+| 82 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 16 | 8 |
+| 83 | `14-main.js` | entrypoint | 13 | 646 | 54 |
 
 ## 模块边
 
