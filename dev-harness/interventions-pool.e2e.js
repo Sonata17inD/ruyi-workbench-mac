@@ -129,7 +129,7 @@ const mkPoolItem = (id, task) => ({ id, proposedBy: 'n1', task, roleId: '', depe
 
 (async () => {
   const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name), 'utf8');
-  const src = [readServerSource(), backend('intervention-journal.cjs'), backend('agent-recovery.cjs'), backend('session-persistence.cjs')].join('\n');
+  const src = [readServerSource(), backend('intervention-journal.cjs'), backend('agent-recovery.cjs'), backend('session-persistence.cjs'), backend('agent-workflow.cjs'), backend('agent-run-routes.cjs')].join('\n');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,
@@ -294,9 +294,9 @@ const mkPoolItem = (id, task) => ({ id, proposedBy: 'n1', task, roleId: '', depe
     ok(/iv\.type === 'pool'/.test(src) && /run\.status === 'paused'\) continue; \/\/ 恢复后可决策/.test(src), 's 02 markInterruptedInterventions pool 分流(paused 保留)');
     ok(/settleIntervention\(run\.sessionId, p\.id, 'expired', \{ decidedBy: 'auto', note: 'run interrupted at boot' \}\)/.test(src), 's 08 中断 expire 旁路 settle');
     ok(/legacyPoolProposed/.test(src) && /backfilled: true/.test(src), 's 08 存量对账补登记(legacyPoolProposed + backfilled)');
-    ok(/registerIntervention\(run\.sessionId, 'pool', item\.id,/.test(src), 's 09 proposeTaskImpl 注册 pool Intervention');
-    ok(/settleIntervention\(run\.sessionId, p\.id, 'expired', \{ decidedBy: p\.decidedBy \|\| 'auto', note: 'run finalized' \}\)/.test(src), 's 09 收尾 expire 旁路 settle');
-    ok(/source: 'legacy_pool'/.test(src) && /payload: \{ action: action === 'pool_approve' \? 'approve' : 'reject' \}/.test(src), 's 13d pool_approve/pool_reject 适配到 decideIntervention');
+    ok(/registerIntervention\(run\.sessionId, 'pool', item\.id,/.test(src), 's 工作流模块 注册 pool Intervention');
+    ok(/settleIntervention\(run\.sessionId, p\.id, 'expired', \{ decidedBy: p\.decidedBy \|\| 'auto', note: 'run finalized' \}\)/.test(src), 's 工作流收尾 expire 旁路 settle');
+    ok(/source: 'legacy_pool'/.test(src) && /payload: \{ action: action === 'pool_approve' \? 'approve' : 'reject' \}/.test(src), 's Agent Run 路由 pool_approve/pool_reject 适配到 decideIntervention');
     ok(/type === 'pool'/.test(backend('intervention-decisions.cjs')) && /materializePoolItem\(live\.run, item/.test(backend('agent-intervention-actions.cjs')), 's 待决服务将任务池执行交给 Agent 动作模块');
     const projection = backend('mission-card-projection.cjs');
     ok(/poolPendingIds/.test(projection) && /iv\.type === 'pool'\) \{ pool\+\+;/.test(projection), 's 事项投影统一待决来源并按 id 去重');

@@ -264,10 +264,10 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     const acceptanceWriters = srcNames.filter(name => /normalizeMissionAcceptance\(/.test(readSrc(name)));
     ok(acceptanceWriters.length === 1 && acceptanceWriters[0] === '../backend/mission-store.cjs',
       'f3 容器验收项的规范器只在 mission-store(实 ' + JSON.stringify(acceptanceWriters) + ')');
-    const src13d = readSrc('13d-core-domain-routes.js');
+    const missionRoutes = readSrc('../backend/mission-routes.cjs');
     for (const fn of ['createMissionContainer', 'patchMissionContainer', 'missionMergeInto']) {
-      const at = src13d.indexOf('await ' + fn + '(');
-      ok(at > 0 && /tokenOk\(req\)/.test(src13d.slice(Math.max(0, at - 700), at)),
+      const at = missionRoutes.indexOf('await ' + fn + '(');
+      ok(at > 0 && /tokenOk\(req\)/.test(missionRoutes.slice(Math.max(0, at - 700), at)),
         'f3 ' + fn + ' 的 HTTP 入口就在它前面那道 tokenOk(UI header token)门后');
     }
     const toolFacing = ['../backend/provider-turn.cjs', '../backend/agent-workflow.cjs', '11-native-tools.js', '12-tool-dispatch.js', '../backend/native-tool-schemas.cjs',

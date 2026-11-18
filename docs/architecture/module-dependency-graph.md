@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2807 | 3328 | 637 | 21 | 0 | 0 |
+| 94 | 2799 | 3314 | 636 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -83,7 +83,7 @@
 | 65 | `12-tool-dispatch.js` | tools | 88 | 171 | 26 |
 | 66 | `13-http-router.js` | transport | 32 | 277 | 41 |
 | 67 | `13b-api-domain-routes.js` | transport | 39 | 60 | 12 |
-| 68 | `13d-core-domain-routes.js` | transport | 24 | 134 | 19 |
+| 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 18 |
 | 69 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
 | 70 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
 | 71 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
@@ -482,16 +482,15 @@
 | `13b-api-domain-routes.js` | `04j-voice-lexicon.js` | backward | `VoiceLexicon` |
 | `13b-api-domain-routes.js` | `04m-voice-service.js` | backward | `asrFixMessages`, `asrFixModeOf`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider`, `resolveAsrProvider`, `resolveAsrStreamProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor`, `voiceLexiconRead`, `voiceLexiconUpdate` |
 | `13b-api-domain-routes.js` | `07-autonomy.js` | backward | `STEER_QUEUE_MAX` |
-| `13d-core-domain-routes.js` | `00-boot.js` | backward | `DESKTOP_MCP_SERVER_ID`, `EventStreamHooks`, `RUYI_EVENTS`, `URL`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `cliBridgeToolTier`, `dataRootAliases`, `json`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `path`, `paths`, `readJsonBody`, `redact`, `safeDecodeURIComponent`, `send`, `text`, `toolDisabledByPolicy` |
+| `13d-core-domain-routes.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `dataRootAliases`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeDecodeURIComponent` |
 | `13d-core-domain-routes.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `13d-core-domain-routes.js` | `01-config.js` | backward | `atomicWriteJson`, `getAgentRoleLibrary`, `readConfig`, `safeSessionId`, `sessionPath`, `tokenMatches`, `tokenOk` |
-| `13d-core-domain-routes.js` | `01e-permission-modes.js` | backward | `resolvePermissionMode` |
 | `13d-core-domain-routes.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `activeChildren`, `pendingPermissions`, `pendingPlans`, `pendingQuestions`, `turnSettlers` |
 | `13d-core-domain-routes.js` | `02-session-store.js` | backward | `AgentRunStore`, `SESSION_LOAD_OMIT_PROVIDER`, `agentRunFile`, `appendAgentRunEvent`, `buildMissionAcceptanceProjection`, `bumpMissionChangeSeq`, `bumpRunIntervention`, `compactInterventionJournal`, `createMissionContainer`, `createSession`, `detectDanglingTurn`, `foldTurnSummaries`, `journalReadIndex`, `listAgentRuns`, `listMissionContainers`, `listSessions`, `loadSession`, `missionAttachThread`, `missionContainerAcceptanceStamp`, `missionDetachThread`, `missionMergeInto`, `missionSplitThreads`, `patchMissionContainer`, `readMissionChangesWithMeta`, `readMissionContainer`, `readMissionSessionHead`, `readSessionHeadResilient`, `registerIntervention`, `saveAgentRun`, `saveSession`, `sessionBodyPaths`, `sessionBriefOf`, `sessionDisplayTitle`, `sessionKind`, `sessionMessagesDelta`, `sessionMeta`, `sessionMissionId`, `sessionOmittedProviderHistory`, `sessionProviderHistoryLength`, `settleIntervention`, `transitionInterventionState`, `updateSessionMeta` |
 | `13d-core-domain-routes.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf`, `sessionDesktopToolsOverrides`, `sessionPermissionModeOverrides` |
 | `13d-core-domain-routes.js` | `03-bridge-guard.js` | backward | `bridgedReadPathGate`, `resolveContainmentPath` |
 | `13d-core-domain-routes.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `13d-core-domain-routes.js` | `04-permission-runtime.js` | backward | `decideInterventionCommand`, `driverAutoSessions`, `extendUserQuestion`, `interventionCommandFailure`, `normalizeQuestionAnswer`, `permissionWaitMs`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `sessionExecutionObservation`, `sessionExecutionSnapshot` |
+| `13d-core-domain-routes.js` | `04-permission-runtime.js` | backward | `decideInterventionCommand`, `driverAutoSessions`, `extendUserQuestion`, `interventionCommandFailure`, `permissionWaitMs`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `sessionExecutionObservation`, `sessionExecutionSnapshot` |
 | `13d-core-domain-routes.js` | `04g-session-deletion.js` | backward | `bulkDeleteUnpinnedSessions`, `deleteSession` |
 | `13d-core-domain-routes.js` | `06e-mission-domain.js` | backward | `missionControlCommand`, `missionControlView` |
 | `13d-core-domain-routes.js` | `06f-autonomy-grants.js` | backward | `consumeGrant` |

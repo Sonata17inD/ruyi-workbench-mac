@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2807,
-    "requiredSymbols": 3328,
-    "edges": 637,
+    "providedSymbols": 2799,
+    "requiredSymbols": 3314,
+    "edges": 636,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -14457,26 +14457,18 @@
       "file": "13d-core-domain-routes.js",
       "order": 68,
       "layer": "transport",
-      "note": "会话和 Agent Run 装配、事项与提问／权限／计划干预路由",
+      "note": "会话、Agent Run、事项与干预服务的装配",
       "provides": [
-        "MISSION_FAILURE_PARAM_KEYS",
-        "addMissionCostBucket",
         "agentInterventionAction",
         "agentRunActionCommand",
         "buildMissionAggregateRows",
         "decideIntervention",
-        "emptyMissionCostBucket",
         "handleAgentRunApiRoutes",
         "handleInterventionApiRoutes",
         "handleMissionsApiRoutes",
         "handleSessionApiRoutes",
         "missionAggregateStats",
-        "missionContainerFailure",
-        "missionContainerHttpStatus",
         "overlayMissionAggregateFields",
-        "pendingInterventionItem",
-        "pendingInterventionRefs",
-        "pendingInterventionRefsMemo",
         "searchSessionsByContent",
         "sessionBackgroundRunRows",
         "sessionEnvelopeEtag",
@@ -14487,42 +14479,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionIdInvalid",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionNotFound",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cliBridgeToolTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "dataRootAliases",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "DESKTOP_MCP_SERVER_ID",
           "kinds": [
             "read"
           ]
@@ -14536,16 +14493,8 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14553,7 +14502,7 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14567,14 +14516,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
             "read"
           ]
         },
@@ -14583,13 +14524,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14610,36 +14544,7 @@
           "provider": "00-boot.js",
           "symbol": "safeDecodeURIComponent",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "toolDisabledByPolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14667,7 +14572,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14675,7 +14579,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14690,22 +14593,14 @@
           "provider": "01-config.js",
           "symbol": "tokenMatches",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "resolvePermissionMode",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14775,7 +14670,7 @@
           "provider": "02-session-store.js",
           "symbol": "buildMissionAcceptanceProjection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14796,14 +14691,14 @@
           "provider": "02-session-store.js",
           "symbol": "compactInterventionJournal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "createMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14824,35 +14719,34 @@
           "provider": "02-session-store.js",
           "symbol": "foldTurnSummaries",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "listAgentRuns",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "listMissionContainers",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14868,70 +14762,69 @@
           "provider": "02-session-store.js",
           "symbol": "missionAttachThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "missionContainerAcceptanceStamp",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "missionDetachThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "missionMergeInto",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "missionSplitThreads",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "patchMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionHeadResilient",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14939,7 +14832,7 @@
           "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14953,7 +14846,7 @@
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14974,7 +14867,6 @@
           "provider": "02-session-store.js",
           "symbol": "sessionBriefOf",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14982,7 +14874,6 @@
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14990,7 +14881,7 @@
           "provider": "02-session-store.js",
           "symbol": "sessionKind",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15011,7 +14902,7 @@
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15032,14 +14923,14 @@
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "transitionInterventionState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15053,7 +14944,6 @@
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15075,7 +14965,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedReadPathGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15110,42 +15000,35 @@
           "provider": "04-permission-runtime.js",
           "symbol": "extendUserQuestion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "interventionCommandFailure",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "normalizeQuestionAnswer",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "requestUserQuestion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "runAutomaticInterventionDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15180,35 +15063,35 @@
           "provider": "06e-mission-domain.js",
           "symbol": "missionControlCommand",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06e-mission-domain.js",
           "symbol": "missionControlView",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "consumeGrant",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "aggregateMissionState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "deriveStewardThreadState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15229,56 +15112,56 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardRuyiOwnedPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateRank",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadTurnQueued",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "waitReasonFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15292,14 +15175,14 @@
           "provider": "07-autonomy.js",
           "symbol": "toolDisabledResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "toolIsRevertible",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15348,14 +15231,14 @@
           "provider": "13e-pretender-index.js",
           "symbol": "emptyMissionUsage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15383,21 +15266,20 @@
           "provider": "13e-pretender-index.js",
           "symbol": "overlayMissionCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "paginatePretenderProjection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderEtag",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15405,7 +15287,6 @@
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderHash",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15413,7 +15294,7 @@
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderIndexMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15427,14 +15308,13 @@
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderLiveOverlayRevision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderNotModified",
           "kinds": [
-            "call",
             "read"
           ]
         }
@@ -31442,28 +31322,16 @@
       "from": "13d-core-domain-routes.js",
       "to": "00-boot.js",
       "symbols": [
-        "DESKTOP_MCP_SERVER_ID",
         "EventStreamHooks",
         "RUYI_EVENTS",
-        "URL",
-        "apiFailure",
-        "apiSessionIdInvalid",
-        "apiSessionNotFound",
-        "cliBridgeToolTier",
         "dataRootAliases",
-        "json",
         "logEvent",
         "makeId",
         "normalizeCwd",
         "nowIso",
-        "path",
         "paths",
-        "readJsonBody",
         "redact",
-        "safeDecodeURIComponent",
-        "send",
-        "text",
-        "toolDisabledByPolicy"
+        "safeDecodeURIComponent"
       ],
       "direction": "backward"
     },
@@ -31486,14 +31354,6 @@
         "sessionPath",
         "tokenMatches",
         "tokenOk"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13d-core-domain-routes.js",
-      "to": "01e-permission-modes.js",
-      "symbols": [
-        "resolvePermissionMode"
       ],
       "direction": "backward"
     },
@@ -31594,7 +31454,6 @@
         "driverAutoSessions",
         "extendUserQuestion",
         "interventionCommandFailure",
-        "normalizeQuestionAnswer",
         "permissionWaitMs",
         "requestUserQuestion",
         "runAutomaticInterventionDecision",

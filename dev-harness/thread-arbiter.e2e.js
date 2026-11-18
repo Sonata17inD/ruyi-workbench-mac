@@ -663,7 +663,7 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
       // 13g 族的哪个文件里由拆分决定,故改读整族。下面「没有第二处自己拼的等待人话」也随之覆盖全族。
       const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js'];
       ok(/waitReasonFor\(/.test(STEWARD_FAMILY.map(rd).join('\n')), '单点:steward_thread_status 经 waitReasonFor');
-      ok(/waitReasonFor\(/.test(rd('13d-core-domain-routes.js')), '单点:GET /api/missions 的线程行经 waitReasonFor');
+      ok(/waitReasonFor\(/.test(rd('../backend/mission-aggregate.cjs')), '单点:GET /api/missions 的线程行经 waitReasonFor');
       // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),这三处 waitReasonFor 随之分落
       // 三个文件 —— 总览行进 13o、仲裁器读模型进 13n、插队工具留在 13h(还多一处是 13q 的递话通道)。
       // 判据不变(三处都经 06i 的 waitReasonFor、没有第二处自己拼的等待人话),只是「运行器」现在是
@@ -673,7 +673,7 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
         '13h-steward-runner.js'];
       const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');
       ok((src13h.match(/waitReasonFor\(/g) || []).length >= 3, '单点:总览行 / 仲裁器读模型 / 插队工具三处都经 waitReasonFor');
-      for (const f of ['06i-steward-core.js', '13d-core-domain-routes.js', ...STEWARD_FAMILY, ...STEWARD_RUNNER_FAMILY]) {
+      for (const f of ['06i-steward-core.js', '../backend/mission-aggregate.cjs', ...STEWARD_FAMILY, ...STEWARD_RUNNER_FAMILY]) {
         ok(!/等你\(\$\{[^}]*\} 条待决\)/.test(rd(f).replace(/^.*function waitReasonFor[\s\S]*?\n}\n/m, '')) || f === '06i-steward-core.js',
           `单点:${f} 里没有第二处自己拼的等待人话`);
       }

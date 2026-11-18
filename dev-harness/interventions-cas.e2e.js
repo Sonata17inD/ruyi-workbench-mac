@@ -188,7 +188,8 @@ async function cas(token, sid, ivId, expectedVersion, toStatus, crashAt, source)
     ok(/const INTERVENTION_TERMINAL = new Set\(\[/.test(src) && /'indeterminate'/.test(src), 'e 02 INTERVENTION_TERMINAL 含 indeterminate');
     ok(/interventionTransitionLocks/.test(src), 'e 02 per-ivId 串行锁 interventionTransitionLocks');
     ok(/'__cas_crash:before_applying'/.test(src) && /'__cas_crash:after_terminal'/.test(src), 'e 02 失败注入六窗口 crashAt 钩子');
-    ok(/api\/_test\/intervention-cas/.test(src) && /RUYI_TEST_HOOKS/.test(src), 'e 13d 测试端点 + RUYI_TEST_HOOKS env 门控');
+    const routes = backend('intervention-routes.cjs');
+    ok(/api\/_test\/intervention-cas/.test(routes) && /RUYI_TEST_HOOKS/.test(routes), 'e 测试端点 + RUYI_TEST_HOOKS env 门控');
     ok(/\{ m: 'POST', p: '\/api\/_test\/intervention-cas', auth: 'token' \}/.test(backend('http-route-policy.cjs')), 'e 测试端点的路由策略为 token 级');
     ok(/status: 'indeterminate'/.test(src), 'e 02 markInterruptedInterventions applying->indeterminate 恢复');
     // 116c: 管家来源的审计标签必须自成一档 —— 「谁按的这个批准」是事后解释与撤销的第一现场。
