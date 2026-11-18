@@ -40,16 +40,25 @@ function alive(pid) {
     }
     const bundle = process.env.RUYI_DESKTOP_TEST_APP || buildMacDesktop(path.join(root, '如意 测试.app'));
     const binary = path.join(bundle, 'Contents', 'MacOS', 'RuyiDesktop');
-    const info = cp.execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :LSMinimumSystemVersion', path.join(bundle, 'Contents', 'Info.plist')], { encoding: 'utf8' }).trim();
-    ok(info === '14.0', 'App declares macOS14 target, subject to actual minimum-system acceptance');
-    const documentsUsage = cp.execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :NSDocumentsFolderUsageDescription', path.join(bundle, 'Contents', 'Info.plist')], { encoding: 'utf8' }).trim();
-    ok(documentsUsage.includes('工作台程序文件') && documentsUsage.includes('工作区'), 'development App explains Documents access for program files and selected workspaces');
-    ok(cp.spawnSync('/usr/bin/codesign', ['--verify', '--strict', bundle]).status === 0, 'development App signature verifies');
+    const plist = path.join(bundle, 'Contents', 'Info.plist');
+    const readInfo = (key, optional = false) => {
+      const result = cp.spawnSync('/usr/libexec/PlistBuddy', ['-c', 'Print :' + key, plist], { encoding: 'utf8' });
+      if (result.error) throw result.error;
+      if (result.status === 0) return result.stdout.trim();
+      if (optional && result.stderr.includes('Does Not Exist')) return '';
+      throw new Error(result.stderr.trim());
+    };
+    const bundled = readInfo('RuyiBundledWorkbench', true) === 'true';
+    const workbenchRoot = bundled ? path.join(bundle, 'Contents', 'Resources', 'workbench') : readInfo('RuyiWorkbenchRoot');
+    ok(readInfo('LSMinimumSystemVersion') === '14.0', 'App declares macOS14 target, subject to actual minimum-system acceptance');
+    const documentsUsage = readInfo('NSDocumentsFolderUsageDescription');
+    ok(documentsUsage.includes('工作台程序文件') && documentsUsage.includes('工作区'), 'App explains Documents access for program files and selected workspaces');
+    ok(cp.spawnSync('/usr/bin/codesign', ['--verify', '--strict', bundle]).status === 0, 'App signature verifies');
     const fixture = fixtureChildEnv({ perTest: true });
     const data = path.join(fixture.home, '工作台 数据😀');
     const workspace = path.join(fixture.home, '工作 区');
     fs.mkdirSync(data); fs.mkdirSync(workspace);
-    const schema = require('../ruyi-workbench/app/server').CONFIG_SCHEMA;
+    const schema = require(path.join(workbenchRoot, 'app/server')).CONFIG_SCHEMA;
     fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({
       configSchema: schema, defaultWorkspace: workspace, workspaces: [{ path: workspace }],
       stewardEnabledV1: false, schedulerEnabledV1: false, autoImportClaudeCodeMcp: false,
@@ -129,16 +138,25 @@ return { previewLoaded: await preview };`);
     await until(() => third.child.signalCode !== null);
     await until(() => !alive(restarted.servicePID), 15000);
     ok(!alive(restarted.servicePID), 'service stdin lease closes and normal backend cleanup runs after App SIGKILL');
-    const missing = launch('missing', [], { RUYI_NODE_PATH: '/missing/ruyi-node' });
-    // An explicit executable selection must fail visibly rather than silently using another runtime.
-    const missingResult = await until(() => readReport(missing.report)?.state === 'failed' && readReport(missing.report));
-    ok(missingResult.code === 'node_missing', 'missing configured Node produces a native recoverable failure page');
-    missing.child.kill('SIGTERM');
-    await until(() => missing.child.exitCode !== null, 15000);
-    const failedAuto = launch('failed-auto', ['--acceptance-auto-quit'], { RUYI_NODE_PATH: '/missing/ruyi-node' });
-    await until(() => failedAuto.child.exitCode !== null, 15000);
-    ok(failedAuto.child.exitCode === 0 && readReport(failedAuto.report)?.code === 'node_missing',
-      'acceptance auto-quit also exits normally after reporting a startup failure');
+    if (bundled) {
+      const installed = launch('bundled-node', ['--acceptance-auto-quit', '--workbench-root', '/missing/ruyi-workbench'],
+        { RUYI_NODE_PATH: '/missing/ruyi-node' });
+      await until(() => installed.child.exitCode !== null);
+      const bundledReport = readReport(installed.report);
+      ok(installed.child.exitCode === 0 && bundledReport?.state === 'ready' && bundledReport.page?.configLoaded
+        && !alive(bundledReport.servicePID), 'bundled App loads its own workbench and Node despite external path overrides');
+    } else {
+      const missing = launch('missing', [], { RUYI_NODE_PATH: '/missing/ruyi-node' });
+      // An explicit executable selection must fail visibly rather than silently using another runtime.
+      const missingResult = await until(() => readReport(missing.report)?.state === 'failed' && readReport(missing.report));
+      ok(missingResult.code === 'node_missing', 'missing configured Node produces a native recoverable failure page');
+      missing.child.kill('SIGTERM');
+      await until(() => missing.child.exitCode !== null, 15000);
+      const failedAuto = launch('failed-auto', ['--acceptance-auto-quit'], { RUYI_NODE_PATH: '/missing/ruyi-node' });
+      await until(() => failedAuto.child.exitCode !== null, 15000);
+      ok(failedAuto.child.exitCode === 0 && readReport(failedAuto.report)?.code === 'node_missing',
+        'acceptance auto-quit also exits normally after reporting a startup failure');
+    }
     const failedScript = path.join(root, 'failed-script.js');
     fs.writeFileSync(failedScript, "throw new Error('fixture acceptance failure');");
     const scriptFailure = launch('script-failure', ['--acceptance-auto-quit', '--acceptance-script', failedScript]);
@@ -197,45 +215,49 @@ return { previewLoaded: await preview };`);
     linked.child.kill('SIGTERM');
     await until(() => linked.child.exitCode !== null, 15000);
     const relative = launch('relative', ['--acceptance-auto-quit'], {
-      RUYI_HOME: path.relative(path.resolve(__dirname, '../ruyi-workbench'), otherData),
+      RUYI_HOME: path.relative(fs.realpathSync(workbenchRoot), otherData),
     });
     await until(() => relative.child.exitCode !== null);
     ok(readReport(relative.report)?.state === 'ready' && readReport(relative.report).profileIdentifier === otherReport.profileIdentifier,
       'relative data-root environment resolves against the same workbench cwd as direct serve');
-    const localBin = path.join(fixture.home, '.local', 'bin');
-    fs.mkdirSync(localBin, { recursive: true });
-    fs.symlinkSync(process.execPath, path.join(localBin, 'node'));
-    // A newly ad-hoc-signed App launched by LaunchServices has a different Documents TCC
-    // identity from its development terminal. Test the LS lifecycle against an exact isolated
-    // program snapshot; real Documents authorization is a separate identity acceptance gate.
-    const launchSource = path.join(root, 'launch-source');
-    const originalSource = path.resolve(__dirname, '../ruyi-workbench');
-    fs.mkdirSync(launchSource);
-    const sourceBinding = [];
-    function bindSnapshot(directory) {
-      for (const item of fs.readdirSync(path.join(originalSource, directory), { withFileTypes: true })) {
-        const relative = path.join(directory, item.name);
-        if (item.isDirectory()) bindSnapshot(relative);
-        else {
-          const fingerprint = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
-          const sourceSha256 = fingerprint(path.join(originalSource, relative));
-          const snapshotSha256 = fingerprint(path.join(launchSource, relative));
-          if (sourceSha256 !== snapshotSha256) throw new Error('LaunchServices snapshot differs: ' + relative);
-          sourceBinding.push({ relative, sha256: sourceSha256 });
+    const launchArguments = [];
+    if (!bundled) {
+      const localBin = path.join(fixture.home, '.local', 'bin');
+      fs.mkdirSync(localBin, { recursive: true });
+      fs.symlinkSync(process.execPath, path.join(localBin, 'node'));
+      // A newly ad-hoc-signed App launched by LaunchServices has a different Documents TCC
+      // identity from its development terminal. Test the LS lifecycle against an exact isolated
+      // program snapshot; real Documents authorization is a separate identity acceptance gate.
+      const launchSource = path.join(root, 'launch-source');
+      const originalSource = workbenchRoot;
+      fs.mkdirSync(launchSource);
+      const sourceBinding = [];
+      function bindSnapshot(directory) {
+        for (const item of fs.readdirSync(path.join(originalSource, directory), { withFileTypes: true })) {
+          const relative = path.join(directory, item.name);
+          if (item.isDirectory()) bindSnapshot(relative);
+          else {
+            const fingerprint = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+            const sourceSha256 = fingerprint(path.join(originalSource, relative));
+            const snapshotSha256 = fingerprint(path.join(launchSource, relative));
+            if (sourceSha256 !== snapshotSha256) throw new Error('LaunchServices snapshot differs: ' + relative);
+            sourceBinding.push({ relative, sha256: sourceSha256 });
+          }
         }
       }
+      for (const directory of ['app', 'resources', 'config', 'desktop-macos', 'runtime']) {
+        fs.cpSync(path.join(originalSource, directory), path.join(launchSource, directory), { recursive: true });
+        bindSnapshot(directory);
+      }
+      fs.writeFileSync(path.join(root, 'launch-source-binding.json'), JSON.stringify({ originalSource, launchSource, files: sourceBinding }, null, 2));
+      ok(sourceBinding.length > 0, 'LaunchServices fixture program snapshot is bound byte-for-byte to current sources outside Documents');
+      launchArguments.push('--workbench-root', launchSource);
     }
-    for (const directory of ['app', 'resources', 'config', 'desktop-macos', 'runtime']) {
-      fs.cpSync(path.join(originalSource, directory), path.join(launchSource, directory), { recursive: true });
-      bindSnapshot(directory);
-    }
-    fs.writeFileSync(path.join(root, 'launch-source-binding.json'), JSON.stringify({ originalSource, launchSource, files: sourceBinding }, null, 2));
-    ok(sourceBinding.length > 0, 'LaunchServices fixture program snapshot is bound byte-for-byte to current sources outside Documents');
     const launchReport = path.join(root, 'launch-services.json');
     const launcher = cp.spawn('/usr/bin/open', ['-n', '-W', '-a', bundle,
       '--env', 'HOME=' + fixture.home, '--env', 'USERPROFILE=' + fixture.home,
       '--env', 'RUYI_HOME=' + data, '--env', 'RUYI_NODE_PATH=',
-      '--env', 'PATH=/usr/bin:/bin', '--args', '--acceptance-report', launchReport, '--acceptance-auto-quit', '--workbench-root', launchSource],
+      '--env', 'PATH=/usr/bin:/bin', '--args', '--acceptance-report', launchReport, '--acceptance-auto-quit', ...launchArguments],
     { env: { ...process.env, ...fixture.env }, stdio: ['ignore', 'pipe', 'pipe'] });
     children.push(launcher);
     launcher.stderr.on('data', data => { diagnostic = (diagnostic + data).slice(-12000); });
@@ -244,33 +266,35 @@ return { previewLoaded: await preview };`);
     ok(launcher.exitCode === 0 && launched?.state === 'ready' && !alive(launched.servicePID),
       'LaunchServices App entry with Finder-style environment loads the workbench and quits without a service leak');
 
-    // Inject replacement and restoration failures after a successful build. The old bundle
-    // must remain recoverable even when the file system rejects both rename operations.
-    const rollback = path.join(root, 'rollback.app');
-    fs.cpSync(bundle, rollback, { recursive: true });
-    const originalSpawn = cp.spawnSync;
-    const originalRename = fs.renameSync;
-    let preserved = '';
-    try {
-      cp.spawnSync = (command, args, options) => {
-        if (command.endsWith('swiftc')) {
-          fs.writeFileSync(args.at(-1), 'fixture executable');
-          return { status: 0, stdout: '', stderr: '' };
+    if (!bundled) {
+      // Inject replacement and restoration failures after a successful build. The old bundle
+      // must remain recoverable even when the file system rejects both rename operations.
+      const rollback = path.join(root, 'rollback.app');
+      fs.cpSync(bundle, rollback, { recursive: true });
+      const originalSpawn = cp.spawnSync;
+      const originalRename = fs.renameSync;
+      let preserved = '';
+      try {
+        cp.spawnSync = (command, args, options) => {
+          if (command.endsWith('swiftc')) {
+            fs.writeFileSync(args.at(-1), 'fixture executable');
+            return { status: 0, stdout: '', stderr: '' };
+          }
+          if (command === '/usr/bin/codesign') return { status: 0, stdout: '', stderr: '' };
+          return originalSpawn(command, args, options);
+        };
+        fs.renameSync = (from, to) => {
+          if (to === rollback && path.basename(from) === 'Ruyi.app') throw new Error('injected replacement failure');
+          if (to === rollback && path.basename(from) === 'previous.app') { preserved = from; throw new Error('injected restore failure'); }
+          return originalRename(from, to);
+        };
+        try { buildMacDesktop(rollback); } catch (error) {
+          ok(error.message.includes('Previous App preserved at'), 'builder reports recovery location after replacement and restoration both fail');
         }
-        if (command === '/usr/bin/codesign') return { status: 0, stdout: '', stderr: '' };
-        return originalSpawn(command, args, options);
-      };
-      fs.renameSync = (from, to) => {
-        if (to === rollback && path.basename(from) === 'Ruyi.app') throw new Error('injected replacement failure');
-        if (to === rollback && path.basename(from) === 'previous.app') { preserved = from; throw new Error('injected restore failure'); }
-        return originalRename(from, to);
-      };
-      try { buildMacDesktop(rollback); } catch (error) {
-        ok(error.message.includes('Previous App preserved at'), 'builder reports recovery location after replacement and restoration both fail');
-      }
-    } finally { cp.spawnSync = originalSpawn; fs.renameSync = originalRename; }
-    ok(preserved && fs.existsSync(path.join(preserved, 'Contents', 'MacOS', 'RuyiDesktop')),
-      'failed build rollback retains the previous complete App bundle');
+      } finally { cp.spawnSync = originalSpawn; fs.renameSync = originalRename; }
+      ok(preserved && fs.existsSync(path.join(preserved, 'Contents', 'MacOS', 'RuyiDesktop')),
+        'failed build rollback retains the previous complete App bundle');
+    }
     console.log('Native acceptance reports ' + root);
   } catch (error) { t.fail(error.stack || error.message); }
   finally {

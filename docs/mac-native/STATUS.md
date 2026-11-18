@@ -6,10 +6,10 @@
 | 阶段 | 状态 | 完成门槛 |
 | --- | --- | --- |
 | 1 能力与基线 | 已完成 | EOL、能力聚合、模板与 UI、Mac 主 CI、工程门通过 |
-| 2 Windows 产品链清理 | 活跃实现已清理，前一候选已通过实际载荷检查，待最终产物复验 | 活跃实现与发行载荷移除 Windows 运行链，保留 Mac 数据与共享功能 |
-| 3 监督与空闲能效 | 已实现，前一候选监督 CPU 降低 95.98%，待绑定最终 helper | 可靠停止与身份清理通过，独占基准 CPU 降幅至少 80% |
-| 4 模块边界与重复工作 | 薄入口及消环已落地，语音按需加载对照达标，待冻结复测 | 显式 CommonJS、生产依赖环为零、共享附件、性能在预算内 |
-| 5 集成发行 | 历史证据已归档，前一候选隔离安装与回退通过，待最终同源回归与构建 | 同源码 Full／Slim、完整 Mac 适用回归、隔离升级回退与归档 |
+| 2 Windows 产品链清理 | 已完成，最终 Full／Slim 载荷通过复验 | 活跃实现与发行载荷移除 Windows 运行链，保留 Mac 数据与共享功能 |
+| 3 监督与空闲能效 | 最终包 helper CPU 复测达标，待实际睡眠唤醒 | 可靠停止与身份清理通过，独占基准 CPU 降幅至少 80% |
+| 4 模块边界与重复工作 | 薄入口及消环已落地，最终源码对照三项达标 | 显式 CommonJS、生产依赖环为零、共享附件、性能在预算内 |
+| 5 集成发行 | 最终同源 Full／Slim 通过安装、离线、升级回退及原生自动化，待实机门 | 同源码 Full／Slim、完整 Mac 适用回归、隔离升级回退与归档 |
 
 原完整计划见本次聊天中用户确认的五阶段计划；审查依据见 ../audits/2026-11-13-mac-only/REPORT.md。
 每批实现后记录自查、实际测试和未验边界，独立提交。不将已完成切片当作整体验收。
@@ -1440,3 +1440,13 @@
 - 重新运行完整单元，2,786 项通过、7 项跳过、0 失败。76 件静态检查分别在批量或定向复跑通过，ACC Mac CI 14 件通过。隔离密钥浏览器夹具接入现行 CLI 入口后，隐私网关和机器人凭据、配对、投递流程通过。路由清册保持 171 个判定点和 157 条鉴权规则，更新夹具引用。 [ACC Mac CI](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/acc-mac-ci-retest.log)
 - 合并首轮和定向复验的 588 件结果中，586 件退出成功，其中 28 件仍含内部跳过；两件真实桌面专项因锁屏失败。原始 25 件失败中的其余 23 件已定向通过。两次首跑失败后成功的记录、14 件 live 排除及内部跳过原因均保留。产品运行时相对首轮仅删除无引用的工作流条件入口导出及绑定。 [逐件合并结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/source-regression-reconciled.json)
 - 源码可冻结并进入同源 Full／Slim 构建。最终产物的安装、离线、升级回退、性能绑定与实机门仍待取得证据。
+
+## 集成交付：最终同源候选安装与原生验收
+
+- arm64 Full／Slim 内测 DMG 同源冻结于 `1ece927eff7d289358bc542a4cd6aa1e2a24db04`，使用同一资产锁，835 个源文件指纹一致。两份 DMG 的 Windows 启动载荷计数均为零，Full 的引导 wheel 另做了 ZIP 完整性及 432 项成员复核。两包使用 ad-hoc 签名，当前验收为本机内测。 [DMG 与 App 树指纹](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/candidate-provenance.json)
+- 两包普通拷贝隔离安装各 13 条、升级回退各 14 条通过。安装涵盖只读挂载与签名、弹出镜像后直接与 LaunchServices 两种入口、卸载保留业务数据；Full／Slim 离线历程分别 22／9 条，原生废纸篓各 12 条。升级从 P6 同版本旧构建进行，验证坏包拒绝、schema12→14 迁移、App 回退及独立恢复旧快照，保留新增数据。校验结果对齐候选 DMG 哈希、已安装 App 树及源提交。 [Full 安装](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/full-install-acceptance.json) · [Slim 安装](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/slim-install-acceptance.json) · [Full 升级](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/full-upgrade-acceptance.json) · [Slim 升级](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/slim-upgrade-acceptance.json)
+- 从实际签名 DMG 隔离安装、弹出镜像后，Full／Slim 各通过桌面宿主 28 项、桥接 53 项、WKWebView 合成媒体 36 项、模拟休眠与恢复 23 项。开发宿主仍通过 32 项，并覆盖可配置 Node 缺失及构建器故障注入。内测包使用自带 Node。两包测试后重新验证签名与 App 树。 [原生候选结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/native-candidate-validation.json)
+- 冻结提交与 `931f9fa` 分别预热后七组独占交错测量。预热启动 141.10→149.39 ms（+5.87%），进程树 RSS 202800→218960 KiB（+7.97%），会话列表请求 P95 0.3833→0.3745 ms（−2.32%），均在 10% 预算内。两包的入口、运行时和 399 个后端模块均与测量指纹相符。冷缓存首样本启动 239.09→203.66 ms，单列观察。另行保留强制为基线和候选启用 Node 编译缓存的敏感性试验，启动 +25.95%，该环境覆盖了基线的默认启动行为。 [默认启动对照](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/workbench-performance.json) · [强制缓存敏感性](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/workbench-performance-forced-cache.json)
+- 基线 v2 监督器从 `931f9fa` 源码重新编译，最终 Full／Slim 签名包内的 v3 helper 指纹各异，分别测量。预热后各三次托管空闲命令 10 秒，CPU 时间中位数从 1.666016 秒降至 Full 的 0.071546 秒（−95.71%）及 Slim 的 0.057672 秒（−96.54%），均达到至少下降 80% 的门槛。 [最终 helper 对照](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/supervisor-candidate-validation.json)
+- 两份最终包通过 LaunchServices 启动后的截图能力均报告 `session_locked`，工具目录隐藏截图入口，包内原生 helper 也确认输入未就绪。待在解锁、具备对应系统授权的会话中验证实际截图与输入，并观察一次真实系统睡眠、唤醒及服务恢复。当前产物仍为内测候选。 [锁屏就绪检查](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/signed-app-desktop-readiness.json) · [性能指纹绑定](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/workbench-performance-binding.json)
+- 验收对账已记录两份镜像和 App 树身份、自动化证据的 SHA-256 及剩余实机门。 [冻结候选验收对账](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/frozen-acceptance-audit.json)
