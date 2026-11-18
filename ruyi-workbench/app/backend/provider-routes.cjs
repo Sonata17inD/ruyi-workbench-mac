@@ -1,11 +1,12 @@
 'use strict';
 
 const { json, readJsonBody, send } = require('./http-protocol.cjs');
+const { providerScrubSecrets } = require('./provider-http.cjs');
 
 function createProviderRoutes({
   readConfig, safeSessionId, readSessionRouteHead, configForSessionEngineRoute, agentCliAdapter,
   catalog: { activeOpenAiProvider, fetchOpenAiModels, cachedContextLength, contextWindowFromTable },
-  credentials: { maskedSecretConflicts, maskedSecretConflictMessage, unmaskProviders, redact, providerScrubSecrets },
+  credentials: { maskedSecretConflicts, maskedSecretConflictMessage, unmaskProviders, redact },
   probe: { sanitizeProvider, normalizeProviderApiStyle, probeProviderCompletion },
 }) {
   async function handleModelsApiRoute(req, res, pathname) {

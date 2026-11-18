@@ -94,7 +94,7 @@ const handleWorkspaceApiRoutes = require('./backend/workspace-routes.cjs').creat
 const { handleModelsApiRoute, handleProviderTestApiRoute } = require('./backend/provider-routes.cjs').createProviderRoutes({
   readConfig, safeSessionId, readSessionRouteHead, configForSessionEngineRoute, agentCliAdapter,
   catalog: { activeOpenAiProvider, fetchOpenAiModels, cachedContextLength, contextWindowFromTable },
-  credentials: { maskedSecretConflicts, maskedSecretConflictMessage, unmaskProviders, redact, providerScrubSecrets },
+  credentials: { maskedSecretConflicts, maskedSecretConflictMessage, unmaskProviders, redact },
   probe: { sanitizeProvider, normalizeProviderApiStyle, probeProviderCompletion },
 });
 

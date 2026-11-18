@@ -100,8 +100,8 @@ const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn(
   },
   provider: {
     openAiStreamOnce: (...args) => openAiStreamOnce(...args),
-    failoverStickyBase, withTransientRetry, providerCallIsTransient,
-    providerThrownErrorText, isContextOverflowError, providerWireProtocol, applyProviderReasoningEffort,
+    withTransientRetry, providerCallIsTransient,
+    isContextOverflowError, providerWireProtocol, applyProviderReasoningEffort,
     providerServerSearchCard, providerWireContentFiltered, providerWireContextExceeded,
     providerWireOutputLimited,
   },

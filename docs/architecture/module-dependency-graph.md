@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2554 | 3211 | 603 | 16 | 0 | 0 |
+| 87 | 2547 | 3205 | 602 | 16 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -31,7 +31,7 @@
 | 13 | `01m-privacy-regex.js` | foundation | 1 | 1 | 1 |
 | 14 | `01j-local-crypto.js` | foundation | 2 | 0 | 0 |
 | 15 | `03a-privacy-gateway.js` | foundation | 10 | 2 | 2 |
-| 16 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
+| 16 | `04h-provider-http.js` | foundation | 13 | 1 | 1 |
 | 17 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 18 | `04i-provider-wire.js` | foundation | 45 | 21 | 2 |
 | 19 | `01-config.js` | foundation | 130 | 31 | 6 |
@@ -69,9 +69,9 @@
 | 51 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
 | 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 53 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
-| 54 | `07-autonomy.js` | orchestration | 72 | 71 | 16 |
+| 54 | `07-autonomy.js` | orchestration | 68 | 68 | 16 |
 | 55 | `08-agent-runs.js` | orchestration | 76 | 108 | 23 |
-| 56 | `09-workflow.js` | orchestration | 26 | 193 | 23 |
+| 56 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
 | 57 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
 | 58 | `10-context-governance.js` | orchestration | 66 | 31 | 12 |
 | 59 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
@@ -80,7 +80,7 @@
 | 62 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 63 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
 | 64 | `12-tool-dispatch.js` | tools | 87 | 171 | 26 |
-| 65 | `13-http-router.js` | transport | 26 | 184 | 29 |
+| 65 | `13-http-router.js` | transport | 26 | 183 | 28 |
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
@@ -266,7 +266,7 @@
 | `07-autonomy.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `07-autonomy.js` | `04-permission-runtime.js` | backward | `PermissionWaitHooks`, `parseClaudeEvent`, `promptWaitMs`, `runAutomaticInterventionDecision` |
 | `07-autonomy.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
-| `07-autonomy.js` | `04h-provider-http.js` | backward | `providerBaseIsLocalOrLan`, `providerRetryAfterMs`, `providerScrubSecrets`, `providerThrownErrorText`, `withTransientRetry` |
+| `07-autonomy.js` | `04h-provider-http.js` | backward | `providerBaseIsLocalOrLan`, `withTransientRetry` |
 | `07-autonomy.js` | `04i-provider-wire.js` | backward | `ProviderWireHooks`, `providerWireProtocol`, `providerWireProtocolForBody` |
 | `07-autonomy.js` | `06b-prompt-registry.js` | backward | `appendResponseLanguagePolicy` |
 | `07-autonomy.js` | `06i-steward-core.js` | backward | `isStewardToolName`, `stewardAutoAskIndirect`, `stewardAutoAskScanIncomplete`, `stewardAutoAskSensitiveKind`, `stewardToolPermanentlyExempt` |
@@ -302,7 +302,7 @@
 | `09-workflow.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `09-workflow.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `appendLiveTail`, `assertSessionExecutionOwner`, `bridgedServerUnavailableMessage`, `clearPendingPermissions`, `clearPendingPlans`, `clearPendingQuestions`, `collectBridgedTools`, `getBridgedClient`, `hasPendingPermissionForSession`, `hasPendingQuestionForSession`, `installActiveChildEventFanout`, `permissionWaitMs`, `registerSessionExecutionChild`, `requestUserQuestion`, `resolveBridge`, `stopSession` |
 | `09-workflow.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
-| `09-workflow.js` | `04h-provider-http.js` | backward | `providerCallIsTransient`, `providerThrownErrorText`, `withTransientRetry` |
+| `09-workflow.js` | `04h-provider-http.js` | backward | `providerCallIsTransient`, `withTransientRetry` |
 | `09-workflow.js` | `04i-provider-wire.js` | backward | `applyProviderReasoningEffort`, `providerServerSearchCard`, `providerWireContentFiltered`, `providerWireContextExceeded`, `providerWireOutputLimited`, `providerWireProtocol` |
 | `09-workflow.js` | `04l-skill-registry.js` | backward | `resolveEnabledSkillEntries` |
 | `09-workflow.js` | `06-provider-engine.js` | backward | `buildStableSystemPrompt`, `buildVolatileParts`, `loadAllPlaybooks`, `repairNodeJsonViaProvider` |
@@ -312,7 +312,7 @@
 | `09-workflow.js` | `06g-resource-leases.js` | backward | `acquireResourceLease`, `inferToolResources`, `normalizeAgentResources`, `releaseResourceLease`, `remapAgentResources` |
 | `09-workflow.js` | `06i-steward-core.js` | backward | `StewardHooks`, `isStewardToolName` |
 | `09-workflow.js` | `06w-capability-service.js` | backward | `getCapabilities` |
-| `09-workflow.js` | `07-autonomy.js` | backward | `ACTION_VIEW_MIN_CHARS`, `ACTION_VIEW_TOOLS`, `LOOP_GUARD_LIMITS`, `MAIL_PER_SENDER_MAX`, `MAIL_QUEUE_MAX`, `MAIL_TEXT_MAX`, `actionTargetMeta`, `bridgedToolTier`, `buildOpenAiTools`, `classifyRuntimeToolFailure`, `compareToolRetrievalShadow`, `createToolLoadingState`, `drainSteerQueue`, `dropPolicyDisabledBridgedTools`, `failoverStickyBase`, `hasInterruptingSteer`, `looksLikePlan`, `loopAbortExempt`, `loopWarnOnly`, `nativeToolGate`, `openAiStreamOnce`, `projectActionModelView`, `requestNativePermission`, `requestPlanApproval`, `toolDisabledResult`, `webPayloadReason` |
+| `09-workflow.js` | `07-autonomy.js` | backward | `ACTION_VIEW_MIN_CHARS`, `ACTION_VIEW_TOOLS`, `LOOP_GUARD_LIMITS`, `MAIL_PER_SENDER_MAX`, `MAIL_QUEUE_MAX`, `MAIL_TEXT_MAX`, `actionTargetMeta`, `bridgedToolTier`, `buildOpenAiTools`, `classifyRuntimeToolFailure`, `compareToolRetrievalShadow`, `createToolLoadingState`, `drainSteerQueue`, `dropPolicyDisabledBridgedTools`, `hasInterruptingSteer`, `looksLikePlan`, `loopAbortExempt`, `loopWarnOnly`, `nativeToolGate`, `openAiStreamOnce`, `projectActionModelView`, `requestNativePermission`, `requestPlanApproval`, `toolDisabledResult`, `webPayloadReason` |
 | `09-workflow.js` | `08-agent-runs.js` | backward | `agentRunCapabilities`, `agentRunResultSlice`, `agentRunRoster`, `buildAgentRunEnvelope`, `buildUpstreamContext`, `cleanupAgentWorktree`, `cleanupAgentWorktreeForRetry`, `createAgentWorktree`, `deriveNodeOutputs`, `evalWaitCondition`, `evaluateNodeToolEvidence`, `evaluateWorkflowCondition`, `finalizeAgentWorktree`, `formatNodeEvidencePrompt`, `indexNodeEvidence`, `materializePoolItem`, `nodeDeliveryEligibility`, `orchestrateArgsProblem`, `orchestrateModelNotes`, `ownAgentMessageReceipt`, `poolChainDepth`, `purgeNodeEvidence`, `readAgentRunRecord`, `recordAgentNodeProgress`, `resolveAgentTeamRoute`, `resolveOrchestrateFollowup`, `resolveOrchestrateNodes`, `runSubAgent`, `summarizeAgentWorkflowRun`, `verifyNodeClaims`, `workflowProgressFingerprint` |
 | `09-workflow.js` | `10-context-governance.js` | forward | `agentNodeContextWindow`, `buildObservationRecallPrompt`, `estimateFactor`, `maybeAutoCompact`, `noteEstimateSample`, `noteWindowOvershoot`, `providerContextWindow`, `recordCompactUsage`, `runForcedOverflowCompaction`, `upsertCompactMarker` |
 | `09-workflow.js` | `12-tool-dispatch.js` | forward | `toolCall`, `toolFailureResult`, `validateNativeToolArgs` |
@@ -402,7 +402,6 @@
 | `13-http-router.js` | `03-bridge-guard.js` | backward | `buildCodeEditorSpawn`, `buildRevealSpawn`, `fileAllowedRoots`, `guardWorkspacePath`, `launchCodeEditor`, `remoteUncDenialResolved`, `resolvePreferredCodeEditor`, `resolveWorkspace` |
 | `13-http-router.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `13-http-router.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `requestSessionExecutionStop` |
-| `13-http-router.js` | `04h-provider-http.js` | backward | `providerScrubSecrets` |
 | `13-http-router.js` | `04i-provider-wire.js` | backward | `PROVIDER_PRESETS`, `activeOpenAiProvider`, `normalizeProviderApiStyle`, `resolveProvider`, `sanitizeProvider` |
 | `13-http-router.js` | `05-claude-engine.js` | backward | `agentCliAdapter` |
 | `13-http-router.js` | `05b-kimi-bridge.js` | backward | `applyKimiStatusToSession`, `kimiSessionStatus`, `kimiStatusFingerprint`, `kimiUsageFromStatus` |

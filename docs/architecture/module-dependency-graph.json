@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2554,
-    "requiredSymbols": 3211,
-    "edges": 603,
+    "providedSymbols": 2547,
+    "requiredSymbols": 3205,
+    "edges": 602,
     "forwardEdges": 16,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -535,10 +535,7 @@
         "providerPostJsonOnce",
         "providerRequestHeaders",
         "providerResponsesBase",
-        "providerRetryAfterMs",
-        "providerScrubSecrets",
         "providerSseAsCompletion",
-        "providerThrownErrorText",
         "withTransientRetry"
       ],
       "requires": [
@@ -6502,8 +6499,6 @@
         "CLAUDE_SUBAGENT_TIER_DENY",
         "CLAUDE_SUBAGENT_TIER_RANK",
         "CLAUDE_SUBAGENT_TIER_TOOLS",
-        "FAILOVER_CONNECT_CODES",
-        "FAILOVER_HTTP_STATUSES",
         "LOOP_GUARD_LIMITS",
         "LOOP_POLLING_TOOLS",
         "MAIL_PER_SENDER_MAX",
@@ -6531,8 +6526,6 @@
         "createToolLoadingState",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
-        "failoverConnectReason",
-        "failoverStickyBase",
         "fetchOpenAiModels",
         "hasInterruptingSteer",
         "httpRequestInternalTargetReason",
@@ -6598,7 +6591,7 @@
           "provider": "00-boot.js",
           "symbol": "cacheContextLength",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6640,7 +6633,7 @@
           "provider": "00-boot.js",
           "symbol": "extractContextLength",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6654,7 +6647,7 @@
           "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6719,7 +6712,6 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -6977,27 +6969,6 @@
         },
         {
           "provider": "04h-provider-http.js",
-          "symbol": "providerRetryAfterMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerScrubSecrets",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerThrownErrorText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
           "symbol": "withTransientRetry",
           "kinds": [
             "call"
@@ -7014,14 +6985,14 @@
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocolForBody",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8558,13 +8529,6 @@
         },
         {
           "provider": "04h-provider-http.js",
-          "symbol": "providerThrownErrorText",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
           "symbol": "withTransientRetry",
           "kinds": [
             "read"
@@ -8876,13 +8840,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "dropPolicyDisabledBridgedTools",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "failoverStickyBase",
           "kinds": [
             "read"
           ]
@@ -12549,13 +12506,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerScrubSecrets",
           "kinds": [
             "read"
           ]
@@ -27758,9 +27708,6 @@
       "to": "04h-provider-http.js",
       "symbols": [
         "providerBaseIsLocalOrLan",
-        "providerRetryAfterMs",
-        "providerScrubSecrets",
-        "providerThrownErrorText",
         "withTransientRetry"
       ],
       "direction": "backward"
@@ -28218,7 +28165,6 @@
       "to": "04h-provider-http.js",
       "symbols": [
         "providerCallIsTransient",
-        "providerThrownErrorText",
         "withTransientRetry"
       ],
       "direction": "backward"
@@ -28338,7 +28284,6 @@
         "createToolLoadingState",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
-        "failoverStickyBase",
         "hasInterruptingSteer",
         "looksLikePlan",
         "loopAbortExempt",
@@ -29433,14 +29378,6 @@
       "symbols": [
         "ToolboxHooks",
         "requestSessionExecutionStop"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "04h-provider-http.js",
-      "symbols": [
-        "providerScrubSecrets"
       ],
       "direction": "backward"
     },

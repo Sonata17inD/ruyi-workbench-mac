@@ -127,6 +127,8 @@
     "app/backend/attachment-prompt.cjs",
     "app/backend/provider-history.cjs",
     "app/backend/provider-http.cjs",
+    "app/backend/provider-probes.cjs",
+    "app/backend/provider-stream.cjs",
     "app/backend/provider-pricing.cjs",
     "app/backend/provider-raw-completion.cjs",
     "app/backend/provider-stable-prompt.cjs",

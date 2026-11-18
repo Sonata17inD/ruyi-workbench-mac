@@ -16,6 +16,7 @@ const {
   toolTimeBudgetWarnMs, toolTimeBudgetHardMs, toolByteBudgetShadowBytes, volatileTailLayoutEnabled,
 } = require('./runtime-policy.cjs');
 const { stripUrlUserinfo } = require('./provider-config.cjs');
+const { providerThrownErrorText } = require('./provider-http.cjs');
 const { createTurnSegmentBuilder } = require('./turn-segments.cjs');
 const { buildSessionNotesInjectPrompt } = require('./session-notes.cjs');
 const { projectBridgedIrreversible, buildTurnSummary } = require('./turn-summary.cjs');
@@ -38,6 +39,8 @@ function createProviderTurn({
   missions, checkpoints, hooks, appendUsageLedger, cwdWarning, isStewardToolName, logEvent, makeId, nowIso,
   readConfig, safeSessionId,
 }) {
+  // Last successful endpoint per provider for this server instance.
+  const failoverStickyBase = new Map();
   const {
     loadSession, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
     normalizeTodoItems, liveSessionPermissionMode,
@@ -51,8 +54,8 @@ function createProviderTurn({
     installActiveChildEventFanout, stopSession, drainSteerQueue, hasInterruptingSteer,
   } = ownership;
   const {
-    openAiStreamOnce, failoverStickyBase, withTransientRetry, providerCallIsTransient,
-    providerThrownErrorText, isContextOverflowError, providerWireProtocol, applyProviderReasoningEffort,
+    openAiStreamOnce, withTransientRetry, providerCallIsTransient,
+    isContextOverflowError, providerWireProtocol, applyProviderReasoningEffort,
     providerServerSearchCard, providerWireContentFiltered, providerWireContextExceeded,
     providerWireOutputLimited,
   } = provider;
