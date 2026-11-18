@@ -1,5 +1,7 @@
+'use strict';
+
 // Original, single-message official API adapter. Durable sending/unknown recovery belongs to the caller.
-const ExternalChannelDelivery = (() => {
+module.exports = (() => {
   const transport = require('node:https');
   const id = value => typeof value === 'string' && /^[\x21-\x7e]{1,128}$/.test(value);
   const object = value => value && typeof value === 'object' && !Array.isArray(value);

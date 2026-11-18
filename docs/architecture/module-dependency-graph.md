@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 92 | 2639 | 3239 | 623 | 17 | 0 | 0 |
+| 89 | 2637 | 3231 | 616 | 17 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -100,13 +100,10 @@
 | 82 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 83 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
 | 84 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
-| 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 86 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
-| 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 88 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
-| 89 | `13w-external-bots.js` | transport | 2 | 13 | 7 |
-| 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
-| 91 | `14-main.js` | entrypoint | 10 | 662 | 55 |
+| 85 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
+| 86 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
+| 87 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
+| 88 | `14-main.js` | entrypoint | 10 | 662 | 55 |
 
 ## 模块边
 
@@ -669,17 +666,10 @@
 | `13t-steward-schedule.js` | `13k-steward-threads.js` | backward | `stewardCanonWorkspacePath`, `stewardDeriveThreadCwd`, `stewardUnattendedByModel`, `stewardValidateCwd` |
 | `13t-steward-schedule.js` | `13q-steward-runner-turn.js` | backward | `stewardEnsureOpenAiRoute` |
 | `13t-steward-schedule.js` | `13s-scheduler.js` | backward | `SchedulerRuntime` |
-| `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `makeId`, `nowIso`, `paths` |
+| `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `fsp`, `makeId`, `nowIso`, `paths` |
 | `13w-external-bots.js` | `01-config.js` | backward | `DurableJsonStore`, `originOk`, `tokenOk` |
 | `13w-external-bots.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `13w-external-bots.js` | `13q-steward-runner-turn.js` | backward | `runStewardTurn` |
-| `13w-external-bots.js` | `13x-external-channel-delivery.js` | backward | `ExternalChannelDelivery` |
-| `13w-external-bots.js` | `13y-external-bot-credentials.js` | backward | `ExternalBotCredentials` |
-| `13w-external-bots.js` | `13z-external-bot-discovery.js` | backward | `ExternalBotDiscovery` |
-| `13x-external-channel-delivery.js` | `00-boot.js` | backward | `path`, `text` |
-| `13y-external-bot-credentials.js` | `00-boot.js` | backward | `fsp`, `paths` |
-| `13y-external-bot-credentials.js` | `01-config.js` | backward | `DurableJsonStore` |
-| `13y-external-bot-credentials.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `14-main.js` | `00-boot.js` | backward | `ACC_POLICY_TOOL_FAMILIES`, `APP_NAME`, `AUTOEXEC_DENYLIST`, `BRIDGED_WRITE_PATH_ARGS`, `CONFIG_SCHEMA`, `CONTEXT_WINDOW_FALLBACK`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `MCP_TOOLS`, `NATIVE_TOOL_TIER`, `OVERLAY_ID`, `RUYI_EVENTS`, `TOOL_REQUIRES`, `VERSION`, `accPolicyHiddenToolNames`, `adaptiveMetaToolSchemas`, `appendPromptToLastUserMessage`, `classifyTextForEstimate`, `collectBridgedWriteTarget`, `collectBridgedWriteTargets`, `contextWindowFromTable`, `createNdjsonLineFeeder`, `defaultDataRoots`, `ensureDirs`, `estimateHistoryTokens`, `estimateTextTokens`, `extractContextLength`, `fmtTokensServer`, `hashArgs`, `historyStartsWithCompactionSummary`, `isContextOverflowError`, `isDirectServeInvocation`, `logEvent`, `lstatOrNull`, `maskProviders`, `maskSecrets`, `maskedSecretConflicts`, `migrateLegacyDataRoot`, `nativeToolDisabledByPolicy`, `neutralizeFenceTag`, `normalizeStoragePolicy`, `nowIso`, `parseMcpConfigFile`, `pathWithinAnyRoot`, `pathWithinRoot`, `paths`, `providerLaunchVectorKey`, `redact`, `resolveContextWindow`, `runtimeToolRequirementsMet`, `safeJsonParse`, `safeUrlForDisplay`, `samePathKey`, `sanitizeExternalMcpServer`, `scanMcpSources`, `setEstimateBucketsV1`, `spawnDetachedChecked`, `ssrfCheck`, `toolDisabledByPolicy`, `toolRequirementsMet`, `truncateToolResult`, `unmaskProviders`, `unmaskSecrets` |
 | `14-main.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn` |
 | `14-main.js` | `01-config.js` | backward | `CONFIG_MIGRATIONS`, `DurableJsonStore`, `RUNTIME`, `atomicWriteJson`, `authorizeRoute`, `autoImportClaudeCodeMcp`, `beginBootCliPathProbes`, `buildClaudeAgentDefinitions`, `buildClaudeCliEnv`, `decodeClaudeCliText`, `defaultConfig`, `desktopMcpFromInstalledRoot`, `desktopPythonCandidates`, `detectDesktopMcp`, `detectDesktopMcpAsync`, `ensureDesktopMcpWarm`, `externalServerJs`, `finishBootCliPathProbes`, `generateMcpConfig`, `generateSessionMcpConfig`, `getAgentRoleLibrary`, `hostAllowed`, `invalidateMcpDropInCache`, `isLoopbackBindHost`, `legacyAccMemoryMigrationComplete`, `mutateConfig`, `normalizeConfig`, `pickPython`, `pickPythonAsync`, `prepareAgentCliSpawn`, `probeAgentCliLauncher`, `readClaudeProjectAgentRoles`, `readConfig`, `readFileTail`, `recordInstallLaunch`, `resolveExternalMcpServers`, `saveProjectAgentRoles`, `serveStatic`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncAgentRolesToClaude`, `syncClaudeCliSettings`, `syncMcpServersToClaude`, `syncMcpServersToKimi`, `waitForBootCliPathProbes` |

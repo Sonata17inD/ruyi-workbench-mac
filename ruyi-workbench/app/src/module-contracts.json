@@ -20980,74 +20980,6 @@
       ]
     },
     {
-      "file": "13x-external-channel-delivery.js",
-      "layer": "transport",
-      "provides": [
-        "ExternalChannelDelivery"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13y-external-bot-credentials.js",
-      "layer": "transport",
-      "provides": [
-        "ExternalBotCredentials"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "DurableJsonStore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01j-local-crypto.js",
-          "symbol": "LocalSecretCrypto",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13z-external-bot-discovery.js",
-      "layer": "transport",
-      "provides": [
-        "ExternalBotDiscovery"
-      ],
-      "requires": []
-    },
-    {
       "file": "13ab-privacy-api.js",
       "layer": "unclassified",
       "provides": [
@@ -21172,6 +21104,7 @@
       "file": "13w-external-bots.js",
       "layer": "transport",
       "provides": [
+        "ExternalBotCredentials",
         "ExternalBotInbox",
         "ExternalBotLedger"
       ],
@@ -21179,6 +21112,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "ExternalBotHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "fsp",
           "kinds": [
             "read"
           ]
@@ -21242,27 +21182,6 @@
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "runStewardTurn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13x-external-channel-delivery.js",
-          "symbol": "ExternalChannelDelivery",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13y-external-bot-credentials.js",
-          "symbol": "ExternalBotCredentials",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13z-external-bot-discovery.js",
-          "symbol": "ExternalBotDiscovery",
           "kinds": [
             "read"
           ]

@@ -3,6 +3,8 @@
 const crypto = require('node:crypto');
 const { runKeyedChain } = require('./keyed-chain.cjs');
 const protocols = require('./external-channel-protocols.cjs');
+const discovery = require('./external-bot-discovery.cjs');
+const delivery = require('./external-channel-delivery.cjs');
 const { EXTERNAL_BOT_LIMITS, externalBotError, externalBotString, externalBotIdentity, externalBotNormalizeConnection,
   externalBotSetupReceipt, externalBotValidSetupReceipt } = require('./external-bot-ledger.cjs');
 
@@ -15,7 +17,7 @@ function externalBotDecodeJson(raw) {
 }
 
 function createExternalBotInbox({
-  ledger, ExternalBotCredentials, ExternalBotDiscovery, ExternalChannelDelivery, LocalSecretCrypto,
+  ledger, ExternalBotCredentials, ExternalBotDiscovery = discovery, ExternalChannelDelivery = delivery, LocalSecretCrypto,
   runStewardTurn, OVERLAY_ID, nowIso, makeId, nowMs = Date.now, ExternalChannelProtocols = protocols,
 }) {
   const { read: externalBotReadState, write: externalBotWriteState } = ledger;

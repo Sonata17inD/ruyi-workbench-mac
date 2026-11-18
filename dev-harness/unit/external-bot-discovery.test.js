@@ -2,15 +2,10 @@
 // Offline fixed-official-host fixtures for the identity probe. Never contacts a platform or uses real credentials.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const http = require('node:http');
-const vm = require('node:vm');
 const { once } = require('node:events');
 const { install } = require('../lib/external-channel-delivery-preload');
-
-const SOURCE = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13z-external-bot-discovery.js'), 'utf8');
-const discovery = vm.runInNewContext(SOURCE + '\nExternalBotDiscovery', { require, Buffer, TextDecoder, setTimeout, clearTimeout, Date });
+const discovery = require('../../ruyi-workbench/app/backend/external-bot-discovery.cjs');
 const SECRET = 'synthetic-feishu-app-secret-canary';
 const APP_ID = 'cli_fixture';
 let server, restore, mode = 'ok', requests = [];
@@ -61,7 +56,7 @@ test('D1 probe reads the fixed official tenant token, bot info and tenant key', 
   reset();
   const result = await discovery.probe({ appId: APP_ID, appSecret: SECRET });
   assert.equal(result.ok, true);
-  assert.deepEqual(JSON.parse(JSON.stringify(result.identity)), { tenantId: 'tenant_fixture', botUserId: 'ou_fixture_bot', appName: 'Fixture Bot', activateStatus: 2 });
+  assert.deepEqual(result.identity, { tenantId: 'tenant_fixture', botUserId: 'ou_fixture_bot', appName: 'Fixture Bot', activateStatus: 2 });
   assert.deepEqual(requests.map(row => [row.method, row.host, row.path]), [
     ['POST', 'open.feishu.cn', '/open-apis/auth/v3/tenant_access_token/internal'],
     ['GET', 'open.feishu.cn', '/open-apis/bot/v3/info'],
@@ -76,7 +71,7 @@ test('D1 probe reads the fixed official tenant token, bot info and tenant key', 
 test('D2 rejected app credentials stop after the token call and leak nothing', async () => {
   reset('token-rejected');
   const result = await discovery.probe({ appId: APP_ID, appSecret: SECRET });
-  assert.deepEqual(JSON.parse(JSON.stringify(result)), { ok: false, errorCode: 'external_discovery.credentials_rejected' });
+  assert.deepEqual(result, { ok: false, errorCode: 'external_discovery.credentials_rejected' });
   assert.equal(requests.length, 1);
   assert.ok(!JSON.stringify(result).includes('must-not-leak'));
 });

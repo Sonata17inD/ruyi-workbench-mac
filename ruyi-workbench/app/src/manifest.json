@@ -512,45 +512,27 @@
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环"
     },
     {
-      "file": "13x-external-channel-delivery.js",
-      "startLine": 25871,
-      "endLine": 26006,
-      "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes"
-    },
-    {
-      "file": "13y-external-bot-credentials.js",
-      "startLine": 26007,
-      "endLine": 26009,
-      "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS"
-    },
-    {
-      "file": "13z-external-bot-discovery.js",
-      "startLine": 26010,
-      "endLine": 26105,
-      "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted"
-    },
-    {
       "file": "13ab-privacy-api.js",
-      "startLine": 26106,
-      "endLine": 26124,
+      "startLine": 25871,
+      "endLine": 25889,
       "note": "81-P2: token-authenticated security settings and recovery API"
     },
     {
       "file": "13w-external-bots.js",
-      "startLine": 26125,
-      "endLine": 26135,
+      "startLine": 25890,
+      "endLine": 25901,
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker"
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "startLine": 26136,
-      "endLine": 26589,
+      "startLine": 25902,
+      "endLine": 26355,
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open"
     },
     {
       "file": "14-main.js",
-      "startLine": 26590,
-      "endLine": 27355,
+      "startLine": 26356,
+      "endLine": 27121,
       "note": "main()/module.exports"
     }
   ]

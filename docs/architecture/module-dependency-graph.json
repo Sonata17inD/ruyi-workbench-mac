@@ -3,10 +3,10 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 92,
-    "providedSymbols": 2639,
-    "requiredSymbols": 3239,
-    "edges": 623,
+    "modules": 89,
+    "providedSymbols": 2637,
+    "requiredSymbols": 3231,
+    "edges": 616,
     "forwardEdges": 17,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -21160,82 +21160,8 @@
       ]
     },
     {
-      "file": "13x-external-channel-delivery.js",
-      "order": 85,
-      "layer": "transport",
-      "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
-      "provides": [
-        "ExternalChannelDelivery"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13y-external-bot-credentials.js",
-      "order": 86,
-      "layer": "transport",
-      "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
-      "provides": [
-        "ExternalBotCredentials"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "DurableJsonStore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01j-local-crypto.js",
-          "symbol": "LocalSecretCrypto",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13z-external-bot-discovery.js",
-      "order": 87,
-      "layer": "transport",
-      "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
-      "provides": [
-        "ExternalBotDiscovery"
-      ],
-      "requires": []
-    },
-    {
       "file": "13ab-privacy-api.js",
-      "order": 88,
+      "order": 85,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -21358,10 +21284,11 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 89,
+      "order": 86,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
+        "ExternalBotCredentials",
         "ExternalBotInbox",
         "ExternalBotLedger"
       ],
@@ -21369,6 +21296,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "ExternalBotHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "fsp",
           "kinds": [
             "read"
           ]
@@ -21435,33 +21369,12 @@
           "kinds": [
             "read"
           ]
-        },
-        {
-          "provider": "13x-external-channel-delivery.js",
-          "symbol": "ExternalChannelDelivery",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13y-external-bot-credentials.js",
-          "symbol": "ExternalBotCredentials",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13z-external-bot-discovery.js",
-          "symbol": "ExternalBotDiscovery",
-          "kinds": [
-            "read"
-          ]
         }
       ]
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 90,
+      "order": 87,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -21626,7 +21539,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 91,
+      "order": 88,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -32746,6 +32659,7 @@
       "symbols": [
         "ExternalBotHooks",
         "OVERLAY_ID",
+        "fsp",
         "makeId",
         "nowIso",
         "paths"
@@ -32775,64 +32689,6 @@
       "to": "13q-steward-runner-turn.js",
       "symbols": [
         "runStewardTurn"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13w-external-bots.js",
-      "to": "13x-external-channel-delivery.js",
-      "symbols": [
-        "ExternalChannelDelivery"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13w-external-bots.js",
-      "to": "13y-external-bot-credentials.js",
-      "symbols": [
-        "ExternalBotCredentials"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13w-external-bots.js",
-      "to": "13z-external-bot-discovery.js",
-      "symbols": [
-        "ExternalBotDiscovery"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13x-external-channel-delivery.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "path",
-        "text"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13y-external-bot-credentials.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "fsp",
-        "paths"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13y-external-bot-credentials.js",
-      "to": "01-config.js",
-      "symbols": [
-        "DurableJsonStore"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13y-external-bot-credentials.js",
-      "to": "01j-local-crypto.js",
-      "symbols": [
-        "LocalSecretCrypto"
       ],
       "direction": "backward"
     },

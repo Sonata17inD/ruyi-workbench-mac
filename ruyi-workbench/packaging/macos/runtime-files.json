@@ -32,6 +32,8 @@
     "app/backend/external-bot-ledger.cjs",
     "app/backend/external-bot-inbox.cjs",
     "app/backend/external-bot-routes.cjs",
+    "app/backend/external-channel-delivery.cjs",
+    "app/backend/external-bot-discovery.cjs",
     "app/backend/file-preview.cjs",
     "app/backend/file-text-io.cjs",
     "app/backend/image-content.cjs",

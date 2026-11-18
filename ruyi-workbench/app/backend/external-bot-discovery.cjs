@@ -1,6 +1,8 @@
+'use strict';
+
 // Owner-initiated identity probe against the fixed official Feishu host. One attempt per request, no
 // redirect/proxy/base-URL override, and the app secret is used once and never returned as data.
-const ExternalBotDiscovery = (() => {
+module.exports = (() => {
   const transport = require('node:https');
   const HOST = 'open.feishu.cn';
   // Independent budget: one 8 s call, 15 s for the whole three-call probe, 64 KiB per response body.

@@ -1,16 +1,12 @@
 'use strict';
 // Offline official-host HTTP fixtures. Does not load workbench data, use real credentials, or send real messages.
 const http = require('node:http');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 const { once } = require('node:events');
 const { install } = require('./lib/external-channel-delivery-preload');
 const { createRunner } = require('./lib/harness');
+const delivery = require('../ruyi-workbench/app/backend/external-channel-delivery.cjs');
 const t = createRunner('EXTERNAL CHANNEL DELIVERY');
 const { ok } = t;
-const source = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/src/13x-external-channel-delivery.js'), 'utf8');
-const delivery = vm.runInNewContext(source + '\nExternalChannelDelivery', { require, Buffer, TextDecoder, setTimeout, clearTimeout, Date });
 const qq = { platform: 'qq', appId: 'fixture-app', botSecret: 'synthetic-qq-secret' };
 const feishu = { platform: 'feishu', appId: 'cli_fixture', tenantId: 'tenant-fixture', appSecret: 'synthetic-feishu-secret' };
 const message = (platform = 'qq', group = false) => ({ messageId: 'original-message', senderId: 'human',
