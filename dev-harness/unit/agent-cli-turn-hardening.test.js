@@ -8,8 +8,7 @@
 //   [C7] #7 外部摘要模型坏了时,自动压缩失败一次后进入退避:下一回合不再重试(修前每回合都重试一次)。
 //   [D8] #8 decodeClaudeCliText 的流式用法:块边界切开的汉字不再被误判成 GB18030 乱码;真 GB18030 流照旧解对。
 //   [R3] #3 ACP 子进程已死、退出事件还没处理时回写 stdin 撞 EPIPE:这个 'error' 必须有人接,不能变成未捕获异常(服务整个退出)。
-//        createKimiAcpRpc 不导出,且「在两个事件之间」的竞态端到端没法稳定复现 —— 这里按源码切出真函数放进 vm,
-//        喂一个写入必回 EPIPE 的假子进程(判据是结构性的:通道对象必须接住自己 stdin 的错误)。
+//        直接给生产 ACP RPC 传入写入时会报 EPIPE 的子进程流，验证通道关闭及后续请求失败。
 //   [K14] #14 syncMcpServersToKimi 并发调用串行化:一次读改写(读 mcp.json → 写 mcp.json 与所有权旁账)做完下一次才读。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -184,21 +183,9 @@ test('[K14] syncMcpServersToKimi 并发调用串行:一次读改写做完,下一
 });
 
 test('[R3] createKimiAcpRpc 接住 stdin 的 EPIPE:通道记为关闭,后续请求同步失败而不是炸掉进程', async () => {
-  const vm = require('vm');
   const { EventEmitter } = require('events');
   const { Writable, PassThrough } = require('stream');
-  const { functionBlock } = require('../lib/source-slice');
-  const src = fs.readFileSync(path.join(app, 'src', '05b-kimi-bridge.js'), 'utf8');
-  const block = functionBlock(src, 'createKimiAcpRpc');
-  assert.ok(block.length > 500, '切到了 createKimiAcpRpc');
-  const sandbox = {
-    createNdjsonLineFeeder: srv.createNdjsonLineFeeder,
-    safeJsonParse: raw => { try { return JSON.parse(raw); } catch { return null; } },
-    kimiAcpRpcError: (payload, method) => new Error(`${method} failed`),
-    setTimeout, clearTimeout, Promise, Error, String, JSON, Map, AbortController,
-  };
-  vm.createContext(sandbox);
-  vm.runInContext(`${block}\nthis.createKimiAcpRpc = createKimiAcpRpc;`, sandbox);
+  const { createKimiAcpRpc } = require(path.join(app, 'backend', 'kimi-acp-rpc.cjs'));
   const child = new EventEmitter();
   child.stdout = new PassThrough();
   child.stdin = new Writable({ write(_chunk, _enc, cb) { cb(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' })); } });
@@ -206,7 +193,7 @@ test('[R3] createKimiAcpRpc 接住 stdin 的 EPIPE:通道记为关闭,后续请�
   const onUncaught = error => uncaught.push(error);
   process.on('uncaughtException', onUncaught);
   try {
-    const rpc = sandbox.createKimiAcpRpc(child, {});
+    const rpc = createKimiAcpRpc(child);
     assert.equal(rpc.notify('session/cancel', {}), true, '写入本身是异步失败的,notify 当场不知道');
     await new Promise(resolve => setImmediate(resolve));
     await new Promise(resolve => setImmediate(resolve));

@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2934,
-    "requiredSymbols": 3377,
+    "providedSymbols": 2929,
+    "requiredSymbols": 3376,
     "edges": 638,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -4725,6 +4725,7 @@
         "agentAutoCompactFailures",
         "agentAutoCompactTrigger",
         "appendKimiAcpTerminalOutput",
+        "applyKimiAcpTurnConfig",
         "applyKimiStatusToSession",
         "awaitKimiAcpWithSignal",
         "buildKimiAcpPromptParts",
@@ -4735,6 +4736,7 @@
         "compactKimiNative",
         "consumeKimiAcpApproval",
         "contextResetKimiAcpPlanApproval",
+        "createAcpRpc",
         "createKimiAcpRpc",
         "ensureKimiAcpOperationPermission",
         "ensureKimiServer",
@@ -4751,7 +4753,6 @@
         "isKimiAcpPlanFilename",
         "killKimiAcpTerminal",
         "kimiAcpActivatedActualConfigValue",
-        "kimiAcpActualConfigValue",
         "kimiAcpApplyPlan",
         "kimiAcpApprovalValue",
         "kimiAcpAssertSession",
@@ -4769,8 +4770,6 @@
         "kimiAcpFreshActualForOperation",
         "kimiAcpInferConcreteToolInput",
         "kimiAcpLifecycle",
-        "kimiAcpMethodNotFound",
-        "kimiAcpMode",
         "kimiAcpModeOptionFromActivated",
         "kimiAcpNativeBashApprovalDescriptor",
         "kimiAcpNativeBashEnvSafe",
@@ -4785,8 +4784,6 @@
         "kimiAcpNoteConfigActual",
         "kimiAcpObjectInput",
         "kimiAcpObserveNativeMode",
-        "kimiAcpOptionAdvertises",
-        "kimiAcpOptionChoices",
         "kimiAcpPermissionInput",
         "kimiAcpPermissionToolCall",
         "kimiAcpPlanApprovalGrantsCurrentTurn",
@@ -4798,9 +4795,7 @@
         "kimiAcpReadPlanSnapshotFile",
         "kimiAcpRememberConfigActual",
         "kimiAcpRequestError",
-        "kimiAcpResponseActualConfigValue",
         "kimiAcpRestoreSession",
-        "kimiAcpRpcError",
         "kimiAcpSamePath",
         "kimiAcpSessionRestoreMethods",
         "kimiAcpStoreConfigOptions",
@@ -4861,13 +4856,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "createCappedDiagnosticText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "createNdjsonLineFeeder",
           "kinds": [
             "call"
           ]
@@ -4990,7 +4978,8 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -28674,7 +28663,6 @@
         "URL",
         "appRoot",
         "createCappedDiagnosticText",
-        "createNdjsonLineFeeder",
         "dataRoot",
         "externalRoot",
         "fs",

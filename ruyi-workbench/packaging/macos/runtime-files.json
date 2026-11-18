@@ -47,6 +47,8 @@
     "app/backend/agent-quality.cjs",
     "app/backend/agent-results.cjs",
     "app/backend/agent-loop-hooks.cjs",
+    "app/backend/kimi-acp-rpc.cjs",
+    "app/backend/kimi-acp-session.cjs",
     "app/backend/kimi-search-policy.cjs",
     "app/backend/kimi-prompt-parts.cjs",
     "app/backend/agent-recovery.cjs",

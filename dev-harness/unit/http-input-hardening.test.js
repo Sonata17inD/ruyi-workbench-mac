@@ -253,7 +253,7 @@ test('[H9] /api/events/stream 连接数有上限(第 33 条 → 503),已有连�
 // ---------------------------------------------------------------------------------------------
 // 结构锁(判据本身是结构性的:这段代码必须挂监听 / 必须先判流已收尾)。
 test('[L1] 子进程 stdin 挂了 error 监听(Kimi ACP RPC、Mac shell 会话):EPIPE 不成 uncaughtException', () => {
-  const rpc = functionBlock(readSrc('05b-kimi-bridge.js'), 'createKimiAcpRpc');
+  const rpc = functionBlock(readSrc('../backend/kimi-acp-rpc.cjs'), 'createKimiAcpRpc');
   assert.ok(rpc.length > 200, '切到 createKimiAcpRpc');
   assert.match(rpc, /child\.stdin\.on\('error'/);
   const shell = functionBlock(readSrc('../backend/shell-sessions.cjs'), 'shellStart');
