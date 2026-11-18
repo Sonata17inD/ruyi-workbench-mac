@@ -71,7 +71,35 @@ const handleSessionExecutionApiRoutes = require('./backend/session-execution-rou
   kimi: { kimiSessionStatus, kimiStatusFingerprint, applyKimiStatusToSession, kimiUsageFromStatus },
 });
 
-// 架构还债批 2 B2:POST /api/config 的落盘与全部副作用 applyConfigPatch 搬到 06k-config-patch.js(配置域),本文件只剩 body 解析与错误翻译。
+const handleStatusApiRoutes = require('./backend/status-routes.cjs').createStatusRoutes({
+  paths, RUNTIME, ServerStartNotices, readConfig, maskProviders, requestIsLoopback, computeHealth, getCapabilities, probeRgAsync,
+  identity: { APP_NAME, VERSION, CONFIG_SCHEMA, OVERLAY_ID, dataRootAliases, exePath },
+  conversation: { safeSessionId, readSessionRouteHead, configForSessionEngineRoute, activeOpenAiProvider,
+    agentConversationContextMeta, configuredConversationWindow, resolveContextWindow, learnedWindowCap },
+  cli: { agentCliAdapter, detectClaudePath, detectKimiPath, AGENT_CLI_TYPES, selectedAgentCli },
+  desktopMcp: { desktopMcpDetectionPending, mcpConfigFilePath, generateMcpConfig, ensureDesktopMcpWarm,
+    detectDesktopMcp, resolveExternalMcpServers },
+  tools: { MCP_TOOLS, runtimeToolRequirementsMet, nativeToolDisabledByPolicy, observationRecallEnabled, isStewardToolName },
+  ToolboxHooks, PROVIDER_PRESETS, CLAUDE_ENDPOINT_PRESETS,
+});
+
+const handleWorkspaceApiRoutes = require('./backend/workspace-routes.cjs').createWorkspaceRoutes({
+  readConfig, resolveWorkspace, DesktopShell,
+});
+
+const { handleModelsApiRoute, handleProviderTestApiRoute } = require('./backend/provider-routes.cjs').createProviderRoutes({
+  readConfig, safeSessionId, readSessionRouteHead, configForSessionEngineRoute, agentCliAdapter,
+  catalog: { activeOpenAiProvider, fetchOpenAiModels, cachedContextLength, contextWindowFromTable },
+  credentials: { maskedSecretConflicts, maskedSecretConflictMessage, unmaskProviders, redact, providerScrubSecrets },
+  probe: { sanitizeProvider, normalizeProviderApiStyle, probeProviderCompletion },
+});
+
+const handleConfigurationApiRoutes = require('./backend/configuration-routes.cjs').createConfigurationRoutes({
+  readConfig, mutateConfig, maskProviders, ConfigPatchHooks, ToolboxHooks, projectCwdDirectoryFailure, resolveExternalMcpServers,
+  roles: { getAgentRoleLibrary, readProjectAgentRoles, readClaudeProjectAgentRoles, buildClaudeAgentDefinitions,
+    saveProjectAgentRoles, projectAgentRoleFile },
+  workflows: { getAgentWorkflows, normalizeAgentWorkflow, agentWorkflowSaveProblem, saveAgentWorkflow, deleteAgentWorkflow },
+});
 
 // 代理模式 v2:MCP 子进程(Claude/Kimi)的 wait_agents / agent_result 回环。鉴权同 launch(body.token = 进程 token,
 // 01b 登记为 body-token),handler 内另接受 UI 头 token(管理面/测试直调)。终态信封在此登记已读 —— 这次返回就是
@@ -128,333 +156,12 @@ async function handleApi(req, res, pathname) {
     if (handled || res.writableEnded || res.destroyed) return;
   }
 
-  if (req.method === 'POST' && pathname === '/api/bootstrap') {
-    // 47c(S1):浏览器拿 token 的【唯一】通道(HTML 不再明文下发)。auth=open -> 顶层 host 门已挡 rebinding
-    // (Host=攻击域 -> 403),信任面与旧 GET / 明文下发完全等同;非浏览器(curl/node)亦同旧规可得。
-    // 不查 Origin:'open' 级本就允许 loopback 非浏览器,浏览器同源(Host=loopback)也放行,跨站 rebinding 已被 host 门拦。
-    // 安全走查 S13(纵深):authorizeRoute 已对非本机对端拒掉这条路由;这里再核一次对端地址,别让以后改鉴权表的人把它放开。
-    if (!requestIsLoopback(req)) return send(res, apiFailure('auth.remote_denied', {}, 'remote client not allowed', 403));
-    return send(res, json({ ok: true, token: RUNTIME.token || '' }));
-  }
-  if (req.method === 'GET' && pathname === '/api/status') {
-    const config = await readConfig();
-    let conversationConfig = config;
-    try {
-      const requestedSessionId = safeSessionId(new URL(req.url, 'http://127.0.0.1').searchParams.get('sessionId') || '');
-      if (requestedSessionId) {
-        // 开放读口只读会话头(02 readSessionRouteHead 头注):不装载、不回写。
-        const statusHead = await readSessionRouteHead(requestedSessionId);
-        if (statusHead) conversationConfig = configForSessionEngineRoute(config, statusHead);
-      }
-    } catch { /* status without a valid session keeps the global new-session default */ }
-    // 128f-③(48 号文 §2-c):桌面组件的 Python 探测还在飞(缓存冷)时,本路由【不等、也不走同步探针】——
-    // 健康项报 preparing、desktopMcp 报 probing、mcpConfigPath 只回路径;前端见 probing 自己有界跟进。
-    // 修前这里三处 await 预热:Full 包首个 /api/status 实测 8.7–8.9 s,整个界面跟着等内嵌 Python 导入 FastMCP。
-    const desktopPending = desktopMcpDetectionPending(config);
-    const { health, manifest, runtime } = await computeHealth(config, { desktopPending });
-    return send(res, json({
-      ok: true,
-      app: APP_NAME,
-      version: VERSION,
-      configSchema: CONFIG_SCHEMA, // v0.8-S0: surfaced top-level so clients/tests don't dig into config
-      overlayId: OVERLAY_ID,
-      launchMode: RUNTIME.launchMode,
-      dataRoot: paths.data, dataRootAliases: dataRootAliases(), homeDir: os.homedir(),   // homeDir:体验走查 #7,向导据此判「工作文件夹是不是整个用户目录」
-      exePath: exePath(),
-      // v1.0-S9 exe 改名 Ruyi.exe;双名兼容探测——先探新名,再探旧名(兼容窗口:存量安装/旧 launcher,建议 v2.0 收口)。
-      exePresent: fs.existsSync(path.join(externalRoot(), 'Ruyi.exe')) || fs.existsSync(path.join(externalRoot(), 'WinClaudeWorkbench.exe')),
-      config: maskProviders(config), // F2: never emit plaintext provider api keys in the response
-
-      permissionModes: PERMISSION_MODES,
-      // Resolve the conversation route (including CLI/manual overrides), never the summary provider.
-      contextWindowResolved: await (async () => {
-        const p = activeOpenAiProvider(conversationConfig);
-        if (!p) {
-          const meta = await agentConversationContextMeta(conversationConfig, null);
-          return { value: meta.contextWindow, source: meta.contextWindowSource, engine: 'agent', agentCliType: meta.contextAgentCliType, provider: '', model: String(conversationConfig.model || '') };
-        }
-        const model = p ? String(p.model || (p.models && p.models[0] && p.models[0].id) || '').trim() : '';
-        const manual = configuredConversationWindow(conversationConfig, 'openai', p.id, model);
-        const r = resolveContextWindow(manual ? { ...p, contextWindow: manual } : p, model);
-        // 45f 对抗轮 P3-5:窗口学习生效时如实展示 —— 否则用户看到「才用一半就压缩」会对不上账。
-        const cap = p ? learnedWindowCap(p.id, model) : 0;
-        return { value: cap ? Math.min(r.value, cap) : r.value, source: r.source, provider: p ? p.id : '', model, learnedCap: cap || undefined };
-      })(),
-      models: agentCliAdapter(conversationConfig.agentCliType).modelCatalog.offline(conversationConfig), // instant offline list for the requested conversation route (per-CLI adapter, 05)
-      providerPresets: PROVIDER_PRESETS, // v0.5: built-in OpenAI-compatible provider templates (local Ollama/LM Studio + custom; no vendor presets)
-      toolbox: typeof ToolboxHooks.statusView === 'function' ? ToolboxHooks.statusView(config) : { autoDiscover: false, components: [] },   // ruyi-toolbox 已登记的组件与各自状态(只读视图;命令不出进程)
-      claudeEndpointPresets: CLAUDE_ENDPOINT_PRESETS, // v1.4.4: third-party Anthropic-compatible endpoint templates for the Claude CLI engine (custom only; no vendor presets)
-      detectedClaudePath: detectClaudePath(),
-      detectedKimiPath: detectKimiPath(),
-      agentCliDrivers: Object.values(AGENT_CLI_TYPES).map(d => ({ ...d, path: selectedAgentCli({ ...config, agentCliType: d.id }).detected })),
-      mcpConfigPath: desktopPending ? mcpConfigFilePath() : await generateMcpConfig(config.mcpCommandMode),
-      // v0.7d: desktop MCP discovery status for the settings UI. `detected` is the autodetect result
-      // (null when not found); `resolved` is what would actually be launched (honors explicit overrides).
-      desktopMcp: desktopPending ? {
-        enabled: !!(config.desktopMcp && config.desktopMcp.enabled), detected: null, resolved: null, probing: true,
-      } : await (async () => {
-        // 39 号文:先等那趟异步预热。缓存热时它是个已决 Promise(零开销);冷时若不等,下面两行会
-        // 同步 spawnSync 逐个探候选,把整个进程钉住 ~2 s —— e2e 每件的首个 /api/status 正是这一处。
-        await ensureDesktopMcpWarm(config);
-        const enabled = !!(config.desktopMcp && config.desktopMcp.enabled);
-        const detected = detectDesktopMcp();
-        const resolved = resolveExternalMcpServers(config).find(s => s.id === 'ai-computer-control') || null;
-        return {
-          enabled,
-          detected: detected ? { command: detected.command, args: detected.args, via: detected.via, pythonSource: detected.pythonSource || '' } : null,
-          resolved: resolved ? { command: resolved.command, args: resolved.args, cwd: resolved.cwd || '', pythonSource: resolved.pythonSource || '' } : null,
-        };
-      })(),
-      health,
-      runtime,
-      manifest,
-      // 118c: 一次性启动提示(上次启动失败的人话 / 本次改用了哪个端口)。纯进程内常量,恒定形状,
-      // 两个位都可能为 null。前端顶部条消费,详见 START_NOTICE 处的口径说明。
-      startNotice: ServerStartNotices.START_NOTICE,
-      // v0.8-S1: vendored-binary capability probe (additive). S6's capability matrix will formally own
-      // this; the `rg` field is established here so file_search's fast-path status is observable now.
-      // 145-W3:异步探测＋进程级缓存(修前 hasRg() 冷缓存在请求路径上 spawnSync rg --version);rgSource 加法字段。
-      binaries: await probeRgAsync().then(info => ({ rg: !!info, rgSource: info ? info.source : null })).catch(() => ({ rg: false, rgSource: null })),
-      // v0.9-S1 (C6): expose the ERROR_CLASSES table top-level so the error-humanization UI renders zh/next
-      // from the single server-side source of truth (result.errorClass keys into this) — no double-maintain.
-      errorClasses: ERROR_CLASSES,
-      // 116c: /api/status 的工具清单是【设置页面向用户的目录】,管家工具族一律不出现在这里(四个
-      // offer 面之一)—— 它们只属于 kind==='steward' 的管家会话,不是用户可挑选的会话工具。
-      tools: MCP_TOOLS.filter(t => runtimeToolRequirementsMet(t.name, runtime).met && !nativeToolDisabledByPolicy(t.name, config) && (t.name !== 'observation_recall' || observationRecallEnabled(config)) && !isStewardToolName(t.name)).map(t => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
-    }));
-  }
-  // v0.8-S6: capability matrix (§7.2). Read-only → same-origin gate is enough (not in needsToken). 60s
-  // internal cache; ?force=1 busts it (used by the UI popover for an on-open refresh). Never throws.
-  if (req.method === 'GET' && pathname === '/api/capabilities') {
-    const config = await readConfig();
-    const force = new URL(req.url, 'http://x').searchParams.get('force') === '1';
-    const caps = await getCapabilities(config, force).catch(() => null);
-    if (!caps) return send(res, json({ ok: false, error: 'capability probe failed' }, 500));
-    return send(res, json({ ok: true, ...caps }));
-  }
+  await handleStatusApiRoutes(req, res, pathname); if (res.writableEnded) return;
   await handlePlaybookApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  // ── v0.9-S3 (C3) Workspace-by-fingerprint + native folder picker ────────────────────────────────────
-  // POST /api/workspace/resolve {name, children[]} — locate the dropped folder's real absolute path by
-  // fingerprint (basename + first-level child names). Token-gated (whitelisted above). Never throws.
-  if (req.method === 'POST' && pathname === '/api/workspace/resolve') {
-    const body = await readJsonBody(req);
-    const config = await readConfig();
-    try {
-      const r = await resolveWorkspace({ name: body && body.name, children: body && body.children, selectedPath: body && body.selectedPath }, config);
-      return send(res, json(r));
-    } catch (e) {
-      return send(res, json({ ok: false, error: String(e && e.message || e), matches: [] }));
-    }
-  }
-  // POST /api/pick-folder {title?, initialDir?} — pop the native Windows folder picker (STA). Token-gated. 120s.
-  // initialDir:对话框从哪个文件夹打开(通常是当前工作文件夹);只认本机盘符绝对路径,其余忽略(见 DesktopShell.folderPickerEnv)。
-  if (req.method === 'POST' && pathname === '/api/pick-folder') {
-    const body = await readJsonBody(req);
-    return send(res, json(await DesktopShell.pickFolder({ title: body && body.title, initialDir: body && body.initialDir })));
-  }
-  // 体验走查 #7: POST /api/workspace/dedicated —— 默认工作文件夹是整个用户目录(读/写/执行全开)时,向导给一枚
-  // 「用一个专用文件夹」:建(已有就复用)「文档\如意工作区」(没有「文档」就放在用户目录下)并回它的路径。
-  // 只建这一个固定名字的目录,不收任何路径参数;设成默认工作区仍走前端既有的 setWorkspace(带护栏)。
-  if (req.method === 'POST' && pathname === '/api/workspace/dedicated') {
-    const docs = path.join(os.homedir(), 'Documents');
-    const dir = path.join(fs.existsSync(docs) ? docs : os.homedir(), '如意工作区');
-    try { await fsp.mkdir(dir, { recursive: true }); } catch (e) { return send(res, json({ ok: false, error: String(e && e.message || e) }, 500)); }
-    return send(res, json({ ok: true, path: dir }));
-  }
-  // 第53波 EC-B(53d): POST /api/pick-file - 原生文件选择器(OpenFileDialog,选 overlay zip 等)。token 级。
-  if (req.method === 'POST' && pathname === '/api/pick-file') {
-    const body = await readJsonBody(req);
-    return send(res, json(await DesktopShell.pickFile(body && body.filter)));
-  }
-  if (req.method === 'GET' && pathname === '/api/models') {
-    // Live-enriched model list. For an active native provider: its models ∪ live GET /models.
-    // Otherwise the Claude path: proxy ∪ offline. Read-only, best-effort; never throws.
-    // 124（用户 2026-09-14 走查①「刷新模型列表失效了，无论 kimi code 还是 Provider」）：这份列表要按
-    // 【正在看的这条会话】的引擎路由派生，与上面 GET /api/status 同一个判据（configForSessionEngineRoute：
-    // 会话级 engineRoute 优先，agent 路由会把 activeProvider 清空）。修前这里只读全局 config —— 线程头把
-    // 这条线程切到 Kimi Code 或另一个 provider 之后，全局 activeProvider 仍是老那一个，于是刷新的是
-    // 【全局那条路由】的模型：前端把它们折回 providers[全局] / status.models，而 chip 菜单读的是
-    // 【这条会话这条路由】的那一份（steward-chips.js 的 modelOptions）—— 按下 ↻、toast 也说
-    // 「模型已刷新（代理 N 个）」，屏幕上的列表一个字没变。真机实测（本机 8765）：
-    //   GET /api/status?sessionId=<kimi 路由的会话> → models = kimi 那两条
-    //   GET /api/models（无会话）                  → engine=openai provider=deepseek 的 4 条
-    // 两个端点各说一套，正是这条不对齐。
-    const config = await readConfig();
-    let modelsConfig = config;
-    try {
-      const requestedSessionId = safeSessionId(new URL(req.url, 'http://127.0.0.1').searchParams.get('sessionId') || '');
-      if (requestedSessionId) {
-        const modelsHead = await readSessionRouteHead(requestedSessionId);   // 同 /api/status:只读头,零副作用
-        if (modelsHead) modelsConfig = configForSessionEngineRoute(config, modelsHead);
-      }
-    } catch { /* 无效或读不到的 sessionId：与 status 同样退回全局新任务默认值 */ }
-    const provider = activeOpenAiProvider(modelsConfig);
-    if (provider) {
-      const live = await fetchOpenAiModels(provider).catch(() => ({ models: [] }));
-      const seen = new Map();
-      // v1.0.2-S2: 每个模型对象带 contextLength(有则带)。探测(live)条目自带; 无探测时回退探测缓存;
-      // 再无探测则使用版本化名称表，让离线 Provider 模型列表也能显示当前默认值；
-      // 已有条目在 live 补到 contextLength 时就地补齐(only-add, 不改既有字段语义)。
-      // 用户在模型菜单里删过的那一行（providers[].hiddenModels）在这【一个】合并点挡掉：saved 清单与
-      // live 发现两条来源都过同一个 add，所以 ↻ 刷新不会把刚删掉的模型还回来。
-      const hidden = new Set((Array.isArray(provider.hiddenModels) ? provider.hiddenModels : [])
-        .map(v => String(v || '').trim()).filter(Boolean));
-      // 2026-09-20（用户实报「保存了语音模型后，再点保存会消失」的真根因）：修前这里只留 id／label／contextLength，
-      // models[].caps（['asr'] 这类能力标记）在合并时被丢掉；前端又把这份清单折回 state.config.providers[].models
-      // （provider-settings.js 的刷新折回），于是内存里的配置从此没有语音标记 —— 选择器回落「无候选」，
-      // 而下一次整份保存（草稿由这份内存配置播种）把盘上的标记也一起抹掉。配置里那一条带的 caps 原样带出去。
-      const add = (id, label, contextLength, caps) => {
-        const k = String(id || ''); if (!k || hidden.has(k)) return;
-        const cl = (Number.isFinite(contextLength) && contextLength > 0) ? Math.round(contextLength)
-          : (cachedContextLength(provider.id, k) || contextWindowFromTable(k));
-        if (!seen.has(k)) { const o = { id: k, label: label || k }; if (cl) o.contextLength = cl; if (Array.isArray(caps) && caps.length) o.caps = caps.slice(); seen.set(k, o); }
-        else if (cl && !seen.get(k).contextLength) seen.get(k).contextLength = cl;
-      };
-      for (const m of (provider.models || [])) add(m.id, m.label, m.contextLength, m.caps);
-      for (const m of (live.models || [])) add(m.id, m.label, m.contextLength);
-      return send(res, json({ ok: true, engine: 'openai', provider: provider.id, models: [...seen.values()], proxyCount: (live.models || []).length }));
-    }
-    // Agent CLI 路由:整份应答由该 CLI 的适配器给(05 modelCatalog.discover;Kimi 问 CLI 自己,Claude 走 Anthropic 口径)。
-    return send(res, json(await agentCliAdapter(modelsConfig.agentCliType).modelCatalog.discover(modelsConfig)));
-  }
-  if (req.method === 'POST' && pathname === '/api/config') {
-    const body = await readJsonBody(req);
-    let next = null;
-    try {
-      next = await ConfigPatchHooks.applyConfigPatch(body); // 06k 填入(见 01 的 ConfigPatchHooks 头注)
-    } catch (error) {
-      // 116-3 B1:切全局默认权限到「全自动」缺 confirm:true -> 409,错误码与 13d 的线程级 PATCH 同一个。
-      if (error && error.code === 'permission.confirm_required') {
-        return send(res, apiFailure('permission.confirm_required', { permissionMode: String(error.permissionMode || '') },
-          String(error.message || ''), 409));
-      }
-      // 107-S2:掩码回传 + 启动向量变了 -> 409 整份拒绝(零写入)。params 里只带条目名与字段名,绝不带值;
-      // 前端按【码】分支(不按中文),见 provider-settings.js 的 saveConfigPartial。
-      if (error && error.code === 'config.masked_secret_vector_changed') {
-        return send(res, apiFailure('config.masked_secret_vector_changed',
-          { conflicts: Array.isArray(error.conflicts) ? error.conflicts : [] }, String(error.message || ''), 409));
-      }
-      throw error;
-    }
-    // 设置页停用／启用了某个 toolbox 组件(或动了总开关)→ 对账一次:该停的停、该起的起、自动生成的服务商条目跟上。
-    // 只在这次补丁确实带了 toolbox 键时才做 —— 平常的保存不该顺手去探一圈端口。不 await:保存的回包不等进程起来。
-    if (body && typeof body === 'object' && Object.prototype.hasOwnProperty.call(body, 'toolbox') && typeof ToolboxHooks.reconcile === 'function') void ToolboxHooks.reconcile().catch(() => {});
-    return send(res, json({ ok: true, config: maskProviders(next) })); // F2: masked response
-  }
-  if (req.method === 'GET' && pathname === '/api/agent-roles') {
-    const config = await readConfig();
-    const u = new URL(req.url, 'http://x');
-    const cwd = normalizeCwd(u.searchParams.get('cwd') || config.defaultWorkspace, config.defaultWorkspace);
-    const roles = await getAgentRoleLibrary(cwd, config);
-    const builtinRoles = BUILTIN_AGENT_ROLES.map(r => normalizeAgentRole(r, { source: 'builtin', builtin: true }));
-    const globalRoles = (config.agentRoleOverrides || []).map(r => normalizeAgentRole(r, { source: 'global' })).filter(Boolean);
-    const projectRoles = await readProjectAgentRoles(cwd);
-    const nativeClaudeRoles = await readClaudeProjectAgentRoles(cwd);
-    const claudeDefs = await buildClaudeAgentDefinitions(cwd, config);
-    const mcpServers = [{ id: RUYI_MCP_SERVER_ID, label: 'Ruyi Workbench' }, ...resolveExternalMcpServers(config).map(s => ({ id: s.id, label: s.label || s.id }))];
-    // 安全走查 S3:项目来源的角色带上【有效档位】标注(effectivePermissionMode / effectiveToolTier / roleClamped),按全局默认档夹;
-    // 角色自己声明的 permissionMode / toolTier 原样不动(设置页编辑器按它存回)。真正起跑时按那条线程的实际档再夹一次。
-    const parentModeForRoles = config.permissionMode;
-    const projectRolesView = projectRoles.map(r => annotateAgentRoleEffective(r, parentModeForRoles));
-    const nativeClaudeRolesView = nativeClaudeRoles.map(r => annotateAgentRoleEffective(r, parentModeForRoles));
-    return send(res, json({ ok: true, cwd, roles, builtinRoles, globalRoles, projectRoles: projectRolesView, nativeClaudeRoles: nativeClaudeRolesView, mcpServers, drivers: { openai: { mode: 'workbench-native' }, claude: { mode: 'claude-native', flag: '--agents', synced: Object.keys(claudeDefs.definitions), omitted: claudeDefs.omitted } } }));
-  }
-  if (req.method === 'POST' && pathname === '/api/agent-roles') {
-    const body = await readJsonBody(req);
-    const scope = body && body.scope === 'project' ? 'project' : 'global';
-    const roles = (Array.isArray(body && body.roles) ? body.roles : []).map(r => normalizeAgentRole(r, { source: scope })).filter(Boolean).slice(0, 32);
-    if (scope === 'project') {
-      const cwdRaw = String(body && body.cwd || '');
-      if (!cwdRaw || !path.isAbsolute(cwdRaw)) return send(res, json({ ok: false, error: 'project scope requires an absolute cwd' }, 400));
-      const cwdBad = await projectCwdDirectoryFailure(cwdRaw);   // 不存在/是文件:400 人话,不再 500 + ENOTDIR 原文
-      if (cwdBad) return send(res, cwdBad);
-      const saved = await saveProjectAgentRoles(path.resolve(cwdRaw), roles);
-      return send(res, json({ ok: true, scope, roles: saved, file: projectAgentRoleFile(cwdRaw) }));
-    }
-    // 117n-M2:走 mutateConfig 的临界区(此前裸 readConfig -> 改字段 -> writeConfig:与并发的
-    // /api/config 保存互吞 —— 存角色的那一下能把刚存的 Provider 整份回滚成读时的旧值)。
-    const saved = await mutateConfig(async (config) => { config.agentRoleOverrides = roles; });
-    return send(res, json({ ok: true, scope, roles: saved.config.agentRoleOverrides }));
-  }
-  if (req.method === 'GET' && pathname === '/api/agent-workflows') {
-    const config = await readConfig(); const u = new URL(req.url, 'http://x');
-    const cwd = normalizeCwd(u.searchParams.get('cwd') || config.defaultWorkspace, config.defaultWorkspace);
-    return send(res, json({ ok: true, cwd, workflows: await getAgentWorkflows(cwd) }));
-  }
-  if (req.method === 'POST' && pathname === '/api/agent-workflows') {
-    const body = await readJsonBody(req); const scope = body && body.scope === 'project' ? 'project' : 'personal';
-    const config = await readConfig(); const cwd = normalizeCwd(body && body.cwd || config.defaultWorkspace, config.defaultWorkspace);
-    if (scope === 'project') { const cwdBad = await projectCwdDirectoryFailure(cwd); if (cwdBad) return send(res, cwdBad); }   // 同 /api/agent-roles(先于工作流本体校验:目录都不对就没必要往下)
-    const draft = normalizeAgentWorkflow(body && body.workflow, { source: scope });
-    const problem = draft ? agentWorkflowSaveProblem(draft, new Set((await getAgentRoleLibrary(cwd, config)).map(r => r.id))) : null;
-    if (problem) return send(res, apiFailure(problem.code, problem.params, `无效工作流：${problem.message}`, 400));
-    const workflow = await saveAgentWorkflow(scope, cwd, body && body.workflow);
-    if (!workflow) return send(res, json({ ok: false, error: '无效工作流：需要唯一 id 和标题；节点 id 不重复、任务非空，依赖只能指向其它已有节点' }, 400));
-    return send(res, json({ ok: true, scope, workflow }));
-  }
-  if (pathname.startsWith('/api/agent-workflows/') && (req.method === 'DELETE' || (req.method === 'POST' && req.headers['x-http-method'] === 'DELETE'))) {
-    const id = String(pathname.slice('/api/agent-workflows/'.length)).toLowerCase(); const body = req.method === 'POST' ? await readJsonBody(req) : {};
-    const config = await readConfig(); const scope = body && body.scope === 'project' ? 'project' : 'personal'; const cwd = normalizeCwd(body && body.cwd || config.defaultWorkspace, config.defaultWorkspace);
-    if (scope === 'project') { const cwdBad = await projectCwdDirectoryFailure(cwd); if (cwdBad) return send(res, cwdBad); }
-    return send(res, json({ ok: await deleteAgentWorkflow(scope, cwd, id), id, scope }));
-  }
-  if (req.method === 'POST' && pathname === '/api/provider/test') {
-    // Test a provider's base URL + key by listing its models. Body: { provider } (saved or draft) or a bare provider.
-    const body = await readJsonBody(req);
-    let rawProvider = (body && body.provider) || body;
-    // F2 (安全): the UI may send back a masked apiKey (`••••…`) from GET /api/status — restore the real
-    // key from the same-id provider in config before firing the test, else the test would use the mask.
-    if (rawProvider && typeof rawProvider === 'object') {
-      const cfg = await readConfig();
-      // 107-S2(M5):这条路会拿还原后的 key 真的往 baseUrl 发一次请求 —— 「改了地址 + 回传掩码」在这里
-      // 不是「写错一份配置」而是【当场把真密钥送出去】。所以先过同一道闸,命中就【不发请求】直接回错,
-      // 错误形状沿用本路由既有的 {ok:false,error,errorClass} (前端 errorMessageOf/ERROR_CLASSES 已认它),
-      // 另带一个稳定 code 供按码分支。
-      const conflicts = maskedSecretConflicts({ providers: [rawProvider] }, cfg);
-      if (conflicts.length) {
-        return send(res, json({
-          ok: false, code: 'config.masked_secret_vector_changed', errorClass: 'provider_misconfigured',
-          error: maskedSecretConflictMessage(conflicts), models: [],
-        }));
-      }
-      rawProvider = unmaskProviders([rawProvider], cfg.providers)[0];
-    }
-    const sp = sanitizeProvider(rawProvider);
-    if (!sp) return send(res, json({ ok: false, error: 'invalid provider (need at least an id + baseUrl)' }));
-    // 先列模型清单(顺带回填下拉);端点不提供清单(404 / 405 / 501,或回了空表)时,用填好的模型发一次最小补全确认能通 ——
-    // 多数 Anthropic 兼容网关(如 https://api.deepseek.com/anthropic)没有 /v1/models,修前这一步直接判「端点地址可能不对」。
-    let probe = await fetchOpenAiModels(sp, 6000);
-    const modelsMissing = (!probe.ok && (probe.notAList === true || /\bHTTP (?:404|405|501)\b/.test(String(probe.error || '')))) || (probe.ok && !(probe.models || []).length);
-    const apiStyle = normalizeProviderApiStyle(sp.apiStyle);
-    if (modelsMissing) {
-      const model = String(sp.model || (sp.models && sp.models[0] && sp.models[0].id) || '').trim();
-      if (!model) {
-        return send(res, json({ ok: false, code: 'provider.test_needs_model', errorClass: 'provider_misconfigured', apiStyle, models: [],
-          error: '这个端点不提供模型清单:请先填写模型名再测试' }));
-      }
-      const reach = await probeProviderCompletion(sp, model, 15000);
-      if (reach.ok) return send(res, json({ ok: true, models: [], probe: 'completion', model, modelsUnavailable: true, apiStyle }));
-      probe = { ok: false, error: reach.error, models: [], probe: 'completion', model };
-    }
-    // 审计 P2: 测试连接把裸 'HTTP 401' 直接回吐给用户 —— 首跑最高频故障(密钥错/无权限)却无人话、无下一步。常见状态映射成
-    // 稳定 code(前端按 code 取本地化文案,并按协议给 Base URL 的写法提示)+ errorClass;error 仍是中文兜底句,detail 是原始报文。
-    if (!probe.ok && probe.error) {
-      const e = String(probe.error);
-      // 先按字面抹掉本次请求带出去的 key / 自定义头的值(服务商常把它们回显在报文里,模式表认不全),再过模式表。
-      const detail = redact(providerScrubSecrets(e, sp)).slice(0, 300);
-      if (/\bHTTP 40[13]\b|unauthorized|authentication/i.test(e)) Object.assign(probe, { code: 'provider.test_unauthorized', errorClass: 'provider_misconfigured', error: '密钥无效或无权限(' + detail + '):请检查 API Key 是否正确、是否有额度/权限' });
-      // 补全试探的 404 若正文点名了模型(Anthropic 官方 / OpenAI / vLLM 对未知模型都回 404)是「模型名」的问题,不是地址;
-      // 裸 404(地址 / 路径错)正文里没有独立的 model 一词。model 后面接 _ 的(model_not_found)照算,models / remodel 不算。
-      else if (probe.probe === 'completion' && /\bHTTP 404\b/.test(e) && /(?<![a-z])model(?![a-z])/i.test(e)) Object.assign(probe, { code: 'provider.test_model_rejected', errorClass: 'provider_misconfigured', error: '模型名可能不对(' + detail + ')' });
-      else if (/\bHTTP 404\b/i.test(e)) Object.assign(probe, { code: 'provider.test_not_found', errorClass: 'provider_misconfigured', error: '端点地址可能不对(' + detail + '):检查 Base URL' });
-      else if (probe.probe === 'completion' && /\bHTTP 4\d\d\b/.test(e) && /model/i.test(e)) Object.assign(probe, { code: 'provider.test_model_rejected', errorClass: 'provider_misconfigured', error: '模型名可能不对(' + detail + ')' });
-      else if (/timeout|fetch failed|ECONN|ENOTFOUND|EAI_AGAIN/i.test(e)) Object.assign(probe, { code: 'provider.test_unreachable', errorClass: 'network_down', error: '连不上端点(' + detail + '):检查网络与 Base URL,内网端点确认可达' });
-      else Object.assign(probe, { code: 'provider.test_failed', error: detail });
-      probe.detail = detail;
-      probe.apiStyle = apiStyle;
-    }
-    return send(res, json(probe));
-  }
+  await handleWorkspaceApiRoutes(req, res, pathname); if (res.writableEnded) return;
+  await handleModelsApiRoute(req, res, pathname); if (res.writableEnded) return;
+  await handleConfigurationApiRoutes(req, res, pathname); if (res.writableEnded) return;
+  await handleProviderTestApiRoute(req, res, pathname); if (res.writableEnded) return;
   // EC-D Wave 65: session CRUD routes live in 13d-core-domain-routes.js.
   await handleSessionApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // 第70波(EC-E):/api/missions 聚合只读投影,同在 13d。

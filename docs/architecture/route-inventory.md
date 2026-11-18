@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T09:58:39.853Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:10:49.899Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -62,26 +62,22 @@
 | POST | `/api/checkpoints/rollback` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
 | POST | `/api/session/rewind` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
 
-## core-inline(26)
+## configuration(6)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/config` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 68 件 |
+| GET | `/api/agent-roles` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
+| POST | `/api/agent-roles` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
+| GET | `/api/agent-workflows` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
+| POST | `/api/agent-workflows` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
+| DELETE/POST | `/api/agent-workflows/` | prefix | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, store-walkthrough-w1.e2e.js |
+
+## core-inline(11)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
 | * | `/health` | exact | host-gate | ../backend/workbench-http-server.cjs · `createWorkbenchHttpServer` | — |
-| POST | `/api/bootstrap` | exact | open | 13-http-router.js · `handleApi` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 22 件 |
-| GET | `/api/status` | exact | open | 13-http-router.js · `handleApi` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 82 件 |
-| GET | `/api/capabilities` | exact | open | 13-http-router.js · `handleApi` | capabilities.e2e.js, macos-capability-popover.browser.e2e.js, macos-capture-host.e2e.js 等 7 件 |
-| POST | `/api/workspace/resolve` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, workspace-resolve.e2e.js |
-| POST | `/api/pick-folder` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, onboarding-workspace.browser.e2e.js, settings-wave1.browser.e2e.js 等 5 件 |
-| POST | `/api/workspace/dedicated` | exact | token | 13-http-router.js · `handleApi` | onboarding-workspace.browser.e2e.js |
-| POST | `/api/pick-file` | exact | token | 13-http-router.js · `handleApi` | macos-desktop-bridge.e2e.js, settings-wave1.browser.e2e.js |
-| GET | `/api/models` | exact | open | 13-http-router.js · `handleApi` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 7 件 |
-| POST | `/api/config` | exact | token | 13-http-router.js · `handleApi` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 68 件 |
-| GET | `/api/agent-roles` | exact | token-browser | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
-| POST | `/api/agent-roles` | exact | token | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
-| GET | `/api/agent-workflows` | exact | token-browser | 13-http-router.js · `handleApi` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
-| POST | `/api/agent-workflows` | exact | token | 13-http-router.js · `handleApi` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
-| DELETE/POST | `/api/agent-workflows/` | prefix | token | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, store-walkthrough-w1.e2e.js |
-| POST | `/api/provider/test` | exact | token | 13-http-router.js · `handleApi` | anthropic-gateway-setup.e2e.js, anthropic-provider-setup.browser.e2e.js, audit-w23.e2e.js 等 8 件 |
 | POST | `/api/todo` | exact | body-token | 13-http-router.js · `handleApi` | event-stream.e2e.js, todo-loopback.e2e.js, http-input-hardening.test.js 等 4 件 |
 | GET/POST | `/api/mission` | exact | body-token self | 13-http-router.js · `handleApi` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 71 件 |
 | * | `/api/autonomy/grants` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
@@ -215,6 +211,13 @@
 | POST | `/api/playbooks` | exact | token | ../backend/playbook-routes.cjs · `handlePlaybookApiRoutes` | auth-deny-default.e2e.js, macos-platform-templates.e2e.js, meta-guard.e2e.js 等 8 件 |
 | DELETE/POST | `/api/playbooks/` | prefix | token | ../backend/playbook-routes.cjs · `handlePlaybookApiRoutes` | auth-deny-default.e2e.js, playbook-reuse.browser.e2e.js, playbooks.e2e.js |
 
+## provider(2)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/models` | exact | open | ../backend/provider-routes.cjs · `handleModelsApiRoute` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 7 件 |
+| POST | `/api/provider/test` | exact | token | ../backend/provider-routes.cjs · `handleProviderTestApiRoute` | anthropic-gateway-setup.e2e.js, anthropic-provider-setup.browser.e2e.js, audit-w23.e2e.js 等 8 件 |
+
 ## scheduler(6)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -254,6 +257,14 @@
 | POST | `/api/session/skills` | exact | token-browser | ../backend/skill-routes.cjs · `handleSkillApiRoutes` | claude-mac-argv.e2e.js, index-dedup.e2e.js, session-id-path-guard.e2e.js 等 6 件 |
 | DELETE | `/api/skills` | exact | token | ../backend/skill-routes.cjs · `handleSkillApiRoutes` | audit-w23.e2e.js, meta-guard.e2e.js, migration-center.browser.e2e.js 等 7 件 |
 
+## status(3)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/bootstrap` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 22 件 |
+| GET | `/api/status` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 82 件 |
+| GET | `/api/capabilities` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | capabilities.e2e.js, macos-capability-popover.browser.e2e.js, macos-capture-host.e2e.js 等 7 件 |
+
 ## steer(2)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -286,12 +297,26 @@
 | POST | `/api/steward/relay` | exact | token self | ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` | foreign-turn-busy-guard.e2e.js, new-thread-engine-default.e2e.js, session-rewind-execution.e2e.js 等 13 件 |
 | POST | `/api/steward/message` | exact | token self | ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` | classic-window-live-steer.e2e.js, event-stream.e2e.js, external-bot-setup.e2e.js 等 23 件 |
 
+## workspace(4)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/workspace/resolve` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, workspace-resolve.e2e.js |
+| POST | `/api/pick-folder` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, onboarding-workspace.browser.e2e.js, settings-wave1.browser.e2e.js 等 5 件 |
+| POST | `/api/workspace/dedicated` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | onboarding-workspace.browser.e2e.js |
+| POST | `/api/pick-file` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, settings-wave1.browser.e2e.js, workspace-resolve.e2e.js |
+
 ## 域路由委派(handleApi → 域 handler)
 
 - ../backend/mcp-routes.cjs · `handleMcpApiRoutes` → `handleMigrationApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardApiRoutes` → `handleStewardRunnerApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` → `handleStewardDeliveryApiRoutes`
+- 13-http-router.js · `handleApi` → `handleStatusApiRoutes`
 - 13-http-router.js · `handleApi` → `handlePlaybookApiRoutes`
+- 13-http-router.js · `handleApi` → `handleWorkspaceApiRoutes`
+- 13-http-router.js · `handleApi` → `handleModelsApiRoute`
+- 13-http-router.js · `handleApi` → `handleConfigurationApiRoutes`
+- 13-http-router.js · `handleApi` → `handleProviderTestApiRoute`
 - 13-http-router.js · `handleApi` → `handleSessionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleMissionsApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSkillApiRoutes`

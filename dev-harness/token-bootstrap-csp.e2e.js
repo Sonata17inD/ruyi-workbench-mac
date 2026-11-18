@@ -44,7 +44,7 @@ async function up() { // 117q:预算 50×120ms=6s 小于本机冷启动实测 4.
 (async () => {
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
-  const router = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+  const router = fs.readFileSync(path.join(WB, 'app', 'backend', 'status-routes.cjs'), 'utf8');
   const routePolicy = fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
   const staticAssets = fs.readFileSync(path.join(WB, 'app', 'backend', 'static-assets.cjs'), 'utf8');
   const net = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'net.js'), 'utf8');

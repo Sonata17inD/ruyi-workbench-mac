@@ -15,8 +15,7 @@ const { getFreePort } = require('./free-port.js');
 //   ② rename / two same-named dirs → multiple candidates, score-sorted DESC.
 //   ③ children mismatch (<0.8 overlap) → zero matches.
 //   ④ recentWorkspaces LRU round-trip through config (front-insert / de-dupe / truncate 10) via /api/config.
-//   ⑤ pick-folder — non-Windows graceful degrade branch asserted as a unit; on Windows the STA-script shape
-//      is code-reviewed (a real dialog can't be asserted headless — see delivery notes). Also: HTTP 403 gate.
+//   ⑤ browser picker requests require a token and return the Mac-host-required response.
 //   ⑥ session cwd PATCH persists (top-bar picker / folder-drag switch write path).
 'use strict';
 const cp = require('child_process');
@@ -95,7 +94,6 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     activeProvider: 'fake',
   }, null, 2));
 
-  // ── ⑤a pick-folder graceful-degrade UNIT (env-independent branch) + resolver units ───────────────────
   // The pure resolver is the load-bearing algorithm; assert it directly first (no server needed).
   {
     const cfg = { defaultWorkspace: TREE, recentWorkspaces: [myproj, repA, repB] };
@@ -244,18 +242,14 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     const cfg3 = (await getJson(WB_PORT, '/api/status')).json;
     ok(cfg3.config.recentWorkspaces.length === 10 && cfg3.config.recentWorkspaces[0] === many[0], '④ list truncated to 10 (front kept)');
 
-    // ── ⑤ pick-folder ────────────────────────────────────────────────────────────────────────────────
-    // A real FolderBrowserDialog can't be asserted headless. On non-Windows the endpoint returns a graceful
-    // degrade {ok:false,error,hint}; on Windows we only assert the endpoint is reachable + token-gated (the
-    // STA script correctness is code-reviewed — see delivery notes). No-token → 403 either way.
-    const pfNoTok = await reqJson(WB_PORT, 'POST', '/api/pick-folder', {}, {});
-    ok(pfNoTok.status === 403, '⑤ pick-folder without token → 403');
-    if (process.platform !== 'win32') {
-      const pf = await reqJson(WB_PORT, 'POST', '/api/pick-folder', {}, hdr);
-      const pfErr = pf.json && pf.json.error; // 统一错误信封后 error 是 {code,message},不再是裸串
-      ok(pf.json && pf.json.ok === false && /Windows/.test((pfErr && pfErr.message) || pfErr || '') && pf.json.hint, '⑤ (non-Windows) pick-folder → graceful degrade with hint');
-    } else {
-      console.log('SKIP ⑤ pick-folder live dialog (Windows headless — STA script code-reviewed; see delivery notes)');
+    // The native app intercepts picker calls. Verify both browser HTTP fallbacks and their auth gates.
+    for (const route of ['/api/pick-folder', '/api/pick-file']) {
+      const noToken = await reqJson(WB_PORT, 'POST', route, {}, {});
+      ok(noToken.status === 403, `⑤ ${route} without token → 403`);
+      const picker = await reqJson(WB_PORT, 'POST', route, {}, hdr);
+      ok(picker.status === 200 && picker.json?.ok === false && picker.json.code === 'host_required'
+        && /Mac 应用.*粘贴完整路径/.test(picker.json.error?.message || ''),
+      `⑤ ${route} reports host_required and the manual path fallback`);
     }
 
     // ── ⑥ session cwd PATCH persists ─────────────────────────────────────────────────────────────────

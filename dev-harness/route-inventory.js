@@ -39,6 +39,10 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 const ROUTER_FILES = [
   '13-http-router.js',
   '../backend/workbench-http-server.cjs',
+  '../backend/status-routes.cjs',
+  '../backend/workspace-routes.cjs',
+  '../backend/provider-routes.cjs',
+  '../backend/configuration-routes.cjs',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
   '../backend/local-support-routes.cjs',
@@ -107,6 +111,10 @@ const DOMAIN_BY_HANDLER = [
 const DOMAIN_BY_FILE = {
   '13-http-router.js': 'core-inline',
   '../backend/workbench-http-server.cjs': 'core-inline',
+  '../backend/status-routes.cjs': 'status',
+  '../backend/workspace-routes.cjs': 'workspace',
+  '../backend/provider-routes.cjs': 'provider',
+  '../backend/configuration-routes.cjs': 'configuration',
   '../backend/migration-routes.cjs': 'migration',
   '../backend/audio-routes.cjs': 'audio',
   '../backend/skill-routes.cjs': 'skills',

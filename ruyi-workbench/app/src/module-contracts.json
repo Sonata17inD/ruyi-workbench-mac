@@ -11816,13 +11816,18 @@
         "handleApi",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
+        "handleConfigurationApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
         "handleMemoryApiRoutes",
+        "handleModelsApiRoute",
         "handlePlaybookApiRoutes",
+        "handleProviderTestApiRoute",
         "handleSessionExecutionApiRoutes",
         "handleSkillApiRoutes",
+        "handleStatusApiRoutes",
         "handleUsageApiRoutes",
+        "handleWorkspaceApiRoutes",
         "installIntegration",
         "parseArgs",
         "setSessionSkillsCore",
@@ -11862,7 +11867,7 @@
           "provider": "00-boot.js",
           "symbol": "cachedContextLength",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11883,14 +11888,14 @@
           "provider": "00-boot.js",
           "symbol": "contextWindowFromTable",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "dataRootAliases",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11926,7 +11931,6 @@
           "provider": "00-boot.js",
           "symbol": "exePath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11940,14 +11944,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "externalRoot",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
           "kinds": [
             "read"
           ]
@@ -11999,21 +11995,20 @@
           "provider": "00-boot.js",
           "symbol": "maskedSecretConflictMessage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "maskedSecretConflicts",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "maskProviders",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12028,7 +12023,6 @@
           "provider": "00-boot.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12093,21 +12087,20 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "resolveContextWindow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "runtimeToolRequirementsMet",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12150,7 +12143,7 @@
           "provider": "00-boot.js",
           "symbol": "unmaskProviders",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12199,7 +12192,7 @@
           "provider": "01-config.js",
           "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12213,7 +12206,7 @@
           "provider": "01-config.js",
           "symbol": "desktopMcpDetectionPending",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12228,21 +12221,21 @@
           "provider": "01-config.js",
           "symbol": "detectDesktopMcp",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "detectKimiPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "ensureDesktopMcpWarm",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12257,21 +12250,20 @@
           "provider": "01-config.js",
           "symbol": "getAgentRoleLibrary",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mcpConfigFilePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12279,14 +12271,14 @@
           "provider": "01-config.js",
           "symbol": "projectAgentRoleFile",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readClaudeProjectAgentRoles",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12301,21 +12293,21 @@
           "provider": "01-config.js",
           "symbol": "readProjectAgentRoles",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "requestIsLoopback",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12337,14 +12329,14 @@
           "provider": "01-config.js",
           "symbol": "saveProjectAgentRoles",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12387,29 +12379,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "observationRecallEnabled",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "annotateAgentRoleEffective",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "BUILTIN_AGENT_ROLES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "normalizeAgentRole",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12466,7 +12436,7 @@
           "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12616,7 +12586,7 @@
           "provider": "02-session-store.js",
           "symbol": "readSessionRouteHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12672,7 +12642,6 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "configForSessionEngineRoute",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12729,7 +12698,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "resolveWorkspace",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12771,21 +12740,22 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerScrubSecrets",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "normalizeProviderApiStyle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12806,14 +12776,13 @@
           "provider": "04i-provider-wire.js",
           "symbol": "sanitizeProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12861,13 +12830,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "ERROR_CLASSES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
             "read"
@@ -12898,35 +12860,35 @@
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "agentWorkflowSaveProblem",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "deleteAgentWorkflow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "getAgentWorkflows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "normalizeAgentWorkflow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "saveAgentWorkflow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13136,7 +13098,6 @@
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -13193,14 +13154,14 @@
           "provider": "06w-capability-service.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13214,14 +13175,14 @@
           "provider": "07-autonomy.js",
           "symbol": "probeProviderCompletion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "projectCwdDirectoryFailure",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13298,21 +13259,21 @@
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "10-context-governance.js",
           "symbol": "configuredConversationWindow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "10-context-governance.js",
           "symbol": "learnedWindowCap",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13340,7 +13301,6 @@
           "provider": "12-tool-dispatch.js",
           "symbol": "computeHealth",
           "kinds": [
-            "call",
             "read"
           ]
         },

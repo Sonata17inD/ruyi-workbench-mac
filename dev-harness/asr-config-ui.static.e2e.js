@@ -86,9 +86,9 @@ assert.ok(providersJs.includes("if (saved && state.providersDraftSeeded === true
 // 同一个「消失」还有三条旁路（真浏览器 voice-setup V4d/V4e 抓到的真根因）：GET /api/models 合并清单时丢 caps、
 // 前端把那份清单折回 state.config 时丢 caps、服务商卡片的手动模型清单一改就丢 caps。三处都按 id 把 caps 带上。
 {
-  const src13 = fs.readFileSync(path.join(APP, 'src', '13-http-router.js'), 'utf8');
-  assert.ok(src13.includes('if (Array.isArray(caps) && caps.length) o.caps = caps.slice();') && src13.includes('add(m.id, m.label, m.contextLength, m.caps);'),
-    '13: GET /api/models 合并时把配置里那条的 caps 带出去');
+  const providerRoutes = fs.readFileSync(path.join(APP, 'backend', 'provider-routes.cjs'), 'utf8');
+  assert.ok(providerRoutes.includes('if (Array.isArray(caps) && caps.length) o.caps = caps.slice();') && providerRoutes.includes('add(m.id, m.label, m.contextLength, m.caps);'),
+    'GET /api/models 合并时把配置里那条的 caps 带出去');
   // 第四条（用户真机的直接原因）：清单上限 100，百炼一刷新就满；追加在末尾的语音模型被「前 100 条」当场截掉。
   assert.ok(providerConfigSource.includes('const marked = models.filter(m => m.caps);') && providerConfigSource.includes('if (models.length > 100) {'),
     'Provider 配置: 模型清单超限时先留带能力标记的条目（不是前 100 条）');

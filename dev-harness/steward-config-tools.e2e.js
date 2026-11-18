@@ -247,7 +247,7 @@ try {
     ok(/StewardHooks\.arbiterRefresh/.test(fs.readFileSync(path.join(WB, 'app', 'src', '06k-config-patch.js'), 'utf8').split('async function applyConfigPatch')[1].split('\nConfigPatchHooks.applyConfigPatch = applyConfigPatch;')[0]),
       'G4 源码单点:arbiterRefresh 就挂在 applyConfigPatch 里(路由与管家共用同一条落盘路径)');
     {
-      const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+      const routerSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'configuration-routes.cjs'), 'utf8');
       ok(!/function applyConfigPatch\(/.test(routerSrc) && (routerSrc.match(/await ConfigPatchHooks\.applyConfigPatch\(body\)/g) || []).length === 1,
         'G4b 路由层只剩一处经 ConfigPatchHooks 的调用,不另留一份 applyConfigPatch');
     }

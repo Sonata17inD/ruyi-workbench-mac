@@ -190,6 +190,8 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const discovery = fs.readFileSync(path.join(app, 'backend', 'agent-cli-discovery.cjs'), 'utf8');
   const sessionExecutionRoutes = fs.readFileSync(path.join(app, 'backend', 'session-execution-routes.cjs'), 'utf8');
   const startup = fs.readFileSync(path.join(app, 'backend', 'server-startup.cjs'), 'utf8');
+  const providerRoutes = fs.readFileSync(path.join(app, 'backend', 'provider-routes.cjs'), 'utf8');
+  const statusRoutes = fs.readFileSync(path.join(app, 'backend', 'status-routes.cjs'), 'utf8');
   const code = text => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
   // 判据:与 'kimi' 字面量比较(kimi 只可能是 CLI 类型);agentCliType 与任何字面量比较;旧的 kind === 'claude';
   // ['claude', 'kimi'] 白名单;`? 'kimi' : 'claude'` 二选一。`engine === 'claude'` 不算 —— 那是引擎族的历史 id(CLI 族 vs provider 族)。
@@ -208,7 +210,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
     agentConversationContextMeta: functionBlock(compactionRouting, 'agentConversationContextMeta'),
     applyConfigPatch: functionBlock(src, 'applyConfigPatch'),
     startServerInner: functionBlock(startup, 'startServerInner'),
-    'route /api/models': bracedBlock(src, "if (req.method === 'GET' && pathname === '/api/models')"),
+    'route /api/models': bracedBlock(providerRoutes, "if (req.method === 'GET' && pathname === '/api/models')"),
     'route /api/agent/compact': bracedBlock(sessionExecutionRoutes, "if (req.method === 'POST' && pathname === '/api/agent/compact')"),
   };
   for (const [name, block] of Object.entries(blocks)) {
@@ -220,7 +222,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   assert.ok(normalizeConfig.includes('if (!isAgentCliType(config.agentCliType)) {'));
   assert.doesNotMatch(normalizeConfig, /\[\s*'claude'\s*,\s*'kimi'\s*\]/);
   // /api/status 的即时模型清单一行。
-  const statusModels = code(src).split('\n').filter(line => /^\s*models: .*conversationConfig/.test(line));
+  const statusModels = code(statusRoutes).split('\n').filter(line => /^\s*models: .*conversationConfig/.test(line));
   assert.equal(statusModels.length, 1);
   assert.match(statusModels[0], /agentCliAdapter\(conversationConfig\.agentCliType\)\.modelCatalog\.offline\(conversationConfig\)/);
   // 改配置与启动预热两处的 Kimi MCP 同步都收进 01 syncAgentCliMcpManifests(按登记表推),不再直调 Kimi 的同步函数。
