@@ -2305,6 +2305,7 @@
       "layer": "foundation",
       "provides": [
         "ACTIVE_CHILD_EVENT_TAPS",
+        "AgentLoopHooks",
         "BRIDGED_CATALOG_INCOMPLETE_TTL_MS",
         "BRIDGED_CATALOG_SCAN_TIMEOUT_MS",
         "BRIDGED_ENTRY_START_TIMEOUT_MS",
@@ -3672,6 +3673,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "AgentLoopHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "appendLiveTail",
           "kinds": [
             "call"
@@ -4112,13 +4120,6 @@
           ]
         },
         {
-          "provider": "06c-agent-loop-hooks.js",
-          "symbol": "AgentLoopHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryCheckPrompt",
           "kinds": [
@@ -4216,13 +4217,16 @@
       "layer": "engine",
       "provides": [
         "AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS",
+        "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
         "agentAutoCompactBackingOff",
         "agentAutoCompactFailures",
         "agentAutoCompactTrigger",
         "appendKimiAcpTerminalOutput",
         "applyKimiStatusToSession",
         "awaitKimiAcpWithSignal",
+        "buildKimiAcpPromptParts",
         "cancelKimiAcpIntervention",
+        "classifyKimiAcpReadonlySearch",
         "cleanupKimiAcpTerminals",
         "closeKimiAcpProcess",
         "compactKimiNative",
@@ -4345,6 +4349,13 @@
         "watchKimiWire"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "appRoot",
+          "kinds": [
+            "read"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "createCappedDiagnosticText",
@@ -4673,7 +4684,8 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -4681,6 +4693,13 @@
           "symbol": "guardWorkspaceExecute",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "03-bridge-guard.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -4694,14 +4713,16 @@
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -4715,6 +4736,13 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "AgentLoopHooks",
           "kinds": [
             "read"
           ]
@@ -4811,40 +4839,10 @@
           ]
         },
         {
-          "provider": "05c-kimi-search-policy.js",
-          "symbol": "classifyKimiAcpReadonlySearch",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "05c-kimi-search-policy.js",
-          "symbol": "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05d-kimi-prompt-parts.js",
-          "symbol": "buildKimiAcpPromptParts",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
           "provider": "06-provider-engine.js",
           "symbol": "softwareEngineeringTaskProfile",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06c-agent-loop-hooks.js",
-          "symbol": "AgentLoopHooks",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -4885,192 +4883,6 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "toolCall",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "05c-kimi-search-policy.js",
-      "layer": "engine",
-      "provides": [
-        "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
-        "KIMI_ACP_SEARCH_MAX_ARGS",
-        "KIMI_ACP_SEARCH_MAX_ARG_LENGTH",
-        "KIMI_ACP_SEARCH_MAX_COMMAND_LENGTH",
-        "KIMI_ACP_SEARCH_MAX_CONTEXT_LINES",
-        "KIMI_ACP_SEARCH_MAX_GLOBS",
-        "KIMI_ACP_SEARCH_MAX_PATTERN_LENGTH",
-        "KIMI_ACP_SEARCH_MAX_SEARCH_PATHS",
-        "KIMI_ACP_SEARCH_MAX_TYPE_LENGTH",
-        "KIMI_ACP_SEARCH_RG_MAX_COLUMNS",
-        "KIMI_ACP_SEARCH_SAFE_ENV_OVERRIDES",
-        "KIMI_ACP_SEARCH_SENSITIVE_GLOBS",
-        "KIMI_ACP_SEARCH_VCS_GLOBS",
-        "classifyKimiAcpReadonlySearch",
-        "kimiAcpSearchAppendGlobArgs",
-        "kimiAcpSearchAppendNegativeGlobArgs",
-        "kimiAcpSearchBuildGlobArgs",
-        "kimiAcpSearchBuildGrepArgs",
-        "kimiAcpSearchCanonicalReadPath",
-        "kimiAcpSearchCanonicalRoot",
-        "kimiAcpSearchDataRootInfo",
-        "kimiAcpSearchDeniedRoots",
-        "kimiAcpSearchDeny",
-        "kimiAcpSearchIsControlPlaneRoot",
-        "kimiAcpSearchIsObject",
-        "kimiAcpSearchIsRgName",
-        "kimiAcpSearchKimiCacheRg",
-        "kimiAcpSearchNegativeGlob",
-        "kimiAcpSearchNormalizeInputEnv",
-        "kimiAcpSearchParseBoundedInteger",
-        "kimiAcpSearchParseGlobArgs",
-        "kimiAcpSearchParseGrepArgs",
-        "kimiAcpSearchPathEqual",
-        "kimiAcpSearchPathRgCandidates",
-        "kimiAcpSearchRealFile",
-        "kimiAcpSearchResolveTrustedRg",
-        "kimiAcpSearchRgName",
-        "kimiAcpSearchUnique",
-        "kimiAcpSearchValidateGlob",
-        "kimiAcpSearchValidateText",
-        "kimiAcpSearchVendorRg",
-        "kimiAcpSearchWithin"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "appRoot",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "fileAllowedRoots",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardFileToolPath",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "realpathForContainment",
-          "kinds": [
-            "call"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "05d-kimi-prompt-parts.js",
-      "layer": "engine",
-      "provides": [
-        "KIMI_ACP_PROMPT_IMAGE_LIKE_EXTENSIONS",
-        "KIMI_ACP_PROMPT_IMAGE_MAX_BYTES",
-        "KIMI_ACP_PROMPT_IMAGE_MAX_COUNT",
-        "KIMI_ACP_PROMPT_IMAGE_SPECS",
-        "KIMI_ACP_PROMPT_IMAGE_TOTAL_MAX_BYTES",
-        "buildKimiAcpPromptParts",
-        "kimiAcpPromptAttachmentReference",
-        "kimiAcpPromptClassifyAttachment",
-        "kimiAcpPromptDeclaredMime",
-        "kimiAcpPromptFallbackBlock",
-        "kimiAcpPromptGuardAttachmentPath",
-        "kimiAcpPromptMagicMatches",
-        "kimiAcpPromptRealpath",
-        "kimiAcpPromptReferenceBlock",
-        "kimiAcpPromptWarn"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardFileToolPath",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "realpathForContainment",
           "kinds": [
             "call",
             "read"
@@ -5662,36 +5474,6 @@
         "revertNoticeTurns"
       ],
       "requires": []
-    },
-    {
-      "file": "06c-agent-loop-hooks.js",
-      "layer": "engine",
-      "provides": [
-        "AgentLoopHooks"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
     },
     {
       "file": "06h-retrieval-index.js",
@@ -9128,6 +8910,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "AgentLoopHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "appendLiveTail",
           "kinds": [
             "call"
@@ -9462,13 +9251,6 @@
           "symbol": "revertNoticeTurns",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06c-agent-loop-hooks.js",
-          "symbol": "AgentLoopHooks",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -25404,6 +25186,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "AgentLoopHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "bridgedServerUnavailableMessage",
           "kinds": [
             "read"
@@ -26266,13 +26055,6 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "PROMPT_PACK_VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06c-agent-loop-hooks.js",
-          "symbol": "AgentLoopHooks",
           "kinds": [
             "read"
           ]

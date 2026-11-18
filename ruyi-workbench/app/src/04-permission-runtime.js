@@ -357,6 +357,10 @@ function bridgedToolCallTimeoutMs(name, args) {
   return Math.max(1000, Math.min(configured, commandSeconds * 1000 + 10000));
 }
 
+const AgentLoopHooks = require('./backend/agent-loop-hooks.cjs').createAgentLoopHooks({
+  makeId, logEvent: (...args) => logEvent(...args), redact,
+});
+
 const { createInterventionDecisions, interventionCommandFailure } = require('./backend/intervention-decisions.cjs');
 const decideInterventionCommand = createInterventionDecisions({
   safeSessionId, makeId, readSessionHeadResilient, sessionMissionId, readInterventions,

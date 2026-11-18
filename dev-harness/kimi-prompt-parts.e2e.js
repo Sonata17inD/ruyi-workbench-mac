@@ -1,5 +1,5 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// Credential-free Kimi ACP prompt-parts contract test. Loads the new source fragment in a VM with a
+// Credential-free Kimi ACP prompt-parts contract test. Loads the production module with a
 // controlled guard and temporary files; it never starts Kimi, a server, a network request, or a build.
 'use strict';
 const fs = require('fs');
@@ -9,7 +9,7 @@ const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const ENGINE = path.join(ROOT, 'ruyi-workbench', 'app', 'src', '05-claude-engine.js');
-const PARTS = path.join(ROOT, 'ruyi-workbench', 'app', 'src', '05d-kimi-prompt-parts.js');
+const { createKimiPromptParts } = require('../ruyi-workbench/app/backend/kimi-prompt-parts.cjs');
 let failures = 0;
 const ok = (condition, label) => {
   if (condition) console.log('PASS ' + label);
@@ -58,15 +58,8 @@ const within = (target, root) => {
   const rel = path.relative(path.resolve(root), path.resolve(target));
   return rel === '' || (rel !== '..' && !rel.startsWith('..' + path.sep) && !path.isAbsolute(rel));
 };
-const sandbox = {
-  Buffer,
-  Object,
-  Set,
-  String,
-  path,
+const buildParts = createKimiPromptParts({
   fsp,
-  IMAGE_ATTACH_MAX: 5 * 1024 * 1024,
-  paths: { uploads },
   realpathForContainment: rawPath => realFsp.realpath(rawPath),
   guardFileToolPath: async rawPath => {
     guardCalls++;
@@ -75,11 +68,7 @@ const sandbox = {
     const allowed = guardMode === 'workspace' && (within(realPath, workspace) || within(realPath, uploads));
     return allowed ? { ok: true, absPath: rawPath } : { ok: false, error: 'controlled guard denied' };
   },
-  console,
-};
-vm.createContext(sandbox);
-vm.runInContext(`${fs.readFileSync(PARTS, 'utf8')}\nthis.buildKimiAcpPromptParts = buildKimiAcpPromptParts;`, sandbox, { filename: PARTS });
-const buildParts = sandbox.buildKimiAcpPromptParts;
+});
 
 const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
 const jpegBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0xff, 0xd9]);

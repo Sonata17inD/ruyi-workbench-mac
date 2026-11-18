@@ -4,6 +4,14 @@
 // (permissions/questions) and queued follow-up steering share one live native Kimi session.
 const kimiBridgeState = { child: null, port: 0, token: '', starting: null, admission: null, signalHooked: false, modelWindows: new Map(), modelsAt: 0, modelsTriedAt: 0 };
 const { fileURLToPath } = require('url');
+const { classifyKimiAcpReadonlySearch, KIMI_ACP_SEARCH_BLOCKED_ENV_RE } =
+  require('./backend/kimi-search-policy.cjs').createKimiSearchPolicy({
+    dataRoot, appRoot, pathWithinRoot, fileAllowedRoots, realpathForContainment, isSensitiveDataPath, guardFileToolPath,
+  });
+const buildKimiAcpPromptParts = require('./backend/kimi-prompt-parts.cjs').createKimiPromptParts({
+  guardFileToolPath, realpathForContainment,
+});
+
 
 function kimiCodeHome() {
   return process.env.KIMI_CODE_HOME || path.join(os.homedir(), '.kimi-code');
@@ -1589,27 +1597,25 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   let cwd = params && params.cwd ? String(params.cwd) : String(context.session.cwd || context.config.defaultWorkspace || os.homedir());
   if (!path.isAbsolute(cwd)) throw kimiAcpRequestError(-32602, 'terminal cwd must be an absolute path');
   let readonlySearch = null;
-  if (typeof classifyKimiAcpReadonlySearch === 'function') {
-    let classified;
-    try {
-      // The classifier owns argv/cwd/read-root canonicalization. Its success descriptor is the only input
-      // accepted by the read-only fast path; caller params.env is intentionally never copied into it.
-      classified = await classifyKimiAcpReadonlySearch({ command, args, cwd, env: params && params.env }, context);
-    } catch (error) {
-      classified = { ok: false, reason: `classifier-error:${String(error && error.message || error)}` };
-    }
-    if (classified && classified.ok === true
-      && typeof classified.command === 'string' && path.isAbsolute(classified.command)
-      && Array.isArray(classified.args) && typeof classified.cwd === 'string' && path.isAbsolute(classified.cwd)) {
-      readonlySearch = classified;
-      command = classified.command;
-      args = classified.args.map(value => String(value));
-      cwd = classified.cwd;
-    } else if (classified && classified.reason
-      && (command === 'rg' || command.toLowerCase() === 'rg'
-        || (path.isAbsolute(command) && path.basename(command).toLowerCase() === ('rg')))) {
-      context.onEvent({ type: 'stderr', text: `[Kimi ACP 搜索策略] ${redact(String(classified.reason))}` });
-    }
+  let classified;
+  try {
+    // The classifier owns argv/cwd/read-root canonicalization. Its success descriptor is the only input
+    // accepted by the read-only fast path; caller params.env is intentionally never copied into it.
+    classified = await classifyKimiAcpReadonlySearch({ command, args, cwd, env: params && params.env }, context);
+  } catch (error) {
+    classified = { ok: false, reason: `classifier-error:${String(error && error.message || error)}` };
+  }
+  if (classified && classified.ok === true
+    && typeof classified.command === 'string' && path.isAbsolute(classified.command)
+    && Array.isArray(classified.args) && typeof classified.cwd === 'string' && path.isAbsolute(classified.cwd)) {
+    readonlySearch = classified;
+    command = classified.command;
+    args = classified.args.map(value => String(value));
+    cwd = classified.cwd;
+  } else if (classified && classified.reason
+    && (command === 'rg' || command.toLowerCase() === 'rg'
+      || (path.isAbsolute(command) && path.basename(command).toLowerCase() === ('rg')))) {
+    context.onEvent({ type: 'stderr', text: `[Kimi ACP 搜索策略] ${redact(String(classified.reason))}` });
   }
   const stat = await fsp.stat(cwd).catch(() => null);
   if (!stat || !stat.isDirectory()) throw kimiAcpRequestError(-32602, 'terminal cwd does not exist or is not a directory');
@@ -1629,10 +1635,9 @@ async function handleKimiAcpTerminalCreate(params, context, requestMeta) {
   }
   let env;
   if (readonlySearch) {
-    const blocked = typeof KIMI_ACP_SEARCH_BLOCKED_ENV_RE !== 'undefined' ? KIMI_ACP_SEARCH_BLOCKED_ENV_RE : null;
     env = {};
     for (const [name, value] of Object.entries(process.env)) {
-      if (!blocked || !blocked.test(name)) env[name] = value;
+      if (!KIMI_ACP_SEARCH_BLOCKED_ENV_RE.test(name)) env[name] = value;
     }
     if (readonlySearch.env && typeof readonlySearch.env === 'object' && !Array.isArray(readonlySearch.env)) {
       Object.assign(env, readonlySearch.env);
@@ -2787,11 +2792,9 @@ async function runKimiAcpTurnPrepared(context) {
       const prompt = typeof promptItem === 'string' ? promptItem : String(promptItem && promptItem.text || '');
       const checkpoint = kimiAcpWireCheckpoint(nativeSessionId);
       const usageTickBefore = state.usageTick;
-      const promptParts = typeof buildKimiAcpPromptParts === 'function'
-        ? await buildKimiAcpPromptParts(prompt, promptItem && promptItem.attachments || [], session.kimiAcpCapabilities, {
-          session, config, workingDir, onEvent: reg.onEvent, kimiNativeSlashCommand: Boolean(promptItem && promptItem.nativeSlash),
-        })
-        : [{ type: 'text', text: prompt }];
+      const promptParts = await buildKimiAcpPromptParts(prompt, promptItem && promptItem.attachments || [], session.kimiAcpCapabilities, {
+        session, config, workingDir, onEvent: reg.onEvent, kimiNativeSlashCommand: Boolean(promptItem && promptItem.nativeSlash),
+      });
       if (typeof PrivacyGateway !== 'undefined') PrivacyGateway.assertSupported(await readConfig(), 'cli');
       const response = await rpc.request('session/prompt', {
         sessionId: nativeSessionId,

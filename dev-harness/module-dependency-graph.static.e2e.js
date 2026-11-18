@@ -75,15 +75,18 @@ const divisionNames = declarationInfo(tokenize(divisionFixture)).provides.map(it
 ok(JSON.stringify(divisionNames) === JSON.stringify(['afterNumber', 'afterRegex', 'afterString', 'afterTemplate', 'matcher', 'ratio', 'templateRatio', 'textRatio']),
   'literal division and regex braces cannot hide later declarations');
 
-const hooks = graph.modules.find(module => module.file === '06c-agent-loop-hooks.js');
-ok(hooks && JSON.stringify(hooks.provides) === JSON.stringify(['AgentLoopHooks']),
-  '103b isolation pilot exposes one namespace instead of fourteen hook internals');
-ok(hooks && ['makeId', 'logEvent', 'redact'].every(symbol => hooks.requires.some(req => req.symbol === symbol)),
-  '103b isolation pilot declares its three injected external dependencies');
+const { createAgentLoopHooks } = require('../ruyi-workbench/app/backend/agent-loop-hooks.cjs');
+const hooks = createAgentLoopHooks({ makeId: () => 'fixture-trace', logEvent: () => {}, redact: String });
+ok(Object.isFrozen(hooks) && Object.keys(hooks).length === 7 && hooks.makeAgentLoopTraceId() === 'fixture-trace',
+  'Agent loop hooks expose seven operations and use the injected trace generator');
+const operations = graph.modules.find(item => item.file === '04-permission-runtime.js');
+const hookAssembly = fs.readFileSync(path.join(SRC, operations.file), 'utf8');
+ok(/createAgentLoopHooks\(\{\s*makeId, logEvent: .*?, redact,\s*\}\)/s.test(hookAssembly),
+  'Agent loop composition injects trace generation, logging and redaction');
 for (const consumer of ['05-claude-engine.js', '05b-kimi-bridge.js', '09-workflow.js', '14-main.js']) {
   const module = graph.modules.find(item => item.file === consumer);
-  ok(module && module.requires.some(req => req.provider === '06c-agent-loop-hooks.js' && req.symbol === 'AgentLoopHooks'),
-    `103b ${consumer} consumes the isolated AgentLoopHooks namespace`);
+  ok(module && module.requires.some(req => req.provider === operations.file && req.symbol === 'AgentLoopHooks'),
+    consumer + ' consumes the shared AgentLoopHooks instance');
 }
 
 console.log(`\nMODULE DEPENDENCY GRAPH STATIC E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
