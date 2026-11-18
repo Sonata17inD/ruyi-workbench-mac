@@ -42,7 +42,7 @@ const backendSources = fs.readdirSync(path.join(SRC, '../backend')).filter(f => 
 const serverSources = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat(backendSources);
 const brief = readSrc('../backend/thread-brief.cjs');
 const core = readSrc('../backend/steward-core.cjs');
-const config = readSrc('01-config.js');
+const config = readSrc('../backend/config-schema.cjs');
 const domain = readSrc('13d-core-domain-routes.js');
 // 117 波 T1(32 号文 §2.1):13g 拆成 13j/13k/13l/13g 四个文件(纯搬家),steward_threads_search
 // 现在住 13k-steward-threads.js。这里要钉的事实是「threads_search 的结果带 brief」,与它住哪个

@@ -67,8 +67,10 @@ ok(autonomyRegion.length > 200, 'S3 授权书路由区可定位');
 ok((autonomyRegion.match(/if \(!tokenOk\(req\)\) return send\(res, json\(\{ ok: false, error: 'missing or invalid workbench token' \}, 403\)\)/g) || []).length >= 3, 'S3 三路由各自 tokenOk 自查(≥3 处 403)');
 ok(!/bodyTokenOk|body\.token === RUNTIME\.token|RUNTIME\.token &&/.test(autonomyRegion), 'S3 授权书路由区【无】body-token 兜底(R-P2-2)');
 
+const providerTurn = fs.readFileSync(path.join(WB, 'app/backend/provider-turn.cjs'), 'utf8');
+
 // S4 子集律插桩:provider 主 gate 仅在 gate==='ask' && !bridge 时 consumeGrant('native');CLI 桥 consumeGrant('cli')。
-ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(src), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
+ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(providerTurn), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
 ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(src), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
 // 117m-A3 重钉（理由）：原文钉死了源码字面 nativeToolGate(config.permissionMode, bridgeTier)。
 // 117m-A1 把闸门签名扩成 (mode, tier, toolName, input)；不把工具名与入参传进去，CLI 桥这一侧的
@@ -89,8 +91,8 @@ ok(src.includes("if (bridgeGate === 'ask') {")
 ok(src.includes("if (bridgeMode === 'auto' && bridgeGate === 'allow') {"),
   'S4 auto 档判 allow 时 CLI 桥直接放行(不再弹窗；只对 auto 档短路)');
 // 主 gate 消耗点必须落在 gate==='block' 判定【之前】(子集律:只作用于 ask 分支)。
-const nativeConsumeIdx = src.indexOf("consumeGrant(session, tc.name, args, 'native'");
-const blockCheckIdx = src.indexOf("if (gate === 'block') {", nativeConsumeIdx - 2000);
+const nativeConsumeIdx = providerTurn.indexOf("consumeGrant(session, tc.name, args, 'native'");
+const blockCheckIdx = providerTurn.indexOf("if (gate === 'block') {", nativeConsumeIdx - 2000);
 ok(nativeConsumeIdx > 0 && blockCheckIdx > nativeConsumeIdx, 'S4 native 消耗点在 gate===block 判定之前(只降 ask,永不碰 block)');
 
 // S5 R-P1-1:runSubAgentCore 内【绝不】调用 consumeGrant(子代理不消耗父授权)。
@@ -103,7 +105,7 @@ ok(!/consumeGrant/.test(subCore), 'S5 子代理执行体【无】consumeGrant(R-
 // 定位正则放宽到可选第二参；判据本身（体内不触碰 autonomyGrants）一个字不动。
 const saveSessionBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
 ok(saveSessionBody.length > 100 && !/autonomyGrants/.test(saveSessionBody), 'S6 saveSession 不落 autonomyGrants(不进会话文件)');
-const normConfigBody = functionBlock(src, 'normalizeConfig');
+const normConfigBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/config-schema.cjs'), 'utf8'), 'normalizeConfig');
 ok(normConfigBody.length > 100 && !/autonomyGrants/.test(normConfigBody), 'S6 normalizeConfig 不含 autonomyGrants(不进 config)');
 
 // S7 不进 digest/系统提示:任务账本 digest 与系统提示构建体内【无】grant 字段泄漏。

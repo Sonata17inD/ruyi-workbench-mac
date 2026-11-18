@@ -5,9 +5,9 @@
 // 06i-steward-core.js 的落点契约。
 //
 // 断言四个方向:
-//   ① 01-config.js 源码正则锁:11 个键的默认值字面量、stewardEnabledV1 严格布尔归一、
+//   ① 配置模块源码锁:11 个键的默认值字面量、stewardEnabledV1 严格布尔归一、
 //      stewardConversationRetention 枚举、各数字键的 clamp 上下限字面量。不写绝对行号,
-//      走「read(path.join(SRC,'01-config.js')) + 正则」的既有静态锁写法(ENGINEERING-SPEC §6)。
+//      默认值和字段校验分别从各自的生产模块读取。
 //   ② manifest.json:06i-steward-core.js 紧跟在 06h-retrieval-index.js 之后。
 //   ③ 06i-steward-core.js 源码:StewardHooks / STEWARD_EVENT_KINDS 五类 / stewardMayAct /
 //      buildStewardDigestLine 存在,且模块零 require(引擎层纯函数不得反向拉传输/工具层)。
@@ -26,22 +26,23 @@ const SRC = path.join(APP, 'src');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
-/* ═══════════════════════ ① 01-config.js 源码正则锁 ═══════════════════════ */
+/* ═══════════════════════ ① 配置模块源码锁 ═══════════════════════ */
 
-const configSrc = fs.readFileSync(path.join(SRC, '01-config.js'), 'utf8');
+const configSrc = fs.readFileSync(path.join(APP, 'backend', 'config-schema.cjs'), 'utf8');
+const configDefaults = fs.readFileSync(path.join(APP, 'backend', 'config-defaults.cjs'), 'utf8');
 
 // 121 波 K0 重钉(34 号文 §8.4 拍板③):默认关 → 默认开,管家视角成为默认入口。
 // 归一口径【不动】(=== true,见下面 ④ 的 'yes' -> false),这里钉的只是默认表那一个值。
-ok(/stewardEnabledV1:\s*true,/.test(configSrc), '默认值: stewardEnabledV1=true(121 波 K0 从 false 翻转)');
-ok(/stewardProviderId:\s*'',/.test(configSrc), "默认值: stewardProviderId=''");
-ok(/stewardModel:\s*'',/.test(configSrc), "默认值: stewardModel=''(在 stewardProviderId 之后,与 subagent 写法对齐)");
-ok(/stewardPollMs:\s*60000,/.test(configSrc), '默认值: stewardPollMs=60000');
+ok(/stewardEnabledV1:\s*true,/.test(configDefaults), '默认值: stewardEnabledV1=true(121 波 K0 从 false 翻转)');
+ok(/stewardProviderId:\s*'',/.test(configDefaults), "默认值: stewardProviderId=''");
+ok(/stewardModel:\s*'',/.test(configDefaults), "默认值: stewardModel=''(在 stewardProviderId 之后,与 subagent 写法对齐)");
+ok(/stewardPollMs:\s*60000,/.test(configDefaults), '默认值: stewardPollMs=60000');
 // 117m-A1 重钉(用户第六轮走查⑦):默认值 12 → 30。12 是 116a 拍脑袋的保守值,真机上被「代批风暴」
 // 15 分钟吃光(11 条 steward_decision),于是用户那两句「还在正常运转吗」撞上熔断。重钉的同时补两条
 // 【更强】的伴随断言:默认表与 sanitize 兜底必须是同一个数(B10b),且 clamp 区间一字未动(下面 clampChecks)。
-ok(/stewardMaxTurnsPerHour:\s*30,/.test(configSrc), '默认值: stewardMaxTurnsPerHour=30(117m-A1 从 12 抬到 30)');
+ok(/stewardMaxTurnsPerHour:\s*30,/.test(configDefaults), '默认值: stewardMaxTurnsPerHour=30(117m-A1 从 12 抬到 30)');
 {
-  const declared = (configSrc.match(/stewardMaxTurnsPerHour:\s*(\d+),/) || [])[1];
+  const declared = (configDefaults.match(/stewardMaxTurnsPerHour:\s*(\d+),/) || [])[1];
   const fallback = (configSrc.match(/Math\.min\(120, Math\.max\(1, Math\.round\(n\)\)\) : (\d+);/) || [])[1];
   ok(declared === '30' && fallback === '30',
     `默认值: stewardMaxTurnsPerHour 的默认表与 sanitize 兜底是同一个数(默认表 ${declared} / 兜底 ${fallback})—— 两处漂移会让「缺省」和「填了垃圾」落到不同上限`);
@@ -50,35 +51,35 @@ ok(/stewardMaxTurnsPerHour:\s*30,/.test(configSrc), '默认值: stewardMaxTurnsP
 // 静默抬高别人的花钱上限不合适。下面 c1 那一段的 clamp 断言就是这条纪律的机器证据。
 ok(/if \(clamped !== config\.stewardMaxTurnsPerHour\) \{ config\.stewardMaxTurnsPerHour = clamped; changed = true; \}/.test(configSrc),
   'sanitize: 合法的存量值原样保留(只有 clamp 后不同才回写 —— 抬高默认值不会动老用户已有的上限)');
-ok(/stewardMaxCostPerDay:\s*5,/.test(configSrc), '默认值: stewardMaxCostPerDay=5');
+ok(/stewardMaxCostPerDay:\s*5,/.test(configDefaults), '默认值: stewardMaxCostPerDay=5');
 // 129g 加了第五格 answer(代答),**默认关** —— 它独立于 relay:勾「事项内自动交接」不该顺带
 // 把「替我回答线程的提问」也给出去(一格两权,用户按的时候看不见第二个)。
 // 136(用户 2026-09-23「管家不够省心」):relay 默认 false → true —— 递话是管家本职,默认只提议
 // 等于每句话都多问一遍。answer 仍默认关。不迁移存量(117m-A1 同一条纪律:显式落过 false 的原样保留)。
 // 第六格 continueUnfinished(2026-10「像这种情况,管家要能自主让线程恢复啊」):回合收了但任务没做完就自己续一轮,**默认开**
 // (有上限、记流水、受每小时回合数与日费用约束,见 13m 的 STEWARD_CONTINUE_*);关掉就退回只提议。
-ok(/stewardAutoActions:\s*\{\s*retry:\s*true,\s*resume:\s*null,\s*relay:\s*true,\s*newThread:\s*true,\s*answer:\s*false,\s*continueUnfinished:\s*true\s*\},/.test(configSrc),
+ok(/stewardAutoActions:\s*\{\s*retry:\s*true,\s*resume:\s*null,\s*relay:\s*true,\s*newThread:\s*true,\s*answer:\s*false,\s*continueUnfinished:\s*true\s*\},/.test(configDefaults),
   "默认值: stewardAutoActions={retry:true,resume:null,relay:true,newThread:true,answer:false,continueUnfinished:true}(136:relay 翻默认;continueUnfinished 默认开)");
-ok(/stewardContextBudgetTokens:\s*200000,/.test(configSrc), '默认值: stewardContextBudgetTokens=200000');
+ok(/stewardContextBudgetTokens:\s*200000,/.test(configDefaults), '默认值: stewardContextBudgetTokens=200000');
 // 136:触发线系数(0.6)与人设两键(空串)的默认值字面量。
-ok(/stewardContextBudgetRatio:\s*0\.6,/.test(configSrc), '默认值: stewardContextBudgetRatio=0.6(136 新增)');
-ok(/stewardPersonaName:\s*'',/.test(configSrc) && /stewardPersonaStyle:\s*'',/.test(configSrc),
+ok(/stewardContextBudgetRatio:\s*0\.6,/.test(configDefaults), '默认值: stewardContextBudgetRatio=0.6(136 新增)');
+ok(/stewardPersonaName:\s*'',/.test(configDefaults) && /stewardPersonaStyle:\s*'',/.test(configDefaults),
   "默认值: stewardPersonaName/stewardPersonaStyle=''(136 新增人设两键)");
-ok(/stewardReadBudgetChars:\s*48000,/.test(configSrc), '默认值: stewardReadBudgetChars=48000');
-ok(/stewardVisitIdleMinutes:\s*60,/.test(configSrc), '默认值: stewardVisitIdleMinutes=60');
+ok(/stewardReadBudgetChars:\s*48000,/.test(configDefaults), '默认值: stewardReadBudgetChars=48000');
+ok(/stewardVisitIdleMinutes:\s*60,/.test(configDefaults), '默认值: stewardVisitIdleMinutes=60');
 // 136(用户 2026-09-23「管家不记事」):默认 visit → 24h。与 maxTurnsPerHour 同一条 B10b 纪律 ——
 // 默认表与 sanitize 兜底必须是同一个值,否则「缺省」和「填了垃圾」落到不同策略。
-ok(/stewardConversationRetention:\s*'24h',/.test(configSrc), "默认值: stewardConversationRetention='24h'(136 从 visit 翻默认)");
+ok(/stewardConversationRetention:\s*'24h',/.test(configDefaults), "默认值: stewardConversationRetention='24h'(136 从 visit 翻默认)");
 {
-  const declared = (configSrc.match(/stewardConversationRetention:\s*'(\w+)',/) || [])[1];
+  const declared = (configDefaults.match(/stewardConversationRetention:\s*'(\w+)',/) || [])[1];
   const fallback = (configSrc.match(/\? config\.stewardConversationRetention : '(\w+)';/) || [])[1];
   ok(declared === '24h' && fallback === '24h',
     `默认值: retention 默认表与 sanitize 兜底是同一个值(默认表 ${declared} / 兜底 ${fallback})`);
 }
 // 116h(27 号文 §3.1 116h 行;用户 2026-09-03 拍板「默认 5、设置可调」):线程间仲裁三个全局闸。
-ok(/stewardMaxParallelThreads:\s*5,/.test(configSrc), '默认值: stewardMaxParallelThreads=5(116h 用户拍板)');
-ok(/stewardGlobalMaxTurnsPerHour:\s*120,/.test(configSrc), '默认值: stewardGlobalMaxTurnsPerHour=120');
-ok(/stewardGlobalMaxCostPerDay:\s*50,/.test(configSrc), '默认值: stewardGlobalMaxCostPerDay=50');
+ok(/stewardMaxParallelThreads:\s*5,/.test(configDefaults), '默认值: stewardMaxParallelThreads=5(116h 用户拍板)');
+ok(/stewardGlobalMaxTurnsPerHour:\s*120,/.test(configDefaults), '默认值: stewardGlobalMaxTurnsPerHour=120');
+ok(/stewardGlobalMaxCostPerDay:\s*50,/.test(configDefaults), '默认值: stewardGlobalMaxCostPerDay=50');
 
 // stewardEnabledV1 严格布尔归一(=== true),不是宽松真值判断。
 ok(/const b = config\.stewardEnabledV1 === true;/.test(configSrc),

@@ -184,12 +184,14 @@ test('[M] MCP 清单同步一个入口:选中推、切走清、Claude 不碰、�
 test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const src = readServerSource();
   const envBrief = fs.readFileSync(path.join(app, 'backend', 'engine-env-brief.cjs'), 'utf8');
+  const configSchema = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
+  const compactionRouting = fs.readFileSync(path.join(app, 'backend', 'compaction-routing.cjs'), 'utf8');
   const code = text => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
   // 判据:与 'kimi' 字面量比较(kimi 只可能是 CLI 类型);agentCliType 与任何字面量比较;旧的 kind === 'claude';
   // ['claude', 'kimi'] 白名单;`? 'kimi' : 'claude'` 二选一。`engine === 'claude'` 不算 —— 那是引擎族的历史 id(CLI 族 vs provider 族)。
   const LITERAL_CLI_COMPARE = /[!=]==\s*'kimi'|'kimi'\s*[!=]==|agentCliType\s*[!=]==\s*['"`]|['"`]\s*[!=]==\s*[\w.]*agentCliType\b|\bkind\s*[!=]==\s*'claude'|\[\s*'claude'\s*,\s*'kimi'\s*\]|\?\s*'kimi'\s*:\s*'claude'/;
   const blocks = {
-    sanitizeLastUsedEngineRoute: functionBlock(src, 'sanitizeLastUsedEngineRoute'),
+    sanitizeLastUsedEngineRoute: functionBlock(configSchema, 'sanitizeLastUsedEngineRoute'),
     normalizeSessionEngineRoute: functionBlock(src, 'normalizeSessionEngineRoute'),
     agentCliInstallCandidates: functionBlock(src, 'agentCliInstallCandidates'),
     selectedAgentCli: functionBlock(src, 'selectedAgentCli'),
@@ -199,7 +201,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
     maybeAutoCompactAgentSession: functionBlock(src, 'maybeAutoCompactAgentSession'),
     engineBriefFacts: functionBlock(envBrief, 'engineBriefFacts'),
     renderCliEnvBrief: functionBlock(envBrief, 'renderCliEnvBrief'),
-    agentConversationContextMeta: functionBlock(src, 'agentConversationContextMeta'),
+    agentConversationContextMeta: functionBlock(compactionRouting, 'agentConversationContextMeta'),
     applyConfigPatch: functionBlock(src, 'applyConfigPatch'),
     startServerInner: functionBlock(src, 'startServerInner'),
     'route /api/models': bracedBlock(src, "if (req.method === 'GET' && pathname === '/api/models')"),
@@ -210,7 +212,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
     assert.doesNotMatch(code(block), LITERAL_CLI_COMPARE, `${name} 不再按 CLI 名字面量分叉(问登记表 / 适配器)`);
   }
   // 配置归一里「agentCliType 必须是登记过的类型」那一句也问登记表(normalizeConfig 里仍有 Kimi 旧模型名迁移,那是 Kimi 自己的数据迁移)。
-  const normalizeConfig = code(functionBlock(src, 'normalizeConfig'));
+  const normalizeConfig = code(functionBlock(configSchema, 'normalizeConfig'));
   assert.ok(normalizeConfig.includes('if (!isAgentCliType(config.agentCliType)) {'));
   assert.doesNotMatch(normalizeConfig, /\[\s*'claude'\s*,\s*'kimi'\s*\]/);
   // /api/status 的即时模型清单一行。

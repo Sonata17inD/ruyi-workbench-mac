@@ -124,7 +124,7 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   const WP = await getFreePort();
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 7, version: '2.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [{ id: 'existing', label: '已有', command: 'old.exe', args: [], env: {}, cwd: '', enabled: true }] }));
   let configReader = null;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   try {
     ok(await up(WP), 'workbench up');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));

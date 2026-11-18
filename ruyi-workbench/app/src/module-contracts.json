@@ -801,12 +801,11 @@
         "BRIDGED_ENV_KEEP",
         "BROWSER_AUTOMATION_MODES",
         "CLAUDEPATH_CACHE_MS",
-        "CLAUDE_THINKING_EFFORTS",
         "CONFIG_BOOKKEEPING_KEYS",
         "CONFIG_CACHE_MIN_AGE_MS",
-        "CONFIG_EXPLICIT_KEY_MAX",
         "CONFIG_MIGRATIONS",
         "ConfigPatchHooks",
+        "ConfigWorkspaces",
         "DESKTOP_PYTHON_DISK_CACHE_FILE",
         "DESKTOP_PYTHON_DISK_MISS_CACHE_MS",
         "DESKTOP_PYTHON_IMPORT_PROBE",
@@ -820,14 +819,10 @@
         "RUYI_AGENT_FILE_MARKER_RE",
         "SCRIPT_FILE_MAX_AGE_MS",
         "SESSION_MCP_CONFIG_MAX_AGE_MS",
-        "STEWARD_MANAGED_WORKSPACES_CAP",
-        "STEWARD_WORKSPACE_LEGACY_NOTE",
         "THREAD_INDEX_RECENT_DEFAULT",
         "THREAD_INDEX_RECENT_MAX",
         "THREAD_INDEX_RECENT_MIN",
         "ToolboxRegistry",
-        "WORKSPACE_NOTE_MAX",
-        "WORKSPACE_TABLE_CAP",
         "_agentCliLauncherOk",
         "_agentCliLauncherPresent",
         "_agentCliPathProbe",
@@ -843,7 +838,6 @@
         "agentCliProbeVerdict",
         "agentCliProbeable",
         "agentMcpImportSources",
-        "applyConfigMigrations",
         "assertSessionIdForPath",
         "atomicWriteJson",
         "authorizeRoute",
@@ -862,7 +856,6 @@
         "claudeProbeCandidates",
         "cloneConfigSnapshot",
         "commandForSelfMcp",
-        "configCanonicalJson",
         "configComparableValue",
         "configDegraded",
         "configDirsEnsuredFor",
@@ -876,6 +869,7 @@
         "configRecoveryCredentialChoice",
         "configValueEquals",
         "configWriteChain",
+        "createConfigSchema",
         "createDesktopPythonProbe",
         "decodeClaudeCliStream",
         "decodeClaudeCliText",
@@ -948,7 +942,6 @@
         "mutateConfig",
         "normalizeConfig",
         "normalizeDesktopPythonCandidate",
-        "normalizeStewardManagedWorkspaces",
         "normalizeWorkspacePathString",
         "noteSessionsDirOwnWrite",
         "offlineModelList",
@@ -981,7 +974,6 @@
         "resolveKimiNpmEntry",
         "resolveNodeModel",
         "safeSessionId",
-        "sanitizeLastUsedEngineRoute",
         "saveProjectAgentRoles",
         "scanMcpDropIns",
         "selectedAgentCli",
@@ -991,7 +983,6 @@
         "sessionsDirOwnWriteSeq",
         "setProxyModelsCache",
         "staticBase",
-        "stewardManagedWorkspaceKey",
         "sweepStaleScriptFiles",
         "sweepStaleSessionMcpConfigs",
         "syncAgentCliMcpManifests",
@@ -1029,27 +1020,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "configSecretValueOrCleared",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "configUrlOrCleared",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
           "kinds": [
             "read"
           ]
@@ -1128,27 +1098,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "normalizePricing",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -1208,7 +1157,6 @@
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1311,34 +1259,6 @@
           ]
         },
         {
-          "provider": "01e-permission-modes.js",
-          "symbol": "normalizeAgentRole",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODE_ALIASES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "AGENT_CLI_DEFAULT_TYPE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01f-agent-cli-types.js",
           "symbol": "AGENT_CLI_TYPES",
           "kinds": [
@@ -1412,7 +1332,7 @@
           "provider": "04i-provider-wire.js",
           "symbol": "sanitizeProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

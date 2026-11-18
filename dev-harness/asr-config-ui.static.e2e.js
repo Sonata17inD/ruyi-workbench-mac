@@ -26,7 +26,8 @@ const voiceService = fs.readFileSync(path.join(APP, 'backend', 'voice-service.cj
 const runtimeCapabilitySources = ['src/06w-capability-service.js', 'backend/capability-service.cjs',
   'backend/desktop-capability-probe.cjs', 'backend/playbook-policy.cjs']
   .map(file => fs.readFileSync(path.join(APP, file), 'utf8')).join('\n');
-const src01 = fs.readFileSync(path.join(APP, 'src', '01-config.js'), 'utf8');
+const configSchema = fs.readFileSync(path.join(APP, 'backend', 'config-schema.cjs'), 'utf8');
+const configDefaults = fs.readFileSync(path.join(APP, 'backend', 'config-defaults.cjs'), 'utf8');
 const src00 = fs.readFileSync(path.join(APP, 'src', '00-boot.js'), 'utf8');
 const providersJs = fs.readFileSync(path.join(APP, 'public', 'js', 'provider-settings.js'), 'utf8');
 const indexHtml = fs.readFileSync(path.join(APP, 'public', 'index.html'), 'utf8');
@@ -50,7 +51,7 @@ assert.ok(mentions.length === 1 && /^\s*\/\//.test(mentions[0].trimStart()) || (
 //    「谁又动了它」还是红的；判据同时钉住「ASR 三个键没有任何迁移分支」，那才是 114a 真正要守的。
 //    128a 又把它抬到 13（稀疏落盘，48 号文 §2；13 本身不挂迁移）；2026-10 抬到 14（出厂权限档翻成智能自动，存量钉回 default）。
 assert.match(src00, /const CONFIG_SCHEMA = 14;/, 'CONFIG_SCHEMA 当前为 14（114a 自己不 bump；11→12 是 107-T1 为 126-111b/d/e 迁移抬的，46 号文 §5；12→13 是 128a 稀疏落盘，48 号文 §2；13→14 是出厂权限档翻成智能自动）');
-assert.ok(!/incomingConfigSchema[^\n]*asr/i.test(src01) && !/asr(ProviderId|Model)[^\n]*incomingConfigSchema/i.test(src01),
+assert.ok(!/incomingConfigSchema[^\n]*asr/i.test(configSchema) && !/asr(ProviderId|Model)[^\n]*incomingConfigSchema/i.test(configSchema),
   '114a 的 asrProviderId/asrModel 仍然没有任何 schema 迁移分支（纯增量：读回空串即「未配置」）');
 // ③ 后端落点
 assert.match(providerConfigSource, /function providerModelCaps\(rawCaps\)/, 'Provider 配置: providerModelCaps 白名单清洗函数');
@@ -59,13 +60,13 @@ assert.match(providerConfigSource, /const caps = providerModelCaps\(m\.caps\);/,
 // 一直是「两者同待遇」，所以判据改成【两行同形】：谁单独改了包装，这一条就红。
 assert.match(providerConfigSource, /const audioBaseUrl = configUrlOrCleared\(str\(raw\.audioBaseUrl, 400\)\.trim\(\)\);/, 'Provider 配置: audioBaseUrl 仍是 trim + 截 400（外加 107-S2 的掩码末闸）');
 assert.match(providerConfigSource, /const mainBase = configUrlOrCleared\(str\(raw\.baseUrl, 400\)\.trim\(\)\);/, 'Provider 配置: audioBaseUrl 与 baseUrl 同待遇（同一个 400 截断 + 同一道 configUrlOrCleared 末闸）');
-assert.match(src01, /asrProviderId: '',/, '01: asrProviderId 默认空（未配置）');
-assert.match(src01, /asrModel: '',/, '01: asrModel 默认空（未配置）');
-assert.match(src01, /for \(const key of \['asrProviderId', 'asrModel', 'asrStreamProviderId', 'asrStreamModel', 'asrFixProviderId', 'asrFixModel'\]\)/, '01: asr 形状清洗块（130 起连实时识别那一对、131b 起连改字端点那一对一起洗）');
-assert.match(src01, /if \(!\['auto', 'audio', 'llm', 'off'\]\.includes\(config\.asrFixMode\)\) \{ config\.asrFixMode = 'auto'; changed = true; \}/, '01: 131b 句尾改错方式只认四个值，别的回 auto');
-assert.match(src01, /if \(config\.asrFixProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrFixProviderId\)\)/, '01: 改字端点没了 → 清成跟随主端点');
-assert.match(src01, /if \(config\.asrStreamProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrStreamProviderId\)\)/, '01: 实时识别指着的 provider 没了 → 两个一起清空');
-assert.match(src01, /if \(config\.asrProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrProviderId\)\)/, '01: provider 没了 → asr 两个一起清空');
+assert.match(configDefaults, /asrProviderId: '',/, '01: asrProviderId 默认空（未配置）');
+assert.match(configDefaults, /asrModel: '',/, '01: asrModel 默认空（未配置）');
+assert.match(configSchema, /for \(const key of \['asrProviderId', 'asrModel', 'asrStreamProviderId', 'asrStreamModel', 'asrFixProviderId', 'asrFixModel'\]\)/, '01: asr 形状清洗块（130 起连实时识别那一对、131b 起连改字端点那一对一起洗）');
+assert.match(configSchema, /if \(!\['auto', 'audio', 'llm', 'off'\]\.includes\(config\.asrFixMode\)\) \{ config\.asrFixMode = 'auto'; changed = true; \}/, '01: 131b 句尾改错方式只认四个值，别的回 auto');
+assert.match(configSchema, /if \(config\.asrFixProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrFixProviderId\)\)/, '01: 改字端点没了 → 清成跟随主端点');
+assert.match(configSchema, /if \(config\.asrStreamProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrStreamProviderId\)\)/, '01: 实时识别指着的 provider 没了 → 两个一起清空');
+assert.match(configSchema, /if \(config\.asrProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrProviderId\)\)/, '01: provider 没了 → asr 两个一起清空');
 // ④ 前端落点
 assert.match(providersJs, /function renderAsrSettings\(\)/, '前端: renderAsrSettings 存在');
 assert.match(providersJs, /caps\.includes\('asr'\)/, '前端: 只列 caps 含 asr 的模型');
@@ -149,7 +150,7 @@ assert.ok(providersJs.includes("if (saved && state.providersDraftSeeded === true
   // 2026-10 设置补全:语音识别有了自己的页签,块顶那条分隔线随之撤掉(append 不再带 sep)。
   assert.ok((providersJs.match(/asrSettingsBlock\.append\(presetBlock, advanced\);/g) || []).length === 2, '前端: 档位栏在前、高级区在后(两条分支)');
   assert.match(providersJs, /const ASR_PRESETS = \['light', 'standard', 'heavy'\];/, '前端: 133c 三档');
-  assert.ok(!/asrPreset(Id)?:/.test(providersJs) && !/asrPreset\b/.test(fs.readFileSync(path.join(APP, 'src', '01-config.js'), 'utf8')), '前端: 档位不是配置键 —— 由现有三对键推算(不与既有键冲突)');
+  assert.ok(!/asrPreset(Id)?:/.test(providersJs) && !/asrPreset\b/.test(configSchema + configDefaults), '前端: 档位不是配置键 —— 由现有三对键推算(不与既有键冲突)');
   {
     // 档位推算与写键:纯函数真跑。
     const targets = { light: { stream: { providerId: 'toolbox-asr-stream', modelId: 'zipformer' }, asr: { providerId: 'toolbox-asr-stream', modelId: 'sensevoice-small' } }, standard: { stream: { providerId: 'toolbox-asr-stream', modelId: 'zipformer' }, asr: { providerId: 'toolbox-asr-shim', modelId: 'qwen3-asr-0.6b' }, asrAny: [{ providerId: 'toolbox-asr-shim', modelId: 'qwen3-asr-0.6b' }, { providerId: 'toolbox-asr-shim', modelId: 'qwen3-asr-auto' }] }, heavy: { stream: null, asr: null } };

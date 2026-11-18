@@ -29,6 +29,7 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 const server = readServerSource();
+const configSchema = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/config-schema.cjs'), 'utf8');
 const runall = fs.readFileSync(RUNALL, 'utf8');
 
 // ── S1: serveStatic 用段比较,startsWith 前缀判定绝迹 ─────────────────────────
@@ -48,8 +49,8 @@ ok(!server.includes('function freeStalePort(') && server.includes('return await 
 ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(server), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');
 
 // ── S5: uiMode 回退 'simple' ────────────────────────────────────────────────
-ok(/config\.uiMode : 'simple'/.test(server), "S5: uiMode 非法值回退 'simple'");
-ok(!/config\.uiMode : 'pro'/.test(server), "S5: 回退 'pro' 绝迹");
+ok(/config\.uiMode : 'simple'/.test(configSchema), "S5: uiMode 非法值回退 'simple'");
+ok(!/config\.uiMode : 'pro'/.test(configSchema), "S5: 回退 'pro' 绝迹");
 
 // ── S6: orchestrate maxItems 三方对齐 64 ────────────────────────────────────
 const toolSchemas = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');

@@ -47,7 +47,7 @@ function setup(t, seed = initial(true)) {
     const app = mod.exports.__review;
     app.__eval('detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";RUNTIME.token="synthetic-missing-config-token";'
       + 'desktopMcpDetectionPending=()=>true;computeHealth=async()=>({health:{},manifest:{}});'
-      + 'agentConversationContextMeta=async()=>({contextWindow:4096,contextWindowSource:"fixture",contextAgentCliType:"claude"});probeRgAsync=async()=>null;');
+      + 'probeRgAsync=async()=>null;');
     let wraps = 0;
     const vault = app.CredentialVault.create({ core: app.PrivacyCore,
       size: async () => fs.existsSync(vaultFile) ? fs.statSync(vaultFile).size : 0,
