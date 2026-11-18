@@ -918,12 +918,8 @@ try {
     ok(/tool: toolLabelOf\(row\)/.test(conv)
       && /const key = STEWARD_TOOL_LABEL_KEYS\[String\(\(row && row\.tool\) \|\| ''\)\];/.test(conv),
       'I2 copy P1-1:※ 脚注优先读 label(读不到先查前端人话表,再落回工具 id),不再直接吐 steward_* 内部标识符');
-    // P1-5:兜底判据的唯一定义点(13g),13h 复用它 —— 两处不许各写一份「非 mission 即 quick_ask」。
-    // 117 波 T1(32 号文 §2.1)重钉:13g 拆成了 13j/13k/13l/13g 四个文件(纯搬家)。判据本身
-    // (stewardQuickThread)搬到 13j-steward-tool-base.js,派生点搬到 13k-steward-threads.js。
-    // 原来钉的是「它在 13g 这个文件里」= 钉落点;I3 改成钉【全仓只声明一次】—— 那才是「单点」这个
-    // 词的意思,而且比原来严(原来 13k 里再抄一份判据照样绿)。
-    const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js'];
+    const contextOwner = '../backend/steward-tool-context.cjs';
+    const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', contextOwner];
     const srcFam = STEWARD_FAMILY.map(rd).join('\n');
     // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),那三个派生点里属于运行器的
     // 那一个(总览行)搬进了 13o-steward-runner-prompt.js。判据不变 —— 三个派生点都走同一个判据、
@@ -933,9 +929,10 @@ try {
       '13h-steward-runner.js'];
     const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');
     const srcDirAll = fs.readdirSync(SRC).filter(f => f.endsWith('.js'));
-    const quickDefs = srcDirAll.filter(f => /function stewardQuickThread\(head\)/.test(rd(f)));
-    ok(quickDefs.length === 1 && quickDefs[0] === '13j-steward-tool-base.js',
-      `I3 P1-5:速查线程判据全仓只声明一次,住 13j-steward-tool-base.js(实得 ${JSON.stringify(quickDefs)})`);
+    const backendFiles = fs.readdirSync(path.join(SRC, '..', 'backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f);
+    const quickDefs = [...srcDirAll, ...backendFiles].filter(f => /function stewardQuickThread\(head\)/.test(rd(f)));
+    ok(quickDefs.length === 1 && quickDefs[0] === contextOwner,
+      `I3 P1-5:速查线程判据只有一份，由管家工具上下文模块持有(实得 ${JSON.stringify(quickDefs)})`);
     ok(!/rawKind === 'mission' \? 'mission' : 'quick_ask'/.test(srcFam) && !/rawKind === 'mission' \? 'mission' : 'quick_ask'/.test(src13h),
       'I3b 「非 mission 即 quick_ask」那个兜底在 13g 族/13h 族里一处都不剩');
     ok((srcFam.match(/stewardQuickThread\(head\)/g) || []).length >= 3 && /stewardQuickThread\(head\)/.test(src13h),

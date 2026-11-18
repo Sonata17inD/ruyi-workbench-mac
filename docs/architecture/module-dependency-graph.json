@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2369,
-    "requiredSymbols": 3182,
+    "providedSymbols": 2364,
+    "requiredSymbols": 3180,
     "edges": 601,
     "forwardEdges": 15,
     "duplicateProvides": 0,
@@ -14788,7 +14788,6 @@
       "provides": [
         "STEWARD_AUDIT_LIMIT_DEFAULT",
         "STEWARD_AUDIT_LIMIT_MAX",
-        "STEWARD_DELIVERABLE_FILES_MAX",
         "STEWARD_MEMORY_MERGED_FROM_MAX",
         "STEWARD_MEMORY_NEW_WINDOW_MS",
         "STEWARD_MEMORY_SCHEMA",
@@ -14813,10 +14812,9 @@
         "STEWARD_STEER_TEXT_MAX",
         "STEWARD_TITLE_MAX",
         "StewardDecisions",
-        "_stewardReadBudget",
-        "_stewardTurnQuota",
-        "_stewardTurnTaint",
+        "clearStewardReadBudget",
         "createStewardMemoryStore",
+        "createStewardToolContext",
         "stewardAppendDecision",
         "stewardBasisOf",
         "stewardClampInt",
@@ -14824,7 +14822,6 @@
         "stewardDisplayKind",
         "stewardEngineOf",
         "stewardExemptDelegationRecord",
-        "stewardExemptDelegationTimes",
         "stewardExemptDelegationsInWindow",
         "stewardFail",
         "stewardLastAssistantText",
@@ -14836,14 +14833,12 @@
         "stewardNormalizeMemoryScope",
         "stewardNotifiesInWindow",
         "stewardNotifyRecord",
-        "stewardNotifyTimes",
         "stewardQuickClosed",
         "stewardQuickThread",
         "stewardRawKind",
         "stewardReadBucket",
         "stewardReadMemoryStore",
         "stewardReadSessionHead",
-        "stewardTaintKeyOf",
         "stewardThreadPermissionMode",
         "stewardTurnAssistantText",
         "stewardTurnFiles",
@@ -14855,13 +14850,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -14870,14 +14858,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -14900,7 +14880,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -14908,28 +14887,28 @@
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01o-execution-state.js",
           "symbol": "providerTurnQuotaKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "foldTurnSummaries",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14943,7 +14922,7 @@
           "provider": "02d-session-overrides.js",
           "symbol": "applySessionPermissionModeOverride",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14999,7 +14978,6 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -19241,9 +19219,9 @@
         },
         {
           "provider": "13j-steward-tool-base.js",
-          "symbol": "_stewardReadBudget",
+          "symbol": "clearStewardReadBudget",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -30359,10 +30337,8 @@
       "from": "13j-steward-tool-base.js",
       "to": "00-boot.js",
       "symbols": [
-        "fsp",
         "nowIso",
-        "safeJsonParse",
-        "text"
+        "safeJsonParse"
       ],
       "direction": "backward"
     },
@@ -31543,7 +31519,7 @@
       "from": "13q-steward-runner-turn.js",
       "to": "13j-steward-tool-base.js",
       "symbols": [
-        "_stewardReadBudget",
+        "clearStewardReadBudget",
         "stewardFail",
         "stewardReadSessionHead"
       ],

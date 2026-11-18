@@ -674,7 +674,7 @@ async function stewardResetConversation() {
       stewardRunnerRuntime.lastReply = null;
       stewardRunnerRuntime.noProgress = 0;
       stewardRunnerRuntime.circuit = null;
-      _stewardReadBudget.delete(STEWARD_SESSION_ID);
+      clearStewardReadBudget(STEWARD_SESSION_ID);
       stewardRunnerRuntime.visit.startedAt = nowIso();
       stewardRunnerRuntime.visit.lastActivityAt = stewardRunnerRuntime.visit.startedAt;
       logEvent({ kind: 'steward_conversation_reset', archived: archive.archived });
@@ -908,7 +908,7 @@ async function stewardVisit(opts) {
       try { logEvent({ kind: 'steward_visit_archive_failed', error: archive.error }); } catch { /* 观测绝不反噬 */ }
     } else {
       // 到访重置:读预算桶(§11.2 每回合 6 次 / 每到访 stewardReadBudgetChars)与无进展计数一起归零。
-      try { _stewardReadBudget.delete(STEWARD_SESSION_ID); } catch { /* 桶是纯内存加速,清不掉也不影响正确性 */ }
+      try { clearStewardReadBudget(STEWARD_SESSION_ID); } catch { /* 桶是纯内存加速,清不掉也不影响正确性 */ }
       stewardRunnerRuntime.noProgress = 0;
       stewardRunnerRuntime.circuit = null;
       stewardRunnerRuntime.visit = {
