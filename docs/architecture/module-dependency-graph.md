@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2547 | 3205 | 602 | 16 | 0 | 0 |
+| 87 | 2519 | 3201 | 601 | 16 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -64,7 +64,7 @@
 | 46 | `06-provider-engine.js` | engine | 32 | 28 | 9 |
 | 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 48 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 49 | `06d-memory-domain.js` | engine | 156 | 34 | 6 |
+| 49 | `06d-memory-domain.js` | engine | 128 | 30 | 5 |
 | 50 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
 | 51 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
 | 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
@@ -224,7 +224,6 @@
 | `06c-agent-workflow-catalog.js` | `01-config.js` | backward | `atomicWriteJson` |
 | `06d-memory-domain.js` | `00-boot.js` | backward | `SKILL_ID_RE`, `agentCliHomes`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `fsp`, `logEvent`, `makeId`, `neutralizeFenceTag`, `normalizeCwd`, `nowIso`, `os`, `path`, `paths`, `runKeyedChain`, `safeJsonParse`, `text`, `tildePath` |
 | `06d-memory-domain.js` | `01-config.js` | backward | `ACC_MEMORY_IMPORT_SCHEMA`, `DurableJsonStore`, `accMemoryImportStore`, `atomicWriteJson`, `legacyAccMemoryMigrationComplete`, `readConfig`, `safeSessionId` |
-| `06d-memory-domain.js` | `01c-runtime-flags.js` | backward | `coreMemoryCharBudget`, `coreMemoryMaxItems`, `memoryFixedSelectionMax`, `memoryRelevanceMax` |
 | `06d-memory-domain.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `06d-memory-domain.js` | `02-session-store.js` | backward | `appendUsageLedger`, `loadSession` |
 | `06d-memory-domain.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `providerRawCompletion` |

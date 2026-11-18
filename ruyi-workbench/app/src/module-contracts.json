@@ -5476,20 +5476,11 @@
       "file": "06d-memory-domain.js",
       "layer": "engine",
       "provides": [
-        "AGENT_INSTRUCTION_CHUNK_CHARS",
-        "AGENT_INSTRUCTION_CORE_PARTS",
-        "AGENT_INSTRUCTION_IMPORT_SCHEMA",
-        "AGENT_INSTRUCTION_MAX_BYTES",
-        "AGENT_INSTRUCTION_NATIVE_CLI",
-        "AGENT_INSTRUCTION_SCAN_VERSION",
-        "CORE_MEMORY_CHAR_CAP",
-        "CORE_MEMORY_MAX",
+        "AgentInstructionImports",
         "CORE_MEMORY_SUMMARY_CAP",
         "MEMORY_EXCLUSION_MAX",
         "MEMORY_GLOBAL_PROGRAMMING_RE",
         "MEMORY_GLOBAL_SCOPE_RE",
-        "MEMORY_INDEX_CAP",
-        "MEMORY_MAX",
         "MEMORY_METADATA_READ_CAP",
         "MEMORY_PERSONAL_PREFERENCE_RE",
         "MEMORY_PROJECT_ONLY_RE",
@@ -5505,14 +5496,8 @@
         "MemoryPrompts",
         "MemoryRecall",
         "MemoryRelations",
+        "MemorySelection",
         "MemoryStore",
-        "agentInstructionChain",
-        "agentInstructionImportFile",
-        "agentInstructionImportStore",
-        "agentInstructionLooksSensitive",
-        "agentInstructionMemoryId",
-        "agentInstructionSourceKeyOf",
-        "agentInstructionSources",
         "analyzeMemoryMaintenance",
         "applyMemoryBatchProposal",
         "applyMemoryRelationProposal",
@@ -5527,18 +5512,18 @@
         "commitToolMemoryProposal",
         "commitToolMemoryProposalUnlocked",
         "confirmMemoryRelation",
+        "createAgentInstructionImports",
+        "createMemorySelection",
         "decideMemoryProposal",
         "deleteMemory",
         "deleteMemoryRelation",
         "draftMemoryFromSession",
-        "effectiveMemorySelection",
         "eligibleMemoryEntries",
         "extractMemoryRelationProposals",
         "filterMemoryForNativeCli",
         "findMemoryProposalDuplicate",
         "fmBool",
         "fmVal",
-        "inspectAgentInstructionEntries",
         "isMemoryRelationType",
         "legacyAccMemoryCandidates",
         "listMemoryProjectGroups",
@@ -5546,8 +5531,6 @@
         "listWorkbenchMemories",
         "loadMemoryRegistry",
         "memoryAutoGlobalAllowed",
-        "memoryCoreLine",
-        "memoryCoreScore",
         "memoryDraftFromObject",
         "memoryExclusionSet",
         "memoryGlobalDir",
@@ -5585,7 +5568,6 @@
         "normalizeMemoryProposalCandidate",
         "parseMemoryDraft",
         "parseMemoryProposalDecision",
-        "planAgentInstructionEntries",
         "projectKeyForCwd",
         "proposeMemoryFromSession",
         "proposeMemoryFromSessionUnlocked",
@@ -5601,8 +5583,6 @@
         "rankRelevantMemories",
         "rankRelevantMemoriesDetailed",
         "rankRelevantMemoriesScored",
-        "readAgentInstructionSource",
-        "readAgentInstructionState",
         "readConfirmedSupersedeEdges",
         "readMemoryDir",
         "readMemoryItem",
@@ -5611,25 +5591,17 @@
         "readMemoryUsageState",
         "readWorkbenchMemory",
         "recordMemoryProposalUsage",
-        "removeAgentInstructionEntries",
         "removeMemoryRelationsFor",
-        "renderAgentInstructionMemory",
         "replayPendingMemoryProposal",
         "resolveCoreMemoryState",
-        "resolveEnabledMemoryEntries",
         "resolveMemoryPreflight",
         "resolveWorkbenchMemoryReadContext",
         "resolveWorkbenchMemoryToolContext",
         "saveMemory",
-        "sha256Hex",
-        "splitAgentInstructionText",
         "syncAgentInstructionImports",
-        "syncAgentInstructionImportsUnlocked",
         "toolMemoryProposalAlreadyPending",
         "touchMemoryUsage",
         "validateMemoryProposalSave",
-        "writeAgentInstructionEntries",
-        "writeAgentInstructionState",
         "writeMemoryMeta",
         "writeMemoryProposalState"
       ],
@@ -5638,7 +5610,7 @@
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5761,7 +5733,7 @@
           "provider": "00-boot.js",
           "symbol": "tildePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5804,40 +5776,13 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "coreMemoryCharBudget",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "coreMemoryMaxItems",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "memoryFixedSelectionMax",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "memoryRelevanceMax",
           "kinds": [
             "call"
           ]

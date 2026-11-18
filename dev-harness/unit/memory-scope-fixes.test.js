@@ -38,11 +38,12 @@ const SERVER_SRC = fs.readFileSync(SERVER, 'utf8');
 const WANT = ['memoryGlobalScopeAllowed', 'memoryRecentUserTexts', 'normalizeMemoryProposalCandidate', 'findMemoryProposalDuplicate', 'memoryProposalDuplicateFailure',
   'saveMemory', 'readMemoryItem', 'moveMemoryScope', 'memoryGlobalDir', 'memoryProjectDir', 'memoryUsageKey', 'touchMemoryUsage', 'readMemoryUsageState',
   'proposeMemoryRelation', 'confirmMemoryRelation', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
-  'planAgentInstructionEntries', 'syncAgentInstructionImports', 'agentInstructionSources', 'readAgentInstructionSource', 'splitAgentInstructionText',
+  'AgentInstructionImports', 'MemorySelection', 'planAgentInstructionEntries', 'syncAgentInstructionImports', 'agentInstructionSources', 'readAgentInstructionSource', 'splitAgentInstructionText',
   'renderAgentInstructionMemory', 'agentInstructionMemoryId', 'agentInstructionImportFile', 'sha256Hex', 'clipRecentMemoryDraftContext',
   'memoryAutoGlobalAllowed', 'memoryProposalPrefilter'];
 const present = WANT.filter(n => new RegExp('(?:function|const|let)\\s+' + n + '\\b').test(SERVER_SRC));
 const I = loadServerInternals(present);
+Object.assign(I, I.AgentInstructionImports, I.MemorySelection);
 const need = name => { assert.equal(typeof I[name], 'function', `${name} 不存在(修前代码没有这个功能)`); return I[name]; };
 
 const memFile = (scope, id) => path.join(scope === 'global' ? path.join(root, 'memory', 'global') : I.memoryProjectDir(PROJ), id + '.md');

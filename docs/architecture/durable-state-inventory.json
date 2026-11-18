@@ -615,7 +615,7 @@
     {
       "id": "agent-instructions-import",
       "pattern": "<data>/memory/.agent-instructions-import-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/agent-instruction-imports.cjs",
       "anchor": "'.agent-instructions-import-v1.json'",
       "schema": "object / schema 1 (sources.<key>: file/sourceHash/importedAt/entries[{id,hash,core}]/dismissed/sourceChanged/userModified)",
       "writePrimitive": "DurableJsonStore (quarantine:false, cache:false) -> atomicWriteJson, called inside the agentInstructionChain read-modify-write section",
