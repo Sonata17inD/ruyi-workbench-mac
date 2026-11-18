@@ -17,7 +17,6 @@ const os = require('os');
 const crypto = require('crypto');
 const cp = require('child_process');
 const readline = require('readline');
-const zlib = require('zlib'); // v0.8-S4a: checkpoint journal gzips `before` content with the built-in zlib (gzipSync/gunzipSync) — NO npm.
 const { URL } = require('url');
 
 const APP_NAME = '如意 Ruyi'; // v0.8-S8 品牌落地(原 'Win Claude Workbench';去 Claude 化,开源商标合规)
@@ -242,7 +241,7 @@ const boundToolResultForDisplay = createToolResultDisplay({ paths });
 const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./backend/attachment-prompt.cjs');
 const { lastAssistantEngine, historyStartsWithCompactionSummary, compactionSummaryPairEnd, appendPromptToLastUserMessage } =
   require('./backend/provider-history.cjs');
-const { PREVIEW_TEXT_EXTS, readFilePreview } = require('./backend/file-preview.cjs');
+const { readFilePreview } = require('./backend/file-preview.cjs');
 const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
 const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');
 const { _expandMcpVar, _tomlKeyPath, _parseTomlMcpServers, parseMcpConfigFile, scanMcpSources } = require('./backend/mcp-config-import.cjs');

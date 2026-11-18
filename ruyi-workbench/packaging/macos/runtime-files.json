@@ -15,6 +15,7 @@
     "app/backend/bridged-write-targets.cjs",
     "app/backend/checkpoint-editor-diff.cjs",
     "app/backend/checkpoint-journal.cjs",
+    "app/backend/checkpoint-routes.cjs",
     "app/backend/credential-recovery.cjs",
     "app/backend/credential-vault.cjs",
     "app/backend/desktop-automation.cjs",

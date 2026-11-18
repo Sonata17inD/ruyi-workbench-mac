@@ -42,7 +42,6 @@
         "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
-        "PREVIEW_TEXT_EXTS",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
         "RUYI_DATA_DIR_NAME",
         "RUYI_EVENTS",
@@ -197,8 +196,7 @@
         "toolRequirementsMet",
         "truncateToolResult",
         "unmaskProviders",
-        "unmaskSecrets",
-        "zlib"
+        "unmaskSecrets"
       ],
       "requires": [
         {
@@ -11852,6 +11850,8 @@
         "doctorHealthSeverity",
         "doctorHumanLines",
         "handleApi",
+        "handleCheckpointApiRoutes",
+        "handleCheckpointQueryApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
         "handleUsageApiRoutes",
@@ -12147,6 +12147,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "normalizeStoragePolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call",
@@ -12193,13 +12200,6 @@
           "symbol": "pathWithinRoot",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PREVIEW_TEXT_EXTS",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -12305,13 +12305,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
           "kinds": [
             "read"
           ]
@@ -12469,7 +12462,8 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12768,7 +12762,8 @@
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12810,14 +12805,28 @@
           "provider": "02-session-store.js",
           "symbol": "journalDir",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
-            "call"
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "journalRevertLogRecord",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "journalRollback",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -12839,7 +12848,7 @@
           "provider": "02-session-store.js",
           "symbol": "materializeCheckpointEditorDiff",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12860,7 +12869,8 @@
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12907,6 +12917,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "rewindSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "saveAgentRun",
           "kinds": [
             "call"
@@ -12930,14 +12947,14 @@
           "provider": "02-session-store.js",
           "symbol": "workspaceBaselineIsCodePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "workspaceBaselinePathKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12951,7 +12968,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "buildCodeEditorSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12973,7 +12990,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12981,7 +12997,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "launchCodeEditor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12995,7 +13011,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "resolvePreferredCodeEditor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13508,7 +13524,8 @@
           "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13732,13 +13749,6 @@
         },
         {
           "provider": "13b-api-domain-routes.js",
-          "symbol": "handleCheckpointApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
           "symbol": "handleMcpApiRoutes",
           "kinds": [
             "call"
@@ -13861,11 +13871,9 @@
         "handleAudioStreamSession",
         "handleAudioTranscribe",
         "handleAudioWarmup",
-        "handleCheckpointApiRoutes",
         "handleMcpApiRoutes",
         "handleMigrationApiRoutes",
         "handleSteerApiRoute",
-        "markTurnSummaryReverted",
         "maybeCompressImageAttachment",
         "maybeOcrImageAttachment",
         "maybeTranscribeAudioAttachment",
@@ -13945,13 +13953,6 @@
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14089,13 +14090,6 @@
         },
         {
           "provider": "01o-execution-state.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
           "symbol": "activeChildren",
           "kinds": [
             "read"
@@ -14104,41 +14098,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bumpMissionChangeSeq",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalRevertLogRecord",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalRollback",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "mutateSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "rewindSession",
           "kinds": [
             "call"
           ]
@@ -14335,13 +14294,6 @@
         {
           "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconUpdate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06v-operational-services.js",
-          "symbol": "storageSweep",
           "kinds": [
             "call"
           ]

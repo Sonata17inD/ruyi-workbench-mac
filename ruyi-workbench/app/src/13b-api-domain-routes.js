@@ -1,4 +1,4 @@
-// 第49波49f (A1): handleApi 域分组拆分第一批 —— MCP / checkpoint·storage / steer 三组域路由
+// MCP、迁移中心、插话和语音路由及其与宿主的装配。
 // 从 13-http-router.js 的 handleApi 原样抽出(共享作用域拼接,零 import 接线,行为不变)。
 // 每个函数:命中自己域的路由则处理并 return true,否则 return false(调用处 fallthrough)。
 // 顺序与语义与原 handleApi 内联块完全一致;e2e 全量即回归网。
@@ -203,112 +203,6 @@ async function handleMcpApiRoutes(req, res, pathname) {
     const r = await mutateMcpConnector({ op: 'remove', id });
     if (!r.ok) return send(res, json({ ok: false, error: r.error }, r.status));
     return send(res, json({ ok: true, id, removed: true, ...(r.warning ? { warning: r.warning } : {}) }));
-  }
-  return false;
-}
-
-// 撤销状态落到那一轮的 turnSummary 上（按轮号＋解析后的绝对路径对上）：刷新／重开之后「本轮变更」卡与产物 chip
-// 照实画「已撤销」，不再给一枚点了也撤不动的「撤销」、也不再给一个已经被删掉的新建文件的「打开」。
-// 旁路写入：失败不影响撤销本身（文件已经回滚、索引已经移除），最坏是卡片仍可点、点了回「没有可撤销的改动」。
-async function markTurnSummaryReverted(sessionId, turnSeq, reverted) {
-  const list = (Array.isArray(reverted) ? reverted : []).filter(r => r && r.path);
-  const revertedPaths = new Set(list.map(r => path.resolve(String(r.path))));
-  const removedPaths = new Set(list.filter(r => r.op === 'create').map(r => path.resolve(String(r.path))));   // 撤掉的是「新建」→ 文件已删，产物 chip 不再给「打开」
-  if (!revertedPaths.size || !Number.isFinite(turnSeq)) return;
-  const at = nowIso();
-  await mutateSession(sessionId, fresh => {
-    let touched = false;
-    for (const m of (Array.isArray(fresh.messages) ? fresh.messages : [])) {
-      const ts = m && m.role === 'assistant' && m.turnSummary;
-      if (!ts || Number(ts.turnSeq) !== turnSeq) continue;
-      for (const f of (Array.isArray(ts.filesChanged) ? ts.filesChanged : [])) {
-        if (f && f.path && !f.reverted && revertedPaths.has(path.resolve(String(f.path)))) { f.reverted = true; f.revertedAt = at; touched = true; }
-      }
-      for (const a of (Array.isArray(ts.artifacts) ? ts.artifacts : [])) {
-        if (a && a.path && !a.reverted && removedPaths.has(path.resolve(String(a.path)))) { a.reverted = true; touched = true; }
-      }
-    }
-    return touched ? {} : { abort: true };
-  }, { writer: 'checkpoint_rollback_mark' });
-}
-
-// ── checkpoint·storage 域:/api/storage/policy|clean、/api/checkpoints/rollback、/api/session/rewind ──
-async function handleCheckpointApiRoutes(req, res, pathname) {
-  if (req.method === 'POST' && pathname === '/api/storage/policy') {
-    const body = await readJsonBody(req);
-    const src = (body && typeof body === 'object')
-      ? (body.storagePolicy && typeof body.storagePolicy === 'object' ? body.storagePolicy : body)
-      : {};
-    // 117n-M2:走 mutateConfig 的临界区(此前裸 readConfig -> 改字段 -> writeConfig,与并发的
-    // /api/config 保存互相吞:一次并发就能让刚存的存储策略或刚存的 Provider 其中一份凭空消失)。
-    const saved = (await mutateConfig(async (config) => {
-      config.storagePolicy = { ...(config.storagePolicy || {}), ...src };
-    })).config;
-    return send(res, json({ ok: true, policy: normalizeStoragePolicy(saved.storagePolicy) }));
-  }
-  if (req.method === 'POST' && pathname === '/api/storage/clean') {
-    const body = await readJsonBody(req);
-    const VALID = new Set(['logs', 'agent-runs', 'webcache', 'engine-transcripts']);
-    let targets = null; // null = 全部
-    if (body && body.target && body.target !== 'all') {
-      const t = String(body.target);
-      if (!VALID.has(t)) return send(res, json({ ok: false, error: 'unknown target' }, 400));
-      targets = new Set([t]);
-    }
-    const config = await readConfig();
-    return send(res, json(await storageSweep(config.storagePolicy, targets)));
-  }
-  // v0.8-S4a: checkpoint rollback (mutating; header-token — see needsToken whitelist above). entrySeq given
-  // = single-entry rollback; omitted = whole turn (all entries for turnSeq, reverse order). Idempotent:
-  // reverted entries are removed from the index, so re-rolling the same turn → {ok:false,error:'no entries'}.
-  if (req.method === 'POST' && pathname === '/api/checkpoints/rollback') {
-    const body = await readJsonBody(req);
-    const sessionId = safeSessionId(body.sessionId); // F4: consume only well-formed ids
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    if (body.turnSeq === undefined || body.turnSeq === null) return send(res, json({ ok: false, error: 'turnSeq is required' }, 400));
-    // F1: refuse rollback while a turn is live for this session — same guard/wording as /api/session/rewind.
-    // The three index.json writers (journalRecord / journalGc / journalRollback) all do an unlocked
-    // read-modify-write; letting rollback through during an active turn races those writers and can drop
-    // an update (lost-write on the shared index). rewindSession has this guard internally; the direct
-    // rollback route did not, so add it here BEFORE calling journalRollback.
-    if (activeChildren.has(sessionId)) return send(res, json({ ok: false, error: '回合进行中,请先停止' }, 409));
-    if ([...activeAgentRuns.values()].some(live => live && live.run && live.run.sessionId === sessionId && !live.closing)) {
-      return send(res, json({ ok: false, error: '班组 Run 进行中,请先停止' }, 409));
-    }
-    const rollback = await journalRollback(sessionId, body.turnSeq, body.entrySeq);
-    if (rollback && rollback.ok) {
-      await bumpMissionChangeSeq(sessionId, {
-        type: 'rewind',
-        cursor: { turnSeq: Number(body.turnSeq), ...(body.entrySeq == null ? {} : { entrySeq: Number(body.entrySeq) }) },
-        detail: {
-          rollbackScope: body.entrySeq == null ? 'turn' : 'entry',
-          filesReverted: Array.isArray(rollback.reverted) ? rollback.reverted.length : 0,
-          filesFailed: Array.isArray(rollback.failed) ? rollback.failed.length : 0,
-        },
-      });
-      await markTurnSummaryReverted(sessionId, Number(body.turnSeq), rollback.reverted).catch(() => {});
-      // C4:记下「用户撤销了哪回合的什么」—— checkpoint_list 据此标 reverted,下一个 provider 回合起跑时 09 把它写成一行告知
-      // 追加到那条 user 消息(见 02 journalRevertLogRecord 头注)。旁路写,失败只是模型少收到一句告知。
-      await journalRevertLogRecord(sessionId, rollback.reverted).catch(() => {});
-    }
-    return send(res, json(rollback));
-  }
-  // v0.8-S4b: conversation REWIND (mutating; header-token — see needsToken whitelist above). Truncates the
-  // session to just before `targetTurnSeq`, clears providerHistory (lazy-reseed rebuilds it), optionally
-  // rolls back the discarded turns' files. Returns {ok, removedTurns, lastUserText, filesReverted, filesFailed}.
-  if (req.method === 'POST' && pathname === '/api/session/rewind') {
-    const body = await readJsonBody(req);
-    const sessionId = safeSessionId(body.sessionId); // F4
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    if (body.targetTurnSeq === undefined || body.targetTurnSeq === null) return send(res, apiFailure('request.field_required', { field: 'targetTurnSeq' }, 'targetTurnSeq is required', 400));
-    const guarded = body.guardExecution === true || Object.prototype.hasOwnProperty.call(body, 'expectedExecution') || Object.prototype.hasOwnProperty.call(body, 'expectedIdleState');
-    const result = await rewindSession(sessionId, body.targetTurnSeq, !!body.rollbackFiles,
-      guarded ? { guardExecution: true, expectedExecution: body.expectedExecution, expectedIdleState: body.expectedIdleState } : {});
-    if (guarded && result && result.ok === false && ['execution_identity_required', 'execution_identity_unavailable',
-      'execution_changed', 'rewind_in_progress', 'rewind_settle_timeout'].includes(result.error)) {
-      return send(res, apiFailure(result.error, {}, result.error, 409));
-    }
-    return send(res, json(result));
   }
   return false;
 }

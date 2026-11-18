@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T08:36:26.282Z",
+  "generatedAt": "2026-11-18T08:42:22.704Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -11,6 +11,7 @@
       "ruyi-workbench/app/src/13e-pretender-index.js",
       "ruyi-workbench/app/backend/local-support-routes.cjs",
       "ruyi-workbench/app/backend/diagnostic-routes.cjs",
+      "ruyi-workbench/app/backend/checkpoint-routes.cjs",
       "ruyi-workbench/app/backend/steward-routes.cjs",
       "ruyi-workbench/app/backend/event-stream.cjs",
       "ruyi-workbench/app/backend/scheduler-routes.cjs",
@@ -983,6 +984,166 @@
     }
   ],
   "decisionPoints": [
+    {
+      "kind": "exact",
+      "path": "/api/checkpoints",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointQueryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\artifacts.e2e.js",
+        "dev-harness\\changes-diff.e2e.js",
+        "dev-harness\\checkpoint-coverage.e2e.js",
+        "dev-harness\\checkpoint-mcpchild.e2e.js",
+        "dev-harness\\checkpoint-proxy-session.e2e.js",
+        "dev-harness\\checkpoint-visibility.e2e.js",
+        "dev-harness\\checkpoint.e2e.js",
+        "dev-harness\\external-code-diff.e2e.js",
+        "dev-harness\\fake-mcp-contract.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\i18n.e2e.js",
+        "dev-harness\\macos-native-entry.e2e.js",
+        "dev-harness\\macos-office-artifacts.e2e.js",
+        "dev-harness\\macos-offline-package.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\subagent.e2e.js",
+        "dev-harness\\tools-v3.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/checkpoints/open-external",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointQueryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\external-code-diff.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/checkpoints/diff",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointQueryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\changes-diff.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\i18n.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/storage/policy",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\config-mutate-mcp-parity.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\session-storage-v2.e2e.js",
+        "dev-harness\\storage-steward.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/storage/clean",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\session-storage-v2.e2e.js",
+        "dev-harness\\storage-steward.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/checkpoints/rollback",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\artifacts.e2e.js",
+        "dev-harness\\checkpoint-coverage.e2e.js",
+        "dev-harness\\checkpoint-proxy-session.e2e.js",
+        "dev-harness\\checkpoint-visibility.e2e.js",
+        "dev-harness\\checkpoint.e2e.js",
+        "dev-harness\\fake-mcp-contract.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\macos-native-entry.e2e.js",
+        "dev-harness\\macos-office-artifacts.e2e.js",
+        "dev-harness\\tools-v3.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/session/rewind",
+      "file": "../backend/checkpoint-routes.cjs",
+      "handler": "handleCheckpointApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "checkpoint-storage",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\agent-wake.e2e.js",
+        "dev-harness\\checkpoint-visibility.e2e.js",
+        "dev-harness\\rewind.e2e.js",
+        "dev-harness\\session-get-etag.e2e.js",
+        "dev-harness\\session-rewind-execution.e2e.js",
+        "dev-harness\\session-stop-execution.e2e.js",
+        "dev-harness\\steward-conversation.e2e.js",
+        "dev-harness\\steward-conversation.static.e2e.js",
+        "dev-harness\\steward-drawer.e2e.js",
+        "dev-harness\\steward-drawer.static.e2e.js",
+        "dev-harness\\steward-settings.static.e2e.js",
+        "dev-harness\\steward-shell-wave1.browser.e2e.js",
+        "dev-harness\\steward-stop-receipts.browser.e2e.js",
+        "dev-harness\\unit\\session-rewind-execution.test.js"
+      ]
+    },
     {
       "kind": "exact",
       "path": "/api/usage/summary",
@@ -3076,7 +3237,7 @@
       "methods": [
         "POST"
       ],
-      "selfChecksToken": true,
+      "selfChecksToken": false,
       "methodOverride": false,
       "domain": "core-inline",
       "auth": "body-token",
@@ -3092,78 +3253,11 @@
       "methods": [
         "POST"
       ],
-      "selfChecksToken": true,
+      "selfChecksToken": false,
       "methodOverride": false,
       "domain": "core-inline",
       "auth": "body-token",
       "coveredBy": []
-    },
-    {
-      "kind": "exact",
-      "path": "/api/checkpoints",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\artifacts.e2e.js",
-        "dev-harness\\changes-diff.e2e.js",
-        "dev-harness\\checkpoint-coverage.e2e.js",
-        "dev-harness\\checkpoint-mcpchild.e2e.js",
-        "dev-harness\\checkpoint-proxy-session.e2e.js",
-        "dev-harness\\checkpoint-visibility.e2e.js",
-        "dev-harness\\checkpoint.e2e.js",
-        "dev-harness\\external-code-diff.e2e.js",
-        "dev-harness\\fake-mcp-contract.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\i18n.e2e.js",
-        "dev-harness\\macos-native-entry.e2e.js",
-        "dev-harness\\macos-office-artifacts.e2e.js",
-        "dev-harness\\macos-offline-package.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\subagent.e2e.js",
-        "dev-harness\\tools-v3.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/checkpoints/open-external",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\external-code-diff.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/checkpoints/diff",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\changes-diff.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\i18n.e2e.js"
-      ]
     },
     {
       "kind": "exact",
@@ -3849,99 +3943,6 @@
         "dev-harness\\mcp-ops-gui.static.e2e.js",
         "dev-harness\\repo-hygiene.e2e.js",
         "dev-harness\\toolbox-discovery.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/storage/policy",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleCheckpointApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "checkpoint-storage",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\config-mutate-mcp-parity.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\session-storage-v2.e2e.js",
-        "dev-harness\\storage-steward.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/storage/clean",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleCheckpointApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "checkpoint-storage",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\session-storage-v2.e2e.js",
-        "dev-harness\\storage-steward.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/checkpoints/rollback",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleCheckpointApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "checkpoint-storage",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\artifacts.e2e.js",
-        "dev-harness\\checkpoint-coverage.e2e.js",
-        "dev-harness\\checkpoint-proxy-session.e2e.js",
-        "dev-harness\\checkpoint-visibility.e2e.js",
-        "dev-harness\\checkpoint.e2e.js",
-        "dev-harness\\fake-mcp-contract.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\macos-native-entry.e2e.js",
-        "dev-harness\\macos-office-artifacts.e2e.js",
-        "dev-harness\\tools-v3.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/session/rewind",
-      "file": "13b-api-domain-routes.js",
-      "handler": "handleCheckpointApiRoutes",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "checkpoint-storage",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\agent-wake.e2e.js",
-        "dev-harness\\checkpoint-visibility.e2e.js",
-        "dev-harness\\rewind.e2e.js",
-        "dev-harness\\session-get-etag.e2e.js",
-        "dev-harness\\session-rewind-execution.e2e.js",
-        "dev-harness\\session-stop-execution.e2e.js",
-        "dev-harness\\steward-conversation.e2e.js",
-        "dev-harness\\steward-conversation.static.e2e.js",
-        "dev-harness\\steward-drawer.e2e.js",
-        "dev-harness\\steward-drawer.static.e2e.js",
-        "dev-harness\\steward-settings.static.e2e.js",
-        "dev-harness\\steward-shell-wave1.browser.e2e.js",
-        "dev-harness\\steward-stop-receipts.browser.e2e.js",
-        "dev-harness\\unit\\session-rewind-execution.test.js"
       ]
     },
     {
@@ -6113,6 +6114,11 @@
       "file": "13-http-router.js",
       "handler": "handleApi",
       "target": "handleAgentRunApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleCheckpointQueryApiRoutes"
     },
     {
       "file": "13-http-router.js",

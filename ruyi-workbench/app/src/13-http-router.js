@@ -30,6 +30,16 @@ const handleLocalSupportApiRoutes = require('./backend/local-support-routes.cjs'
   guardWorkspacePath, buildRevealSpawn,
 });
 
+const { handleCheckpointQueryApiRoutes, handleCheckpointApiRoutes } =
+  require('./backend/checkpoint-routes.cjs').createCheckpointRoutes({
+    tokenOk, safeSessionId, readConfig, loadSession, mutateSession, mutateConfig, nowIso, logEvent,
+    execution: { activeChildren, activeAgentRuns, rewindSession },
+    journal: { journalReadIndex, journalDir, journalRollback, journalRevertLogRecord,
+      workspaceBaselinePathKey, workspaceBaselineIsCodePath, bumpMissionChangeSeq },
+    editor: { guardWorkspacePath, resolvePreferredCodeEditor, buildCodeEditorSpawn, materializeCheckpointEditorDiff, launchCodeEditor },
+    storage: { normalizeStoragePolicy, storageSweep }, process,
+  });
+
 // 118c: 启动体验。两件用户看得见的事,都通过 GET /api/status 的【一个】只读字段 startNotice 上线:
 //   ① 上一次启动【失败】过 -- 失败时把人话写进 <data>/last-start-error.json,下一次成功启动读出来、
 //      交给前端顶部条,读完立刻删文件(所以它天然是一次性的,不会反复骚扰)。
@@ -1235,141 +1245,13 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/agent-workflow/wait') return agentWorkflowLoopbackRoute(req, res, 'wait');
   if (req.method === 'POST' && pathname === '/api/agent-workflow/result') return agentWorkflowLoopbackRoute(req, res, 'result');
   await handleUsageApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  // v0.8-S4a: checkpoint query (read-only → same-origin gate is enough; not in needsToken).
   // EC-D Wave 65: Agent Run query, event, and control routes live in 13d-core-domain-routes.js.
   await handleAgentRunApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  if (req.method === 'GET' && pathname === '/api/checkpoints') {
-    // F2 (安全·泄露面): this GET exposes the file-change history. It is a GET, so it never runs through the
-    // mutating auth block above — the token gate MUST be applied here in the handler. The UI's api() always
-    // sends the token, so it is unaffected; only tokenless local processes are refused.
-    if (!tokenOk(req)) return send(res, json({ ok: false, error: 'missing or invalid workbench token' }, 403));
-    const sessionId = safeSessionId(new URL(req.url, 'http://x').searchParams.get('sessionId')); // F4
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    const entries = await journalReadIndex(sessionId);
-    // v1.4.1: 附上每条目当前磁盘大小(改动后状态),前端可显示「原 X → 现 Y」的大小变化 + 判定是否值得看 diff。
-    const enriched = await Promise.all(entries.map(async e => {
-      let currentBytes = null;
-      if (e && e.path) { try { const st = await fsp.stat(e.path); currentBytes = st.isFile() ? st.size : null; } catch { currentBytes = null; } }
-      return { ...e, currentBytes };
-    }));
-    const totalBytes = entries.reduce((s, e) => s + (Number(e.bytes) || 0), 0);
-    return send(res, json({ ok: true, entries: enriched, totalBytes }));
-  }
-  // User-clicked handoff to the native editor selected by Windows for code files. POST body:
-  // {sessionId,turnSeq,entrySeq?,action:'diff'|'open'}. Omit entrySeq to open every distinct code-file diff
-  // in the turn (bounded to 12). Unlike office_open this never hands source files to an arbitrary association:
-  // resolvePreferredCodeEditor accepts only known editors/IDEs, preventing `.js` -> WScript execution.
-  if (req.method === 'POST' && pathname === '/api/checkpoints/open-external') {
-    if (process.platform !== 'darwin') return send(res, apiFailure('editor.platform_unsupported', {}, '仅支持 macOS', 400));
-    const body = await readJsonBody(req);
-    const sessionId = safeSessionId(body && body.sessionId);
-    const turnSeq = Number(body && body.turnSeq);
-    const hasEntrySeq = body && body.entrySeq !== undefined && body.entrySeq !== null && body.entrySeq !== '';
-    const entrySeq = hasEntrySeq ? Number(body.entrySeq) : null;
-    const action = body && body.action === 'open' ? 'open' : 'diff';
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    if (!Number.isInteger(turnSeq) || turnSeq < 0 || (hasEntrySeq && (!Number.isInteger(entrySeq) || entrySeq < 0))) {
-      return send(res, apiFailure('checkpoint.reference_invalid', {}, 'invalid turnSeq or entrySeq', 400));
-    }
-    if (action === 'open' && !hasEntrySeq) return send(res, apiFailure('checkpoint.reference_invalid', {}, 'entrySeq is required for open', 400));
-    const session = await loadSession(sessionId);
-    if (!session) return send(res, apiSessionNotFound());
-    const config = await readConfig();
-    const turnEntries = (await journalReadIndex(sessionId))
-      .filter(e => e && Number(e.turnSeq) === turnSeq)
-      .sort((a, b) => Number(a.entrySeq) - Number(b.entrySeq));
-    let targets = hasEntrySeq ? turnEntries.filter(e => Number(e.entrySeq) === entrySeq) : turnEntries;
-    if (!targets.length) return send(res, apiFailure('checkpoint.not_found', {}, 'entry not found', 404));
-    if (!hasEntrySeq) {
-      const earliestByPath = new Map();
-      for (const entry of targets) {
-        const key = workspaceBaselinePathKey(entry.path);
-        if (!earliestByPath.has(key)) earliestByPath.set(key, entry);
-      }
-      targets = [...earliestByPath.values()].slice(0, 12);
-    }
-    const opened = [], failed = [];
-    for (const entry of targets) {
-      const sourcePath = String(entry.path || '');
-      if (!workspaceBaselineIsCodePath(sourcePath)) { failed.push({ entrySeq: entry.entrySeq, reason: '不是支持的代码/文本文件' }); continue; }
-      const guard = await guardWorkspacePath(sourcePath, session, config);
-      if (!guard.ok) { failed.push({ entrySeq: entry.entrySeq, reason: guard.error }); continue; }
-      let exists = false;
-      try { exists = (await fsp.stat(guard.absPath)).isFile(); } catch { exists = false; }
-      if (entry.op !== 'delete' && !exists) { failed.push({ entrySeq: entry.entrySeq, reason: '当前文件不存在' }); continue; }
-      const editor = resolvePreferredCodeEditor(sourcePath);
-      if (!editor) { failed.push({ entrySeq: entry.entrySeq, reason: '未检测到安全的本机代码编辑器；请先为任一代码文件选择默认编辑器' }); continue; }
-      let spawnSpec;
-      if (action === 'open') {
-        if (entry.op === 'delete') { failed.push({ entrySeq: entry.entrySeq, reason: '文件已删除，请使用 Diff 查看删除前内容' }); continue; }
-        spawnSpec = buildCodeEditorSpawn(editor, 'open', '', guard.absPath);
-      } else {
-        const materialized = await materializeCheckpointEditorDiff(sessionId, entry, exists ? guard.absPath : '');
-        if (!materialized.ok) { failed.push({ entrySeq: entry.entrySeq, reason: materialized.error }); continue; }
-        spawnSpec = buildCodeEditorSpawn(editor, 'diff', materialized.beforePath, materialized.afterPath);
-        // Generic safe editors have no command-line diff contract. Keep the browser's internal diff as the
-        // comparison view and open the meaningful side in the native editor (before for a deletion).
-        if (spawnSpec.diffUnsupported) spawnSpec.args = [...(spawnSpec.fileOpenPrefix || []), entry.op === 'delete' ? materialized.beforePath : materialized.afterPath];
-      }
-      if (!spawnSpec.ok || !await launchCodeEditor(spawnSpec)) {
-        failed.push({ entrySeq: entry.entrySeq, reason: spawnSpec.error || '无法启动本机编辑器' });
-        continue;
-      }
-      opened.push({ entrySeq: Number(entry.entrySeq), editor: spawnSpec.editor, mode: spawnSpec.mode,
-        source: spawnSpec.source, diffSupported: !spawnSpec.diffUnsupported });
-    }
-    if (!opened.length) {
-      const reason = failed[0] && failed[0].reason || '没有可打开的代码改动';
-      return send(res, apiFailure('editor.open_failed', { failed: failed.length }, reason, 409));
-    }
-    logEvent({ kind: 'checkpoint_external_open', sessionId, turnSeq, action, opened: opened.length,
-      failed: failed.length, editor: opened[0].editor, mode: opened[0].mode });
-    return send(res, json({ ok: true, action, opened, failed, limited: !hasEntrySeq && turnEntries.length > targets.length }));
-  }
-  // v1.4.1: 单条变更的「改动前↔现在」对比。GET /api/checkpoints/diff?sessionId=&turnSeq=&entrySeq=
-  // before = 本地 .gz 快照(create 无);after = 当前磁盘文件(delete 无)。文本文件返回内容(前端渲染 diff),
-  // 二进制/过大只返回字节数。token-gated(GET 不走上面的变更类鉴权块,此处显式校验)。path 取自我方 journal
-  // 索引(非用户输入,零穿越面);内容为工作台自身写过的文件,不新增暴露面(是 /api/file/preview 的严格子集)。
-  if (req.method === 'GET' && pathname === '/api/checkpoints/diff') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const q = new URL(req.url, 'http://x').searchParams;
-    const sessionId = safeSessionId(q.get('sessionId'));
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    const turnSeq = Number(q.get('turnSeq')), entrySeq = Number(q.get('entrySeq'));
-    if (!Number.isInteger(turnSeq) || !Number.isInteger(entrySeq) || turnSeq < 0 || entrySeq < 0) {
-      return send(res, apiFailure('checkpoint.reference_invalid', {}, 'invalid turnSeq or entrySeq', 400));
-    }
-    const idx = await journalReadIndex(sessionId);
-    const entry = idx.find(e => e && Number(e.turnSeq) === turnSeq && Number(e.entrySeq) === entrySeq);
-    if (!entry) return send(res, apiFailure('checkpoint.not_found', {}, 'entry not found', 404));
-    const p = String(entry.path || '');
-    const ext = String(path.extname(p).replace(/^\./, '')).toLowerCase();
-    const DIFF_TEXT_MAX = 256 * 1024; // 单侧文本上限;超限只给大小
-    const textish = PREVIEW_TEXT_EXTS.has(ext) || ext === '' || ext === 'log';
-    let beforeBuf = null, afterBuf = null;
-    if (entry.op !== 'create' && !entry.skipped) {
-      try { beforeBuf = zlib.gunzipSync(await fsp.readFile(path.join(journalDir(sessionId), `${turnSeq}-${entrySeq}.gz`))); } catch { beforeBuf = null; }
-    }
-    if (entry.op !== 'delete') { try { afterBuf = await fsp.readFile(p); } catch { afterBuf = null; } }
-    const looksBinary = b => !!b && b.slice(0, 8192).includes(0);
-    const tooBig = b => !!b && b.length > DIFF_TEXT_MAX;
-    const out = { ok: true, op: entry.op, path: p, skipped: !!entry.skipped,
-      beforeBytes: beforeBuf ? beforeBuf.length : (entry.op === 'create' ? 0 : (Number(entry.bytes) || null)),
-      afterBytes: afterBuf ? afterBuf.length : (entry.op === 'delete' ? 0 : (Number(entry.currentBytes) || null)) };
-    if (textish && !looksBinary(beforeBuf) && !looksBinary(afterBuf) && !tooBig(beforeBuf) && !tooBig(afterBuf)) {
-      out.isText = true;
-      out.before = beforeBuf ? beforeBuf.toString('utf8') : '';
-      out.after = afterBuf ? afterBuf.toString('utf8') : '';
-    } else {
-      out.isText = false; out.binary = true;
-    }
-    return send(res, json(out));
-  }
+  await handleCheckpointQueryApiRoutes(req, res, pathname); if (res.writableEnded) return;
   await handleLocalSupportApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // 49f(A1): MCP 域路由抽至 13b-api-domain-routes.js(import-folder/import-config scan|apply)。
   await handleMcpApiRoutes(req, res, pathname); if (res.writableEnded) return; // send 无返回值,以响应已结束为命中信号
   await handleDiagnosticsApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  // 49f(A1): checkpoint·storage 域路由抽至 13b-api-domain-routes.js。
   await handleCheckpointApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // 49f(A1): steer 域路由抽至 13b-api-domain-routes.js。
   await handleSteerApiRoute(req, res, pathname); if (res.writableEnded) return;

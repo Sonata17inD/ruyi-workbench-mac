@@ -194,17 +194,20 @@ test('guarded idle requires the complete observation and checks authoritative tu
 });
 
 test('guarded HTTP rewind keeps stable conflict codes and forwards the original idle observation', async () => {
-  const source = read('src/13b-api-domain-routes.js');
+  const { Readable } = require('node:stream');
+  const { createCheckpointRoutes } = require('../../ruyi-workbench/app/backend/checkpoint-routes.cjs');
   for (const error of ['execution_identity_required', 'execution_identity_unavailable', 'execution_changed', 'rewind_in_progress', 'rewind_settle_timeout']) {
     let options;
-    const ctx = vm.createContext({
-      ...require('../../ruyi-workbench/app/backend/http-protocol.cjs'),
-      readJsonBody: async () => ({ sessionId: 's', targetTurnSeq: 2, rollbackFiles: true, ...idleOptions() }),
-      safeSessionId: id => id, send: (_res, value) => value,
-      rewindSession: async (_id, _target, _files, observed) => { options = observed; return { ok: false, error }; },
+    const { handleCheckpointApiRoutes } = createCheckpointRoutes({
+      safeSessionId: id => id, journal: {}, editor: {}, storage: {},
+      execution: {
+        rewindSession: async (_id, _target, _files, observed) => { options = observed; return { ok: false, error }; },
+      },
     });
-    vm.runInContext(functionBlock(source, 'handleCheckpointApiRoutes') + '\nthis.route = handleCheckpointApiRoutes;', ctx);
-    const response = await ctx.route({ method: 'POST' }, {}, '/api/session/rewind');
+    const payload = Buffer.from(JSON.stringify({ sessionId: 's', targetTurnSeq: 2, rollbackFiles: true, ...idleOptions() }));
+    const req = Object.assign(Readable.from([payload]), { method: 'POST' });
+    const response = { writeHead(status) { this.status = status; }, end(body) { this.body = body; } };
+    await handleCheckpointApiRoutes(req, response, '/api/session/rewind');
     assert.equal(response.status, 409);
     assert.equal(JSON.parse(response.body).error.code, error);
     assert.equal(JSON.stringify(options.expectedIdleState), JSON.stringify(idleOptions().expectedIdleState));

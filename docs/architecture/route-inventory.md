@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T08:36:26.282Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T08:42:22.704Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -29,16 +29,19 @@
 | DELETE | `/api/agent-runs/` | prefix | token | 13d-core-domain-routes.js · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 | GET | `/api/agent-runs/` | prefix | token self | 13d-core-domain-routes.js · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 
-## checkpoint-storage(4)
+## checkpoint-storage(7)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/storage/policy` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js, session-storage-v2.e2e.js 等 4 件 |
-| POST | `/api/storage/clean` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | frontend-domains.static.e2e.js, session-storage-v2.e2e.js, storage-steward.e2e.js |
-| POST | `/api/checkpoints/rollback` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
-| POST | `/api/session/rewind` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
+| GET | `/api/checkpoints` | exact | token self | ../backend/checkpoint-routes.cjs · `handleCheckpointQueryApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, changes-diff.e2e.js 等 18 件 |
+| POST | `/api/checkpoints/open-external` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointQueryApiRoutes` | external-code-diff.e2e.js |
+| GET | `/api/checkpoints/diff` | exact | token self | ../backend/checkpoint-routes.cjs · `handleCheckpointQueryApiRoutes` | changes-diff.e2e.js, frontend-domains.static.e2e.js, i18n.e2e.js |
+| POST | `/api/storage/policy` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js, session-storage-v2.e2e.js 等 4 件 |
+| POST | `/api/storage/clean` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | frontend-domains.static.e2e.js, session-storage-v2.e2e.js, storage-steward.e2e.js |
+| POST | `/api/checkpoints/rollback` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
+| POST | `/api/session/rewind` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
 
-## core-inline(59)
+## core-inline(56)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
@@ -91,11 +94,8 @@
 | POST | `/api/autonomy/grant` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
 | POST | `/api/autonomy/revoke` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
 | POST | `/api/agent-workflow/launch` | exact | body-token | 13-http-router.js · `handleApi` | agent-deadlock-watchdog.e2e.js, agent-node-limits.e2e.js, agent-node-wrapup.e2e.js 等 40 件 |
-| POST | `/api/agent-workflow/wait` | exact | body-token self | 13-http-router.js · `handleApi` | agent-node-limits.e2e.js |
-| POST | `/api/agent-workflow/result` | exact | body-token self | 13-http-router.js · `handleApi` | — |
-| GET | `/api/checkpoints` | exact | token self | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, artifacts.e2e.js, changes-diff.e2e.js 等 18 件 |
-| POST | `/api/checkpoints/open-external` | exact | token | 13-http-router.js · `handleApi` | external-code-diff.e2e.js |
-| GET | `/api/checkpoints/diff` | exact | token self | 13-http-router.js · `handleApi` | changes-diff.e2e.js, frontend-domains.static.e2e.js, i18n.e2e.js |
+| POST | `/api/agent-workflow/wait` | exact | body-token | 13-http-router.js · `handleApi` | agent-node-limits.e2e.js |
+| POST | `/api/agent-workflow/result` | exact | body-token | 13-http-router.js · `handleApi` | — |
 | POST | `/api/upload` | exact | token-browser | 13-http-router.js · `handleApi` | chat-ux-wave1.browser.e2e.js, external-bots.browser.e2e.js, file-text-encoding.e2e.js 等 9 件 |
 | GET | `/api/upload/content` | exact | token self | 13-http-router.js · `handleApi` | tool-result-render.browser.e2e.js, tool-result-shrink.test.js, vision-loop.e2e.js |
 | POST | `/api/chat/stream` | exact | token-browser | 13-http-router.js · `handleApi` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
@@ -265,6 +265,7 @@
 - 13-http-router.js · `handleApi` → `handleInterventionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleUsageApiRoutes`
 - 13-http-router.js · `handleApi` → `handleAgentRunApiRoutes`
+- 13-http-router.js · `handleApi` → `handleCheckpointQueryApiRoutes`
 - 13-http-router.js · `handleApi` → `handleLocalSupportApiRoutes`
 - 13-http-router.js · `handleApi` → `handleMcpApiRoutes`
 - 13-http-router.js · `handleApi` → `handleDiagnosticsApiRoutes`
