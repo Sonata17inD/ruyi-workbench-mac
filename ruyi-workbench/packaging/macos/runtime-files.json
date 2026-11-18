@@ -48,6 +48,7 @@
     "app/backend/agent-results.cjs",
     "app/backend/agent-loop-hooks.cjs",
     "app/backend/kimi-acp-files.cjs",
+    "app/backend/kimi-acp-interventions.cjs",
     "app/backend/kimi-acp-rpc.cjs",
     "app/backend/kimi-acp-session.cjs",
     "app/backend/kimi-acp-terminals.cjs",

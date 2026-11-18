@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2910,
-    "requiredSymbols": 3374,
+    "providedSymbols": 2885,
+    "requiredSymbols": 3373,
     "edges": 638,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -4725,7 +4725,6 @@
         "agentAutoCompactTrigger",
         "applyKimiAcpTurnConfig",
         "applyKimiStatusToSession",
-        "awaitKimiAcpWithSignal",
         "buildKimiAcpPromptParts",
         "cancelKimiAcpIntervention",
         "classifyKimiAcpReadonlySearch",
@@ -4735,6 +4734,7 @@
         "consumeKimiAcpApproval",
         "contextResetKimiAcpPlanApproval",
         "createAcpRpc",
+        "createKimiAcpInterventions",
         "createKimiAcpRpc",
         "ensureKimiAcpOperationPermission",
         "ensureKimiServer",
@@ -4748,43 +4748,23 @@
         "killKimiAcpTerminal",
         "kimiAcpActivatedActualConfigValue",
         "kimiAcpApplyPlan",
-        "kimiAcpApprovalValue",
-        "kimiAcpAssertSession",
-        "kimiAcpCanonicalExecutable",
         "kimiAcpCapabilityState",
-        "kimiAcpConcreteEditGuard",
-        "kimiAcpContentJsonTexts",
         "kimiAcpContentText",
-        "kimiAcpEffectiveCwd",
-        "kimiAcpElicitationOptions",
-        "kimiAcpElicitationQuestion",
-        "kimiAcpElicitationValue",
         "kimiAcpExplicitToolInput",
         "kimiAcpFindConfigOption",
         "kimiAcpFreshActualForOperation",
         "kimiAcpInferConcreteToolInput",
         "kimiAcpLifecycle",
         "kimiAcpModeOptionFromActivated",
-        "kimiAcpNativeBashApprovalDescriptor",
-        "kimiAcpNativeBashEnvSafe",
-        "kimiAcpNativeBashPathExcluded",
-        "kimiAcpNativeBashRootPairs",
         "kimiAcpNativeBashWrapperCandidate",
-        "kimiAcpNativeBashWrapperCwdTexts",
-        "kimiAcpNativeBashWrapperMatches",
         "kimiAcpNativeBashWrapperTexts",
         "kimiAcpNativeShellQuote",
-        "kimiAcpNormalizedToolName",
         "kimiAcpNoteConfigActual",
-        "kimiAcpObjectInput",
         "kimiAcpObserveNativeMode",
-        "kimiAcpPermissionInput",
         "kimiAcpPermissionToolCall",
-        "kimiAcpPlanApprovalGrantsCurrentTurn",
         "kimiAcpPlanFileFromUpdate",
         "kimiAcpPlanIdFromUpdate",
         "kimiAcpPlanSnapshotFromUpdate",
-        "kimiAcpQuestionKind",
         "kimiAcpRememberConfigActual",
         "kimiAcpRequestError",
         "kimiAcpRestoreSession",
@@ -4795,11 +4775,6 @@
         "kimiAcpSyncActualConfig",
         "kimiAcpTerminalDisplayResult",
         "kimiAcpTerminalRef",
-        "kimiAcpToolTier",
-        "kimiAcpToolUpdateHasError",
-        "kimiAcpToolUpdateSucceeded",
-        "kimiAcpTrustedNativeBashExecutable",
-        "kimiAcpTrustedNativeBashPath",
         "kimiAcpUnknownSessionError",
         "kimiAcpWireCheckpoint",
         "kimiAcpWireOutcome",
@@ -4895,7 +4870,6 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4945,7 +4919,6 @@
           "provider": "00-boot.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4975,7 +4948,7 @@
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4983,13 +4956,6 @@
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5158,7 +5124,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "buildOpenSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5172,7 +5138,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5180,7 +5145,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5195,7 +5159,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5203,7 +5166,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "workspaceWriteRoots",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5267,7 +5229,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -5281,14 +5244,14 @@
           "provider": "04-permission-runtime.js",
           "symbol": "requestUserQuestion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "runAutomaticInterventionDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5344,8 +5307,7 @@
           "provider": "12-tool-dispatch.js",
           "symbol": "toolCall",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         }
       ]
@@ -28627,7 +28589,6 @@
       "to": "00-boot.js",
       "symbols": [
         "RUYI_EVENTS",
-        "URL",
         "appRoot",
         "createCappedDiagnosticText",
         "dataRoot",

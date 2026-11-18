@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2910 | 3374 | 638 | 21 | 0 | 0 |
+| 94 | 2885 | 3373 | 638 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -60,7 +60,7 @@
 | 42 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
 | 43 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
 | 44 | `05-claude-engine.js` | engine | 3 | 121 | 24 |
-| 45 | `05b-kimi-bridge.js` | engine | 107 | 73 | 12 |
+| 45 | `05b-kimi-bridge.js` | engine | 82 | 72 | 12 |
 | 46 | `06-provider-engine.js` | engine | 32 | 29 | 10 |
 | 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 48 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
@@ -207,7 +207,7 @@
 | `05-claude-engine.js` | `06v-operational-services.js` | backward | `engineTranscriptCwd` |
 | `05-claude-engine.js` | `06w-capability-service.js` | backward | `getCapabilities`, `peekCapabilities` |
 | `05-claude-engine.js` | `07-autonomy.js` | forward | `classifyToolPacks` |
-| `05b-kimi-bridge.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `URL`, `appRoot`, `createCappedDiagnosticText`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `http`, `isSensitiveDataPath`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathToFileURL`, `pathWithinRoot`, `paths`, `redact`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
+| `05b-kimi-bridge.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `appRoot`, `createCappedDiagnosticText`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `http`, `isSensitiveDataPath`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathToFileURL`, `pathWithinRoot`, `paths`, `redact`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
 | `05b-kimi-bridge.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherUsable`, `decodeClaudeCliText`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi` |
 | `05b-kimi-bridge.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
 | `05b-kimi-bridge.js` | `01o-execution-state.js` | backward | `activeChildren` |
