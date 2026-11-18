@@ -7,49 +7,34 @@
 
 ## 怎么跑
 
-```powershell
+```sh
 # 单件
-node dev-harness\openai-engine.e2e.js
-# 每件自成一体:spawn 自己的假服务与工作台，断言后用 killOwnTree 清理自己的进程树。
+node dev-harness/run-all.js openai-engine.e2e.js
 # 静态快通道（先运行单测）
-node dev-harness\run-all.js --fast --parallel 4
-# 全量回归由 runner 分桶；不要自行并发运行固定端口单件
-node dev-harness\run-all.js --parallel 4
+node dev-harness/run-all.js --fast --parallel 4
+# 全量回归由 runner 检查端口并分桶执行
+node dev-harness/run-all.js --parallel 4
 ```
 
-### 实际发布包验收（Windows，按需）
+### macOS 候选包与内测验收
 
-先用 `ruyi-workbench/tools/package-offline.ps1` 分别生成真正包含 EXE 的 Slim 和 Full，保留打包退出码、日志、ZIP 及其同名 stage。Full 需要已验证的 ACC 离线载荷。不要用 `-SkipExeBuild` 的源码运行包代替 EXE 验收。
+按离线构建说明用同一源码构建 arm64 Full 和 Slim，并分别运行包体验收。用内测包装器制作 DMG 后，分别验证安装，再用两份实际 DMG 做隔离升级与回退。 [离线构建和包体校验](../ruyi-workbench/desktop-macos/OFFLINE-PACKAGING.md) · [内测 DMG 制作和验收](../ruyi-workbench/desktop-macos/INTERNAL-TRIAL.md)
 
-```powershell
-node dev-harness/release-package-acceptance.js --slim <Slim.zip> --full <Full.zip> --baseline-ref v3.0.1 --output <新的短路径目录>
+```sh
+RUYI_UPGRADE_OLD_DISTRIBUTION=/path/to/old-trial \
+RUYI_UPGRADE_NEW_DISTRIBUTION=/path/to/new-trial \
+RUYI_UPGRADE_REQUIRED=1 node dev-harness/macos-upgrade-rollback.e2e.js
 ```
 
-脚本验证实际 ZIP 及当前源码字节、随包 Node 和 EXE 的四份全新数据目录、候选特有的隐私保护行为、丢失配置后的两种冷恢复、旧版数据副本升级/重启/续写/备份回退、每包 19 项核心旅程，以及 Full 安装版 Python 的完整性、重复安装、WinSDK OCR 和两个真实 MCP stdio 入口。旧数据由固定 `v3.0.1` 标签源码和随包 Node 生成，不冒充下载的旧发行二进制。`validation.json` 逐项记录结果和来源 SHA-256；失败保留现场，已有输出目录会拒绝复用。测试采用离线 Fake provider，原用户配置及工具箱目录被隔离。桌面窗口的实际启动/操作/关闭仍须另行观察，并核对 GUI 与后台的进程归属。
+### 浏览器与专项回归
 
 隐私规则另有按需真实输入框验证：`node dev-harness/privacy-31/browser-input-validation.js --output=ruyi-workbench/dist/privacy-validation`。它在独立 home 启动真实浏览器，通过聊天与管家输入框填写、点击发送 45 条目录及对抗语料，检查四档位／技术开关、公开负例、未保存草稿和工具代号读写闭环；另用三代自然段验证整段输入、实际文件返回及代号回填，最新一代含 27 个敏感正例、25 个公开或已打码负例，并审计递归 JSON 解码后的完整模型请求。使用本地假模型，不连接用户实例或真实模型。标题截断与策略切换另由 `unit/privacy-thread-brief-boundary.test.js` 验证；用户显示与 HTTP／历史隔离由 `unit/privacy-display.test.js` 和 `unit/privacy-display-http.test.js` 验证。真实端点矩阵为 `privacy-31/live-matrix.js --live --report=<path>`，含 28 个场景（包括第二／三轮六场景正反例、管家自然语言规则管理和类型异常历史续跑），须显式启用并使用合成材料。
 
-`release-dryrun.js --pkg` 另验构建、overlay 和打包器链路；构包非零、ZIP 缺失或清单不完整均失败。普通干跑缺少 Full 载荷时明确 SKIP；`--require-full --acc-offline-source <目录>` 要求 Full 实际通过。此脚本只报告 live 配置状态，不调用真实模型 API。
+浏览器夹具可通过 `RUYI_E2E_BROWSER` 指定 Chrome 或 Chromium 的可执行文件。需要 `realhist-fixtures/` 的测试会在夹具缺失时记录 `SKIP`，跳过项单独计数。 [浏览器查找规则](lib/browser-path.js)
 
-### 在 Linux / 云端容器里跑(非主战场,但可用)
+第54波的回合叙事视觉门禁可单独运行 `node dev-harness/dom-screenshot.e2e.js`；它调用系统 Edge/Chrome 截取明暗主题，并与 `visual-baselines/workbench-shell-v2.json` 的低分辨率感知网格比较。只有确认视觉变更是预期行为时才使用 `--update` 更新基线。
 
-服务端本身在 Linux 上直接起(`node ruyi-workbench/app/server.js serve`),界面可用。回归套件是 Windows 优先的,
-在 Linux 上这样跑能得到最多的有效信号:
-
-```bash
-# 以 root 跑的容器里 Chromium 需要 --no-sandbox;界面断言多为中文,让浏览器与进程都用 zh-CN。
-printf '#!/bin/sh\nexec /path/to/chromium --no-sandbox --lang=zh-CN "$@"\n' > /tmp/chromium-ruyi && chmod +x /tmp/chromium-ruyi
-LANG=zh_CN.UTF-8 RUYI_E2E_BROWSER=/tmp/chromium-ruyi node dev-harness/run-all.js --parallel 4
-```
-
-`RUYI_E2E_BROWSER` 不设时依次找 Edge/Chrome/Chromium 的常见安装位置(见 `lib/browser-path.js`)。
-2026-09 在 4 核 Linux 容器里实测:402 件里 366 过。其余多数是**按设计只在 Windows 成立**的件(PowerShell 会话、
-`.cmd` 启动器、资源管理器、`C:\` 路径、像素基线);root 身份下「只读文件写不进去」一类断言也不成立。
-依赖未随开源仓发布的 `realhist-fixtures/` 的件在夹具缺失时打印 `SKIP` 并退出 0(整件或只跳那一节)。Linux 上的红不等于 Windows 回归,以 Windows CI 为准。
-
-第54波的回合叙事视觉门禁可单独运行 `node dev-harness\dom-screenshot.e2e.js`；它调用系统 Edge/Chrome 截取明暗主题，并与 `visual-baselines/workbench-shell-v2.json` 的低分辨率感知网格比较。只有确认视觉变更是预期行为时才使用 `--update` 更新基线。
-
-运行时优化 shadow 有两层无外部依赖测试：`node dev-harness\runtime-shadow-benchmark.js` 用真实 native catalog 跑基础 60 条工具查询、20 条长 observation 与 30 条失败分类样本；`node dev-harness\runtime-shadow-adversarial.js` 再扩为检索误召回/歧义/typo/顺序确定性/1,000 项 catalog 压测、observation 保护误判/非法 JSON/幂等/5 MiB 载荷，以及写操作 transport ambiguity/指纹碰撞。结果分别写到被 git 忽略的 `dev-harness/ab-results/runtime-shadow-latest.json` 与 `runtime-shadow-adversarial-latest.json`。两件都不代表批准主动检索、主动 observation reducer 或自动重试；后者发现产品阻断项时仍可 exit 0，只有 shadow 行为等价、隐私或 fail-safe 不变量破坏才 exit 非零。F1 真实数据用 `node dev-harness\runtime-failure-report.js <RUYI_HOME>` 按最新分类器版本单独过门；分类器升级时可先运行 `node dev-harness\runtime-failure-replay.js <RUYI_HOME>`，它只输出新旧类别聚合和安全计数，不输出或改写原始工具结果。
+运行时优化 shadow 有两层无外部依赖测试：`node dev-harness/runtime-shadow-benchmark.js` 用真实 native catalog 跑基础 60 条工具查询、20 条长 observation 与 30 条失败分类样本；`node dev-harness/runtime-shadow-adversarial.js` 再扩为检索误召回/歧义/typo/顺序确定性/1,000 项 catalog 压测、observation 保护误判/非法 JSON/幂等/5 MiB 载荷，以及写操作 transport ambiguity/指纹碰撞。结果分别写到被 git 忽略的 `dev-harness/ab-results/runtime-shadow-latest.json` 与 `runtime-shadow-adversarial-latest.json`。两件都不代表批准主动检索、主动 observation reducer 或自动重试；后者发现产品阻断项时仍可 exit 0，只有 shadow 行为等价、隐私或 fail-safe 不变量破坏才 exit 非零。F1 真实数据用 `node dev-harness/runtime-failure-report.js <RUYI_HOME>` 按最新分类器版本单独过门；分类器升级时可先运行 `node dev-harness/runtime-failure-replay.js <RUYI_HOME>`，它只输出新旧类别聚合和安全计数，不输出或改写原始工具结果。
 
 > **第79–84波（交办台专项门）已于第 121 波 K1 整段退役。** 34 号文 §8.1：交办台壳层（8 个
 > `js/preview-*.js`、`css/views/preview-shell.css`、505 个 `previewShell.*` 键）整层删除，钉着它的
