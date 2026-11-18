@@ -301,9 +301,9 @@ function typeExpressionLiterals(text) {
     'D7 settle 之后的那次落盘同时补 launchedBy(覆盖递话给用户自己会话的那条路)');
   ok(famCount(/result\.result && typeof result\.result === 'object'/g) === 1,
     "D7 成败取【内层】result.result.ok —— 外层 ok 只表示这次调用完成了(一条 HTTP 500 的回合外层仍是 ok:true)");
-  const src02b = read('02-session-store.js');
+  const src02b = read('../backend/session-meta-updates.cjs');
   ok(src02b.includes("if (patch.launchedBy === 'steward') session.launchedBy = 'steward';"),
-    "D7 02 的元数据白名单只认 'steward' 这一个字面量(PATCH /api/sessions 的调用方拿不到别的值)");
+    "D7 会话元数据服务的白名单只认 'steward' 这一个字面量(PATCH /api/sessions 的调用方拿不到别的值)");
   ok(src02b.includes('session.stewardLastTurn = {')
     && src02b.includes("errorClass: String(t.errorClass || '').slice(0, 64),"),
     'D7 stewardLastTurn 严格归一成固定五字段(与 stewardQuick 同纪律)');
