@@ -75,6 +75,8 @@
     "app/backend/mcp-routes.cjs",
     "app/backend/session-steering.cjs",
     "app/backend/audio-routes.cjs",
+    "app/backend/skill-routes.cjs",
+    "app/backend/memory-routes.cjs",
     "app/backend/attachment-enrichment.cjs",
     "app/backend/agent-workflow.cjs",
     "app/backend/persisted-agent-launch.cjs",

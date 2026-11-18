@@ -65,11 +65,6 @@ function readMemoryItem(...args) { return MemoryStore.readMemoryItem(...args); }
 function saveMemory(...args) { return MemoryStore.saveMemory(...args); }
 function deleteMemory(...args) { return MemoryStore.deleteMemory(...args); }
 
-// 域函数失败回执带 errorCode 时,路由走 apiFailure(稳定码 + 参数,前端按码本地化);没带的照旧 json(r, status)(逐字节不变)。
-function memoryFailureResponse(r, status) {
-  return r && r.errorCode ? apiFailure(r.errorCode, r.errorParams || {}, r.error || '', status) : json(r, status);
-}
-
 // 把一条记忆换到另一个作用域(项目 → 全局「提升」/ 全局 → 当前项目「下放」)。
 // mem = 要写进目标作用域的完整内容(含 id、scope=目标作用域);fromScope = 它现在所在的作用域。
 // 顺序:先写目标、写成功才删原件;原件删不掉就把刚写的那份撤回 —— 不会留下两处各一份。

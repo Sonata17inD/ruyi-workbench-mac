@@ -5585,7 +5585,6 @@
         "memoryCoreScore",
         "memoryDraftFromObject",
         "memoryExclusionSet",
-        "memoryFailureResponse",
         "memoryGlobalDir",
         "memoryGlobalScopeAllowed",
         "memoryIsExpired",
@@ -5679,13 +5678,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -5710,13 +5702,6 @@
           "symbol": "fsp",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -11853,6 +11838,8 @@
         "handleCheckpointQueryApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
+        "handleMemoryApiRoutes",
+        "handleSkillApiRoutes",
         "handleUsageApiRoutes",
         "installIntegration",
         "listenOnNextFreePort",
@@ -12185,13 +12172,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinAnyRoot",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12610,34 +12590,6 @@
         },
         {
           "provider": "01c-runtime-flags.js",
-          "symbol": "coreMemoryCharBudget",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "coreMemoryMaxItems",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "memoryFixedSelectionMax",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "memoryRelevanceMax",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
           "symbol": "observationRecallEnabled",
           "kinds": [
             "call",
@@ -12981,7 +12933,6 @@
           "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -13242,70 +13193,70 @@
           "provider": "06d-memory-domain.js",
           "symbol": "analyzeMemoryMaintenance",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "applyMemoryRelationProposal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "confirmMemoryRelation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "decideMemoryProposal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "deleteMemory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "deleteMemoryRelation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "draftMemoryFromSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "listMemoryProjectGroups",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "listMemoryRelations",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "loadMemoryRegistry",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13313,13 +13264,6 @@
           "symbol": "MEMORY_EXCLUSION_MAX",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "memoryFailureResponse",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13333,63 +13277,63 @@
           "provider": "06d-memory-domain.js",
           "symbol": "migrateMemory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "moveMemoryScope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "projectKeyForCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "proposeMemoryFromSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "proposeMemoryRelation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "readMemoryItem",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "replayPendingMemoryProposal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "resolveCoreMemoryState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "saveMemory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13403,7 +13347,7 @@
           "provider": "06d-memory-domain.js",
           "symbol": "validateMemoryProposalSave",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13721,7 +13665,7 @@
           "provider": "12-tool-dispatch.js",
           "symbol": "loadSkillRegistry",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

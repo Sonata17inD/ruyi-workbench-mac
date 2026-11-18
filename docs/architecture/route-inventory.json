@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T09:25:21.254Z",
+  "generatedAt": "2026-11-18T09:45:07.727Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -19,6 +19,8 @@
       "ruyi-workbench/app/backend/mcp-routes.cjs",
       "ruyi-workbench/app/backend/session-steering.cjs",
       "ruyi-workbench/app/backend/audio-routes.cjs",
+      "ruyi-workbench/app/backend/skill-routes.cjs",
+      "ruyi-workbench/app/backend/memory-routes.cjs",
       "ruyi-workbench/app/backend/steward-routes.cjs",
       "ruyi-workbench/app/backend/event-stream.cjs",
       "ruyi-workbench/app/backend/scheduler-routes.cjs",
@@ -2201,6 +2203,320 @@
     },
     {
       "kind": "exact",
+      "path": "/api/session/memories",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\memory-subagent.e2e.js",
+        "dev-harness\\session-id-path-guard.e2e.js",
+        "dev-harness\\unit\\session-memory-cap.test.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\agent-quality-workflow.e2e.js",
+        "dev-harness\\auth-deny-default.e2e.js",
+        "dev-harness\\frontend-wave2.browser.e2e.js",
+        "dev-harness\\memory-auto-proposal-api.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\memory-recall-injection.e2e.js",
+        "dev-harness\\memory-scope-card.browser.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\memory-subagent.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\memory-scope-fixes.test.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/item",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\memory-scope-card.browser.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/proposal",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\memory-auto-proposal-api.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/proposal/decision",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\memory-auto-proposal-api.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/proposal/apply",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/draft",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/migrate",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/metadata",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\memory-scope-fixes.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\agent-quality-workflow.e2e.js",
+        "dev-harness\\auth-deny-default.e2e.js",
+        "dev-harness\\frontend-wave2.browser.e2e.js",
+        "dev-harness\\memory-auto-proposal-api.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\memory-recall-injection.e2e.js",
+        "dev-harness\\memory-scope-card.browser.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\memory-subagent.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\memory-scope-fixes.test.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/relations",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\agent-quality-workflow.e2e.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/maintenance",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "memory",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/relations/propose",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/memory/relations/confirm",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "prefix",
+      "path": "/api/memory/relations/",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "DELETE",
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "prefix",
+      "path": "/api/memory/",
+      "file": "../backend/memory-routes.cjs",
+      "handler": "handleMemoryApiRoutes",
+      "methods": [
+        "DELETE",
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": true,
+      "domain": "memory",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\action-feedback.static.e2e.js",
+        "dev-harness\\agent-quality-workflow.e2e.js",
+        "dev-harness\\auth-deny-default.e2e.js",
+        "dev-harness\\memory-auto-proposal-api.e2e.js",
+        "dev-harness\\memory-batch-proposal.e2e.js",
+        "dev-harness\\memory-scope-card.browser.e2e.js",
+        "dev-harness\\memory-scope.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\memory-scope-fixes.test.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
       "path": "/api/migration/scan",
       "file": "../backend/migration-routes.cjs",
       "handler": "handleMigrationApiRoutes",
@@ -3699,6 +4015,71 @@
     },
     {
       "kind": "exact",
+      "path": "/api/skills",
+      "file": "../backend/skill-routes.cjs",
+      "handler": "handleSkillApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "skills",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\audit-w23.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\migration-center.browser.e2e.js",
+        "dev-harness\\migration-center.e2e.js",
+        "dev-harness\\playbooks.e2e.js",
+        "dev-harness\\settings-skills.browser.e2e.js",
+        "dev-harness\\skills-registry.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/session/skills",
+      "file": "../backend/skill-routes.cjs",
+      "handler": "handleSkillApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "skills",
+      "auth": "token-browser",
+      "coveredBy": [
+        "dev-harness\\claude-mac-argv.e2e.js",
+        "dev-harness\\index-dedup.e2e.js",
+        "dev-harness\\session-id-path-guard.e2e.js",
+        "dev-harness\\skills-registry.e2e.js",
+        "dev-harness\\steward-content-tools.e2e.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/skills",
+      "file": "../backend/skill-routes.cjs",
+      "handler": "handleSkillApiRoutes",
+      "methods": [
+        "DELETE"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "skills",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\audit-w23.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\migration-center.browser.e2e.js",
+        "dev-harness\\migration-center.e2e.js",
+        "dev-harness\\playbooks.e2e.js",
+        "dev-harness\\settings-skills.browser.e2e.js",
+        "dev-harness\\skills-registry.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
       "path": "/api/steward/start",
       "file": "../backend/steward-routes.cjs",
       "handler": "handleStewardApiRoutes",
@@ -4701,385 +5082,6 @@
         "dev-harness\\onboarding.e2e.js",
         "dev-harness\\onboarding.static.e2e.js",
         "dev-harness\\provider-custom-headers.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/skills",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\audit-w23.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\migration-center.browser.e2e.js",
-        "dev-harness\\migration-center.e2e.js",
-        "dev-harness\\playbooks.e2e.js",
-        "dev-harness\\settings-skills.browser.e2e.js",
-        "dev-harness\\skills-registry.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/session/skills",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\claude-mac-argv.e2e.js",
-        "dev-harness\\index-dedup.e2e.js",
-        "dev-harness\\session-id-path-guard.e2e.js",
-        "dev-harness\\skills-registry.e2e.js",
-        "dev-harness\\steward-content-tools.e2e.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/skills",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "DELETE"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\audit-w23.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\migration-center.browser.e2e.js",
-        "dev-harness\\migration-center.e2e.js",
-        "dev-harness\\playbooks.e2e.js",
-        "dev-harness\\settings-skills.browser.e2e.js",
-        "dev-harness\\skills-registry.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/session/memories",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\memory-subagent.e2e.js",
-        "dev-harness\\session-id-path-guard.e2e.js",
-        "dev-harness\\unit\\session-memory-cap.test.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\agent-quality-workflow.e2e.js",
-        "dev-harness\\auth-deny-default.e2e.js",
-        "dev-harness\\frontend-wave2.browser.e2e.js",
-        "dev-harness\\memory-auto-proposal-api.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\memory-recall-injection.e2e.js",
-        "dev-harness\\memory-scope-card.browser.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\memory-subagent.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\memory-scope-fixes.test.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/item",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\memory-scope-card.browser.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/proposal",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\memory-auto-proposal-api.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/proposal/decision",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\memory-auto-proposal-api.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/proposal/apply",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/draft",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/migrate",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/metadata",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\memory-scope-fixes.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\agent-quality-workflow.e2e.js",
-        "dev-harness\\auth-deny-default.e2e.js",
-        "dev-harness\\frontend-wave2.browser.e2e.js",
-        "dev-harness\\memory-auto-proposal-api.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\memory-recall-injection.e2e.js",
-        "dev-harness\\memory-scope-card.browser.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\memory-subagent.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\memory-scope-fixes.test.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/relations",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\agent-quality-workflow.e2e.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/maintenance",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/relations/propose",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/memory/relations/confirm",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "prefix",
-      "path": "/api/memory/relations/",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "DELETE",
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "prefix",
-      "path": "/api/memory/",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "DELETE",
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": true,
-      "domain": "core-inline",
-      "auth": "token-browser",
-      "coveredBy": [
-        "dev-harness\\action-feedback.static.e2e.js",
-        "dev-harness\\agent-quality-workflow.e2e.js",
-        "dev-harness\\auth-deny-default.e2e.js",
-        "dev-harness\\memory-auto-proposal-api.e2e.js",
-        "dev-harness\\memory-batch-proposal.e2e.js",
-        "dev-harness\\memory-scope-card.browser.e2e.js",
-        "dev-harness\\memory-scope.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\memory-scope-fixes.test.js",
-        "dev-harness\\workbench-memory.e2e.js"
       ]
     },
     {
@@ -6109,6 +6111,16 @@
       "file": "13-http-router.js",
       "handler": "handleApi",
       "target": "handleMissionsApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleSkillApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleMemoryApiRoutes"
     },
     {
       "file": "13-http-router.js",

@@ -64,8 +64,8 @@ function routeBlock(file, marker, lines = 70) {
 // 而本件只读源码、并不打这些路由 —— 字面写出来就是一条假覆盖(本件第一版就把 6 条路由的 coveredBy 冒领了)。
 const routeMarker = tail => "pathname === '/" + 'api/' + tail + "'";
 const sites = [
-  ['13-http-router.js setSessionSkillsCore', fnBody('13-http-router.js', 'async function setSessionSkillsCore('), false],
-  ['13-http-router.js 线程记忆设置路由', routeBlock('13-http-router.js', routeMarker('session/memories'), 60), false],
+  ['skill-routes.cjs setSessionSkillsCore', fnBody('../backend/skill-routes.cjs', 'async function setSessionSkillsCore('), false],
+  ['memory-routes.cjs 线程记忆设置路由', routeBlock('../backend/memory-routes.cjs', routeMarker('session/memories'), 60), false],
   ['13-http-router.js todo 回写路由', routeBlock('13-http-router.js', routeMarker('todo'), 25), false],
   ['13-http-router.js Kimi 状态读数回写路由', routeBlock('13-http-router.js', routeMarker('kimi/status'), 30), false],
   ['13-http-router.js 任务账本路由(check／start／update)', routeBlock('13-http-router.js', routeMarker('mission'), 110), true],

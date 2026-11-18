@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T09:25:21.254Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T09:45:07.727Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -55,7 +55,7 @@
 | POST | `/api/checkpoints/rollback` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
 | POST | `/api/session/rewind` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
 
-## core-inline(56)
+## core-inline(37)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
@@ -79,25 +79,6 @@
 | POST | `/api/agent-workflows` | exact | token | 13-http-router.js · `handleApi` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
 | DELETE/POST | `/api/agent-workflows/` | prefix | token | 13-http-router.js · `handleApi` | auth-deny-default.e2e.js, store-walkthrough-w1.e2e.js |
 | POST | `/api/provider/test` | exact | token | 13-http-router.js · `handleApi` | anthropic-gateway-setup.e2e.js, anthropic-provider-setup.browser.e2e.js, audit-w23.e2e.js 等 8 件 |
-| GET | `/api/skills` | exact | token-browser | 13-http-router.js · `handleApi` | audit-w23.e2e.js, meta-guard.e2e.js, migration-center.browser.e2e.js 等 7 件 |
-| POST | `/api/session/skills` | exact | token-browser | 13-http-router.js · `handleApi` | claude-mac-argv.e2e.js, index-dedup.e2e.js, session-id-path-guard.e2e.js 等 6 件 |
-| DELETE | `/api/skills` | exact | token | 13-http-router.js · `handleApi` | audit-w23.e2e.js, meta-guard.e2e.js, migration-center.browser.e2e.js 等 7 件 |
-| POST | `/api/session/memories` | exact | token-browser | 13-http-router.js · `handleApi` | memory-subagent.e2e.js, session-id-path-guard.e2e.js, session-memory-cap.test.js 等 4 件 |
-| GET | `/api/memory` | exact | token self | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 15 件 |
-| GET | `/api/memory/item` | exact | token self | 13-http-router.js · `handleApi` | memory-scope-card.browser.e2e.js, memory-scope.e2e.js, workbench-memory.e2e.js |
-| POST | `/api/memory/proposal` | exact | token-browser | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, memory-auto-proposal-api.e2e.js, memory-batch-proposal.e2e.js 等 5 件 |
-| POST | `/api/memory/proposal/decision` | exact | token-browser | 13-http-router.js · `handleApi` | memory-auto-proposal-api.e2e.js, memory-batch-proposal.e2e.js, frontend-failure-paths.test.js |
-| POST | `/api/memory/proposal/apply` | exact | token-browser | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, memory-batch-proposal.e2e.js, memory-scope.e2e.js 等 4 件 |
-| POST | `/api/memory/draft` | exact | token-browser | 13-http-router.js · `handleApi` | memory-scope.e2e.js, workbench-memory.e2e.js |
-| POST | `/api/memory/migrate` | exact | token-browser | 13-http-router.js · `handleApi` | workbench-memory.e2e.js |
-| POST | `/api/memory/metadata` | exact | token-browser | 13-http-router.js · `handleApi` | memory-scope.e2e.js, http-input-hardening.test.js, memory-scope-fixes.test.js |
-| POST | `/api/memory` | exact | token-browser | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 15 件 |
-| GET | `/api/memory/relations` | exact | token self | 13-http-router.js · `handleApi` | agent-quality-workflow.e2e.js, workbench-memory.e2e.js |
-| GET | `/api/memory/maintenance` | exact | token self | 13-http-router.js · `handleApi` | workbench-memory.e2e.js |
-| POST | `/api/memory/relations/propose` | exact | token-browser | 13-http-router.js · `handleApi` | workbench-memory.e2e.js |
-| POST | `/api/memory/relations/confirm` | exact | token-browser | 13-http-router.js · `handleApi` | workbench-memory.e2e.js |
-| DELETE/POST | `/api/memory/relations/` | prefix | token-browser | 13-http-router.js · `handleApi` | workbench-memory.e2e.js |
-| DELETE/POST | `/api/memory/` | prefix | token-browser | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 11 件 |
 | POST | `/api/stop` | exact | token-browser | 13-http-router.js · `handleApi` | agent-resource-wait-stop.e2e.js, agent-run-lifecycle.e2e.js, agent-wake.e2e.js 等 27 件 |
 | POST | `/api/provider/compact` | exact | token-browser | 13-http-router.js · `handleApi` | context-compact-v2.e2e.js, provider-compact-recall.e2e.js, provider-compact.e2e.js 等 6 件 |
 | POST | `/api/agent/compact` | exact | token-browser | 13-http-router.js · `handleApi` | agent-cli-registry.test.js |
@@ -185,6 +166,27 @@
 | POST | `/api/mcp/connectors/toggle` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 4 件 |
 | DELETE | `/api/mcp/connectors` | exact | token | ../backend/mcp-routes.cjs · `handleMcpApiRoutes` | config-mutate-mcp-parity.e2e.js, mcp-ops-closure.e2e.js, mcp-ops-gui.static.e2e.js 等 5 件 |
 
+## memory(16)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/session/memories` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | memory-subagent.e2e.js, session-id-path-guard.e2e.js, session-memory-cap.test.js 等 4 件 |
+| GET | `/api/memory` | exact | token self | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 15 件 |
+| GET | `/api/memory/item` | exact | token self | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | memory-scope-card.browser.e2e.js, memory-scope.e2e.js, workbench-memory.e2e.js |
+| POST | `/api/memory/proposal` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | action-feedback.static.e2e.js, memory-auto-proposal-api.e2e.js, memory-batch-proposal.e2e.js 等 5 件 |
+| POST | `/api/memory/proposal/decision` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | memory-auto-proposal-api.e2e.js, memory-batch-proposal.e2e.js, frontend-failure-paths.test.js |
+| POST | `/api/memory/proposal/apply` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | action-feedback.static.e2e.js, memory-batch-proposal.e2e.js, memory-scope.e2e.js 等 4 件 |
+| POST | `/api/memory/draft` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | memory-scope.e2e.js, workbench-memory.e2e.js |
+| POST | `/api/memory/migrate` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | workbench-memory.e2e.js |
+| POST | `/api/memory/metadata` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | memory-scope.e2e.js, http-input-hardening.test.js, memory-scope-fixes.test.js |
+| POST | `/api/memory` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 15 件 |
+| GET | `/api/memory/relations` | exact | token self | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | agent-quality-workflow.e2e.js, workbench-memory.e2e.js |
+| GET | `/api/memory/maintenance` | exact | token self | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | workbench-memory.e2e.js |
+| POST | `/api/memory/relations/propose` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | workbench-memory.e2e.js |
+| POST | `/api/memory/relations/confirm` | exact | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | workbench-memory.e2e.js |
+| DELETE/POST | `/api/memory/relations/` | prefix | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | workbench-memory.e2e.js |
+| DELETE/POST | `/api/memory/` | prefix | token-browser | ../backend/memory-routes.cjs · `handleMemoryApiRoutes` | action-feedback.static.e2e.js, agent-quality-workflow.e2e.js, auth-deny-default.e2e.js 等 11 件 |
+
 ## migration(5)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -229,6 +231,14 @@
 | GET | `/api/sessions/background-counts` | exact | token-browser self | ../backend/session-routes.cjs · `handleSessionApiRoutes` | — |
 | DELETE/GET/PATCH/POST | `/api/sessions/:id` | regex | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | acc-capability-gates.e2e.js, action-feedback.browser.e2e.js, agent-mode-v2.e2e.js 等 156 件 |
 
+## skills(3)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/skills` | exact | token-browser | ../backend/skill-routes.cjs · `handleSkillApiRoutes` | audit-w23.e2e.js, meta-guard.e2e.js, migration-center.browser.e2e.js 等 7 件 |
+| POST | `/api/session/skills` | exact | token-browser | ../backend/skill-routes.cjs · `handleSkillApiRoutes` | claude-mac-argv.e2e.js, index-dedup.e2e.js, session-id-path-guard.e2e.js 等 6 件 |
+| DELETE | `/api/skills` | exact | token | ../backend/skill-routes.cjs · `handleSkillApiRoutes` | audit-w23.e2e.js, meta-guard.e2e.js, migration-center.browser.e2e.js 等 7 件 |
+
 ## steer(2)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -268,6 +278,8 @@
 - ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` → `handleStewardDeliveryApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSessionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleMissionsApiRoutes`
+- 13-http-router.js · `handleApi` → `handleSkillApiRoutes`
+- 13-http-router.js · `handleApi` → `handleMemoryApiRoutes`
 - 13-http-router.js · `handleApi` → `handleInterventionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleUsageApiRoutes`
 - 13-http-router.js · `handleApi` → `handleAgentRunApiRoutes`
