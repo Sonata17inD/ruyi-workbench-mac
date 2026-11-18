@@ -923,7 +923,7 @@
     {
       "id": "steward-visits",
       "pattern": "<data>/steward/visits/<ISO>.json",
-      "owner": "13q-steward-runner-turn.js",
+      "owner": "../backend/steward-conversation-visits.cjs",
       "anchor": "STEWARD_VISITS_DIR",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson",

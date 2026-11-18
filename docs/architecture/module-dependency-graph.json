@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2309,
-    "requiredSymbols": 3173,
+    "providedSymbols": 2277,
+    "requiredSymbols": 3170,
     "edges": 601,
     "forwardEdges": 15,
     "duplicateProvides": 0,
@@ -18741,98 +18741,45 @@
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
-        "STEWARD_ACT_ATTEMPT_LIMITS",
-        "STEWARD_COMMITMENT_I18N",
-        "STEWARD_COMMITMENT_TEXT",
-        "STEWARD_INBOX_TURN_RETRY_MAX",
-        "STEWARD_RELAY_CHANNELS",
-        "STEWARD_RELAY_SETTLE_WAIT_MS",
-        "STEWARD_VISIT_DIGEST_PAGES",
         "runStewardTurn",
-        "stewardActAttemptId",
-        "stewardActAttemptPrune",
-        "stewardActAttempts",
-        "stewardActInflight",
-        "stewardActReceiptFloor",
         "stewardApplyThreadTier",
-        "stewardArchiveConversation",
-        "stewardDecideNudged",
-        "stewardDeferredNotified",
-        "stewardDelegationReceiptLabel",
-        "stewardDelegationToolCalls",
         "stewardEnsureOpenAiRoute",
-        "stewardHoldViewedEvents",
-        "stewardInboxDebounceMs",
-        "stewardInboxRetryCounts",
-        "stewardLastAssistantCreatedAt",
         "stewardMergeDelegationReceipts",
         "stewardOnInboxBatch",
-        "stewardPendingList",
-        "stewardQueueHasBlockingAsk",
-        "stewardQueueHasQuickAnswer",
-        "stewardRecheckViewHeld",
         "stewardRelayChannelFor",
         "stewardRelayDeliver",
         "stewardRequeueFailedInboxBatch",
         "stewardResetConversation",
         "stewardRunAct",
-        "stewardRunActOnce",
-        "stewardRunClaimedTurn",
         "stewardScheduleInboxDrain",
-        "stewardTrimVisits",
-        "stewardUserWaiters",
-        "stewardViewedPendingStillOpen",
         "stewardVisit",
-        "stewardVisitDigest",
-        "stewardVisitFileName",
-        "stewardVisitsDir"
+        "stewardVisitDigest"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "OVERLAY_ID",
-          "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
+          "symbol": "OVERLAY_ID",
           "kinds": [
             "read"
           ]
@@ -18848,21 +18795,21 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18897,63 +18844,63 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "writeSessionNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "normalizeQuestionAnswer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "promptDeadlineIsReal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06e-mission-domain.js",
           "symbol": "waitMissionTurnSettled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18988,21 +18935,20 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardOpenAiFallback",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardPendingOneLine",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -19010,14 +18956,14 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadEngineRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "waitReasonFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19031,133 +18977,133 @@
           "provider": "10a-session-turn.js",
           "symbol": "runSessionTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13b-api-domain-routes.js",
           "symbol": "steerSessionCore",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13d-core-domain-routes.js",
           "symbol": "decideIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13g-steward.js",
           "symbol": "stewardAuthorizeExternalContext",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardDir",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardInboxRead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardPendingKeyOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardPendingStillOpen",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardPresenceRows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardViewingSessionIds",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "clearStewardReadBudget",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardErrorDetail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardLaunchPending",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardMediatesPermissions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13l-steward-ops.js",
           "symbol": "stewardDecideAttempted",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13m-steward-runner-base.js",
           "symbol": "ensureStewardSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19283,14 +19229,14 @@
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardAbortInflight",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardArbiterWait",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19304,91 +19250,91 @@
           "provider": "13o-steward-runner-prompt.js",
           "symbol": "stewardParseReply",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13o-steward-runner-prompt.js",
           "symbol": "stewardThreadDigestRows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardCircuitCheck",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardDowngradeActions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardExecuteActions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardHumanizeSay",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardInboxMessage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardLastAssistantContent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardLastAssistantFinalSegment",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardNormalizeRouteHint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardSelfServeInbox",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardStampReply",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardTriggerStamp",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -31251,12 +31197,9 @@
       "symbols": [
         "OVERLAY_ID",
         "RUYI_EVENTS",
-        "crypto",
-        "fsp",
         "logEvent",
         "makeId",
-        "nowIso",
-        "path"
+        "nowIso"
       ],
       "direction": "backward"
     },

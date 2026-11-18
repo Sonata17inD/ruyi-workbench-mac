@@ -121,13 +121,14 @@ const memoryTools = '../backend/steward-memory-tools.cjs';
 const settingsTools = '../backend/steward-settings-tools.cjs';
 const contentTools = '../backend/steward-content-tools.cjs';
 const decisionTools = '../backend/steward-decision-tools.cjs';
+const actReceipts = '../backend/steward-act-receipts.cjs';
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
   .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs',
     '../backend/steward-thread-create.cjs', '../backend/steward-thread-launch.cjs',
     threadEdits, threadAdmission, '../backend/steward-thread-delivery.cjs',
     '../backend/steward-inbox.cjs', '../backend/steward-status-tools.cjs', decisionTools,
     '../backend/steward-notification-tool.cjs', '../backend/steward-external-read-tools.cjs',
-    memoryTools, settingsTools, contentTools).sort();
+    memoryTools, settingsTools, contentTools, actReceipts).sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
@@ -140,7 +141,7 @@ const src13h = read('13h-steward-runner.js');
 // 与 STEWARD_TOOL_LABELS)随共享常量块搬进 13m;⑦ 的 userPressed 三处分落 13m(注释)/13q(唯一置 true)
 // /13h(act 路由那段「不置」的注释)。故这两组判据改读确切的那个文件与整族,期望值一字未改。
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js'];
+  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', actReceipts, '13h-steward-runner.js'];
 
 /* ═════════════ ① 四处登记一致(真实产物内省,不靠 grep 形状) ═════════════ */
 

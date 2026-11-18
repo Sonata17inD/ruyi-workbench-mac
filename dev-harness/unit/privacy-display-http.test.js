@@ -1,33 +1,35 @@
 'use strict';
 // Actual HTTP route functions with an in-memory response sink, synthetic session
-// storage and synthetic ciphertext. No listener, browser, model or DPAPI process.
+// storage and synthetic ciphertext.
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { EventEmitter } = require('node:events');
 const { createHttpChatStream } = require('../../ruyi-workbench/app/backend/http-chat-stream.cjs');
 const { createSessionRoutes } = require('../../ruyi-workbench/app/backend/session-routes.cjs');
+const { createStewardRoutes } = require('../../ruyi-workbench/app/backend/steward-routes.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-display-http-'));
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), path.join(root, 'data')));
 const app = require('../lib/server-internals').loadServerInternals([
   'PrivacyGateway', 'PrivacyCore', 'readConfig', 'paths', 'safeSessionId', 'safeDecodeURIComponent', 'nowIso',
-  'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'STEWARD_SESSION_ID', 'pretenderNotModified',
+  'stewardInboxState', 'stewardSanitizeAttachments', 'STEWARD_SESSION_ID', 'STEWARD_PREROUTE_QUERY_MAX', 'pretenderNotModified',
   'sessionEnvelopeEtag', 'sessionMessagesStamp', 'sessionMessagesDelta', 'sessionDisplayTitle',
   'SESSION_LOAD_OMIT_PROVIDER', 'sessionOmittedProviderHistory', 'sessionProviderHistoryLength', 'detectDanglingTurn',
-], { withEval: true });
+]);
 const fixture = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return fixture.vault.sealLocal(...args); };
 app.PrivacyCore.configHooks.openLocal = (...args) => { opens++; return fixture.vault.openLocal(...args); };
-const state = app.__eval(`(() => {
-  const state = { session: null, live: { live: false }, run: null, steward: null, runner: {} };
-  tokenOk = () => true;
-  runStewardTurn = opts => state.steward(opts);
-  loadSession = async id => state.session && state.session.id === id ? state.session : null;
-  readSessionHeadResilient = async () => state.session;
-  StewardHooks.runnerState = async () => state.runner;
-  return state;
-})()`);
+const state = { session: null, live: { live: false }, run: null, steward: null, runner: {} };
+const { handleStewardRunnerApiRoutes, handleStewardApiRoutes } = createStewardRoutes({
+  tokenOk: () => true, readConfig: app.readConfig, safeSessionId: app.safeSessionId, nowIso: app.nowIso,
+  PrivacyGateway: app.PrivacyGateway, STEWARD_SESSION_ID: app.STEWARD_SESSION_ID,
+  STEWARD_PREROUTE_QUERY_MAX: app.STEWARD_PREROUTE_QUERY_MAX,
+  StewardHooks: { runnerState: async () => state.runner },
+  inbox: { stewardInboxState: app.stewardInboxState },
+  runner: { runStewardTurn: input => state.steward(input), stewardSanitizeAttachments: app.stewardSanitizeAttachments },
+  memory: {}, delivery: {},
+});
 const streamChat = createHttpChatStream({
   runSessionTurn: input => state.run(input), PrivacyGateway: app.PrivacyGateway,
   safeSessionId: app.safeSessionId, nowIso: app.nowIso,
@@ -149,7 +151,7 @@ test('HTTP display snapshots the session synchronously before the engine appends
     if (kind === 'main') {
       state.run = run; await streamChat(request('POST', '/api/chat/stream', { message: 'Public task' }), res);
     } else {
-      state.steward = run; await app.handleStewardRunnerApiRoutes(request('POST', '/api/steward/message', { message: 'Public task' }), res, '/api/steward/message');
+      state.steward = run; await handleStewardRunnerApiRoutes(request('POST', '/api/steward/message', { message: 'Public task' }), res, '/api/steward/message');
     }
     const event = frames(res).find(row => row.type === 'session');
     observed.push({ kind, messageCount: event.session.messages.length, stampMatches: event.messagesStamp === app.sessionMessagesStamp(event.session.messages) });
@@ -181,7 +183,7 @@ test('steward HTTP restores streaming narration and final say/why without changi
     opts.onEvent({ type: 'result', ok: true });
     return { ok: true, say: token, why: token, actions: [action], acts: [], parsed: true };
   };
-  const res = response(); await app.handleStewardRunnerApiRoutes(request('POST', '/api/steward/message', { message: 'Public task' }), res, '/api/steward/message');
+  const res = response(); await handleStewardRunnerApiRoutes(request('POST', '/api/steward/message', { message: 'Public task' }), res, '/api/steward/message');
   const events = frames(res), reply = events.find(row => row.type === 'steward_reply');
   assert.equal(events.filter(row => row.type === 'assistant_delta').map(row => row.text).join(''), synthetic);
   assert.equal(reply.say, synthetic); assert.equal(reply.why, synthetic); assert.equal(reply.actions[0].text, token);
@@ -211,7 +213,7 @@ test('steward state projects only lastReply say/why and keeps the stored runner 
   const token = await reference('steward');
   state.runner = { lastReply: { say: token, why: token, acts: [{ text: token }], actions: [{ text: token }] } };
   const before = JSON.stringify(state.runner), res = response();
-  await app.handleStewardApiRoutes(request('GET', '/api/steward/state'), res, '/api/steward/state');
+  await handleStewardApiRoutes(request('GET', '/api/steward/state'), res, '/api/steward/state');
   const shown = envelope(res);
   assert.equal(shown.lastReply.say, synthetic); assert.equal(shown.lastReply.why, synthetic);
   assert.equal(shown.lastReply.acts[0].text, token); assert.equal(shown.lastReply.actions[0].text, token);

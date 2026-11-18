@@ -668,7 +668,7 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
       // 一族文件,故整族一起读、整族一起查。
       const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs',
         '13o-steward-runner-prompt.js', '13p-steward-runner-actions.js', '../backend/steward-autonomous-actions.cjs',
-        '../backend/steward-inbox-prompt.cjs', '13q-steward-runner-turn.js',
+        '../backend/steward-inbox-prompt.cjs', '../backend/steward-thread-relay.cjs', '13q-steward-runner-turn.js',
         '13h-steward-runner.js'];
       const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');
       ok((src13h.match(/waitReasonFor\(/g) || []).length >= 3, '单点:总览行 / 仲裁器读模型 / 插队工具三处都经 waitReasonFor');

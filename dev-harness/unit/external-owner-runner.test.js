@@ -2,7 +2,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
 const {functionBlock,constBlock,sliceBlock}=require('../lib/source-slice');
 const read=file=>fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src',file),'utf8');
-const G=read('13g-steward.js'),Q=read('13q-steward-runner-turn.js');
+const G=read('13g-steward.js'),Q=read('../backend/steward-turn-runner.cjs');
 const { createStewardThreadLauncher } = require('../../ruyi-workbench/app/backend/steward-thread-launch.cjs');
 const { createStewardActionExecution } = require('../../ruyi-workbench/app/backend/steward-action-execution.cjs');
 const deferred=()=>{let resolve;const promise=new Promise(a=>resolve=a);return{promise,resolve};};const tick=()=>new Promise(resolve=>setImmediate(resolve));

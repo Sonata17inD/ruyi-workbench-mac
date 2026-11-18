@@ -84,8 +84,14 @@ const runnerActionServices = [
   '../backend/steward-action-execution.cjs', '../backend/steward-turn-circuit.cjs',
   '../backend/steward-conversation-replies.cjs', autonomousActions, inboxPrompt,
 ];
+const turnRunner = '../backend/steward-turn-runner.cjs';
+const conversationVisits = '../backend/steward-conversation-visits.cjs';
+const runnerTurnServices = [
+  '../backend/steward-inbox-queue.cjs', turnRunner, conversationVisits,
+  '../backend/steward-thread-relay.cjs', '../backend/steward-act-receipts.cjs',
+];
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', '13h-steward-runner.js'];
+  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
 const src01b = read('../backend/http-route-policy.cjs');
 
@@ -216,7 +222,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + runnerActionServices.map(read).join('\n');
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -484,12 +490,12 @@ const srv = require(path.join(APP, 'server.js'));
   //     也与 13d 那段 `?since=` 过滤用的是同一个字段(否则水位与增量不是一把尺,又会重画);
   //   · 它进的是回执对象本身(前端 finishReply 从 steward_reply 帧上读它);
   //   · 读不到就【不下发这个键】,老回执逐字节不变、前端自己走「对齐一发」的退路。
-  const src13q = read('13q-steward-runner-turn.js');
-  ok(/async function stewardLastAssistantCreatedAt\(\)/.test(src13q)
-    && /role === 'assistant'\) return String\(messages\[i\]\.createdAt \|\| ''\)/.test(src13q),
-    '⑤ 123-N1 ① 13q 有「最后一条助手消息的 createdAt」这个取数口径(与 stewardStampReply 同一条消息)');
-  ok(/const stampedAt = await stewardLastAssistantCreatedAt\(\);/.test(src13q)
-    && /\.\.\.\(stampedAt \? \{ createdAt: stampedAt \} : \{\}\)/.test(src13q),
+  const turnSource = read(turnRunner);
+  ok(/async function stewardLastAssistantCreatedAt\(\)/.test(turnSource)
+    && /role === 'assistant'\) return String\(messages\[i\]\.createdAt \|\| ''\)/.test(turnSource),
+    '⑤ 123-N1 ① 回合服务读取最后一条助手消息的 createdAt(与 stewardStampReply 同一条消息)');
+  ok(/const stampedAt = await stewardLastAssistantCreatedAt\(\);/.test(turnSource)
+    && /\.\.\.\(stampedAt \? \{ createdAt: stampedAt \} : \{\}\)/.test(turnSource),
     '⑤ 123-N1 ① 回执带 createdAt,且读不到时【不下发这个键】(老回执逐字节不变)');
   ok(/return Number\.isFinite\(at\) && at > sinceMs;/.test(sessionRoutes),
     '⑤ 123-N1 ① 服务端 ?since= 是【严格大于】—— 水位停在本回合末尾正好把这一回合两条消息一起盖住');
@@ -519,15 +525,12 @@ const srv = require(path.join(APP, 'server.js'));
   // 下一个人解释这段历史时同样会抄。所以整行注释一律先剔掉 —— 锁要钉的是「代码里没有第二条
   // 挑选式」,不是「这几个字不许出现在文件里」。行尾注释不剔:那种位置上写 rows[0] 本来就可疑。
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13qFocus = read('13q-steward-runner-turn.js');
-  const at = src13qFocus.indexOf('async function stewardVisit(opts) {');
-  const end = at < 0 ? -1 : src13qFocus.indexOf('\n}\n', at);
-  const visitBody = at < 0 ? '' : (end < 0 ? src13qFocus.slice(at) : src13qFocus.slice(at, end));
+  const visitBody = functionBlock(read(conversationVisits), 'stewardVisit');
   ok(visitBody.length > 400,
     `⑥ stewardVisit 函数体切得到(切不到 = 本组静默失效;实得 ${visitBody.length})`);
   ok(visitBody.includes('const threads = rows.slice(0, STEWARD_DIGEST_LIMITS.maxThreads).map('),
     '⑥ 到访只投影 threads,帽子读 06i 的 STEWARD_DIGEST_LIMITS.maxThreads(不另立第二个数字)');
-  ok(/\n    threads,\n/.test(codeOnly(visitBody)),
+  ok(/\n\s+threads,\n/.test(codeOnly(visitBody)),
     '⑥ threads 真的进了到访响应体');
   ok(!codeOnly(visitBody).includes('focusRow') && !/\n\s*focus:/.test(codeOnly(visitBody)),
     '⑥ 到访响应里再没有 focus 这个键,也没有 focusRow 这个中间量');

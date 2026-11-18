@@ -205,7 +205,7 @@ try {
     // 也就是这两个标记所在的那个函数 —— 整体搬进了 13q-steward-runner-turn.js。钉的是【源码里这两件
     // 事的先后】,与它住哪个文件无关,故按 manifest 顺序整族拼起来读:同一函数内的先后关系原样保留。
     const src13h = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
-      '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js']
+      '13p-steward-runner-actions.js', '../backend/steward-turn-runner.cjs', '13q-steward-runner-turn.js', '13h-steward-runner.js']
       .map(f => fs.readFileSync(path.join(WB, 'app', 'src', f), 'utf8')).join('\n');
     const closeAt = src13h.indexOf('StewardHooks.quickClose(');
     const replyAt = src13h.indexOf('const finalText = await stewardLastAssistantContent();');

@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2309 | 3173 | 601 | 15 | 0 | 0 |
+| 87 | 2277 | 3170 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -93,7 +93,7 @@
 | 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
 | 76 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 16 |
 | 77 | `13p-steward-runner-actions.js` | transport | 16 | 63 | 12 |
-| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 21 |
+| 78 | `13q-steward-runner-turn.js` | transport | 13 | 83 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
@@ -602,7 +602,7 @@
 | `13p-steward-runner-actions.js` | `13l-steward-ops.js` | backward | `stewardReadRunSnapshot`, `stewardRunResumeTier` |
 | `13p-steward-runner-actions.js` | `13m-steward-runner-base.js` | backward | `STEWARD_ACTION_HOOKS`, `STEWARD_ACTS_MAX`, `STEWARD_ACT_LABEL_MAX`, `STEWARD_CONTINUE_FRESH_MS`, `STEWARD_CONTINUE_NOPLAN_MAX`, `STEWARD_CONTINUE_PLAN_MAX`, `STEWARD_CONTINUE_PROMPT`, `STEWARD_INBOX_DELIVERABLE_CHARS`, `STEWARD_INBOX_EVENTS_PER_TURN`, `STEWARD_INBOX_EVENT_CHARS`, `STEWARD_INBOX_MESSAGE_CHARS`, `STEWARD_NO_PROGRESS_MAX`, `STEWARD_SELF_SERVE_ATTEMPT_MAX`, `STEWARD_SELF_SERVE_PER_TURN_MAX`, `STEWARD_SELF_SERVE_RETRY_WINDOW_MS`, `STEWARD_TURN_DAY_MS`, `STEWARD_TURN_WINDOW_MS`, `stewardFailureExplain`, `stewardRunnerRuntime` |
 | `13p-steward-runner-actions.js` | `13o-steward-runner-prompt.js` | backward | `stewardActConfirmLines`, `stewardActLabel`, `stewardNormalizeAct` |
-| `13q-steward-runner-turn.js` | `00-boot.js` | backward | `OVERLAY_ID`, `RUYI_EVENTS`, `crypto`, `fsp`, `logEvent`, `makeId`, `nowIso`, `path` |
+| `13q-steward-runner-turn.js` | `00-boot.js` | backward | `OVERLAY_ID`, `RUYI_EVENTS`, `logEvent`, `makeId`, `nowIso` |
 | `13q-steward-runner-turn.js` | `01-config.js` | backward | `atomicWriteJson`, `readConfig`, `safeSessionId` |
 | `13q-steward-runner-turn.js` | `01o-execution-state.js` | backward | `activeChildren`, `pendingPermissions`, `pendingQuestions`, `turnSettlers` |
 | `13q-steward-runner-turn.js` | `02-session-store.js` | backward | `loadSession`, `mutateSession`, `readSessionNotes`, `writeSessionNotes` |
