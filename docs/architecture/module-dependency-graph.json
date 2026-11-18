@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2077,
-    "requiredSymbols": 3100,
-    "edges": 597,
+    "providedSymbols": 2073,
+    "requiredSymbols": 3096,
+    "edges": 596,
     "forwardEdges": 14,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -1377,19 +1377,12 @@
       "note": "架构还债批 3·B: 从 02-session-store.js 搬出会话引擎路由的纯函数(normalizeSessionEngineRoute/sessionEngineRouteFromConfig/inferSessionEngineRoute/configForSessionEngineRoute;123-N2 读写 config 的三件留在 02);零出边,不进任何环;纯搬家,零行为变更",
       "provides": [
         "configForSessionEngineRoute",
+        "createSessionRoutePreferences",
         "inferSessionEngineRoute",
         "normalizeSessionEngineRoute",
         "sessionEngineRouteFromConfig"
       ],
-      "requires": [
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "normalizeAgentCliType",
-          "kinds": [
-            "call"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "02f-turn-effect-kinds.js",
@@ -1540,7 +1533,6 @@
       "note": "会话存储 v2(head+NDJSON 正文)/索引/load-save/checkpoint journal/日志",
       "provides": [
         "AgentRunStore",
-        "IMPORTED_MESSAGE_ROLE_MAX",
         "INTERVENTION_TERMINAL",
         "JOURNAL_KEEP_TURNS",
         "JOURNAL_MAX_BEFORE_BYTES",
@@ -1561,7 +1553,6 @@
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
         "SESSION_SCRATCHPAD_LIMITS",
-        "SESSION_SCRATCHPAD_SCHEMA",
         "SESSION_STORAGE_VERSION",
         "SESSION_TOMBSTONE",
         "SessionBodies",
@@ -1599,6 +1590,7 @@
         "createMissionContainer",
         "createSession",
         "createSessionNotes",
+        "createSessionScratchpad",
         "danglingTurnState",
         "detectDanglingTurn",
         "dropInterventionSessionState",
@@ -1643,7 +1635,6 @@
         "journalRollback",
         "journalSessionCtx",
         "kindForPath",
-        "lastUsedEngineRouteUsable",
         "listAgentRunDigests",
         "listAgentRuns",
         "listMissionContainers",
@@ -1715,13 +1706,12 @@
         "resolveFileToolRoot",
         "rewindSession",
         "safeMissionId",
-        "sanitizeImportedSessionMessages",
-        "sanitizeSessionScratchpad",
         "saveAgentRun",
         "saveSession",
         "saveTurnFinalSession",
         "scheduleSessionIndexUpdate",
         "scratchpadTotalChars",
+        "scratchpadWriteInFlight",
         "serializeSessionBody",
         "sessionBodiesMatchCommit",
         "sessionBodyCommitValid",
@@ -1747,9 +1737,7 @@
         "sessionProviderHistoryLength",
         "sessionRecentUserRequest",
         "sessionRewindGenHighWater",
-        "sessionScratchpadChains",
         "sessionScratchpadPath",
-        "sessionScratchpadStore",
         "sessionTodosSignature",
         "setSessionBodyState",
         "setSessionIndexRebuildScanHookForTest",
@@ -1781,7 +1769,7 @@
           "provider": "00-boot.js",
           "symbol": "clearDeletedSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1824,7 +1812,6 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1838,14 +1825,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
           "kinds": [
             "read"
           ]
@@ -1869,13 +1848,6 @@
           "symbol": "pathWithinRoot",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -1918,20 +1890,12 @@
           "provider": "00-boot.js",
           "symbol": "sessionSaveIsTombstoned",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -1963,7 +1927,7 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2000,7 +1964,7 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2161,9 +2125,15 @@
         },
         {
           "provider": "02e-session-engine-route.js",
+          "symbol": "createSessionRoutePreferences",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02e-session-engine-route.js",
           "symbol": "inferSessionEngineRoute",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -2171,15 +2141,7 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "normalizeSessionEngineRoute",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "sessionEngineRouteFromConfig",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -2961,6 +2923,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "scratchpadWriteInFlight",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "SESSION_TOMBSTONE",
           "kinds": [
             "read"
@@ -2983,13 +2952,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SessionPersistence",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionScratchpadChains",
           "kinds": [
             "read"
           ]
@@ -24862,15 +24824,12 @@
         "makeId",
         "normalizeCwd",
         "nowIso",
-        "os",
         "path",
         "pathWithinRoot",
         "paths",
-        "runKeyedChain",
         "safeJsonParse",
         "sessionAssociatedSaveIsTombstoned",
-        "sessionSaveIsTombstoned",
-        "text"
+        "sessionSaveIsTombstoned"
       ],
       "direction": "backward"
     },
@@ -24951,9 +24910,9 @@
       "from": "02-session-store.js",
       "to": "02e-session-engine-route.js",
       "symbols": [
+        "createSessionRoutePreferences",
         "inferSessionEngineRoute",
-        "normalizeSessionEngineRoute",
-        "sessionEngineRouteFromConfig"
+        "normalizeSessionEngineRoute"
       ],
       "direction": "backward"
     },
@@ -24972,14 +24931,6 @@
       "to": "01e-permission-modes.js",
       "symbols": [
         "PERMISSION_MODES"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "02e-session-engine-route.js",
-      "to": "01f-agent-cli-types.js",
-      "symbols": [
-        "normalizeAgentCliType"
       ],
       "direction": "backward"
     },
@@ -25249,9 +25200,9 @@
         "readMissionSessionHead",
         "removeSessionNotes",
         "scheduleSessionIndexUpdate",
+        "scratchpadWriteInFlight",
         "sessionBodyPaths",
         "sessionMissionId",
-        "sessionScratchpadChains",
         "sessionScratchpadPath",
         "stopMissionAgentRuns"
       ],

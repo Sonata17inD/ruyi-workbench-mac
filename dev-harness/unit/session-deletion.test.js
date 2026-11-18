@@ -15,8 +15,10 @@ test('deletion records shared tombstones, drains writes before unlink and cancel
     const timer = originalSet(fn, delay, ...args); if (delay === 8000) timers.add(timer); return timer;
   });
   t.mock.method(global, 'clearTimeout', timer => { timers.delete(timer); return originalClear(timer); });
-  let finishWrite, observedStop;
+  let finishWrite, finishScratchpadWrite, observedStop, observedScratchpadLookup;
   const pending = new Promise(resolve => { finishWrite = resolve; });
+  const scratchpadPending = new Promise(resolve => { finishScratchpadWrite = resolve; });
+  const scratchpadLookup = new Promise(resolve => { observedScratchpadLookup = resolve; });
   const stopped = new Promise(resolve => { observedStop = resolve; });
   const sessionWriteChains = new Map([['sess_owned', pending]]), events = [];
   const tombstones = createSessionTombstones();
@@ -28,7 +30,9 @@ test('deletion records shared tombstones, drains writes before unlink and cancel
       interventionFilePath: id => file(id + '.iv'), missionChangeFilePath: id => file(id + '.change'),
       removeSessionNotes: id => fs.promises.rm(file(id + '.notes'), { force: true }),
       sessionScratchpadPath: id => file(id + '.scratch'), journalDir: id => file(id + '.journal'), agentRunDir: id => file(id + '.runs') },
-    pendingWrites: { sessionWriteChains, sessionScratchpadChains: new Map() },
+    pendingWrites: { sessionWriteChains, scratchpadWriteInFlight: id => {
+      assert.equal(id, 'sess_owned'); observedScratchpadLookup(); return scratchpadPending;
+    } },
     execution: { stop: id => { assert.equal(tombstones.sessionSaveIsTombstoned({ id }), true); observedStop(); }, activeRuns: () => [], stopRuns: async () => {},
       settler: () => ({ promise: Promise.resolve() }), isActive: () => false, revokeGrants() {}, flushRuns: async () => {} },
     membership: { readHead: async () => null, ownerOf: () => null, remove: async () => {} },
@@ -37,13 +41,19 @@ test('deletion records shared tombstones, drains writes before unlink and cancel
   };
   const service = createSessionDeletion(options);
   fs.writeFileSync(file('sess_owned.json'), '{}');
+  fs.writeFileSync(file('sess_owned.scratch'), '{}');
   const deletion = service.deleteSession('sess_owned', { purgeAssociated: true });
   await stopped;
   assert.equal(fs.existsSync(file('sess_owned.json')), true);
   assert.equal(tombstones.sessionAssociatedSaveIsTombstoned('sess_owned'), true);
   assert.equal(createSessionTombstones().sessionAssociatedSaveIsTombstoned('sess_owned'), false);
   finishWrite();
+  await scratchpadLookup;
+  assert.equal(fs.existsSync(file('sess_owned.json')), true);
+  assert.equal(fs.existsSync(file('sess_owned.scratch')), true);
+  finishScratchpadWrite();
   await deletion;
+  assert.equal(fs.existsSync(file('sess_owned.scratch')), false);
   assert.equal(fs.existsSync(file('sess_owned.json')), false);
   assert.equal(timers.size, 0);
   assert.deepEqual(events.map(row => row[0]), ['invalidate', 'index', 'projection.invalidated', 'thread.removed']);

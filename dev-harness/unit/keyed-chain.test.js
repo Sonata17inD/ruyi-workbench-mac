@@ -59,7 +59,7 @@ test('[K4] 修前的手写副本都已收编', () => {
   const allowed = new Set(['02-session-store.js:sessionWriteChains', '02-session-store.js:interventionWriteChains', '../backend/session-meta-updates.cjs:sessionMetaDeferChains']);
   assert.deepEqual(found.filter(x => !allowed.has(x)), [], '新写链请用 runKeyedChain(keyed-chain.cjs)');
   for (const name of ['checkpoint-journal', 'agent-run-store', 'external-bot-credentials', 'mission-changes',
-    'mission-store', 'shell-sessions', 'memory-relations', 'intervention-journal', 'session-transactions']) {
+    'mission-store', 'shell-sessions', 'memory-relations', 'intervention-journal', 'session-transactions', 'session-scratchpad']) {
     const text = fs.readFileSync(path.join(SRC, '../backend', name + '.cjs'), 'utf8');
     assert.match(text, /const \{ runKeyedChain \} = require\('\.\/keyed-chain\.cjs'\)/, name);
     const specialized = new Set(['mission-changes:sessionWriteChains', 'intervention-journal:interventionWriteChains']);

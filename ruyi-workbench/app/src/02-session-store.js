@@ -30,86 +30,12 @@ const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, par
 const { sessionNotesPath, readSessionNotes, writeSessionNotes, removeSessionNotes, maybeWriteSessionNotes } =
   createSessionNotes({ paths, assertSessionIdForPath, atomicWriteJson, sessionObjectIsStale, sessionSaveIsTombstoned, logEvent });
 
-// ── C2(61 号文):会话草稿本 sessions/<id>.scratchpad.json ──────────────────────────────────────
-// 模型自己「写即生效、不进长期库」的短笔记:按 key 写/覆盖,text 为空即删。只发给模型服务商引擎普通会话的主回合
-// (工具 scratchpad_write:schema 在 13f、发放在 07 buildOpenAiTools 的 opts.scratchpadEnabled、handler 在 12);
-// 09 每回合把快照贴到末条 user 尾部(非持久,见那里的缓存账)。与 session-notes 分工:notes 由运行时在 L2 压缩后
-// 从摘要写出,模型没有写入口;草稿本只有模型写。长期偏好与项目约定仍走 workbench_memory_propose(确认制)。
-// 落盘走 DurableJsonStore(01):schema 1、清洗(限额对手改过的文件同样成立)、坏文件当空(quarantine:false ——
-// 草稿是易失副本,下一次写自愈,不留 .corrupt)、原子写。cache:false:每会话一个文件,store 按调用现建(构造只是
-// 几个闭包),读永远读盘 —— 删会话后不会有进程缓存把旧条目「复活」进下一次注入。同一会话的读-改-写由 runKeyedChain
-// 按会话 id 串行(store 自带的写链按实例,不跨实例,这里不依赖它)。
-const SESSION_SCRATCHPAD_SCHEMA = 1;
-const SESSION_SCRATCHPAD_LIMITS = Object.freeze({ maxEntries: 32, maxKeyChars: 40, maxTextChars: 2000, maxTotalChars: 12000 });
-const sessionScratchpadChains = new Map();
-function sessionScratchpadPath(id) {
-  return path.join(paths.sessions, `${assertSessionIdForPath(id)}.scratchpad.json`);
-}
-// key:控制字符换空格、折叠空白、trim。不截断 —— 截断会让两个不同的 key 悄悄撞成一个,超长由调用方拒绝。
-function normalizeScratchpadKey(raw) {
-  return String(raw == null ? '' : raw).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
-}
-// text:统一换行、去掉 \n \t 以外的控制字符、trim(保留多行)。
-function normalizeScratchpadText(raw) {
-  return String(raw == null ? '' : raw).replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim();
-}
-// 总长只数正文(key 另有单条上限,20 × 40 有界)。
-function scratchpadTotalChars(entries) {
-  return (Array.isArray(entries) ? entries : []).reduce((n, e) => n + String((e && e.text) || '').length, 0);
-}
-// 盘上形状 { schema:1, updatedAt, entries:[{ key, text, at }] }。用数组保序:对象键里的 "1"、"42" 这类整数键会被 JS 重排。
-// 清洗丢掉手改坏的条目、同 key 留最后一条、超长正文截断、超出条目数 / 总长从最早的条目丢起 —— 于是注入块的大小
-// 只取决于限额,一份手改的大文件撑不大它。
-function sanitizeSessionScratchpad(value) {
-  const L = SESSION_SCRATCHPAD_LIMITS;
-  const byKey = new Map();
-  for (const raw of Array.isArray(value && value.entries) ? value.entries : []) {
-    if (!raw || typeof raw !== 'object') continue;
-    const key = normalizeScratchpadKey(raw.key);
-    const text = normalizeScratchpadText(raw.text).slice(0, L.maxTextChars);
-    if (!key || key.length > L.maxKeyChars || !text) continue;
-    byKey.delete(key);
-    byKey.set(key, { key, text, at: typeof raw.at === 'string' ? raw.at.slice(0, 40) : '' });
-  }
-  let entries = [...byKey.values()];
-  if (entries.length > L.maxEntries) entries = entries.slice(-L.maxEntries);
-  while (entries.length && scratchpadTotalChars(entries) > L.maxTotalChars) entries.shift();
-  return { schema: SESSION_SCRATCHPAD_SCHEMA, updatedAt: typeof (value && value.updatedAt) === 'string' ? value.updatedAt.slice(0, 40) : '', entries };
-}
-function sessionScratchpadStore(id) {
-  return DurableJsonStore.create({
-    id: 'session-scratchpad',
-    file: sessionScratchpadPath(id),   // 不合形的 id 在这里就抛(assertSessionIdForPath)
-    schemaVersion: SESSION_SCRATCHPAD_SCHEMA,
-    cache: false,
-    quarantine: false,
-    defaultValue: () => ({ schema: SESSION_SCRATCHPAD_SCHEMA, updatedAt: '', entries: [] }),
-    sanitize: sanitizeSessionScratchpad,
-    validate: value => value.schema === SESSION_SCRATCHPAD_SCHEMA && Array.isArray(value.entries),
-    onCorrupt(error) {
-      try { logEvent({ kind: 'session_scratchpad_corrupt', sessionId: String(id), error: String((error && error.message) || error).slice(0, 200) }); } catch { /* 诊断绝不阻断 */ }
-    },
-  });
-}
-// 读:缺文件 / 坏文件 / 读不动 / 不合形的 id 一律空表 —— 草稿是旁车副本,绝不阻断回合。
-async function readSessionScratchpad(id) {
-  try { return (await sessionScratchpadStore(id).read()).entries; }
-  catch { return []; }
-}
-// 读-改-写(按会话串行)。mutate 拿到条目副本,返回 { entries, changed, ...其余字段原样带回 };changed 为假 = 不落盘。
-// 会话已删除(墓碑,见 markSessionDeleted)时拒写:垂死回合里迟到的一次写不得在 unlink 之后把旁车写回来。
-async function updateSessionScratchpad(session, mutate) {
-  const id = String((session && session.id) || '');
-  const store = sessionScratchpadStore(id);
-  return runKeyedChain(sessionScratchpadChains, id, async () => {
-    if (sessionSaveIsTombstoned(session)) return { refused: 'session-deleted' };
-    const current = (await store.read()).entries.map(e => ({ ...e }));
-    const out = mutate(current) || {};
-    if (out.refused || !out.changed) return { entries: current, ...out };
-    const saved = await store.write({ schema: SESSION_SCRATCHPAD_SCHEMA, updatedAt: nowIso(), entries: out.entries });
-    return { ...out, entries: saved.entries };
-  });
-}
+const {
+  createSessionScratchpad, SESSION_SCRATCHPAD_LIMITS, normalizeScratchpadKey, normalizeScratchpadText, scratchpadTotalChars,
+} = require('./backend/session-scratchpad.cjs');
+const { sessionScratchpadPath, scratchpadWriteInFlight, readSessionScratchpad, updateSessionScratchpad } = createSessionScratchpad({
+  paths, assertSessionIdForPath, DurableJsonStore, logEvent, sessionSaveIsTombstoned, nowIso,
+});
 
 // ── 第71波 EC-E 切片二:未决事项 Intervention 持久化(append-only NDJSON)──────────────────────────
 // permission/question/plan 三类未决事项此前是纯内存 Map(04-permission-runtime:191/194/199),进程重启即消失
@@ -208,6 +134,8 @@ const { readSessionIndex, invalidateSessionIndex, setSessionIndexRebuildScanHook
 // 计划条(session.todos)的指纹:管家「没做完就续」只认【这一回合里动过的】计划(13p stewardContinueUnfinishedGate)——
 // 回合开头记一笔、收尾写进 stewardLastTurn.todosStartSig,与收尾时的现值不同才算这一回合在推进这份计划。
 // 早就搁下、用户已经换了话题的旧计划不该让每个新回合都被当成「没做完」。
+const { rememberLastUsedEngineRoute, newSessionEngineRoute } = createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEvent });
+
 const SessionMetaUpdates = require('./backend/session-meta-updates.cjs').createSessionMetaUpdates({
   safeSessionId, logEvent: (...args) => logEvent(...args), RUYI_EVENTS,
   metadata: { setSessionTitleOverride, SESSION_BRIEF_TITLE_CHARS, SESSION_BRIEF_GIST_CHARS },
@@ -216,86 +144,6 @@ const SessionMetaUpdates = require('./backend/session-meta-updates.cjs').createS
   lifecycle: { activeChildren, turnSettlers },
 });
 const { sessionTodosSignature, updateSessionMeta } = SessionMetaUpdates;
-
-// 架构还债批 3·B: 会话引擎路由的纯函数(normalizeSessionEngineRoute/sessionEngineRouteFromConfig/inferSessionEngineRoute/configForSessionEngineRoute)抽至 02e-session-engine-route.js。
-
-// ── 123-N2「新线程默认上一次用的引擎」(用户 2026-09-13 真机原话:「现在新开线程会默认开 Kimi
-// code cli,我希望改成默认上一次用的或者别的方式,不要设定死」)────────────────────────────────
-//
-// 病根:createSession 的缺省【只有】 sessionEngineRouteFromConfig(config) 这一条路 —— 全局
-// activeProvider/agentCliType/model 三项设置。用户在线程头上把引擎切成别的,那个选择只活在
-// 那一条线程头上,下一条新线程照旧回到全局那一项(用户机器上 agentCliType 是 kimi),这就是
-// 「写死」。修法不是改全局默认值(那只是把写死换了个值),而是给新线程的缺省【加一层可选来源】。
-//
-// 记(rememberLastUsedEngineRoute)与读(newSessionEngineRoute)分两处,共用 config 上的一个字段。
-// ────────────────────────────────────────────────────────────────────────────────────────
-// 记:**两个写入点共用这一个函数**,不许各写一遍。
-//   ① 用户在线程头上换引擎/模型 → PATCH /api/sessions/:id → applySessionMetaPatch;
-//   ② 用户自己发起的回合 → 10 的 runSessionTurn 且 source === 'http'。
-// 三条纪律:
-//   · 只记【用户自己的意思表示】。管家(source 'steward')与将来的调度器(source 'scheduler')
-//     派出去的回合一概不记 —— 判据在调用点那个 if,不在这里(这里拿到的就是「该记的那一条」);
-//   · 【与现值不同才落盘】,否则每个回合都要写一次 config.json;权威比对在 mutateConfig 的锁内
-//     再做一次(锁外那一次只是拿调用方手上的现成副本做便宜短路,可能已经陈旧);
-//   · 【失败静默】。这是旁路记账 —— 写不进去最多是下一条新线程回落全局,绝不能弄坏回合或 PATCH。
-async function rememberLastUsedEngineRoute(nextRoute, knownConfig) {
-  try {
-    const clean = normalizeSessionEngineRoute(nextRoute);
-    if (!clean) return false;
-    const wanted = JSON.stringify(clean);
-    if (knownConfig && typeof knownConfig === 'object'
-      && JSON.stringify(normalizeSessionEngineRoute(knownConfig.lastUsedEngineRoute)) === wanted) return false;
-    let wrote = false;
-    await mutateConfig(async current => {
-      if (JSON.stringify(normalizeSessionEngineRoute(current.lastUsedEngineRoute)) === wanted) return { abort: 'unchanged' };
-      current.lastUsedEngineRoute = clean;
-      wrote = true;
-    });
-    return wrote;
-  } catch { return false; }
-}
-
-// 「上一次用的」现在还能不能用。只有两条判据,都对应【用户换过环境】这一件事:
-//   · openai 路由 —— 那个端点还在不在 config.providers 里。删掉端点后再开新线程必须回落,
-//     否则新线程一开口就撞 10 的「会话绑定的 Provider 不可用」,用户完全不知道发生了什么;
-//   · agent 路由 —— 那个 CLI 还检不检得到。判据【复用】01 的 selectedAgentCli(它同时看用户手填
-//     的路径与探测结果,且带缓存),不另写第二套探测 —— 第二套判据迟早与第一套判出不同答案。
-function lastUsedEngineRouteUsable(route, config) {
-  if (!route) return false;
-  if (route.engine === 'openai') {
-    return ((config && config.providers) || []).some(item => item && item.id === route.providerId);
-  }
-  const cli = selectedAgentCli({ ...(config || {}), agentCliType: route.agentCliType });
-  return Boolean(cli && cli.path);
-}
-
-// 读:新线程的缺省引擎。优先级固定四层,**第三层是本波新增的那一层**,上下两层一字未动:
-//   ① 显式入参 engineRoute(POST /api/sessions 的请求体带的,或进程内调用方指定的)——
-//      「这一条线程就要这个」压过一切;
-//   ② 从导入进来的消息里推断 —— 导入历史对话时沿用它原来的引擎(既有行为);
-//   ③ newThreadEngine === 'last' 且 lastUsedEngineRoute 【仍可用】→ 用它(本波新增);
-//   ④ 全局设置 —— 老行为,同时也是 ③ 的回落去处。
-// ③ 因「不可用」回落到 ④ 时必须留痕:用户明明设了「跟上次用的」却拿到别的引擎,不记一条
-// 审计事件就无从解释。**「还没有上一次」不算回落**(那是首次使用,不记)。
-function newSessionEngineRoute(config, explicitRoute, initialMessages, sessionId) {
-  const explicit = normalizeSessionEngineRoute(explicitRoute);
-  if (explicit) return explicit;
-  const inferred = inferSessionEngineRoute({ messages: initialMessages });
-  if (inferred) return inferred;
-  const fromGlobal = sessionEngineRouteFromConfig(config);
-  if (!config || config.newThreadEngine !== 'last') return fromGlobal;
-  const last = normalizeSessionEngineRoute(config.lastUsedEngineRoute);
-  if (!last) return fromGlobal;
-  if (lastUsedEngineRouteUsable(last, config)) return last;
-  logEvent({
-    kind: 'new_thread_engine_fallback',
-    sessionId: String(sessionId || ''),
-    reason: last.engine === 'openai' ? 'provider_missing' : 'agent_cli_missing',
-    last,
-    to: fromGlobal,
-  });
-  return fromGlobal;
-}
 
 // v0.8-S0: fold an older/partial session onto the current schema. Mirrors normalizeConfig's shape:
 // returns { session, changed }. Backfills schemaVersion + turnSeq and guarantees the array fields so
@@ -310,50 +158,10 @@ const {
   runProcess: DesktopShell.runProcess,
 });
 
-async function stopMissionAgentRuns(sessionId) {
-  let count = 0;
-  const saves = [];
-  for (const live of activeAgentRuns.values()) {
-    if (!live || !live.run || live.run.sessionId !== sessionId || live.closing || live.stopRequested) continue;
-    count++;
-    live.stopRequested = true;
-    live.paused = false;
-    try { if (live.ctrl) live.ctrl.abort(); } catch { /* best-effort */ }
-    const waiters = Array.isArray(live.resumeWaiters) ? live.resumeWaiters.splice(0) : [];
-    for (const wake of waiters) { try { wake(); } catch { /* best-effort */ } }
-    bumpRunIntervention(live.run, 'mission_stop');
-    appendAgentRunEvent(live.run, { type: 'run_stop_requested', data: { reason: 'mission_stop' } });
-    saves.push(saveAgentRun(live.run).catch(() => {}));
-  }
-  await Promise.all(saves);
-  return count;
-}
-
-// 撤回(rewindSession)用:被丢弃回合里【模型自己起的】、仍在跑的后台 run 一并停掉 —— 起它的那句话对模型已经没发生过,跑完的信封只会让
-// 下一回合凭空多出一份通知(并且唤醒会把改写过的线程叫醒)。停法与托盘 / mission 里停一件同一个(stopRequested + abort + 记干预 + 追事件),
-// 并打 cancelledByRewind:09 deliverAgentRunEnvelope 据此不再给它投信封。用户在面板里自己起的 run 不动(不是被撤回的那句话起的);
-// 起它的回合没被撤回的 run 也不动(照常跑完,信封随用户下一句话送达)。返回停掉的件数。同步,零 await。
-function cancelModelRunsOfDiscardedTurns(sessionId, discardedTurnSeqs) {
-  const discarded = discardedTurnSeqs instanceof Set ? discardedTurnSeqs : new Set(Array.isArray(discardedTurnSeqs) ? discardedTurnSeqs : []);
-  let cancelled = 0;
-  for (const live of activeAgentRuns.values()) {
-    if (!live || !live.run || live.run.sessionId !== sessionId || live.closing || live.stopRequested) continue;
-    if (live.run.launchedByModel !== true || !discarded.has(Number(live.run.turnSeq))) continue;
-    try {
-      live.run.cancelledByRewind = true;
-      live.stopRequested = true;
-      live.paused = false;
-      try { if (live.ctrl) live.ctrl.abort(); } catch { /* best-effort */ }
-      for (const wake of (Array.isArray(live.resumeWaiters) ? live.resumeWaiters.splice(0) : [])) { try { wake(); } catch { /* best-effort */ } }
-      bumpRunIntervention(live.run, 'rewind_stop');
-      appendAgentRunEvent(live.run, { type: 'run_stop_requested', data: { reason: 'rewind' } });
-      saveAgentRun(live.run).catch(() => {});
-      cancelled++;
-    } catch { /* 停不掉也不挡撤回 */ }
-  }
-  if (cancelled) logEvent({ kind: 'rewind_cancel_agent_runs', sessionId, cancelled });
-  return cancelled;
-}
+const { stopMissionAgentRuns, cancelModelRunsOfDiscardedTurns } =
+  require('./backend/session-run-cancellation.cjs').createSessionRunCancellation({
+    activeAgentRuns, bumpRunIntervention, appendAgentRunEvent, saveAgentRun, logEvent,
+  });
 
 // 110-3b: createTurnSegmentBuilder 回合分段构建器抽至 02c-turn-segments.js。
 
@@ -371,23 +179,6 @@ function cancelModelRunsOfDiscardedTurns(sessionId, discardedTurnSeqs) {
 //  - artifacts is always [] (field established for C4/v0.9).
 const { kindForPath, projectBridgedIrreversible, buildTurnSummary } = require('./backend/turn-summary.cjs');
 
-// v0.8-S0 A6: detect an interrupted (dangling) turn from providerHistory. Dangling shapes:
-//   - the tail is a role:'user' message with no assistant reply after it (turn never got answered);
-//   - the tail is a role:'tool' message (turn stopped mid tool-loop, see below);
-//   - the tail assistant carries tool_calls but not every tool_call_id has a matching role:'tool' reply
-//     (turn was arrested mid tool-loop). Returns { dangling, kind } — kind: 'user'|'tool_calls'|null.
-function detectDanglingTurn(session) {
-  // perf:不读 provider 正文的装载视图(SESSION_LOAD_OMIT_PROVIDER)带着这份正文的判定与条数,形状与下面逐键相同。
-  const omitted = sessionOmittedProviderHistory(session);
-  const h = omitted ? null : ((session && Array.isArray(session.providerHistory)) ? session.providerHistory : []);
-  // turnSeq + historyLength form a stable UI-dismiss fingerprint: reopening the same interrupted turn stays
-  // dismissed, while a later interruption automatically gets a fresh banner instead of inheriting the old ×.
-  const meta = { turnSeq: Math.max(0, Number(session && session.turnSeq) || 0), historyLength: omitted ? omitted.count : h.length };
-  const state = omitted ? omitted.dangling : danglingTurnState(h.length, i => h[i]);
-  return { dangling: state.dangling, kind: state.kind, ...meta };
-}
-// detectDanglingTurn 的判定本体:只看 providerHistory 的尾巴,at(i) 取第 i 条(数组下标,或 02 正文记录按行惰性解析)。
-
 const ProviderHistory = require('./backend/provider-history.cjs').createProviderHistory({ logEvent });
 function repairProviderHistoryPairing(...args) { return ProviderHistory.repairProviderHistoryPairing(...args); }
 function isProviderToolArgsObject(...args) { return ProviderHistory.isProviderToolArgsObject(...args); }
@@ -402,46 +193,11 @@ function syncProviderHistoryFromDisplay(...args) { return ProviderHistory.syncPr
 // v1.9 存储 v2:头(storageVersion:2)从两个 NDJSON 正文装配 messages/providerHistory;正文缺失/坏 →
 // v1bak 回退(迁移备份),无 v1bak 才按损坏隔离。legacy 单文件首次加载后打非枚举 __v1bakPending 标记,
 // 由 saveSession 完成「先备份 v1bak、再落 v2」的懒迁移(对调用方完全透明)。
-// ── 第71b波:残留 pending 叙事段清理者 ─────────────────────────────────────────────────────────
-// permission/plan/question 叙事段在回合流式期以 status:'pending'(权限另有 'paused' 存档暂停)落盘(上方段构建器)。
-// 进程重启/回合中断后,内存待决注册表(04 pendingPermissions/pendingQuestions/pendingPlans)已清空,决策永远
-// 到不了 —— 段却在每次重进会话时永远显示「待处理」只读 pill(与 Intervention 的 cancelled_restart 同源的残留)。
-// 本清理器在 loadSession 全量装载时惰性修复:段的 id 不在活注册表 → 决策不可能再到达,诚实标终态 'cancelled'
-// + note(前端 pill 词汇已有 cancelled,见 chat-static-renderer narrativeStateLabel)。惰性而非 boot 全扫:
-// messages 正文是大文件,boot 扫全部会话代价不可控;loadSession 时该会话反正要被读,一趟摊销。
-// 覆盖 71b 前存量段(无 Intervention 记录)与 71b 后段(boot 已 cancel_restart 但段未动)——活注册表是唯一判据。
-// 竞态防护(调用方执行):活回合(activeChildren)或 dying turn 收尾窗口(turnSettlers,第69波 rewind 同款)
-// 内绝不调用 —— 此时磁盘 pending 可能是「决策在内存、未落盘」的活段,误标会与回合收尾 save 互相覆盖。
-function healStalePendingSegments(session) {
-  if (!session || !Array.isArray(session.messages)) return false;
-  let healed = false;
-  const note = '应用重启或回合中断,该请求已失效;如需请重新发起。';
-  const toolNote = '回合中断时该工具仍在运行,已标记为取消;如需请重试。';
-  for (const msg of session.messages) {
-    const segs = msg && Array.isArray(msg.segments) ? msg.segments : null;
-    if (!segs) continue;
-    for (const seg of segs) {
-      if (!seg || typeof seg !== 'object') continue;
-      if (seg.type === 'permission' && (seg.status === 'pending' || seg.status === 'paused')) {
-        if (seg.requestId && pendingPermissions.has(String(seg.requestId))) continue; // 活待决:决策仍会到达
-        seg.status = 'cancelled'; seg.note = note; healed = true;
-      } else if (seg.type === 'plan' && seg.status === 'pending') {
-        if (seg.planId && pendingPlans.has(String(seg.planId))) continue;
-        seg.status = 'cancelled'; seg.note = note; healed = true;
-      } else if (seg.type === 'question' && seg.status === 'pending') {
-        if (seg.questionId && pendingQuestions.has(String(seg.questionId))) continue;
-        seg.status = 'cancelled'; seg.note = note; healed = true;
-      } else if ((seg.type === 'tool' || seg.type === 'subagent') && seg.status === 'running') {
-        // 47b/86: 回合被 Stop/看门狗/异常中止时,正在执行的 tool/subagent 段以 'running' 落盘 (finalizeAll
-        // 在新回合会兜底,但此会话是修复前落盘的存量) -> 重进会话时诚实标 'cancelled'。
-        seg.status = 'cancelled'; seg.note = toolNote; healed = true;
-      } else if (seg.type === 'workflow' && (seg.status === 'running' || seg.status === 'paused')) {
-        seg.status = 'cancelled'; seg.note = toolNote; healed = true;
-      }
-    }
-  }
-  return healed;
-}
+const { detectDanglingTurn, healStalePendingSegments } =
+  require('./backend/session-recovery.cjs').createSessionRecovery({
+    danglingTurnState, sessionOmittedProviderHistory: session => sessionOmittedProviderHistory(session),
+    pendingPermissions, pendingPlans, pendingQuestions,
+  });
 
 const SessionPersistence = require('./backend/session-persistence.cjs').createSessionPersistence({
   files: { sessionPath, sessionBodyPaths, ensureDirs, atomicWriteJson: (...args) => atomicWriteJson(...args) },
@@ -493,77 +249,10 @@ function sessionObjectIsStale(session) {
 
 // 50-fix(标题卡死):未命名标题判定 —— 后端占位 'New session' 与历史前端本地化占位('新会话'/'New chat')
 // 均视为未命名,两引擎回合结束据此自动命名(历史会话下一轮补名)。
-const IMPORTED_MESSAGE_ROLE_MAX = 32;
-// 安全走查 S10:导入来的消息是外来文本(可能是别人分享的会话文件、含伪造的「用户已授权…」对话),每条打来源标记
-// meta.imported:true,让这条线程里的内容始终能被认出是导入的。meta【整个替换】而不是合并:文件自带的 meta
-// (比如伪造 origin:'agent_wake' / 'inbox' 去走界面里那几条特殊渲染)一律丢掉。
-function sanitizeImportedSessionMessages(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(m => m && typeof m === 'object' && !Array.isArray(m)
-    && typeof m.role === 'string' && m.role.trim() && m.role.length <= IMPORTED_MESSAGE_ROLE_MAX
-    && (m.content == null || typeof m.content === 'string' || Array.isArray(m.content)))
-    .map(m => ({ ...m, meta: { imported: true } }));
-}
-
-async function createSession({ title, cwd, origin, engineRoute }) {
-  const id = makeId('sess');
-  clearDeletedSession(id);   // hunt2-P2:新建的会话绝不继承同名旧会话的删除墓碑
-  const config = await readConfig();
-  // 导入会话(POST /api/sessions 的 messages,来自用户选的 JSON 文件)同样不可信:修前 [null] 让建会话 500
-  // (而且半截落了盘),数字/字符串元素原样进正文。只收【普通对象 + 非空字符串 role + content 缺省或为字符串/数组】
-  // 的条目,其余丢掉 —— 这就是展示消息的形状(assistant 的 content 可以是 '',正文在 segments 里)。
-  const initialMessages = sanitizeImportedSessionMessages(arguments[0]?.messages);
-  // title / cwd 来自 POST /api/sessions 与 /api/chat/stream 的请求体,类型不可信:修前 {"cwd":5} 原样落盘,
-  // 这条会话此后每一回合都死在 path.resolve(5);对象/数组标题会原样回给列表(前端 .trim() 的雷)。
-  // 非字符串或空白一律当没传;标题上限与 applySessionMetaPatch 改名同为 200。
-  const safeTitle = typeof title === 'string' && title.trim() ? title.slice(0, 200) : undefined;
-  const safeCwd = typeof cwd === 'string' && cwd.trim() ? cwd : undefined;
-  const session = {
-    id,
-    schemaVersion: SESSION_SCHEMA,
-    turnSeq: 0,
-    title: safeTitle || 'New session',
-    summary: '',
-    pinned: false,
-    cwd: safeCwd || config.defaultWorkspace || os.homedir(),
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    claudeSessionId: null,
-    messages: initialMessages,
-    providerHistory: [],
-    providerHistoryCursor: 0,
-    privacyHistoryV1: false, // Fresh disabled sessions bypass legacy-reference migration entirely.
-    attachments: [],
-    // 123-N2:四层优先级搬进 newSessionEngineRoute(见那里的头注)。修前这一行是
-    // `inferSessionEngineRoute({messages}) || sessionEngineRouteFromConfig(config)` —— 即今天的
-    // ②||④,新增的是最前面的 ①(显式入参)与中间的 ③(上一次用的)。
-    engineRoute: newSessionEngineRoute(config, engineRoute, initialMessages, id),
-    mission: null, // 第26波b: 任务账本(见 normalizeMission)
-    missionId: id, // 75a (D1 plan B): stable Mission identity, written for new sessions (== sessionId in 3.0)
-    kind: 'quick_ask', // 第70波(EC-E):显式 Quick Ask 标识;mission start 时翻转 'mission'(见 13-http-router /api/mission)
-    // 第 121 波 K3(34 号文 §4.1「来源三值」):这条线程是谁开的。**只在这里写一次,此后终身不变**,
-    // 且【不在】 applySessionMetaPatch 的白名单里(理由与 createdBy 同一条,见那里的注释锚)。
-    // 三值 'steward' | 'user' | 'schedule':管家族两条建线程的路径(13k thread_new / quick_ask)显式传
-    // 'steward';119 波的定时任务落地后由它自己传 'schedule';其余一律 'user'。非法值当没传。
-    // 存量会话头没有这个字段:读侧由 06i 的 threadOriginOf 现场派生,**不回写**(索引是纯派生物,
-    // 为了补一个字段去改几百个会话文件不值得,而且那会把 sourceStamp 全体打脏)。
-    origin: (origin === 'steward' || origin === 'schedule') ? origin : 'user',
-    // 116-5a(§11.8.3):建会话时就带了一个【不是占位符】的标题 = 这条线程已经有名字了,不必再花一次
-    // 模型调用去起名。判据复用既有的 isUntitledSessionTitle(中英占位集,双引擎自动命名共用同一个),
-    // 所以经典壳送来的「新会话」/「New chat」仍然算没名字。与「用户手改标题」写的是同一个字段:
-    // 显示优先级只有一条 —— 人给的名字 > 生成的名字 > 原话。
-    ...(isUntitledSessionTitle(safeTitle) ? {} : { titleSource: 'user' }),
-  };
-  // 落盘前就补齐 normalizeSession 的默认字段(todos / skills / memories / memoriesExplicit / memoryExclusions ……)。
-  // 修前新会话头缺这几个键,第一次 loadSession 判 changed → load_normalize 回写 —— 光是「点开看一眼」就把
-  // updatedAt 推到现在,这条会话跳到列表最上面(rail-session-search 浏览器件在 Windows CI 上偶发红的根因)。
-  normalizeSession(session);
-  await saveSession(session);
-  // 121-K2a(§6.1 第 4 条):新线程。missionId 在 3.0 里建会话时 == sessionId(见上面那一行),
-  // 真正归到别的任务是后来 missionAttachThread 的事(它自己派 thread.adopted)。
-  RUYI_EVENTS.emit('thread.created', { sessionId: id, missionId: String(session.missionId || ''), title: String(session.title || '') });
-  return session;
-}
+const createSession = require('./backend/session-creation.cjs').createSessionService({
+  SESSION_SCHEMA, makeId, clearDeletedSession, readConfig, nowIso, newSessionEngineRoute,
+  isUntitledSessionTitle, normalizeSession, saveSession, RUYI_EVENTS,
+});
 
 // ============================================================================
 // v0.8-S4a — Checkpoint journal (信任层核心). Layout under dataRoot/checkpoints/<sessionId>/:

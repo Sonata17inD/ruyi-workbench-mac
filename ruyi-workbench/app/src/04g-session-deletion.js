@@ -3,7 +3,7 @@ const { deleteSession, bulkDeleteUnpinnedSessions, removeSessionToolImages } = r
   paths, assertSessionIdForPath, safeSessionId, logEvent, markSessionDeleted,
   files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
     removeSessionNotes, sessionScratchpadPath, journalDir, agentRunDir },
-  pendingWrites: { sessionWriteChains, sessionScratchpadChains },
+  pendingWrites: { sessionWriteChains, scratchpadWriteInFlight },
   execution: {
     stop: stopSession, activeRuns: () => activeAgentRuns.values(), stopRuns: stopMissionAgentRuns,
     settler: id => turnSettlers.get(id), isActive: id => activeChildren.has(id),

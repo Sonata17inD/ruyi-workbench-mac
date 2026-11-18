@@ -20,7 +20,8 @@ const CENSUS = {
   '../backend/session-rewind.cjs': 1, // 撤回成功的严格提交。
   '../backend/session-transactions.cjs': 2, // 读改写与回合收尾的共享提交出口。
   '../backend/session-persistence.cjs': 3, // 装载归一化、旧格式迁移与迁移备份恢复。
-  '02-session-store.js': 2, // 创建与会话元数据存储端口。
+  '02-session-store.js': 1, // 会话元数据存储端口。
+  '../backend/session-creation.cjs': 1, // 新建会话首次提交。
   '../backend/session-meta-updates.cjs': 2, // 元数据立即／延后提交，使用撤回代数闸与有界重放。
   '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
   '../backend/agent-cli-turn.cjs': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)

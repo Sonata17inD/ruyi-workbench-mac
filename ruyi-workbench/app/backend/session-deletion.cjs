@@ -7,7 +7,7 @@ function createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent,
   files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
     removeSessionNotes, sessionScratchpadPath, journalDir, agentRunDir },
-  pendingWrites: { sessionWriteChains, sessionScratchpadChains },
+  pendingWrites: { sessionWriteChains, scratchpadWriteInFlight },
   execution, membership, index, invalidateSessionState, events, markSessionDeleted,
 }) {
 const SESSION_DELETE_SETTLE_TIMEOUT_MS = 8000;
@@ -51,7 +51,7 @@ async function deleteSession(id, { purgeAssociated = false } = {}) {
     const inFlight = sessionWriteChains.get(id);
     if (inFlight) await inFlight.catch(() => {});
     // C2:草稿本那一截写链同样先落完再 unlink(墓碑已立,之后排进来的写会被 updateSessionScratchpad 拒掉)。
-    const scratchpadInFlight = sessionScratchpadChains.get(id);
+    const scratchpadInFlight = scratchpadWriteInFlight(id);
     if (scratchpadInFlight) await scratchpadInFlight.catch(() => {});
   }
   try { execution.revokeGrants(id, 'session-deleted'); } catch { /* best-effort */ } // 第27波:会话销毁 → 授权书全清

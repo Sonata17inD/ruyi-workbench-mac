@@ -185,6 +185,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const src = readServerSource();
   const envBrief = fs.readFileSync(path.join(app, 'backend', 'engine-env-brief.cjs'), 'utf8');
   const configSchema = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
+  const sessionEngineRoute = fs.readFileSync(path.join(app, 'backend', 'session-engine-route.cjs'), 'utf8');
   const compactionRouting = fs.readFileSync(path.join(app, 'backend', 'compaction-routing.cjs'), 'utf8');
   const cliMcp = fs.readFileSync(path.join(app, 'backend', 'cli-mcp-sync.cjs'), 'utf8');
   const discovery = fs.readFileSync(path.join(app, 'backend', 'agent-cli-discovery.cjs'), 'utf8');
@@ -199,7 +200,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const LITERAL_CLI_COMPARE = /[!=]==\s*'kimi'|'kimi'\s*[!=]==|agentCliType\s*[!=]==\s*['"`]|['"`]\s*[!=]==\s*[\w.]*agentCliType\b|\bkind\s*[!=]==\s*'claude'|\[\s*'claude'\s*,\s*'kimi'\s*\]|\?\s*'kimi'\s*:\s*'claude'/;
   const blocks = {
     sanitizeLastUsedEngineRoute: functionBlock(configSchema, 'sanitizeLastUsedEngineRoute'),
-    normalizeSessionEngineRoute: functionBlock(src, 'normalizeSessionEngineRoute'),
+    normalizeSessionEngineRoute: functionBlock(sessionEngineRoute, 'normalizeSessionEngineRoute'),
     agentCliInstallCandidates: functionBlock(discovery, 'agentCliInstallCandidates'),
     selectedAgentCli: functionBlock(src, 'selectedAgentCli'),
     prepareAgentCliSpawn: functionBlock(src, 'prepareAgentCliSpawn'),

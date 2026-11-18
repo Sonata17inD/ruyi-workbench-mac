@@ -9,16 +9,10 @@
 //   2) healStalePendingSegments 在 loadSession 时把存量 running tool/subagent/workflow 段标 'cancelled'
 //      (修复前落盘的旧会话);
 //   3) 桥接超时表给 ACC `wait`(cap 300s) 310s,不再用默认 120s 杀掉合法 wait(300)。
-// 纯静态:vm 加载 02c-turn-segments.js 的 builder 片段 + 02-session-store.js 的 heal 片段
-// 并直接调用 MCP 超时模块,不启服务器。
+// 直接调用生产模块验证回合收尾、落盘段恢复及 MCP 超时。
 
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
-
-const ROOT = path.resolve(__dirname, '..');
-const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
-const read = file => fs.readFileSync(file, 'utf8');
+const { createTurnSegmentBuilder } = require('../ruyi-workbench/app/backend/turn-segments.cjs');
+const { createSessionRecovery } = require('../ruyi-workbench/app/backend/session-recovery.cjs');
 
 let failures = 0;
 const ok = (condition, label) => {
@@ -26,32 +20,15 @@ const ok = (condition, label) => {
   else { failures += 1; console.log('FAIL ' + label); }
 };
 
-// --- load createTurnSegmentBuilder + healStalePendingSegments from source -------------------
-// 110-3b: createTurnSegmentBuilder 已搬至 02c-turn-segments.js。builder 片段改从 02c 取(02c 只含
-// 该构建器,故终点即文件末尾,切出的字节与旧哨兵 '\n// v0.8-S3/S4a:' 截出的完全相同);
-// healStalePendingSegments 仍取自 02。只改读取来源,断言与期望值一字未改。
-const store = read(path.join(SRC, '02-session-store.js'));
-const builderSrc = read(path.join(SRC, '../backend/turn-segments.cjs'));
-const builderStart = builderSrc.indexOf('function createTurnSegmentBuilder()');
-const builderEnd = builderSrc.indexOf('module.exports =');
-ok(builderStart >= 0 && builderEnd > builderStart, 'F1 createTurnSegmentBuilder 在 session store 源码');
-
-const healStart = store.indexOf('function healStalePendingSegments(session)');
-const healEnd = store.indexOf('\nconst SessionPersistence =', healStart);
-ok(healStart >= 0 && healEnd > healStart, 'F2 healStalePendingSegments 在 session store 源码');
-
-// Build a vm context with the globals healStalePendingSegments references (the pending registries).
+// 使用独立待决注册表验证存量段和活待决。
 const pendingPermissions = new Map();
-const pendingPlans = new Map();
-const pendingQuestions = new Map();
-const ctx = { pendingPermissions, pendingPlans, pendingQuestions, ...require('../ruyi-workbench/app/backend/turn-segments.cjs') };
-// Load the builder + healStalePendingSegments together (healStalePendingSegments is standalone,
-// references the module-level Maps which we inject via context).
-const slice = store.slice(healStart, healEnd) +
-  '\nthis.createTurnSegmentBuilder = createTurnSegmentBuilder; this.healStalePendingSegments = healStalePendingSegments;';
-vm.runInNewContext(slice, ctx);
+const { healStalePendingSegments } = createSessionRecovery({
+  pendingPermissions, pendingPlans: new Map(), pendingQuestions: new Map(),
+});
+ok(typeof createTurnSegmentBuilder === 'function', 'F1 装载实际回合分段构建器');
+ok(typeof healStalePendingSegments === 'function', 'F2 装载实际会话段恢复函数');
 
-const builder = ctx.createTurnSegmentBuilder();
+const builder = createTurnSegmentBuilder();
 
 // --- F3: finalizeAll marks running tool/subagent/workflow as cancelled, leaves done alone ----
 const batch = builder.createBatchId('openai');
@@ -77,7 +54,7 @@ ok(find('s-running').status === 'cancelled', 'F3e 运行中 subagent -> cancelle
 ok(find('wf1').status === 'cancelled', 'F3f 运行中 workflow -> cancelled');
 
 // --- F4: a normally-completing turn (no finalizeAll) still works & running segments persist ---
-const b2 = ctx.createTurnSegmentBuilder();
+const b2 = createTurnSegmentBuilder();
 const batch2 = b2.createBatchId('claude');
 b2.consume({ type: 'tool_use', id: 'x1', name: 'git_status', batchId: batch2 });
 const beforeSegs = b2.snapshot();
@@ -100,7 +77,7 @@ const session = {
     ],
   }],
 };
-const healedSession = ctx.healStalePendingSegments(session);
+const healedSession = healStalePendingSegments(session);
 ok(healedSession === true, 'F5 healStalePendingSegments 报告有修复');
 const seg = (cid) => session.messages[0].segments.find(s => s.toolCallId === cid || s.workflowId === cid || s.requestId === cid);
 ok(seg('old-tool').status === 'cancelled', 'F5a 存量 running 工具 -> cancelled');
@@ -113,7 +90,7 @@ ok(seg('old-perm').status === 'cancelled', 'F5f 存量 pending permission 仍被
 // --- F6: live pending permission is NOT healed (decision may still arrive) ------------------
 pendingPermissions.set('live-perm', { sessionId: 'x' });
 const live = { messages: [{ segments: [{ type: 'permission', requestId: 'live-perm', status: 'pending' }] }] };
-ctx.healStalePendingSegments(live);
+healStalePendingSegments(live);
 ok(live.messages[0].segments[0].status === 'pending', 'F6 活待决 permission 不被误标 (决策仍会到达)');
 
 // --- F7: production bridge deadlines include the tool ceiling and request-specific grace ---

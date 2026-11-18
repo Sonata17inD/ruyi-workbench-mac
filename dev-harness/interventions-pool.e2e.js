@@ -288,7 +288,7 @@ const mkPoolItem = (id, task) => ({ id, proposedBy: 'n1', task, roleId: '', depe
 
     // ============ (s) 静态锁 ============
     console.log('\n── [s] 静态锁 ──');
-    ok(/function healStalePendingSegments\(session\)/.test(src), 's 02 有 healStalePendingSegments 清理器');
+    ok(/function healStalePendingSegments\(session\)/.test(backend('session-recovery.cjs')), 's 会话恢复模块持有 healStalePendingSegments 清理器');
     ok(/if \(!lifecycle\.isActive\(session\.id\)\) \{\s*try \{ healed = healStalePendingSegments\(session\)/.test(backend('session-persistence.cjs'))
       && /isActive: id => activeChildren\.has\(id\) \|\| turnSettlers\.has\(id\)/.test(src), 's 会话持久化仅在回合及收尾均结束后清理残留待决段');
     ok(/iv\.type === 'pool'/.test(src) && /run\.status === 'paused'\) continue; \/\/ 恢复后可决策/.test(src), 's 02 markInterruptedInterventions pool 分流(paused 保留)');

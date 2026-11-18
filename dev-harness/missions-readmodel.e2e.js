@@ -222,12 +222,12 @@ function spawnFake(seq, extraEnv) {
     const srcConfig = fs.readFileSync(path.join(WB, 'app', 'src', '01-config.js'), 'utf8')
       + fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
     const missionRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'mission-routes.cjs'), 'utf8');
-    const src02 = fs.readFileSync(path.join(WB, 'app', 'src', '02-session-store.js'), 'utf8');
+    const sessionCreation = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-creation.cjs'), 'utf8');
     ok(/\{ m: 'GET', p: '\/api\/missions', auth: 'token-browser' \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions 标 token-browser');
     ok(/\{ m: 'GET', p: '\/api\/missions\/', auth: 'token-browser', prefix: true \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions/ 前缀标 token-browser');
     ok(/async function handleMissionsApiRoutes\(/.test(missionRoutes), '(e) 事项处理器归独立路由模块');
     ok(/await handleMissionsApiRoutes\(req, res, pathname\)/.test(srcRouter), '(e) 路由器挂载 missions 处理器');
-    ok(/kind: 'quick_ask'/.test(src02), '(e) createSession 显式写入 kind=quick_ask');
+    ok(/kind: 'quick_ask'/.test(sessionCreation), '(e) createSession 显式写入 kind=quick_ask');
     const metadata = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-metadata.cjs'), 'utf8');
     ok(/function sessionKind\(/.test(metadata), '(e) 会话类型由元数据模块只读派生');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e.message || e)); fail++; }

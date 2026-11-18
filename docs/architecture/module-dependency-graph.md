@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2077 | 3100 | 597 | 14 | 0 | 0 |
+| 87 | 2073 | 3096 | 596 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -39,12 +39,12 @@
 | 21 | `01l-credential-recovery.js` | foundation | 2 | 11 | 3 |
 | 22 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
 | 23 | `02d-session-overrides.js` | foundation | 11 | 1 | 1 |
-| 24 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
+| 24 | `02e-session-engine-route.js` | foundation | 5 | 0 | 0 |
 | 25 | `02f-turn-effect-kinds.js` | foundation | 4 | 0 | 0 |
 | 26 | `02g-desktop-executions.js` | foundation | 1 | 4 | 1 |
 | 27 | `02h-desktop-ledger.js` | foundation | 1 | 4 | 3 |
 | 28 | `06f-autonomy-grants.js` | engine | 13 | 4 | 1 |
-| 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
+| 29 | `02-session-store.js` | foundation | 231 | 56 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 25 | 16 | 3 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 32 | `04-permission-runtime.js` | foundation | 78 | 47 | 6 |
@@ -124,17 +124,16 @@
 | `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `invalidateConfigRecoveryState`, `mutateConfig`, `normalizeConfig`, `readConfig` |
 | `01l-credential-recovery.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01m-privacy-regex.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
-| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `clearDeletedSession`, `ensureDirs`, `fsp`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `runKeyedChain`, `safeJsonParse`, `sessionAssociatedSaveIsTombstoned`, `sessionSaveIsTombstoned`, `text` |
+| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `clearDeletedSession`, `ensureDirs`, `fsp`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `sessionAssociatedSaveIsTombstoned`, `sessionSaveIsTombstoned` |
 | `02-session-store.js` | `01-config.js` | backward | `DurableJsonStore`, `assertSessionIdForPath`, `atomicWriteJson`, `mutateConfig`, `noteSessionsDirOwnWrite`, `readConfig`, `readFileTail`, `safeSessionId`, `selectedAgentCli`, `sessionPath` |
 | `02-session-store.js` | `01c-runtime-flags.js` | backward | `MEMORY_FIXED_SELECTION_HARD_MAX` |
 | `02-session-store.js` | `01e-permission-modes.js` | backward | `resolvePermissionMode` |
 | `02-session-store.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `gitReadOnlyGuard`, `runGit` |
 | `02-session-store.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `activeChildren`, `pendingPermissions`, `pendingPlans`, `pendingQuestions`, `sessionWriteChains`, `turnSettlers` |
 | `02-session-store.js` | `02d-session-overrides.js` | backward | `applySessionDesktopToolsOverride`, `applySessionPermissionModeOverride`, `normalizeSessionDesktopTools`, `normalizeSessionPermissionMode`, `sessionDesktopToolsOverrides`, `sessionEngineRouteOverrides`, `sessionEngineRouteScopeOverrides`, `sessionPermissionModeOf`, `sessionPermissionModeOverrides` |
-| `02-session-store.js` | `02e-session-engine-route.js` | backward | `inferSessionEngineRoute`, `normalizeSessionEngineRoute`, `sessionEngineRouteFromConfig` |
+| `02-session-store.js` | `02e-session-engine-route.js` | backward | `createSessionRoutePreferences`, `inferSessionEngineRoute`, `normalizeSessionEngineRoute` |
 | `02-session-store.js` | `03-bridge-guard.js` | forward | `guardFileToolPath`, `guardWorkspacePath`, `realpathForContainment` |
 | `02d-session-overrides.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
-| `02e-session-engine-route.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
 | `02g-desktop-executions.js` | `00-boot.js` | backward | `copyOrdinaryJsonData`, `crypto`, `executionArgumentsDigest`, `json` |
 | `02h-desktop-ledger.js` | `00-boot.js` | backward | `nowIso`, `runKeyedChain` |
 | `02h-desktop-ledger.js` | `01-config.js` | backward | `DurableJsonStore` |
@@ -157,7 +156,7 @@
 | `04g-session-deletion.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `logEvent`, `markSessionDeleted`, `paths` |
 | `04g-session-deletion.js` | `01-config.js` | backward | `assertSessionIdForPath`, `safeSessionId`, `sessionPath` |
 | `04g-session-deletion.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `activeChildren`, `sessionWriteChains`, `turnSettlers` |
-| `04g-session-deletion.js` | `02-session-store.js` | backward | `AgentRunStore`, `SESSION_TOMBSTONE`, `SessionPersistence`, `agentRunDir`, `dropInterventionSessionState`, `dropSessionBodyState`, `dropSessionTitleOverride`, `interventionFilePath`, `journalDir`, `listSessions`, `missionChangeFilePath`, `missionIndexRemove`, `readMissionSessionHead`, `removeSessionNotes`, `scheduleSessionIndexUpdate`, `sessionBodyPaths`, `sessionMissionId`, `sessionScratchpadChains`, `sessionScratchpadPath`, `stopMissionAgentRuns` |
+| `04g-session-deletion.js` | `02-session-store.js` | backward | `AgentRunStore`, `SESSION_TOMBSTONE`, `SessionPersistence`, `agentRunDir`, `dropInterventionSessionState`, `dropSessionBodyState`, `dropSessionTitleOverride`, `interventionFilePath`, `journalDir`, `listSessions`, `missionChangeFilePath`, `missionIndexRemove`, `readMissionSessionHead`, `removeSessionNotes`, `scheduleSessionIndexUpdate`, `scratchpadWriteInFlight`, `sessionBodyPaths`, `sessionMissionId`, `sessionScratchpadPath`, `stopMissionAgentRuns` |
 | `04g-session-deletion.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOverrides`, `sessionEngineRouteOverrides`, `sessionEngineRouteScopeOverrides`, `sessionPermissionModeOverrides` |
 | `04g-session-deletion.js` | `04-permission-runtime.js` | backward | `stopSession` |
 | `04g-session-deletion.js` | `06f-autonomy-grants.js` | backward | `revokeAllGrants` |
