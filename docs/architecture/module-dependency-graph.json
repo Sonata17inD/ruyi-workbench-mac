@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2146,
-    "requiredSymbols": 3136,
-    "edges": 599,
+    "providedSymbols": 2128,
+    "requiredSymbols": 3120,
+    "edges": 597,
     "forwardEdges": 15,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -6081,37 +6081,22 @@
       "provides": [
         "ACTION_VIEW_MIN_CHARS",
         "ACTION_VIEW_TOOLS",
-        "AGENT_TOOL_NAMES",
-        "CLAUDE_PROGRESS_CHAR_STEP",
-        "CLAUDE_SUBAGENT_EDIT_TOOLS",
-        "CLAUDE_SUBAGENT_EXEC_TOOLS",
-        "CLAUDE_SUBAGENT_PASSTHROUGH_MODES",
-        "CLAUDE_SUBAGENT_TIER_DENY",
-        "CLAUDE_SUBAGENT_TIER_RANK",
-        "CLAUDE_SUBAGENT_TIER_TOOLS",
         "LOOP_GUARD_LIMITS",
-        "LOOP_POLLING_TOOLS",
         "MAIL_PER_SENDER_MAX",
         "MAIL_QUEUE_MAX",
         "MAIL_TEXT_MAX",
         "MEMORY_WRITE_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
-        "REVERTIBLE_TOOLS",
         "STEER_QUEUE_MAX",
-        "WEB_PAYLOAD_LIMITS",
-        "WEB_PAYLOAD_QUERY_TOOLS",
-        "WEB_PAYLOAD_URL_TOOLS",
-        "_nativeToolSchemaByName",
         "actionTargetMeta",
         "bridgedToolTier",
-        "buildActionEnvelope",
         "buildOpenAiTools",
         "buildToolCatalog",
         "classifyClaudeSubagentFailure",
         "classifyRuntimeToolFailure",
         "classifyToolPacks",
-        "claudeSubagentPermission",
         "compareToolRetrievalShadow",
+        "createNativeToolApproval",
         "createToolLoader",
         "createToolLoadingState",
         "drainSteerQueue",
@@ -6143,38 +6128,14 @@
         "toolDisabledResult",
         "toolIsRevertible",
         "toolPackForName",
-        "webLooksEncoded",
-        "webPayloadReason",
-        "webSafeDecode",
-        "webUrlPayloadReason"
+        "webPayloadReason"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "adaptiveMetaToolSchemas",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "BRIDGED_WRITE_PATH_ARGS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "buildAttachmentPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6188,7 +6149,7 @@
           "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6201,13 +6162,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "createNdjsonLineFeeder",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -6228,13 +6182,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
             "read"
@@ -6244,7 +6191,6 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -6252,48 +6198,12 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "MCP_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nativeToolDisabledByPolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
           "kinds": [
             "read"
           ]
@@ -6309,20 +6219,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "TOOL_REQUIRES",
-          "kinds": [
             "read"
           ]
         },
@@ -6334,94 +6230,73 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "toolRequirementsMet",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "buildUserEnvelope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "decodeClaudeCliText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "detectClaudePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "effectiveAnthropicEnv",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "generateAgentNodeMcpConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "observationRecallEnabled",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01e-permission-modes.js",
           "symbol": "clampAgentRoleToParent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01e-permission-modes.js",
           "symbol": "claudePermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "existsExecutableAsync",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6449,21 +6324,21 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6484,28 +6359,21 @@
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6519,7 +6387,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "parseClaudeEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6533,14 +6401,14 @@
           "provider": "04-permission-runtime.js",
           "symbol": "promptWaitMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "runAutomaticInterventionDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6554,14 +6422,14 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseIsLocalOrLan",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "withTransientRetry",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6589,42 +6457,42 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "appendResponseLanguagePolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskIndirect",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskScanIncomplete",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskSensitiveKind",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardToolPermanentlyExempt",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -26603,34 +26471,20 @@
       "from": "07-autonomy.js",
       "to": "00-boot.js",
       "symbols": [
-        "BRIDGED_WRITE_PATH_ARGS",
         "CONTEXT_OVERFLOW_PATTERNS",
         "DesktopExecutionHooks",
-        "MCP_TOOLS",
-        "PROVIDER_SESSION_TOOL_SCHEMAS",
-        "TOOL_REQUIRES",
         "TOOL_TIER_RANK",
-        "URL",
-        "adaptiveMetaToolSchemas",
-        "apiFailure",
         "buildAttachmentPrompt",
         "cacheContextLength",
         "claudeCostFields",
         "createNdjsonLineFeeder",
-        "crypto",
         "extractContextLength",
-        "fsp",
         "isContextOverflowError",
         "logEvent",
         "makeId",
-        "nativeToolDisabledByPolicy",
-        "nativeToolTier",
         "nowIso",
-        "path",
         "redact",
-        "safeJsonParse",
-        "text",
-        "toolRequirementsMet"
+        "safeJsonParse"
       ],
       "direction": "backward"
     },
@@ -26644,14 +26498,6 @@
         "effectiveAnthropicEnv",
         "generateAgentNodeMcpConfig",
         "readConfig"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "07-autonomy.js",
-      "to": "01c-runtime-flags.js",
-      "symbols": [
-        "observationRecallEnabled"
       ],
       "direction": "backward"
     },
@@ -26702,14 +26548,6 @@
       "to": "02d-session-overrides.js",
       "symbols": [
         "sessionDesktopToolsOf"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "07-autonomy.js",
-      "to": "02f-turn-effect-kinds.js",
-      "symbols": [
-        "unprefixedBridgedName"
       ],
       "direction": "backward"
     },

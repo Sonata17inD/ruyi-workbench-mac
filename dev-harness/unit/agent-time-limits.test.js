@@ -133,7 +133,7 @@ test('[S1] 设置页:自动收尾的占位值与回填默认值跟出厂一致(3
 });
 
 test('[C1] Claude CLI 节点的空闲上限跟 turnIdleTimeoutMs 走,不再封顶 10 分钟', () => {
-  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/07-autonomy.js'), 'utf8');
+  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/claude-subagent.cjs'), 'utf8');
   const body = functionBlock(src, 'runClaudeSubAgentOnce');
   assert.ok(body.length > 2000, '切到了 runClaudeSubAgentOnce');
   assert.match(body, /const idleLimitMs = Math\.max\(1000, Number\(process\.env\.WCW_TURN_IDLE_MS\) \|\| Number\(config\.turnIdleTimeoutMs\) \|\| 600000\);/);

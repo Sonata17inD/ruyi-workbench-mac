@@ -26,7 +26,7 @@ const CENSUS = {
   '../backend/agent-cli-turn.cjs': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '../backend/kimi-acp-turn.cjs': 2, // Kimi 回合自存，收尾走 saveTurnFinalSession。
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
-  '07-autonomy.js': 1,           // steer 排空(回合自存)
+  '../backend/agent-steering.cjs': 1,           // steer 排空(回合自存)
   '../backend/provider-turn.cjs': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
   '../backend/session-compaction.cjs': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
   // session-execution-routes.cjs 0:Kimi 状态 GET 回写用量走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。

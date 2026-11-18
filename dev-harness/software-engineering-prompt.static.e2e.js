@@ -88,7 +88,7 @@ ok(srv.planDiscoveryToolBatchAllowed([{ name: 'orchestrate_agents' }], {}, {}) =
 ok(srv.planDiscoveryToolBatchAllowed([{ name: 'unknown_future_tool' }], {}, {}) === false, 'plan discovery fails closed for unknown tools');
 
 const claudeSrc = fs.readFileSync(path.join(SRC, '../backend/agent-cli-turn.cjs'), 'utf8');
-const autonomySrc = fs.readFileSync(path.join(SRC, '07-autonomy.js'), 'utf8');
+const autonomySrc = fs.readFileSync(path.join(SRC, '../backend/claude-subagent.cjs'), 'utf8');
 const agentSrc = fs.readFileSync(path.join(SRC, '..', 'backend', 'subagent-runner.cjs'), 'utf8');
 const workflowSrc = fs.readFileSync(path.join(SRC, '../backend/provider-turn.cjs'), 'utf8');
 const registrySrc = fs.readFileSync(path.join(SRC, '../backend/prompt-registry.cjs'), 'utf8');

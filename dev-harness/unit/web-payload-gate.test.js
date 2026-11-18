@@ -34,14 +34,11 @@ process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
 const { startFakeProvider, toolCallFrames, textFrames } = require('../lib/fake-openai-provider');
-const BASE = ['nativeToolGate', 'runSubAgentCore', 'readConfig', 'activeOpenAiProvider', 'getAgentRoleLibrary'];
-let I;
-try { I = loadServerInternals([...BASE, 'webPayloadReason', 'webUrlPayloadReason', 'webLooksEncoded']); }
-catch (e) {
-  if (!(e instanceof ReferenceError)) throw e;   // 反向验证:修前没有这些符号 → [A] 纯函数断言红,[B][C] 照跑(行为断言在旧码上红)
-  I = loadServerInternals(BASE);
-  I.webPayloadReason = () => ''; I.webUrlPayloadReason = () => ''; I.webLooksEncoded = () => false;
-}
+const { webPayloadReason, webUrlPayloadReason } = require('../../ruyi-workbench/app/backend/native-tool-approval.cjs');
+const I = {
+  ...loadServerInternals(['nativeToolGate', 'runSubAgentCore', 'readConfig', 'activeOpenAiProvider', 'getAgentRoleLibrary']),
+  webPayloadReason, webUrlPayloadReason,
+};
 
 let benign = null, benignHits = [];
 let fake = null;

@@ -83,7 +83,6 @@ async function getToken(port) {
 (async () => {
   // ───────────────── S 段: 静态锁 ─────────────────
   console.log('── S 段: 静态锁(后端分派 + 前端去门 + i18n 双键) ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
   const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name), 'utf8');
   const steerRouteSrc = backend('session-steering.cjs');
   const app = readFrontendSrc();
@@ -95,7 +94,8 @@ async function getToken(port) {
     'S1 claude 引擎登记带 kind 标记的活回合(/api/steer 分派依据)');
   ok(steerRouteSrc.includes("reg.kind === 'claude'"), 'S2 /api/steer 按引擎分派 claude 分支在');
   ok(steerRouteSrc.includes('hasPendingQuestionForSession(sessionId)'), 'S3 提问挂起分流函数在(防插话误收为答案)');
-  ok(src.includes("'--input-format', 'stream-json'") && src.includes('drainSteers'), 'S4 Claude 工作流节点持续输入与插话 drain 在');
+  const cliSubagent = functionBlock(backend('claude-subagent.cjs'), 'runClaudeSubAgentOnce');
+  ok(cliSubagent.includes("'--input-format', 'stream-json'") && cliSubagent.includes('drainSteers'), 'S4 Claude 工作流节点持续输入与插话 drain 在');
   ok(backend('agent-run-control.cjs').includes('nodeDeliveryEligibility(live.run, nodeId, { allowClaude: true })'), 'S5 steer_node 为 Claude 工作流节点开启实时投递');
   ok(!app.includes('if (isProviderMode()) return steerPrompt(overrideText); return;'), 'S6 前端 sendPrompt 引擎静默门已去');
   ok(app.includes('r.injected') && app.includes("t('toast.steerInjected')") && app.includes("t('toast.steerQueued')"), 'S7 前端 toast 区分即时/下步生效(50c i18n:toast.steerInjected/Queued)');

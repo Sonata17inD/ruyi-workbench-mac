@@ -7,7 +7,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //    提前挂桥接面=桌面全控泄漏);⑤web_search/web_fetch 保持 read 级但 http_request 保持 exec、git_commit 保持
 //    exec、spawn_agent 保持 exec + 子回合 noSpawnAgent;⑥bridgedToolTier 未知工具缺省 exec、用户覆盖生效。
 'use strict';
-const { readServerSource } = require('./src-reader');
 const { functionBlock } = require('./lib/source-slice.js');
 const fs = require('fs');
 const path = require('path');
@@ -21,7 +20,7 @@ const srv = require(path.join(__dirname, '..', 'ruyi-workbench', 'app', 'server.
 let failures = 0;
 function ok(cond, label) { if (cond) { console.log(`PASS ${label}`); } else { failures++; console.log(`FAIL ${label}`); } }
 
-const src = readServerSource();
+const src = require('node:fs').readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/claude-subagent.cjs'), 'utf8');
 const subagentSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/subagent-runner.cjs'), 'utf8');
 
 // ---- ① Claude tier 白名单(抽出实际求值,不靠正则目测) ----

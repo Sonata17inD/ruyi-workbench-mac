@@ -401,8 +401,15 @@ async function verifyKimiPermissionAlias() {
   try {
     const target = path.join(root, 'workspace'), alias = path.join(root, 'alias');
     fs.mkdirSync(target); fs.symlinkSync(target, alias, process.platform === 'win32' ? 'junction' : 'dir');
-    const S = require('./lib/server-internals').loadServerInternals(['handleKimiAcpPermissionRequest', 'consumeKimiAcpApproval'], { withEval: true });
-    S.__eval("requestNativePermission = async () => ({ behavior: 'allow', scope: 'once' });");
+    const { createKimiAcpInterventions } = require('../ruyi-workbench/app/backend/kimi-acp-interventions.cjs');
+    const ports = require('./lib/server-internals').loadServerInternals([
+      'dataRoot', 'fileAllowedRoots', 'workspaceWriteRoots', 'guardFileToolPath', 'realpathForContainment',
+      'makeId', 'requestUserQuestion', 'permissionWaitMs', 'runAutomaticInterventionDecision',
+      'buildOpenSpawn', 'spawnDetachedChecked',
+    ]);
+    const S = createKimiAcpInterventions({
+      ...ports, process, requestNativePermission: async () => ({ behavior: 'allow', scope: 'once' }),
+    });
     const context = { reg: {}, state: { toolMap: new Map([['write-alias', { nativeName: 'Write', kind: 'edit', __settled: false }]]) },
       session: { id: 'alias-test', cwd: alias }, config: { permissionMode: 'default' }, onEvent: () => {} };
     await S.handleKimiAcpPermissionRequest({ toolCall: { toolCallId: 'write-alias', title: 'Write', kind: 'edit', rawInput: { path: path.join(alias, 'new.txt') } },

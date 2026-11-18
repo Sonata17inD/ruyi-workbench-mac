@@ -346,9 +346,10 @@ function spawnWb() {
     ok(/await markInterruptedInterventions\(\);/.test(backend('server-startup.cjs')), 'e 启动服务调用 markInterruptedInterventions');
     ok(/registerIntervention\(sessionId, 'question', id,/.test(runtime), 'e question 注册点调 registerIntervention');
     ok(/settleIntervention\(sessionId, id, answer && answer\.ok !== false \? 'answered' : 'cancelled'/.test(runtime), 'e question deliver 调 settleIntervention');
-    ok(/registerIntervention\(sessionId, 'permission', requestId,/.test(src), 'e 07 原生 permission 注册点调 registerIntervention');
-    ok(/registerIntervention\(sessionId, 'plan', planId,/.test(src), 'e 07 plan 注册点调 registerIntervention');
-    ok(/settleIntervention\(sessionId, requestId, decision && decision\.behavior === 'allow' \? 'allowed' : 'denied'/.test(src), 'e 07 permission settle 调 settleIntervention');
+    const nativeApproval = backend('native-approval-waiters.cjs');
+    ok(/registerIntervention\(sessionId, 'permission', requestId,/.test(nativeApproval), 'e 原生 permission 注册点调 registerIntervention');
+    ok(/registerIntervention\(sessionId, 'plan', planId,/.test(nativeApproval), 'e plan 注册点调 registerIntervention');
+    ok(/settleIntervention\(sessionId, requestId, decision && decision\.behavior === 'allow' \? 'allowed' : 'denied'/.test(nativeApproval), 'e permission settle 调 settleIntervention');
     ok(/source: 'legacy_permission'/.test(src) && /source: 'legacy_plan'/.test(src), 'e 干预路由 permission/plan 经典端点适配到 decideIntervention');
     ok(/async function decideInterventionCommand\(/.test(decisions) && /transitionInterventionState\(/.test(decisions)
       && /return decideInterventionCommand\(command, agentInterventionAction\);/.test(src)

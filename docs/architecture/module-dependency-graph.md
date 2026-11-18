@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2146 | 3136 | 599 | 15 | 0 | 0 |
+| 87 | 2128 | 3120 | 597 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -69,7 +69,7 @@
 | 51 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
 | 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 53 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
-| 54 | `07-autonomy.js` | orchestration | 68 | 68 | 16 |
+| 54 | `07-autonomy.js` | orchestration | 50 | 52 | 14 |
 | 55 | `08-agent-runs.js` | orchestration | 59 | 100 | 23 |
 | 56 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
 | 57 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
@@ -251,15 +251,13 @@
 | `06w-capability-service.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `existsExecutableAsync`, `probeGitCliAsync`, `probeRgAsync` |
 | `06w-capability-service.js` | `04-permission-runtime.js` | backward | `collectBridgedTools`, `mcpClients`, `sanitizeServerId` |
 | `06w-capability-service.js` | `04h-provider-http.js` | backward | `providerBaseIsLocalOrLan`, `providerBaseWithV1` |
-| `07-autonomy.js` | `00-boot.js` | backward | `BRIDGED_WRITE_PATH_ARGS`, `CONTEXT_OVERFLOW_PATTERNS`, `DesktopExecutionHooks`, `MCP_TOOLS`, `PROVIDER_SESSION_TOOL_SCHEMAS`, `TOOL_REQUIRES`, `TOOL_TIER_RANK`, `URL`, `adaptiveMetaToolSchemas`, `apiFailure`, `buildAttachmentPrompt`, `cacheContextLength`, `claudeCostFields`, `createNdjsonLineFeeder`, `crypto`, `extractContextLength`, `fsp`, `isContextOverflowError`, `logEvent`, `makeId`, `nativeToolDisabledByPolicy`, `nativeToolTier`, `nowIso`, `path`, `redact`, `safeJsonParse`, `text`, `toolRequirementsMet` |
+| `07-autonomy.js` | `00-boot.js` | backward | `CONTEXT_OVERFLOW_PATTERNS`, `DesktopExecutionHooks`, `TOOL_TIER_RANK`, `buildAttachmentPrompt`, `cacheContextLength`, `claudeCostFields`, `createNdjsonLineFeeder`, `extractContextLength`, `isContextOverflowError`, `logEvent`, `makeId`, `nowIso`, `redact`, `safeJsonParse` |
 | `07-autonomy.js` | `01-config.js` | backward | `buildUserEnvelope`, `decodeClaudeCliText`, `detectClaudePath`, `effectiveAnthropicEnv`, `generateAgentNodeMcpConfig`, `readConfig` |
-| `07-autonomy.js` | `01c-runtime-flags.js` | backward | `observationRecallEnabled` |
 | `07-autonomy.js` | `01e-permission-modes.js` | backward | `clampAgentRoleToParent`, `claudePermissionMode` |
 | `07-autonomy.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `existsExecutableAsync`, `killChildTree` |
 | `07-autonomy.js` | `01o-execution-state.js` | backward | `pendingPermissions`, `pendingPlans` |
 | `07-autonomy.js` | `02-session-store.js` | backward | `appendUsageLedger`, `loadSession`, `registerIntervention`, `repairProviderHistoryPairing`, `repairProviderHistoryToolArgs`, `saveSession`, `settleIntervention` |
 | `07-autonomy.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
-| `07-autonomy.js` | `02f-turn-effect-kinds.js` | backward | `unprefixedBridgedName` |
 | `07-autonomy.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `07-autonomy.js` | `04-permission-runtime.js` | backward | `PermissionWaitHooks`, `parseClaudeEvent`, `promptWaitMs`, `runAutomaticInterventionDecision` |
 | `07-autonomy.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |

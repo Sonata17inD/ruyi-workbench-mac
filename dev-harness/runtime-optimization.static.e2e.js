@@ -229,10 +229,11 @@ ok(!/metaToolHintsV1: true/.test(src), 'E5 meta hints are not defaulted on');
 
 console.log('\n── [E3] action-argument model view wiring (21) ──');
 ok(/actionArgumentModelViewV1: false/.test(src), 'E3 action model view defaults false');
-ok(/function projectActionModelView/.test(src) && /ACTION_VIEW_TOOLS = new Set\(/.test(src) && /ACTION_VIEW_MIN_CHARS = 512/.test(src), 'E3 projection block present (whitelist + threshold)');
+const actionHistory = require('node:fs').readFileSync(require.resolve('../ruyi-workbench/app/backend/provider-action-history.cjs'), 'utf8');
+ok(/function projectActionModelView/.test(actionHistory) && /ACTION_VIEW_TOOLS = new Set\(/.test(actionHistory) && /ACTION_VIEW_MIN_CHARS = 512/.test(actionHistory), 'E3 projection block present (whitelist + threshold)');
 ok(/const privacyHistory = typeof PrivacyGateway !== 'undefined' \? PrivacyGateway\.projectHostHistory\(session, session\.providerHistory\) : session\.providerHistory;/.test(providerTurn)
   && /const viewHistory = actionAuditMap\.size \? projectActionModelView\(privacyHistory, actionAuditMap\)\.history : privacyHistory;/.test(providerTurn), 'E3 buildBody consumes the privacy history projection followed by the action view');
-ok(/crypto\.createHash\('sha256'\)\.update\(rawArgs\)\.digest\('hex'\) !== entry\.sha256/.test(src), 'E3 sha256 tamper gate on projection');
+ok(/crypto\.createHash\('sha256'\)\.update\(rawArgs\)\.digest\('hex'\) !== entry\.sha256/.test(actionHistory), 'E3 sha256 tamper gate on projection');
 ok(/session\.actionAudit\.length > 200/.test(providerTurn), 'E3 audit capped (no unbounded growth)');
 ok(/status: isErr \? 'failed' : 'completed'/.test(providerTurn), 'E3 failed actions never projected');
 ok(!/actionArgumentModelViewV1: true/.test(src), 'E3 action model view is not defaulted on');

@@ -130,7 +130,7 @@ const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
     '../backend/steward-notification-tool.cjs', '../backend/steward-external-read-tools.cjs',
     memoryTools, settingsTools, contentTools, actReceipts).sort();
 const src06i = read('../backend/steward-core.cjs');
-const src07 = read('07-autonomy.js');
+const src07 = read('../backend/provider-tool-offer.cjs');
 const src11 = read('11-native-tools.js');
 const statusRoutes = read('../backend/status-routes.cjs');
 const src13f = read('../backend/native-tool-schemas.cjs');

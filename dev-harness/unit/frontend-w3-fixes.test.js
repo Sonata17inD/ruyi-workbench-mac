@@ -71,7 +71,7 @@ describe('M4 stewardAskText：「等你放行」按界面语言拼', () => {
 
 describe('M4 子代理进度 noteCode ＋ 新词条', () => {
   it('服务端子代理进度事件在各自实现中带有 noteCode', () => {
-    const need = { 'backend/subagent-runner.cjs': ['init', 'streaming'], 'src/07-autonomy.js': ['generating'],
+    const need = { 'backend/subagent-runner.cjs': ['init', 'streaming'], 'backend/claude-subagent.cjs': ['generating'],
       'backend/kimi-wire.cjs': ['kimiRunning', 'kimiRunningFor', 'kimiPaused'] };
     for (const [file, codes] of Object.entries(need)) {
       const text = read(path.join(ROOT, 'ruyi-workbench', 'app', file));

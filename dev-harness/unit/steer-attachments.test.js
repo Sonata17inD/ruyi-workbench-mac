@@ -9,6 +9,7 @@ const { pathWithinRoot } = require('../../ruyi-workbench/app/backend/path-contai
 const { buildAttachmentPrompt } = require('../../ruyi-workbench/app/backend/attachment-prompt.cjs');
 const { sanitizeFsSegmentName } = require('../../ruyi-workbench/app/backend/attachment-store.cjs');
 const { createSessionSteering } = require('../../ruyi-workbench/app/backend/session-steering.cjs');
+const { createAgentSteering } = require('../../ruyi-workbench/app/backend/agent-steering.cjs');
 const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const read = file => fs.readFileSync(path.join(src, file), 'utf8');
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7ZzXcAAAAASUVORK5CYII=', 'base64');
@@ -26,8 +27,8 @@ function backend(t, kind = 'openai') {
     saveSession: async () => {}, hasPendingQuestionForSession: () => false,
     writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
   });
-  vm.runInContext(functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' +
-    functionBlock(read('07-autonomy.js'), 'drainSteerQueue'), c);
+  vm.runInContext(functionBlock(read('01-config.js'), 'buildUserEnvelope'), c);
+  c.drainSteerQueue = createAgentSteering({ sessions: c }).drainSteerQueue;
   c.steerSessionCore = createSessionSteering(c).steerSessionCore;
   reg.onEvent = event => events.push(event);
   reg.buildSteerAttachmentPrompt = buildAttachmentPrompt;
