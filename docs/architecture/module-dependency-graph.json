@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 3230,
-    "requiredSymbols": 3494,
-    "edges": 594,
-    "forwardEdges": 27,
+    "providedSymbols": 3229,
+    "requiredSymbols": 3496,
+    "edges": 595,
+    "forwardEdges": 24,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -69,6 +69,7 @@
         "StringDecoder",
         "SubAgentMemoryHooks",
         "TOOL_PACK_DESCRIPTIONS",
+        "TOOL_REQUIRES",
         "TOOL_TIER_RANK",
         "URL",
         "VERSION",
@@ -181,6 +182,7 @@
         "resolveDataRootUncached",
         "restoreExternalMcpServerSecrets",
         "runKeyedChain",
+        "runtimeToolRequirementsMet",
         "ruyiPackageInfo",
         "ruyiVendorBinDir",
         "safeDecodeURIComponent",
@@ -206,6 +208,7 @@
         "tokensFromTextCounts",
         "toolDisabledByPolicy",
         "toolImageSessionTag",
+        "toolRequirementsMet",
         "unmaskProviders",
         "unmaskSecrets",
         "zlib"
@@ -3680,8 +3683,33 @@
       "requires": []
     },
     {
-      "file": "05-claude-engine.js",
+      "file": "06b-prompt-registry.js",
       "order": 38,
+      "layer": "engine",
+      "note": "Shared prompt packs, fenced budgets and turn policies",
+      "provides": [
+        "PROMPT_EN",
+        "PROMPT_PACK_VERSION",
+        "PROMPT_ZH",
+        "appendMemorySection",
+        "appendResponseLanguagePolicy",
+        "appendTurnPolicies",
+        "buildAgentTeamHint",
+        "buildClaudeNativeAgentPolicy",
+        "buildPromptTaskContext",
+        "buildSoftwareEngineeringPolicy",
+        "clampAppendWithSkills",
+        "fenceSafeSlice",
+        "getPromptPack",
+        "revertNoticeTurns",
+        "shrinkFencedSection",
+        "softwareEngineeringTaskProfile"
+      ],
+      "requires": []
+    },
+    {
+      "file": "05-claude-engine.js",
+      "order": 39,
       "layer": "engine",
       "note": "runClaudeTurn/stream-json 解析/spawn 环境/权限桥接线",
       "provides": [
@@ -4429,20 +4457,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "appendMemorySection",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "appendTurnPolicies",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildBrowserAutomationHint",
           "kinds": [
             "call"
@@ -4451,13 +4465,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "buildPlaybookIndexSection",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildPromptTaskContext",
           "kinds": [
             "call"
           ]
@@ -4519,8 +4526,22 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
-          "symbol": "softwareEngineeringTaskProfile",
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendMemorySection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendTurnPolicies",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildPromptTaskContext",
           "kinds": [
             "call"
           ]
@@ -4537,6 +4558,13 @@
           "symbol": "PROMPT_PACK_VERSION",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "softwareEngineeringTaskProfile",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -4627,7 +4655,7 @@
     },
     {
       "file": "05b-kimi-bridge.js",
-      "order": 39,
+      "order": 40,
       "layer": "engine",
       "note": "Kimi Code ACP 驱动：会话/流式/工具/权限/提问/排队 steer；Server API 原生压缩与 wire 状态补强",
       "provides": [
@@ -5254,7 +5282,7 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
           "kinds": [
             "call"
@@ -5307,7 +5335,7 @@
     },
     {
       "file": "06-provider-engine.js",
-      "order": 40,
+      "order": 41,
       "layer": "engine",
       "note": "provider 引擎助手/能力探测/metrics/转录 GC/存储管家/playbooks",
       "provides": [
@@ -5334,33 +5362,23 @@
         "THREAD_BRIEF_REPLY_CHARS",
         "THREAD_BRIEF_RETRY_BACKOFF_MS",
         "TOOL_ITERATION_BUDGETS",
-        "TOOL_REQUIRES",
         "_capCache",
         "_capInflight",
         "_capRequestedKey",
         "_engineBriefMemo",
-        "appendMemorySection",
-        "appendResponseLanguagePolicy",
-        "appendTurnPolicies",
         "auditSummaryFor",
-        "buildAgentTeamHint",
         "buildBrowserAutomationHint",
-        "buildClaudeNativeAgentPolicy",
         "buildEngineEnvBrief",
         "buildMetricsPayload",
         "buildOpsMetrics",
         "buildPlaybookIndexSection",
-        "buildPromptTaskContext",
         "buildProviderSystemPrompt",
-        "buildResponseLanguagePolicy",
         "buildRuntimeIdentityFacts",
         "buildSkillsPromptSection",
-        "buildSoftwareEngineeringPolicy",
         "buildStableSystemPrompt",
         "buildThreadBriefMessages",
         "buildToolCustomizationHint",
         "buildVolatileParts",
-        "clampAppendWithSkills",
         "claudeProjectDirKey",
         "claudeProjectsRoot",
         "collectAudit",
@@ -5373,7 +5391,6 @@
         "engineBriefFacts",
         "engineTranscriptCwd",
         "evalPlaybookAvailability",
-        "fenceSafeSlice",
         "getCapabilities",
         "invalidateCapabilityCache",
         "isLongToolTask",
@@ -5407,13 +5424,10 @@
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
-        "runtimeToolRequirementsMet",
         "sampleProcessRss",
         "saveUserPlaybook",
         "settleThreadBrief",
         "shouldExtendToolIterationBudget",
-        "shrinkFencedSection",
-        "softwareEngineeringTaskProfile",
         "storageSweep",
         "storageTrendPath",
         "sweepAgentRunEventsStore",
@@ -5427,7 +5441,6 @@
         "threadBriefOnce",
         "threadBriefProvider",
         "threadBriefRateLimited",
-        "toolRequirementsMet",
         "updateAutomaticThreadTitle",
         "withRuntimeCapabilities"
       ],
@@ -5589,6 +5602,20 @@
           "symbol": "text",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "TOOL_REQUIRES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "toolRequirementsMet",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -5872,20 +5899,6 @@
           ]
         }
       ]
-    },
-    {
-      "file": "06b-prompt-registry.js",
-      "order": 41,
-      "layer": "engine",
-      "note": "第51波51c-b(04 Phase B):提示词外置 i18n registry(PROMPT_PACK_VERSION + PROMPT_ZH 中文包,Phase1 中文版骨架)",
-      "provides": [
-        "PROMPT_EN",
-        "PROMPT_PACK_VERSION",
-        "PROMPT_ZH",
-        "getPromptPack",
-        "revertNoticeTurns"
-      ],
-      "requires": []
     },
     {
       "file": "06h-retrieval-index.js",
@@ -7313,9 +7326,23 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "TOOL_REQUIRES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "TOOL_TIER_RANK",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "toolRequirementsMet",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7599,22 +7626,8 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06b-prompt-registry.js",
           "symbol": "appendResponseLanguagePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "TOOL_REQUIRES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "toolRequirementsMet",
           "kinds": [
             "call"
           ]
@@ -8282,13 +8295,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "appendResponseLanguagePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildProviderSystemPrompt",
           "kinds": [
             "call"
@@ -8327,6 +8333,13 @@
           "symbol": "TOOL_ITERATION_BUDGETS",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendResponseLanguagePolicy",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -9601,20 +9614,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "appendTurnPolicies",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildPromptTaskContext",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
             "call"
@@ -9684,8 +9683,15 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
-          "symbol": "softwareEngineeringTaskProfile",
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendTurnPolicies",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildPromptTaskContext",
           "kinds": [
             "call"
           ]
@@ -9714,6 +9720,13 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "revertNoticeTurns",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "softwareEngineeringTaskProfile",
           "kinds": [
             "call"
           ]
@@ -11707,6 +11720,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "runtimeToolRequirementsMet",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -11848,13 +11868,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "probeAny",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "runtimeToolRequirementsMet",
           "kinds": [
             "call"
           ]
@@ -12196,6 +12209,13 @@
           "symbol": "pathWithinRoot",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "runtimeToolRequirementsMet",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -12782,13 +12802,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "peekCapabilities",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "runtimeToolRequirementsMet",
           "kinds": [
             "call"
           ]
@@ -13666,6 +13679,14 @@
           "symbol": "resolveContextWindow",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "runtimeToolRequirementsMet",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -14653,14 +14674,6 @@
           "symbol": "recordRequestMetric",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "runtimeToolRequirementsMet",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -24806,7 +24819,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "TOOL_REQUIRES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "toolRequirementsMet",
           "kinds": [
             "read"
           ]
@@ -26312,35 +26339,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "appendResponseLanguagePolicy",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "appendTurnPolicies",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildAgentTeamHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildBrowserAutomationHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildClaudeNativeAgentPolicy",
           "kinds": [
             "read"
           ]
@@ -26368,13 +26367,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "buildPromptTaskContext",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildProviderSystemPrompt",
           "kinds": [
             "read"
@@ -26383,13 +26375,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "buildRuntimeIdentityFacts",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildSoftwareEngineeringPolicy",
           "kinds": [
             "read"
           ]
@@ -26418,13 +26403,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "CAP_UNKNOWN_TTL_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "clampAppendWithSkills",
           "kinds": [
             "read"
           ]
@@ -26467,13 +26445,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "evalPlaybookAvailability",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "fenceSafeSlice",
           "kinds": [
             "read"
           ]
@@ -26599,20 +26570,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "shrinkFencedSection",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "softwareEngineeringTaskProfile",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "storageSweep",
           "kinds": [
             "read"
@@ -26626,15 +26583,57 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
-          "symbol": "TOOL_REQUIRES",
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendResponseLanguagePolicy",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "06-provider-engine.js",
-          "symbol": "toolRequirementsMet",
+          "provider": "06b-prompt-registry.js",
+          "symbol": "appendTurnPolicies",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildAgentTeamHint",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildClaudeNativeAgentPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildPromptTaskContext",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "buildSoftwareEngineeringPolicy",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "clampAppendWithSkills",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "fenceSafeSlice",
           "kinds": [
             "read"
           ]
@@ -26649,6 +26648,20 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "PROMPT_PACK_VERSION",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "shrinkFencedSection",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06b-prompt-registry.js",
+          "symbol": "softwareEngineeringTaskProfile",
           "kinds": [
             "read"
           ]
@@ -29630,11 +29643,8 @@
       "from": "05-claude-engine.js",
       "to": "06-provider-engine.js",
       "symbols": [
-        "appendMemorySection",
-        "appendTurnPolicies",
         "buildBrowserAutomationHint",
         "buildPlaybookIndexSection",
-        "buildPromptTaskContext",
         "buildSkillsPromptSection",
         "buildToolCustomizationHint",
         "engineTranscriptCwd",
@@ -29642,8 +29652,7 @@
         "getCapabilities",
         "loadAllPlaybooks",
         "peekCapabilities",
-        "resolveEngineEnvBrief",
-        "softwareEngineeringTaskProfile"
+        "resolveEngineEnvBrief"
       ],
       "direction": "forward"
     },
@@ -29652,9 +29661,13 @@
       "to": "06b-prompt-registry.js",
       "symbols": [
         "PROMPT_PACK_VERSION",
-        "getPromptPack"
+        "appendMemorySection",
+        "appendTurnPolicies",
+        "buildPromptTaskContext",
+        "getPromptPack",
+        "softwareEngineeringTaskProfile"
       ],
-      "direction": "forward"
+      "direction": "backward"
     },
     {
       "from": "05-claude-engine.js",
@@ -29830,11 +29843,11 @@
     },
     {
       "from": "05b-kimi-bridge.js",
-      "to": "06-provider-engine.js",
+      "to": "06b-prompt-registry.js",
       "symbols": [
         "softwareEngineeringTaskProfile"
       ],
-      "direction": "forward"
+      "direction": "backward"
     },
     {
       "from": "05b-kimi-bridge.js",
@@ -29872,6 +29885,7 @@
         "DesktopExecutionHooks",
         "OVERLAY_ID",
         "RUYI_EVENTS",
+        "TOOL_REQUIRES",
         "VERSION",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
@@ -29890,6 +29904,7 @@
         "redact",
         "safeJsonParse",
         "text",
+        "toolRequirementsMet",
         "zlib"
       ],
       "direction": "backward"
@@ -30016,7 +30031,7 @@
         "PROMPT_EN",
         "getPromptPack"
       ],
-      "direction": "forward"
+      "direction": "backward"
     },
     {
       "from": "06-provider-engine.js",
@@ -30304,6 +30319,7 @@
         "MCP_TOOLS",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
         "TOOL_PACK_DESCRIPTIONS",
+        "TOOL_REQUIRES",
         "TOOL_TIER_RANK",
         "URL",
         "adaptiveMetaToolSchemas",
@@ -30325,7 +30341,8 @@
         "path",
         "redact",
         "safeJsonParse",
-        "text"
+        "text",
+        "toolRequirementsMet"
       ],
       "direction": "backward"
     },
@@ -30461,11 +30478,9 @@
     },
     {
       "from": "07-autonomy.js",
-      "to": "06-provider-engine.js",
+      "to": "06b-prompt-registry.js",
       "symbols": [
-        "TOOL_REQUIRES",
-        "appendResponseLanguagePolicy",
-        "toolRequirementsMet"
+        "appendResponseLanguagePolicy"
       ],
       "direction": "backward"
     },
@@ -30658,12 +30673,19 @@
       "to": "06-provider-engine.js",
       "symbols": [
         "TOOL_ITERATION_BUDGETS",
-        "appendResponseLanguagePolicy",
         "buildProviderSystemPrompt",
         "getCapabilities",
         "readProjectMemory",
         "resolveToolIterationBudget",
         "shouldExtendToolIterationBudget"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "08-agent-runs.js",
+      "to": "06b-prompt-registry.js",
+      "symbols": [
+        "appendResponseLanguagePolicy"
       ],
       "direction": "backward"
     },
@@ -30980,8 +31002,6 @@
       "from": "09-workflow.js",
       "to": "06-provider-engine.js",
       "symbols": [
-        "appendTurnPolicies",
-        "buildPromptTaskContext",
         "buildStableSystemPrompt",
         "buildVolatileParts",
         "evalPlaybookAvailability",
@@ -30991,8 +31011,7 @@
         "readProjectMemory",
         "repairNodeJsonViaProvider",
         "resolveToolIterationBudget",
-        "shouldExtendToolIterationBudget",
-        "softwareEngineeringTaskProfile"
+        "shouldExtendToolIterationBudget"
       ],
       "direction": "backward"
     },
@@ -31002,8 +31021,11 @@
       "symbols": [
         "PROMPT_EN",
         "PROMPT_PACK_VERSION",
+        "appendTurnPolicies",
+        "buildPromptTaskContext",
         "getPromptPack",
-        "revertNoticeTurns"
+        "revertNoticeTurns",
+        "softwareEngineeringTaskProfile"
       ],
       "direction": "backward"
     },
@@ -31467,6 +31489,7 @@
         "pathWithinRoot",
         "paths",
         "redact",
+        "runtimeToolRequirementsMet",
         "sensitiveFileIdentities",
         "sensitiveGlobsForRg"
       ],
@@ -31542,8 +31565,7 @@
       "symbols": [
         "markNetworkOnline",
         "networkAnchors",
-        "probeAny",
-        "runtimeToolRequirementsMet"
+        "probeAny"
       ],
       "direction": "backward"
     },
@@ -31611,6 +31633,7 @@
         "path",
         "pathWithinRoot",
         "paths",
+        "runtimeToolRequirementsMet",
         "safeJsonParse",
         "sensitiveFileIdentities",
         "spawnDetachedChecked",
@@ -31789,7 +31812,6 @@
         "markNetworkOnline",
         "neutralizeAuthoredText",
         "peekCapabilities",
-        "runtimeToolRequirementsMet",
         "updateAutomaticThreadTitle"
       ],
       "direction": "backward"
@@ -31980,6 +32002,7 @@
         "readJsonBody",
         "redact",
         "resolveContextWindow",
+        "runtimeToolRequirementsMet",
         "safeJsonParse",
         "samePathKey",
         "send",
@@ -32264,7 +32287,6 @@
         "normalizePlaybook",
         "playbookReuseSources",
         "recordRequestMetric",
-        "runtimeToolRequirementsMet",
         "saveUserPlaybook",
         "storageSweep"
       ],
@@ -35428,6 +35450,7 @@
         "EventStreamHooks",
         "NATIVE_TOOL_TIER",
         "RUYI_EVENTS",
+        "TOOL_REQUIRES",
         "accPolicyHiddenToolNames",
         "adaptiveMetaToolSchemas",
         "classifyTextForEstimate",
@@ -35459,6 +35482,7 @@
         "spawnDetachedChecked",
         "ssrfCheck",
         "toolDisabledByPolicy",
+        "toolRequirementsMet",
         "unmaskProviders",
         "unmaskSecrets"
       ],
@@ -35816,29 +35840,20 @@
         "CAP_UNKNOWN_TTL_MS",
         "ERROR_CLASSES",
         "TOOL_ITERATION_BUDGETS",
-        "TOOL_REQUIRES",
-        "appendResponseLanguagePolicy",
-        "appendTurnPolicies",
-        "buildAgentTeamHint",
         "buildBrowserAutomationHint",
-        "buildClaudeNativeAgentPolicy",
         "buildEngineEnvBrief",
         "buildMetricsPayload",
         "buildPlaybookIndexSection",
-        "buildPromptTaskContext",
         "buildProviderSystemPrompt",
         "buildRuntimeIdentityFacts",
-        "buildSoftwareEngineeringPolicy",
         "buildStableSystemPrompt",
         "buildToolCustomizationHint",
         "buildVolatileParts",
-        "clampAppendWithSkills",
         "claudeProjectDirKey",
         "claudeProjectsRoot",
         "collectStorageStats",
         "desktopAuditEntriesFromResult",
         "evalPlaybookAvailability",
-        "fenceSafeSlice",
         "getCapabilities",
         "invalidateCapabilityCache",
         "matchServiceEntry",
@@ -35856,10 +35871,7 @@
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
         "shouldExtendToolIterationBudget",
-        "shrinkFencedSection",
-        "softwareEngineeringTaskProfile",
-        "storageSweep",
-        "toolRequirementsMet"
+        "storageSweep"
       ],
       "direction": "backward"
     },
@@ -35868,7 +35880,17 @@
       "to": "06b-prompt-registry.js",
       "symbols": [
         "PROMPT_PACK_VERSION",
-        "getPromptPack"
+        "appendResponseLanguagePolicy",
+        "appendTurnPolicies",
+        "buildAgentTeamHint",
+        "buildClaudeNativeAgentPolicy",
+        "buildPromptTaskContext",
+        "buildSoftwareEngineeringPolicy",
+        "clampAppendWithSkills",
+        "fenceSafeSlice",
+        "getPromptPack",
+        "shrinkFencedSection",
+        "softwareEngineeringTaskProfile"
       ],
       "direction": "backward"
     },
@@ -36319,7 +36341,6 @@
       "05-claude-engine.js",
       "05b-kimi-bridge.js",
       "06-provider-engine.js",
-      "07-autonomy.js",
       "08-agent-runs.js",
       "09-workflow.js",
       "10-context-governance.js",
@@ -36330,35 +36351,25 @@
   "cycleEdgeKeys": [
     "05-claude-engine.js->05b-kimi-bridge.js",
     "05-claude-engine.js->06-provider-engine.js",
-    "05-claude-engine.js->07-autonomy.js",
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
-    "05b-kimi-bridge.js->06-provider-engine.js",
-    "05b-kimi-bridge.js->07-autonomy.js",
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
     "06-provider-engine.js->05-claude-engine.js",
-    "06-provider-engine.js->07-autonomy.js",
-    "07-autonomy.js->06-provider-engine.js",
     "08-agent-runs.js->06-provider-engine.js",
-    "08-agent-runs.js->07-autonomy.js",
     "08-agent-runs.js->09-workflow.js",
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->06-provider-engine.js",
-    "09-workflow.js->07-autonomy.js",
     "09-workflow.js->08-agent-runs.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
     "10-context-governance.js->05-claude-engine.js",
     "10-context-governance.js->06-provider-engine.js",
-    "10-context-governance.js->07-autonomy.js",
     "10-context-governance.js->09-workflow.js",
     "11-native-tools.js->06-provider-engine.js",
-    "11-native-tools.js->07-autonomy.js",
     "12-tool-dispatch.js->05-claude-engine.js",
     "12-tool-dispatch.js->06-provider-engine.js",
-    "12-tool-dispatch.js->07-autonomy.js",
     "12-tool-dispatch.js->08-agent-runs.js",
     "12-tool-dispatch.js->10-context-governance.js",
     "12-tool-dispatch.js->11-native-tools.js"
@@ -36367,17 +36378,14 @@
     "02-session-store.js->03-bridge-guard.js",
     "05-claude-engine.js->05b-kimi-bridge.js",
     "05-claude-engine.js->06-provider-engine.js",
-    "05-claude-engine.js->06b-prompt-registry.js",
     "05-claude-engine.js->06d-memory-domain.js",
     "05-claude-engine.js->06e-mission-domain.js",
     "05-claude-engine.js->07-autonomy.js",
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
-    "05b-kimi-bridge.js->06-provider-engine.js",
     "05b-kimi-bridge.js->07-autonomy.js",
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
-    "06-provider-engine.js->06b-prompt-registry.js",
     "06-provider-engine.js->06d-memory-domain.js",
     "06-provider-engine.js->06e-mission-domain.js",
     "06-provider-engine.js->07-autonomy.js",

@@ -249,6 +249,7 @@ const { ssrfCheck } = require('./backend/network-policy.cjs');
 const { httpGetGuarded } = require('./backend/http-transport.cjs');
 const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
 const { BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg } = require('./backend/bridged-write-targets.cjs');
+const { TOOL_REQUIRES, runtimeToolRequirementsMet, toolRequirementsMet } = require('./backend/tool-capability-policy.cjs');
 const { redact } = require('./backend/secret-redaction.cjs');
 const {
   KEY_MASK_PREFIX, maskKey, safeUrlForDisplay,

@@ -253,6 +253,7 @@ const { ssrfCheck } = require('./backend/network-policy.cjs');
 const { httpGetGuarded } = require('./backend/http-transport.cjs');
 const { normalizeCwd, macPathAnchor, sameFileIdentity, pathWithinRoot, pathWithinAnyRoot } = require('./backend/path-containment.cjs');
 const { BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg } = require('./backend/bridged-write-targets.cjs');
+const { TOOL_REQUIRES, runtimeToolRequirementsMet, toolRequirementsMet } = require('./backend/tool-capability-policy.cjs');
 const { redact } = require('./backend/secret-redaction.cjs');
 const {
   KEY_MASK_PREFIX, maskKey, safeUrlForDisplay,
@@ -8271,6 +8272,11 @@ const { VoiceLexicon } = require('./backend/voice-lexicon.cjs');
 
 const { VoiceLearn } = require('./backend/voice-learn.cjs');
 
+// Explicit shared prompt-registry service.
+const { PROMPT_EN, PROMPT_PACK_VERSION, PROMPT_ZH, getPromptPack, revertNoticeTurns } = require('./backend/prompt-registry.cjs');
+const { appendMemorySection, clampAppendWithSkills, fenceSafeSlice, shrinkFencedSection } = require('./backend/prompt-budget.cjs');
+const { appendResponseLanguagePolicy, appendTurnPolicies, buildAgentTeamHint, buildClaudeNativeAgentPolicy, buildPromptTaskContext, buildSoftwareEngineeringPolicy, softwareEngineeringTaskProfile } = require('./backend/turn-prompt-policy.cjs');
+
 const { effectiveSkillSelection } = require('./backend/skill-registry.cjs');
 // ============================================================================
 // 架构还债批 3 A:Agent CLI 适配器。runClaudeTurn 是 Claude Code 与 Kimi Code 两个命令行引擎共用的唯一回合骨架;
@@ -12778,83 +12784,6 @@ async function runKimiAcpTurnPrepared(context) {
     ...(reg?.cleanup || reg?.kimiAcpCleanupIncomplete ? { cleanupIncomplete, cleanupScope: reg?.cleanup?.scope, cleanupEscapeCoverage: reg?.cleanup?.escapeCoverage } : {}), error: !turnOk && !wasStopped ? redact(errorText).slice(0, 2000) : undefined });
 }
 
-// ============================================================================
-// v0.8-S6 — Capability matrix (§7.2) + TOOL_REQUIRES + ERROR_CLASSES.
-// ============================================================================
-// TOOL_REQUIRES: which runtime capabilities a native tool needs before it may be offered to the model.
-// { toolName: { requires:[capKey…], reason } }. capKey ∈ 'network' (caps.network.online===true).
-// buildOpenAiTools filters out any tool whose requirements are unmet AND buildProviderSystemPrompt lists it
-// under 「当前不可用」 with the reason, so a text model knows why it can't call it. THIS TABLE IS DELIBERATELY
-// (near-)EMPTY for S6: the real consumer (web_search) lands in v0.9-S9. The single entry below is a TEST
-// HOOK, gated by config.enableToolRequiresProbe (default false → zero production side-effect); it exists
-// only so the filter + prompt pipeline is exercisable by the capabilities e2e (§4.e). With the flag off the
-// table is effectively empty and every tool passes.
-const TOOL_REQUIRES = {
-  // TEST-ONLY entry (see note above). Requires network; when the probe URL points at a dead port the
-  // capability matrix reports network.online===false → http_request is filtered + listed unavailable.
-  // Guarded so it never fires unless a test opts in.
-  http_request: { requires: ['network'], reason: '需要联网', testOnly: true },
-  // v0.9-S9 (D6): web_search needs BOTH a live network AND a configured search backend. Either unmet → the
-  // tool is filtered from the offered set (buildOpenAiTools) and listed under 「当前不可用」 with this reason.
-  web_search: { requires: ['network', 'searchBackend'], reason: '需要联网并配置搜索后端' },
-  // v0.9-S9: web_fetch needs a live network (it fetches an arbitrary http(s) url; SSRF-guarded at call time).
-  // Offline, the tool is still offered so the model can hit the on-disk web cache; but when the matrix knows
-  // it is offline we drop it and let the model read from cache only via an explicit ask? — decision: KEEP it
-  // required on network so the model isn't tempted to fetch when offline; the offline cache path is a
-  // graceful fallback INSIDE the tool for when it IS offered but the request fails. (See webFetch.)
-  web_fetch: { requires: ['network'], reason: '需要联网' },
-  // v1.1-W2 (T1): http_download 从任意 http(s) url 下载到工作区(SSRF-guarded);离线时无从下载 → require network。
-  http_download: { requires: ['network'], reason: '需要联网' },
-  // v1.0-S4: the git 工具族 all need a runnable `git` binary (caps.gitCli). When git is absent the four tools
-  // are filtered from the offered set (buildOpenAiTools) and listed under 「当前不可用」 with this reason.
-  git_status: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
-  git_diff: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
-  git_log: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
-  git_commit: { requires: ['gitCli', 'processSupervisor'], reason: '需要安装 Git' },
-  shell_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
-  script_run: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
-  shell_start: { requires: ['processSupervisor'], reason: 'Mac 进程监督器尚未就绪' },
-  desktop_screenshot: { requires: ['desktopCapture'], reason: 'Mac 屏幕捕获尚未就绪，请检查屏幕录制权限和自动化组件' },
-};
-// Is a tool's requirement met given the capability matrix? Unknown cap keys are treated as satisfied
-// (fail-open: a typo in the table must never silently strip a tool). `enabled` gates testOnly entries.
-// `config` is consulted for capability keys that live in config rather than the probe matrix (searchBackend).
-function runtimeToolRequirementsMet(toolName, runtime) {
-  if (process.platform === 'darwin' && TOOL_REQUIRES[toolName]?.requires.includes('desktopCapture')
-    && runtime?.capabilities?.['desktop.capture']?.ready !== true) {
-    return { met: false, reason: TOOL_REQUIRES[toolName].reason,
-      code: runtime?.capabilities?.['desktop.capture']?.reasonCode || 'capture_unavailable' };
-  }
-  const requiresSupervisor = TOOL_REQUIRES[toolName]?.requires.includes('processSupervisor');
-  if (process.platform !== 'darwin' || !requiresSupervisor || runtime?.capabilities?.['process.supervisor']?.ready === true) return { met: true };
-  return { met: false, reason: 'Mac 进程监督器尚未就绪' };
-}
-function toolRequirementsMet(toolName, caps, toolRequiresEnabled, config) {
-  const spec = TOOL_REQUIRES[toolName];
-  if (!spec) return { met: true };
-  if (spec.testOnly && !toolRequiresEnabled) return { met: true }; // test hook off → treat as no requirement
-  const reqs = Array.isArray(spec.requires) ? spec.requires : [];
-  for (const cap of reqs) {
-    if (cap === 'processSupervisor' || cap === 'desktopCapture') {
-      const requirement = runtimeToolRequirementsMet(toolName, caps && caps.runtime);
-      if (requirement.met) continue;
-      return requirement;
-    }
-    if (cap === 'network') { if (caps && caps.network && caps.network.online === true) continue; return { met: false, reason: spec.reason || '当前不可用' }; }
-    // v0.9-S9: searchBackend is 'met' when config.searchBackend.type is a real backend (not 'none'). It is a
-    // CONFIG fact, not a probe fact — pass config through so this check is deterministic offline too.
-    // v1.1-W1a (T3): 'builtin' counts as configured (t !== 'none'); it needs no key, only the network cap
-    // (a separate requires entry on web_search), so the zero-config default satisfies this check.
-    if (cap === 'searchBackend') { const t = config && config.searchBackend && config.searchBackend.type; if (t && t !== 'none') continue; return { met: false, reason: spec.reason || '当前不可用' }; }
-    // v1.0-S4: gitCli is a probe fact carried on the matrix (caps.gitCli === true when `git --version` ran).
-    // Unknown (matrix without the key, e.g. an old cache) → treat as satisfied (fail-open, mirrors网络's spirit
-    // that only an EXPLICIT negative strips a tool). Only an explicit `false` filters the git tools.
-    if (cap === 'gitCli') { if (!caps || caps.gitCli !== false) continue; return { met: false, reason: spec.reason || '当前不可用' }; }
-    // Unknown capability key → fail-open (satisfied). Future keys (vision/ocr/…) add explicit cases here.
-  }
-  return { met: true };
-}
-
 // v0.8-S6 ERROR_CLASSES (§C6 seed): stable server-side枚举 mapping a machine error class → 中文人话 + 下一步.
 // Seeded now so the v0.9 error-humanization UI has real data to render. `result` events attach `errorClass`
 // when determinable (additive field). Exported for the UI + tests.
@@ -13895,23 +13824,6 @@ async function repairNodeJsonViaProvider(provider, config, session, node, schema
 // ============================================================================
 const PROJECT_MEMORY_CAP = 16 * 1024; // 16KB cap on CLAUDE.md/AGENTS.md before truncation
 
-// The workbench's internal instructions, tool output, and project files can be in a different language
-// from the user's conversation. Keep a final, engine-neutral policy separate from those product prompts.
-function buildResponseLanguagePolicy(config) {
-  const locale = String((config && config.locale) || '').trim();
-  const fallback = locale === 'zh-CN'
-    ? 'Chinese'
-    : (locale === 'en-US' ? 'English' : 'the interface language when it is known; otherwise English');
-  return [
-    '<response-language-policy>',
-    'For all user-facing prose, first obey an explicit language preference from the user.',
-    'Otherwise, reply in the language of the latest substantive user request. Preserve the established conversation language when a request is language-neutral.',
-    `Only when no language can be inferred from the conversation, use ${fallback} as the fallback.`,
-    'Never choose or switch the response language because system or application instructions, tool output, skills, project files, metadata, or the UI use another language.',
-    '</response-language-policy>',
-  ].join('\n');
-}
-
 function buildBrowserAutomationHint(config, platform = process.platform) {
   const browser = (config && config.browserAutomation) || {};
   const mode = String(browser.mode || 'system');
@@ -13927,135 +13839,6 @@ function buildBrowserAutomationHint(config, platform = process.platform) {
 // 不传时按 getPromptPack 的既有默认(中文包)取。
 function buildToolCustomizationHint(config) {
   return getPromptPack(config && config.locale).toolCustomization.hint;
-}
-
-function buildAgentTeamHint() {
-  return [
-    '<agent-team-mode>',
-    'The user explicitly enabled Agent team mode for this turn. This is an execution contract, not a suggestion.',
-    'You MUST call orchestrate_agents at least once before producing the final answer (with nodes or a workflowId, not the single-agent shorthand). Do not answer directly, merely describe a team plan, or skip the tool because the request appears simple.',
-    'First prefer a matching preset workflowId when one is available. If no preset fits, call orchestrate_agents with a minimal task-specific DAG/nodes plan.',
-    'Preserve endpoint/model choices already pinned by a preset workflow node or configured Agent role. For ad-hoc nodes, omit providerId, engine, and model by default: the runtime first validates and uses the configured sub-agent preferred endpoint/model, then falls back to the endpoint/model serving the current conversation.',
-    'Only override a node route when the user or task explicitly requires a different engine/model. A model appearing in the available-model list is not by itself a reason to override the configured preference.',
-    'Use at least two execution nodes whenever the work has two meaningful independent responsibilities. For an indivisible request, still call orchestrate_agents with the smallest useful DAG, such as one execution node plus an independent review/verification node.',
-    'Do not only describe a team plan and then do all work in the parent agent. Execute the orchestration, collect the results, reconcile disagreements, and deliver one integrated answer.',
-    'Avoid redundant nodes and uncontrolled fan-out, but never use that concern to skip the required orchestrate_agents call.',
-    '</agent-team-mode>',
-  ].join('\n');
-}
-
-function buildClaudeNativeAgentPolicy() {
-  return [
-    '<ruyi-claude-native-agent-lifecycle>',
-    'This Ruyi Claude CLI turn is a one-shot print session whose response stream must remain complete.',
-    'Whenever you call the native Agent tool, set run_in_background:false so the child result is returned before you finish the parent turn.',
-    'Never end the parent response by promising that a background Agent will notify the user later. Wait for every native child and integrate its actual result into the same response.',
-    'If a native Agent was already launched in the background, use TaskOutput with block:true and a generous timeout for its task id, then continue only after collecting the result.',
-    '</ruyi-claude-native-agent-lifecycle>',
-  ].join('\n');
-}
-
-// Task-local software-engineering router. Keep repository workflow rules out of generic chat turns, but
-// apply the same compact contract to parent turns and delegated nodes whenever the request is actually
-// about code, a repository, tests/builds, or Git. This is intentionally a deterministic classifier: prompt
-// selection is observable and testable instead of asking the model to decide whether it needs its own rules.
-function softwareEngineeringTaskProfile(message) {
-  const text = String(message || '').trim().slice(0, 12000);
-  if (!text) return { relevant: false, debugging: false, git: false };
-  const fileLike = /(?:^|[\\/\s`'"(])[^\s`'"()]+\.(?:[cm]?[jt]sx?|py|rb|rs|go|java|kt|kts|cs|cpp|cc|cxx|c|h|hpp|swift|php|scala|sh|ps1|sql|vue|svelte|json|ya?ml|toml|ini|gradle|csproj|sln)(?:\b|$)/i.test(text);
-  const domain = /代码|源码|代码库|仓库|软件|程序|脚本|模块|组件|函数|类|接口|数据库|依赖|测试|用例|构建|编译|类型检查|回归|缺陷|报错|异常|故障|调试|部署|发布|\b(?:code|source|repository|repo|software|program|script|module|component|function|class|api|database|dependency|test|build|compile|typecheck|lint|regression|bug|debug|deploy|release|ci)\b/i.test(text);
-  const action = /实现|开发|编写|修改|修复|排查|诊断|调试|重构|迁移|优化|审查|评审|测试|验证|构建|编译|提交|合并|部署|发布|删除|新增|添加|更新|\b(?:implement|develop|write|change|modify|fix|diagnose|debug|refactor|migrate|optimi[sz]e|review|test|verify|build|compile|commit|merge|deploy|release|delete|add|update)\b/i.test(text);
-  const commandLike = /(?:^|\s)(?:git|npm|pnpm|yarn|bun|node|deno|pytest|cargo|go\s+test|dotnet|mvn|gradle)(?:\s|$)/i.test(text);
-  const relevant = fileLike || commandLike || (domain && action);
-  const debugging = relevant && /修复|排查|诊断|调试|回归|缺陷|报错|异常|故障|失败|不工作|无法|\b(?:fix|diagnos|debug|regression|bug|error|exception|failure|failing|broken|doesn['’]?t work|cannot|unable)\b/i.test(text);
-  const git = relevant && /\bgit\b|提交|分支|合并|推送|拉取请求|代码审查|\b(?:commit|branch|merge|rebase|reset|clean|stash|push|pull request|code review|cherry-pick)\b/i.test(text);
-  return { relevant, debugging, git };
-}
-
-// A short acknowledgement/continuation often carries no domain words ("按你说的继续" / "go ahead").
-// In that narrow case, inherit routing only from recent USER tasks, never from assistant output. Explicit or
-// substantial new requests route on their own text so a topic switch does not retain stale engineering policy.
-function buildPromptTaskContext(message, session) {
-  const current = String(message || '').trim();
-  if (!current || softwareEngineeringTaskProfile(current).relevant) return current;
-  const continuation = current.length <= 240 && /继续|接着|推进|落实|开始吧|动手|照(?:此|这个|上面|刚才)|按(?:这个|上面|刚才|你说的)|就这样|可以(?:的|了)?|没问题|确认|批准|执行吧|\b(?:continue|go ahead|proceed|do it|implement it|start now|sounds good|approved|as discussed|as above)\b/i.test(current);
-  if (!continuation) return current;
-  const messages = Array.isArray(session && session.messages) ? session.messages : [];
-  let skippedDuplicateCurrent = false;
-  for (let i = messages.length - 1, seen = 0; i >= 0 && seen < 8; i--) {
-    const row = messages[i];
-    if (!row || row.role !== 'user') continue;
-    const prior = String(row.content || '').trim();
-    if (!prior) continue;
-    if (!skippedDuplicateCurrent && prior === current) { skippedDuplicateCurrent = true; continue; }
-    seen++;
-    if (softwareEngineeringTaskProfile(prior).relevant) return prior + '\n' + current;
-  }
-  return current;
-}
-
-function buildSoftwareEngineeringPolicy(message, config) {
-  const profile = softwareEngineeringTaskProfile(message);
-  if (!profile.relevant) return '';
-  const p = getPromptPack(config && config.locale).softwareEngineering;
-  return [
-    '<software-engineering-policy>',
-    p.scope,
-    p.preflight,
-    p.implementation,
-    profile.debugging ? p.debugging : '',
-    p.verification,
-    profile.git ? p.git : '',
-    p.completion,
-    '</software-engineering-policy>',
-  ].filter(Boolean).join('\n');
-}
-
-// Claude's append prompt has an 8K contract. Reserve its final segment for turn policies and trim
-// lower-priority generated context from the tail when necessary; user-configured text at the beginning stays.
-// cmd8191 防线: 截断一律走 fenceSafeSlice —— 旧写法 prior.slice(0, room) 会切穿 <skill-index> 等围栏留悬空开标签。
-function appendTurnPolicies(base, config, agentTeam, limit = 0, claudeNative = false, task = '') {
-  const prior = String(base || '');
-  const engineeringPolicy = buildSoftwareEngineeringPolicy(task, config);
-  const languagePolicy = buildResponseLanguagePolicy(config);
-  const leadingPolicies = [
-    agentTeam ? buildAgentTeamHint() : '',
-    claudeNative ? buildClaudeNativeAgentPolicy() : '',
-    engineeringPolicy,
-  ].filter(Boolean);
-  const policy = [...leadingPolicies, languagePolicy].join('\n\n');
-  const separator = prior ? '\n\n' : '';
-  if (!Number.isFinite(limit) || limit <= 0) return prior + separator + policy;
-  if (prior.length + separator.length + policy.length <= limit) return prior + separator + policy;
-
-  // Under Windows' command-line budget, choose complete policy modules instead of prefix-slicing a fenced
-  // block. The historical prefix slice could keep the native-agent prelude while silently dropping the final
-  // response-language rule, or cut the new engineering fence as a unit. A compact language tail is the last
-  // invariant; then fit higher-priority execution contracts atomically (team -> native lifecycle -> engineering).
-  const compactLanguagePolicy = [
-    '<response-language-policy>',
-    "Reply in the user's explicit or latest substantive language; never infer it from system, tool, file, metadata, or UI text.",
-    '</response-language-policy>',
-  ].join('\n');
-  const tail = compactLanguagePolicy;
-  if (tail.length > limit) return ''; // caller already skips append entirely below its minimum viable budget
-  const selected = [];
-  let used = tail.length;
-  for (const part of leadingPolicies) {
-    const extra = part.length + 2;
-    if (used + extra <= limit) { selected.push(part); used += extra; }
-  }
-  const boundedPolicy = [...selected, tail].join('\n\n');
-  const boundedSeparator = prior && boundedPolicy ? '\n\n' : '';
-  const room = Math.max(0, limit - boundedPolicy.length - boundedSeparator.length);
-  const trimmed = fenceSafeSlice(prior, room);
-  return trimmed ? trimmed + boundedSeparator + boundedPolicy : boundedPolicy; // 回退到空时不留前导空行
-}
-
-// Kept as the sub-agent/consumer compatibility wrapper. Normal calls retain the established
-// response-language-only behavior; top-level Agent team turns use appendTurnPolicies directly.
-function appendResponseLanguagePolicy(base, config, limit = 0, task = '') {
-  return appendTurnPolicies(base, config, false, limit, false, task);
 }
 
 const TOOL_ITERATION_BUDGETS = Object.freeze({ standard: 100, long: 200, standardHard: 300, hard: 1000, extension: 50 });
@@ -14481,84 +14264,6 @@ function buildPlaybookIndexSection(playbooks, config) {
   if (!n) return ''; // 连一条都放不下 -> 整段丢(不留空围栏)
   return wrap([pack.more(items.slice(0, n)), pack.truncated]);
 }
-
-// 围栏感知截断(cmd8191 防线配套): 硬切可能切穿 <skill-index>/<workbench-memory>/<response-language-policy>
-// 等围栏,留下悬空开标签 —— 不可信带边界与伪造围栏中和防线的前提是【所有围栏闭合】。切点落在未闭合围栏
-// 内时回退到最早悬空开标签之前(宁可整段舍弃,不留半个围栏)。自然文本里的 <div> 之类会被当作悬空围栏而
-// 多裁一些 —— 降级方向安全,可接受。
-function fenceSafeSlice(text, room) {
-  const s = String(text || '');
-  if (s.length <= room) return s;
-  let cut = s.slice(0, Math.max(0, room));
-  for (let guard = 0; guard < 8; guard++) {
-    const openIdx = [];
-    const re = /<\/?[a-zA-Z][a-zA-Z0-9-]*>/g;
-    let m;
-    while ((m = re.exec(cut))) {
-      const closing = m[0][1] === '/';
-      const name = m[0].slice(closing ? 2 : 1, -1).toLowerCase();
-      if (closing) { const i = openIdx.findIndex(o => o.name === name); if (i >= 0) openIdx.splice(i, 1); }
-      else openIdx.push({ name, at: m.index });
-    }
-    if (!openIdx.length) return cut.replace(/\s+$/g, '');
-    const back = Math.min(...openIdx.map(o => o.at));
-    if (back <= 0) return ''; // 整个切点都在某个围栏内 —— 无安全内容可留
-    cut = cut.slice(0, back);
-  }
-  return cut.replace(/\s+$/g, '');
-}
-
-// 段内收缩(保围栏): 「头部\n<fence>\n条目行…\n</fence>」结构的段优先在围栏内按行截断并补截断标记,保住
-// 闭合围栏与头部;连外壳(头+开/关标签+标记)都放不下才整段返回 ''(由调用方走 fits-or-drop)。供预算紧张
-// 时收缩技能索引段,替代裸 slice 留半个围栏。
-function shrinkFencedSection(text, room) {
-  const s = String(text || '');
-  if (s.length <= room) return s;
-  const openM = s.match(/<([a-zA-Z][a-zA-Z0-9-]*)>/);
-  if (!openM) return fenceSafeSlice(s, room);
-  const closeTag = `</${openM[1]}>`;
-  if (!s.endsWith(closeTag)) return fenceSafeSlice(s, room); // 非「围栏收尾」结构,回退通用围栏安全截断
-  const openEnd = openM.index + openM[0].length;
-  const TRUNC = '\n…（索引已截断）';
-  const shell = openEnd + closeTag.length + TRUNC.length;
-  if (room < shell + 8) return ''; // 连外壳都放不下 → 整体丢弃
-  let inner = s.slice(openEnd, s.length - closeTag.length).slice(0, room - shell);
-  const lastNl = inner.lastIndexOf('\n');
-  if (lastNl > 0) inner = inner.slice(0, lastNl); // 不切断一条条目行
-  return s.slice(0, openEnd) + inner + TRUNC + closeTag;
-}
-
-// v1 技能体系: 把「用户自定义 append」与「技能索引」合成为一个 --append-system-prompt 串，整体钳到 limit。
-// 「技能段先截」: 优先保住用户的 appendSystemPrompt(config 侧已各自钳 8000),剩余空间才给技能索引。
-// cmd8191 防线: 技能段收缩走 shrinkFencedSection(栏内截断保闭合),用户段走 fenceSafeSlice —— 绝不裸切留半个围栏。
-function clampAppendWithSkills(userAppend, skillSec, limit) {
-  const u = String(userAppend || '');
-  let s = String(skillSec || '');
-  if (!s) return fenceSafeSlice(u, limit);
-  if (!u) return shrinkFencedSection(s, limit);
-  const SEP = '\n\n';
-  const room = limit - u.length - SEP.length;
-  if (room <= 0) return fenceSafeSlice(u, limit); // 没空间放技能 → 只保用户 append
-  if (s.length > room) s = shrinkFencedSection(s, room);
-  if (!s) return fenceSafeSlice(u, limit); // 技能段连外壳都放不下 → 整体舍弃,保用户 append
-  return u + SEP + s;
-}
-
-// v2 跨会话记忆(P3-2): 记忆段追加。与技能段(clampAppendWithSkills 会中截)不同,记忆段要么整体放入、要么整体
-// 丢弃——中途截断会切掉闭合的 </workbench-memory>,留下悬空开围栏,破坏「不可信参考带」边界与伪造围栏中和防线。
-// 放不下整段就当没有记忆(与注释/README 的「没空间则整体丢弃」契约一致)。base 自身超限时按 limit 截断(只损已有内容)。
-function appendMemorySection(base, memSec, limit) {
-  const b = String(base || '');
-  const s = String(memSec || '');
-  if (!s) return b.slice(0, limit);
-  if (!b) return s.length <= limit ? s : ''; // 空 base:整段放得下才放,否则整体丢弃(不中截)
-  const SEP = '\n\n';
-  if (b.length + SEP.length + s.length > limit) return b.slice(0, limit); // 放不下整段 → 丢弃记忆段,只保留已有内容
-  return b + SEP + s;
-}
-
-// Explicit shared prompt-registry service.
-const { PROMPT_EN, PROMPT_PACK_VERSION, PROMPT_ZH, getPromptPack, revertNoticeTurns } = require('./backend/prompt-registry.cjs');
 
 // Retrieval owns its corpus and vocabulary caches; consumers hold separate instances.
 const { createRetrievalCorpusCache, rankRetrievalCorpus, reciprocalRankFusion, retrievalTerms } = require('./backend/retrieval-index.cjs');
