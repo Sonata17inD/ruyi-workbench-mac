@@ -456,7 +456,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 
 // ⑧ 117w-W1 提交①(27 号文 §11.19.4):cwd 校验【一处实现】;W7 起再加一层【一条选择顺序、两处调用】。
 // 被钉的事实:
-//   (a) stewardValidateCwd 在 13k 只定义一次,13k 里只被【选择顺序】stewardResolveThreadCwd 调一次
+//   (a) 工作区服务只定义一处 stewardValidateCwd，并且只在选择顺序 stewardResolveThreadCwd 中调用
 //       (thread_new / quick_ask 不再各自直调校验 —— 它们调的是选择顺序,校验是选择顺序的第 ① 步);
 //   (b) stewardResolveThreadCwd 只定义一次,thread_new 与 quick_ask 的函数体里【各恰好一处】调用 ——
 //       只数次数挡不住「两处调用都写在 thread_new 里」,所以锚到各自的函数体;
@@ -466,19 +466,21 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // 工具共用一份(与修前「校验共用一份」同一条纪律),于是被钉的对象从「校验」上移到「选择顺序」。
 {
   const src13k = read('13k-steward-threads.js');
-  const defs = (src13k.match(/function stewardValidateCwd\(/g) || []).length;
+  const workspaceSource = read('../backend/steward-workspaces.cjs');
+  const workspaceAndTools = workspaceSource + '\n' + src13k;
+  const defs = (workspaceAndTools.match(/function stewardValidateCwd\(/g) || []).length;
   ok(defs === 1, `⑧ stewardValidateCwd 只定义一次(got ${defs})`);
-  const uses = (src13k.match(/stewardValidateCwd\(/g) || []).length;
-  ok(uses === 2, `⑧ stewardValidateCwd 在 13k 出现 2 次 = 定义 1 + 选择顺序里调 1(got ${uses})`);
-  const pickDefs = (src13k.match(/async function stewardResolveThreadCwd\(/g) || []).length;
+  const uses = (workspaceSource.match(/stewardValidateCwd\(/g) || []).length;
+  ok(uses === 2, `⑧ stewardValidateCwd 在工作区服务出现 2 次 = 定义 1 + 选择顺序里调 1(got ${uses})`);
+  const pickDefs = (workspaceAndTools.match(/async function stewardResolveThreadCwd\(/g) || []).length;
   ok(pickDefs === 1, `⑧ stewardResolveThreadCwd 只定义一次(got ${pickDefs})`);
-  const pickUses = (src13k.match(/stewardResolveThreadCwd\(/g) || []).length;
+  const pickUses = (workspaceAndTools.match(/stewardResolveThreadCwd\(/g) || []).length;
   ok(pickUses === 3, `⑧ stewardResolveThreadCwd 出现 3 次 = 定义 1 + 调用 2(got ${pickUses})`);
   // 函数体切片:公共切片按括号配对取整个函数(批 3·D;修前按「下一个顶格 }」截)。
   const bodyOf = (name) => functionBlock(src13k, name);
   const newBody = bodyOf('stewardImplThreadNew');
   const quickBody = bodyOf('stewardImplQuickAsk');
-  const pickBody = bodyOf('stewardResolveThreadCwd');
+  const pickBody = functionBlock(workspaceSource, 'stewardResolveThreadCwd');
   ok(newBody && quickBody && pickBody, '⑧ 取到 stewardImplThreadNew / stewardImplQuickAsk / stewardResolveThreadCwd 三个函数体');
   const inNew = (newBody.match(/stewardResolveThreadCwd\(args, config, requestedMissionId\)/g) || []).length;
   const inQuick = (quickBody.match(/stewardResolveThreadCwd\(args, config, ''\)/g) || []).length;
@@ -489,33 +491,33 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   ok(/stewardValidateCwd\(args\.cwd, /.test(pickBody) && /if \(!cwdCheck\.ok\) return cwdCheck;/.test(pickBody),
     '⑧ 选择顺序第 ① 步就是校验 args.cwd,不合法原样拒(不静默回落)');
   // 反向保护:修前那行原样透传不许留在任何 src 模块里。
-  const passthrough = srcFiles.filter(f => /cwd:\s*args\.cwd\s*\?\s*String\(args\.cwd\)/.test(read(f)));
+  const passthrough = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => /cwd:\s*args\.cwd\s*\?\s*String\(args\.cwd\)/.test(read(f)));
   ok(passthrough.length === 0, '⑧ 全 src 零「cwd: args.cwd ? String(args.cwd)」原样透传' + (passthrough.length ? ' → ' + passthrough.join(',') : ''));
-  // 归一化只用仓里既有的那一份(01-config 的 normalizeWorkspacePathString),不许在 13k 里另写一套。
-  ok(/normalizeWorkspacePathString\(/.test(src13k),
+  // 归一化使用配置层的 normalizeWorkspacePathString。
+  ok(/normalizeWorkspacePathString\(/.test(workspaceSource),
     '⑧ 归一化复用 01-config 的 normalizeWorkspacePathString(与 workspaces 清洗同一口径)');
 }
 
 // ⑨ 117w-W1 提交③(27 号文 §11.19.2 + §11.19.7 裁决):候选表上限【一处定义、两处读】。
-// 被钉的事实:06i 定义 STEWARD_WORKSPACE_TABLE_MAX,13k 的 cwd 拒绝文案与 13o 的候选表投影都读它。
+// 被钉的事实:06i 定义 STEWARD_WORKSPACE_TABLE_MAX,工作区服务的 cwd 拒绝文案与 13o 的候选表投影都读它。
 // 为什么静态与行为两层都要:steward-tools.e2e 的 O6 用 20 行夹具比较两个【运行期产出】,能抓住
 // 「有人把其中一处改小」;「有人把其中一处改大」在行为层要造一张比上限还大的表才看得见,不是
 // 这条锁的形状 —— 那一半靠这里的源码锁。
 {
   const src06i = read('../backend/steward-core.cjs');
-  const src13k = read('13k-steward-threads.js');
+  const workspaceSource = read('../backend/steward-workspaces.cjs');
   const src13o = read('13o-steward-runner-prompt.js');
   const defs = (src06i.match(/const STEWARD_WORKSPACE_TABLE_MAX = /g) || []).length;
   ok(defs === 1, `⑨ STEWARD_WORKSPACE_TABLE_MAX 在 06i 只定义一次(got ${defs})`);
-  const others = srcFiles.filter(f => f !== '06i-steward-core.js' && /const STEWARD_WORKSPACE_TABLE_MAX/.test(read(f)));
+  const others = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => f !== '06i-steward-core.js' && /const STEWARD_WORKSPACE_TABLE_MAX/.test(read(f)));
   ok(others.length === 0, '⑨ 没有第二个模块另立同名常量' + (others.length ? ' → ' + others.join(',') : ''));
   // 两个消费者各自【在代码行里】读它(注释里提到不算)。
   const codeUses = (src, name) => src.split(/\r?\n/)
     .filter(line => line.includes(name) && !/^\s*(\/\/|\*|\/\*)/.test(line)).length;
-  ok(codeUses(src13k, 'STEWARD_WORKSPACE_TABLE_MAX') >= 1, '⑨ 13k 的拒绝文案读同一个常量');
+  ok(codeUses(workspaceSource, 'STEWARD_WORKSPACE_TABLE_MAX') >= 1, '⑨ 工作区服务的拒绝文案读同一个常量');
   ok(codeUses(src13o, 'STEWARD_WORKSPACE_TABLE_MAX') >= 1, '⑨ 13o 的候选表投影读同一个常量');
   // 反向保护:提交① 那个自立门户的 8 不许留在任何 src 模块里。
-  const zombie = srcFiles.filter(f => /STEWARD_CWD_CANDIDATES_MAX/.test(read(f)));
+  const zombie = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => /STEWARD_CWD_CANDIDATES_MAX/.test(read(f)));
   ok(zombie.length === 0, '⑨ 提交① 的 STEWARD_CWD_CANDIDATES_MAX 已零残留' + (zombie.length ? ' → ' + zombie.join(',') : ''));
 }
 
@@ -575,10 +577,10 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   // 默认不显示在常用工作区中)。派生于是不再占常用工作区的行,「常用工作区满了就拒开线程」这件事
   // 没有对象了;如意那张表满了由 01-config 从最老的一行起丢(用户看不见也清不了那张表,拒只会让管家卡死)。
   // 下面钉的是新事实,并反向保护旧路不回来。
-  const src13k = read('13k-steward-threads.js');
-  const retired = srcFiles.filter(f => /stewardWorkspaceTableFull|workspace_table_full/.test(read(f)));
+  const stewardWorkspaces = read('../backend/steward-workspaces.cjs');
+  const retired = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => /stewardWorkspaceTableFull|workspace_table_full/.test(read(f)));
   ok(retired.length === 0, '⑪ 退役的帽检查在全 src 零残留(stewardWorkspaceTableFull / workspace_table_full)' + (retired.length ? ' → ' + retired.join(',') : ''));
-  const claimBody = functionBlock(src13k, 'stewardClaimDerivedWorkspace');
+  const claimBody = functionBlock(stewardWorkspaces, 'stewardClaimDerivedWorkspace');
   ok(!!claimBody, '⑪ 取到 stewardClaimDerivedWorkspace 函数体');
   ok(/current\.stewardManagedWorkspaces = /.test(claimBody), '⑪ 派生登记写的是如意自己那张表(stewardManagedWorkspaces)');
   ok(!/current\.workspaces\s*=/.test(claimBody), '⑪ 反向:派生不再往 workspaces[](用户的常用工作区)里写任何一行');

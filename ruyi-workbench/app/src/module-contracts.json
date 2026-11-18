@@ -15063,19 +15063,14 @@
       "provides": [
         "SESSION_SEARCH_MIN_QUERY",
         "STEWARD_MEDIATED_PERMISSION_WAIT_MS",
-        "STEWARD_WORKSPACE_DERIVE_TRIES",
-        "STEWARD_WORKSPACE_SLUG_MAX",
         "stewardAnswerBasisOf",
         "stewardAnswerGate",
         "stewardAnswerQuestionText",
         "stewardBriefTextOf",
         "stewardCanonWorkspacePath",
-        "stewardClaimDerivedWorkspace",
         "stewardContinueAttachments",
         "stewardDelegationSteps",
         "stewardDeriveThreadCwd",
-        "stewardDeriveWorkspaceDir",
-        "stewardDiscardDerivedWorkspaceDir",
         "stewardEnrichInboxRows",
         "stewardErrorDetail",
         "stewardExemptDelegatedLog",
@@ -15092,7 +15087,6 @@
         "stewardImplThreadStatus",
         "stewardImplThreadWorkspace",
         "stewardImplThreadsSearch",
-        "stewardInheritableCwd",
         "stewardKnownWorkspaces",
         "stewardLaunchTurn",
         "stewardLaunchingTurns",
@@ -15119,7 +15113,6 @@
         "stewardUserDirected",
         "stewardValidateCwd",
         "stewardWorkspaceNameOf",
-        "stewardWorkspaceSlug",
         "threadRelatedThreads",
         "threadRelationsIndex"
       ],
@@ -15128,14 +15121,14 @@
           "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "dataRootAliases",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15177,7 +15170,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15219,21 +15213,22 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "normalizeWorkspacePathString",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15275,7 +15270,8 @@
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15303,7 +15299,8 @@
           "provider": "02-session-store.js",
           "symbol": "readMissionContainer",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15345,7 +15342,8 @@
           "provider": "02-session-store.js",
           "symbol": "sessionMetaIsSteward",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15366,14 +15364,14 @@
           "provider": "02-session-store.js",
           "symbol": "withMissionContainerLock",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "writeMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15408,7 +15406,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "sanitizeFsSegmentName",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15618,7 +15617,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardRuyiOwnedPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15688,7 +15687,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardWorkspaceLabels",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15912,7 +15911,8 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15940,7 +15940,8 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardRawKind",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15961,7 +15962,8 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadSessionHead",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
