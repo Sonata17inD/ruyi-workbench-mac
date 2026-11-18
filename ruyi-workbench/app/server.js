@@ -30888,6 +30888,8 @@ async function stewardAppendUserStop(sessionId, facts) {
 // ────────────────────────────────────────────────────────────────────────────
 // 路由(token 级,ROUTE_AUTH 在 01b 登记)。经 13g 的 handleStewardApiRoutes 末尾转交(见那里的注释)。
 // ────────────────────────────────────────────────────────────────────────────
+const { createHttpNdjsonResponse } = require('./backend/http-ndjson-response.cjs');
+
 async function handleStewardRunnerApiRoutes(req, res, pathname) {
   if (req.method === 'GET' && pathname === '/api/steward/delivery') {
     await StewardHooks.handleDeliveryApiRoutes(req, res, pathname);
@@ -31007,36 +31009,7 @@ async function handleStewardRunnerApiRoutes(req, res, pathname) {
     // 133e:随这句话来的附件(/api/upload 的记录)。只收记录形状里那几个字段、≤12 条;交给回合的方式与 /api/chat/stream 同一条
     // (runSessionTurn 的 attachments —— 上传目录内的文件由那边按 id 核对,这里不信 path 字段能指到哪里)。
     const attachments = stewardSanitizeAttachments(body && body.attachments);
-    // SSE 壳:与 /api/chat/stream 同款 NDJSON + 50ms delta 合批(那边的壳是 streamChat,这里是它的
-    // 同形副本 —— 管家回合不经 /api/chat/stream,但前端拿到的事件流形状必须一样)。
-    let deltaBuffer = []; let flushTimer = null;
-    const flushDeltas = () => {
-      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-      if (!deltaBuffer.length) return;
-      const merged = [];
-      for (const d of deltaBuffer) {
-        const last = merged[merged.length - 1];
-        if (last && last.type === d.type) last.text = (last.text || '') + (d.text || '');
-        else merged.push({ ...d });
-      }
-      deltaBuffer = [];
-      // 流已收尾(res.end 之后)的迟到事件直接丢:write-after-end 的 ERR_STREAM_WRITE_AFTER_END 是【异步】
-      // 'error' 事件,try/catch 接不住,没有监听者就是 uncaughtException → 整个服务退出。
-      if (res.writableEnded || res.destroyed) return;
-      for (const evt of merged) {
-        try { res.write(`${JSON.stringify({ ...evt, ts: nowIso() })}\n`); } catch { /* client gone */ }
-      }
-    };
-    const writeEvent = evt => {
-      if (evt && (evt.type === 'assistant_delta' || evt.type === 'thinking_delta')) {
-        deltaBuffer.push(evt);
-        if (!flushTimer) flushTimer = setTimeout(flushDeltas, 50);
-        return;
-      }
-      flushDeltas();
-      if (res.writableEnded || res.destroyed) return;   // 迟到事件(见 flushDeltas)
-      try { res.write(`${JSON.stringify({ ...evt, ts: nowIso() })}\n`); } catch { /* client gone */ }
-    };
+    const { start, writeEvent, flushDeltas } = createHttpNdjsonResponse(req, res, nowIso);
     const display = PrivacyGateway.createDisplayStream(STEWARD_SESSION_ID, writeEvent);
     let displayPending = Promise.resolve();
     const writeDisplayEvent = evt => {
@@ -31044,15 +31017,7 @@ async function handleStewardRunnerApiRoutes(req, res, pathname) {
       displayPending = display.write(evt);
       displayPending.catch(() => {});
     };
-    try { req.socket.setNoDelay(true); } catch { /* ignore */ }
-    res.writeHead(200, {
-      'content-type': 'application/x-ndjson; charset=utf-8',
-      'cache-control': 'no-cache',
-      connection: 'keep-alive',
-      'x-accel-buffering': 'no',
-    });
-    try { res.flushHeaders(); } catch { /* ignore */ }
-    res.on('error', () => {});   // 断线后的异步写错误(EPIPE / write-after-end)不得成为 uncaughtException
+    start();
     try {
       // 117l D1:routeHint 随请求进来,但它只是【提示】—— 服务端只信 sessionId(见 stewardNormalizeRouteHint)。
       const result = await runStewardTurn({ trigger: 'user', message, routeHint: body && body.routeHint, attachments, onEvent: writeDisplayEvent });

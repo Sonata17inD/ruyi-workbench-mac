@@ -379,6 +379,7 @@
     "app/backend/sensitive-paths.cjs",
     "app/backend/keyed-chain.cjs",
     "app/backend/http-chat-stream.cjs",
+    "app/backend/http-ndjson-response.cjs",
     "app/backend/session-turn-runtime.cjs",
     "app/backend/agent-workflow-catalog.cjs",
     "app/backend/history-snapshot-store.cjs",

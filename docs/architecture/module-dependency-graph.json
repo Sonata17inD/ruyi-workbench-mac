@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2849,
+    "providedSymbols": 2850,
     "requiredSymbols": 3359,
     "edges": 637,
     "forwardEdges": 21,
@@ -21331,6 +21331,7 @@
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
         "STEWARD_STOP_REASON_MAX",
+        "createHttpNdjsonResponse",
         "handleStewardRunnerApiRoutes",
         "stewardAppendUserStop",
         "stewardImplThreadPrioritize",
@@ -21357,7 +21358,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

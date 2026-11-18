@@ -1,6 +1,7 @@
 'use strict';
 
 const { apiSessionIdInvalid, readJsonBody, send } = require('./http-protocol.cjs');
+const { createHttpNdjsonResponse } = require('./http-ndjson-response.cjs');
 
 function createHttpChatStream({ runSessionTurn, PrivacyGateway, safeSessionId, nowIso }) {
   // HTTP 壳:只做「解析 body / 起流 / 构造 sink / 调核心 / 收尾 res.end」。回合语义全在 runSessionTurn 里。
@@ -12,35 +13,7 @@ function createHttpChatStream({ runSessionTurn, PrivacyGateway, safeSessionId, n
     if (body.sessionId != null && body.sessionId !== '' && !(typeof body.sessionId === 'string' && safeSessionId(body.sessionId))) {
       return send(res, apiSessionIdInvalid());
     }
-    // D1:assistant_delta/thinking_delta 高频小事件合批(50ms 窗口),减前端重渲染 60-80%;边界事件立即 flush 保顺序
-    let deltaBuffer = []; let flushTimer = null;
-    const flushDeltas = () => {
-      if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-      if (!deltaBuffer.length) return;
-      const merged = [];
-      for (const d of deltaBuffer) {
-        const last = merged[merged.length - 1];
-        if (last && last.type === d.type) last.text = (last.text || '') + (d.text || '');
-        else merged.push({ ...d });
-      }
-      deltaBuffer = [];
-      // 流已收尾(res.end 之后)的迟到事件直接丢:write-after-end 的 ERR_STREAM_WRITE_AFTER_END 是【异步】
-      // 'error' 事件,try/catch 接不住,没有监听者就是 uncaughtException → 整个服务退出。
-      if (res.writableEnded || res.destroyed) return;
-      for (const evt of merged) {
-        try { res.write(`${JSON.stringify({ ...evt, ts: nowIso() })}\n`); } catch { /* client gone */ }
-      }
-    };
-    const writeEvent = evt => {
-      if (evt && (evt.type === 'assistant_delta' || evt.type === 'thinking_delta')) {
-        deltaBuffer.push(evt);
-        if (!flushTimer) flushTimer = setTimeout(flushDeltas, 50);
-        return;
-      }
-      flushDeltas();  // D1:边界事件先 flush 积压 delta,保顺序
-      if (res.writableEnded || res.destroyed) return;   // 迟到事件(见 flushDeltas)
-      try { res.write(`${JSON.stringify({ ...evt, ts: nowIso() })}\n`); } catch { /* client gone */ }
-    };
+    const { start, writeEvent, flushDeltas } = createHttpNdjsonResponse(req, res, nowIso);
     // This is a user-facing HTTP copy only. The engine's events, stored messages and
     // provider history keep their opaque references. Bind new sessions from the host's
     // session frame, never from a model/subagent-supplied scope identifier.
@@ -66,17 +39,7 @@ function createHttpChatStream({ runSessionTurn, PrivacyGateway, safeSessionId, n
     let started = false;
     const onStart = () => {
       started = true;
-      // Lowest-latency streaming on loopback: no Nagle batching, flush headers immediately.
-      try { req.socket.setNoDelay(true); } catch { /* ignore */ }
-      res.writeHead(200, {
-        'content-type': 'application/x-ndjson; charset=utf-8',
-        'cache-control': 'no-cache',
-        connection: 'keep-alive',
-        'x-accel-buffering': 'no',
-      });
-      try { res.flushHeaders(); } catch { /* ignore */ }
-      // 流上的异步写错误(EPIPE / write-after-end)兜底吸收:断线已由下面的 close/aborted 翻译成 abort。
-      res.on('error', () => {});
+      start();
       req.on('aborted', handleDisconnect);
       res.on('close', () => { if (!shellFinished && !res.writableEnded) handleDisconnect(); });
     };

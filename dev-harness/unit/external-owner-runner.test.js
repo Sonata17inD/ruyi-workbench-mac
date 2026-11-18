@@ -17,6 +17,7 @@ test('HTTP message JSON cannot supply external actor or claim a remote trigger',
  const f=fixture();let opts,flushed=false,closed=false;const writes=[];
  Object.assign(f.context,{
   clearTimeout,STEWARD_SESSION_ID:'steward',tokenOk:()=>true,
+  createHttpNdjsonResponse:require('../../ruyi-workbench/app/backend/http-ndjson-response.cjs').createHttpNdjsonResponse,
   readJsonBody:async()=>({message:'hello',trigger:'external',externalActor:f.actor,externalOwner:true}),
   stewardSanitizeAttachments:()=>[],
   // This authorization fixture isolates the display transport. Its identity sink
