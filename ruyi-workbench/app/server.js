@@ -676,6 +676,11 @@ const { ANTHROPIC_API_VERSION, ANTHROPIC_AUTH_MODES, ANTHROPIC_BETA_FALLBACK, AN
 // Provider protocol composition with explicit service dependencies.
 const { OPENAI_STREAM_ERROR_STATUS, PROVIDER_REASONING_EFFORTS, PROVIDER_WIRE_DEFAULT, PROVIDER_WIRE_PROTOCOLS, ProviderWireHooks, applyProviderReasoningEffort, buildResponsesInputItems, chatCompletionText, createChatStreamDecoder, createResponsesStreamDecoder, decodeChatCompletion, decodeResponsesCompletion, noRetryOn400, normalizeProviderApiStyle, providerReasoningEffort, providerServerSearchCard, providerWireContentFiltered, providerWireContextExceeded, providerWireDecoded, providerWireFailureDetail, providerWireIncomplete, providerWireModelsUrl, providerWireOutputLimited, providerWireProtocol, providerWireProtocolForBody, providerWireResponseIdOf, providerWireStreamErrorText, providerWireToolCallsFromSlots, reasoningContentField, responsesFailedText, responsesHistoryWithCompleteToolPairs, responsesIncompleteFinishReason, responsesInstructions, responsesOutputText, setTemperature, toResponsesContent, toResponsesTools } = require('./backend/provider-wire.cjs').createProviderWire({ providerApiBase, providerBaseWithV1, providerCompletionUrl, providerRequestHeaders, anthropicApiBase, anthropicMessagesUrl, anthropicModelsUrl, anthropicRequestHeaders, anthropicRetryBodyOn400, applyAnthropicEffort, applyAnthropicTemperature, applyAnthropicTools, createAnthropicStreamDecoder, decodeAnthropicCompletion, encodeAnthropicMessages, encodeAnthropicQuick, normalizeAnthropicUsage });
 
+const { createProviderRawCompletion } = require('./backend/provider-raw-completion.cjs');
+const providerRawCompletion = createProviderRawCompletion({
+  providerWireProtocol, applyProviderReasoningEffort, providerPostJsonOnce,
+});
+
 const {
   PROVIDER_PRESETS, resolveProvider, activeOpenAiProvider, stripUrlUserinfo, createProviderConfigNormalizer,
 } = require('./backend/provider-config.cjs');
@@ -13601,49 +13606,12 @@ async function collectAudit(config, { limit, sourceFilter, typeFilter, kinds, ex
 const { evalPlaybookAvailability, matchServiceEntry } = require('./backend/playbook-policy.cjs');
 const { normalizePlaybook, loadAllPlaybooks, listPlaybooksWithAvailability, saveUserPlaybook, deleteUserPlaybook, playbookReuseSources, draftPlaybookFromSession } = require('./backend/playbooks.cjs').createPlaybooks({ safeSessionId, externalRoot, paths, safeJsonParse, getCapabilities, atomicWriteJson, loadSession, readConfig, activeOpenAiProvider, providerRawCompletion, cachedInputTokensFromUsage, computeProviderCost, appendUsageLedger });
 
-// Non-stream provider completion with the identity-only system layer (reuses the same headers/timeout
-// shape as providerSummaryCall). Returns { ok, content } | { ok:false, error }. Used by the draft feature.
-// 线协议(58 号批 1)问 04i 的登记表:端点、请求头、请求体(Responses 把调用方后插的 system 规则折进 instructions ——
-// 否则 JSON 修复器/记忆审稿人的严格协议会被丢掉)、回体取字。URL/请求头/一次 POST 的原语在 04h。
-async function providerRawCompletion(provider, history, executionSessionId) {
-  const wire = providerWireProtocol(provider);
-  const chatUrl = wire.completionUrl(provider.baseUrl);
-  const model = String(provider.model || (provider.models && provider.models[0] && provider.models[0].id) || '').trim();
-  if (!chatUrl || !model || typeof fetch !== 'function') {
-    return { ok: false, error: !chatUrl ? 'provider base URL is not set' : (!model ? 'no model selected for this provider' : 'fetch unavailable') };
-  }
-  const headers = wire.requestHeaders(provider, { model });
-  const sysIdentity = buildProviderSystemPrompt(provider, model, '', [], null, null, null, true);
-  const bodyObj = applyProviderReasoningEffort(
-    wire.encodeMessages({ model, messages: [{ role: 'system', content: sysIdentity }, ...history], stream: false, foldSystem: true, provider }), provider, wire.id);
-  const temp = (provider.temperature !== '' && provider.temperature != null && Number.isFinite(Number(provider.temperature))) ? Number(provider.temperature) : undefined;
-  wire.applyTemperature(bodyObj, temp);
-  // 60 s 超时(计时覆盖读回体);不认 SSE 兜底(修前就只认 JSON 回体)。回体不是 JSON → parsed 为 null → 下面按空补全报。
-  const r = await providerPostJsonOnce({ url: chatUrl, headers, body: bodyObj, timeoutMs: 60000, executionSessionId });
-  if (r.threw) { const e = r.error; return { ok: false, error: (e && e.name === 'AbortError') ? 'draft request timed out (60s)' : ((e && e.message) || 'draft request failed') }; }
-  if (!r.res || !r.ok) {
-    const d = r.raw;
-    return { ok: false, error: `HTTP ${r.res ? r.status : '?'}${d ? ': ' + redact(d.slice(0, 300)) : ''}` };
-  }
-  const decoded = wire.decodeCompletion(r.parsed);
-  const content = decoded.text.trim();
-  // 200 回体里装着失败(chat 顶层 {error}、Responses status:'failed'、Anthropic type:'error' / stop_reason:'refusal'):
-  // 修前只剩一句「空补全」,真因(额度用尽 / 拒答 / 服务端报错)看不到。与 10 摘要调用的口径一致,带出 failedDetail。
-  if (decoded.failed || (!content && decoded.failedDetail)) {
-    return { ok: false, error: `provider returned a failed completion${decoded.failedDetail ? ': ' + redact(String(decoded.failedDetail).slice(0, 300)) : ''}` };
-  }
-  if (!content) return { ok: false, error: 'provider returned an empty completion' };
-  // v1.4-OSS 用量看板(补): 透传响应 usage + 实际用的 model,让调用方把这次起草补全记入 aux 台账。
-  return { ok: true, content, usage: decoded.usage, model };
-}
-
 // ── 116-5a(27 号文 §11.8「线程自动摘要」)────────────────────────────────────────────────
 // 每开一条新线程,自动生成一个 ≤24 字的名字与一句 ≤80 字的概括写进会话头 threadBrief。用户证据:
 // 线程搜索结果里整条是用户原话「帮我分析一下AMD——按美股超威半导体…」,一屏放不下三条,
 // 看不出哪条是哪件事。
 //
-// 为什么住在这里:它就是 providerRawCompletion 的第三个消费者,与 playbook 起草、JSON 修复同一族
-// —— 非流式一次性补全 + aux 台账记账。放这里不新增任何模块边,也不碰 CLI 引擎与工具循环。
+// 与 playbook 起草、JSON 修复共用非流式补全服务，独立记入 aux 台账。
 //
 // 红线(§11.8.8):不改写 session.title(原话是权威,brief 只是显示层的另一份数据);不给存量会话
 // 补账;不进 providerHistory(与会话上下文完全隔离,不污染下一回合);失败静默,绝不阻塞回合。
@@ -14286,48 +14254,12 @@ async function resolveEngineEnvBrief(opts = {}) {
   return buildEngineEnvBrief({ ...opts, rg });
 }
 
+const { renderProviderStablePrompt } = require('./backend/provider-stable-prompt.cjs');
 function buildStableSystemPrompt(provider, model, cwd, tools, identityOnly, config) {
-  const label = String((provider && provider.label) || (provider && provider.id) || '模型端点').trim();
-  const modelName = String(model || '').trim() || '(未指定模型)';
-  const hasTools = Array.isArray(tools) && tools.length > 0;
-  const lines = [];
-  // [身份层]
-  lines.push(getPromptPack(config && config.locale).identity({ label, modelName, cwd }));
-  // [运行时身份层] - 108a
-  if (!identityOnly) lines.push(getPromptPack(config && config.locale).runtimeIdentity(buildRuntimeIdentityFacts()));
-  // [界面渲染] - 145-W3:mermaid 成图 / 本地图片(版本级常量,稳定层;Markdown 与代码块那半句身份层已说过)。
-  if (!identityOnly) lines.push(getPromptPack(config && config.locale).engineBrief.renderDiagram);
-  if (hasTools) {
-    // [工具协议层]
-    lines.push(getPromptPack(config && config.locale).toolProtocol.intro);
-    lines.push(getPromptPack(config && config.locale).toolProtocol.rules);
-    lines.push(getPromptPack(config && config.locale).toolProtocol.batching);
-    lines.push(getPromptPack(config && config.locale).toolProtocol.authorization);
-    lines.push(getPromptPack(config && config.locale).toolProtocol.questioning);
-    if ((tools || []).some(t => t && t.function && t.function.name === 'tool_search')) {
-      lines.push(getPromptPack(config && config.locale).toolProtocol.onDemand);
-    }
-    lines.push(getPromptPack(config && config.locale).toolProtocol.priority);
-    lines.push(getPromptPack(config && config.locale).toolProtocol.contextBudget);
-    // C2(61 号文):会话草稿本何时用。工具表里有 scratchpad_write 才说(只有模型服务商普通会话主回合有;它常驻 core,
-    // 会话第一回合起就在,这一行在会话内逐字节稳定,不破稳定层缓存)。子代理、管家、Claude/Kimi 引擎没有这个工具,也就没有这一行。
-    if ((tools || []).some(t => t && t.function && t.function.name === 'scratchpad_write')) {
-      lines.push(getPromptPack(config && config.locale).toolProtocol.scratchpad);
-    }
-  } else if (!identityOnly) {
-    lines.push(getPromptPack(config && config.locale).noTools);
-  }
-  // [答复形状层] - 117v-V3(27 号文 §11.16.2 V3 行):结论先行。门控只有 !identityOnly ——
-  //   · 排除 identity-only 探针(压缩摘要 06:997 / 10:1263 那两条调用逐字节不变,capabilities.e2e
-  //     的身份泄漏守卫与 prompt-snapshot D13 那条路径都不受影响);
-  //   · 【不】看 hasTools:纯对话的研究型线程(管家 steward_thread_new 开的那种)既没有 mission 账本、
-  //     也进不了 softwareEngineering 那一包,它恰恰是这条规则唯一能落到的地方。理由与被修的那条
-  //     head.summary 链路写在 06b 的 answerShape 头注里。
-  if (!identityOnly) lines.push(getPromptPack(config && config.locale).answerShape);
-  // [provider 层]
-  const psp = String((provider && provider.systemPrompt) || '').trim();
-  if (psp) lines.push(psp);
-  return lines.join('\n');
+  return renderProviderStablePrompt({
+    provider, model, cwd, tools, identityOnly, config,
+    runtimeIdentity: identityOnly ? null : buildRuntimeIdentityFacts(),
+  });
 }
 // 易变层:能力/桌面规程/搜索/风格/项目/技能/记忆/账本(每回合可能变化,自破 prefix cache)。
 // C1b 时移 user 侧;C1a 仍由 buildProviderSystemPrompt 包装进 system(行为零漂移)。

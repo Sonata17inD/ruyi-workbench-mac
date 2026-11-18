@@ -589,11 +589,13 @@
         "chatCompletionText",
         "createChatStreamDecoder",
         "createProviderConfigNormalizer",
+        "createProviderRawCompletion",
         "createResponsesStreamDecoder",
         "decodeChatCompletion",
         "decodeResponsesCompletion",
         "noRetryOn400",
         "normalizeProviderApiStyle",
+        "providerRawCompletion",
         "providerReasoningEffort",
         "providerServerSearchCard",
         "providerWireContentFiltered",
@@ -639,6 +641,13 @@
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerCompletionUrl",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerPostJsonOnce",
           "kinds": [
             "read"
           ]
@@ -5294,7 +5303,6 @@
         "probeDesktopMcp",
         "probeNetwork",
         "providerEnvLines",
-        "providerRawCompletion",
         "readDesktopAudit",
         "readProjectMemory",
         "readStorageTrend",
@@ -5303,6 +5311,7 @@
         "recordEngineTranscript",
         "recordRequestMetric",
         "renderCliEnvBrief",
+        "renderProviderStablePrompt",
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
@@ -5706,13 +5715,6 @@
           ]
         },
         {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerPostJsonOnce",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
@@ -5722,16 +5724,10 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "applyProviderReasoningEffort",
+          "symbol": "providerRawCompletion",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6404,7 +6400,7 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "providerRawCompletion",
           "kinds": [
             "call"
@@ -25929,6 +25925,13 @@
         },
         {
           "provider": "04i-provider-wire.js",
+          "symbol": "providerRawCompletion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
           "symbol": "providerReasoningEffort",
           "kinds": [
             "read"
@@ -26364,13 +26367,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "probeAny",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "providerRawCompletion",
           "kinds": [
             "read"
           ]

@@ -4,10 +4,11 @@
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const { createProviderHttp } = require('../../ruyi-workbench/app/backend/provider-http.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-thread-brief-boundary-'));
 const data = path.join(root, 'data'); fs.mkdirSync(data);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'threadBriefOnce', 'buildThreadBriefMessages', 'providerPostJsonOnce', 'THREAD_BRIEF_INPUT_CHARS', 'THREAD_BRIEF_REPLY_CHARS'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'threadBriefOnce', 'buildThreadBriefMessages', 'THREAD_BRIEF_INPUT_CHARS', 'THREAD_BRIEF_REPLY_CHARS'], { withEval: true });
 const f = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0, workerStarts = 0, serial = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return f.vault.sealLocal(...args); };
@@ -17,9 +18,7 @@ threads.Worker = class extends OriginalWorker { constructor(...args) { workerSta
 const state = app.__eval(`(() => {
   const state = { gate: null };
   loadSession = async id => { if (state.gate) await state.gate(); return { id, kind: 'quick_ask', title: 'New session', rewindGen: 0, turnSeq: 1 }; };
-  saveSession = async () => {};
   threadBriefRateLimited = () => false;
-  logEvent = () => {};
   return state;
 })()`);
 const captured = [], savedFetch = global.fetch;
@@ -144,24 +143,26 @@ test('ordinary off title preserves original 1200 and 400 caps without scope stat
 });
 
 test('actual provider POST rechecks policy after boundary resolution and before fetch', async () => {
-  const vm = require('node:vm');
   for (const initial of [policy('off'), policy('basic')]) {
     const gateway = app.PrivacyGateway; gateway.configure(initial);
     let boundaryResolved = 0, fetches = 0;
     // The real boundary finishes first. Resolving this thenable queues the caller's
     // await continuation; change policy synchronously before that continuation runs.
     // Without the POST caller's post-await assert, its actual fetch is now reachable.
-    const post = vm.runInNewContext('(' + app.providerPostJsonOnce.toString() + ')', {
-      AbortController, setTimeout, clearTimeout,
+    const { providerPostJsonOnce: post } = createProviderHttp({
       PrivacyGateway: { ...gateway, beforeModelRequest: body => ({ then(resolve, reject) {
         gateway.beforeModelRequest(body).then(prepared => {
           boundaryResolved++; resolve(prepared); gateway.configure(policy('enhanced'));
         }, reject);
       } }) },
-      fetch: async () => { fetches++; throw Error('stale policy reached fetch'); },
     });
-    const result = await gateway.withPolicy(sid(), () => post({ url: 'https://fixture.invalid/v1/chat/completions', headers: {},
-      body: { messages: [{ role: 'user', content: 'Synthetic public request.' }] }, timeoutMs: 1000 }));
+    const fixtureFetch = global.fetch;
+    global.fetch = async () => { fetches++; throw Error('stale policy reached fetch'); };
+    let result;
+    try {
+      result = await gateway.withPolicy(sid(), () => post({ url: 'https://fixture.invalid/v1/chat/completions', headers: {},
+        body: { messages: [{ role: 'user', content: 'Synthetic public request.' }] }, timeoutMs: 1000 }));
+    } finally { global.fetch = fixtureFetch; }
     assert.equal(boundaryResolved, 1); assert.equal(fetches, 0);
     assert.equal(result.threw, true); assert.equal(result.error.code, 'privacy.policy_changed');
   }

@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 3228,
-    "requiredSymbols": 3495,
-    "edges": 595,
+    "providedSymbols": 3230,
+    "requiredSymbols": 3494,
+    "edges": 594,
     "forwardEdges": 27,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -637,11 +637,13 @@
         "chatCompletionText",
         "createChatStreamDecoder",
         "createProviderConfigNormalizer",
+        "createProviderRawCompletion",
         "createResponsesStreamDecoder",
         "decodeChatCompletion",
         "decodeResponsesCompletion",
         "noRetryOn400",
         "normalizeProviderApiStyle",
+        "providerRawCompletion",
         "providerReasoningEffort",
         "providerServerSearchCard",
         "providerWireContentFiltered",
@@ -687,6 +689,13 @@
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerCompletionUrl",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerPostJsonOnce",
           "kinds": [
             "read"
           ]
@@ -5386,7 +5395,6 @@
         "probeDesktopMcp",
         "probeNetwork",
         "providerEnvLines",
-        "providerRawCompletion",
         "readDesktopAudit",
         "readProjectMemory",
         "readStorageTrend",
@@ -5395,6 +5403,7 @@
         "recordEngineTranscript",
         "recordRequestMetric",
         "renderCliEnvBrief",
+        "renderProviderStablePrompt",
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
@@ -5798,13 +5807,6 @@
           ]
         },
         {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerPostJsonOnce",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
@@ -5814,16 +5816,10 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "applyProviderReasoningEffort",
+          "symbol": "providerRawCompletion",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -6504,7 +6500,7 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "providerRawCompletion",
           "kinds": [
             "call"
@@ -26113,6 +26109,13 @@
         },
         {
           "provider": "04i-provider-wire.js",
+          "symbol": "providerRawCompletion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
           "symbol": "providerReasoningEffort",
           "kinds": [
             "read"
@@ -26548,13 +26551,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "probeAny",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "providerRawCompletion",
           "kinds": [
             "read"
           ]
@@ -29382,6 +29378,7 @@
         "providerApiBase",
         "providerBaseWithV1",
         "providerCompletionUrl",
+        "providerPostJsonOnce",
         "providerRequestHeaders"
       ],
       "direction": "backward"
@@ -29991,8 +29988,7 @@
       "to": "04h-provider-http.js",
       "symbols": [
         "providerBaseIsLocalOrLan",
-        "providerBaseWithV1",
-        "providerPostJsonOnce"
+        "providerBaseWithV1"
       ],
       "direction": "backward"
     },
@@ -30001,8 +29997,7 @@
       "to": "04i-provider-wire.js",
       "symbols": [
         "activeOpenAiProvider",
-        "applyProviderReasoningEffort",
-        "providerWireProtocol"
+        "providerRawCompletion"
       ],
       "direction": "backward"
     },
@@ -30121,14 +30116,7 @@
       "from": "06d-memory-domain.js",
       "to": "04i-provider-wire.js",
       "symbols": [
-        "activeOpenAiProvider"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06d-memory-domain.js",
-      "to": "06-provider-engine.js",
-      "symbols": [
+        "activeOpenAiProvider",
         "providerRawCompletion"
       ],
       "direction": "backward"
@@ -35775,6 +35763,7 @@
         "applyProviderReasoningEffort",
         "buildResponsesInputItems",
         "normalizeProviderApiStyle",
+        "providerRawCompletion",
         "providerReasoningEffort",
         "providerWireProtocol",
         "responsesHistoryWithCompleteToolPairs"
@@ -35861,7 +35850,6 @@
         "parseThreadBrief",
         "peekCapabilities",
         "probeAny",
-        "providerRawCompletion",
         "readStorageTrend",
         "recordEngineTranscript",
         "recordRequestMetric",
@@ -36331,7 +36319,6 @@
       "05-claude-engine.js",
       "05b-kimi-bridge.js",
       "06-provider-engine.js",
-      "06d-memory-domain.js",
       "07-autonomy.js",
       "08-agent-runs.js",
       "09-workflow.js",
@@ -36343,7 +36330,6 @@
   "cycleEdgeKeys": [
     "05-claude-engine.js->05b-kimi-bridge.js",
     "05-claude-engine.js->06-provider-engine.js",
-    "05-claude-engine.js->06d-memory-domain.js",
     "05-claude-engine.js->07-autonomy.js",
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
@@ -36352,9 +36338,7 @@
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
     "06-provider-engine.js->05-claude-engine.js",
-    "06-provider-engine.js->06d-memory-domain.js",
     "06-provider-engine.js->07-autonomy.js",
-    "06d-memory-domain.js->06-provider-engine.js",
     "07-autonomy.js->06-provider-engine.js",
     "08-agent-runs.js->06-provider-engine.js",
     "08-agent-runs.js->07-autonomy.js",
@@ -36362,7 +36346,6 @@
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->06-provider-engine.js",
-    "09-workflow.js->06d-memory-domain.js",
     "09-workflow.js->07-autonomy.js",
     "09-workflow.js->08-agent-runs.js",
     "09-workflow.js->10-context-governance.js",
@@ -36375,7 +36358,6 @@
     "11-native-tools.js->07-autonomy.js",
     "12-tool-dispatch.js->05-claude-engine.js",
     "12-tool-dispatch.js->06-provider-engine.js",
-    "12-tool-dispatch.js->06d-memory-domain.js",
     "12-tool-dispatch.js->07-autonomy.js",
     "12-tool-dispatch.js->08-agent-runs.js",
     "12-tool-dispatch.js->10-context-governance.js",
