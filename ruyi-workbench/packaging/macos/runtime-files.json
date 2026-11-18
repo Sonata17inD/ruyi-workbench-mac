@@ -43,6 +43,7 @@
     "app/backend/privacy-regex.cjs",
     "app/backend/privacy-rule-catalog.cjs",
     "app/backend/process-runtime.cjs",
+    "app/backend/mac-child-cleanup.cjs",
     "app/backend/prompt-registry.cjs",
     "app/backend/provider-anthropic.cjs",
     "app/backend/provider-history.cjs",

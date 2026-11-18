@@ -13,7 +13,7 @@ const check = cp.spawnSync(process.execPath, [path.join(__dirname, 'architecture
 ok(check.status === 0, 'contract snapshot generator is current');
 const manifest = JSON.parse(read('ruyi-workbench/app/src/manifest.json'));
 const files = manifest.modules.map(item => item.file);
-for (const file of ['04-visual-pipeline.js', '04-desktop-shell.js', '06d-memory-domain.js', '06e-mission-domain.js', '06f-autonomy-grants.js', '06g-resource-leases.js']) {
+for (const file of ['04-visual-pipeline.js', '01h-process-runtime.js', '06d-memory-domain.js', '06e-mission-domain.js', '06f-autonomy-grants.js', '06g-resource-leases.js']) {
   ok(files.includes(file), `${file} is a physical build module`);
 }
 const permission = read('ruyi-workbench/app/src/04-permission-runtime.js');

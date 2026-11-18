@@ -251,10 +251,35 @@
       "file": "01h-process-runtime.js",
       "layer": "foundation",
       "provides": [
+        "DesktopShell",
         "ProcessRuntime",
-        "ProcessRuntimeHooks"
+        "ProcessRuntimeHooks",
+        "killChildTree",
+        "killPosixChildTree",
+        "processHelperPath"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "externalRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "path",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "spawnDetachedChecked",
+          "kinds": [
+            "read"
+          ]
+        },
         {
           "provider": "01n-desktop-automation.js",
           "symbol": "MacDesktopAutomation",
@@ -775,6 +800,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -797,13 +829,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "pathWithinRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -1664,6 +1689,13 @@
           ]
         },
         {
+          "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01o-execution-state.js",
           "symbol": "activeAgentRuns",
           "kinds": [
@@ -1836,13 +1868,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -2359,8 +2384,6 @@
         "isNativeToolName",
         "isSensitiveUrlParamName",
         "killAllMcpClients",
-        "killChildTree",
-        "killPosixChildTree",
         "kimiModelList",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
@@ -2429,13 +2452,6 @@
         "validateBrowserTargetPatch"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "crypto",
@@ -2657,14 +2673,15 @@
         },
         {
           "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
+          "symbol": "killChildTree",
           "kinds": [
+            "call",
             "read"
           ]
         },
         {
           "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntimeHooks",
+          "symbol": "ProcessRuntime",
           "kinds": [
             "read"
           ]
@@ -2770,36 +2787,6 @@
       ]
     },
     {
-      "file": "04-desktop-shell.js",
-      "layer": "foundation",
-      "provides": [
-        "DesktopShell"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "04f-toolbox-services.js",
       "layer": "foundation",
       "provides": [],
@@ -2827,14 +2814,14 @@
         },
         {
           "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
+          "symbol": "killChildTree",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
+          "provider": "01h-process-runtime.js",
+          "symbol": "ProcessRuntime",
           "kinds": [
             "read"
           ]
@@ -3498,6 +3485,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "killChildTree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -3731,13 +3725,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "isClaudeResumeMissingError",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
           "kinds": [
             "call"
           ]
@@ -4518,6 +4505,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "killChildTree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -4731,13 +4725,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
           "kinds": [
             "call"
           ]
@@ -7117,6 +7104,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "killChildTree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -7239,13 +7233,6 @@
           "symbol": "PrivacyGateway",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -11611,6 +11598,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "killChildTree",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -11691,13 +11685,6 @@
           "symbol": "collectBridgedTools",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -12164,6 +12151,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -12462,13 +12456,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -13829,6 +13816,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -14167,13 +14161,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-desktop-shell.js",
-          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -23604,7 +23591,7 @@
           ]
         },
         {
-          "provider": "04-desktop-shell.js",
+          "provider": "01h-process-runtime.js",
           "symbol": "DesktopShell",
           "kinds": [
             "read"
@@ -24792,6 +24779,13 @@
           ]
         },
         {
+          "provider": "01h-process-runtime.js",
+          "symbol": "killChildTree",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01o-execution-state.js",
           "symbol": "activeChildren",
           "kinds": [
@@ -25396,13 +25390,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "killAllMcpClients",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
           "kinds": [
             "read"
           ]
