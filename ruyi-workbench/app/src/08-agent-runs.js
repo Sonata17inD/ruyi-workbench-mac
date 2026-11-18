@@ -20,6 +20,9 @@ function agentRunHealth(...args) { return AgentRunStore.agentRunHealth(...args);
 function agentRunHealthChanged(...args) { return AgentRunStore.agentRunHealthChanged(...args); }
 function saveAgentRun(...args) { return AgentRunStore.saveAgentRun(...args); }
 function listAgentRuns(...args) { return AgentRunStore.listAgentRuns(...args); }
+const { gitExec, createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry } = require('./backend/agent-worktrees.cjs').createAgentWorktrees({
+  worktreesDirectory: paths.agentWorktrees, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
+});
 function agentRunDigestShadow(...args) { return AgentRunStore.agentRunDigestShadow(...args); }
 function listAgentRunDigests(...args) { return AgentRunStore.listAgentRunDigests(...args); }
 function agentRunDigestRow(...args) { return AgentRunStore.agentRunDigestRow(...args); }

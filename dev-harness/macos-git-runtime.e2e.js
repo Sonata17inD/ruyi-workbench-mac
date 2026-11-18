@@ -19,12 +19,13 @@ const quote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP macOS supervisor requires macOS'); return; }
-    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'killChildTree', 'PrivacyGateway', 'privacySourceActive', 'privacySourceLine', 'privacySourceLineOffsets', 'toolCall', 'DesktopShell', 'gitExec', 'createAgentWorktree', 'cleanupAgentWorktree', 'applyAgentWorktree', 'agentRunFile']);
+    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'GitRuntime', 'PrivacyGateway', 'privacySourceActive', 'privacySourceLine', 'privacySourceLineOffsets', 'toolCall', 'DesktopShell', 'gitExec', 'createAgentWorktree', 'cleanupAgentWorktree', 'applyAgentWorktree', 'agentRunFile']);
     Object.assign(S, require('../ruyi-workbench/app/backend/git-tools.cjs').createGitTools({
-      ProcessRuntime: S.ProcessRuntime, killChildTree: S.killChildTree,
+      git: S.GitRuntime,
       privacy: { PrivacyGateway: S.PrivacyGateway, privacySourceActive: S.privacySourceActive,
         privacySourceLine: S.privacySourceLine, privacySourceLineOffsets: S.privacySourceLineOffsets },
     }));
+    Object.assign(S, S.GitRuntime);
     runtime = S.ProcessRuntime;
     if (!fs.existsSync(S.ProcessRuntimeHooks.helperPath())) throw new Error('Build the native macOS process helper first');
     async function capture(script, options = {}) {

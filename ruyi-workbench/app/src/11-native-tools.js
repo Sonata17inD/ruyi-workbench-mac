@@ -1,6 +1,4 @@
 const { levenshtein } = require('./backend/path-patterns.cjs');
-const { ssrfCheck } = require('./backend/network-policy.cjs');
-const { httpGetGuarded } = require('./backend/http-transport.cjs');
 const { httpRequest, webFetchFailMessage } = require('./backend/http-request.cjs');
 const { boundedReadPage } = require('./backend/text-pages.cjs');
 const BackgroundJobs = require('./backend/background-jobs.cjs').createBackgroundJobs({
@@ -35,11 +33,6 @@ const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,
   killAllShellSessions, shellMcpChildGuard, shellSessions } = ShellSessions;
 EventStreamHooks.backgroundShells = ShellSessions.backgroundShells;
 
-const RgProbe = require('./backend/rg-probe.cjs').createRgProbe({
-  ProcessRuntime, vendorBinDir: ruyiVendorBinDir, pathBeforeVendor: RUYI_PATH_BEFORE_VENDOR,
-});
-let { probeRgAsync, probeRgInfoSync, peekRgProbe, probeRg, hasRg, hasRgAsync, rgProbeCandidates } = RgProbe;
-
 // 安全修复(审计 F · ReDoS 后续):file_list 的 pattern 是模型给的正则,逐项同步 `re.test(相对路径)`。
 // `(a+)+$` 碰上一个 60 个 a 加 b 的文件名(模型自己就能用 file_write 造出来)要回溯 2^60 步,整个服务的事件循环
 // 冻死 —— 与 file_search 修前同一类问题(见下方 regexScanFilesBounded)。file_list 是热路径,不能每次都起 worker:
@@ -60,11 +53,10 @@ const { searchFileContent, regexScanFilesBounded, searchMaxFileBytes, explicitAl
 });
 
 // Git tools share supervised execution and explicit source-privacy ports.
-const { runGit, gitReadOnlyGuard, gitStatus, gitDiff, gitLog, gitCommit } = require('./backend/git-tools.cjs').createGitTools({
-  ProcessRuntime, killChildTree,
+const { gitStatus, gitDiff, gitLog, gitCommit } = require('./backend/git-tools.cjs').createGitTools({
+  git: GitRuntime,
   privacy: { PrivacyGateway, privacySourceActive, privacySourceLine, privacySourceLineOffsets },
 });
-AgentWorktreeHooks.runGit = runGit;
 
 const { dependencyInventory, codeReviewScan, frontendAudit, claudeMdAudit } = require('./backend/code-audits.cjs').createCodeAudits({
   files: { readIfExists, walkFiles },

@@ -15,3 +15,11 @@ ProcessRuntimeHooks.stopUnsupervised = killChildTree;
 const DesktopShell = require('./backend/desktop-shell.cjs').createDesktopShell({
   ProcessRuntime, killChildTree, spawnDetachedChecked,
 });
+
+const GitRuntime = require('./backend/git-runtime.cjs').createGitRuntime({ ProcessRuntime, killChildTree });
+const { runGit, gitReadOnlyGuard } = GitRuntime;
+
+const RgProbe = require('./backend/rg-probe.cjs').createRgProbe({
+  ProcessRuntime, vendorBinDir: ruyiVendorBinDir, pathBeforeVendor: RUYI_PATH_BEFORE_VENDOR,
+});
+let { probeRgAsync, probeRgInfoSync, peekRgProbe, probeRg, hasRg, hasRgAsync, rgProbeCandidates } = RgProbe;

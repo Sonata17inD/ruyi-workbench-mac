@@ -64,22 +64,22 @@ function gitAvailable() {
   {
     const server = readServerSource();
     const gitSource = fs.readFileSync(path.join(WB, 'app/backend/git-tools.cjs'), 'utf8');
+    const runtimeSource = fs.readFileSync(path.join(WB, 'app/backend/git-runtime.cjs'), 'utf8');
+    const { NATIVE_TOOL_TIER } = require('../ruyi-workbench/app/backend/native-tool-tiers.cjs');
     const appjs = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆分后函数不再只在 app.js)
     const css = require('./read-frontend-css.js').readFrontendCss();
 
-    // ⑥a server.js 的 NATIVE_TOOL_TIER 表里 git_commit 为 exec(读 tier 表断言)。
-    ok(/git_commit:\s*'exec'/.test(server), "⑥ server.js NATIVE_TOOL_TIER git_commit === 'exec'");
-    // git_diff / git_log 为 read;git_status 亦 read。
-    ok(/git_diff:\s*'read'/.test(server) && /git_log:\s*'read'/.test(server), "⑥ server.js git_diff/git_log === 'read'");
-    ok(/git_status:\s*'read'/.test(server), "⑥ server.js git_status === 'read'");
+    ok(NATIVE_TOOL_TIER.git_commit === 'exec', "⑥ git_commit === 'exec'");
+    ok(NATIVE_TOOL_TIER.git_diff === 'read' && NATIVE_TOOL_TIER.git_log === 'read', "⑥ git_diff/git_log === 'read'");
+    ok(NATIVE_TOOL_TIER.git_status === 'read', "⑥ git_status === 'read'");
     ok(/git_commit:\s*\{\s*requires:\s*\['gitCli',\s*'processSupervisor'\]/.test(server), '⑥ TOOL_REQUIRES git_commit requires Git and process supervision');
     // ⑥d 安全加固(对抗复核 CRITICAL防回潮,git 缺失机器也守):runGit 前置 GIT_SAFE_FLAGS 中和仓库自带
     // core.fsmonitor / diff.external;gitDiff 加 --no-textconv。全部覆盖仓库配置的代码执行面。
-    ok(/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*core\.fsmonitor=/.test(gitSource), '⑥ git-tools GIT_SAFE_FLAGS 含 core.fsmonitor=(中和 fsmonitor RCE)');
-    ok(/\[\s*\.\.\.GIT_SAFE_FLAGS\s*,\s*\.\.\.args\s*\]/.test(gitSource), '⑥ runGit 对所有 git 调用前置 GIT_SAFE_FLAGS');
+    ok(/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*core\.fsmonitor=/.test(runtimeSource), '⑥ Git 运行时关闭 core.fsmonitor');
+    ok(/\[\s*\.\.\.GIT_SAFE_FLAGS\s*,\s*\.\.\.args\s*\]/.test(runtimeSource), '⑥ runGit 对所有 git 调用前置 GIT_SAFE_FLAGS');
     // gitDiff 用 --no-ext-diff --no-textconv 封 diff.external / textconv 面(不能用 `-c diff.external=` 空值——会破坏正常 diff)。
     ok(/'diff',\s*'--no-ext-diff',\s*'--no-textconv'/.test(gitSource), '⑥ gitDiff 加 --no-ext-diff --no-textconv(封 diff.external/textconv 面)');
-    ok(!/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*diff\.external=/.test(gitSource), '⑥ GIT_SAFE_FLAGS 不含空 diff.external=(会破坏正常 diff)');
+    ok(!/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*diff\.external=/.test(runtimeSource), '⑥ GIT_SAFE_FLAGS 保留正常 diff 行为');
 
     // ⑥b app.js 含 .diff-view 渲染,且逐行用 textContent(禁 innerHTML)构建。
     ok(/renderDiffView/.test(appjs) && /'diff-view'/.test(appjs), "⑥ app.js 定义 renderDiffView('diff-view')");

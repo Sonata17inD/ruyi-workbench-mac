@@ -104,6 +104,7 @@
         "fsp",
         "hashArgs",
         "http",
+        "httpGetGuarded",
         "isContextOverflowError",
         "isDirectServeInvocation",
         "isSensitiveDataPath",
@@ -161,6 +162,7 @@
         "sensitiveGlobsForRg",
         "setEstimateBucketsV1",
         "spawnDetachedChecked",
+        "ssrfCheck",
         "text",
         "tildePath",
         "tokensFromTextCounts",
@@ -307,11 +309,22 @@
       "layer": "foundation",
       "provides": [
         "DesktopShell",
+        "GitRuntime",
         "ProcessRuntime",
         "ProcessRuntimeHooks",
+        "RgProbe",
+        "gitReadOnlyGuard",
+        "hasRg",
+        "hasRgAsync",
         "killChildTree",
         "killPosixChildTree",
-        "processHelperPath"
+        "peekRgProbe",
+        "probeRg",
+        "probeRgAsync",
+        "probeRgInfoSync",
+        "processHelperPath",
+        "rgProbeCandidates",
+        "runGit"
       ],
       "requires": [
         {
@@ -324,6 +337,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "path",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "RUYI_PATH_BEFORE_VENDOR",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ruyiVendorBinDir",
           "kinds": [
             "read"
           ]
@@ -2081,6 +2108,20 @@
           ]
         },
         {
+          "provider": "01h-process-runtime.js",
+          "symbol": "gitReadOnlyGuard",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "runGit",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01o-execution-state.js",
           "symbol": "activeAgentRuns",
           "kinds": [
@@ -2297,20 +2338,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "saveAgentRun",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "gitReadOnlyGuard",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "runGit",
           "kinds": [
             "call"
           ]
@@ -5288,6 +5315,13 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
           "kinds": [
             "read"
@@ -5495,13 +5529,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "toolPackForName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "probeRgAsync",
           "kinds": [
             "call"
           ]
@@ -6518,7 +6545,6 @@
         "ACTION_VIEW_MIN_CHARS",
         "ACTION_VIEW_TOOLS",
         "AGENT_TOOL_NAMES",
-        "AgentWorktreeHooks",
         "BRIDGED_NOT_READ",
         "BRIDGED_READ_PREFIXES",
         "BRIDGED_READ_TOOLS",
@@ -6573,10 +6599,6 @@
         "actionTargetMeta",
         "agentRunDir",
         "agentRunFile",
-        "agentWorktreeApplyChains",
-        "agentWorktreePathOwned",
-        "applyAgentWorktree",
-        "applyAgentWorktreeLocked",
         "bridgedCallTierFloor",
         "bridgedShadowNative",
         "bridgedToolAliases",
@@ -6593,10 +6615,7 @@
         "classifyToolPacks",
         "claudePermissionMode",
         "claudeSubagentPermission",
-        "cleanupAgentWorktree",
-        "cleanupAgentWorktreeForRetry",
         "compareToolRetrievalShadow",
-        "createAgentWorktree",
         "createToolLoadingState",
         "desktopToolsDisabledReason",
         "drainSteerQueue",
@@ -6604,9 +6623,7 @@
         "failoverConnectReason",
         "failoverStickyBase",
         "fetchOpenAiModels",
-        "finalizeAgentWorktree",
         "getAgentRoleLibrary",
-        "gitExec",
         "hasInterruptingSteer",
         "httpRequestInternalTargetReason",
         "legacyToolCatalogSearch",
@@ -6707,13 +6724,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "createNdjsonLineFeeder",
           "kinds": [
             "call"
@@ -6785,13 +6795,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -6813,13 +6816,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
           "kinds": [
             "read"
@@ -6831,13 +6827,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -7245,13 +7234,6 @@
           "kinds": [
             "call"
           ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
@@ -7294,6 +7276,7 @@
         "aggregateCoverage",
         "appendAgentRunEvent",
         "appendAgentWorkflowSummaryToSession",
+        "applyAgentWorktree",
         "autoResumeInterruptedRuns",
         "balancedJsonSpan",
         "buildAgentRunEnvelope",
@@ -7303,8 +7286,11 @@
         "bumpRunIntervention",
         "canonicalWorkflowValue",
         "classifyNodeErrorText",
+        "cleanupAgentWorktree",
+        "cleanupAgentWorktreeForRetry",
         "computeSchedulerStep",
         "computeWaveSeq",
+        "createAgentWorktree",
         "cutAtSentence",
         "dedupeAgentFindings",
         "deleteAgentWorkflow",
@@ -7312,10 +7298,12 @@
         "evalWaitCondition",
         "evaluateNodeToolEvidence",
         "evaluateWorkflowCondition",
+        "finalizeAgentWorktree",
         "findingHandledItems",
         "flushAgentRunEvents",
         "formatNodeEvidencePrompt",
         "getAgentWorkflows",
+        "gitExec",
         "indexNodeEvidence",
         "listAgentRunDigests",
         "listAgentRuns",
@@ -7433,6 +7421,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "httpGetGuarded",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
             "call"
@@ -7527,6 +7522,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ssrfCheck",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "SubAgentMemoryHooks",
           "kinds": [
             "read"
@@ -7600,6 +7602,13 @@
         {
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "runGit",
           "kinds": [
             "read"
           ]
@@ -8175,20 +8184,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "writeHistorySnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "httpGetGuarded",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "ssrfCheck",
           "kinds": [
             "call"
           ]
@@ -9441,28 +9436,7 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "cleanupAgentWorktree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "cleanupAgentWorktreeForRetry",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "compareToolRetrievalShadow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "createAgentWorktree",
           "kinds": [
             "call"
           ]
@@ -9493,13 +9467,6 @@
           "symbol": "failoverStickyBase",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "finalizeAgentWorktree",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -9750,7 +9717,28 @@
         },
         {
           "provider": "08-agent-runs.js",
+          "symbol": "cleanupAgentWorktree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "cleanupAgentWorktreeForRetry",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
           "symbol": "computeSchedulerStep",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "createAgentWorktree",
           "kinds": [
             "call"
           ]
@@ -9787,6 +9775,13 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "evalWaitCondition",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "finalizeAgentWorktree",
           "kinds": [
             "call"
           ]
@@ -11177,7 +11172,6 @@
       "layer": "tools",
       "provides": [
         "BackgroundJobs",
-        "RgProbe",
         "ShellSessions",
         "adaptiveCatalogForMcp",
         "boundedReadPage",
@@ -11194,15 +11188,10 @@
         "gitCommit",
         "gitDiff",
         "gitLog",
-        "gitReadOnlyGuard",
         "gitStatus",
-        "hasRg",
-        "hasRgAsync",
-        "httpGetGuarded",
         "httpRequest",
         "killAllShellSessions",
         "levenshtein",
-        "peekRgProbe",
         "persistBackgroundJob",
         "privacyProjectSearch",
         "privacyReadTextWindow",
@@ -11211,16 +11200,11 @@
         "privacySourceLine",
         "privacySourceLineOffsets",
         "privacySourceMark",
-        "probeRg",
-        "probeRgAsync",
-        "probeRgInfoSync",
         "prunedDirsHint",
         "readBackgroundJobs",
         "readIfExists",
         "readWebCache",
         "regexScanFilesBounded",
-        "rgProbeCandidates",
-        "runGit",
         "searchFileContent",
         "searchFileContentJs",
         "searchFileContentRg",
@@ -11234,7 +11218,6 @@
         "shellStart",
         "shellVisibleTo",
         "sourceViewOf",
-        "ssrfCheck",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -11330,20 +11313,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "RUYI_PATH_BEFORE_VENDOR",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "ruyiVendorBinDir",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "sensitiveFileIdentities",
           "kinds": [
             "read"
@@ -11393,9 +11362,30 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "GitRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "hasRgAsync",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRg",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -11473,13 +11463,6 @@
           "symbol": "isStewardToolName",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "AgentWorktreeHooks",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -11944,6 +11927,13 @@
           "symbol": "DesktopShell",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -12713,13 +12703,6 @@
           "symbol": "privacySourceMark",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "probeRgAsync",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13664,6 +13647,13 @@
           "symbol": "DesktopShell",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -14710,13 +14700,6 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "killAllShellSessions",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "probeRgAsync",
           "kinds": [
             "call"
           ]
@@ -16252,20 +16235,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "applyAgentWorktree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "cleanupAgentWorktree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "DESKTOP_MCP_SERVER_ID",
           "kinds": [
             "read"
@@ -16344,10 +16313,24 @@
         },
         {
           "provider": "08-agent-runs.js",
+          "symbol": "applyAgentWorktree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
           "symbol": "bumpRunIntervention",
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "cleanupAgentWorktree",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -24298,6 +24281,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "ssrfCheck",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "unmaskProviders",
           "kinds": [
             "read"
@@ -24734,6 +24724,20 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "peekRgProbe",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "probeRgAsync",
           "kinds": [
             "read"
           ]
@@ -26847,13 +26851,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "applyAgentWorktree",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
           "kinds": [
             "read"
@@ -26910,13 +26907,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "createAgentWorktree",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "createToolLoadingState",
           "kinds": [
             "read"
@@ -26932,13 +26922,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "finalizeAgentWorktree",
           "kinds": [
             "read"
           ]
@@ -27071,6 +27054,13 @@
         },
         {
           "provider": "08-agent-runs.js",
+          "symbol": "applyAgentWorktree",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
           "symbol": "autoResumeInterruptedRuns",
           "kinds": [
             "read"
@@ -27093,6 +27083,13 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "BUILTIN_AGENT_WORKFLOWS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "createAgentWorktree",
           "kinds": [
             "read"
           ]
@@ -27128,6 +27125,13 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "evaluateWorkflowCondition",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "finalizeAgentWorktree",
           "kinds": [
             "read"
           ]
@@ -27715,28 +27719,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "peekRgProbe",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "probeRgAsync",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "readWebCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "ssrfCheck",
           "kinds": [
             "read"
           ]

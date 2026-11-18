@@ -4,7 +4,9 @@ const os = require('node:os');
 const path = require('node:path');
 const { decodeConsoleText } = require('./text-codecs.cjs');
 const { readFileWindow } = require('./file-text-io.cjs').FileTextIo;
-function createGitTools({ ProcessRuntime, killChildTree, privacy }) {
+const { GIT_READ_ONLY_FLAGS } = require('./git-runtime.cjs');
+function createGitTools({ git, privacy }) {
+  const { runGit, gitReadOnlyGuard } = git;
   const { PrivacyGateway, privacySourceActive, privacySourceLine, privacySourceLineOffsets } = privacy;
 const GIT_DIFF_MAX_CHARS = 40000;
 const GIT_DIFF_STAT_MAX_CHARS = 6000;
@@ -28,109 +30,8 @@ function gitHeadToJsonBudget(text, budget) {
   else if (/[\ud800-\udbff]/.test(cut[cut.length - 1] || '')) cut = cut.slice(0, -1);
   return { text: cut };
 }
-// v1.0 收官安全加固(对抗复核 CONFIRMED·CRITICAL):git 会执行由被操作仓库自带 `.git/config` 指定的
-// 外部程序 —— `core.fsmonitor`(status/diff 读 index 时执行)、`diff.external` / textconv(diff 时执行)。
-// git_status/git_diff 是 read 档、所有权限模式恒放行零弹窗,若不覆盖这些键,「看一眼陌生仓库的 git 状态」
-// 即等于在受害仓库自带的 hook 程序下无提示 RCE(两面均实弹已证:fsmonitor 用 sh hook + fsmonitorHookVersion=2
-// 触发;diff.external 裸 git diff 即执行)。命令行 `-c core.fsmonitor=`(空=关闭)优先级最高,覆盖各级配置且
-// 对功能零损失(fsmonitor 纯读性能优化)。**注意**:`-c diff.external=`(空)不能用——git 会把空值当成「要 spawn
-// 的外部差异器」而报 `external diff died`,反而破坏正常 diff;diff.external / textconv 面改由 gitDiff 的
-// `--no-ext-diff --no-textconv` 关闭(diff 子命令专用选项,见 gitDiff)。GIT_SAFE_FLAGS 对 ALL git 调用统一
-// 前置(commit 亦安全:它不读 fsmonitor;合法 pre-commit hook 走 core.hooksPath,未被触碰,仍在 exec 档权限门下)。
-// NE-7:core.quotepath=false —— 否则中文路径在 status/diff 里被写成 "\346\226\260..." 八进制转义,模型和用户都读不了。
-const GIT_SAFE_FLAGS = ['-c', 'core.fsmonitor=', '-c', 'core.fsmonitorHookVersion=0', '-c', 'core.quotepath=false'];
-// ProcessRuntime.capture 的 Promise 包装:无 shell。返回 { ok, code, stdout, stderr, error?(ENOENT等), timedOut?, timeoutMs? }。
-// 永不 reject —— 传输层错误(git 缺失、cwd 不存在)落在 result.error / result.code<0 上,由调用方转人话。
-// opts.encoding:'buffer' 时 stdout/stderr 是原字节(Buffer)—— 读文件内容(blob)必须走这条,按 utf8 解码会把
-// GBK 等非 UTF-8 字节变成 U+FFFD(hunt2 #4)。
-// 走查 W1·F6:超时由自己的计时器管,不用 execFile 的 timeout 选项 —— 后者只给 git 本身发 SIGTERM,
-// pre-commit 钩子起的子进程(lint / 测试)成了孤儿,还攥着 stdout 管道,execFile 的回调要等它们退出才来;而且超时后的错误形状
-// (code:null、killed:true)被 gitCommit 当成「钩子拒绝」。现在:到点 → timedOut:true,用 killChildTree 整棵树杀(128i:只认
-// 自己的子孙);树杀不掉、管道仍不关(杀树命令失败 / 极端孤儿)时,5 秒后强行收尾,不让调用方永远挂着。
-function runGit(args, cwd, timeoutMs, opts = {}) {
-  return new Promise((resolve, reject) => {
-    void (async () => {
-    // 非数字(模型给 git_status 之类自造 timeoutMs:"30s")回落缺省:修前 NaN 一路传到 setTimeout,等于 1 ms 就把跑完的 git 杀掉、报「超过 0 秒」。
-    const askedMs = Number(timeoutMs);
-    const limitMs = Math.min(GIT_TIMEOUT_MAX_MS, Math.max(1000, Number.isFinite(askedMs) && askedMs > 0 ? askedMs : 15000));
-    let child, timer = null, grace = null, timedOut = false, settled = false, cleanup = null;
-    const settle = r => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer); clearTimeout(grace);
-      if (child) cleanup = ProcessRuntime.result(child) || cleanup;
-      if (!timedOut && child?.pid && cleanup?.incomplete) {
-        r = { ...r, ok: false, code: -1, commandExitCode: r.code, error: Object.assign(new Error('Git process cleanup has not been confirmed'), { code: 'ERR_PROCESS_CLEANUP_INCOMPLETE' }) };
-      }
-      const cleanupFields = cleanup ? { cleanupScope: cleanup.scope, cleanupIncomplete: cleanup.incomplete === true,
-        ...(cleanup.escapeCoverage ? { cleanupEscapeCoverage: cleanup.escapeCoverage, cleanupUnconfirmed: cleanup.unconfirmed } : {}) } : {};
-      resolve(timedOut ? { ...r, ok: false, timedOut: true, timeoutMs: limitMs, ...cleanupFields } : { ...r, ...cleanupFields });
-    };
-    try {
-      // 安全加固前缀(GIT_SAFE_FLAGS)必须在子命令之前;args 以 `-C <dir> <subcmd> …` 开头,故整体前置合法。
-      const executionOptions = {
-        signal: opts.signal, cwd: cwd || process.cwd(),
-        maxBuffer: opts && opts.maxBuffer ? opts.maxBuffer : 24 * 1024 * 1024,
-        encoding: opts && opts.encoding === 'buffer' ? 'buffer' : 'utf8',
-      };
-      const complete = (error, stdout, stderr) => {
-        const code = error && typeof error.code === 'number' ? error.code : (error ? -1 : 0);
-        settle({ ok: !error, code, stdout: stdout || '', stderr: stderr || '', error: error || null });
-      };
-      const capture = await ProcessRuntime.capture('git', [...GIT_SAFE_FLAGS, ...args], executionOptions, { ...ProcessRuntime.currentOwner(), kind: 'git', ...opts.owner });
-      child = capture.child;
-      void capture.output.then(result => complete(result.error, result.stdout, result.stderr));
-    } catch (e) {
-      settle({ ok: false, code: -1, stdout: '', stderr: '', error: e });
-      return;
-    }
-    child.on('error', () => { /* handled via the callback's `error` arg */ });
-    timer = setTimeout(() => {
-      timedOut = true;
-      try { cleanup = killChildTree(child); } catch { cleanup = { scope: 'unknown', incomplete: true }; }
-      grace = setTimeout(() => {
-        try { if (!ProcessRuntime.stopChild(child)) child.kill('SIGKILL'); } catch { /* 已经退出 */ }
-        try { if (child.stdout) child.stdout.destroy(); if (child.stderr) child.stderr.destroy(); } catch { /* ignore */ }
-        settle({ ok: false, code: -1, stdout: '', stderr: '', error: Object.assign(new Error('git 超时被终止'), { killed: true }) });
-      }, 5000);
-      if (grace.unref) grace.unref();
-    }, limitMs);
-  })().catch(reject);
-    });
-}
-// git 单条命令的超时上限(模型经 timeoutMs 能放宽到的最大值):钩子再慢也不该让一个工具调用挂过十分钟。
-const GIT_TIMEOUT_MAX_MS = 10 * 60 * 1000;
 // git_commit 默认超时:提交会跑 pre-commit / commit-msg 钩子(lint、测试常要几十秒),30s 对真实仓库偏紧;给 90s,模型可经 timeoutMs 放宽。
 const GIT_COMMIT_TIMEOUT_DEFAULT_MS = 90 * 1000;
-// 安全修复(审计 B):read 档的 git 调用还会执行仓库自带配置指定的【过滤器】—— `.gitattributes` 里一行
-// `* filter=x` 加 `.git/config` 里 `[filter "x"] clean = <命令>`,git status / git diff 在比对工作区文件时就会
-// spawn 那条命令(stat 变了就重算哈希,先过 clean)。子模块同理:status/diff 会在子模块里再起一个 git,
-// 子模块自己的 config 里的过滤器不归上面那几个 -c 管。修法:
-//   ① 先读一遍配置里【所有】filter.<name>.(clean|smudge|process) 键(git config 只读配置、不执行任何东西),
-//      对每个 name 追加 `-c filter.<name>.clean= -c …smudge= -c …process= -c …required=false`(空值 = 不跑;
-//      实弹验证 status/diff 不再触发,输出照常);名字里带 `=`(`-c` 的键值分隔符,覆盖不到)一律拒绝执行(fail-closed);
-//   ② `--ignore-submodules=dirty`:不进子模块跑 status(子模块提交指针变了仍会报,只是不看子模块工作区脏不脏);
-//   ③ 另外关掉会 spawn 子进程的展示项:status.submoduleSummary(跑子模块 log)、log.showSignature(跑 gpg.program)。
-// 代价:用 git-lfs 之类 clean 过滤器的仓库,stat 变过的受管文件会被报成「已修改」(按原始字节比);结果里
-// filtersNeutralized 如实列出被关掉的过滤器名。git_commit(exec 档,要真的按过滤器入库)不走这条。
-const GIT_READ_ONLY_FLAGS = ['-c', 'status.submoduleSummary=false', '-c', 'log.showSignature=false', '-c', 'diff.submodule=short'];
-async function gitReadOnlyGuard(cwd, timeoutMs) {
-  const res = await runGit(['-C', cwd, 'config', '-z', '--get-regexp', '^filter\\..*\\.(clean|smudge|process)$'], cwd, timeoutMs || 15000);
-  // exit 1 = 没有匹配的键(也包括「不是仓库」时只剩全局/系统配置且没有过滤器);其余非零 = 读配置本身就失败了。
-  if (res.cleanupIncomplete || (!res.ok && res.code !== 1)) return { ok: false, res };
-  const names = [];
-  for (const entry of String(res.stdout || '').split('\0')) {
-    const key = entry.split('\n')[0];
-    const m = /^filter\.(.+)\.(?:clean|smudge|process)$/i.exec(key);
-    if (m && !names.includes(m[1])) names.push(m[1]);
-  }
-  const bad = names.find(n => /[=\r\n]/.test(n));
-  if (bad) return { ok: false, refused: true, name: bad };
-  const flags = [...GIT_READ_ONLY_FLAGS];
-  for (const n of names) flags.push('-c', `filter.${n}.clean=`, '-c', `filter.${n}.smudge=`, '-c', `filter.${n}.process=`, '-c', `filter.${n}.required=false`);
-  return { ok: true, flags, names };
-}
-
 function gitReadOnlyGuardError(guard, cwd) {
   if (guard && guard.refused) {
     return { ok: false, error: '这个仓库的 git 配置里有无法安全关闭的过滤器,已拒绝执行只读 git 命令', hint: '过滤器名含「=」。请在终端里检查 .git/config 的 [filter] 段后再试。', cwd };
@@ -612,6 +513,6 @@ async function gitCommit(args = {}) {
 }
 
 
-return { runGit, gitReadOnlyGuard, gitHumanError, gitStatus, gitDiff, gitLog, gitCommit };
+return { gitHumanError, gitStatus, gitDiff, gitLog, gitCommit };
 }
 module.exports = { createGitTools };

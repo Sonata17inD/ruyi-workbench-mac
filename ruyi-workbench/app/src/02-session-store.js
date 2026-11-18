@@ -672,7 +672,7 @@ async function checkpointRollbackContext(sessionId) {
   };
 }
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
-  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard: (...args) => gitReadOnlyGuard(...args), guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit: (...args) => runGit(...args), safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
+  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit, safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
 });
 
 // v0.8-S4b B2 — conversation REWIND (Claude Code-style "back up to just before this message"). Truncates
