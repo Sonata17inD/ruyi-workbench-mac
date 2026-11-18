@@ -31,6 +31,7 @@ const src06i = read('../backend/steward-core.cjs');
 const src06k = read('06k-config-patch.js'); // 架构还债批 2 B2:applyConfigPatch(消费 StewardHooks.arbiterRefresh)从 13 搬到这里
 const src09 = read('09-workflow.js');
 const src10 = read('10-context-governance.js');
+const turnRuntime = read('../backend/session-turn-runtime.cjs');
 const src12 = read('12-tool-dispatch.js');
 const src13 = read('13-http-router.js');
 const src13d = read('13d-core-domain-routes.js');
@@ -108,7 +109,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // (12 的工具 handler、13 的 /api/stop、13d 的事项聚合行)。加入样本让「零前向边」的判据【更严】
   // (这三个文件同样不许出现 13h 的符号),同时让下面反向的 unused 判据仍然覆盖全部消费者。
   // 117 波 T1 再扩:13g 拆出的三个新文件同属 13g 族,同样不许出现 13h 的符号(判据更严,不是放宽)。
-  const consumers = [['06-provider-engine.js', src06], ['09-workflow.js', src09], ['10-context-governance.js', src10],
+  const consumers = [['06-provider-engine.js', src06], ['09-workflow.js', src09], ['10-context-governance.js', src10], ['session-turn-runtime.cjs', turnRuntime],
     ['12-tool-dispatch.js', src12], ['13-http-router.js', src13], ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
     ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];
@@ -176,7 +177,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = src09 + src10 + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s;
+  const consumedText = src09 + src10 + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');

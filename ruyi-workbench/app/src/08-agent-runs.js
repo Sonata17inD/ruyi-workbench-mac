@@ -1,17 +1,6 @@
 const { gitExec, createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry } = require('./backend/agent-worktrees.cjs').createAgentWorktrees({
   worktreesDirectory: paths.agentWorktrees, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
 });
-const AgentRecovery = require('./backend/agent-recovery.cjs').createAgentRecovery({
-  agentRunsRoot: paths.agentRuns, isWriteTool: name => NODE_WRITE_FAMILY.has(name), safeSessionId, nowIso,
-  sessions: { readSessionHeadResilient, applySessionPermissionModeOverride, resolvePermissionMode },
-  runs: { listAgentRuns, syncRunEventSeq, appendAgentRunEvent, saveAgentRun },
-  execution: { hasLiveRun: id => activeAgentRuns.has(id), launchPersistedAgentRun: (...args) => launchPersistedAgentRun(...args) },
-  interventions: { settleIntervention, readInterventions, registerIntervention },
-  readConfig, notifyInterruptedRun: run => EventStreamHooks.notifyAgentRunEnvelope?.(run.sessionId, run, buildAgentRunEnvelope(run)),
-});
-function agentRunPermissionMode(...args) { return AgentRecovery.agentRunPermissionMode(...args); }
-function autoResumeInterruptedRuns(...args) { return AgentRecovery.autoResumeInterruptedRuns(...args); }
-function markInterruptedAgentRuns(...args) { return AgentRecovery.markInterruptedAgentRuns(...args); }
 
 // 子代理回合的外壳:两路心跳(初始化心跳 initBeat、工具心跳 toolBeat)在【任何】出口都停掉 —— 正常返回、提前返回、
 // 抛错,以及第一次模型调用之前就被中止(修前这条路 break 出循环时 initBeat 还在跳:每秒一条 subagent_progress,

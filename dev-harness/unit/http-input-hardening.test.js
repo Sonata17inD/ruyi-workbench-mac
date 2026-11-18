@@ -262,7 +262,7 @@ test('[L1] 子进程 stdin 挂了 error 监听(Kimi ACP RPC、Mac shell 会话):
 });
 
 test('[L2] NDJSON 流壳:收尾后的迟到事件不写、res 挂 error 监听(streamChat / 管家运行器)', () => {
-  for (const [file, fn] of [['10-context-governance.js', 'streamChat'], ['13h-steward-runner.js', 'handleStewardRunnerApiRoutes']]) {
+  for (const [file, fn] of [['../backend/http-chat-stream.cjs', 'streamChat'], ['13h-steward-runner.js', 'handleStewardRunnerApiRoutes']]) {
     const block = functionBlock(readSrc(file), fn);
     assert.ok(block.length > 200, `切到 ${fn}`);
     const guards = block.match(/if \(res\.writableEnded \|\| res\.destroyed\) return;/g) || [];

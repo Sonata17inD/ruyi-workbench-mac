@@ -9,6 +9,7 @@ const { functionBlock, constBlock } = require('../lib/source-slice');
 const root = path.resolve(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, 'ruyi-workbench/app', file), 'utf8');
 const { createSessionRewind } = require('../../ruyi-workbench/app/backend/session-rewind.cjs');
+const { createSessionTurnRuntime } = require('../../ruyi-workbench/app/backend/session-turn-runtime.cjs');
 const conversation = read('public/js/steward-conversation.js');
 const execution = id => ({ serverInstanceId: 'process-A', driverRunId: id, phase: 'running' });
 const idleOptions = () => ({ guardExecution: true, expectedExecution: null, expectedIdleState: {
@@ -103,16 +104,15 @@ test('the actual turn entry refuses admission while guarded rewind awaits storag
   const pending = f.rewind('s', 2, false, idleOptions());
   assert.equal(f.blocked(), true);
   let registered = 0;
-  Object.assign(f.ctx, {
-    readConfig: async () => ({}), loadSession: async () => ({ id: 's', todos: [] }),
-    AGENT_WAKE_SOURCE: 'agent_wake', EXCLUSIVE_TURN_SOURCES: new Set(),
-    sessionTodosSignature: () => '', resolvePermissionMode: () => 'default', permissionModeFrom: () => '',
-    configForSessionEngineRoute: config => config, agentWakeChain: new Map(), agentWakeSuppressed: new Set(),
-    sessionEngineRouteScopeOverrides: new Map(),
-    makeId: () => { registered++; return 'B'; }, bindDriverRun: () => { registered++; },
+  const { runSessionTurn } = createSessionTurnRuntime({
+    readConfig: async () => ({}),
+    sessions: { loadSession: async () => ({ id: 's', todos: [] }), sessionTodosSignature: () => '' },
+    routing: { configForSessionEngineRoute: config => config, sessionEngineRouteScopeOverrides: new Map() },
+    execution: f.ctx, engines: {}, steward: {}, EventStreamHooks: {},
+    makeId: () => { registered++; return 'B'; },
+    mission: { bindDriverRun: () => { registered++; } },
   });
-  vm.runInContext(functionBlock(read('src/10-context-governance.js'), 'runSessionTurn') + '\nthis.startTurn = runSessionTurn;', f.ctx);
-  await assert.rejects(f.ctx.startTurn({ sessionId: 's', source: 'steward' }), error => error.code === 'SESSION_EXECUTION_LOCKED');
+  await assert.rejects(runSessionTurn({ sessionId: 's', source: 'steward' }), error => error.code === 'SESSION_EXECUTION_LOCKED');
   assert.equal(registered, 0, 'no new driver identity or grant binding occurs');
   assert.equal(f.ctx.turnSettlers.size, 0);
   f.ctx.storage.loadSession = load;

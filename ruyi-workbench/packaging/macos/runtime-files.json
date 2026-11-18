@@ -353,7 +353,9 @@
     "app/backend/http-download.cjs",
     "app/backend/secret-redaction.cjs",
     "app/backend/sensitive-paths.cjs",
-    "app/backend/keyed-chain.cjs"
+    "app/backend/keyed-chain.cjs",
+    "app/backend/http-chat-stream.cjs",
+    "app/backend/session-turn-runtime.cjs"
   ],
   "acc": [
     "LICENSE",

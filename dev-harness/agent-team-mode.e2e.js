@@ -3,7 +3,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // Fully offline: fake OpenAI captures request bodies; fake Claude captures argv.
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -193,9 +192,9 @@ function capturedUser() {
     ok(!capturedSystem().includes('<agent-team-mode>') && !capturedUser().includes('<agent-team-mode>'), 'server ignores agentTeam when sub-agents are disabled');
 
     // Static guard: driverAuto MUST bypass agentTeam (verified via source-code pattern check).
-    const serverSrc = readServerSource();
+    const serverSrc = fs.readFileSync(path.join(WB, 'app/backend/session-turn-runtime.cjs'), 'utf8');
     ok(/const turnAgentTeam = !driverAuto && body\.agentTeam === true/.test(serverSrc),
-      'server.js guards agentTeam behind !driverAuto to protect autonomous turns');
+      'session turn runtime guards agentTeam behind !driverAuto to protect autonomous turns');
   } finally {
     killTree(wb); killTree(fake);
     await sleep(250);

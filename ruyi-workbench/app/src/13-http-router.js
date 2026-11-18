@@ -1,3 +1,7 @@
+const streamChat = require('./backend/http-chat-stream.cjs').createHttpChatStream({
+  runSessionTurn, PrivacyGateway, safeSessionId, nowIso,
+});
+
 const buildUsageSummary = require('./backend/usage-summary.cjs').createUsageSummary({
   readConfig, forEachUsageRow, usageRangeLowerMs, usageDayKeyMemo,
   async readSessionTitles() {

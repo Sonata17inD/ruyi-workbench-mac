@@ -7577,7 +7577,6 @@
         "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
-        "AgentRecovery",
         "BUILTIN_AGENT_WORKFLOWS",
         "C3_HIGH_RISK_GATE",
         "EVIDENCE_REFS_MAX_ITEMS",
@@ -7589,7 +7588,6 @@
         "agentMessageReceipt",
         "agentPoolExpansionEligibility",
         "agentRunCapabilities",
-        "agentRunPermissionMode",
         "agentRunResultSlice",
         "agentRunRoster",
         "agentWorkflowSaveProblem",
@@ -7598,7 +7596,6 @@
         "aggregateCoverage",
         "appendAgentWorkflowSummaryToSession",
         "applyAgentWorktree",
-        "autoResumeInterruptedRuns",
         "balancedJsonSpan",
         "buildAgentRunEnvelope",
         "buildNodeEvidenceCatalog",
@@ -7623,7 +7620,6 @@
         "getAgentWorkflows",
         "gitExec",
         "indexNodeEvidence",
-        "markInterruptedAgentRuns",
         "materializePoolItem",
         "nodeDeliveryEligibility",
         "normalizeAgentGate",
@@ -7865,13 +7861,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "resolveNodeModel",
           "kinds": [
             "call"
@@ -7897,13 +7886,6 @@
           "symbol": "clampAgentRoleToParent",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "resolvePermissionMode",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -7939,8 +7921,7 @@
           "provider": "02-session-store.js",
           "symbol": "appendAgentRunEvent",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -7966,13 +7947,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
             "call"
@@ -7994,49 +7968,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "readInterventions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readSessionHeadResilient",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "registerIntervention",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "saveAgentRun",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "settleIntervention",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "syncRunEventSeq",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02d-session-overrides.js",
-          "symbol": "applySessionPermissionModeOverride",
           "kinds": [
             "read"
           ]
@@ -8394,13 +8326,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "webPayloadReason",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09-workflow.js",
-          "symbol": "launchPersistedAgentRun",
           "kinds": [
             "call"
           ]
@@ -10504,13 +10429,153 @@
       ]
     },
     {
+      "file": "09b-agent-recovery.js",
+      "layer": "orchestration",
+      "provides": [
+        "AgentRecovery",
+        "autoResumeInterruptedRuns",
+        "markInterruptedAgentRuns"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01e-permission-modes.js",
+          "symbol": "resolvePermissionMode",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendAgentRunEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readInterventions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readSessionHeadResilient",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "registerIntervention",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "saveAgentRun",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "settleIntervention",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "syncRunEventSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "applySessionPermissionModeOverride",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "buildAgentRunEnvelope",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "NODE_WRITE_FAMILY",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "09-workflow.js",
+          "symbol": "launchPersistedAgentRun",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "10-context-governance.js",
       "layer": "orchestration",
       "provides": [
-        "AGENT_WAKE_BOOT_WINDOW_MS",
-        "AGENT_WAKE_CHAIN_MAX",
-        "AGENT_WAKE_DEBOUNCE_MS",
-        "AGENT_WAKE_SOURCE",
         "COMPACTION_HISTORY_PREFIX",
         "COMPACTION_PATH_ARG_KEYS",
         "COMPACTION_RAWREF_PATTERN",
@@ -10531,7 +10596,6 @@
         "CompactionPlan",
         "ECON_AUX_FLAG_CACHE",
         "EVAPORATED_PREFIX",
-        "EXCLUSIVE_TURN_SOURCES",
         "FILE_READ_HEAD",
         "FILE_READ_TAIL",
         "IMG_B64_TRIM_RE",
@@ -10582,13 +10646,6 @@
         "_calibKey",
         "agentConversationContextMeta",
         "agentNodeContextWindow",
-        "agentWakeAttempted",
-        "agentWakeChain",
-        "agentWakeJobKey",
-        "agentWakeMessage",
-        "agentWakeSkipsStatus",
-        "agentWakeSuppressed",
-        "agentWakeTimers",
         "aggregateSummaryCalls",
         "anySummarySignal",
         "appendPromptToLastUserMessage",
@@ -10635,7 +10692,6 @@
         "historyUnitStarts",
         "isContinuableReadResult",
         "isReducedObservationView",
-        "lastAssistantTextOf",
         "lastSessionContextTokens",
         "learnedWindowCap",
         "loadContextCalibration",
@@ -10658,7 +10714,6 @@
         "pickSummaryFailure",
         "privacySummarySliceEnd",
         "protectedObservation",
-        "providerCompactInFlight",
         "providerContextWindow",
         "providerConversationContextWindow",
         "providerSummaryCall",
@@ -10673,14 +10728,9 @@
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
         "runAgentExternalCompact",
-        "runAgentWake",
         "runAutoCompaction",
         "runForcedOverflowCompaction",
         "runProviderCompact",
-        "runProviderCompactTracked",
-        "runSessionTurn",
-        "scheduleAgentWake",
-        "scheduleAgentWakesAtBoot",
         "sessionNotesBodyEmpty",
         "shrinkSerializedToolResult",
         "shrinkToolResultArray",
@@ -10688,7 +10738,6 @@
         "shrinkToolResultValue",
         "shrinkToolText",
         "singleSummaryCall",
-        "streamChat",
         "stripSummaryTaskEvidence",
         "summaryCallPolicyKey",
         "summaryCallPolicyMetadata",
@@ -10723,13 +10772,6 @@
         "writeHistorySnapshot"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionIdInvalid",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
@@ -10789,13 +10831,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "EventStreamHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fmtTokensServer",
           "kinds": [
             "call"
@@ -10818,13 +10853,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
           "kinds": [
             "call"
           ]
@@ -10859,13 +10887,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "call"
@@ -10876,20 +10897,6 @@
           "symbol": "resolveContextWindow",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SessionExecutionHooks",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -10937,13 +10944,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "safeSessionId",
           "kinds": [
             "call"
           ]
@@ -11047,50 +11047,8 @@
           ]
         },
         {
-          "provider": "01e-permission-modes.js",
-          "symbol": "permissionModeFrom",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "resolvePermissionMode",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-privacy-core.js",
-          "symbol": "PrivacyCore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "createSession",
           "kinds": [
             "call"
           ]
@@ -11139,13 +11097,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "rememberLastUsedEngineRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "repairProviderHistoryPairing",
           "kinds": [
             "call"
@@ -11160,42 +11111,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "sessionMessagesDelta",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionMessagesStamp",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionMissionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "sessionObjectIsStale",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionTodosSignature",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "updateSessionMeta",
           "kinds": [
             "call"
           ]
@@ -11222,13 +11138,6 @@
           ]
         },
         {
-          "provider": "02d-session-overrides.js",
-          "symbol": "sessionEngineRouteScopeOverrides",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02e-session-engine-route.js",
           "symbol": "configForSessionEngineRoute",
           "kinds": [
@@ -11236,78 +11145,8 @@
           ]
         },
         {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "inferSessionEngineRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "normalizeSessionEngineRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "sessionEngineRouteFromConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "assertSessionExecutionOwner",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "driverAutoSessions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "recordSessionExecutionOwner",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "requestSessionExecutionStop",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "sessionExecutionSnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "stopSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "turnOutcomePending",
           "kinds": [
             "read"
           ]
@@ -11348,13 +11187,6 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "runClaudeTurn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06-provider-engine.js",
           "symbol": "buildProviderSystemPrompt",
           "kinds": [
@@ -11369,45 +11201,309 @@
           ]
         },
         {
+          "provider": "06i-steward-core.js",
+          "symbol": "StewardHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "buildOpenAiTools",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "fetchOpenAiModels",
+          "kinds": [
+            "call"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "10a-session-turn.js",
+      "layer": "orchestration",
+      "provides": [
+        "SessionTurnRuntime",
+        "runProviderCompactTracked",
+        "runSessionTurn",
+        "scheduleAgentWakesAtBoot"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "DesktopExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "makeId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "SessionExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-privacy-core.js",
+          "symbol": "PrivacyCore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "createSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "loadSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "rememberLastUsedEngineRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionMessagesDelta",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionMessagesStamp",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionMissionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionTodosSignature",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "updateSessionMeta",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "sessionEngineRouteScopeOverrides",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02e-session-engine-route.js",
+          "symbol": "configForSessionEngineRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02e-session-engine-route.js",
+          "symbol": "inferSessionEngineRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02e-session-engine-route.js",
+          "symbol": "normalizeSessionEngineRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02e-session-engine-route.js",
+          "symbol": "sessionEngineRouteFromConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "assertSessionExecutionOwner",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "driverAutoSessions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "recordSessionExecutionOwner",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "requestSessionExecutionStop",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "sessionExecutionSnapshot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "stopSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "turnOutcomePending",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "05-claude-engine.js",
+          "symbol": "runClaudeTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "maybeWriteThreadBrief",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "settleThreadBrief",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06e-mission-domain.js",
           "symbol": "runMissionDriver",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "bindDriverRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "endDriverRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "revokeGrantsForRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11428,35 +11524,28 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardTaintToolCall",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardWatchedThread",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "buildOpenAiTools",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "fetchOpenAiModels",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "runOpenAiTurn",
           "kinds": [
-            "call"
+            "read"
+          ]
+        },
+        {
+          "provider": "10-context-governance.js",
+          "symbol": "runProviderCompact",
+          "kinds": [
+            "read"
           ]
         }
       ]
@@ -13199,6 +13288,7 @@
         "startServer",
         "startServerInner",
         "stopAllActiveTurnsSync",
+        "streamChat",
         "tailLinesFromBuffer",
         "writeStartError"
       ],
@@ -13478,7 +13568,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13861,7 +13952,8 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14857,13 +14949,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "autoResumeInterruptedRuns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
             "call"
@@ -14879,13 +14964,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "markInterruptedAgentRuns",
           "kinds": [
             "call"
           ]
@@ -14954,6 +15032,20 @@
           ]
         },
         {
+          "provider": "09b-agent-recovery.js",
+          "symbol": "autoResumeInterruptedRuns",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "09b-agent-recovery.js",
+          "symbol": "markInterruptedAgentRuns",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
           "kinds": [
@@ -14983,30 +15075,30 @@
         },
         {
           "provider": "10-context-governance.js",
+          "symbol": "truncateToolResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "10a-session-turn.js",
           "symbol": "runProviderCompactTracked",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "10-context-governance.js",
+          "provider": "10a-session-turn.js",
+          "symbol": "runSessionTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "10a-session-turn.js",
           "symbol": "scheduleAgentWakesAtBoot",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "streamChat",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "truncateToolResult",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -18611,7 +18703,7 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
+          "provider": "10a-session-turn.js",
           "symbol": "runSessionTurn",
           "kinds": [
             "call"
@@ -19485,7 +19577,7 @@
           ]
         },
         {
-          "provider": "08-agent-runs.js",
+          "provider": "09b-agent-recovery.js",
           "symbol": "AgentRecovery",
           "kinds": [
             "read"
@@ -22106,7 +22198,7 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
+          "provider": "10a-session-turn.js",
           "symbol": "runSessionTurn",
           "kinds": [
             "call"
@@ -23176,7 +23268,7 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
+          "provider": "10a-session-turn.js",
           "symbol": "runSessionTurn",
           "kinds": [
             "read"
@@ -27408,13 +27500,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "autoResumeInterruptedRuns",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
             "read"
@@ -27500,13 +27585,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "markInterruptedAgentRuns",
           "kinds": [
             "read"
           ]
@@ -27647,6 +27725,20 @@
         {
           "provider": "09-workflow.js",
           "symbol": "waitForAgentRunResults",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "09b-agent-recovery.js",
+          "symbol": "autoResumeInterruptedRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "09b-agent-recovery.js",
+          "symbol": "markInterruptedAgentRuns",
           "kinds": [
             "read"
           ]
@@ -27961,13 +28053,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "runSessionTurn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "summaryMaxConcurrent",
           "kinds": [
             "read"
@@ -28011,6 +28096,13 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "writeHistorySnapshot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "10a-session-turn.js",
+          "symbol": "runSessionTurn",
           "kinds": [
             "read"
           ]

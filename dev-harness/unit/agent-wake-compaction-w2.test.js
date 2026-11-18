@@ -17,8 +17,9 @@ process.env.RUYI_HOME = home;
 const { loadServerInternals } = require('../lib/server-internals');
 const {
   buildCompactionToolIndex, compactionTaskText, COMPACTION_TOOL_INDEX_HEADER,
-  agentWakeJobKey, agentWakeSkipsStatus, runGit,
-} = loadServerInternals(['buildCompactionToolIndex', 'compactionTaskText', 'COMPACTION_TOOL_INDEX_HEADER', 'agentWakeJobKey', 'agentWakeSkipsStatus', 'runGit']);
+  SessionTurnRuntime, runGit,
+} = loadServerInternals(['buildCompactionToolIndex', 'compactionTaskText', 'COMPACTION_TOOL_INDEX_HEADER', 'SessionTurnRuntime', 'runGit']);
+const { agentWakeJobKey, agentWakeSkipsStatus } = SessionTurnRuntime;
 
 const call = (name, args, id = 'call_1') => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
 const result = (text, id = 'call_1') => ({ role: 'tool', tool_call_id: id, content: text });

@@ -5,9 +5,10 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { EventEmitter } = require('node:events');
+const { createHttpChatStream } = require('../../ruyi-workbench/app/backend/http-chat-stream.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-display-http-'));
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), path.join(root, 'data')));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'streamChat', 'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'handleSessionApiRoutes', 'sessionMessagesStamp'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'safeSessionId', 'nowIso', 'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'handleSessionApiRoutes', 'sessionMessagesStamp'], { withEval: true });
 const fixture = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return fixture.vault.sealLocal(...args); };
@@ -16,7 +17,6 @@ const state = app.__eval(`(() => {
   const state = { config: null, session: null, live: { live: false }, run: null, steward: null, runner: {} };
   tokenOk = () => true;
   readConfig = async () => state.config;
-  runSessionTurn = opts => state.run(opts);
   runStewardTurn = opts => state.steward(opts);
   loadSession = async id => state.session && state.session.id === id ? state.session : null;
   readSessionHeadResilient = async () => state.session;
@@ -26,6 +26,10 @@ const state = app.__eval(`(() => {
   stewardInboxState = async () => ({ enabled: true });
   return state;
 })()`);
+const streamChat = createHttpChatStream({
+  runSessionTurn: input => state.run(input), PrivacyGateway: app.PrivacyGateway,
+  safeSessionId: app.safeSessionId, nowIso: app.nowIso,
+});
 const policy = mode => ({ privacyModeV1: mode, privacyRulesV1: [], privacyTechnicalV1: false, providers: [], stewardEnabledV1: true });
 const request = (method, url, body = {}) => Object.assign(new EventEmitter(), {
   method, url, headers: {}, socket: { setNoDelay() {} },
@@ -71,7 +75,7 @@ test('main HTTP projects only display copies and awaits split-token output befor
     opts.onEvent({ type: 'result', ok: true }); opts.onFlush();
   };
   // The trusted session frame, rather than a user-selected body id, binds new scope.
-  const res = response(); await app.streamChat(request('POST', '/api/chat/stream', { sessionId: 'sess_wrong_body', message: 'Public task', knownMessages: { count: 2, stamp: 'canonical-only' } }), res);
+  const res = response(); await streamChat(request('POST', '/api/chat/stream', { sessionId: 'sess_wrong_body', message: 'Public task', knownMessages: { count: 2, stamp: 'canonical-only' } }), res);
   const events = frames(res), shown = events.find(row => row.type === 'session');
   assert.equal(shown.session.messages[1].content, synthetic);
   assert.equal(shown.session.providerHistory[0].content, token);
@@ -92,7 +96,7 @@ test('actual history and streaming HTTP routes translate complete diagnostics wh
     for (const text of marker) { opts.onEvent({ type: 'assistant_delta', text }); opts.onEvent({ type: 'raw_line', line: 'synthetic wire metadata' }); }
     opts.onEvent({ type: 'assistant_delta', text: ' ordinary [' }); opts.onEvent({ type: 'result', ok: true });
   };
-  const streamed = response(); await app.streamChat(request('POST', '/api/chat/stream', { sessionId: id, message: 'Public task' }), streamed);
+  const streamed = response(); await streamChat(request('POST', '/api/chat/stream', { sessionId: id, message: 'Public task' }), streamed);
   assert.equal(frames(streamed).filter(row => row.type === 'assistant_delta').map(row => row.text).join(''), expected + ' ordinary [');
   assert.equal(JSON.stringify(session), before); assert.equal(streamed.writableEnded, true);
 });
@@ -115,7 +119,7 @@ test('HTTP display snapshots the session synchronously before the engine appends
     };
     const res = response();
     if (kind === 'main') {
-      state.run = run; await app.streamChat(request('POST', '/api/chat/stream', { message: 'Public task' }), res);
+      state.run = run; await streamChat(request('POST', '/api/chat/stream', { message: 'Public task' }), res);
     } else {
       state.steward = run; await app.handleStewardRunnerApiRoutes(request('POST', '/api/steward/message', { message: 'Public task' }), res, '/api/steward/message');
     }
@@ -134,7 +138,7 @@ test('main HTTP safely flushes a cancelled partial marker before closing the res
     opts.onEvent({ type: 'assistant_delta', text: 'Public prefix [[RUYI_PVT:EMA' });
     throw Error('synthetic cancellation');
   };
-  const res = response(); await assert.rejects(app.streamChat(request('POST', '/api/chat/stream', { message: 'Public task' }), res), /synthetic cancellation/);
+  const res = response(); await assert.rejects(streamChat(request('POST', '/api/chat/stream', { message: 'Public task' }), res), /synthetic cancellation/);
   const output = frames(res).filter(row => row.type === 'assistant_delta').map(row => row.text).join('');
   assert.ok(output.startsWith('Public prefix ')); assert.equal(output.includes('[[RUYI_PVT:'), false); assert.equal(output.includes(synthetic), false);
   assert.equal(res.writableEnded, true);
