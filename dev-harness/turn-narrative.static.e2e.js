@@ -15,7 +15,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-turn-narrative-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.WIN_CLAUDE_WORKBENCH_HOME || home;
 process.env.RUYI_HOME = process.env.RUYI_HOME || home;
 const { createTurnSegmentBuilder } = require(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'turn-segments.cjs'));
-const claude = read('ruyi-workbench/app/src/05-claude-engine.js');
+const claude = read('ruyi-workbench/app/backend/agent-cli-turn.cjs');
 const provider = read('ruyi-workbench/app/backend/provider-turn.cjs');
 const app = [
   read('ruyi-workbench/app/public/app.js'),

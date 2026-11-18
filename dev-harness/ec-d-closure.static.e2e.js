@@ -63,7 +63,7 @@ ok(/data-message-key/.test(frontend)
 const sessionStoreDomain = read(path.join(SRC, '02-session-store.js')) + read(path.join(SRC, '../backend/turn-segments.cjs'));
 ok(/function createTurnSegmentBuilder\(/.test(sessionStoreDomain)
   && /const batchId = String\(evt\.batchId/.test(sessionStoreDomain)
-  && /createTurnSegmentBuilder\(\)/.test(read(path.join(SRC, '05-claude-engine.js')))
+  && /createTurnSegmentBuilder\(\)/.test(read(path.join(SRC, '../backend/agent-cli-turn.cjs')))
   && /activeProviderBatchId/.test(read(path.join(SRC, '../backend/provider-turn.cjs'))),
 'E5 双引擎统一有序 segments，并保留并行工具 batchId');
 

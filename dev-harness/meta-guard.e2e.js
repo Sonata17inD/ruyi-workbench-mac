@@ -21,7 +21,7 @@ const pkg = require(path.join(WB, 'package.json'));
 const readme = fs.readFileSync(README, 'utf8');
 const readmeEn = fs.readFileSync(README_EN, 'utf8');
 const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-driver.cjs'), 'utf8');
-const claudeRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/src/05-claude-engine.js'), 'utf8'), 'runClaudeTurn');
+const claudeRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/agent-cli-turn.cjs'), 'utf8'), 'runClaudeTurn');
 const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/provider-turn.cjs'), 'utf8'), 'runOpenAiTurn');
 
 // Mac product identity and generated engineering facts are the documentation authority.
@@ -131,7 +131,7 @@ const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/pr
   // ① 文本只有一份:定义在 06b 的提示词包里,两条路都经 getPromptPack(...).answerShape 取,
   //    src/ 里不许出现第二处自己写的结论先行文字(那是「同一条规则两份口径」的老毛病)。
   const providerPrompt = fs.readFileSync(path.join(WB, 'app/backend/provider-stable-prompt.cjs'), 'utf8');
-  const accessors = ((src + '\n' + providerPrompt).match(/getPromptPack\([^)]*\)\.answerShape/g) || []).length;
+  const accessors = ((claudeRegion + '\n' + providerPrompt).match(/getPromptPack\([^)]*\)\.answerShape/g) || []).length;
   ok(accessors >= 2, 'G answerShape 经 getPromptPack 取用 ≥2 处(两个引擎各一次;实 ' + accessors + ')');
   const backend = path.join(WB, 'app/backend');
   const promptOwners = src + '\n' + fs.readdirSync(backend).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backend, name), 'utf8')).join('\n');

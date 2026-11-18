@@ -339,11 +339,11 @@ test('[M] 其余逐 CLI 决定', async () => {
 });
 
 test('[G] runClaudeTurn 骨架不再按 CLI 类型分叉', () => {
-  const src = fs.readFileSync(path.join(app, 'src', '05-claude-engine.js'), 'utf8');
-  const start = src.indexOf('async function runClaudeTurn(');
-  const end = src.indexOf('\n}\n', start);
-  assert.ok(start >= 0 && end > start);
-  const body = src.slice(start, end).split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
+  const { functionBlock } = require('../lib/source-slice');
+  const src = fs.readFileSync(path.join(app, 'backend', 'agent-cli-turn.cjs'), 'utf8');
+  const turn = functionBlock(src, 'runClaudeTurn');
+  assert.ok(turn);
+  const body = turn.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   assert.doesNotMatch(body, /agentCliType\s*[!=]==/, '按 agentCliType 比较的分叉都进适配器');
   assert.doesNotMatch(body, /[!=]==\s*'(?:claude|kimi)'/, '不与 CLI 名字面量比较');
   for (const call of ['effectiveAnthropicEnv(', 'parseAgentCliEvent(', 'parseClaudeEvent(', 'watchKimiWire(', 'syncKimiSessionUsage(',

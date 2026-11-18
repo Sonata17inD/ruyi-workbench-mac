@@ -144,7 +144,8 @@ const MISSION_INPUT = {
 
     // ── 钉点(静态):上面那五组是【时序】判据 —— 竞态窗口在快机器上只有几十毫秒宽,窗口没被命中时它们
     //    也会绿。故把修法的形状另外钉死一遍,防「窗口漂了 → 断言从此永远绿」这种假绿。
-    const src = readServerSource() + ['mission-lifecycle.cjs', 'session-persistence.cjs', 'provider-turn.cjs'].map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8')).join('\n');
+    const owners = ['mission-lifecycle.cjs', 'session-persistence.cjs', 'provider-turn.cjs', 'agent-cli-turn.cjs', 'kimi-acp-turn.cjs'];
+    const src = [readServerSource(), ...owners.map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8'))].join('\n');
     ok(/function mergeMissionBeforeSave\(session, onDisk\)/.test(src), 's 02 落盘前合并是【一个共用函数】(三引擎同一份语义)');
     ok(/if \(!disk\) return false;/.test(src) && /if \(diskSeq <= memSeq\) return false;/.test(src)
       && /String\(disk\.createdAt \|\| ''\) !== String\(mem\.createdAt \|\| ''\)/.test(src),

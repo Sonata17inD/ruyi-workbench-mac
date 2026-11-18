@@ -3664,7 +3664,6 @@
           "provider": "00-boot.js",
           "symbol": "buildAttachmentPrompt",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -3672,33 +3671,26 @@
           "provider": "00-boot.js",
           "symbol": "buildDeliveryRevisionPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "createCappedDiagnosticText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "createNdjsonLineFeeder",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -3726,42 +3718,28 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
+          "symbol": "lastAssistantEngine",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "lastAssistantEngine",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -3777,7 +3755,7 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3791,7 +3769,7 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3805,105 +3783,105 @@
           "provider": "01-config.js",
           "symbol": "agentCliLauncherUsable",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "buildClaudeAgentDefinitions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "buildModelHint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "buildUserEnvelope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "decodeClaudeCliText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "discoverModels",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "effectiveAnthropicEnv",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "generateSessionMcpConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "isAskUserTool",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "offlineModelList",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "prepareAgentCliSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncMcpServersToKimi",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "writeToChild",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3924,14 +3902,14 @@
           "provider": "01f-agent-cli-types.js",
           "symbol": "normalizeAgentCliType",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -3952,105 +3930,105 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "finalizeMissionAfterTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "isUntitledSessionTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mergeMissionBeforeSave",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "reconcileWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveTurnFinalSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02c-turn-segments.js",
           "symbol": "createTurnSegmentBuilder",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4071,91 +4049,91 @@
           "provider": "04-permission-runtime.js",
           "symbol": "appendLiveTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "assertSessionExecutionOwner",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "buildClaudeRecoveryHistory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "claudeProviderTailSince",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "claudeResumeRouteKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingPermissions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingQuestions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "discoverKimiModels",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "formatQuestionGuidance",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingQuestionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "installActiveChildEventFanout",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "isClaudeResumeMissingError",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4169,91 +4147,91 @@
           "provider": "04-permission-runtime.js",
           "symbol": "kimiModelList",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "lastSuccessfulClaudeModel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "nativeClaudeAgentResultInfo",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "parseClaudeEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "parseKimiStreamJsonEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "registerUserQuestion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "sameClaudeResumeCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04l-skill-registry.js",
           "symbol": "effectiveSkillSelection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04l-skill-registry.js",
           "symbol": "resolveEnabledSkillEntries",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4281,7 +4259,7 @@
           "provider": "05b-kimi-bridge.js",
           "symbol": "maybeAutoCompactAgentSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4386,28 +4364,28 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "appendMemorySection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "appendTurnPolicies",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "buildPromptTaskContext",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4421,21 +4399,21 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "buildOrchestrateHint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "getAgentWorkflows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4484,21 +4462,21 @@
           "provider": "06v-operational-services.js",
           "symbol": "engineTranscriptCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06w-capability-service.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06w-capability-service.js",
           "symbol": "peekCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

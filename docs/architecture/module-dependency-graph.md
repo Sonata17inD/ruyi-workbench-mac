@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2189 | 3151 | 601 | 15 | 0 | 0 |
+| 87 | 2189 | 3148 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -59,7 +59,7 @@
 | 41 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
 | 42 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
 | 43 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
-| 44 | `05-claude-engine.js` | engine | 3 | 121 | 24 |
+| 44 | `05-claude-engine.js` | engine | 3 | 118 | 24 |
 | 45 | `05b-kimi-bridge.js` | engine | 47 | 58 | 11 |
 | 46 | `06-provider-engine.js` | engine | 38 | 27 | 8 |
 | 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
@@ -176,7 +176,7 @@
 | `04m-voice-service.js` | `04-permission-runtime.js` | backward | `ToolboxHooks` |
 | `04m-voice-service.js` | `04h-provider-http.js` | backward | `providerBaseWithV1`, `providerPostJsonOnce` |
 | `04m-voice-service.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |
-| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `crypto`, `fsp`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `path`, `paths`, `redact`, `safeJsonParse` |
+| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeJsonParse` |
 | `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `05-claude-engine.js` | `01-config.js` | backward | `agentCliLauncherUsable`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi`, `writeToChild` |
 | `05-claude-engine.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP` |

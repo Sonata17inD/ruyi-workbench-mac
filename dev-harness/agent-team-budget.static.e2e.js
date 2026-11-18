@@ -49,7 +49,7 @@ const app = [
   read('app/public/app.js'),
   read('app/public/js/chat-stream-runtime.js'),
 ].join('\n');
-const claudeTurn = read('app/src/05-claude-engine.js');
+const claudeTurn = read('app/backend/agent-cli-turn.cjs');
 const providerTurn = read('app/backend/provider-turn.cjs');
 assert.ok(html.includes('id="agentTeamBtn"'));
 assert.ok(css.includes('.agent-team-btn[aria-pressed="true"]'));

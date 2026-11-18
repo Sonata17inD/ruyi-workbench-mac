@@ -145,7 +145,7 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   ok(/You are Kimi Code/.test(enKimi) && /native AskUserQuestion/.test(enKimi) && /Desktop control: disabled/.test(enKimi) && /no usable ripgrep/.test(enKimi), 'E2 英文 Kimi 版(原生提问/桌面关/无 rg)');
 
   /* ═══════════ F 接线(源码) ═══════════ */
-  const claude = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/src/05-claude-engine.js'), 'utf8');
+  const claude = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/agent-cli-turn.cjs'), 'utf8');
   const region = functionBlock(claude, 'runClaudeTurn');
   const codeOnly = region.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   const iUser = codeOnly.indexOf("appendSys = String(config.appendSystemPrompt || '');");

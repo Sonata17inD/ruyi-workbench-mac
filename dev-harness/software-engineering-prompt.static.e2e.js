@@ -87,7 +87,7 @@ ok(srv.planDiscoveryToolBatchAllowed([{ name: 'file_read' }, { name: 'file_write
 ok(srv.planDiscoveryToolBatchAllowed([{ name: 'orchestrate_agents' }], {}, {}) === false && srv.planDiscoveryToolBatchAllowed([{ name: 'todo_write' }], {}, {}) === false, 'plan discovery blocks delegation and planning-metadata side effects');
 ok(srv.planDiscoveryToolBatchAllowed([{ name: 'unknown_future_tool' }], {}, {}) === false, 'plan discovery fails closed for unknown tools');
 
-const claudeSrc = fs.readFileSync(path.join(SRC, '05-claude-engine.js'), 'utf8');
+const claudeSrc = fs.readFileSync(path.join(SRC, '../backend/agent-cli-turn.cjs'), 'utf8');
 const autonomySrc = fs.readFileSync(path.join(SRC, '07-autonomy.js'), 'utf8');
 const agentSrc = fs.readFileSync(path.join(SRC, '..', 'backend', 'subagent-runner.cjs'), 'utf8');
 const workflowSrc = fs.readFileSync(path.join(SRC, '../backend/provider-turn.cjs'), 'utf8');

@@ -90,7 +90,9 @@ async function getToken(port) {
   const net = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'net.js'), 'utf8');
   const zh = fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8');
   const en = fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'en-US.json'), 'utf8');
-  ok(/kind: 'claude' \}/.test(src) || /kind: 'claude',/.test(src) || /kind: 'claude'$/.test(src.trim()) || src.includes("kind: 'claude'"), 'S1 claude 引擎 reg 带 kind 标记(/api/steer 分派依据)');
+  const cliTurn = functionBlock(backend('agent-cli-turn.cjs'), 'runClaudeTurn');
+  ok(/const reg = \{[^\n]*kind: 'claude'/.test(cliTurn) && /registerSessionExecutionChild\(session\.id, reg, executionOwner\)/.test(cliTurn),
+    'S1 claude 引擎登记带 kind 标记的活回合(/api/steer 分派依据)');
   ok(steerRouteSrc.includes("reg.kind === 'claude'"), 'S2 /api/steer 按引擎分派 claude 分支在');
   ok(steerRouteSrc.includes('hasPendingQuestionForSession(sessionId)'), 'S3 提问挂起分流函数在(防插话误收为答案)');
   ok(src.includes("'--input-format', 'stream-json'") && src.includes('drainSteers'), 'S4 Claude 工作流节点持续输入与插话 drain 在');

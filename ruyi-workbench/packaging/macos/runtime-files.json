@@ -54,6 +54,8 @@
     "app/backend/mcp-client-runtime.cjs",
     "app/backend/mcp-connector-settings.cjs",
     "app/backend/agent-cli-events.cjs",
+    "app/backend/agent-cli-adapters.cjs",
+    "app/backend/agent-cli-turn.cjs",
     "app/backend/claude-resume-recovery.cjs",
     "app/backend/mission-membership.cjs",
     "app/backend/mission-card-projection.cjs",

@@ -23,7 +23,7 @@ const CENSUS = {
   '02-session-store.js': 2, // 创建与会话元数据存储端口。
   '../backend/session-meta-updates.cjs': 2, // 元数据立即／延后提交，使用撤回代数闸与有界重放。
   '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
-  '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
+  '../backend/agent-cli-turn.cjs': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
   '../backend/kimi-acp-turn.cjs': 2, // Kimi 回合自存，收尾走 saveTurnFinalSession。
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
   '07-autonomy.js': 1,           // steer 排空(回合自存)

@@ -129,7 +129,7 @@ const ok = (condition, label) => {
   ok(!['memory_save', 'memory_read', 'memory_list', 'memory_delete'].some(n => toolNames.has(n)), 'ACC memory tools are not native Workbench tools');
 
   const providerSource = fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench', 'app', 'backend', 'provider-prompt.cjs'), 'utf8');
-  const claudeSource = fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench', 'app', 'src', '05-claude-engine.js'), 'utf8');
+  const claudeSource = fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench', 'app', 'backend', 'agent-cli-turn.cjs'), 'utf8');
   const accSource = fs.readFileSync(path.join(__dirname, '..', 'mcp', 'ai-computer-control', 'src', 'ai_computer_control', 'server.py'), 'utf8');
   ok(/memoryCoreGuide/.test(providerSource) && /memoryCoreGuide/.test(claudeSource), 'both engines inject the Workbench Memory core protocol');
   ok(/ACC_HIDE_MEMORY/.test(accSource), 'ACC can suppress its legacy memory module after migration');

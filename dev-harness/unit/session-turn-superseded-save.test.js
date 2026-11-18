@@ -119,7 +119,7 @@ test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时�
   const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
   const engines = [
     ['../backend/provider-turn.cjs', 'runOpenAiTurn'],
-    ['05-claude-engine.js', 'runClaudeTurn'],
+    ['../backend/agent-cli-turn.cjs', 'runClaudeTurn'],
     ['../backend/kimi-acp-turn.cjs', 'runKimiAcpTurnPrepared'],
   ];
   for (const [file, fn] of engines) {

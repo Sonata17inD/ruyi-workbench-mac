@@ -163,7 +163,7 @@ ok(/\/api\/agent\/compact/.test(streamUi)
 ok(/isProviderMode\(\) \|\| !agentCliMeta\(currentEngineMeta\(\)\.agentCliType\)\.statusEndpoint/.test(sessionUi), 'Kimi status refresh cannot overwrite active Provider compaction usage');
 ok(/handle && !isProviderMode\(\) && agentCliMeta\(currentEngineMeta\(\)\.agentCliType\)\.statusEndpoint/.test(navigation), 'opening the Provider context popover cannot trigger a late Kimi usage overwrite');
 ok(/case 'tool_use_update'/.test(streamUi) && /card\.inp\.textContent/.test(streamUi), 'live Kimi tool input updates refresh the existing Ruyi tool card');
-const engine = fs.readFileSync(path.join(WB, 'app', 'src', '05-claude-engine.js'), 'utf8');
+const engine = fs.readFileSync(path.join(WB, 'app', 'backend', 'agent-cli-adapters.cjs'), 'utf8');
 // W6 设置重组翻面重钉：「用哪个命令行引擎」那枚静态 <select id="cfgAgentCliType">（带 <option value="kimi">）退役，
 // 并进「模型分配」主模型下拉 —— 两个命令行引擎由 AGENT_CLI_LABELS 现建成两项（选 Kimi Code = 写 agentCliType:kimi）。
 // 钉的仍是「设置里能选到 Kimi」：标签表里有它、主模型下拉按这张表建命令行那两项、Agent CLI 页签还在。

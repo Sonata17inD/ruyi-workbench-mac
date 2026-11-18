@@ -2,7 +2,7 @@
 // 静态锁：117q-B1（30 号文 §4.1「子进程 NDJSON 逐块解码」）。
 //
 // 钉两件事：
-//   ① 三条子进程 NDJSON 主干道（05-claude-engine.js 主回合、07-autonomy.js 子代理、
+//   ① 三条子进程 NDJSON 主干道（agent-cli-turn.cjs 主回合、07-autonomy.js 子代理、
 //      kimi-acp-rpc.cjs ACP）里【不再出现】旧缺陷形状——对每个 chunk 单独 chunk.toString('utf8')
 //      再拼接（CJK 3 字节，切在两个 data 事件之间会静默变成 U+FFFD）；三处改用同一份
 //      createNdjsonLineFeeder，且它在 text-codecs.cjs 里只有一份定义，不允许被复制到别的模块。
@@ -22,10 +22,10 @@ const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
 const readMod = file => fs.readFileSync(path.join(SRC, file), 'utf8');
 
 const boot = readMod('../backend/text-codecs.cjs');
-const claudeEngine = readMod('05-claude-engine.js');
+const claudeEngine = readMod('../backend/agent-cli-turn.cjs');
 const kimiRpc = readMod('../backend/kimi-acp-rpc.cjs');
 const autonomy = readMod('07-autonomy.js');
-const src = readServerSource() + '\n' + kimiRpc;
+const src = [readServerSource(), claudeEngine, kimiRpc].join('\n');
 
 console.log('\n── [A] 旧缺陷形状在整条逻辑全文里【零命中】──');
 // 旧形状: 某变量单独对 chunk 调 toString('utf8') 后再拼接(不经 StringDecoder)。
@@ -37,16 +37,16 @@ console.log('\n── [B] createNdjsonLineFeeder 只有一份定义,且落在 te
 const defRe = /function createNdjsonLineFeeder\(onLine\)\s*\{/g;
 ok(((src + boot).match(defRe) || []).length === 1, 'B1 整条逻辑全文里 createNdjsonLineFeeder 只定义一次');
 ok((boot.match(/function createNdjsonLineFeeder\(onLine\)\s*\{/g) || []).length === 1, 'B2 定义落在 text-codecs.cjs');
-for (const [file, body] of [['05-claude-engine.js', claudeEngine], ['kimi-acp-rpc.cjs', kimiRpc], ['07-autonomy.js', autonomy]]) {
+for (const [file, body] of [['agent-cli-turn.cjs', claudeEngine], ['kimi-acp-rpc.cjs', kimiRpc], ['07-autonomy.js', autonomy]]) {
   ok(!/function createNdjsonLineFeeder\(/.test(body), `B3 ${file} 没有自己复制一份定义(只消费共享解码器)`);
 }
 ok(/const \{ StringDecoder \} = require\('string_decoder'\);/.test(boot), 'B4 text-codecs.cjs 使用 StringDecoder(createNdjsonLineFeeder 内部依赖它,零新增运行时依赖)');
 ok(/decoder\.write\(chunk\)/.test(boot) && /decoder\.end\(\)/.test(boot), 'B5 createNdjsonLineFeeder 内部走 decoder.write/decoder.end,不是逐块 toString');
 
 console.log('\n── [C] 三处调用点都改用了 createNdjsonLineFeeder ──');
-ok(/const stdoutFeeder = createNdjsonLineFeeder\(consumeLine\);/.test(claudeEngine), 'C1 05-claude-engine.js 主回合走 createNdjsonLineFeeder(consumeLine)');
-ok(/child\.stdout\.on\('data', chunk => \{ stdoutFeeder\.push\(chunk\); \}\);/.test(claudeEngine), 'C2 05-claude-engine.js 的 data 处理器只转发给 feeder');
-ok(/stdoutFeeder\.flush\(\);/.test(claudeEngine), 'C3 05-claude-engine.js 收尾调用 flush()');
+ok(/const stdoutFeeder = createNdjsonLineFeeder\(consumeLine\);/.test(claudeEngine), 'C1 agent-cli-turn.cjs 主回合走 createNdjsonLineFeeder(consumeLine)');
+ok(/child\.stdout\.on\('data', chunk => \{ stdoutFeeder\.push\(chunk\); \}\);/.test(claudeEngine), 'C2 agent-cli-turn.cjs 的 data 处理器只转发给 feeder');
+ok(/stdoutFeeder\.flush\(\);/.test(claudeEngine), 'C3 agent-cli-turn.cjs 收尾调用 flush()');
 
 ok(/const stdoutFeeder = createNdjsonLineFeeder\(consumeLine\);/.test(autonomy), 'C4 07-autonomy.js 子代理走 createNdjsonLineFeeder(consumeLine)');
 ok(/child\.stdout\.on\('data', chunk => \{ stdoutFeeder\.push\(chunk\); \}\);/.test(autonomy), 'C5 07-autonomy.js 的 data 处理器只转发给 feeder');

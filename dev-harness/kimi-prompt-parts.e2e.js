@@ -6,9 +6,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const vm = require('vm');
+const { bracedBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
-const ENGINE = path.join(ROOT, 'ruyi-workbench', 'app', 'src', '05-claude-engine.js');
+const ENGINE = path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'agent-cli-turn.cjs');
 const { createKimiPromptParts } = require('../ruyi-workbench/app/backend/kimi-prompt-parts.cjs');
 let failures = 0;
 const ok = (condition, label) => {
@@ -249,10 +250,10 @@ const resetCounters = () => { statCalls = 0; readCalls = 0; openCalls = 0; guard
     const regularClaudePolicy = runPolicy({ ...slashInput, agentCliType: 'claude', message: 'continue normally', summary: '', override: null });
     ok(regularClaudePolicy.recoveryHistory === 'claude-history', 'Claude non-slash recovery history remains available');
     // 架构还债批 3 A:ACP 接管那一支改为问 CLI 适配器(AGENT_CLI_ADAPTERS.kimi.runPreparedTurn → runKimiAcpTurnPrepared),锚跟着换。
-    const acpAnchor = '  if (adapter.runPreparedTurn && !fakeClaude)';
-    ok(engine.indexOf(acpAnchor) >= 0 && /runPreparedTurn: context => runKimiAcpTurnPrepared\(context\)/.test(engine), '05 Kimi adapter hands the prepared turn to the ACP bridge');
-    const kimiBranch = engine.slice(engine.indexOf(acpAnchor), engine.indexOf('\n  // cmd8191', engine.indexOf(acpAnchor)));
-    ok(/session, message, attachments,/.test(kimiBranch) && /kimiNativeSlashCommand/.test(kimiBranch), '05 passes attachments and kimiNativeSlashCommand to the ACP bridge');
+    const kimiBranch = bracedBlock(engine, 'if (adapter.runPreparedTurn && !fakeClaude)');
+    const adapters = fs.readFileSync(path.join(path.dirname(ENGINE), 'agent-cli-adapters.cjs'), 'utf8');
+    ok(kimiBranch && /runPreparedTurn: context => runKimiAcpTurnPrepared\(context\)/.test(adapters), 'Kimi adapter hands the prepared turn to the ACP bridge');
+    ok(/session, message, attachments,/.test(kimiBranch) && /kimiNativeSlashCommand/.test(kimiBranch), 'CLI turn passes attachments and kimiNativeSlashCommand to the ACP bridge');
   } catch (error) {
     failures++;
     console.error('FAIL unexpected harness error:', error && error.stack || error);

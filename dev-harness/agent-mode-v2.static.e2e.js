@@ -104,7 +104,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(/if \(liveReg && liveReg\.session\) settleWaitEnvelopes\(liveReg\.session, out\);/.test(workflowRoutes) && /settleWaitEnvelopes\(snapshot, out\);/.test(workflowRoutes), '③ MCP 回环 wait 同一套结算(活回合内存会话 / 无活回合读快照 + mutateSession 落已读)');
   ok(!/function markDeliveredEnvelopes\(/.test(s09), '③ 09 旧的单向登记 markDeliveredEnvelopes 已被结算函数取代');
   ok(/const prefix = job\.kind === 'agent'/.test(jobs) && /\[代理完成通知；以下是交付信封/.test(jobs), '③ 后台账本 drainBackgroundJobs 对代理 job 用信封口径');
-  const s05 = src('05-claude-engine.js');
+  const s05 = src('../backend/agent-cli-turn.cjs');
   ok(/EventStreamHooks\.drainAgentEnvelopesText\(session\)/.test(s05) && /\[recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope\]/.test(s05), '③ 05 Claude/Kimi 下一回合开头拼入未读信封(同一张已读表)');
   ok(/const completion = run => deliverAgentRunEnvelope\(session\.id, run\);/.test(workflowRoutes) && !/appendAgentWorkflowSummaryToSession\(session\.id, run, \{ title/.test(workflowRoutes), '③ launch 完成投递信封(不追加整份助手摘要消息)');
 }

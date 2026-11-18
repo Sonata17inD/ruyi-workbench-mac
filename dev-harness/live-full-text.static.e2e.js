@@ -34,7 +34,7 @@ const experience = read(path.join(PUBLIC, 'js', 'session-experience.js'));
 const chatLive = read(path.join(PUBLIC, 'css', 'states', 'chat-live.css'));
 const turnSegments = read(path.join(SRC, '../backend/turn-segments.cjs'));
 const workflow = read(path.join(SRC, '../backend/provider-turn.cjs'));
-const claudeEngine = read(path.join(SRC, '05-claude-engine.js'));
+const claudeEngine = read(path.join(SRC, '../backend/agent-cli-turn.cjs'));
 const primitives = read(path.join(PUBLIC, 'js', 'chat-render-primitives.js'));
 
 // 纪律本身写在注释里(「本模块唯一的 setInterval」这种话),扫计数之前先把注释剥掉 ——
