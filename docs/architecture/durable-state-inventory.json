@@ -503,7 +503,7 @@
     {
       "id": "storage-trend",
       "pattern": "<data>/storage-trend.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/runtime-metrics.cjs",
       "anchor": "'storage-trend.json'",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson",

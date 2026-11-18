@@ -3811,6 +3811,120 @@
       ]
     },
     {
+      "file": "06v-operational-services.js",
+      "layer": "engine",
+      "provides": [
+        "buildMetricsPayload",
+        "buildOpsMetrics",
+        "claudeProjectDirKey",
+        "claudeProjectsRoot",
+        "collectAudit",
+        "collectStorageStats",
+        "desktopAuditEntriesFromResult",
+        "engineTranscriptCwd",
+        "maybeRecordStorageTrend",
+        "normalizeMetricsPath",
+        "readStorageTrend",
+        "recordEngineTranscript",
+        "recordRequestMetric",
+        "storageSweep",
+        "sweepEngineTranscriptsStore"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeJsonParse",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveExternalMcpServers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "SESSION_INDEX_FILE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "collectBridgedTools",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "mcpClients",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "sanitizeServerId",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "05-claude-engine.js",
       "layer": "engine",
       "provides": [
@@ -4508,13 +4622,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "engineTranscriptCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "evalPlaybookAvailability",
           "kinds": [
             "call"
@@ -4656,6 +4763,13 @@
         {
           "provider": "06e-mission-domain.js",
           "symbol": "buildMissionPromptSection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "engineTranscriptCwd",
           "kinds": [
             "call"
           ]
@@ -5350,7 +5464,6 @@
       "file": "06-provider-engine.js",
       "layer": "engine",
       "provides": [
-        "AUDIT_SUMMARY_MAP",
         "CAP_CACHE_MS",
         "CAP_PROBE_STALL_SLACK_MS",
         "CAP_PROBE_TIMEOUT_MS",
@@ -5360,13 +5473,7 @@
         "ERROR_CLASSES",
         "NETWORK_ANCHORS",
         "PROJECT_MEMORY_CAP",
-        "REQ_METRICS",
-        "REQ_METRICS_RECENT_MAX",
         "RUYI_MCP_TOOL_PREFIX",
-        "STORAGE_ARCHIVE_TERMINAL",
-        "STORAGE_STEWARD",
-        "STORAGE_TREND_MAX",
-        "STORAGE_TREND_MIN_GAP_MS",
         "THREAD_BRIEF_FIRST_TURN_TRIES",
         "THREAD_BRIEF_INPUT_CHARS",
         "THREAD_BRIEF_PER_MINUTE",
@@ -5377,11 +5484,8 @@
         "_capInflight",
         "_capRequestedKey",
         "_engineBriefMemo",
-        "auditSummaryFor",
         "buildBrowserAutomationHint",
         "buildEngineEnvBrief",
-        "buildMetricsPayload",
-        "buildOpsMetrics",
         "buildPlaybookIndexSection",
         "buildProviderSystemPrompt",
         "buildRuntimeIdentityFacts",
@@ -5390,17 +5494,9 @@
         "buildThreadBriefMessages",
         "buildToolCustomizationHint",
         "buildVolatileParts",
-        "claudeProjectDirKey",
-        "claudeProjectsRoot",
-        "collectAudit",
-        "collectChildProcessInfo",
-        "collectStorageStats",
         "deleteUserPlaybook",
-        "desktopAuditEntriesFromResult",
-        "dirStat",
         "draftPlaybookFromSession",
         "engineBriefFacts",
-        "engineTranscriptCwd",
         "evalPlaybookAvailability",
         "getCapabilities",
         "invalidateCapabilityCache",
@@ -5409,12 +5505,9 @@
         "loadAllPlaybooks",
         "markNetworkOnline",
         "matchServiceEntry",
-        "maybeRecordStorageTrend",
         "maybeWriteThreadBrief",
-        "metricsBucketIndex",
         "networkAnchors",
         "neutralizeAuthoredText",
-        "normalizeMetricsPath",
         "normalizePlaybook",
         "parseThreadBrief",
         "peekCapabilities",
@@ -5423,28 +5516,16 @@
         "probeDesktopMcp",
         "probeNetwork",
         "providerEnvLines",
-        "readDesktopAudit",
         "readProjectMemory",
-        "readStorageTrend",
-        "readWorkbenchAudit",
         "reassertThreadBrief",
-        "recordEngineTranscript",
-        "recordRequestMetric",
         "renderCliEnvBrief",
         "renderProviderStablePrompt",
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
-        "sampleProcessRss",
         "saveUserPlaybook",
         "settleThreadBrief",
         "shouldExtendToolIterationBudget",
-        "storageSweep",
-        "storageTrendPath",
-        "sweepAgentRunEventsStore",
-        "sweepEngineTranscriptsStore",
-        "sweepLogsStore",
-        "sweepWebcacheStore",
         "threadBriefCalls",
         "threadBriefDone",
         "threadBriefEnabled",
@@ -5524,13 +5605,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
@@ -5552,17 +5626,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "normalizeStoragePolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -5588,13 +5654,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -5604,7 +5663,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5637,13 +5695,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_CLI_TOOL_PREFIX",
           "kinds": [
@@ -5654,7 +5705,6 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5745,13 +5795,6 @@
           ]
         },
         {
-          "provider": "01o-execution-state.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
@@ -5784,13 +5827,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SESSION_BRIEF_TITLE_CHARS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "SESSION_INDEX_FILE",
           "kinds": [
             "read"
           ]
@@ -14637,34 +14673,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "buildMetricsPayload",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildOpsMetrics",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "collectAudit",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "collectStorageStats",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "deleteUserPlaybook",
           "kinds": [
             "call"
@@ -14707,13 +14715,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "maybeRecordStorageTrend",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "normalizePlaybook",
           "kinds": [
             "call"
@@ -14728,21 +14729,7 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "recordRequestMetric",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "saveUserPlaybook",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "storageSweep",
           "kinds": [
             "call"
           ]
@@ -15019,6 +15006,55 @@
           "symbol": "StewardHooks",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "buildMetricsPayload",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "buildOpsMetrics",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "collectAudit",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "collectStorageStats",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "maybeRecordStorageTrend",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "recordRequestMetric",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "storageSweep",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -15850,7 +15886,7 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
+          "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
           "kinds": [
             "call"
@@ -19365,13 +19401,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "collectAudit",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "draftPlaybookFromSession",
           "kinds": [
             "call"
@@ -19660,6 +19689,13 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "threadOriginOf",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "collectAudit",
           "kinds": [
             "call"
           ]
@@ -26370,13 +26406,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "buildMetricsPayload",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "buildPlaybookIndexSection",
           "kinds": [
             "read"
@@ -26426,34 +26455,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "claudeProjectDirKey",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "claudeProjectsRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "collectStorageStats",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "desktopAuditEntriesFromResult",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "ERROR_CLASSES",
           "kinds": [
             "read"
@@ -26489,13 +26490,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "maybeRecordStorageTrend",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "maybeWriteThreadBrief",
           "kinds": [
             "read"
@@ -26504,13 +26498,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "networkAnchors",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "normalizeMetricsPath",
           "kinds": [
             "read"
           ]
@@ -26545,27 +26532,6 @@
         },
         {
           "provider": "06-provider-engine.js",
-          "symbol": "readStorageTrend",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "recordEngineTranscript",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "recordRequestMetric",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
           "symbol": "resolveEngineEnvBrief",
           "kinds": [
             "read"
@@ -26581,13 +26547,6 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "shouldExtendToolIterationBudget",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "storageSweep",
           "kinds": [
             "read"
           ]
@@ -27491,6 +27450,83 @@
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "SCHEDULER_THREAD_TIERS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "buildMetricsPayload",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "claudeProjectDirKey",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "claudeProjectsRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "collectStorageStats",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "desktopAuditEntriesFromResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "maybeRecordStorageTrend",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "normalizeMetricsPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "readStorageTrend",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "recordEngineTranscript",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "recordRequestMetric",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06v-operational-services.js",
+          "symbol": "storageSweep",
           "kinds": [
             "read"
           ]
