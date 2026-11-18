@@ -58,16 +58,7 @@ function waitForAgentRunResults(...args) { return AgentResults.waitForAgentRunRe
 function settleWaitEnvelopes(...args) { return AgentResults.settleWaitEnvelopes(...args); }
 function deliverAgentRunEnvelope(...args) { return AgentResults.deliverAgentRunEnvelope(...args); }
 
-// 旧 spawn_agent 调用 → 单节点 orchestrate 参数(dependsOn 在单节点里无意义,提示改为一次 orchestrate 的 nodes)。
-function legacySpawnToOrchestrateArgs(args) {
-  const a = args && typeof args === 'object' ? args : {};
-  // 旧模型常把任务写在 prompt / description 里(Claude Code Task 工具的字段名):修前只认 task,于是零节点启动,
-  // 还配着一句「本次已按单节点代理执行」的说明。
-  const out = { task: a.task != null ? a.task : (a.prompt != null ? a.prompt : a.description), background: a.background === true };
-  for (const k of ['role', 'agentKey', 'toolTier', 'maxIters', 'model', 'resources']) if (a[k] != null) out[k] = a[k];
-  return out;
-}
-const LEGACY_SPAWN_NOTE = 'spawn_agent 已并入 orchestrate_agents(本次已按单节点代理执行)。下次请直接调用 orchestrate_agents({task, role?, background?});多代理依赖请在同一次调用的 nodes 里用 dependsOn 表达。';
+const { legacySpawnToOrchestrateArgs, LEGACY_SPAWN_NOTE } = require('./backend/agent-workflow.cjs');
 
 const launchPersistedAgentRun = require('./backend/persisted-agent-launch.cjs').createPersistedAgentLaunch({
   activeAgentRuns, activeChildren, agentRunFile, safeJsonParse, nowIso, readConfig,

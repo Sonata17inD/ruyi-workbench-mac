@@ -32,6 +32,8 @@ RUYI_UPGRADE_REQUIRED=1 node dev-harness/macos-upgrade-rollback.e2e.js
 
 浏览器夹具可通过 `RUYI_E2E_BROWSER` 指定 Chrome 或 Chromium 的可执行文件。需要 `realhist-fixtures/` 的测试会在夹具缺失时记录 `SKIP`，跳过项单独计数。 [浏览器查找规则](lib/browser-path.js)
 
+运行 `engine-env-runtime.e2e.js` 时，将 `RUYI_MACOS_OFFLINE_ASSETS` 指向离线打包准备器的输出目录。夹具使用当前资产锁校验并复制随包的 ripgrep。 [离线构建说明](../ruyi-workbench/desktop-macos/OFFLINE-PACKAGING.md)
+
 第54波的回合叙事视觉门禁可单独运行 `node dev-harness/dom-screenshot.e2e.js`；它调用系统 Edge/Chrome 截取明暗主题，并与 `visual-baselines/workbench-shell-v2.json` 的低分辨率感知网格比较。只有确认视觉变更是预期行为时才使用 `--update` 更新基线。
 
 运行时优化 shadow 有两层无外部依赖测试：`node dev-harness/runtime-shadow-benchmark.js` 用真实 native catalog 跑基础 60 条工具查询、20 条长 observation 与 30 条失败分类样本；`node dev-harness/runtime-shadow-adversarial.js` 再扩为检索误召回/歧义/typo/顺序确定性/1,000 项 catalog 压测、observation 保护误判/非法 JSON/幂等/5 MiB 载荷，以及写操作 transport ambiguity/指纹碰撞。结果分别写到被 git 忽略的 `dev-harness/ab-results/runtime-shadow-latest.json` 与 `runtime-shadow-adversarial-latest.json`。两件都不代表批准主动检索、主动 observation reducer 或自动重试；后者发现产品阻断项时仍可 exit 0，只有 shadow 行为等价、隐私或 fail-safe 不变量破坏才 exit 非零。F1 真实数据用 `node dev-harness/runtime-failure-report.js <RUYI_HOME>` 按最新分类器版本单独过门；分类器升级时可先运行 `node dev-harness/runtime-failure-replay.js <RUYI_HOME>`，它只输出新旧类别聚合和安全计数，不输出或改写原始工具结果。

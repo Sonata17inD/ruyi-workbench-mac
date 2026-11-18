@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2048 | 3083 | 595 | 14 | 0 | 0 |
+| 87 | 2047 | 3080 | 595 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -34,7 +34,7 @@
 | 16 | `04h-provider-http.js` | foundation | 13 | 1 | 1 |
 | 17 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 18 | `04i-provider-wire.js` | foundation | 45 | 21 | 2 |
-| 19 | `01-config.js` | foundation | 133 | 30 | 6 |
+| 19 | `01-config.js` | foundation | 132 | 29 | 6 |
 | 20 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
 | 21 | `01l-credential-recovery.js` | foundation | 2 | 11 | 3 |
 | 22 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
@@ -44,7 +44,7 @@
 | 26 | `02g-desktop-executions.js` | foundation | 1 | 0 | 0 |
 | 27 | `02h-desktop-ledger.js` | foundation | 1 | 4 | 3 |
 | 28 | `06f-autonomy-grants.js` | engine | 13 | 4 | 1 |
-| 29 | `02-session-store.js` | foundation | 230 | 57 | 9 |
+| 29 | `02-session-store.js` | foundation | 230 | 55 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 25 | 16 | 3 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 32 | `04-permission-runtime.js` | foundation | 78 | 47 | 6 |
@@ -108,7 +108,7 @@
 | 调用方 | 提供方 | 方向 | 符号 |
 |---|---|---|---|
 | `00-boot.js` | `00-platform-runtime.js` | backward | `platformRuntimeEnvironment` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `RUYI_EVENTS`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `samePathKey`, `text` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `RUYI_EVENTS`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `samePathKey` |
 | `01-config.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `01-config.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01-config.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `ProcessRuntime`, `existsExecutableAsync`, `spawnProbeAsync`, `spawnProbeSync` |
@@ -124,7 +124,7 @@
 | `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `invalidateConfigRecoveryState`, `mutateConfig`, `normalizeConfig`, `readConfig` |
 | `01l-credential-recovery.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01m-privacy-regex.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
-| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `clearDeletedSession`, `ensureDirs`, `fsp`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `sessionAssociatedSaveIsTombstoned`, `sessionSaveIsTombstoned` |
+| `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `clearDeletedSession`, `ensureDirs`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `pathWithinRoot`, `paths`, `safeJsonParse`, `sessionAssociatedSaveIsTombstoned`, `sessionSaveIsTombstoned` |
 | `02-session-store.js` | `01-config.js` | backward | `DurableJsonStore`, `assertSessionIdForPath`, `atomicWriteJson`, `mutateConfig`, `noteSessionsDirOwnWrite`, `readConfig`, `readFileTail`, `safeSessionId`, `selectedAgentCli`, `sessionBodyPaths`, `sessionPath` |
 | `02-session-store.js` | `01c-runtime-flags.js` | backward | `MEMORY_FIXED_SELECTION_HARD_MAX` |
 | `02-session-store.js` | `01e-permission-modes.js` | backward | `resolvePermissionMode` |

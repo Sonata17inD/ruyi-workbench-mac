@@ -160,19 +160,8 @@ const logEvent = require('./backend/audit-log.cjs').createAuditLog({ paths, nowI
 
 const { CLAUDE_ENDPOINT_PRESETS, claudeCostFields, normalizePricing, cachedInputTokensFromUsage, computeProviderCost } = require('./backend/provider-pricing.cjs');
 
-// 61-A3:给模型看的本地时间(provider 引擎每条 user 消息落历史时带一行,文案在 06b turnTime)。分钟粒度;
-// weekday 0 = 周日;offset 形如 UTC+08:00(日志 ts 是 UTC,模型要换算时靠它)。
-function localTurnTimeParts(ms) {
-  const d = new Date(ms);
-  const p2 = n => String(n).padStart(2, '0');
-  const off = -d.getTimezoneOffset();
-  const abs = Math.abs(off);
-  return {
-    stamp: `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`,
-    weekday: d.getDay(),
-    offset: `UTC${off >= 0 ? '+' : '-'}${p2(Math.floor(abs / 60))}:${p2(abs % 60)}`,
-  };
-}
+const { localTurnTimeParts } = require('./backend/engine-env-brief.cjs');
+
 const RUYI_EVENTS = require('./backend/workbench-events.cjs').createWorkbenchEvents();
 
 // 事件流模块(13r-event-stream.js)的延迟绑定命名空间 —— 先例是 06i 的 StewardHooks 与 06c 的
@@ -394,15 +383,8 @@ const AGENT_CLI_HOST = Object.freeze({
   syncMcpServersToKimi: config => syncMcpServersToKimi(config),
 });
 function detectKimiPath() { return detectAgentCliPath('kimi'); }
-function selectedAgentCli(config) {
-  const meta = AGENT_CLI_TYPES[normalizeAgentCliType(config && config.agentCliType)];
-  const detected = meta.detectPath(AGENT_CLI_HOST);
-  return { ...meta, path: String(config && config[meta.pathKey] || detected || ''), detected };
-}
-function prepareAgentCliSpawn(type, command, args) {
-  const argv = Array.isArray(args) ? args : [];
-  return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
-}
+const { selectedAgentCli, prepareAgentCliSpawn } =
+  require('./backend/agent-cli-discovery.cjs').createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST });
 
 const { decodeClaudeCliText } = require('./backend/text-codecs.cjs');
 const { buildClaudeCliEnv, effectiveAnthropicEnv } = require('./backend/claude-cli-env.cjs');
@@ -420,42 +402,10 @@ const DesktopMcpDiscovery = require('./backend/desktop-mcp-discovery.cjs').creat
 const { detectDesktopMcp, detectDesktopMcpAsync, desktopMcpFromInstalledRoot, ensureDesktopMcpWarm } = DesktopMcpDiscovery;
 function desktopMcpDetectionPending(config) { return DesktopMcpDiscovery.desktopMcpDetectionPending(config); }
 
-// 走查 W1·F10:script_run 把脚本明文落在 <generated>/scripts/,正常路径执行完立刻删(12 script_run 的 finally);进程被强杀 / 杀毒占着删不掉时
-// 会留下孤儿 —— 里面可能有模型嵌进去的密钥。这里按龄兜底:启动时扫一次(13 起服务处调),超过 SCRIPT_FILE_MAX_AGE_MS 没动过的删。
-// 脚本最长跑 30 分钟(timeoutMs 上限 1800000),一天的余量足够不碰在跑的。只删 scripts/ 下的普通文件,失败静默(旁路清理)。
-// screenshot-*.png 不在此列:聊天里的工具图片卡片经 /api/file/preview 按路径回读它们,清掉会让历史对话里的截图变成裂图。
-const SCRIPT_FILE_MAX_AGE_MS = 24 * 3600 * 1000;
-async function sweepStaleScriptFiles(nowMs = Date.now()) {
-  const dir = path.join(paths.generated, 'scripts');
-  let names = [];
-  try { names = await fsp.readdir(dir); } catch { return 0; }
-  let removed = 0;
-  for (const name of names) {
-    const file = path.join(dir, name);
-    try {
-      const st = await fsp.lstat(file);
-      if (st.isFile() && nowMs - st.mtimeMs > SCRIPT_FILE_MAX_AGE_MS) { await fsp.unlink(file); removed += 1; }
-    } catch { /* 并发删除 / 一时被锁:下个进程再扫 */ }
-  }
-  return removed;
-}
+const sweepStaleScriptFiles = require('./backend/file-persistence.cjs').createGeneratedScriptCleanup(paths);
 
-// --- Interactive stream-json envelopes (defensive; exact shapes are underdocumented). ---
-function buildUserEnvelope(text) {
-  return { type: 'user', message: { role: 'user', content: [{ type: 'text', text: String(text || '') }] } };
-}
-function writeToChild(sessionId, obj) {
-  const reg = activeChildren.get(sessionId);
-  if (!reg || !reg.child || !reg.child.stdin.writable) return false;
-  try {
-    if (typeof PrivacyCore !== 'undefined') PrivacyCore.configHooks.assertCliAllowed?.();
-    reg.child.stdin.write(JSON.stringify(obj) + '\n', 'utf8'); return true;
-  } catch { return false; }
-}
-// Tools the workbench OWNS the interactive answer for (never intercept tools the CLI runs itself).
-function isAskUserTool(name) {
-  return typeof name === 'string' && name.replace(/[^a-z]/gi, '').toLowerCase().includes('askuserquestion');
-}
+const { buildUserEnvelope, writeToChild, isAskUserTool } =
+  require('./backend/cli-interactive-input.cjs').createCliInteractiveInput({ activeChildren, PrivacyCore });
 
 const { staticBase, serveStatic } = require('./backend/static-assets.cjs').createStaticAssets({
   externalRoot, publicDirectory: path.join(__dirname, 'public'), pathWithinRoot, requestIsLoopback, runtime: RUNTIME,
@@ -527,77 +477,11 @@ Object.assign(PrivacyCore.configHooks, CredentialRecovery.create({
 // Explicit module boundary; implementation and tests belong to backend/turn-segments.cjs.
 const { createTurnSegmentBuilder } = require('./backend/turn-segments.cjs');
 
-// 02d-session-overrides.js - 架构还债批 3·B: 从 02-session-store.js 搬出的会话级内存覆盖表(引擎路由/权限档/桌面工具的 live-turn stale-save guard;纯搬家,零行为变更)。
-const sessionEngineRouteOverrides = new Map(); // live-turn stale-save guard for UI route changes
-const sessionEngineRouteScopeOverrides = new Map(); // 与路由同寿命，守住显式“仅此任务”的选择
-// 116-2a(27 号文 §3.3/§8.6 线程权限就地快切):会话级权限档的内存权威副本 —— 与上面那张 engineRoute
-// 覆盖表同款「live-turn stale-save guard」。值为档名,或 ''(= 用户清除了会话级设置,回落全局)。
-// 为什么需要它:活回合手里那份会话内存副本是回合开始时的快照,不带用户刚切的权限档;它的收尾 save
-// 会把整个会话头写回「没有该字段」的样子。loadSession / saveSession 两侧都应用这张表,任何顺序下
-// 快切都不会被回合的陈旧副本吞掉,也让「点开即换、立即生效」对所有读者(含还没落盘的那一刻)成立。
-// 表为空时全部应用点都是零操作 —— 没有设过会话级权限的会话(含全部存量会话)行为逐字节不变。
-const sessionPermissionModeOverrides = new Map();
-// 会话头 permissionMode 的白名单归一:''/null/非法值一律归成 ''(= 清除会话级设置,回落全局默认)。
-function normalizeSessionPermissionMode(value) {
-  const mode = value == null ? '' : String(value);
-  return PERMISSION_MODES.includes(mode) ? mode : '';
-}
-// 会话级权限档的读形:合法则返回档名,否则 null(【不】在这里填全局值 —— 见 sessionMeta 的注释)。
-function sessionPermissionModeOf(o) {
-  const mode = normalizeSessionPermissionMode(o && o.permissionMode);
-  return mode || null;
-}
-// 把内存覆盖表盖到一个会话对象/会话头上(装载时与落盘前各一次)。没有条目就原样返回。
-function applySessionPermissionModeOverride(session) {
-  const id = session && session.id;
-  if (!id || !sessionPermissionModeOverrides.has(id)) return session;
-  const mode = sessionPermissionModeOverrides.get(id);
-  if (mode) session.permissionMode = mode; else delete session.permissionMode;
-  return session;
-}
-// 117m-A1(用户第六轮走查②;27 号文 §3.3/§8.6):活回合中途改档,闸门要读【此刻】的会话级档,
-// 而不是回合开始时的那个快照。修前 10-context-governance 在回合开始时把三层解析成一个不可变快照
-// (resolvePermissionMode(request > session > config)),09/08 全程读它 —— 上面 sessionMetaDeferChains
-// 的设计注释 ② 自称「permissionMode 先进内存覆盖表…对所有读者立刻是新值」,但 09 的闸门从来没读过
-// 这张表,那句话对活回合从未成立。后果是用户在最该收紧/放宽的那几分钟里改档等于没改(放宽只是费
-// token,反过来「想临时收紧」失效则是安全问题)。
-// 本函数【只读】,不碰延后落盘那条链;档位仍然只有 PATCH 一个写口。
-// '' = 用户清了会话级设置(回落全局),此时返回 null 让调用方继续用它自己的解析结果 —— 中途「清除」
-// 要到下一个回合才生效。这是有意的保守取舍:清除是回落全局,方向不定,不在活回合里替用户猜。
-function liveSessionPermissionMode(id) {
-  const mode = sessionPermissionModeOverrides.get(String(id || ''));
-  return mode ? mode : null;
-}
-
-// ── 117z-E2 提交①(27 号文 §11.21.3):会话级【桌面工具】覆盖 ───────────────────────────────
-// 修前 `allowDesktopTools` 是【全局唯一】的一把闸(07-autonomy:99),在 buildOpenAiTools 的注册层
-// 决定桌面工具要不要提供给模型;没有任何会话级覆盖。本波加的是【另一把钥匙】,不动那把全局闸:
-//   · session.desktopTools === true   -> 这条线程拿得到桌面工具(与全局值无关);
-//   · session.desktopTools === false  -> 这条线程拿不到(与全局值无关);
-//   · 缺席 / null                     -> 跟随全局 allowDesktopTools(= 全部存量会话的行为逐字节不变)。
-// 三态而不是布尔:两态分不出「这条线程自己定了」与「跟着全局走」,与 permissionMode 的 chip 同一条
-// 理由(见 sessionMeta 里那段注释)。
-function normalizeSessionDesktopTools(value) {
-  if (value === true) return true;
-  if (value === false) return false;
-  return null;   // null/''/缺席/任何野值 -> 跟随全局(fail-open 到【修前行为】,不是 fail-open 到放行)
-}
-// 读形:true / false / null(null = 没设过会话级覆盖)。
-function sessionDesktopToolsOf(o) {
-  return normalizeSessionDesktopTools(o && o.desktopTools);
-}
-// 与 sessionPermissionModeOverrides 同款「live-turn stale-save guard」:活回合手里那份会话内存副本是
-// 回合开始时的快照,不带刚写下的覆盖值;它的收尾 save 会把整个会话头写回「没有该字段」的样子。
-// loadSession / saveSession 两侧都盖一次,任何顺序下这次改动都不会被回合的陈旧副本吞掉。
-// 表为空时全部应用点都是零操作 —— 没设过会话级桌面覆盖的会话(含全部存量会话)行为逐字节不变。
-const sessionDesktopToolsOverrides = new Map();   // id -> true | false | null(null = 清除,回落全局)
-function applySessionDesktopToolsOverride(session) {
-  const id = session && session.id;
-  if (!id || !sessionDesktopToolsOverrides.has(id)) return session;
-  const value = sessionDesktopToolsOverrides.get(id);
-  if (value === null) delete session.desktopTools; else session.desktopTools = value;
-  return session;
-}
+const {
+  sessionEngineRouteOverrides, sessionEngineRouteScopeOverrides, sessionPermissionModeOverrides,
+  normalizeSessionPermissionMode, sessionPermissionModeOf, applySessionPermissionModeOverride, liveSessionPermissionMode,
+  normalizeSessionDesktopTools, sessionDesktopToolsOf, sessionDesktopToolsOverrides, applySessionDesktopToolsOverride,
+} = require('./backend/session-overrides.cjs').createSessionOverrides({ PERMISSION_MODES });
 
 const {
   normalizeSessionEngineRoute, sessionEngineRouteFromConfig, inferSessionEngineRoute, configForSessionEngineRoute,
@@ -641,6 +525,9 @@ const { grantIssueTierInfo, resolveToolPermissionContext, normalizeGrant, consum
 const SESSION_STORAGE_VERSION = 2;
 // 架构还债批 3·B: 会话级内存覆盖表(sessionEngineRouteOverrides/权限档/桌面工具)与其归一、应用函数抽至 02d-session-overrides.js。
 
+const { sessionRewindGenHighWater, sessionObjectIsStale } =
+  require('./backend/session-files.cjs').createSessionRewindWatermark();
+
 const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, parseSessionNotesMarkdown,
   mergeSessionNotes, buildSessionNotesInjectPrompt } = require('./backend/session-notes.cjs');
 const { sessionNotesPath, readSessionNotes, writeSessionNotes, removeSessionNotes, maybeWriteSessionNotes } =
@@ -678,7 +565,7 @@ const { sessionScratchpadPath, scratchpadWriteInFlight, readSessionScratchpad, u
 // 只在进程内:重启后表为空,所有对象都从盘上新读(loadSession 每次都 JSON.parse 新解析,没有对象缓存),
 // 不会误丢。loadSession 另有一道自愈:读到的代数低于高水位 = 这次读恰好落在「代数已抬、撤回那一存还没
 // 落盘」的窗口里 → 等写链跑完再读一次,所以撤回【之后】才读的人永远拿到撤回之后的状态。
-const sessionRewindGenHighWater = new Map();
+
 // 第79波:changeSeq 不再只有一个计数器。每次事实推进同时写一条 append-only change record，
 // 让回来摘要可以严格消费 (lastSeenRevision,currentRevision]，并保留可追溯的原始 source cursor。
 // 老任务可能已有 changeSeq、却没有本流水：首条记录的前缀被视为 migration baseline；前端首读
@@ -689,8 +576,8 @@ const MissionChanges = require('./backend/mission-changes.cjs').createMissionCha
   invalidateReads: id => SessionPersistence.invalidateReads(id), events: RUYI_EVENTS,
 });
 const { missionChangeFilePath, boundedChangeText, normalizeMissionChangePayload, repairMissionChangeTornTail, appendMissionChangeRecord, foldMissionChangeJournalText, readMissionChangesWithMeta, bumpMissionChangeSeq, missionSignalThrottleAllow, recordMissionStalledChange, recordMissionBudgetTrippedChange, MISSION_CHANGE_TYPES, MISSION_STALL_SIGNAL_WINDOW_MS } = MissionChanges;
-function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
-function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
+const { agentRunDir, agentRunFile } =
+  require('./backend/session-files.cjs').createAgentRunPaths({ paths, safeSessionId });
 
 const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunStore({
   files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
@@ -857,12 +744,6 @@ const { saveTurnFinalSession, withSessionMutateLock, mutateSession } = require('
   loadSession, saveSession, logEvent,
 });
 
-// 一份内存里的会话对象是不是撤回之前读出来的(驱动器、旁车写入用它判「还该不该接着干」)。
-function sessionObjectIsStale(session) {
-  if (!session || !session.id) return false;
-  return (Number(session.rewindGen) || 0) < (sessionRewindGenHighWater.get(session.id) || 0);
-}
-
 // 50-fix(标题卡死):未命名标题判定 —— 后端占位 'New session' 与历史前端本地化占位('新会话'/'New chat')
 // 均视为未命名,两引擎回合结束据此自动命名(历史会话下一轮补名)。
 const createSession = require('./backend/session-creation.cjs').createSessionService({
@@ -887,15 +768,12 @@ const createSession = require('./backend/session-creation.cjs').createSessionSer
 // A journal write that throws simply skips its index entry; the tool runs regardless. The trade-off is
 // deliberate — a checkpoint is a safety net, and a broken safety net must never stop the user's work.
 // ============================================================================
-async function checkpointRollbackContext(sessionId) {
-  let guardSession = null, guardConfig = null;
-  try { guardSession = await loadSession(sessionId); } catch { guardSession = null; }
-  try { guardConfig = await readConfig(); } catch { guardConfig = {}; }
-  return {
-    session: guardSession, config: guardConfig,
-    effectivePermissionMode: resolvePermissionMode({ session: guardSession, config: guardConfig }),
-  };
-}
+const { checkpointRollbackContext, journalSessionCtx } =
+  require('./backend/checkpoint-journal.cjs').createCheckpointContext({
+    loadSession, readConfig, resolvePermissionMode, process,
+    journalResolveTurnSeq: (...args) => journalResolveTurnSeq(...args),
+  });
+
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
   paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, logEvent, nowIso, pathWithinRoot, runGit,
   safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
@@ -953,17 +831,6 @@ const SessionRewind = require('./backend/session-rewind.cjs').createSessionRewin
 const { rewindSession } = SessionRewind;
 SessionExecutionHooks.admissionBlocked = SessionRewind.admissionBlocked;
 
-// Resolve the journal {sessionId, turnSeq} for a file-mutating toolCall. Priority:
-//  - ctx (provider loop passes its live session.id + session.turnSeq) → authoritative;
-//  - else the MCP child reads WCW_SESSION_ID env + the session file's turnSeq (read-only, no race).
-// Returns {sessionId, turnSeq} where either may be falsy/null → journalRecord then no-ops gracefully.
-async function journalSessionCtx(ctx) {
-  if (ctx && ctx.sessionId && Number.isFinite(ctx.turnSeq)) return { sessionId: ctx.sessionId, turnSeq: Number(ctx.turnSeq) };
-  const sessionId = (ctx && ctx.sessionId) || process.env.WCW_SESSION_ID || '';
-  const turnSeq = await journalResolveTurnSeq(sessionId, ctx && ctx.turnSeq);
-  return { sessionId, turnSeq };
-}
-
 // ============================================================================
 // 第 116 波 116g(27 号文 §3.1「事项跨会话升格」):事项(Mission)容器。
 //
@@ -995,11 +862,9 @@ async function journalSessionCtx(ctx) {
 const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, atomicWriteJson });
 const { safeMissionId, readMissionContainer, withMissionContainerLock, writeMissionContainer, listMissionContainers, createMissionContainer, patchMissionContainer, missionIndexAdd, missionIndexRemove, MISSION_CONTAINER_MAX_FILES } = MissionStore;
 
-async function readMissionSessionHead(sessionId) {
-  const sid = safeSessionId(sessionId);
-  if (!sid) return null;
-  try { return applySessionTitleOverride(safeJsonParse(await fsp.readFile(sessionPath(sid), 'utf8'), null)); } catch { return null; }
-}
+const readMissionSessionHead = require('./backend/session-files.cjs').createMissionSessionHeadReader({
+  safeSessionId, sessionPath, applySessionTitleOverride, safeJsonParse,
+});
 
 const { missionAttachThread, missionDetachThread, missionMergeInto, missionSplitThreads } = require('./backend/mission-membership.cjs').createMissionMembership({
   store: MissionStore,
@@ -1430,19 +1295,9 @@ const repairNodeJsonViaProvider = require('./backend/provider-raw-completion.cjs
   providerRawCompletion, appendUsageLedger,
 });
 
-function buildRuntimeIdentityFacts() {
-  const host = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.host) || '127.0.0.1';
-  const port = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.port) || DEFAULT_PORT;
-  return {
-    appName: APP_NAME,
-    version: VERSION,
-    launchMode: 'node',
-    installDir: externalRoot(),
-    dataDir: dataRoot(),
-    address: 'http://' + host + ':' + port,
-    instanceId: OVERLAY_ID,
-  };
-}
+const buildRuntimeIdentityFacts = require('./backend/engine-env-brief.cjs').createRuntimeIdentityFacts({
+  RUNTIME, DEFAULT_PORT, APP_NAME, VERSION, OVERLAY_ID, externalRoot, dataRoot,
+});
 
 const { buildEngineEnvBrief, resolveEngineEnvBrief } = require('./backend/engine-env-brief.cjs').createEngineEnvBrief({
   appName: APP_NAME, buildRuntimeIdentityFacts, probeRgAsync,
@@ -1974,16 +1829,7 @@ function waitForAgentRunResults(...args) { return AgentResults.waitForAgentRunRe
 function settleWaitEnvelopes(...args) { return AgentResults.settleWaitEnvelopes(...args); }
 function deliverAgentRunEnvelope(...args) { return AgentResults.deliverAgentRunEnvelope(...args); }
 
-// 旧 spawn_agent 调用 → 单节点 orchestrate 参数(dependsOn 在单节点里无意义,提示改为一次 orchestrate 的 nodes)。
-function legacySpawnToOrchestrateArgs(args) {
-  const a = args && typeof args === 'object' ? args : {};
-  // 旧模型常把任务写在 prompt / description 里(Claude Code Task 工具的字段名):修前只认 task,于是零节点启动,
-  // 还配着一句「本次已按单节点代理执行」的说明。
-  const out = { task: a.task != null ? a.task : (a.prompt != null ? a.prompt : a.description), background: a.background === true };
-  for (const k of ['role', 'agentKey', 'toolTier', 'maxIters', 'model', 'resources']) if (a[k] != null) out[k] = a[k];
-  return out;
-}
-const LEGACY_SPAWN_NOTE = 'spawn_agent 已并入 orchestrate_agents(本次已按单节点代理执行)。下次请直接调用 orchestrate_agents({task, role?, background?});多代理依赖请在同一次调用的 nodes 里用 dependsOn 表达。';
+const { legacySpawnToOrchestrateArgs, LEGACY_SPAWN_NOTE } = require('./backend/agent-workflow.cjs');
 
 const launchPersistedAgentRun = require('./backend/persisted-agent-launch.cjs').createPersistedAgentLaunch({
   activeAgentRuns, activeChildren, agentRunFile, safeJsonParse, nowIso, readConfig,

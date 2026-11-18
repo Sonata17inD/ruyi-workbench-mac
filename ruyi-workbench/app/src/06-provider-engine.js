@@ -20,19 +20,9 @@ const repairNodeJsonViaProvider = require('./backend/provider-raw-completion.cjs
   providerRawCompletion, appendUsageLedger,
 });
 
-function buildRuntimeIdentityFacts() {
-  const host = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.host) || '127.0.0.1';
-  const port = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.port) || DEFAULT_PORT;
-  return {
-    appName: APP_NAME,
-    version: VERSION,
-    launchMode: 'node',
-    installDir: externalRoot(),
-    dataDir: dataRoot(),
-    address: 'http://' + host + ':' + port,
-    instanceId: OVERLAY_ID,
-  };
-}
+const buildRuntimeIdentityFacts = require('./backend/engine-env-brief.cjs').createRuntimeIdentityFacts({
+  RUNTIME, DEFAULT_PORT, APP_NAME, VERSION, OVERLAY_ID, externalRoot, dataRoot,
+});
 
 const { buildEngineEnvBrief, resolveEngineEnvBrief } = require('./backend/engine-env-brief.cjs').createEngineEnvBrief({
   appName: APP_NAME, buildRuntimeIdentityFacts, probeRgAsync,

@@ -105,15 +105,8 @@ const AGENT_CLI_HOST = Object.freeze({
   syncMcpServersToKimi: config => syncMcpServersToKimi(config),
 });
 function detectKimiPath() { return detectAgentCliPath('kimi'); }
-function selectedAgentCli(config) {
-  const meta = AGENT_CLI_TYPES[normalizeAgentCliType(config && config.agentCliType)];
-  const detected = meta.detectPath(AGENT_CLI_HOST);
-  return { ...meta, path: String(config && config[meta.pathKey] || detected || ''), detected };
-}
-function prepareAgentCliSpawn(type, command, args) {
-  const argv = Array.isArray(args) ? args : [];
-  return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
-}
+const { selectedAgentCli, prepareAgentCliSpawn } =
+  require('./backend/agent-cli-discovery.cjs').createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST });
 
 const { decodeClaudeCliText } = require('./backend/text-codecs.cjs');
 const { buildClaudeCliEnv, effectiveAnthropicEnv } = require('./backend/claude-cli-env.cjs');
@@ -131,42 +124,10 @@ const DesktopMcpDiscovery = require('./backend/desktop-mcp-discovery.cjs').creat
 const { detectDesktopMcp, detectDesktopMcpAsync, desktopMcpFromInstalledRoot, ensureDesktopMcpWarm } = DesktopMcpDiscovery;
 function desktopMcpDetectionPending(config) { return DesktopMcpDiscovery.desktopMcpDetectionPending(config); }
 
-// 走查 W1·F10:script_run 把脚本明文落在 <generated>/scripts/,正常路径执行完立刻删(12 script_run 的 finally);进程被强杀 / 杀毒占着删不掉时
-// 会留下孤儿 —— 里面可能有模型嵌进去的密钥。这里按龄兜底:启动时扫一次(13 起服务处调),超过 SCRIPT_FILE_MAX_AGE_MS 没动过的删。
-// 脚本最长跑 30 分钟(timeoutMs 上限 1800000),一天的余量足够不碰在跑的。只删 scripts/ 下的普通文件,失败静默(旁路清理)。
-// screenshot-*.png 不在此列:聊天里的工具图片卡片经 /api/file/preview 按路径回读它们,清掉会让历史对话里的截图变成裂图。
-const SCRIPT_FILE_MAX_AGE_MS = 24 * 3600 * 1000;
-async function sweepStaleScriptFiles(nowMs = Date.now()) {
-  const dir = path.join(paths.generated, 'scripts');
-  let names = [];
-  try { names = await fsp.readdir(dir); } catch { return 0; }
-  let removed = 0;
-  for (const name of names) {
-    const file = path.join(dir, name);
-    try {
-      const st = await fsp.lstat(file);
-      if (st.isFile() && nowMs - st.mtimeMs > SCRIPT_FILE_MAX_AGE_MS) { await fsp.unlink(file); removed += 1; }
-    } catch { /* 并发删除 / 一时被锁:下个进程再扫 */ }
-  }
-  return removed;
-}
+const sweepStaleScriptFiles = require('./backend/file-persistence.cjs').createGeneratedScriptCleanup(paths);
 
-// --- Interactive stream-json envelopes (defensive; exact shapes are underdocumented). ---
-function buildUserEnvelope(text) {
-  return { type: 'user', message: { role: 'user', content: [{ type: 'text', text: String(text || '') }] } };
-}
-function writeToChild(sessionId, obj) {
-  const reg = activeChildren.get(sessionId);
-  if (!reg || !reg.child || !reg.child.stdin.writable) return false;
-  try {
-    if (typeof PrivacyCore !== 'undefined') PrivacyCore.configHooks.assertCliAllowed?.();
-    reg.child.stdin.write(JSON.stringify(obj) + '\n', 'utf8'); return true;
-  } catch { return false; }
-}
-// Tools the workbench OWNS the interactive answer for (never intercept tools the CLI runs itself).
-function isAskUserTool(name) {
-  return typeof name === 'string' && name.replace(/[^a-z]/gi, '').toLowerCase().includes('askuserquestion');
-}
+const { buildUserEnvelope, writeToChild, isAskUserTool } =
+  require('./backend/cli-interactive-input.cjs').createCliInteractiveInput({ activeChildren, PrivacyCore });
 
 const { staticBase, serveStatic } = require('./backend/static-assets.cjs').createStaticAssets({
   externalRoot, publicDirectory: path.join(__dirname, 'public'), pathWithinRoot, requestIsLoopback, runtime: RUNTIME,

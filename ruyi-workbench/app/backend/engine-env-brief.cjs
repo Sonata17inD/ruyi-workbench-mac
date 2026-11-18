@@ -93,4 +93,35 @@ function createEngineEnvBrief({ appName, buildRuntimeIdentityFacts, probeRgAsync
   return { buildEngineEnvBrief, resolveEngineEnvBrief };
 }
 
-module.exports = { createEngineEnvBrief };
+// 61-A3:给模型看的本地时间(provider 引擎每条 user 消息落历史时带一行,文案在 06b turnTime)。分钟粒度;
+// weekday 0 = 周日;offset 形如 UTC+08:00(日志 ts 是 UTC,模型要换算时靠它)。
+function localTurnTimeParts(ms) {
+  const d = new Date(ms);
+  const p2 = n => String(n).padStart(2, '0');
+  const off = -d.getTimezoneOffset();
+  const abs = Math.abs(off);
+  return {
+    stamp: `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`,
+    weekday: d.getDay(),
+    offset: `UTC${off >= 0 ? '+' : '-'}${p2(Math.floor(abs / 60))}:${p2(abs % 60)}`,
+  };
+}
+
+function createRuntimeIdentityFacts({ RUNTIME, DEFAULT_PORT, APP_NAME, VERSION, OVERLAY_ID, externalRoot, dataRoot }) {
+  function buildRuntimeIdentityFacts() {
+    const host = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.host) || '127.0.0.1';
+    const port = (typeof RUNTIME !== 'undefined' && RUNTIME && RUNTIME.port) || DEFAULT_PORT;
+    return {
+      appName: APP_NAME,
+      version: VERSION,
+      launchMode: 'node',
+      installDir: externalRoot(),
+      dataDir: dataRoot(),
+      address: 'http://' + host + ':' + port,
+      instanceId: OVERLAY_ID,
+    };
+  }
+  return buildRuntimeIdentityFacts;
+}
+
+module.exports = { localTurnTimeParts, createRuntimeIdentityFacts, createEngineEnvBrief };

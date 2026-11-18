@@ -279,4 +279,17 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
   };
 }
 
-module.exports = { createAgentCliDiscovery };
+function createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST }) {
+  function selectedAgentCli(config) {
+    const meta = AGENT_CLI_TYPES[normalizeAgentCliType(config && config.agentCliType)];
+    const detected = meta.detectPath(AGENT_CLI_HOST);
+    return { ...meta, path: String(config && config[meta.pathKey] || detected || ''), detected };
+  }
+  function prepareAgentCliSpawn(type, command, args) {
+    const argv = Array.isArray(args) ? args : [];
+    return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
+  }
+  return { selectedAgentCli, prepareAgentCliSpawn };
+}
+
+module.exports = { createAgentCliSelection, createAgentCliDiscovery };

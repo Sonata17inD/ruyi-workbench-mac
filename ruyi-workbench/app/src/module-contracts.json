@@ -787,7 +787,6 @@
         "HttpAuthorization",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
-        "SCRIPT_FILE_MAX_AGE_MS",
         "THREAD_INDEX_RECENT_DEFAULT",
         "THREAD_INDEX_RECENT_MAX",
         "THREAD_INDEX_RECENT_MIN",
@@ -1037,13 +1036,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "VERSION",
           "kinds": [
             "read"
@@ -1060,7 +1052,7 @@
           "provider": "01f-agent-cli-types.js",
           "symbol": "normalizeAgentCliType",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1683,13 +1675,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
             "call",
@@ -1719,13 +1704,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
@@ -1749,7 +1727,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1828,7 +1805,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1843,7 +1819,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1865,7 +1840,6 @@
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1880,7 +1854,6 @@
           "provider": "01e-permission-modes.js",
           "symbol": "resolvePermissionMode",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4755,7 +4728,7 @@
           "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4769,7 +4742,6 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call",
             "read"
           ]
         },

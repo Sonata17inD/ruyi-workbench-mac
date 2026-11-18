@@ -1,5 +1,6 @@
 'use strict';
 const path = require('node:path');
+const fsp = require('node:fs/promises');
 
 function createSessionFiles({ paths }) {
   // F4 (安全·消毒): accept only a well-formed session id. Returns the id unchanged when it matches the
@@ -46,4 +47,29 @@ function createSessionFiles({ paths }) {
   return { safeSessionId, assertSessionIdForPath, sessionPath, sessionBodyPaths };
 }
 
-module.exports = { createSessionFiles };
+function createSessionRewindWatermark() {
+  const sessionRewindGenHighWater = new Map();
+  // 一份内存里的会话对象是不是撤回之前读出来的(驱动器、旁车写入用它判「还该不该接着干」)。
+  function sessionObjectIsStale(session) {
+    if (!session || !session.id) return false;
+    return (Number(session.rewindGen) || 0) < (sessionRewindGenHighWater.get(session.id) || 0);
+  }
+  return { sessionRewindGenHighWater, sessionObjectIsStale };
+}
+
+function createAgentRunPaths({ paths, safeSessionId }) {
+  function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
+  function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
+  return { agentRunDir, agentRunFile };
+}
+
+function createMissionSessionHeadReader({ safeSessionId, sessionPath, applySessionTitleOverride, safeJsonParse }) {
+  async function readMissionSessionHead(sessionId) {
+    const sid = safeSessionId(sessionId);
+    if (!sid) return null;
+    try { return applySessionTitleOverride(safeJsonParse(await fsp.readFile(sessionPath(sid), 'utf8'), null)); } catch { return null; }
+  }
+  return readMissionSessionHead;
+}
+
+module.exports = { createSessionRewindWatermark, createAgentRunPaths, createMissionSessionHeadReader, createSessionFiles };

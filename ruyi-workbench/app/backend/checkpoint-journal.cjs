@@ -916,4 +916,28 @@ async function journalRevertLogPrune(sessionId, fromTurnSeq) {
 
 return { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune };
 }
-module.exports = { createCheckpointJournal };
+function createCheckpointContext({ loadSession, readConfig, resolvePermissionMode, process, journalResolveTurnSeq }) {
+  async function checkpointRollbackContext(sessionId) {
+    let guardSession = null, guardConfig = null;
+    try { guardSession = await loadSession(sessionId); } catch { guardSession = null; }
+    try { guardConfig = await readConfig(); } catch { guardConfig = {}; }
+    return {
+      session: guardSession, config: guardConfig,
+      effectivePermissionMode: resolvePermissionMode({ session: guardSession, config: guardConfig }),
+    };
+  }
+
+  // Resolve the journal {sessionId, turnSeq} for a file-mutating toolCall. Priority:
+  //  - ctx (provider loop passes its live session.id + session.turnSeq) → authoritative;
+  //  - else the MCP child reads WCW_SESSION_ID env + the session file's turnSeq (read-only, no race).
+  // Returns {sessionId, turnSeq} where either may be falsy/null → journalRecord then no-ops gracefully.
+  async function journalSessionCtx(ctx) {
+    if (ctx && ctx.sessionId && Number.isFinite(ctx.turnSeq)) return { sessionId: ctx.sessionId, turnSeq: Number(ctx.turnSeq) };
+    const sessionId = (ctx && ctx.sessionId) || process.env.WCW_SESSION_ID || '';
+    const turnSeq = await journalResolveTurnSeq(sessionId, ctx && ctx.turnSeq);
+    return { sessionId, turnSeq };
+  }
+  return { checkpointRollbackContext, journalSessionCtx };
+}
+
+module.exports = { createCheckpointContext, createCheckpointJournal };

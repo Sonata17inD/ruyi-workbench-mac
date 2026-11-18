@@ -17,6 +17,9 @@
 const SESSION_STORAGE_VERSION = 2;
 // 架构还债批 3·B: 会话级内存覆盖表(sessionEngineRouteOverrides/权限档/桌面工具)与其归一、应用函数抽至 02d-session-overrides.js。
 
+const { sessionRewindGenHighWater, sessionObjectIsStale } =
+  require('./backend/session-files.cjs').createSessionRewindWatermark();
+
 const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, parseSessionNotesMarkdown,
   mergeSessionNotes, buildSessionNotesInjectPrompt } = require('./backend/session-notes.cjs');
 const { sessionNotesPath, readSessionNotes, writeSessionNotes, removeSessionNotes, maybeWriteSessionNotes } =
@@ -54,7 +57,7 @@ const { sessionScratchpadPath, scratchpadWriteInFlight, readSessionScratchpad, u
 // 只在进程内:重启后表为空,所有对象都从盘上新读(loadSession 每次都 JSON.parse 新解析,没有对象缓存),
 // 不会误丢。loadSession 另有一道自愈:读到的代数低于高水位 = 这次读恰好落在「代数已抬、撤回那一存还没
 // 落盘」的窗口里 → 等写链跑完再读一次,所以撤回【之后】才读的人永远拿到撤回之后的状态。
-const sessionRewindGenHighWater = new Map();
+
 // 第79波:changeSeq 不再只有一个计数器。每次事实推进同时写一条 append-only change record，
 // 让回来摘要可以严格消费 (lastSeenRevision,currentRevision]，并保留可追溯的原始 source cursor。
 // 老任务可能已有 changeSeq、却没有本流水：首条记录的前缀被视为 migration baseline；前端首读
@@ -65,8 +68,8 @@ const MissionChanges = require('./backend/mission-changes.cjs').createMissionCha
   invalidateReads: id => SessionPersistence.invalidateReads(id), events: RUYI_EVENTS,
 });
 const { missionChangeFilePath, boundedChangeText, normalizeMissionChangePayload, repairMissionChangeTornTail, appendMissionChangeRecord, foldMissionChangeJournalText, readMissionChangesWithMeta, bumpMissionChangeSeq, missionSignalThrottleAllow, recordMissionStalledChange, recordMissionBudgetTrippedChange, MISSION_CHANGE_TYPES, MISSION_STALL_SIGNAL_WINDOW_MS } = MissionChanges;
-function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
-function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
+const { agentRunDir, agentRunFile } =
+  require('./backend/session-files.cjs').createAgentRunPaths({ paths, safeSessionId });
 
 const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunStore({
   files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
@@ -233,12 +236,6 @@ const { saveTurnFinalSession, withSessionMutateLock, mutateSession } = require('
   loadSession, saveSession, logEvent,
 });
 
-// 一份内存里的会话对象是不是撤回之前读出来的(驱动器、旁车写入用它判「还该不该接着干」)。
-function sessionObjectIsStale(session) {
-  if (!session || !session.id) return false;
-  return (Number(session.rewindGen) || 0) < (sessionRewindGenHighWater.get(session.id) || 0);
-}
-
 // 50-fix(标题卡死):未命名标题判定 —— 后端占位 'New session' 与历史前端本地化占位('新会话'/'New chat')
 // 均视为未命名,两引擎回合结束据此自动命名(历史会话下一轮补名)。
 const createSession = require('./backend/session-creation.cjs').createSessionService({
@@ -263,15 +260,12 @@ const createSession = require('./backend/session-creation.cjs').createSessionSer
 // A journal write that throws simply skips its index entry; the tool runs regardless. The trade-off is
 // deliberate — a checkpoint is a safety net, and a broken safety net must never stop the user's work.
 // ============================================================================
-async function checkpointRollbackContext(sessionId) {
-  let guardSession = null, guardConfig = null;
-  try { guardSession = await loadSession(sessionId); } catch { guardSession = null; }
-  try { guardConfig = await readConfig(); } catch { guardConfig = {}; }
-  return {
-    session: guardSession, config: guardConfig,
-    effectivePermissionMode: resolvePermissionMode({ session: guardSession, config: guardConfig }),
-  };
-}
+const { checkpointRollbackContext, journalSessionCtx } =
+  require('./backend/checkpoint-journal.cjs').createCheckpointContext({
+    loadSession, readConfig, resolvePermissionMode, process,
+    journalResolveTurnSeq: (...args) => journalResolveTurnSeq(...args),
+  });
+
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
   paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, logEvent, nowIso, pathWithinRoot, runGit,
   safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
@@ -329,17 +323,6 @@ const SessionRewind = require('./backend/session-rewind.cjs').createSessionRewin
 const { rewindSession } = SessionRewind;
 SessionExecutionHooks.admissionBlocked = SessionRewind.admissionBlocked;
 
-// Resolve the journal {sessionId, turnSeq} for a file-mutating toolCall. Priority:
-//  - ctx (provider loop passes its live session.id + session.turnSeq) → authoritative;
-//  - else the MCP child reads WCW_SESSION_ID env + the session file's turnSeq (read-only, no race).
-// Returns {sessionId, turnSeq} where either may be falsy/null → journalRecord then no-ops gracefully.
-async function journalSessionCtx(ctx) {
-  if (ctx && ctx.sessionId && Number.isFinite(ctx.turnSeq)) return { sessionId: ctx.sessionId, turnSeq: Number(ctx.turnSeq) };
-  const sessionId = (ctx && ctx.sessionId) || process.env.WCW_SESSION_ID || '';
-  const turnSeq = await journalResolveTurnSeq(sessionId, ctx && ctx.turnSeq);
-  return { sessionId, turnSeq };
-}
-
 // ============================================================================
 // 第 116 波 116g(27 号文 §3.1「事项跨会话升格」):事项(Mission)容器。
 //
@@ -371,11 +354,9 @@ async function journalSessionCtx(ctx) {
 const MissionStore = require('./backend/mission-store.cjs').createMissionStore({ paths, safeSessionId, makeId, nowIso, logEvent, atomicWriteJson });
 const { safeMissionId, readMissionContainer, withMissionContainerLock, writeMissionContainer, listMissionContainers, createMissionContainer, patchMissionContainer, missionIndexAdd, missionIndexRemove, MISSION_CONTAINER_MAX_FILES } = MissionStore;
 
-async function readMissionSessionHead(sessionId) {
-  const sid = safeSessionId(sessionId);
-  if (!sid) return null;
-  try { return applySessionTitleOverride(safeJsonParse(await fsp.readFile(sessionPath(sid), 'utf8'), null)); } catch { return null; }
-}
+const readMissionSessionHead = require('./backend/session-files.cjs').createMissionSessionHeadReader({
+  safeSessionId, sessionPath, applySessionTitleOverride, safeJsonParse,
+});
 
 const { missionAttachThread, missionDetachThread, missionMergeInto, missionSplitThreads } = require('./backend/mission-membership.cjs').createMissionMembership({
   store: MissionStore,

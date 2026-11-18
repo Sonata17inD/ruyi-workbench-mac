@@ -72,19 +72,17 @@ const sameDir = (a, b) => { const key = value => { let result; try { result = fs
     fs.rmSync(ROOT_TMP, { recursive: true, force: true });
     for (const d of [HOME_P, HOME_C, WORK, CAPTURE]) fs.mkdirSync(d, { recursive: true });
     if (process.platform === 'darwin') {
-      const { copyTree, verifyPackage, sha256 } = require('../ruyi-workbench/tools/macos-offline-lib');
+      const { copyTree, verifyAssets } = require('../ruyi-workbench/tools/macos-offline-lib');
+      const lock = require('../ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json');
+      const assets = process.env.RUYI_MACOS_OFFLINE_ASSETS;
+      if (!assets) throw new Error('Set RUYI_MACOS_OFFLINE_ASSETS to the prepared Mac release assets');
+      const { ripgrep } = verifyAssets(path.resolve(assets), lock, 'slim');
+      const rg = path.join(ripgrep.directory, RG_NAME);
       for (const name of ['app', 'tools', 'resources', 'desktop-macos', 'runtime']) copyTree(path.join(SOURCE_WB, name), path.join(WB, name));
-      const input = path.resolve(process.env.RUYI_TEST_MACOS_PACKAGE || path.join(SOURCE_WB, 'dist/Ruyi-macos-arm64-slim-p6-final-source'));
-      const manifest = verifyPackage(input);
-      const distribution = require('../MACOS-PORTING/evidence/P6/final/artifacts/slim/distribution.json');
-      if (sha256(path.join(input, 'package-manifest.json')) !== distribution.inputPackageManifestSha256) throw new Error('Mac rg fixture requires the frozen verified Slim source package');
-      const relative = 'Contents/Resources/workbench/app/vendor-bin/rg';
-      const expected = manifest.files.find(file => file.path === relative);
-      const rg = path.join(input, 'Ruyi.app', relative);
-      const magic = fs.readFileSync(rg).subarray(0, 4).toString('hex');
-      if (!expected || sha256(rg) !== expected.sha256 || !['cffaedfe', 'feedfacf', 'cafebabe', 'bebafeca'].includes(magic)) throw new Error('Mac rg fixture must be the hash-bound Mach-O');
-      fs.copyFileSync(rg, path.join(VENDOR_BIN, RG_NAME)); fs.chmodSync(path.join(VENDOR_BIN, RG_NAME), expected.mode);
-      ok(true, 'A0b isolated source layout uses the actual hash-bound packaged Mach-O rg');
+      fs.mkdirSync(VENDOR_BIN, { recursive: true });
+      fs.copyFileSync(rg, path.join(VENDOR_BIN, RG_NAME));
+      fs.chmodSync(path.join(VENDOR_BIN, RG_NAME), 0o755);
+      ok(true, 'A0b isolated source layout uses the same hash-verified rg as the Mac offline package');
     }
     ok(fs.existsSync(path.join(VENDOR_BIN, RG_NAME)), 'A0 fixture has bundled app/vendor-bin/' + RG_NAME);
     // 预载:记下服务进程里【每一次】同步起 rg 的调用(不设耗时门槛,修前那一发 rg --version 常常 <50ms)。
