@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T08:29:42.715Z",
+  "generatedAt": "2026-11-18T08:36:26.282Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -9,6 +9,8 @@
       "ruyi-workbench/app/src/13b-api-domain-routes.js",
       "ruyi-workbench/app/src/13d-core-domain-routes.js",
       "ruyi-workbench/app/src/13e-pretender-index.js",
+      "ruyi-workbench/app/backend/local-support-routes.cjs",
+      "ruyi-workbench/app/backend/diagnostic-routes.cjs",
       "ruyi-workbench/app/backend/steward-routes.cjs",
       "ruyi-workbench/app/backend/event-stream.cjs",
       "ruyi-workbench/app/backend/scheduler-routes.cjs",
@@ -983,6 +985,106 @@
   "decisionPoints": [
     {
       "kind": "exact",
+      "path": "/api/usage/summary",
+      "file": "../backend/diagnostic-routes.cjs",
+      "handler": "handleUsageApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "diagnostics",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\model-menu-no-shift.browser.e2e.js",
+        "dev-harness\\settings-wave1.browser.e2e.js",
+        "dev-harness\\steward-drawer.e2e.js",
+        "dev-harness\\steward-drawer.static.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js",
+        "dev-harness\\unit\\steward-model-menu.test.js",
+        "dev-harness\\usage-claude-cached.e2e.js",
+        "dev-harness\\usage-dashboard.e2e.js",
+        "dev-harness\\usage-ledger.e2e.js",
+        "dev-harness\\usage-subagent-ledger.e2e.js",
+        "dev-harness\\walkthrough-round1.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/ops/metrics",
+      "file": "../backend/diagnostic-routes.cjs",
+      "handler": "handleUsageApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "diagnostics",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\monitor-incremental.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/audit",
+      "file": "../backend/diagnostic-routes.cjs",
+      "handler": "handleDiagnosticsApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "diagnostics",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\audit-desktop-records.e2e.js",
+        "dev-harness\\audit.e2e.js",
+        "dev-harness\\auth-deny-default.e2e.js",
+        "dev-harness\\autonomy-grant.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\session-search.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/storage/summary",
+      "file": "../backend/diagnostic-routes.cjs",
+      "handler": "handleDiagnosticsApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "diagnostics",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\metrics-panel.e2e.js",
+        "dev-harness\\session-storage-v2.e2e.js",
+        "dev-harness\\storage-steward.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/metrics",
+      "file": "../backend/diagnostic-routes.cjs",
+      "handler": "handleDiagnosticsApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "diagnostics",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\metrics-panel.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
       "path": "/api/events/stream",
       "file": "../backend/event-stream.cjs",
       "handler": "handleEventStreamApiRoutes",
@@ -1018,6 +1120,102 @@
         "dev-harness\\thread-switch-race.browser.e2e.js",
         "dev-harness\\unit\\event-stream-lifecycle.test.js",
         "dev-harness\\unit\\http-input-hardening.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/help/doc",
+      "file": "../backend/local-support-routes.cjs",
+      "handler": "handleLocalSupportApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "local-support",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\help-viewer.e2e.js",
+        "dev-harness\\onboarding.static.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/open-path",
+      "file": "../backend/local-support-routes.cjs",
+      "handler": "handleLocalSupportApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "local-support",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\copy-path-guard.static.e2e.js",
+        "dev-harness\\help-menu.e2e.js",
+        "dev-harness\\macos-runtime-start.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/logs/tail",
+      "file": "../backend/local-support-routes.cjs",
+      "handler": "handleLocalSupportApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "local-support",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\help-menu.e2e.js",
+        "dev-harness\\ui-misc-wave1.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/file/preview",
+      "file": "../backend/local-support-routes.cjs",
+      "handler": "handleLocalSupportApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "local-support",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\artifacts.e2e.js",
+        "dev-harness\\audit-w23.e2e.js",
+        "dev-harness\\file-text-encoding.e2e.js",
+        "dev-harness\\frontend-domains.static.e2e.js",
+        "dev-harness\\i18n.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\tool-image-inline.static.e2e.js",
+        "dev-harness\\workbench-memory.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/file/reveal",
+      "file": "../backend/local-support-routes.cjs",
+      "handler": "handleLocalSupportApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "local-support",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\artifacts.e2e.js",
+        "dev-harness\\copy-path-guard.static.e2e.js",
+        "dev-harness\\help-menu.e2e.js",
+        "dev-harness\\macos-runtime-start.e2e.js",
+        "dev-harness\\meta-guard.e2e.js",
+        "dev-harness\\steward-delivery.browser.e2e.js"
       ]
     },
     {
@@ -2902,48 +3100,6 @@
     },
     {
       "kind": "exact",
-      "path": "/api/usage/summary",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\model-menu-no-shift.browser.e2e.js",
-        "dev-harness\\settings-wave1.browser.e2e.js",
-        "dev-harness\\steward-drawer.e2e.js",
-        "dev-harness\\steward-drawer.static.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js",
-        "dev-harness\\unit\\steward-model-menu.test.js",
-        "dev-harness\\usage-claude-cached.e2e.js",
-        "dev-harness\\usage-dashboard.e2e.js",
-        "dev-harness\\usage-ledger.e2e.js",
-        "dev-harness\\usage-subagent-ledger.e2e.js",
-        "dev-harness\\walkthrough-round1.browser.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/ops/metrics",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\monitor-incremental.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
       "path": "/api/checkpoints",
       "file": "13-http-router.js",
       "handler": "handleApi",
@@ -3007,160 +3163,6 @@
         "dev-harness\\changes-diff.e2e.js",
         "dev-harness\\frontend-domains.static.e2e.js",
         "dev-harness\\i18n.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/help/doc",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\help-viewer.e2e.js",
-        "dev-harness\\onboarding.static.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/open-path",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\copy-path-guard.static.e2e.js",
-        "dev-harness\\help-menu.e2e.js",
-        "dev-harness\\macos-runtime-start.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/logs/tail",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\help-menu.e2e.js",
-        "dev-harness\\ui-misc-wave1.browser.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/file/preview",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\artifacts.e2e.js",
-        "dev-harness\\audit-w23.e2e.js",
-        "dev-harness\\file-text-encoding.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\i18n.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\tool-image-inline.static.e2e.js",
-        "dev-harness\\workbench-memory.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/file/reveal",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\artifacts.e2e.js",
-        "dev-harness\\copy-path-guard.static.e2e.js",
-        "dev-harness\\help-menu.e2e.js",
-        "dev-harness\\macos-runtime-start.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\steward-delivery.browser.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/audit",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\audit-desktop-records.e2e.js",
-        "dev-harness\\audit.e2e.js",
-        "dev-harness\\auth-deny-default.e2e.js",
-        "dev-harness\\autonomy-grant.e2e.js",
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\meta-guard.e2e.js",
-        "dev-harness\\session-search.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/storage/summary",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\metrics-panel.e2e.js",
-        "dev-harness\\session-storage-v2.e2e.js",
-        "dev-harness\\storage-steward.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/metrics",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\frontend-domains.static.e2e.js",
-        "dev-harness\\metrics-panel.e2e.js"
       ]
     },
     {
@@ -6105,12 +6107,27 @@
     {
       "file": "13-http-router.js",
       "handler": "handleApi",
+      "target": "handleUsageApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
       "target": "handleAgentRunApiRoutes"
     },
     {
       "file": "13-http-router.js",
       "handler": "handleApi",
+      "target": "handleLocalSupportApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
       "target": "handleMcpApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleDiagnosticsApiRoutes"
     },
     {
       "file": "13-http-router.js",

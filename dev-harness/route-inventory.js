@@ -41,6 +41,8 @@ const ROUTER_FILES = [
   '13b-api-domain-routes.js',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
+  '../backend/local-support-routes.cjs',
+  '../backend/diagnostic-routes.cjs',
   '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
@@ -93,6 +95,8 @@ const DOMAIN_BY_FILE = {
   '13b-api-domain-routes.js': 'mcp/checkpoint-storage/steer',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
+  '../backend/local-support-routes.cjs': 'local-support',
+  '../backend/diagnostic-routes.cjs': 'diagnostics',
   '../backend/steward-routes.cjs': 'steward',
   '../backend/event-stream.cjs': 'event-stream',
   '../backend/scheduler-routes.cjs': 'scheduler',

@@ -154,13 +154,13 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
     /* 缺文件降级:白名单里的文件不在磁盘上时给 help.doc_missing。
        源码不可改,所以这里不去伪造缺失;改为核对降级分支确实写在源码里,并锁住它给的是
        应用内解释(help.doc_missing),而不是「自己去某个路径打开文件」。 */
-    const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+    const routerSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'local-support-routes.cjs'), 'utf8');
     const supportSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'local-support.cjs'), 'utf8');
     ok(routerSrc.includes("json({ ok: false, error: 'help.doc_missing', id, lang })"),
       '⑧ 源码含缺文件降级分支 help.doc_missing(精简包不带 docs/ 时不 500)');
     // handler 块 = 从判定行起到本 if 块结束(下一行同缩进的收口花括号)。只在这段里查 path.join 的实参。
     const handlerStart = routerSrc.indexOf("if (req.method === 'GET' && pathname === '/api/help/doc') {");
-    const handlerEnd = routerSrc.indexOf('\n  }\n', handlerStart);
+    const handlerEnd = routerSrc.indexOf('\n    }\n', handlerStart);
     const handlerBlock = handlerStart >= 0 && handlerEnd > handlerStart ? routerSrc.slice(handlerStart, handlerEnd) : '';
     const joinLines = handlerBlock.split(/\r?\n/).filter(l => l.includes('path.join('));
     ok(/const HELP_DOC_FILES = Object\.freeze\(\{/.test(supportSrc)

@@ -2,6 +2,17 @@
 
 const { CLAUDE_ENDPOINT_PRESETS } = require('./provider-pricing.cjs');
 
+function emptyUsageTotals() {
+  return { inTok: 0, outTok: 0, cachedInTok: 0, turns: 0, subagentTurns: 0, auxCalls: 0,
+    estimatedTurns: 0, planBasedTurns: 0, costsByCurrency: {} };
+}
+
+function usageSummaryPayload(range, totals = emptyUsageTotals(), {
+  byEngine = [], byProvider = [], byModel = [], bySession = [], byDay = [], budget = null,
+} = {}) {
+  return { ok: true, range, totals, byEngine, byProvider, byModel, bySession, byDay, budget };
+}
+
 function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, usageRangeLowerMs, usageDayKeyMemo }) {
   // Aggregate the ledger for a range into the /api/usage/summary shape. costsByCurrency holds ONLY trusted,
   // non-plan-based costs; planBasedTurns counts turns whose cost is plan-based/notional (surfaced separately).
@@ -16,7 +27,7 @@ function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, us
     const titles = await readSessionTitles().catch(() => new Map());
 
     const addCost = (bucket, cur, cost) => { bucket[cur] = (bucket[cur] || 0) + cost; };
-    const totals = { inTok: 0, outTok: 0, cachedInTok: 0, turns: 0, subagentTurns: 0, auxCalls: 0, estimatedTurns: 0, planBasedTurns: 0, costsByCurrency: {} };
+    const totals = emptyUsageTotals();
     const byEngine = new Map(), byProvider = new Map(), bySession = new Map(), byDay = new Map(), byModel = new Map();
     const dayKeyOf = usageDayKeyMemo();
     const modelKeys = new Map();   // eng -> pid -> mid -> JSON 键(每个三元组只 stringify 一次)
@@ -95,8 +106,7 @@ function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, us
       await forEachUsageRow(usageRangeLowerMs('month', now), r => { const c = Number(r.cost); if (r.costTrusted !== false && r.currency === ub.currency && Number.isFinite(c)) spent += c; });
       budget = { monthly: Number(ub.monthly), currency: ub.currency, spentThisMonth: round6(spent) };
     }
-    return {
-      ok: true, range, totals,
+    return usageSummaryPayload(range, totals, {
       byEngine: [...byEngine.values()],
       byProvider: [...byProvider.values()],
       // 117x-M1: most-recently-used first (lastAt desc), then busier first, then model id — a total order, so the
@@ -109,8 +119,8 @@ function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, us
       bySession: [...bySession.values()].sort((a, b) => (b.inTok + b.outTok) - (a.inTok + a.outTok)).slice(0, 20),
       byDay: [...byDay.values()].sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0)),
       budget,
-    };
+    });
   };
 }
 
-module.exports = { createUsageSummary };
+module.exports = { createUsageSummary, usageSummaryPayload };

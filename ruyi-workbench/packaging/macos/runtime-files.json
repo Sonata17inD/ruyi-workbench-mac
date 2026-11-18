@@ -333,6 +333,8 @@
     "app/backend/user-question-protocol.cjs",
     "app/backend/model-selection.cjs",
     "app/backend/local-support.cjs",
+    "app/backend/local-support-routes.cjs",
+    "app/backend/diagnostic-routes.cjs",
     "app/backend/tool-dispatcher.cjs",
     "app/backend/scheduler-runtime.cjs",
     "app/backend/scheduler-routes.cjs",

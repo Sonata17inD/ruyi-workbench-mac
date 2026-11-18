@@ -227,12 +227,12 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
       '⑥ 手册阅读器的缺文件降级同款修补(118a-fix 遗留的恒不命中已修)');
 
     /* ⑦ 源码锁:请求串永不进路径 / 枚举是源码常量 */
-    const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+    const routerSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'local-support-routes.cjs'), 'utf8');
     const supportSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'local-support.cjs'), 'utf8');
     ok(/const OPEN_PATH_TARGETS = Object\.freeze\(\['data', 'logs', 'workspace', 'manuals'\]\);/.test(supportSrc),
       '⑦ OPEN_PATH_TARGETS 是 Object.freeze 的源码枚举');
     const opStart = routerSrc.indexOf("if (req.method === 'POST' && pathname === '/api/open-path') {");
-    const opEnd = routerSrc.indexOf('\n  }\n', opStart);
+    const opEnd = routerSrc.indexOf('\n    }\n', opStart);
     const opBlock = opStart >= 0 && opEnd > opStart ? routerSrc.slice(opStart, opEnd) : '';
     ok(!!opBlock && !/path\.(join|resolve)\(/.test(opBlock),
       '⑦ open-path handler 内没有任何 path.join/path.resolve(目录只由 openPathTargetDir 的常量映射给出)');
@@ -247,7 +247,7 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
       '⑦ 日志文件名在服务端已知目录里按固定正则筛,请求里没有文件名入参');
     // 读失败分支绝不能把 Node 的 ENOENT/EPERM 文本回给前端: 那句话里带着日志文件的绝对路径。
     const logStart = routerSrc.indexOf("if (req.method === 'GET' && pathname === '/api/logs/tail') {");
-    const logEnd = routerSrc.indexOf('\n  }\n', logStart);
+    const logEnd = routerSrc.indexOf('\n    }\n', logStart);
     const logBlock = logStart >= 0 && logEnd > logStart ? routerSrc.slice(logStart, logEnd) : '';
     ok(!!logBlock && logBlock.includes("error: 'logs.read_failed', maxLines: LOG_TAIL_MAX_LINES")
       && !/detail:/.test(logBlock) && logBlock.includes("kind: 'logs_tail_failed'"),

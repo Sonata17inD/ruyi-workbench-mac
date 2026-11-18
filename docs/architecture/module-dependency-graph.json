@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2846,
-    "requiredSymbols": 3352,
+    "providedSymbols": 2837,
+    "requiredSymbols": 3351,
     "edges": 640,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -11985,14 +11985,7 @@
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
-        "HELP_DOC_FILES",
-        "HELP_DOC_LANGS",
-        "HELP_DOC_MAX_BYTES",
         "LAST_START_ERROR_FILE",
-        "LOG_TAIL_DEFAULT_LINES",
-        "LOG_TAIL_MAX_BYTES",
-        "LOG_TAIL_MAX_LINES",
-        "OPEN_PATH_TARGETS",
         "PORT_FALLBACK_SPAN",
         "START_ERROR_KINDS",
         "START_NOTICE",
@@ -12003,14 +11996,13 @@
         "doctorHealthSeverity",
         "doctorHumanLines",
         "handleApi",
-        "helpDocTitle",
-        "helpDocsDir",
+        "handleDiagnosticsApiRoutes",
+        "handleLocalSupportApiRoutes",
+        "handleUsageApiRoutes",
         "installIntegration",
-        "latestLogFile",
         "listenOnNextFreePort",
         "listenOnce",
         "listenWithFallback",
-        "openPathTargetDir",
         "parseArgs",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
@@ -12022,7 +12014,6 @@
         "startServerInner",
         "stopAllActiveTurnsSync",
         "streamChat",
-        "tailLinesFromBuffer",
         "writeStartError"
       ],
       "requires": [
@@ -12135,7 +12126,7 @@
           "provider": "00-boot.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12208,14 +12199,14 @@
           "provider": "00-boot.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12229,7 +12220,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12352,13 +12344,6 @@
           "symbol": "PREVIEW_TEXT_EXTS",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readFilePreview",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12763,7 +12748,8 @@
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12982,7 +12968,8 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13115,21 +13102,23 @@
           "provider": "03-bridge-guard.js",
           "symbol": "buildRevealSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "fileAllowedRoots",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13143,7 +13132,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "remoteUncDenialResolved",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13621,35 +13610,35 @@
           "provider": "06v-operational-services.js",
           "symbol": "buildMetricsPayload",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06v-operational-services.js",
           "symbol": "buildOpsMetrics",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06v-operational-services.js",
           "symbol": "collectAudit",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06v-operational-services.js",
           "symbol": "collectStorageStats",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06v-operational-services.js",
           "symbol": "maybeRecordStorageTrend",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -30713,7 +30702,6 @@
         "pathWithinAnyRoot",
         "pathWithinRoot",
         "paths",
-        "readFilePreview",
         "readJsonBody",
         "redact",
         "resolveContextWindow",

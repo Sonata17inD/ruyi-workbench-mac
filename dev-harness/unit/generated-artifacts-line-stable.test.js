@@ -79,6 +79,9 @@ describe('generated architecture artifacts are line-number free', () => {
     for (const file of moduleFiles(dir)) inserted[file] = shiftLines(path.join(dir, file));
     shiftLines(path.join(dir, '../backend/event-stream.cjs'));
     assert.ok(shiftLines(path.join(dir, '../backend/steward-routes.cjs')) > 2, '显式管家路由内也平移了 handler');
+    for (const file of ['local-support-routes.cjs', 'diagnostic-routes.cjs']) {
+      assert.ok(shiftLines(path.join(dir, '../backend', file)) > 2, `${file} 内也平移了 handler`);
+    }
     // 点名的三个文件与全部路由文件必须真被平移过(否则本件静默失效)。
     for (const file of ['00-boot.js', '02-session-store.js', '13-http-router.js', '13d-core-domain-routes.js', '13g-steward.js', '01b-route-auth.js']) {
       assert.ok(inserted[file] > 0, `${file} 应被插入行(实得 ${inserted[file]})`);

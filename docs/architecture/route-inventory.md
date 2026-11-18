@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T08:29:42.715Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T08:36:26.282Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -38,7 +38,7 @@
 | POST | `/api/checkpoints/rollback` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
 | POST | `/api/session/rewind` | exact | token | 13b-api-domain-routes.js · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
 
-## core-inline(69)
+## core-inline(59)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
@@ -93,24 +93,24 @@
 | POST | `/api/agent-workflow/launch` | exact | body-token | 13-http-router.js · `handleApi` | agent-deadlock-watchdog.e2e.js, agent-node-limits.e2e.js, agent-node-wrapup.e2e.js 等 40 件 |
 | POST | `/api/agent-workflow/wait` | exact | body-token self | 13-http-router.js · `handleApi` | agent-node-limits.e2e.js |
 | POST | `/api/agent-workflow/result` | exact | body-token self | 13-http-router.js · `handleApi` | — |
-| GET | `/api/usage/summary` | exact | token self | 13-http-router.js · `handleApi` | model-menu-no-shift.browser.e2e.js, settings-wave1.browser.e2e.js, steward-drawer.e2e.js 等 11 件 |
-| GET | `/api/ops/metrics` | exact | token self | 13-http-router.js · `handleApi` | monitor-incremental.e2e.js |
 | GET | `/api/checkpoints` | exact | token self | 13-http-router.js · `handleApi` | action-feedback.static.e2e.js, artifacts.e2e.js, changes-diff.e2e.js 等 18 件 |
 | POST | `/api/checkpoints/open-external` | exact | token | 13-http-router.js · `handleApi` | external-code-diff.e2e.js |
 | GET | `/api/checkpoints/diff` | exact | token self | 13-http-router.js · `handleApi` | changes-diff.e2e.js, frontend-domains.static.e2e.js, i18n.e2e.js |
-| GET | `/api/help/doc` | exact | token self | 13-http-router.js · `handleApi` | help-viewer.e2e.js, onboarding.static.e2e.js |
-| POST | `/api/open-path` | exact | token self | 13-http-router.js · `handleApi` | copy-path-guard.static.e2e.js, help-menu.e2e.js, macos-runtime-start.e2e.js |
-| GET | `/api/logs/tail` | exact | token self | 13-http-router.js · `handleApi` | help-menu.e2e.js, ui-misc-wave1.browser.e2e.js |
-| GET | `/api/file/preview` | exact | token self | 13-http-router.js · `handleApi` | artifacts.e2e.js, audit-w23.e2e.js, file-text-encoding.e2e.js 等 8 件 |
-| POST | `/api/file/reveal` | exact | token | 13-http-router.js · `handleApi` | artifacts.e2e.js, copy-path-guard.static.e2e.js, help-menu.e2e.js 等 6 件 |
-| GET | `/api/audit` | exact | token self | 13-http-router.js · `handleApi` | audit-desktop-records.e2e.js, audit.e2e.js, auth-deny-default.e2e.js 等 7 件 |
-| GET | `/api/storage/summary` | exact | token self | 13-http-router.js · `handleApi` | frontend-domains.static.e2e.js, metrics-panel.e2e.js, session-storage-v2.e2e.js 等 4 件 |
-| GET | `/api/metrics` | exact | token self | 13-http-router.js · `handleApi` | frontend-domains.static.e2e.js, metrics-panel.e2e.js |
 | POST | `/api/upload` | exact | token-browser | 13-http-router.js · `handleApi` | chat-ux-wave1.browser.e2e.js, external-bots.browser.e2e.js, file-text-encoding.e2e.js 等 9 件 |
 | GET | `/api/upload/content` | exact | token self | 13-http-router.js · `handleApi` | tool-result-render.browser.e2e.js, tool-result-shrink.test.js, vision-loop.e2e.js |
 | POST | `/api/chat/stream` | exact | token-browser | 13-http-router.js · `handleApi` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
 | POST | `/api/tools/` | prefix | token | 13-http-router.js · `handleApi` | audit-w23.e2e.js, autonomy-shell-sandbox.e2e.js, background-completion.e2e.js 等 25 件 |
 | * | `/health` | exact | host-gate | 13-http-router.js · `startServerInner` | — |
+
+## diagnostics(5)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/usage/summary` | exact | token self | ../backend/diagnostic-routes.cjs · `handleUsageApiRoutes` | model-menu-no-shift.browser.e2e.js, settings-wave1.browser.e2e.js, steward-drawer.e2e.js 等 11 件 |
+| GET | `/api/ops/metrics` | exact | token self | ../backend/diagnostic-routes.cjs · `handleUsageApiRoutes` | monitor-incremental.e2e.js |
+| GET | `/api/audit` | exact | token self | ../backend/diagnostic-routes.cjs · `handleDiagnosticsApiRoutes` | audit-desktop-records.e2e.js, audit.e2e.js, auth-deny-default.e2e.js 等 7 件 |
+| GET | `/api/storage/summary` | exact | token self | ../backend/diagnostic-routes.cjs · `handleDiagnosticsApiRoutes` | frontend-domains.static.e2e.js, metrics-panel.e2e.js, session-storage-v2.e2e.js 等 4 件 |
+| GET | `/api/metrics` | exact | token self | ../backend/diagnostic-routes.cjs · `handleDiagnosticsApiRoutes` | frontend-domains.static.e2e.js, metrics-panel.e2e.js |
 
 ## event-stream(1)
 
@@ -148,6 +148,16 @@
 | POST | `/api/permission/decision` | exact | token-browser | 13d-core-domain-routes.js · `handleInterventionApiRoutes` | acc-capability-gates.e2e.js, autonomy-pause.e2e.js, claude-binary-live.e2e.js 等 17 件 |
 | POST | `/api/plan/decision` | exact | token | 13d-core-domain-routes.js · `handleInterventionApiRoutes` | intervention-mission-gate.e2e.js, interventions-snapshot.e2e.js, plan-mode.e2e.js 等 7 件 |
 | POST | `/api/_test/intervention-cas` | exact | token self | 13d-core-domain-routes.js · `handleInterventionApiRoutes` | interventions-cas.e2e.js, interventions-changeseq.e2e.js |
+
+## local-support(5)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/help/doc` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | help-viewer.e2e.js, onboarding.static.e2e.js |
+| POST | `/api/open-path` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | copy-path-guard.static.e2e.js, help-menu.e2e.js, macos-runtime-start.e2e.js |
+| GET | `/api/logs/tail` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | help-menu.e2e.js, ui-misc-wave1.browser.e2e.js |
+| GET | `/api/file/preview` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | artifacts.e2e.js, audit-w23.e2e.js, file-text-encoding.e2e.js 等 8 件 |
+| POST | `/api/file/reveal` | exact | token | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | artifacts.e2e.js, copy-path-guard.static.e2e.js, help-menu.e2e.js 等 6 件 |
 
 ## mcp(7)
 
@@ -253,8 +263,11 @@
 - 13-http-router.js · `handleApi` → `handleSessionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleMissionsApiRoutes`
 - 13-http-router.js · `handleApi` → `handleInterventionApiRoutes`
+- 13-http-router.js · `handleApi` → `handleUsageApiRoutes`
 - 13-http-router.js · `handleApi` → `handleAgentRunApiRoutes`
+- 13-http-router.js · `handleApi` → `handleLocalSupportApiRoutes`
 - 13-http-router.js · `handleApi` → `handleMcpApiRoutes`
+- 13-http-router.js · `handleApi` → `handleDiagnosticsApiRoutes`
 - 13-http-router.js · `handleApi` → `handleCheckpointApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSteerApiRoute`
 - 13-http-router.js · `handleApi` → `handleAudioApiRoutes`
