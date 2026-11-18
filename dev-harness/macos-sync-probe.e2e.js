@@ -14,7 +14,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP requires macOS supervisor'); return; }
-    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'desktopPythonCache', 'detectClaudePathUncached', 'ProcessRuntime', 'ProcessRuntimeHooks', 'cliDiscoveryProbes']);
+    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'detectClaudePathUncached', 'ProcessRuntime', 'ProcessRuntimeHooks', 'cliDiscoveryProbes']);
     const cli = path.join(root, '假 CLI 😀');
     const write = source => fs.writeFileSync(cli, '#!' + process.execPath + '\n' + source, { mode: 0o700 });
     const beat = path.join(root, 'heartbeat');
@@ -96,8 +96,13 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       finally { S.cliDiscoveryProbes.spawnProbeSync = probeSync; }
       t.ok(error?.cleanupIncomplete && probed.length === 1 && probed[0] === cli && !fs.existsSync(marker),
         'sync Claude candidate scan stops on cleanup uncertainty');
-      error = null; try { S.pickPython(root, {}, { candidates: [candidate, {command:second,args:[],source:'second'}] }); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && !S.desktopPythonCache.has(root+'\n') && !fs.existsSync(marker), 'sync Python scan stops without caching or trying a later candidate');
+      for (let attempt = 0; attempt < 2; attempt++) {
+        error = null;
+        try { S.pickPython(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); }
+        catch (caught) { error = caught; }
+        t.ok(error?.cleanupIncomplete && !fs.existsSync(marker),
+          attempt === 0 ? 'sync Python scan stops before trying a later candidate' : 'incomplete cleanup cannot create a Python cache hit');
+      }
       rg = createRgProbe({ ProcessRuntime: S.ProcessRuntime, candidates: () => [{ command: cli, source: 'env' }, { command: second, source: 'system' }] });
       error = null; try { rg.probeRgInfoSync(); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete && !fs.existsSync(marker), 'sync rg discovery stops on cleanup uncertainty');

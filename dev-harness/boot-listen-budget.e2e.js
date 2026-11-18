@@ -131,10 +131,12 @@ function getJson(pathname, token, timeoutMs) {
       's 探针段用「listen 之后再让一小段起跑延迟」的形状（同步 spawnSync 会占住事件循环，只 setImmediate 不够）');
     ok(/^\s*const imp = await autoImportClaudeCodeMcp\(config\)/m.test(beforeListen),
       's autoImportClaudeCodeMcp 仍留在 listen 之前（它只读 ~/.claude.json，不碰探针）');
-    ok(/function detectDesktopMcp\(\)/.test(src) && !/async function detectDesktopMcp\(\)/.test(src),
+    const desktopDiscovery = fs.readFileSync(path.join(WB, 'app/backend/desktop-mcp-discovery.cjs'), 'utf8');
+    const pythonSelection = fs.readFileSync(path.join(WB, 'app/backend/desktop-python-selection.cjs'), 'utf8');
+    ok(/function detectDesktopMcp\(\)/.test(desktopDiscovery) && !/async function detectDesktopMcp\(\)/.test(desktopDiscovery),
       's detectDesktopMcp 保持同步签名（39 号文 §2 的拍板：它的调用方 resolveExternalMcpServers 一族散在 8 个模块，改 async 是跨模块大手术）');
     // ── 39 号文的三把形状锁 ──
-    ok(/async function detectDesktopMcpAsync\(\)/.test(src) && /async function pickPythonAsync\(/.test(src),
+    ok(/async function detectDesktopMcpAsync\(\)/.test(desktopDiscovery) && /async function pickPythonAsync\(/.test(pythonSelection),
       's 异步孪生 detectDesktopMcpAsync／pickPythonAsync 都在');
     const probeSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'desktop-python-probe.cjs'), 'utf8');
     ok(/ProcessRuntime\.capture\(candidate\.command, probeArgs\(candidate\)/.test(functionBlock(probeSource, 'probeDesktopPythonAsync')),

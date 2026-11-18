@@ -20,6 +20,8 @@
     "app/backend/desktop-automation.cjs",
     "app/backend/desktop-shell.cjs",
     "app/backend/desktop-python-probe.cjs",
+    "app/backend/desktop-python-selection.cjs",
+    "app/backend/desktop-mcp-discovery.cjs",
     "app/backend/durable-json-store.cjs",
     "app/backend/engine-transcripts.cjs",
     "app/backend/event-stream.cjs",

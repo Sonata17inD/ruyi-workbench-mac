@@ -15,7 +15,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP requires macOS supervisor'); return; }
-    const S = loadServerInternals(['probeDesktopPythonAsync', 'pickPythonAsync', 'desktopPythonCache', 'ProcessRuntime', 'ProcessRuntimeHooks']);
+    const S = loadServerInternals(['probeDesktopPythonAsync', 'pickPythonAsync', 'ProcessRuntime', 'ProcessRuntimeHooks']);
     cp.spawn = function(...args) { const child = originalSpawn.apply(this, args); children.push(child); return child; };
     const python = path.join(root, '假 Python 😀');
     const candidate = { command: python, args: ['--fixture-prefix'], source: 'fixture' };
@@ -63,15 +63,18 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       const before = children.filter(c => S.ProcessRuntime.handle(c)).length;
       error = null;
       try { await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && children.filter(c => S.ProcessRuntime.handle(c)).length === before + 1 && !S.desktopPythonCache.has(root + '\n'), 'picker stops before next candidate and cache write when cleanup is unconfirmed');
+      t.ok(error?.cleanupIncomplete && children.filter(c => S.ProcessRuntime.handle(c)).length === before + 1, 'picker stops before next candidate and cache write when cleanup is unconfirmed');
       const completeFrames = frames.map(event => event.event === 'cleanup' ? { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 } : event);
       fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}const core=process.argv[3]===${JSON.stringify(python)};const events=core?${JSON.stringify(completeFrames)}:${JSON.stringify(frames)};require('fs').writeSync(3,events.map(e=>JSON.stringify(e)+'\\n').join(''));process.stdout.write(core?'__RUYI_ACC_CORE__':'__RUYI_ACC_FULL__');`, { mode: 0o700 });
       error = null;
       try { await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && !S.desktopPythonCache.has(root + '\n'), 'later incomplete Full probe cannot fall back to an earlier Core or write cache');
+      t.ok(error?.cleanupIncomplete, 'later incomplete Full probe cannot fall back to an earlier Core or write cache');
       S.ProcessRuntimeHooks.helperPath = helperPath;
       const recovered = await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] });
-      t.ok(recovered.command === second && recovered.capability === 'full' && S.desktopPythonCache.has(root + '\n'), 'restored supervisor allows a fresh selection and caches only the confirmed result');
+      t.ok(recovered.command === second && recovered.capability === 'full', 'restored supervisor allows a fresh Full selection after both failures');
+      const afterRecovery = children.length;
+      const cached = await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] });
+      t.ok(cached?.command === second && children.length === afterRecovery, 'confirmed result is cached and skips further Python probes');
       S.ProcessRuntimeHooks.helperPath = () => helper;
       frames[1] = { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 };
       fs.writeFileSync(helper, fake("const leaf=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>process.exit(0),2000)'],{stdio:['ignore','inherit','inherit']});leaf.unref();"), { mode: 0o700 });
