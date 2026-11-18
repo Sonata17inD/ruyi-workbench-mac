@@ -116,7 +116,7 @@ const HOOK_KEY = {
 
 const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
-  .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs').sort();
+  .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs').sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');

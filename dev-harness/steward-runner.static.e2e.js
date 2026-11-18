@@ -49,6 +49,7 @@ const src13g = read('13g-steward.js');
 // 否则一条 13h 符号只要搬进新文件就能绕过这把锁。
 const src13j = read('13j-steward-tool-base.js');
 const src13k = read('13k-steward-threads.js');
+const threadQueries = read('../backend/steward-thread-queries.cjs');
 const src13l = read('13l-steward-ops.js');
 const inboxComposition = read('13i-steward-inbox.js');
 const inboxSource = read('../backend/steward-inbox.cjs');
@@ -93,14 +94,14 @@ const src01b = read('../backend/http-route-policy.cjs');
   // T2 已经把那笔债还了(13h 拆成六个文件,纯搬家)。故那条豁免删掉,运行器族六个文件与工具族三个
   // 一起进这道闸:以后再往管家回合层加东西,超线的是哪个文件当场就看得见。
   for (const [name, text] of [['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k],
-    ['13l-steward-ops.js', src13l], ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
+    ['13l-steward-ops.js', src13l], ['steward-thread-queries.cjs', threadQueries], ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
     const n = text.split('\n').length;
     ok(n < 2000, `① ${name} 也在 SPEC 目标 2000 行以内(got ${n};拆分不许把债换个文件放)`);
   }
   // 117l companion:这条预算不是靠少写注释守住的,而是靠「新判定不往 13g 堆」。本波三个新判据
   // 一个都不在 13g 里 —— 递话通道的判定与执行在 13h,id 人话化 / 模型分档 / 「它在问你」在 06i。
   // 117 波 T1:判据面从 13g 一个文件扩到整个 13g 族 —— 否则拆完之后把新判定塞进 13k/13l 就绕过去了。
-  const famText = src13g + src13j + src13k + src13l;
+  const famText = src13g + src13j + src13k + src13l + threadQueries;
   for (const symbol of ['stewardRelayChannelFor', 'stewardHumanizeIds', 'stewardThreadEngineRoute', 'stewardAsksYou']) {
     ok(!new RegExp('function ' + symbol + '\\s*\\(').test(famText), `① 117l companion: ${symbol} 的实现不在 13g 族(新判定往 13h/06i 放)`);
   }
@@ -124,6 +125,7 @@ const src01b = read('../backend/http-route-policy.cjs');
     ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
+    ['steward-thread-queries.cjs', threadQueries],
     ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['06k-config-patch.js', src06k]];
   const leaks = [];
   for (const [name, text] of consumers) {
@@ -189,7 +191,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadQueries + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');

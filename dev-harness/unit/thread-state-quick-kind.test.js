@@ -169,11 +169,12 @@ const srcDir = path.join(repo, 'ruyi-workbench', 'app', 'src');
 const backendDir = path.join(srcDir, '../backend');
 const serverFiles = fs.readdirSync(srcDir).filter(file => file.endsWith('.js'))
   .concat(fs.readdirSync(backendDir).filter(file => file.endsWith('.cjs')).map(file => '../backend/' + file));
-const ALLOWED_NO_FACTS = new Set(['../backend/mission-aggregate.cjs', '13k-steward-threads.js']);
+const threadQueries = '../backend/steward-thread-queries.cjs';
+const ALLOWED_NO_FACTS = new Set(['../backend/mission-aggregate.cjs', threadQueries]);
 const strayed = serverFiles.filter(f => !ALLOWED_NO_FACTS.has(f)
   && /factsUnknown:\s*true/.test(codeOnly(fs.readFileSync(path.join(srcDir, f), 'utf8'))));
-ok(strayed.length === 0, '④ 「明说没事实」的调用面只许出现在白名单里的两个文件(事项聚合模块的 else 支 / 13k 的 threads_search 兜底支)' + (strayed.length ? ' -> ' + strayed.join(',') : ''));
-ok(/factsUnknown: true \}\)\s*$|deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\)/.test(codeOnly(fs.readFileSync(path.join(srcDir, '13k-steward-threads.js'), 'utf8'))),
+ok(strayed.length === 0, '④ 只在事项聚合与线程查询的速查兜底分支显式标记无事实' + (strayed.length ? ' -> ' + strayed.join(',') : ''));
+ok(/factsUnknown: true \}\)\s*$|deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\)/.test(codeOnly(fs.readFileSync(path.join(srcDir, threadQueries), 'utf8'))),
   '④ threads_search 那条兜底支确实是「速查那一侧才说没事实」(mission 那一侧仍落 dispatching,逐字节不变)');
 // 伴随(比原条更强):每一个「明说没事实」的调用,对象字面量里【不许】同时出现任何一个真事实键。
 // 一边说没事实一边喂事实 = 用一个字段把真相盖掉,这正是本刀要根除的那种用法。

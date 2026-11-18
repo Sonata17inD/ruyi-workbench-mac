@@ -919,7 +919,8 @@ try {
       && /const key = STEWARD_TOOL_LABEL_KEYS\[String\(\(row && row\.tool\) \|\| ''\)\];/.test(conv),
       'I2 copy P1-1:※ 脚注优先读 label(读不到先查前端人话表,再落回工具 id),不再直接吐 steward_* 内部标识符');
     const contextOwner = '../backend/steward-tool-context.cjs';
-    const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', contextOwner];
+    const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
+      '../backend/steward-thread-queries.cjs', contextOwner];
     const srcFam = STEWARD_FAMILY.map(rd).join('\n');
     // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),那三个派生点里属于运行器的
     // 那一个(总览行)搬进了 13o-steward-runner-prompt.js。判据不变 —— 三个派生点都走同一个判据、

@@ -29,6 +29,7 @@ const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -313,10 +314,8 @@ try {
   // 这一条只能静态钉:`/api/steward/act` 的白名单(STEWARD_ACTION_HOOKS)只收【写】工具,
   // 读类工具根本走不到那条路由上,拿它来跑一次「没被拒」是假绿(它压根没被执行)。
   {
-    const readSrc = readServerSource();
-    const at = readSrc.indexOf('async function stewardImplThreadRead(');
-    const end = readSrc.indexOf('\nasync function ', at + 10);
-    const body = at >= 0 && end > at ? readSrc.slice(at, end) : '';
+    const queries = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-thread-queries.cjs'), 'utf8');
+    const body = functionBlock(queries, 'stewardImplThreadRead');
     ok(Boolean(body) && !/stewardSeated/.test(body),
       'T4 steward_thread_read 的函数体里【没有】这道门(§4.5「可以读」;拿 /api/steward/act 跑一次是假绿——读类工具根本不在它的白名单里)');
   }
@@ -391,11 +390,14 @@ try {
 
   /* ═════════ 静态锁 ═════════ */
   const src = readServerSource();
-  ok(/function stewardApplyPresenceGate\(events\)/.test(src), 'S3 在场门单点在编译产物里(13i)');
+  const inbox = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox.cjs'), 'utf8');
+  ok(/function stewardApplyPresenceGate\(events\)/.test(inbox) && !/function stewardApplyPresenceGate\(/.test(src),
+    'S3 收件箱服务持有唯一的在场门');
   ok(/function stewardSeatedByUser\(sessionId\)/.test(src), 'S4 工具门的在场判据单点在编译产物里(13k)');
   ok(/EventStreamHooks\.presenceSnapshot/.test(src) && !/13r[^\n]*stewardPresenceSnapshot\(\)[^\n]*13i/.test(src),
     'S5 三个消费面都经 EventStreamHooks 延迟绑定取在场(不直引 13r 的符号 = 零前向边)');
-  ok((src.match(/typeof EventStreamHooks\.presenceSnapshot === 'function'/g) || []).length >= 4,
+  ok(/typeof EventStreamHooks\.presenceSnapshot === 'function'/.test(inbox)
+    && (src.match(/typeof EventStreamHooks\.presenceSnapshot === 'function'/g) || []).length >= 3,
     'S6 四个消费面各自带 typeof 守卫(钩子未填充时 fail-open,不反噬)');
 } finally {
   try { if (seat) seat.close(); } catch { /* ignore */ }
@@ -411,7 +413,7 @@ process.exitCode = fail ? 1 : 0;
 
 // ────────────────────────────────────────────────────────────────────────────
 // REVERSE VERIFICATION(32 号文 §4 纪律 5)
-//   1. P1b:把 13i stewardTickOnce 里的 `const gated = stewardApplyPresenceGate(events);`
+//   1. P1b:把收件箱服务 stewardTickOnce 里的 `const gated = stewardApplyPresenceGate(events);`
 //      改成 `const gated = events;` -> P1b 必须 FAIL(门拔了,坐着也照样被戳)。
 //   2. P2e:把 stewardApplyPresenceGate 里 `quiet: true` 改成 `quiet: false` -> P2e 必须 FAIL。
 //   3. P2d:把那一支的 `out.push({ ...evt, payload: ... })` 改成 `continue` -> P2d 必须 FAIL

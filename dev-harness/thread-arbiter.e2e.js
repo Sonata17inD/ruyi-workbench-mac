@@ -658,11 +658,9 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
       const SRC = path.join(WB, 'app', 'src');
       const rd = f => fs.readFileSync(path.join(SRC, f), 'utf8');
       ok(/function waitReasonFor\(thread, ctx\)/.test(rd('../backend/steward-core.cjs')), '单点:waitReasonFor 只声明在 06i(引擎层纯函数)');
-      // 117 波 T1(32 号文 §2.1)重钉:steward_thread_status 的实现随拆分搬进 13k-steward-threads.js
-      // (纯搬家,逐字节不变)。判据不变 —— 那个展示面必须经 06i 的 waitReasonFor,只是它现在住在
-      // 13g 族的哪个文件里由拆分决定,故改读整族。下面「没有第二处自己拼的等待人话」也随之覆盖全族。
-      const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js'];
-      ok(/waitReasonFor\(/.test(STEWARD_FAMILY.map(rd).join('\n')), '单点:steward_thread_status 经 waitReasonFor');
+      const queries = '../backend/steward-thread-queries.cjs';
+      const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', queries];
+      ok(/waitReasonFor\(/.test(rd(queries)), '单点:steward_thread_status 经 waitReasonFor');
       ok(/waitReasonFor\(/.test(rd('../backend/mission-aggregate.cjs')), '单点:GET /api/missions 的线程行经 waitReasonFor');
       // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),这三处 waitReasonFor 随之分落
       // 三个文件 —— 总览行进 13o、仲裁器读模型进 13n、插队工具留在 13h(还多一处是 13q 的递话通道)。

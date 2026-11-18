@@ -45,11 +45,7 @@ const core = readSrc('../backend/steward-core.cjs');
 const config = readSrc('../backend/config-schema.cjs');
 const search = readSrc('../backend/session-search.cjs');
 const sessionRoutes = readSrc('../backend/session-routes.cjs');
-// 117 波 T1(32 号文 §2.1):13g 拆成 13j/13k/13l/13g 四个文件(纯搬家),steward_threads_search
-// 现在住 13k-steward-threads.js。这里要钉的事实是「threads_search 的结果带 brief」,与它住哪个
-// 文件无关,故改读整个 13g 族 —— 拆分再动一次也不会假红。
-const steward = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js']
-  .map(readSrc).join('\n');
+const steward = readSrc('../backend/steward-thread-queries.cjs');
 // 117 波 T2(32 号文 §5):13h 拆成 13m/13n/13o/13p/13q/13h 六个文件(纯搬家),总览行装配与
 // preroute 索引行都搬进了 13o-steward-runner-prompt.js。这里要钉的事实是「总览行带 displayTitle、
 // preroute 索引行的 title 仍是原话」,与它住哪个文件无关,故与上面 13g 族同办法 —— 改读整族。
