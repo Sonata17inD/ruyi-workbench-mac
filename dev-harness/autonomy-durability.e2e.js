@@ -106,7 +106,6 @@ function capturesContaining(dir, needle) {
 
   // ── B) 静态锁 ──
   {
-    ok((src.match(/await atomicWriteJson\(/g) || []).length >= 14, 'B 原子写调用点 ≥14(全量收编,实 ' + (src.match(/await atomicWriteJson\(/g) || []).length + ')');
     // 硬不变量:全文件 " + '.tmp'" 只允许 5 处豁免 —— ①atomicWriteJson 自身的唯一名构造;②flushSessionIndexSync
     // (exit 监听器只能同步 I/O,但 tmp 名同样唯一);③检查点回滚的二进制内容恢复(非 JSON,单写者语义);
     // ④v1.9 数据管家 sweep 的 events.ndjson.gz 归档(二进制,进程内串行 sweep 单写者,tmp+rename 原子替换);
@@ -118,17 +117,22 @@ function capturesContaining(dir, needle) {
     // tmp+rename,tmp 名带 pid+随机后缀(非固定名),不是工作台自有的 JSON 状态,不适用 atomicWriteJson。
     // 任何人新增第 7 处手写 tmp 写点 → 此断言红,逼着走 atomicWriteJson 或登记专用协议。
     const backendDir = path.join(WB, 'app', 'backend');
-    const runtimeSource = src + fs.readdirSync(backendDir).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backendDir, name), 'utf8')).join('\n');
+    const runtimeSource = src + '\n' + fs.readdirSync(backendDir).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backendDir, name), 'utf8')).join('\n');
+    const atomicSites = (runtimeSource.match(/await atomicWriteJson\(/g) || []).length;
+    ok(atomicSites >= 14, 'B 原子写调用点 ≥14(全量收编,实 ' + atomicSites + ')');
     const tmpSites = (runtimeSource.match(/\+ '\.tmp'/g) || []).length;
     ok(tmpSites === 6, 'B 手写 tmp 写点=6(白名单豁免;实 ' + tmpSites + ')');
     const agentRunStoreSource = fs.readFileSync(path.join(backendDir, 'agent-run-store.cjs'), 'utf8');
+    const agentRunRoutes = fs.readFileSync(path.join(backendDir, 'agent-run-routes.cjs'), 'utf8');
     const turnSummarySource = fs.readFileSync(path.join(backendDir, 'turn-summary.cjs'), 'utf8');
     ok(!/dest \+ '\.' \+ process\.pid \+ '\.tmp'/.test(agentRunStoreSource), 'B saveAgentRun 旧 pid-only tmp 模式已清零');
     ok(/AGENT_RUN_PERSIST_DEGRADED_AFTER = 3/.test(agentRunStoreSource) && /AGENT_RUN_PERSIST_PAUSE_AFTER = 8/.test(agentRunStoreSource), 'B 持久化退化阈值常量在(3/8)');
     // hunt2-http:digest 视图(只读标量、不外发)浅展开,完整视图照旧深拷贝。
-    ok(/runs\[i\]\s*=\s*\{\s*\.\.\.\(digestView \? live\.run : JSON\.parse\(JSON\.stringify\(live\.run\)\)\),\s*live:\s*true/.test(src),
+    ok(/runs\[i\]\s*=\s*\{\s*\.\.\.\(digestView \? live\.run : JSON\.parse\(JSON\.stringify\(live\.run\)\)\),\s*live:\s*true/.test(agentRunRoutes)
+      && /persistenceDegraded: !!mem\.persistenceDegraded/.test(agentRunStoreSource),
       'B GET /api/agent-runs 以完整 live 快照叠加进度与 persistenceDegraded');
-    ok(/function appendAgentRunEvent\(run, evt\)/.test(agentRunStoreSource) && (src.match(/appendAgentRunEvent\(/g) || []).length >= 10, 'B 事件日志助手 + ≥10 发射点');
+    ok(/function appendAgentRunEvent\(run, evt\)/.test(agentRunStoreSource)
+      && (runtimeSource.match(/appendAgentRunEvent\(/g) || []).length >= 10, 'B 事件日志助手 + ≥10 发射点');
     ok(/op === 'skip'\) continue/.test(turnSummarySource), 'B 幂等跳过不进本轮变更清单');
     const fe = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆域后横幅在 js/agent-workflows.js)
     const zh = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));

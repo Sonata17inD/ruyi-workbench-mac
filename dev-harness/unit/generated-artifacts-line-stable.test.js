@@ -78,7 +78,7 @@ describe('generated architecture artifacts are line-number free', () => {
     const inserted = {};
     for (const file of moduleFiles(dir)) inserted[file] = shiftLines(path.join(dir, file));
     assert.ok(shiftLines(path.join(dir, '../backend/workbench-http-server.cjs')) > 2, 'HTTP listener route anchors also shift');
-    for (const owner of ['status', 'workspace', 'provider', 'configuration']) {
+    for (const owner of ['status', 'workspace', 'provider', 'configuration', 'mission-ledger', 'autonomy-grant', 'agent-workflow']) {
       const file = `${owner}-routes.cjs`;
       assert.ok(shiftLines(path.join(dir, '../backend', file)) > 2, `${file} 内也平移了 handler`);
     }

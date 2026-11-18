@@ -23,6 +23,7 @@ const repo = path.resolve(__dirname, '..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const src = f => fs.readFileSync(path.join(app, 'src', f), 'utf8');
 const workflowRunner = src('../backend/agent-workflow.cjs');
+const workflowRoutes = src('../backend/agent-workflow-routes.cjs');
 const pub = f => fs.readFileSync(path.join(app, 'public', f), 'utf8');
 const srv = require(path.join(app, 'server.js'));
 let fail = 0;
@@ -46,9 +47,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   // 的安全不变量要求「每个注册工具都有 tier 与 pack 声明」—— 缺声明会让兼容口落到默认低档。「不 offer」由上面 ① 第一条钉。
   ok(/spawn_agent: 'exec'/.test(tiers) && /agent_result: 'read'/.test(tiers) && /agent_result: 'agents'/.test(s07),
     '① 原生工具档位表把 spawn_agent 保留为 exec、agent_result 定为 read 并归入 agents 包');
-  const s13 = src('13-http-router.js');
-  ok(!/if \(t\.name === 'spawn_agent'\) return false;/.test(s13), '① 13 MCP tools/list 不再需要过滤 spawn_agent');
-  ok(/pathname === '\/api\/agent-workflow\/wait'\) return agentWorkflowLoopbackRoute\(req, res, 'wait'\)/.test(s13) && /pathname === '\/api\/agent-workflow\/result'\) return agentWorkflowLoopbackRoute\(req, res, 'result'\)/.test(s13) && /async function agentWorkflowLoopbackRoute\(req, res, kind\)/.test(s13), '① 13 有 wait/result 回环路由(MCP 子进程用)');
+  ok(!/if \(t\.name === 'spawn_agent'\) return false;/.test(src('../backend/mcp-server.cjs')), '① MCP tools/list 无需过滤 spawn_agent');
+  ok(/pathname === '\/api\/agent-workflow\/wait'\) return agentWorkflowLoopbackRoute\(req, res, 'wait'\)/.test(workflowRoutes) && /pathname === '\/api\/agent-workflow\/result'\) return agentWorkflowLoopbackRoute\(req, res, 'result'\)/.test(workflowRoutes) && /async function agentWorkflowLoopbackRoute\(req, res, kind\)/.test(workflowRoutes), '① 工作流路由持有 wait/result 回环');
   ok(/\{ m: 'POST', p: '\/api\/agent-workflow\/wait', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')) && /\{ m: 'POST', p: '\/api\/agent-workflow\/result', auth: 'body-token' \}/.test(src('../backend/http-route-policy.cjs')), '① 01b 两条回环路由登记 body-token 门(同 launch)');
   const s12 = src('12-tool-dispatch.js');
   ok(/function agentToolLoopback\(route, payload\)/.test(s12) && /'\/api\/agent-workflow\/wait'/.test(s12) && /'\/api\/agent-workflow\/result'/.test(s12) && /envelope: true/.test(s12), '① 12 MCP 子进程:launch(envelope:true)/wait/result 三路回环');
@@ -101,13 +101,12 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(s11.includes('EventStreamHooks.isAgentEnvelopeDelivered = BackgroundJobs.isAgentEnvelopeDelivered;') && /const isAgentEnvelopeDelivered = \(session, runId\)/.test(jobs),
     '③ 后台账本连接已读查询钩子 isAgentEnvelopeDelivered');
   ok(/function settleWaitEnvelopes\(session, out\)/.test(s09) && /kind: 'agent_envelope_receipt', runId: env\.runId, status: env\.status, delivered: 'already'/.test(s09) && /resultObj = settleWaitEnvelopes\(session, await waitForAgentRunResults\(session\.id, requestedRunIds/.test(s09), '③ 09 wait_agents 经 settleWaitEnvelopes 结算:已送达 → 短回执,否则登记已读');
-  ok(/if \(liveReg && liveReg\.session\) settleWaitEnvelopes\(liveReg\.session, out\);/.test(src('13-http-router.js')) && /settleWaitEnvelopes\(snapshot, out\);/.test(src('13-http-router.js')), '③ 13 MCP 回环 wait 同一套结算(活回合内存会话 / 无活回合读快照 + mutateSession 落已读)');
+  ok(/if \(liveReg && liveReg\.session\) settleWaitEnvelopes\(liveReg\.session, out\);/.test(workflowRoutes) && /settleWaitEnvelopes\(snapshot, out\);/.test(workflowRoutes), '③ MCP 回环 wait 同一套结算(活回合内存会话 / 无活回合读快照 + mutateSession 落已读)');
   ok(!/function markDeliveredEnvelopes\(/.test(s09), '③ 09 旧的单向登记 markDeliveredEnvelopes 已被结算函数取代');
   ok(/const prefix = job\.kind === 'agent'/.test(jobs) && /\[代理完成通知；以下是交付信封/.test(jobs), '③ 后台账本 drainBackgroundJobs 对代理 job 用信封口径');
   const s05 = src('05-claude-engine.js');
   ok(/EventStreamHooks\.drainAgentEnvelopesText\(session\)/.test(s05) && /\[recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope\]/.test(s05), '③ 05 Claude/Kimi 下一回合开头拼入未读信封(同一张已读表)');
-  const s13 = src('13-http-router.js');
-  ok(/const completion = run => deliverAgentRunEnvelope\(session\.id, run\);/.test(s13) && !/appendAgentWorkflowSummaryToSession\(session\.id, run, \{ title/.test(s13), '③ 13 launch 完成不再追加整份助手摘要消息(那条会被抄进模型上下文)');
+  ok(/const completion = run => deliverAgentRunEnvelope\(session\.id, run\);/.test(workflowRoutes) && !/appendAgentWorkflowSummaryToSession\(session\.id, run, \{ title/.test(workflowRoutes), '③ launch 完成投递信封(不追加整份助手摘要消息)');
 }
 
 // ④ 界面零泄漏

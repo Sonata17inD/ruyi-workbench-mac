@@ -11808,18 +11808,20 @@
       "layer": "transport",
       "provides": [
         "ServerStartNotices",
-        "agentWorkflowLoopbackRoute",
         "buildUsageSummary",
         "doctor",
         "doctorHealthSeverity",
         "doctorHumanLines",
+        "handleAgentWorkflowApiRoutes",
         "handleApi",
+        "handleAutonomyGrantApiRoutes",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
         "handleConfigurationApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
         "handleMemoryApiRoutes",
+        "handleMissionLedgerApiRoutes",
         "handleModelsApiRoute",
         "handlePlaybookApiRoutes",
         "handleProviderTestApiRoute",
@@ -11838,20 +11840,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionIdInvalid",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionNotFound",
           "kinds": [
             "call"
           ]
@@ -11980,7 +11968,6 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -11988,7 +11975,7 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12028,13 +12015,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "normalizeStoragePolicy",
           "kinds": [
             "read"
@@ -12044,7 +12024,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12148,13 +12127,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "VERSION",
           "kinds": [
             "read"
@@ -12213,7 +12185,6 @@
           "provider": "01-config.js",
           "symbol": "detectClaudePath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12321,7 +12292,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12364,14 +12334,13 @@
           "provider": "01-config.js",
           "symbol": "tokenMatches",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "tokenOk",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12380,20 +12349,6 @@
           "symbol": "observationRecallEnabled",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "resolvePermissionMode",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12429,7 +12384,7 @@
           "provider": "01h-process-runtime.js",
           "symbol": "existsExecutableAsync",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12464,14 +12419,13 @@
           "provider": "02-session-store.js",
           "symbol": "applyMissionUpdate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12479,7 +12433,7 @@
           "provider": "02-session-store.js",
           "symbol": "evaluateMissionCheck",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12536,7 +12490,7 @@
           "provider": "02-session-store.js",
           "symbol": "maybeFinalizeMission",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12550,7 +12504,6 @@
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12558,14 +12511,14 @@
           "provider": "02-session-store.js",
           "symbol": "normalizeMission",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "normalizeTodoItems",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12593,7 +12546,7 @@
           "provider": "02-session-store.js",
           "symbol": "recordMissionCheckResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12607,7 +12560,7 @@
           "provider": "02-session-store.js",
           "symbol": "saveAgentRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12747,7 +12700,6 @@
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12769,7 +12721,7 @@
           "provider": "04i-provider-wire.js",
           "symbol": "resolveProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13042,56 +12994,56 @@
           "provider": "06e-mission-domain.js",
           "symbol": "missionControlCommand",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "activeDriverRunOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "dryRunGrantFiles",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "installGrant",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "listGrantsView",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "normalizeGrant",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "revokeAllGrants",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "revokeGrant",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13196,21 +13148,21 @@
           "provider": "08-agent-runs.js",
           "symbol": "agentRunResultSlice",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateNodes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13224,35 +13176,35 @@
           "provider": "09-workflow.js",
           "symbol": "deliverAgentRunEnvelope",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "resolveWaitAgentsMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "runAgentWorkflow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "settleWaitEnvelopes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09-workflow.js",
           "symbol": "waitForAgentRunResults",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

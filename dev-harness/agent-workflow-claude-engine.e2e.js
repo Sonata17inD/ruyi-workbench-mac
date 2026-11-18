@@ -44,7 +44,8 @@ async function tokenFor(port) {
   // 活的 Kimi 父回合在离线夹具里起不来,这里钉结构:只有活的 provider 父回合才映射成 'openai',其余按可用引擎挑。
   {
     const { sliceBlock } = require('./lib/source-slice.js');
-    const routing = sliceBlock(fs.readFileSync(path.join(WB, 'app', 'server.js'), 'utf8'), 'const parentEngine = ', ';', { inclusive: true });
+    const workflowRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'agent-workflow-routes.cjs'), 'utf8');
+    const routing = sliceBlock(workflowRoutes, 'const parentEngine = ', ';', { inclusive: true });
     ok(/reg && reg\.kind === 'claude' \? 'claude'/.test(routing) && /reg && reg\.kind === 'openai' \? 'openai'/.test(routing) && /provider \? 'openai' : 'claude'/.test(routing),
       'K launch routing maps only a live provider parent to openai; a Kimi parent (or none) picks from the available engines');
   }

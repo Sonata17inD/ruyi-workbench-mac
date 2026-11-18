@@ -66,9 +66,9 @@ const routeMarker = tail => "pathname === '/" + 'api/' + tail + "'";
 const sites = [
   ['skill-routes.cjs setSessionSkillsCore', fnBody('../backend/skill-routes.cjs', 'async function setSessionSkillsCore('), false],
   ['memory-routes.cjs 线程记忆设置路由', routeBlock('../backend/memory-routes.cjs', routeMarker('session/memories'), 60), false],
-  ['13-http-router.js todo 回写路由', routeBlock('13-http-router.js', routeMarker('todo'), 25), false],
+  ['mission-ledger-routes.cjs todo 回写路由', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('todo'), 25), false],
   ['session-execution-routes.cjs Kimi 状态读数回写路由', routeBlock('../backend/session-execution-routes.cjs', routeMarker('kimi/status'), 30), false],
-  ['13-http-router.js 任务账本路由(check／start／update)', routeBlock('13-http-router.js', routeMarker('mission'), 110), true],
+  ['mission-ledger-routes.cjs 任务账本路由(check／start／update)', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('mission'), 110), true],
   ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
   ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
   ['kimi-native-operations.cjs runKimiCompact', fnBody('../backend/kimi-native-operations.cjs', 'async function runKimiCompact('), false],

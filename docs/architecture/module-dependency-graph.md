@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 93 | 2702 | 3254 | 629 | 20 | 0 | 0 |
+| 93 | 2704 | 3248 | 628 | 20 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -81,7 +81,7 @@
 | 63 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 64 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
 | 65 | `12-tool-dispatch.js` | tools | 87 | 171 | 26 |
-| 66 | `13-http-router.js` | transport | 26 | 220 | 36 |
+| 66 | `13-http-router.js` | transport | 28 | 214 | 35 |
 | 67 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 18 |
 | 69 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
@@ -400,11 +400,10 @@
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |
-| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CLAUDE_ENDPOINT_PRESETS`, `CONFIG_SCHEMA`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SKILL_ID_RE`, `URL`, `VERSION`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `cachedContextLength`, `contextWindowFromTable`, `dataRootAliases`, `ensureDataRootReal`, `ensureDirs`, `exePath`, `externalRoot`, `fsp`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `json`, `logEvent`, `makeId`, `maskProviders`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `nativeToolDisabledByPolicy`, `normalizeCwd`, `normalizeStoragePolicy`, `nowIso`, `os`, `path`, `paths`, `readJsonBody`, `redact`, `resolveContextWindow`, `runtimeToolRequirementsMet`, `safeJsonParse`, `samePathKey`, `send`, `truncateToolResult`, `unmaskProviders` |
+| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CLAUDE_ENDPOINT_PRESETS`, `CONFIG_SCHEMA`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SKILL_ID_RE`, `VERSION`, `apiFailure`, `cachedContextLength`, `contextWindowFromTable`, `dataRootAliases`, `ensureDataRootReal`, `ensureDirs`, `exePath`, `externalRoot`, `fsp`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `json`, `logEvent`, `makeId`, `maskProviders`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `nativeToolDisabledByPolicy`, `normalizeStoragePolicy`, `nowIso`, `os`, `path`, `paths`, `readJsonBody`, `redact`, `resolveContextWindow`, `runtimeToolRequirementsMet`, `safeJsonParse`, `samePathKey`, `send`, `truncateToolResult`, `unmaskProviders` |
 | `13-http-router.js` | `00b-ruyi-names.js` | backward | `LEGACY_RUYI_MCP_SERVER_IDS`, `RUYI_MCP_SERVER_ID` |
 | `13-http-router.js` | `01-config.js` | backward | `ConfigPatchHooks`, `RUNTIME`, `atomicWriteJson`, `authorizeRoute`, `buildClaudeAgentDefinitions`, `desktopMcpDetectionPending`, `detectClaudePath`, `detectDesktopMcp`, `detectKimiPath`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `getAgentRoleLibrary`, `mcpConfigFilePath`, `mutateConfig`, `projectAgentRoleFile`, `readClaudeProjectAgentRoles`, `readConfig`, `readProjectAgentRoles`, `requestIsLoopback`, `resolveExternalMcpServers`, `safeSessionId`, `saveProjectAgentRoles`, `selectedAgentCli`, `syncAgentRolesToClaude`, `syncClaudeCliSettings`, `syncMcpServersToClaude`, `tokenMatches`, `tokenOk` |
 | `13-http-router.js` | `01c-runtime-flags.js` | backward | `observationRecallEnabled` |
-| `13-http-router.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES`, `resolvePermissionMode` |
 | `13-http-router.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES` |
 | `13-http-router.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `13-http-router.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `ProcessRuntime`, `existsExecutable`, `existsExecutableAsync`, `probeRgAsync` |

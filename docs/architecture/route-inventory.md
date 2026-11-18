@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:10:49.899Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:13:19.809Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -29,6 +29,14 @@
 | DELETE | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 | GET | `/api/agent-runs/` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
 
+## agent-workflow(3)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/agent-workflow/launch` | exact | body-token | ../backend/agent-workflow-routes.cjs · `handleAgentWorkflowApiRoutes` | agent-deadlock-watchdog.e2e.js, agent-node-limits.e2e.js, agent-node-wrapup.e2e.js 等 40 件 |
+| POST | `/api/agent-workflow/wait` | exact | body-token | ../backend/agent-workflow-routes.cjs · `handleAgentWorkflowApiRoutes` | agent-node-limits.e2e.js |
+| POST | `/api/agent-workflow/result` | exact | body-token | ../backend/agent-workflow-routes.cjs · `handleAgentWorkflowApiRoutes` | — |
+
 ## attachment(2)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -49,6 +57,14 @@
 | GET | `/api/audio/lexicon` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
 | POST | `/api/audio/lexicon` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | data-root-migration.e2e.js, voice-learn-front.test.js, voice-learn.browser.e2e.js 等 5 件 |
 | POST | `/api/audio/lexicon/observe` | exact | token | ../backend/audio-routes.cjs · `handleAudioApiRoutes` | voice-learn-front.test.js, voice-learn.browser.e2e.js, voice-learn.e2e.js |
+
+## autonomy-grant(3)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| * | `/api/autonomy/grants` | exact | token self | ../backend/autonomy-grant-routes.cjs · `handleAutonomyGrantApiRoutes` | autonomy-grant.e2e.js |
+| POST | `/api/autonomy/grant` | exact | token self | ../backend/autonomy-grant-routes.cjs · `handleAutonomyGrantApiRoutes` | autonomy-grant.e2e.js |
+| POST | `/api/autonomy/revoke` | exact | token self | ../backend/autonomy-grant-routes.cjs · `handleAutonomyGrantApiRoutes` | autonomy-grant.e2e.js |
 
 ## checkpoint-storage(7)
 
@@ -73,19 +89,11 @@
 | POST | `/api/agent-workflows` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
 | DELETE/POST | `/api/agent-workflows/` | prefix | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, store-walkthrough-w1.e2e.js |
 
-## core-inline(11)
+## core-inline(3)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
 | * | `/health` | exact | host-gate | ../backend/workbench-http-server.cjs · `createWorkbenchHttpServer` | — |
-| POST | `/api/todo` | exact | body-token | 13-http-router.js · `handleApi` | event-stream.e2e.js, todo-loopback.e2e.js, http-input-hardening.test.js 等 4 件 |
-| GET/POST | `/api/mission` | exact | body-token self | 13-http-router.js · `handleApi` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 71 件 |
-| * | `/api/autonomy/grants` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
-| POST | `/api/autonomy/grant` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
-| POST | `/api/autonomy/revoke` | exact | token self | 13-http-router.js · `handleApi` | autonomy-grant.e2e.js |
-| POST | `/api/agent-workflow/launch` | exact | body-token | 13-http-router.js · `handleApi` | agent-deadlock-watchdog.e2e.js, agent-node-limits.e2e.js, agent-node-wrapup.e2e.js 等 40 件 |
-| POST | `/api/agent-workflow/wait` | exact | body-token | 13-http-router.js · `handleApi` | agent-node-limits.e2e.js |
-| POST | `/api/agent-workflow/result` | exact | body-token | 13-http-router.js · `handleApi` | — |
 | POST | `/api/chat/stream` | exact | token-browser | 13-http-router.js · `handleApi` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
 | POST | `/api/tools/` | prefix | token | 13-http-router.js · `handleApi` | audit-w23.e2e.js, autonomy-shell-sandbox.e2e.js, background-completion.e2e.js 等 25 件 |
 
@@ -200,6 +208,13 @@
 | POST | `/api/missions/:missionId/merge` | regex | token self | ../backend/mission-routes.cjs · `handleMissionsApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
 | POST | `/api/missions/:missionId/split` | regex | token self | ../backend/mission-routes.cjs · `handleMissionsApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
 | GET | `/api/missions/:missionId` | regex | token-browser self | ../backend/mission-routes.cjs · `handleMissionsApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
+
+## mission-ledger(2)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/todo` | exact | body-token | ../backend/mission-ledger-routes.cjs · `handleMissionLedgerApiRoutes` | event-stream.e2e.js, todo-loopback.e2e.js, http-input-hardening.test.js 等 4 件 |
+| GET/POST | `/api/mission` | exact | body-token self | ../backend/mission-ledger-routes.cjs · `handleMissionLedgerApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 71 件 |
 
 ## playbook(5)
 
@@ -323,6 +338,9 @@
 - 13-http-router.js · `handleApi` → `handleMemoryApiRoutes`
 - 13-http-router.js · `handleApi` → `handleSessionExecutionApiRoutes`
 - 13-http-router.js · `handleApi` → `handleInterventionApiRoutes`
+- 13-http-router.js · `handleApi` → `handleMissionLedgerApiRoutes`
+- 13-http-router.js · `handleApi` → `handleAutonomyGrantApiRoutes`
+- 13-http-router.js · `handleApi` → `handleAgentWorkflowApiRoutes`
 - 13-http-router.js · `handleApi` → `handleUsageApiRoutes`
 - 13-http-router.js · `handleApi` → `handleAgentRunApiRoutes`
 - 13-http-router.js · `handleApi` → `handleCheckpointQueryApiRoutes`

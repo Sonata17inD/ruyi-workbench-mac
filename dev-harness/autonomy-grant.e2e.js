@@ -62,33 +62,34 @@ const bodyTokenEntries = (routePolicySource.match(/\{[^}]*auth: 'body-token'[^}]
 ok(bodyTokenEntries.length > 0 && !/autonomy/.test(bodyTokenEntries), 'S2 /api/autonomy 不在 body-token 路由(不可 body-token 绕过)');
 
 // S3 R-P2-2:三个 autonomy handler 各自 tokenOk(req) 自查,且授权书路由区【无】body-token 兜底。
-const autonomyRegion = (src.match(/\/\/ ── 第27波:自主性授权书 API[\s\S]*?if \(req\.method === 'POST' && pathname === '\/api\/agent-workflow\/launch'\)/) || [''])[0];
-ok(autonomyRegion.length > 200, 'S3 授权书路由区可定位');
+const autonomyRegion = fs.readFileSync(path.join(WB, 'app/backend/autonomy-grant-routes.cjs'), 'utf8');
+ok(/async function handleAutonomyGrantApiRoutes\(/.test(autonomyRegion), 'S3 授权书路由区可定位');
 ok((autonomyRegion.match(/if \(!tokenOk\(req\)\) return send\(res, json\(\{ ok: false, error: 'missing or invalid workbench token' \}, 403\)\)/g) || []).length >= 3, 'S3 三路由各自 tokenOk 自查(≥3 处 403)');
 ok(!/bodyTokenOk|body\.token === RUNTIME\.token|RUNTIME\.token &&/.test(autonomyRegion), 'S3 授权书路由区【无】body-token 兜底(R-P2-2)');
 
 const providerTurn = fs.readFileSync(path.join(WB, 'app/backend/provider-turn.cjs'), 'utf8');
+const cliInterventions = fs.readFileSync(path.join(WB, 'app/backend/intervention-routes.cjs'), 'utf8');
 
 // S4 子集律插桩:provider 主 gate 仅在 gate==='ask' && !bridge 时 consumeGrant('native');CLI 桥 consumeGrant('cli')。
 ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(providerTurn), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
-ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(src), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
+ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(cliInterventions), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
 // 117m-A3 重钉（理由）：原文钉死了源码字面 nativeToolGate(config.permissionMode, bridgeTier)。
 // 117m-A1 把闸门签名扩成 (mode, tier, toolName, input)；不把工具名与入参传进去，CLI 桥这一侧的
 // auto 档就还是老口径 —— 同一个「全自动」在两个引擎下行为不一。天花板语义一字未改：
 // 仍是「只有闸门判 ask 才允许授权书降级」。下面三条比旧那一条强：除了钉住复检本身，
 // 还钉住它【吃到了工具名与入参】且 auto 档判 allow 时不得再弹一次窗。
-ok(src.includes("const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});"),
+ok(cliInterventions.includes("const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});"),
   'S4 CLI 桥的闸门判定吃到工具名与入参(与原生主 gate 同口径)');
 // 代码走查 C5：CLI 报的是 Claude 名(Edit/Write/Bash)。修前按原生表查，一律落成 exec —— 「改文件不问」档在 CLI 引擎下不生效、弹窗徽标也错。
 const { cliBridgeToolTier } = require('../ruyi-workbench/app/backend/cli-tool-tiers.cjs');
-ok(src.includes("const bridgeTier = cliBridgeToolTier(String(body.toolName || ''));")
+ok(cliInterventions.includes("const bridgeTier = cliBridgeToolTier(String(body.toolName || ''));")
   && cliBridgeToolTier('Edit') === 'edit' && cliBridgeToolTier('Read') === 'read'
   && cliBridgeToolTier('file_read') === 'read' && cliBridgeToolTier('unknown') === 'exec',
   'S4c CLI 权限桥使用共享档位及原生工具兜底');
-ok(src.includes("if (bridgeGate === 'ask') {")
-  && src.indexOf("consumeGrant({ id: sessionId }") > src.indexOf("if (bridgeGate === 'ask') {"),
+ok(cliInterventions.includes("if (bridgeGate === 'ask') {")
+  && cliInterventions.indexOf("consumeGrant({ id: sessionId }") > cliInterventions.indexOf("if (bridgeGate === 'ask') {"),
   'S4 CLI 桥消耗前复检闸门天花板(P3 对称；只降 ask，plan 的 block 永不放行)');
-ok(src.includes("if (bridgeMode === 'auto' && bridgeGate === 'allow') {"),
+ok(cliInterventions.includes("if (bridgeMode === 'auto' && bridgeGate === 'allow') {"),
   'S4 auto 档判 allow 时 CLI 桥直接放行(不再弹窗；只对 auto 档短路)');
 // 主 gate 消耗点必须落在 gate==='block' 判定【之前】(子集律:只作用于 ask 分支)。
 const nativeConsumeIdx = providerTurn.indexOf("consumeGrant(session, tc.name, args, 'native'");

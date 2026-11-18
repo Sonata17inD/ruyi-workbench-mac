@@ -246,7 +246,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       'f1 那一处就是 recordMissionCheckResult(不许有第二条赋值)');
     // f2:落章的调用点恰两处,都是真的跑了检查那两条路。
     const stampCallers = srcNames.filter(name => name !== '../backend/session-model.cjs' && /recordMissionCheckResult\(/.test(readSrc(name)));
-    ok(stampCallers.length === 2 && stampCallers.includes('../backend/mission-driver.cjs') && stampCallers.includes('13-http-router.js'),
+    ok(stampCallers.length === 2 && stampCallers.includes('../backend/mission-driver.cjs') && stampCallers.includes('../backend/mission-ledger-routes.cjs'),
       'f2 落章的调用点恰两处:驱动器每轮 + action:check(实 ' + JSON.stringify(stampCallers) + ')');
     for (const name of stampCallers) {
       // 128b:action:check 的落盘改走 mutateSession(撤回插在中间时在新读的副本上重放),章不能再紧挨着检查写 ——
@@ -257,7 +257,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       const viaMap = /const r = await evaluateMissionCheck\(m\.check, cwd\);\s*results\.push\(\{ id: m\.id, checkType: [^\n]*result: r \}\);/.test(src)
         && /const byId = new Map\(results\.map\(item => \[item\.id, item\.result\]\)\);/.test(src)
         && /const r = byId\.get\(m\.id\);\s*if \(!r\) continue;\s*recordMissionCheckResult\(m, r\);/.test(src);
-      ok(name === '13-http-router.js' ? viaMap : direct,
+      ok(name === '../backend/mission-ledger-routes.cjs' ? viaMap : direct,
         'f2 ' + name + ' 的章来自真跑过的那次 evaluateMissionCheck(不是凭空落章)');
     }
     // f3:容器验收项的写面 —— 规范器只在 02,HTTP 侧三条路由全是 UI header token,模型工具面零处。

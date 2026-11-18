@@ -226,6 +226,11 @@ function spawnWb() {
 
     // ============ (s) 静态锁 ============
     console.log('\n── [s] 静态锁 ──');
+    const backendSource = file => fs.readFileSync(path.join(WB, 'app/backend', file), 'utf8');
+    const ledgerRoutes = backendSource('mission-ledger-routes.cjs');
+    const missionRoutes = backendSource('mission-routes.cjs');
+    const missionControl = backendSource('mission-control.cjs');
+    const providerTurn = backendSource('provider-turn.cjs');
     ok(/IRREVERSIBLE_NATIVE_KIND = \{/.test(src) && /CLAUDE_IRREVERSIBLE_KIND = \{/.test(src), 's 02 不可逆账分类表(内建+claude)');
     ok(/function irreversibleToolKind\(name\)/.test(src) && /irreversible\.push\(\{ kind, name/.test(src), 's 02 buildTurnSummary 记账');
     const summaryProbe = require(path.join(WB, 'app/server.js')).buildTurnSummary(1, [], 'openai', []);
@@ -234,10 +239,10 @@ function spawnWb() {
     ok(/async function buildMissionResult\(session, opts\)/.test(src) && /rollbackAvailable/.test(src), 's 02 buildMissionResult(含真实回滚引用)');
     ok(/async function maybeFinalizeMission\(session, how\)/.test(src), 's 02 maybeFinalizeMission 盖章/清章');
     ok(/result: \(p\.result && typeof p\.result === 'object'\) \? p\.result : null,/.test(src), 's 02 normalizeMission 深拷携带 result');
-    ok(/const result = await missionControlCommand\(sessionId, 'stop'\)/.test(src) && /mission\.result = await buildMissionResult\(session, \{ status: 'stopped', how: 'stop' \}\)/.test(src), 's 13 stop 复用整单控制核心盖 stopped 章');
+    ok(/const result = await missionControlCommand\(sessionId, 'stop'\)/.test(ledgerRoutes) && /mission\.result = await buildMissionResult\(session, \{ status: 'stopped', how: 'stop' \}\)/.test(missionControl), 's stop 复用整单控制核心盖 stopped 章');
     // 128b:check／update 的落盘改走 mutateSession,盖章落在新读的那份副本(fresh)上 —— 接线本身不变。
-    ok(/await maybeFinalizeMission\((?:session|fresh), 'check'\)/.test(src) && /await maybeFinalizeMission\((?:session|fresh), 'update'\)/.test(src), 's 13 check/update 接线盖章');
-    ok(/Object\.defineProperty\(session, '__missionFinalizeHow'/.test(src) && /finalizeMissionAfterTurn\(session, how\)/.test(src), 's 09 回合内 mission_update 推迟盖章 + 收尾 finalize(含本回合交付)');
+    ok(/await maybeFinalizeMission\((?:session|fresh), 'check'\)/.test(ledgerRoutes) && /await maybeFinalizeMission\((?:session|fresh), 'update'\)/.test(ledgerRoutes), 's 账本 check/update 接线盖章');
+    ok(/Object\.defineProperty\(session, '__missionFinalizeHow'/.test(providerTurn) && /finalizeMissionAfterTurn\(session, how\)/.test(providerTurn), 's Provider 回合内 mission_update 推迟盖章 + 收尾 finalize(含本回合交付)');
     // 122-§2.4:这条原本钉的是「05 收尾那一行长什么样」（`session.mission = onDisk.mission`）——
     // 那句已经收编进三引擎共用的 mergeMissionBeforeSave。改钉【哪件事必须成立】（纪律 5）：
     // 收尾落盘前先把磁盘账本合并进来，并且盖章（finalizeMissionAfterTurn）排在合并【之后】，
@@ -247,14 +252,14 @@ function spawnWb() {
     const stampAt = claudeTail.indexOf("if (session.__missionFinalizeHow) {");
     ok(mergeAt > 0 && stampAt > mergeAt && /async function finalizeMissionAfterTurn\(session, how\)/.test(src),
       's 05 claude 收尾先落盘前合并、再盖当前轮 result 章（不沿用上一轮交付，也不被合并盖掉）');
-    ok(/result: \(session\.mission && session\.mission\.result\) \|\| null,/.test(src), 's 13d 快照带 result');
-    ok(/const fold = foldTurnSummaries\(session\);/.test(src), 's 13d 折叠走 foldTurnSummaries(NaN bug 修复)');
+    ok(/result: \(session\.mission && session\.mission\.result\) \|\| null,/.test(missionRoutes), 's 事项快照带 result');
+    ok(/const fold = foldTurnSummaries\(session\);/.test(missionRoutes), 's 事项快照走 foldTurnSummaries');
     ok(/function archiveMissionResult\(mission\)/.test(src), 's 02 archiveMissionResult 归档旧 result');
     ok(/resultHistory: Array\.isArray\(p\.resultHistory\) \? p\.resultHistory\.slice\(-10\) : \[\],/.test(src), 's 02 normalizeMission 深拷携带 resultHistory');
     ok(/deliverableText = msg\.content\.slice\(0, 16000\)/.test(src), 's 02 buildMissionResult 取最后 assistant content 作 deliverableText');
     ok(/function followupAcceptanceCriterion\(prompt, followup = true\)/.test(src) && !/desc: prompt\.slice\(0, MISSION_MAX_TEXT\)/.test(src), 's 02 追加回合建立验收标准，不把用户提示原文重复为验收项');
     ok(/id === 'delivery' && rawDesc\.trim\(\) === goal\.trim\(\)/.test(src) && /\^followup_/.test(src), 's 02 旧 delivery/followup 摘要项加载时迁移为验收式表述');
-    ok(/resultHistory: Array\.isArray\(session\.mission && session\.mission\.resultHistory\) \? session\.mission\.resultHistory : \[\],/.test(src), 's 13d 快照带 resultHistory');
+    ok(/resultHistory: Array\.isArray\(session\.mission && session\.mission\.resultHistory\) \? session\.mission\.resultHistory : \[\],/.test(missionRoutes), 's 事项快照带 resultHistory');
     ok(/archiveMissionResult\(mission\);/.test(src) && /archiveMissionResult\(m\);/.test(src), 's 02 stop/retry/next_turn/rollback + 再武装 前归档旧 result');
     // 第97波:历史轮次验收报告全文 —— 归档不再裁 deliverableText(slice(0, 2000) 移除)。
     ok(!/deliverableText\.length > 2000\) \{\s*archived\.deliverableText = archived\.deliverableText\.slice\(0, 2000\)/.test(src), 's 02 archiveMissionResult 不再裁 2000(保留完整正文)');
@@ -263,8 +268,8 @@ function spawnWb() {
     // 以及 app.js 里 runPreviewMissionControlTurn 那条 await)随交办台一起退役 —— 它们钉的 DOM 与
     // 函数都已不存在。服务端那一侧(本文件上下文全部 src 断言)一条没动,「归档保留完整正文」这件
     // 用户可见的事仍由上面那条与真回合跑出来的 resultHistory 断言钉着。
-    ok(/reg\.session\.mission\.result = session\.mission && session\.mission\.result \|\| null;/.test(src), 's 13 update 分支把磁盘权威 result 同步回活回合(防回合收尾覆盖丢失新章)');
-    ok(/reg\.session\.mission\.resultHistory = Array\.isArray\(session\.mission && session\.mission\.resultHistory\) \? session\.mission\.resultHistory\.slice\(-10\) : \[\]\;/.test(src), 's 13 update 分支把磁盘权威 resultHistory 同步回活回合');
+    ok(/reg\.session\.mission\.result = session\.mission && session\.mission\.result \|\| null;/.test(ledgerRoutes), 's 账本 update 把磁盘权威 result 同步回活回合');
+    ok(/reg\.session\.mission\.resultHistory = Array\.isArray\(session\.mission && session\.mission\.resultHistory\) \? session\.mission\.resultHistory\.slice\(-10\) : \[\]\;/.test(ledgerRoutes), 's 账本 update 把磁盘权威 resultHistory 同步回活回合');
     ok(/if \(await maybeFinalizeMission\(session, 'driver'\)\)/.test(src), 's 10 驱动器机器验收全 done 补盖 complete 章(收工卡有验收报告)');
 
   } finally {

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T10:10:49.899Z",
+  "generatedAt": "2026-11-18T10:13:19.809Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -11,6 +11,9 @@
       "ruyi-workbench/app/backend/workspace-routes.cjs",
       "ruyi-workbench/app/backend/provider-routes.cjs",
       "ruyi-workbench/app/backend/configuration-routes.cjs",
+      "ruyi-workbench/app/backend/mission-ledger-routes.cjs",
+      "ruyi-workbench/app/backend/autonomy-grant-routes.cjs",
+      "ruyi-workbench/app/backend/agent-workflow-routes.cjs",
       "ruyi-workbench/app/src/13d-core-domain-routes.js",
       "ruyi-workbench/app/src/13e-pretender-index.js",
       "ruyi-workbench/app/backend/local-support-routes.cjs",
@@ -1228,6 +1231,91 @@
     },
     {
       "kind": "exact",
+      "path": "/api/agent-workflow/launch",
+      "file": "../backend/agent-workflow-routes.cjs",
+      "handler": "handleAgentWorkflowApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "agent-workflow",
+      "auth": "body-token",
+      "coveredBy": [
+        "dev-harness\\agent-deadlock-watchdog.e2e.js",
+        "dev-harness\\agent-node-limits.e2e.js",
+        "dev-harness\\agent-node-wrapup.e2e.js",
+        "dev-harness\\agent-parent-mailbox.e2e.js",
+        "dev-harness\\agent-quality-workflow.e2e.js",
+        "dev-harness\\agent-resource-wait-stop.e2e.js",
+        "dev-harness\\agent-run-lifecycle.e2e.js",
+        "dev-harness\\agent-steer-node.e2e.js",
+        "dev-harness\\agent-subturn-loop-guard.e2e.js",
+        "dev-harness\\agent-wake.e2e.js",
+        "dev-harness\\agent-workflow-audit-fixes.e2e.js",
+        "dev-harness\\agent-workflow-budget-finalizer.e2e.js",
+        "dev-harness\\agent-workflow-claude-engine.e2e.js",
+        "dev-harness\\agent-workflow-claude-transient-repro.e2e.js",
+        "dev-harness\\agent-workflow-node-context.e2e.js",
+        "dev-harness\\agent-workflow-replan-approve.e2e.js",
+        "dev-harness\\agent-workflow-replan-review.e2e.js",
+        "dev-harness\\agent-workflow-replan.e2e.js",
+        "dev-harness\\agent-workflow-transient-repro.e2e.js",
+        "dev-harness\\agent-workflow-ui-progress.e2e.js",
+        "dev-harness\\anthropic-fake.e2e.js",
+        "dev-harness\\autonomy-durability.e2e.js",
+        "dev-harness\\batch-output-discipline.e2e.js",
+        "dev-harness\\interventions-pool.e2e.js",
+        "dev-harness\\judge-json-repair.e2e.js",
+        "dev-harness\\macos-execution-subagents.e2e.js",
+        "dev-harness\\memory-subagent.e2e.js",
+        "dev-harness\\monitor-incremental.e2e.js",
+        "dev-harness\\orchestrate-model-select.e2e.js",
+        "dev-harness\\orchestration-blindspots.e2e.js",
+        "dev-harness\\provider-turnloop-hardening.e2e.js",
+        "dev-harness\\scheduler-ready-queue.e2e.js",
+        "dev-harness\\steering-claude.e2e.js",
+        "dev-harness\\subagent-compaction-parity.e2e.js",
+        "dev-harness\\team-pool-mailbox.e2e.js",
+        "dev-harness\\unit\\frontend-failure-paths.test.js",
+        "dev-harness\\unit\\release-audit-w4-gates.test.js",
+        "dev-harness\\usage-claude-cached.e2e.js",
+        "dev-harness\\usage-subagent-ledger.e2e.js",
+        "dev-harness\\wait-primitive.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/agent-workflow/wait",
+      "file": "../backend/agent-workflow-routes.cjs",
+      "handler": "handleAgentWorkflowApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "agent-workflow",
+      "auth": "body-token",
+      "coveredBy": [
+        "dev-harness\\agent-node-limits.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/agent-workflow/result",
+      "file": "../backend/agent-workflow-routes.cjs",
+      "handler": "handleAgentWorkflowApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "agent-workflow",
+      "auth": "body-token",
+      "coveredBy": []
+    },
+    {
+      "kind": "exact",
       "path": "/api/upload",
       "file": "../backend/attachment-routes.cjs",
       "handler": "handleAttachmentApiRoutes",
@@ -1439,6 +1527,54 @@
         "dev-harness\\unit\\voice-learn-front.test.js",
         "dev-harness\\voice-learn.browser.e2e.js",
         "dev-harness\\voice-learn.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/autonomy/grants",
+      "file": "../backend/autonomy-grant-routes.cjs",
+      "handler": "handleAutonomyGrantApiRoutes",
+      "methods": [
+        "*"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "autonomy-grant",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\autonomy-grant.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/autonomy/grant",
+      "file": "../backend/autonomy-grant-routes.cjs",
+      "handler": "handleAutonomyGrantApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "autonomy-grant",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\autonomy-grant.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/autonomy/revoke",
+      "file": "../backend/autonomy-grant-routes.cjs",
+      "handler": "handleAutonomyGrantApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "autonomy-grant",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\autonomy-grant.e2e.js"
       ]
     },
     {
@@ -2832,6 +2968,112 @@
       "auth": "token",
       "coveredBy": [
         "dev-harness\\migration-center.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/todo",
+      "file": "../backend/mission-ledger-routes.cjs",
+      "handler": "handleMissionLedgerApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "mission-ledger",
+      "auth": "body-token",
+      "coveredBy": [
+        "dev-harness\\event-stream.e2e.js",
+        "dev-harness\\todo-loopback.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\release-audit-w4-gates.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/mission",
+      "file": "../backend/mission-ledger-routes.cjs",
+      "handler": "handleMissionLedgerApiRoutes",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "selfChecksToken": true,
+      "methodOverride": false,
+      "domain": "mission-ledger",
+      "auth": "body-token",
+      "coveredBy": [
+        "dev-harness\\acceptance-provenance.e2e.js",
+        "dev-harness\\action-feedback.browser.e2e.js",
+        "dev-harness\\agent-workflow-replan-approve.e2e.js",
+        "dev-harness\\agent-workflow-replan-review.e2e.js",
+        "dev-harness\\auth-deny-default.e2e.js",
+        "dev-harness\\autonomy-benchmark.e2e.js",
+        "dev-harness\\bridged-read-noprompt.e2e.js",
+        "dev-harness\\budget-guard.e2e.js",
+        "dev-harness\\compound-effect-audit.e2e.js",
+        "dev-harness\\event-stream-client.browser.e2e.js",
+        "dev-harness\\event-stream.e2e.js",
+        "dev-harness\\focus-rail.browser.e2e.js",
+        "dev-harness\\intervention-mission-gate.e2e.js",
+        "dev-harness\\interventions-c4.e2e.js",
+        "dev-harness\\interventions-changeseq.e2e.js",
+        "dev-harness\\interventions-persist.e2e.js",
+        "dev-harness\\interventions-pool.e2e.js",
+        "dev-harness\\interventions-snapshot.e2e.js",
+        "dev-harness\\macos-execution-input.e2e.js",
+        "dev-harness\\macos-native-entry.e2e.js",
+        "dev-harness\\macos-native-readiness.e2e.js",
+        "dev-harness\\macos-neutral-abort.e2e.js",
+        "dev-harness\\mission-driver.e2e.js",
+        "dev-harness\\mission-index-boot-race.e2e.js",
+        "dev-harness\\mission-index-gate.e2e.js",
+        "dev-harness\\mission-index-late-materialize.e2e.js",
+        "dev-harness\\mission-index-scale.e2e.js",
+        "dev-harness\\mission-result.e2e.js",
+        "dev-harness\\mission-start-race.e2e.js",
+        "dev-harness\\mission-threads.e2e.js",
+        "dev-harness\\missions-readmodel.e2e.js",
+        "dev-harness\\monitor-incremental.e2e.js",
+        "dev-harness\\net-token-replay.static.e2e.js",
+        "dev-harness\\one-workbench-frame.browser.e2e.js",
+        "dev-harness\\plan-mode.e2e.js",
+        "dev-harness\\provider-tool-history.e2e.js",
+        "dev-harness\\quiet-card.browser.e2e.js",
+        "dev-harness\\rail-reconcile.browser.e2e.js",
+        "dev-harness\\session-id-path-guard.e2e.js",
+        "dev-harness\\steward-board.e2e.js",
+        "dev-harness\\steward-board.static.e2e.js",
+        "dev-harness\\steward-conversation.static.e2e.js",
+        "dev-harness\\steward-decisions.browser.e2e.js",
+        "dev-harness\\steward-deliverable.e2e.js",
+        "dev-harness\\steward-drawer.e2e.js",
+        "dev-harness\\steward-drawer.static.e2e.js",
+        "dev-harness\\steward-global-health.browser.e2e.js",
+        "dev-harness\\steward-inbox.e2e.js",
+        "dev-harness\\steward-preroute.e2e.js",
+        "dev-harness\\steward-presence-gate.e2e.js",
+        "dev-harness\\steward-quickask-board.e2e.js",
+        "dev-harness\\steward-relay-channels.e2e.js",
+        "dev-harness\\steward-runner.e2e.js",
+        "dev-harness\\steward-settings.static.e2e.js",
+        "dev-harness\\steward-shell-wave1.browser.e2e.js",
+        "dev-harness\\steward-signals.e2e.js",
+        "dev-harness\\steward-task-decisions.e2e.js",
+        "dev-harness\\steward-thread-order.e2e.js",
+        "dev-harness\\steward-thread-title.e2e.js",
+        "dev-harness\\thread-arbiter.e2e.js",
+        "dev-harness\\thread-brief.e2e.js",
+        "dev-harness\\thread-index-visibility.e2e.js",
+        "dev-harness\\thread-switch-race.browser.e2e.js",
+        "dev-harness\\tool-audit-r2-meta.e2e.js",
+        "dev-harness\\unit\\http-input-hardening.test.js",
+        "dev-harness\\unit\\poll-path-caches.test.js",
+        "dev-harness\\unit\\release-audit-w4-gates.test.js",
+        "dev-harness\\unit\\thread-facts.test.js",
+        "dev-harness\\unit\\thread-state-quick-kind.test.js",
+        "dev-harness\\walkthrough-round1.browser.e2e.js",
+        "dev-harness\\workbench-thread-head.browser.e2e.js"
       ]
     },
     {
@@ -5247,245 +5489,6 @@
     },
     {
       "kind": "exact",
-      "path": "/api/todo",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "body-token",
-      "coveredBy": [
-        "dev-harness\\event-stream.e2e.js",
-        "dev-harness\\todo-loopback.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\release-audit-w4-gates.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/mission",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "GET",
-        "POST"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "body-token",
-      "coveredBy": [
-        "dev-harness\\acceptance-provenance.e2e.js",
-        "dev-harness\\action-feedback.browser.e2e.js",
-        "dev-harness\\agent-workflow-replan-approve.e2e.js",
-        "dev-harness\\agent-workflow-replan-review.e2e.js",
-        "dev-harness\\auth-deny-default.e2e.js",
-        "dev-harness\\autonomy-benchmark.e2e.js",
-        "dev-harness\\bridged-read-noprompt.e2e.js",
-        "dev-harness\\budget-guard.e2e.js",
-        "dev-harness\\compound-effect-audit.e2e.js",
-        "dev-harness\\event-stream-client.browser.e2e.js",
-        "dev-harness\\event-stream.e2e.js",
-        "dev-harness\\focus-rail.browser.e2e.js",
-        "dev-harness\\intervention-mission-gate.e2e.js",
-        "dev-harness\\interventions-c4.e2e.js",
-        "dev-harness\\interventions-changeseq.e2e.js",
-        "dev-harness\\interventions-persist.e2e.js",
-        "dev-harness\\interventions-pool.e2e.js",
-        "dev-harness\\interventions-snapshot.e2e.js",
-        "dev-harness\\macos-execution-input.e2e.js",
-        "dev-harness\\macos-native-entry.e2e.js",
-        "dev-harness\\macos-native-readiness.e2e.js",
-        "dev-harness\\macos-neutral-abort.e2e.js",
-        "dev-harness\\mission-driver.e2e.js",
-        "dev-harness\\mission-index-boot-race.e2e.js",
-        "dev-harness\\mission-index-gate.e2e.js",
-        "dev-harness\\mission-index-late-materialize.e2e.js",
-        "dev-harness\\mission-index-scale.e2e.js",
-        "dev-harness\\mission-result.e2e.js",
-        "dev-harness\\mission-start-race.e2e.js",
-        "dev-harness\\mission-threads.e2e.js",
-        "dev-harness\\missions-readmodel.e2e.js",
-        "dev-harness\\monitor-incremental.e2e.js",
-        "dev-harness\\net-token-replay.static.e2e.js",
-        "dev-harness\\one-workbench-frame.browser.e2e.js",
-        "dev-harness\\plan-mode.e2e.js",
-        "dev-harness\\provider-tool-history.e2e.js",
-        "dev-harness\\quiet-card.browser.e2e.js",
-        "dev-harness\\rail-reconcile.browser.e2e.js",
-        "dev-harness\\session-id-path-guard.e2e.js",
-        "dev-harness\\steward-board.e2e.js",
-        "dev-harness\\steward-board.static.e2e.js",
-        "dev-harness\\steward-conversation.static.e2e.js",
-        "dev-harness\\steward-decisions.browser.e2e.js",
-        "dev-harness\\steward-deliverable.e2e.js",
-        "dev-harness\\steward-drawer.e2e.js",
-        "dev-harness\\steward-drawer.static.e2e.js",
-        "dev-harness\\steward-global-health.browser.e2e.js",
-        "dev-harness\\steward-inbox.e2e.js",
-        "dev-harness\\steward-preroute.e2e.js",
-        "dev-harness\\steward-presence-gate.e2e.js",
-        "dev-harness\\steward-quickask-board.e2e.js",
-        "dev-harness\\steward-relay-channels.e2e.js",
-        "dev-harness\\steward-runner.e2e.js",
-        "dev-harness\\steward-settings.static.e2e.js",
-        "dev-harness\\steward-shell-wave1.browser.e2e.js",
-        "dev-harness\\steward-signals.e2e.js",
-        "dev-harness\\steward-task-decisions.e2e.js",
-        "dev-harness\\steward-thread-order.e2e.js",
-        "dev-harness\\steward-thread-title.e2e.js",
-        "dev-harness\\thread-arbiter.e2e.js",
-        "dev-harness\\thread-brief.e2e.js",
-        "dev-harness\\thread-index-visibility.e2e.js",
-        "dev-harness\\thread-switch-race.browser.e2e.js",
-        "dev-harness\\tool-audit-r2-meta.e2e.js",
-        "dev-harness\\unit\\http-input-hardening.test.js",
-        "dev-harness\\unit\\poll-path-caches.test.js",
-        "dev-harness\\unit\\release-audit-w4-gates.test.js",
-        "dev-harness\\unit\\thread-facts.test.js",
-        "dev-harness\\unit\\thread-state-quick-kind.test.js",
-        "dev-harness\\walkthrough-round1.browser.e2e.js",
-        "dev-harness\\workbench-thread-head.browser.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/autonomy/grants",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "*"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\autonomy-grant.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/autonomy/grant",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\autonomy-grant.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/autonomy/revoke",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": true,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\autonomy-grant.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/agent-workflow/launch",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "body-token",
-      "coveredBy": [
-        "dev-harness\\agent-deadlock-watchdog.e2e.js",
-        "dev-harness\\agent-node-limits.e2e.js",
-        "dev-harness\\agent-node-wrapup.e2e.js",
-        "dev-harness\\agent-parent-mailbox.e2e.js",
-        "dev-harness\\agent-quality-workflow.e2e.js",
-        "dev-harness\\agent-resource-wait-stop.e2e.js",
-        "dev-harness\\agent-run-lifecycle.e2e.js",
-        "dev-harness\\agent-steer-node.e2e.js",
-        "dev-harness\\agent-subturn-loop-guard.e2e.js",
-        "dev-harness\\agent-wake.e2e.js",
-        "dev-harness\\agent-workflow-audit-fixes.e2e.js",
-        "dev-harness\\agent-workflow-budget-finalizer.e2e.js",
-        "dev-harness\\agent-workflow-claude-engine.e2e.js",
-        "dev-harness\\agent-workflow-claude-transient-repro.e2e.js",
-        "dev-harness\\agent-workflow-node-context.e2e.js",
-        "dev-harness\\agent-workflow-replan-approve.e2e.js",
-        "dev-harness\\agent-workflow-replan-review.e2e.js",
-        "dev-harness\\agent-workflow-replan.e2e.js",
-        "dev-harness\\agent-workflow-transient-repro.e2e.js",
-        "dev-harness\\agent-workflow-ui-progress.e2e.js",
-        "dev-harness\\anthropic-fake.e2e.js",
-        "dev-harness\\autonomy-durability.e2e.js",
-        "dev-harness\\batch-output-discipline.e2e.js",
-        "dev-harness\\interventions-pool.e2e.js",
-        "dev-harness\\judge-json-repair.e2e.js",
-        "dev-harness\\macos-execution-subagents.e2e.js",
-        "dev-harness\\memory-subagent.e2e.js",
-        "dev-harness\\monitor-incremental.e2e.js",
-        "dev-harness\\orchestrate-model-select.e2e.js",
-        "dev-harness\\orchestration-blindspots.e2e.js",
-        "dev-harness\\provider-turnloop-hardening.e2e.js",
-        "dev-harness\\scheduler-ready-queue.e2e.js",
-        "dev-harness\\steering-claude.e2e.js",
-        "dev-harness\\subagent-compaction-parity.e2e.js",
-        "dev-harness\\team-pool-mailbox.e2e.js",
-        "dev-harness\\unit\\frontend-failure-paths.test.js",
-        "dev-harness\\unit\\release-audit-w4-gates.test.js",
-        "dev-harness\\usage-claude-cached.e2e.js",
-        "dev-harness\\usage-subagent-ledger.e2e.js",
-        "dev-harness\\wait-primitive.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/agent-workflow/wait",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "body-token",
-      "coveredBy": [
-        "dev-harness\\agent-node-limits.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/agent-workflow/result",
-      "file": "13-http-router.js",
-      "handler": "handleApi",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "body-token",
-      "coveredBy": []
-    },
-    {
-      "kind": "exact",
       "path": "/api/chat/stream",
       "file": "13-http-router.js",
       "handler": "handleApi",
@@ -6170,6 +6173,21 @@
       "file": "13-http-router.js",
       "handler": "handleApi",
       "target": "handleInterventionApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleMissionLedgerApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleAutonomyGrantApiRoutes"
+    },
+    {
+      "file": "13-http-router.js",
+      "handler": "handleApi",
+      "target": "handleAgentWorkflowApiRoutes"
     },
     {
       "file": "13-http-router.js",
