@@ -162,6 +162,8 @@
     "app/backend/steward-workspaces.cjs",
     "app/backend/steward-thread-arbiter.cjs",
     "app/backend/steward-thread-queries.cjs",
+    "app/backend/steward-thread-launch.cjs",
+    "app/backend/steward-thread-create.cjs",
     "app/backend/steward-routes.cjs",
     "app/backend/session-bodies.cjs",
     "app/backend/session-executions.cjs",

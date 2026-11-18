@@ -288,7 +288,7 @@ function typeExpressionLiterals(text) {
   // 并把「有」换成【恰好几处】—— 既跟着搬家走,又比原来严:原来只钉「至少有一处」,加回一份重复的
   // 写入端照样绿;现在族里多一份就红。
   const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13aa-steward-delivery.js', '13k-steward-threads.js',
-    '13l-steward-ops.js'].map(read).join('\n');
+    '13l-steward-ops.js', '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs'].map(read).join('\n');
   const famCount = re => (stewardFamilySrc.match(re) || []).length;
   ok(famCount(/function stewardRecordLaunchOutcome\(/g) === 1,
     'D7 管家族里恰好一处回合成败的落盘写入端(stewardRecordLaunchOutcome)');

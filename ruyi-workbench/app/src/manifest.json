@@ -436,91 +436,91 @@
     {
       "file": "13k-steward-threads.js",
       "startLine": 12572,
-      "endLine": 13808,
+      "endLine": 13427,
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)"
     },
     {
       "file": "13l-steward-ops.js",
-      "startLine": 13809,
-      "endLine": 15385,
+      "startLine": 13428,
+      "endLine": 15004,
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)"
     },
     {
       "file": "13g-steward.js",
-      "startLine": 15386,
-      "endLine": 15731,
+      "startLine": 15005,
+      "endLine": 15350,
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)"
     },
     {
       "file": "13m-steward-runner-base.js",
-      "startLine": 15732,
-      "endLine": 16076,
+      "startLine": 15351,
+      "endLine": 15695,
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)"
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "startLine": 16077,
-      "endLine": 16815,
+      "startLine": 15696,
+      "endLine": 16434,
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)"
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "startLine": 16816,
-      "endLine": 17717,
+      "startLine": 16435,
+      "endLine": 17336,
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)"
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "startLine": 17718,
-      "endLine": 18986,
+      "startLine": 17337,
+      "endLine": 18605,
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)"
     },
     {
       "file": "13h-steward-runner.js",
-      "startLine": 18987,
-      "endLine": 19283,
+      "startLine": 18606,
+      "endLine": 18902,
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)"
     },
     {
       "file": "13r-event-stream.js",
-      "startLine": 19284,
-      "endLine": 19306,
+      "startLine": 18903,
+      "endLine": 18925,
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)"
     },
     {
       "file": "13s-scheduler.js",
-      "startLine": 19307,
-      "endLine": 19319,
+      "startLine": 18926,
+      "endLine": 18938,
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗"
     },
     {
       "file": "13t-steward-schedule.js",
-      "startLine": 19320,
-      "endLine": 19347,
+      "startLine": 18939,
+      "endLine": 18966,
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环"
     },
     {
       "file": "13ab-privacy-api.js",
-      "startLine": 19348,
-      "endLine": 19366,
+      "startLine": 18967,
+      "endLine": 18985,
       "note": "81-P2: token-authenticated security settings and recovery API"
     },
     {
       "file": "13w-external-bots.js",
-      "startLine": 19367,
-      "endLine": 19378,
+      "startLine": 18986,
+      "endLine": 18997,
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker"
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "startLine": 19379,
-      "endLine": 19832,
+      "startLine": 18998,
+      "endLine": 19451,
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open"
     },
     {
       "file": "14-main.js",
-      "startLine": 19833,
-      "endLine": 20598,
+      "startLine": 19452,
+      "endLine": 20217,
       "note": "main()/module.exports"
     }
   ]

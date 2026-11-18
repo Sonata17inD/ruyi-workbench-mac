@@ -12,12 +12,12 @@ const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-attachments-'));
 process.env.RUYI_HOME = root;
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-const s = loadServerInternals(['readConfig', 'writeConfig', 'createSession', 'loadSession', 'saveSession', 'makeAttachmentRecord', 'stewardRunAct', 'stewardImplThreadContinue', 'stewardRelayChannelFor', 'runSessionTurn', 'searchSessionsByContent', 'stewardImplThreadsSearch', 'stewardLaunchingTurns', 'stewardContinueAttachments']);
+const s = loadServerInternals(['readConfig', 'writeConfig', 'createSession', 'loadSession', 'saveSession', 'makeAttachmentRecord', 'stewardRunAct', 'stewardImplThreadContinue', 'stewardRelayChannelFor', 'runSessionTurn', 'searchSessionsByContent', 'stewardImplThreadsSearch', 'stewardLaunchPending', 'stewardContinueAttachments']);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const act = (sid, message, attachments) => ({ kind: 'tool', tool: 'steward_thread_continue', args: { sessionId: sid, message, attachments } });
 async function idle(sid) {
   for (let n = 0; n < 200; n++) {
-    if (!s.stewardLaunchingTurns.has(sid) && s.stewardRelayChannelFor(sid).channel === 'turn') return;
+    if (!s.stewardLaunchPending(sid) && s.stewardRelayChannelFor(sid).channel === 'turn') return;
     await sleep(25);
   }
   throw new Error('turn did not settle: ' + sid);

@@ -33,10 +33,10 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, stewardPollMs: 120000, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
       permissionMode: 'auto', toolLoadingMode: 'full', defaultWorkspace: home, workspaces: [{ path: home }], subagentMaxPerTurn: 8, subagentMaxConcurrent: 2,
       providers: [{ id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'fixture', model: 'fake-model' }], activeProvider: 'fake' }));
-    s = loadServerInternals(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchingTurns', 'activeAgentRuns', 'runSessionTurn', 'AgentRecovery', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks'], { withEval: true });
+    s = loadServerInternals(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchPending', 'activeAgentRuns', 'runSessionTurn', 'AgentRecovery', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks'], { withEval: true });
     const ctx = { sessionId: 'steward', trigger: 'user', session: { id: 'steward', kind: 'steward', providerHistory: [] } };
     const make = (title, tasks) => s.StewardHooks.threadNew({ title, cwd: home, brief: { userText: title + '，按前后顺序办理并统一交付。' }, steps: tasks.map(task => ({ task })) }, ctx);
-    const settle = async id => { await until(() => !s.stewardLaunchingTurns.has(id), 'settle ' + id); return s.loadSession(id); };
+    const settle = async id => { await until(() => !s.stewardLaunchPending(id), 'settle ' + id); return s.loadSession(id); };
     const countBefore = (await s.listSessions()).length;
     for (const args of [{ steps: [{ task: 'only one' }] }, { steps: [{ task: 'A' }, { task: '' }] }, { missionId: 'sess_existing', steps: [{ task: 'A' }, { task: 'B' }] }, { relatedSessionId: 'sess_existing', steps: [{ task: 'A' }, { task: 'B' }] }, { steps: [{ task: 'A', toolTier: 'superuser' }, { task: 'B' }] }]) {
       const result = await s.StewardHooks.threadNew({ brief: { userText: 'test' }, ...args }, ctx);
@@ -84,7 +84,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     if (!pending.ok) throw new Error('delegation was rejected: ' + JSON.stringify(pending));
     await until(async () => {
       if ((await s.readInterventions(pending.sessionId)).some(iv => iv.status === 'pending' && iv.type === 'permission')) return true;
-      if (s.stewardLaunchingTurns.has(pending.sessionId)) return false;
+      if (s.stewardLaunchPending(pending.sessionId)) return false;
       const run = (await s.listAgentRuns(pending.sessionId))[0];
       throw new Error('delegation ended before permission: ' + JSON.stringify({
         mode: (await s.readConfig()).permissionMode, status: run?.status,

@@ -27,7 +27,7 @@ const correction = '金额使用万元，保留两位小数，按本次材料重
       return 'done';
     } });
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ providers: [{ id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'fixture', model: 'fake-model' }], activeProvider: 'fake', defaultWorkspace: home, workspaces: [{ path: home }], includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, stewardEnabledV1: true, permissionMode: 'acceptEdits' }));
-    const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'mutateSession', 'readConfig', 'mutateConfig', 'playbookReuseSources', 'draftPlaybookFromSession', 'normalizePlaybook', 'saveUserPlaybook', 'loadAllPlaybooks', 'StewardHooks', 'stewardLaunchingTurns']);
+    const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'mutateSession', 'readConfig', 'mutateConfig', 'playbookReuseSources', 'draftPlaybookFromSession', 'normalizePlaybook', 'saveUserPlaybook', 'loadAllPlaybooks', 'StewardHooks', 'stewardLaunchPending']);
     const source = await s.createSession({ title: '已认可预算成果', cwd: home });
     source.messages = [
       { role: 'user', turnSeq: 1, content: '汇总旧材料 OLD_A，金额12和8。' },
@@ -75,7 +75,7 @@ const correction = '金额使用万元，保留两位小数，按本次材料重
     const missing = await s.StewardHooks.threadNew({ brief: { userText: '在新材料上验证做法', playbook: { id: pb.id, inputs: { material: 'new-b.txt' } } }, cwd: home }, ctx);
     ok(!missing.ok && missing.reason === 'playbook_inputs_missing', '普通管家Playbook执行继续拒绝缺参数');
     const launched = await s.StewardHooks.threadNew({ brief: { userText: 'NEW_MATERIAL_B：按认可做法验证新材料', playbook: { id: pb.id, inputs: { material: 'new-b.txt', output: 'new-report.md' } } }, cwd: home }, ctx);
-    for (let i = 0; i < 800 && s.stewardLaunchingTurns.has(launched.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 25));
+    for (let i = 0; i < 800 && s.stewardLaunchPending(launched.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 25));
     ok(launched.ok && fs.readFileSync(path.join(home, 'new-report.md'), 'utf8').includes('33.75') && !fs.readFileSync(path.join(home, 'new-report.md'), 'utf8').includes('20.00'), '复用普通线程/文件工具在新材料上产生新结论，不复制旧成果数值');
     const run = await s.loadSession(launched.sessionId);
     ok(run.messages[0].content.includes('<playbook-reuse-checks>') && run.messages[0].content.includes(selection.checks[0]), '真实执行包含所选验收标准，来源历史不冒充本轮验证');

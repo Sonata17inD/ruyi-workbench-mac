@@ -11,7 +11,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-delivery-'));
 process.env.RUYI_HOME = path.join(root, 'data');
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'writeConfig', 'readConfig', 'normalizeMission', 'recordMissionCheckResult',
-  'stewardCaptureDelivery', 'stewardDeliveryProjection', 'stewardValidateDeliveryReference', 'stewardRunAct', 'stewardLaunchingTurns', 'runSessionTurn', 'createMissionContainer', 'turnSettlers']);
+  'stewardCaptureDelivery', 'stewardDeliveryProjection', 'stewardValidateDeliveryReference', 'stewardRunAct', 'stewardLaunchPending', 'runSessionTurn', 'createMissionContainer', 'turnSettlers']);
 const ref = d => ({ turnSeq: d.turnSeq, latestTurnSeq: d.latestTurnSeq, sourceStamp: d.sourceStamp, fileStamp: d.fileStamp });
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
@@ -121,7 +121,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const act = { kind: 'tool', tool: 'steward_thread_continue', args: { sessionId: session.id, message, deliverySource: ref(delivered) } };
     const result = await s.stewardRunAct(act, cfg, { attemptId: 'delivery-revision-0001' });
     ok(result.executed && result.result.channel === 'turn', '修订复用原任务和既有递话回合');
-    for (let i = 0; i < 200 && s.stewardLaunchingTurns.has(session.id); i++) await sleep(25);
+    for (let i = 0; i < 200 && s.stewardLaunchPending(session.id); i++) await sleep(25);
     const revised = await s.loadSession(session.id);
     const user = revised.messages.filter(row => row.role === 'user').at(-1);
     ok(user.content === message && user.meta.revisionOf.turnSeq === 1 && user.meta.revisionOf.sessionId === session.id, '原话逐字保存,修订关系作为元数据持久化');

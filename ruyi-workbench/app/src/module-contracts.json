@@ -15027,7 +15027,6 @@
         "stewardBriefTextOf",
         "stewardCanonWorkspacePath",
         "stewardContinueAttachments",
-        "stewardDelegationSteps",
         "stewardDeriveThreadCwd",
         "stewardEnrichInboxRows",
         "stewardErrorDetail",
@@ -15046,16 +15045,14 @@
         "stewardImplThreadWorkspace",
         "stewardImplThreadsSearch",
         "stewardKnownWorkspaces",
+        "stewardLaunchPending",
         "stewardLaunchTurn",
-        "stewardLaunchingTurns",
         "stewardLiveTurnPermissionMode",
         "stewardMatchKnownWorkspace",
         "stewardMediatedPermissionWaitMs",
         "stewardMediatesPermissions",
-        "stewardMissionExists",
         "stewardPendingExecutionSummary",
         "stewardQuickClose",
-        "stewardRecordLaunchOutcome",
         "stewardRecordMissionWorkspace",
         "stewardRelayAutoAllowed",
         "stewardResolveAnswerBasis",
@@ -15065,7 +15062,6 @@
         "stewardThreadDisplayTitle",
         "stewardToolCallLine",
         "stewardToolCallVerdict",
-        "stewardTriggerOf",
         "stewardUnattendedByModel",
         "stewardUserDirected",
         "stewardValidateCwd",
@@ -15120,7 +15116,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15214,7 +15211,7 @@
           "provider": "02-session-store.js",
           "symbol": "createSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15228,7 +15225,6 @@
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15244,7 +15240,7 @@
           "provider": "02-session-store.js",
           "symbol": "missionIndexAdd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15259,7 +15255,6 @@
           "provider": "02-session-store.js",
           "symbol": "readMissionContainer",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15267,7 +15262,7 @@
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15303,7 +15298,6 @@
           "provider": "02-session-store.js",
           "symbol": "sessionMetaIsSteward",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15319,7 +15313,8 @@
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15384,7 +15379,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15405,7 +15400,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "buildStewardBrief",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15482,7 +15477,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardAssemblePlaybookPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15552,7 +15547,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardOpenAiFallback",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15574,7 +15569,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardPlaybookMissingInputs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15681,7 +15676,7 @@
           "provider": "10a-session-turn.js",
           "symbol": "runSessionTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15842,14 +15837,16 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardBasisOf",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15960,7 +15957,6 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardTurnKeyOf",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -15968,7 +15964,7 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardTurnQuotaTake",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -19090,9 +19086,9 @@
         },
         {
           "provider": "13k-steward-threads.js",
-          "symbol": "stewardLaunchingTurns",
+          "symbol": "stewardLaunchPending",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {

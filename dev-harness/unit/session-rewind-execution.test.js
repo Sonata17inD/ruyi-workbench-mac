@@ -308,15 +308,16 @@ test('identity conflicts use the existing localized refresh instruction', async 
 });
 
 test('launch registration captures only its own event and resolves unavailable if it never registers', async () => {
-  const source = read('src/13k-steward-threads.js');
+  const { createStewardThreadLauncher } = require('../../ruyi-workbench/app/backend/steward-thread-launch.cjs');
   let input;
   const done = deferred();
-  const ctx = vm.createContext({
-    stewardLaunchingTurns: new Set(), runSessionTurn: value => { input = value; return done.promise; },
-    logEvent() {}, stewardRecordLaunchOutcome: async () => {},
+  const { stewardLaunchTurn: launch, stewardLaunchPending } = createStewardThreadLauncher({
+    runSessionTurn: value => { input = value; return done.promise; },
+    safeSessionId: id => id, nowIso: () => '2026-01-01T00:00:00.000Z',
+    logEvent() {}, updateSessionMeta: async () => {},
   });
-  const launch = vm.runInContext(functionBlock(source, 'stewardLaunchTurn') + '\nstewardLaunchTurn', ctx);
   const running = launch({ sessionId: 's' }, 'test');
+  assert.equal(stewardLaunchPending('s'), true);
   const own = execution('A');
   input.onEvent({ type: 'session', session: { id: 's', turnSeq: 7 }, execution: own });
   own.driverRunId = 'B';
@@ -325,6 +326,7 @@ test('launch registration captures only its own event and resolves unavailable i
   assert.equal(observed.rewindTargetTurnSeq, 8);
   done.resolve({ ok: true });
   await running;
+  assert.equal(stewardLaunchPending('s'), false);
   const early = launch({ sessionId: 's' }, 'test');
   assert.equal(await early.registration, null);
 });

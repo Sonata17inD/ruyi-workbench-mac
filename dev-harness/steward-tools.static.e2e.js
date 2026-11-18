@@ -116,7 +116,8 @@ const HOOK_KEY = {
 
 const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
-  .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs').sort();
+  .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs',
+    '../backend/steward-thread-create.cjs', '../backend/steward-thread-launch.cjs').sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
@@ -396,7 +397,8 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 {
   const NEWLINE_RE = /\r?\n/;
   const COMMENT_RE = /^\s*(\/\/|\*|\/\*)/;
-  const STEWARD_TOOL_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js'];
+  const STEWARD_TOOL_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
+    '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs'];
   // 117 波 T2 重钉:白名单里的「13h」扩成 T2 拆出的运行器族六个文件(纯搬家)。三处出现点各自的
   // 落点:13m 是 ACTION_HOOKS 表头那两行注释、13q 是【唯一】置 true 的那一行(stewardRunAct)、
   // 13h 是 act 路由里「不置 userPressed」的那句注释。被钉的事实(唯一置 true 点在 act 路径、读点
@@ -467,7 +469,8 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 {
   const src13k = read('13k-steward-threads.js');
   const workspaceSource = read('../backend/steward-workspaces.cjs');
-  const workspaceAndTools = workspaceSource + '\n' + src13k;
+  const threadCreation = read('../backend/steward-thread-create.cjs');
+  const workspaceAndTools = workspaceSource + '\n' + src13k + '\n' + threadCreation;
   const defs = (workspaceAndTools.match(/function stewardValidateCwd\(/g) || []).length;
   ok(defs === 1, `⑧ stewardValidateCwd 只定义一次(got ${defs})`);
   const uses = (workspaceSource.match(/stewardValidateCwd\(/g) || []).length;
@@ -477,7 +480,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const pickUses = (workspaceAndTools.match(/stewardResolveThreadCwd\(/g) || []).length;
   ok(pickUses === 3, `⑧ stewardResolveThreadCwd 出现 3 次 = 定义 1 + 调用 2(got ${pickUses})`);
   // 函数体切片:公共切片按括号配对取整个函数(批 3·D;修前按「下一个顶格 }」截)。
-  const bodyOf = (name) => functionBlock(src13k, name);
+  const bodyOf = (name) => functionBlock(threadCreation, name);
   const newBody = bodyOf('stewardImplThreadNew');
   const quickBody = bodyOf('stewardImplQuickAsk');
   const pickBody = functionBlock(workspaceSource, 'stewardResolveThreadCwd');
