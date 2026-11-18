@@ -2083,14 +2083,6 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   }
 }
 
-const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
-  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
-});
-
-const { kimiModelList, discoverKimiModels } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
-  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
-});
-
 // 110-1: MCP_TOOLS 原生工具 schema 数组抽至 13f-native-tool-schemas.js。
 
 async function startMcp() {

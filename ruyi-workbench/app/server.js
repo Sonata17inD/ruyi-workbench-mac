@@ -3474,6 +3474,10 @@ function effectiveAnthropicEnv(config) {
   return { ...process.env, ...buildClaudeCliEnv(config) };
 }
 
+const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
+  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
+});
+
 function externalServerJs() {
   const p = path.join(externalRoot(), 'app', 'server.js');
   return fs.existsSync(p) ? p : '';
@@ -7614,6 +7618,10 @@ function killChildTree(pid) {
 
 ProcessRuntimeHooks.helperPath = () => path.join(externalRoot(), 'runtime', 'macos', 'ruyi-process-helper');
 ProcessRuntimeHooks.stopUnsupervised = killChildTree;
+
+const { kimiModelList, discoverKimiModels } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
+  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
+});
 
 // 47b/长工具保活:按工具声明式超时表(裸名小写)。未知工具默认 15min 有界上限;
 // 已知工具仍按其自身参数上限收紧 ——
@@ -36626,14 +36634,6 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
       .then(started => { if (!started.ok) { try { console.error(`--open: 无法自动打开浏览器(${started.error}),请手动访问 ${url}`); } catch { /* ignore */ } } });
   }
 }
-
-const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
-  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
-});
-
-const { kimiModelList, discoverKimiModels } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
-  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
-});
 
 // 110-1: MCP_TOOLS 原生工具 schema 数组抽至 13f-native-tool-schemas.js。
 

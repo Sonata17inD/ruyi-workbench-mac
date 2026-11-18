@@ -2874,6 +2874,10 @@ function effectiveAnthropicEnv(config) {
   return { ...process.env, ...buildClaudeCliEnv(config) };
 }
 
+const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
+  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
+});
+
 function externalServerJs() {
   const p = path.join(externalRoot(), 'app', 'server.js');
   return fs.existsSync(p) ? p : '';

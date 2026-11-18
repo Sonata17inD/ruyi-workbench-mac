@@ -363,6 +363,7 @@
         "bridgedCliServerEnv",
         "bridgedEnvKeyStripped",
         "buildClaudeCliEnv",
+        "buildModelHint",
         "buildUserEnvelope",
         "bundledNodeExe",
         "classifyAgentMcpCandidate",
@@ -419,15 +420,18 @@
         "detectDesktopMcp",
         "detectDesktopMcpAsync",
         "detectKimiPath",
+        "discoverModels",
         "effectiveAnthropicEnv",
         "ensureDesktopMcpWarm",
         "ensureDirsForConfigRead",
         "externalServerJs",
+        "fetchProxyModels",
         "finalizeConfigExplicitKeys",
         "finishBootCliPathProbes",
         "generateAgentNodeMcpConfig",
         "generateMcpConfig",
         "generateSessionMcpConfig",
+        "getProxyModelsCache",
         "hostAllowed",
         "invalidateAgentCliPathCaches",
         "invalidateClaudePathCache",
@@ -442,12 +446,14 @@
         "lastGoodCredentialEncryptionV1",
         "looksLikeRuyiSelfMcp",
         "mcpConfigFilePath",
+        "modelCapabilityTier",
         "mutateConfig",
         "normalizeConfig",
         "normalizeDesktopPythonCandidate",
         "normalizeStewardManagedWorkspaces",
         "normalizeWorkspacePathString",
         "noteSessionsDirOwnWrite",
+        "offlineModelList",
         "originOk",
         "persistableConfig",
         "pickPython",
@@ -471,6 +477,7 @@
         "refreshInBackground",
         "requestIsLoopback",
         "resolveKimiNpmEntry",
+        "resolveNodeModel",
         "safeSessionId",
         "sanitizeLastUsedEngineRoute",
         "selectedAgentCli",
@@ -478,6 +485,7 @@
         "sessionMcpConfigSweepDone",
         "sessionPath",
         "sessionsDirOwnWriteSeq",
+        "setProxyModelsCache",
         "spawnProbeAsync",
         "spawnProbeSync",
         "staticBase",
@@ -490,6 +498,7 @@
         "syncMcpServersToClaude",
         "syncMcpServersToKimi",
         "syncMcpServersToKimiNow",
+        "tierModelForNode",
         "tokenMatches",
         "tokenOk",
         "waitForBootCliPathProbes",
@@ -2330,6 +2339,7 @@
         "configureMcpFromTool",
         "decodeClaudeTaskXmlText",
         "deltaOf",
+        "discoverKimiModels",
         "driverAutoSessions",
         "enabledToolboxComponents",
         "extendUserQuestion",
@@ -2348,6 +2358,7 @@
         "killAllMcpClients",
         "killChildTree",
         "killPosixChildTree",
+        "kimiModelList",
         "lastAssistantEngine",
         "lastSuccessfulClaudeModel",
         "logEvent",
@@ -2614,6 +2625,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "prepareAgentCliSpawn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "call"
@@ -2623,7 +2641,8 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -3364,6 +3383,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "buildModelHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "buildUserEnvelope",
           "kinds": [
             "call"
@@ -3372,6 +3398,13 @@
         {
           "provider": "01-config.js",
           "symbol": "decodeClaudeCliText",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "discoverModels",
           "kinds": [
             "call"
           ]
@@ -3400,6 +3433,13 @@
         {
           "provider": "01-config.js",
           "symbol": "isAskUserTool",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "offlineModelList",
           "kinds": [
             "call"
           ]
@@ -3652,6 +3692,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "discoverKimiModels",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "formatQuestionGuidance",
           "kinds": [
             "call"
@@ -3688,6 +3735,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "killChildTree",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "kimiModelList",
           "kinds": [
             "call"
           ]
@@ -4129,41 +4183,6 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "resolveEnabledSkillEntries",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "buildModelHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "discoverKimiModels",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "discoverModels",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "kimiModelList",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "offlineModelList",
           "kinds": [
             "call"
           ]
@@ -4701,6 +4720,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "discoverKimiModels",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
           "kinds": [
             "call"
@@ -4840,13 +4866,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "discoverKimiModels",
-          "kinds": [
-            "call"
           ]
         }
       ]
@@ -7684,6 +7703,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "resolveNodeModel",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
             "call",
@@ -8377,13 +8403,6 @@
           "kinds": [
             "call"
           ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "resolveNodeModel",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
@@ -8625,7 +8644,21 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "buildModelHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "resolveNodeModel",
           "kinds": [
             "call"
           ]
@@ -10419,20 +10452,6 @@
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "validateNativeToolArgs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "buildModelHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13-http-router.js",
-          "symbol": "resolveNodeModel",
           "kinds": [
             "call"
           ]
@@ -13142,33 +13161,23 @@
         "START_ERROR_KINDS",
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
-        "buildModelHint",
         "buildUsageSummary",
         "consumeStartError",
-        "discoverKimiModels",
-        "discoverModels",
         "doctor",
         "doctorHealthSeverity",
         "doctorHumanLines",
-        "fetchProxyModels",
-        "getProxyModelsCache",
         "handleApi",
         "helpDocTitle",
         "helpDocsDir",
         "installIntegration",
-        "kimiModelList",
         "latestLogFile",
         "listenOnNextFreePort",
         "listenOnce",
         "listenWithFallback",
-        "modelCapabilityTier",
-        "offlineModelList",
         "openPathTargetDir",
         "parseArgs",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
-        "resolveNodeModel",
-        "setProxyModelsCache",
         "setSessionSkillsCore",
         "sleep",
         "startErrorNextText",
@@ -13177,7 +13186,6 @@
         "startServerInner",
         "stopAllActiveTurnsSync",
         "tailLinesFromBuffer",
-        "tierModelForNode",
         "writeStartError"
       ],
       "requires": [
@@ -13504,8 +13512,7 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -13567,13 +13574,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "effectiveAnthropicEnv",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "ensureDesktopMcpWarm",
           "kinds": [
             "call"
@@ -13631,13 +13631,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "prepareAgentCliSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "call",
@@ -13676,8 +13669,7 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -14196,13 +14188,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "killChildTree",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
           "kinds": [
             "call"
@@ -14219,8 +14204,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "redact",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {

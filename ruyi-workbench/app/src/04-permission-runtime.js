@@ -356,6 +356,10 @@ function killChildTree(pid) {
 ProcessRuntimeHooks.helperPath = () => path.join(externalRoot(), 'runtime', 'macos', 'ruyi-process-helper');
 ProcessRuntimeHooks.stopUnsupervised = killChildTree;
 
+const { kimiModelList, discoverKimiModels } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
+  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
+});
+
 // 47b/长工具保活:按工具声明式超时表(裸名小写)。未知工具默认 15min 有界上限;
 // 已知工具仍按其自身参数上限收紧 ——
 // ACC run_command timeout cap 600s / launch_application wait_timeout cap 600s,桥给 650s(含网络缓冲),
