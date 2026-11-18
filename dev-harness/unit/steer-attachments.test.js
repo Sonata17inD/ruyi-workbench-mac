@@ -5,6 +5,7 @@ const fs = require('node:fs'), fsp = require('node:fs/promises'), os = require('
 const { functionBlock } = require('../lib/source-slice');
 const { fixture: composerFixture } = require('../lib/composer-race-fixture');
 const { killOwnTree } = require('../lib/kill-own-tree');
+const { pathWithinRoot } = require('../../ruyi-workbench/app/backend/path-containment.cjs');
 const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const read = file => fs.readFileSync(path.join(src, file), 'utf8');
 const domain = read('13b-api-domain-routes.js');
@@ -20,13 +21,12 @@ function backend(t, kind = 'openai') {
   const reg = { kind, session, state: 'running', interactive: true, vision: true, steerQueue: [] };
   const regs = new Map([[session.id, reg]]), events = [], writes = [];
   const c = vm.createContext({ createTurnSegmentBuilder: require('../../ruyi-workbench/app/backend/turn-segments.cjs').createTurnSegmentBuilder, VisualPipeline: require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline(), require, fs, fsp, path, Buffer, Date, paths: { uploads }, activeChildren: regs, STEER_QUEUE_MAX: 3,
-    safeSessionId: s => /^sess_\w+$/.test(String(s)) ? s : '', nowIso: () => new Date().toISOString(),
+    safeSessionId: s => /^sess_\w+$/.test(String(s)) ? s : '', nowIso: () => new Date().toISOString(), pathWithinRoot,
     saveSession: async () => {}, hasPendingQuestionForSession: () => false,
     writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
   });
   const bridge = read('03-bridge-guard.js');
-  vm.runInContext(functionBlock(bridge, 'pathWithinRoot') + '\n' +
-    functionBlock(bridge, 'buildAttachmentPrompt') + '\n' + functionBlock(read('04-permission-runtime.js'), 'sanitizeFsSegmentName') + '\n' +
+  vm.runInContext(functionBlock(bridge, 'buildAttachmentPrompt') + '\n' + functionBlock(read('04-permission-runtime.js'), 'sanitizeFsSegmentName') + '\n' +
     functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' + steering + '\n' +
     functionBlock(read('07-autonomy.js'), 'drainSteerQueue'), c);
   reg.onEvent = event => events.push(event);

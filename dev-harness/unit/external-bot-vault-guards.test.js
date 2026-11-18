@@ -2,12 +2,17 @@
 const {test,after}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),vm=require('node:vm');
 const {constBlock,functionBlock}=require('../lib/source-slice');
 const guard=fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src/03-bridge-guard.js'),'utf8');
+const { pathWithinRoot } = require('../../ruyi-workbench/app/backend/path-containment.cjs');
 const { createSensitivePaths } = require('../../ruyi-workbench/app/backend/sensitive-paths.cjs');
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'ruyi-bot-vault-guards-'));const data=path.join(root,'data'),alias=path.join(root,'legacy');fs.mkdirSync(data);
 after(()=>fs.rmSync(root,{recursive:true,force:true}));
-const context=vm.createContext({process,fs,fsp:fs.promises,path,dataRoot:()=>data,dataRootAliases:()=>[alias],_dataRootReal:data});
-vm.runInContext([functionBlock(guard,'macPathAnchor'),functionBlock(guard,'sameFileIdentity'),functionBlock(guard,'macAnchorIgnoresAsciiCase'),functionBlock(guard,'pathWithinRoot'),constBlock(guard,'WRITE_PROTECTED_DATA_DIRS'),constBlock(guard,'WRITE_PROTECTED_DATA_FILES'),functionBlock(guard,'isWriteProtectedDataPath')].join('\n'),context);
-Object.assign(context, createSensitivePaths({ dataRoot: () => data, dataRootAliases: () => [alias], realDataRoot: () => data, pathWithinRoot: context.pathWithinRoot }));
+const context = vm.createContext({ process, fs, fsp: fs.promises, path, pathWithinRoot, dataRoot: () => data, dataRootAliases: () => [alias], _dataRootReal: data });
+vm.runInContext([
+  constBlock(guard, 'WRITE_PROTECTED_DATA_DIRS'),
+  constBlock(guard, 'WRITE_PROTECTED_DATA_FILES'),
+  functionBlock(guard, 'isWriteProtectedDataPath'),
+].join('\n'), context);
+Object.assign(context, createSensitivePaths({ dataRoot: () => data, dataRootAliases: () => [alias], realDataRoot: () => data, pathWithinRoot }));
 test('vault and atomic-temp family are equally read/write sensitive through the current root, legacy alias and NTFS suffixes',()=>{
  for(const base of [data,alias])for(const name of ['credential-vault-v1.json','credential-vault-v1.json.123.random.tmp','credential-vault-v1.json::$DATA','external-bot-credentials.json','external-bot-credentials.json.123.random.tmp','external-bot-credentials.json::$DATA','external-bot-credentials.json.','external-bots/state-v1.json','external-bots/state-v1.json.123.random.tmp']){
   const file=path.join(base,name);assert.equal(context.isSensitiveDataPath(file),true,file);assert.equal(context.isWriteProtectedDataPath(file),true,file);

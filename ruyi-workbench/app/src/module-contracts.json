@@ -18,6 +18,7 @@
       "provides": [
         "APP_NAME",
         "ASR_MAX_BODY_BYTES",
+        "BRIDGED_WRITE_PATH_ARGS",
         "BUNDLED_PYTHON_RUNTIME",
         "CLAUDE_ENDPOINT_PRESETS",
         "CONFIG_SCHEMA",
@@ -56,11 +57,14 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
+        "bridgedWriteRelativePathArg",
         "cacheContextLength",
         "cachedContextLength",
         "cachedInputTokensFromUsage",
         "classifyTextForEstimate",
         "claudeCostFields",
+        "collectBridgedWriteTarget",
+        "collectBridgedWriteTargets",
         "collectDisplayUrlRestores",
         "computeProviderCost",
         "configSecretValueOrCleared",
@@ -102,6 +106,7 @@
         "json",
         "localTurnTimeParts",
         "lstatOrNull",
+        "macPathAnchor",
         "makeId",
         "maskExternalMcpServerForDisplay",
         "maskKey",
@@ -118,6 +123,8 @@
         "os",
         "path",
         "pathToFileURL",
+        "pathWithinAnyRoot",
+        "pathWithinRoot",
         "paths",
         "pidAlive",
         "providerLaunchVectorKey",
@@ -134,6 +141,7 @@
         "safeDecodeURIComponent",
         "safeJsonParse",
         "safeUrlForDisplay",
+        "sameFileIdentity",
         "samePathEntry",
         "samePathKey",
         "sanitizeExternalMcpServer",
@@ -1013,6 +1021,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "runKeyedChain",
           "kinds": [
             "call"
@@ -1199,13 +1214,6 @@
           "symbol": "existsExecutableAsync",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -1616,7 +1624,6 @@
       "file": "02-session-store.js",
       "layer": "foundation",
       "provides": [
-        "BRIDGED_WRITE_PATH_ARGS",
         "IMPORTED_MESSAGE_ROLE_MAX",
         "INTERVENTION_TERMINAL",
         "JOURNAL_KEEP_TURNS",
@@ -1655,7 +1662,6 @@
         "applySessionTitleOverride",
         "archiveMissionResult",
         "boundedChangeText",
-        "bridgedWriteRelativePathArg",
         "buildMissionAcceptanceProjection",
         "buildMissionResult",
         "buildTurnSummary",
@@ -1665,8 +1671,6 @@
         "captureWorkspaceTurnBaseline",
         "checkpointRollbackContext",
         "clearDeletedSession",
-        "collectBridgedWriteTarget",
-        "collectBridgedWriteTargets",
         "compactInterventionJournal",
         "createMissionContainer",
         "createSession",
@@ -1899,6 +1903,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -2185,13 +2196,6 @@
           ]
         },
         {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "03-bridge-guard.js",
           "symbol": "buildAttachmentPrompt",
           "kinds": [
@@ -2208,13 +2212,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -2379,16 +2376,12 @@
         "journalBridgedWrite",
         "launchCodeEditor",
         "listChildDirs",
-        "macAnchorIgnoresAsciiCase",
-        "macPathAnchor",
         "macSystemPolicyPath",
         "materializeCheckpointEditorDiff",
         "nameSetJaccard",
         "normalizeAutoexecPath",
         "normalizeCwd",
         "normalizeGuardPath",
-        "pathWithinAnyRoot",
-        "pathWithinRoot",
         "preflightWriteBoundary",
         "probeGitCli",
         "probeGitCliAsync",
@@ -2403,7 +2396,6 @@
         "resolveExecCwd",
         "resolvePreferredCodeEditor",
         "resolveWorkspace",
-        "sameFileIdentity",
         "sensitiveFileIdentities",
         "sensitiveGlobsForRg",
         "statTimed",
@@ -2419,6 +2411,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "BRIDGED_WRITE_PATH_ARGS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "collectBridgedWriteTargets",
           "kinds": [
             "call"
           ]
@@ -2476,6 +2482,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "macPathAnchor",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "os",
           "kinds": [
             "read"
@@ -2486,6 +2499,28 @@
           "symbol": "path",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinAnyRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sameFileIdentity",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -2540,20 +2575,6 @@
         {
           "provider": "01-config.js",
           "symbol": "spawnProbeSync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "BRIDGED_WRITE_PATH_ARGS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "collectBridgedWriteTargets",
           "kinds": [
             "call"
           ]
@@ -4441,6 +4462,14 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "call"
@@ -4698,14 +4727,6 @@
           "symbol": "normalizeCwd",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -6193,6 +6214,13 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "03-bridge-guard.js",
           "symbol": "AUTOEXEC_DENYLIST",
           "kinds": [
@@ -6209,13 +6237,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -6268,20 +6289,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "collectBridgedWriteTargets",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -6669,6 +6676,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "BRIDGED_WRITE_PATH_ARGS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cacheContextLength",
           "kinds": [
             "call"
@@ -6771,6 +6785,13 @@
           "symbol": "paths",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6972,13 +6993,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "BRIDGED_WRITE_PATH_ARGS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -7050,13 +7064,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "call"
           ]
@@ -7353,6 +7360,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "bridgedWriteRelativePathArg",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -7575,13 +7589,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
             "call"
           ]
@@ -8271,6 +8278,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "bridgedWriteRelativePathArg",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
             "call"
@@ -8581,13 +8595,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "applyMissionUpdate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
             "call"
           ]
@@ -11264,6 +11271,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "read"
@@ -11370,13 +11384,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -11659,6 +11666,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "bridgedWriteRelativePathArg",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -11732,6 +11746,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -11890,13 +11911,6 @@
           "symbol": "MacDesktopAutomation",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bridgedWriteRelativePathArg",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12122,13 +12136,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "OFFICE_WRITER_LIB_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -13156,6 +13163,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinAnyRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "readJsonBody",
           "kinds": [
             "call"
@@ -13884,20 +13905,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinAnyRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "call"
           ]
@@ -15526,6 +15533,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "readJsonBody",
           "kinds": [
             "call"
@@ -16013,13 +16027,6 @@
           "symbol": "normalizeCwd",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -17483,6 +17490,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinAnyRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "send",
           "kinds": [
             "call"
@@ -17589,13 +17603,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "isSensitiveHardlinkAlias",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinAnyRoot",
           "kinds": [
             "call"
           ]
@@ -17771,6 +17778,13 @@
           "symbol": "paths",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -17958,13 +17972,6 @@
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionPermissionModeOf",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "call"
           ]
@@ -18719,6 +18726,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
             "call"
@@ -18825,13 +18839,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "call"
           ]
@@ -24071,7 +24078,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "BRIDGED_WRITE_PATH_ARGS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "classifyTextForEstimate",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "collectBridgedWriteTarget",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "collectBridgedWriteTargets",
           "kinds": [
             "read"
           ]
@@ -24170,6 +24198,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinAnyRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]
@@ -24688,13 +24730,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "BRIDGED_WRITE_PATH_ARGS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
             "read"
@@ -24710,20 +24745,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "collectBridgedWriteTarget",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "collectBridgedWriteTargets",
           "kinds": [
             "read"
           ]
@@ -25186,20 +25207,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinAnyRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "pathWithinRoot",
           "kinds": [
             "read"
           ]

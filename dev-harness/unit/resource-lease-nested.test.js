@@ -20,8 +20,7 @@ process.env.RUYI_HOME = root;
 let leaseSeq = 0;
 const srv = require('../../ruyi-workbench/app/backend/resource-leases.cjs').createResourceLeases({
   makeId: () => 'lease_' + (++leaseSeq), nowIso: () => new Date().toISOString(),
-  pathWithinRoot: (target, base) => { const rel = path.relative(base, target); return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel)); },
-  collectBridgedWriteTargets: () => [], env: {},
+  env: {},
 });
 const { acquireResourceLease, releaseResourceLease, normalizeAgentResources } = srv;
 

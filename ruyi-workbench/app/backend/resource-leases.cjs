@@ -1,13 +1,14 @@
 'use strict';
 const path = require('node:path');
+const { pathWithinRoot } = require('./path-containment.cjs');
+const { collectBridgedWriteTargets } = require('./bridged-write-targets.cjs');
 // Immutable classification tables are shared across calls and runtime instances.
 const pathTypes = new Set(['file', 'office', 'workspace']);
 const exactReadNames = new Set(['file_read', 'docs_search']);
 const treeReadNames = new Set(['file_list', 'file_search', 'glob', 'project_snapshot', 'git_status', 'git_diff', 'git_log', 'dependency_inventory', 'code_review_scan', 'frontend_audit', 'claude_md_audit', 'codebase_symbol_search']);
 const writeNames = new Set(['file_write', 'file_edit', 'file_delete', 'file_move', 'file_copy', 'archive_zip', 'archive_unzip', 'http_download']);
-// Each runtime owns its resource graph and wait queue. Tool policy is supplied
-// explicitly; cancellation and deadlines belong to the lease lifecycle.
-function createResourceLeases({ makeId, nowIso, pathWithinRoot, collectBridgedWriteTargets, env = process.env }) {
+// Each runtime owns its resource graph and wait queue, including cancellation and deadlines.
+function createResourceLeases({ makeId, nowIso, env = process.env }) {
 // Resource-aware agent scheduling. A lease is scoped to an agent group: the node-level declaration and
 // its individual tool calls may overlap each other, while other agents still see the resource as busy.
 // Resource strings are intentionally portable/persistable: desktop, browser:<profile>, file:<path>,
