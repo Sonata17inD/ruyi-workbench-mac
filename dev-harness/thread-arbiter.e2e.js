@@ -668,7 +668,7 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
       // 三个文件 —— 总览行进 13o、仲裁器读模型进 13n、插队工具留在 13h(还多一处是 13q 的递话通道)。
       // 判据不变(三处都经 06i 的 waitReasonFor、没有第二处自己拼的等待人话),只是「运行器」现在是
       // 一族文件,故整族一起读、整族一起查。
-      const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '13n-steward-arbiter.js',
+      const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs',
         '13o-steward-runner-prompt.js', '13p-steward-runner-actions.js', '13q-steward-runner-turn.js',
         '13h-steward-runner.js'];
       const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');

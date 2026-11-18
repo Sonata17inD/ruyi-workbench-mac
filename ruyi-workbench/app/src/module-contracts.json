@@ -17916,6 +17916,12 @@
         "STEWARD_WHY_MAX",
         "ensureStewardSession",
         "stewardAbortInflight",
+        "stewardAcquireTurnSlot",
+        "stewardArbiterPrioritize",
+        "stewardArbiterRefresh",
+        "stewardArbiterState",
+        "stewardArbiterWait",
+        "stewardCancelQueuedTurn",
         "stewardFailureExplain",
         "stewardResolveRoute",
         "stewardResumeRunner",
@@ -17927,7 +17933,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -17939,6 +17946,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "OVERLAY_ID",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
@@ -17946,7 +17960,35 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "SESSION_SCHEMA",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "SessionExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
           "kinds": [
             "read"
           ]
@@ -17967,6 +18009,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -17974,9 +18023,44 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "readInterventions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "recordMissionBudgetTrippedChange",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKey",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageDayKeyMemo",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageRangeLowerMs",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -17991,6 +18075,13 @@
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "assertSessionExecutionOwner",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -18032,202 +18123,13 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13n-steward-arbiter.js",
-      "layer": "transport",
-      "provides": [
-        "STEWARD_ARBITER_COST_CACHE_MS",
-        "STEWARD_ARBITER_DURATION_SAMPLES",
-        "STEWARD_ARBITER_QUEUE_MAX",
-        "STEWARD_ARBITER_RETRY_ERROR_MS",
-        "STEWARD_ARBITER_RETRY_MAX_MS",
-        "STEWARD_ARBITER_RETRY_MIN_MS",
-        "STEWARD_ARBITER_RETRY_SLACK_MS",
-        "STEWARD_ARBITER_STARVE_FACTOR",
-        "STEWARD_ARBITER_STARVE_MIN_MS",
-        "STEWARD_ARBITER_STARVE_OVERRIDE_MS",
-        "stewardAcquireTurnSlot",
-        "stewardArbiter",
-        "stewardArbiterAhead",
-        "stewardArbiterArmRetry",
-        "stewardArbiterBlocked",
-        "stewardArbiterBudget",
-        "stewardArbiterCancel",
-        "stewardArbiterClearRetry",
-        "stewardArbiterCwdKey",
-        "stewardArbiterCwdLock",
-        "stewardArbiterDayCost",
-        "stewardArbiterDetach",
-        "stewardArbiterDrain",
-        "stewardArbiterEmit",
-        "stewardArbiterGrant",
-        "stewardArbiterGrantPending",
-        "stewardArbiterHasPending",
-        "stewardArbiterMaxParallel",
-        "stewardArbiterPrioritize",
-        "stewardArbiterRecordBudget",
-        "stewardArbiterRefresh",
-        "stewardArbiterResourceOf",
-        "stewardArbiterRetryDelayMs",
-        "stewardArbiterScheduleDrain",
-        "stewardArbiterSetWait",
-        "stewardArbiterStarvationBump",
-        "stewardArbiterStarveThresholdMs",
-        "stewardArbiterStarvedHead",
-        "stewardArbiterState",
-        "stewardArbiterWait",
-        "stewardArbiterWaitSignature",
-        "stewardCancelQueuedTurn"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
+            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "OVERLAY_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "RUYI_EVENTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "turnSettlers",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readInterventions",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "recordMissionBudgetTrippedChange",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "usageDayKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "usageDayKeyMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "usageRangeLowerMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "assertSessionExecutionOwner",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "STEWARD_SESSION_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "stewardSanitizeText",
-          "kinds": [
-            "call"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "waitReasonFor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13m-steward-runner-base.js",
-          "symbol": "STEWARD_TURN_DAY_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13m-steward-runner-base.js",
-          "symbol": "STEWARD_TURN_WINDOW_MS",
           "kinds": [
             "read"
           ]
@@ -18719,16 +18621,16 @@
         },
         {
           "provider": "13m-steward-runner-base.js",
-          "symbol": "stewardRunnerRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
           "symbol": "stewardArbiterWait",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardRunnerRuntime",
+          "kinds": [
+            "read"
           ]
         }
       ]
@@ -19768,16 +19670,16 @@
         },
         {
           "provider": "13m-steward-runner-base.js",
-          "symbol": "stewardRunnerRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
           "symbol": "stewardArbiterWait",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardRunnerRuntime",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -20157,6 +20059,50 @@
         },
         {
           "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardAcquireTurnSlot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardArbiterPrioritize",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardArbiterRefresh",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardArbiterState",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardArbiterWait",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
+          "symbol": "stewardCancelQueuedTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13m-steward-runner-base.js",
           "symbol": "stewardResumeRunner",
           "kinds": [
             "read"
@@ -20172,50 +20118,6 @@
         {
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardStopRunner",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardAcquireTurnSlot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardArbiterPrioritize",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardArbiterRefresh",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardArbiterState",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardArbiterWait",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "13n-steward-arbiter.js",
-          "symbol": "stewardCancelQueuedTurn",
           "kinds": [
             "read"
           ]

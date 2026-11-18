@@ -58,7 +58,7 @@ const stewardRoutes = read('../backend/steward-routes.cjs');
 // (纯搬家,拼接顺序即依赖方向)。这六个合起来才是原来那个「13h」,故下面凡是钉【运行器里有这件事】
 // 的判据一律改读整族 —— 事实一个字没变,只是它现在住在族里的哪个文件由拆分决定;钉【落点】的那几条
 // (① 的顺序链、② 的注册表与 threadStop 实现)仍各自钉到确切的那个文件。
-const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-steward-runner-prompt.js',
+const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
   '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
 const src01b = read('../backend/http-route-policy.cjs');
@@ -73,9 +73,10 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 且顺序即依赖方向」。故改钉整条链本身 —— 比原来那个探针更严:族里任何一个被挪出这段连续区间、
   // 或顺序被换,这条都红。
   const iFam = files.indexOf('13g-steward.js') + 1;
-  ok(iFam > 0 && STEWARD_RUNNER_FAMILY.every((f, k) => files[iFam + k] === f),
-    '① 13g 之后是 T2 拆出的运行器族、以 13h 收尾(' + STEWARD_RUNNER_FAMILY.join(' -> ') + ';实得 '
-    + JSON.stringify(files.slice(iFam, iFam + STEWARD_RUNNER_FAMILY.length)) + ')');
+  const stitchedFamily = STEWARD_RUNNER_FAMILY.filter(file => !file.startsWith('../backend/'));
+  ok(iFam > 0 && stitchedFamily.every((f, k) => files[iFam + k] === f),
+    '① 运行器的拼接片段紧跟 13g、以 13h 收尾(' + stitchedFamily.join(' -> ') + ';实得 '
+    + JSON.stringify(files.slice(iFam, iFam + stitchedFamily.length)) + ')');
   // 121 波 K2a 重钉:13h 与 14-main 之间插进了 13r-event-stream.js(事件流,同为 transport 层;
   // 它必须排在【所有】管家模块之后 —— 它订阅总线、读五态与未决计数,排在前面全是前向边)。原来
   // 钉的是「下标恰好差 1」,那钉的是当时的排布长什么样;这条判据的【用意】写在上一行注释里 ——
@@ -110,8 +111,8 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 13h 族里所有顶层 function 名(它们是「13h 的符号」)。任何消费者源码里出现其中之一 = 前向边。
   // 117 波 T2 重钉:样本从「13h 一个文件」扩到整族 —— 否则一条符号只要搬进 13m/13n/13o/13p/13q
   // 就能绕过这把锁。判据一字未变,样本比原来大(判得更严)。
-  const runnerSymbols = [...new Set((srcRunnerFamily.match(/^(?:async )?function ([A-Za-z0-9_]+)/gm) || [])
-    .map(m => m.replace(/^(?:async )?function /, '')))];
+  const runnerSymbols = [...new Set([...srcRunnerFamily.matchAll(/^(?: {2}(?=(?:async )?function steward))?(?:async )?function ([A-Za-z0-9_]+)/gm)]
+    .map(match => match[1]))];
   ok(runnerSymbols.length >= 15, `② 13h 顶层函数抽取到 ${runnerSymbols.length} 个(锁的样本足够大)`);
   // 116h 重钉:消费者面从 06/09/10/13g 扩到 06/09/10/12/13/13d/13g —— 仲裁的钩子多了三个新消费者
   // (12 的工具 handler、13 的 /api/stop、13d 的事项聚合行)。加入样本让「零前向边」的判据【更严】

@@ -1,4 +1,8 @@
 'use strict';
+
+const STEWARD_TURN_WINDOW_MS = 60 * 60 * 1000; // 每小时回合上限的滑动窗口
+const STEWARD_TURN_DAY_MS = 24 * 60 * 60 * 1000; // 回合时间戳表只保留 24 小时(state 的 day 口径同源)
+
 // State, permission and budget rules; host actions are supplied through StewardHooks.
 function createStewardCore({ PrivacyGateway }) {
 // ============================================================================
@@ -2525,4 +2529,4 @@ return {
   waitReasonFor
 };
 }
-module.exports = { createStewardCore };
+module.exports = { createStewardCore, STEWARD_TURN_WINDOW_MS, STEWARD_TURN_DAY_MS };

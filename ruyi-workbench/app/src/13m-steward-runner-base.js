@@ -82,8 +82,7 @@ const STEWARD_VIEW_HELD_MAX = 200;
 const STEWARD_NO_PROGRESS_MAX = 5;            // 连续 5 次收件箱回合零 acts 零 actions -> 退避
 const STEWARD_VISIT_DIGEST_MAX = 5;           // 到访摘要 ≤5 条人话
 const STEWARD_PENDING_LIST_MAX = 20;          // 到访返回的待决列表上限
-const STEWARD_TURN_WINDOW_MS = 60 * 60 * 1000; // 每小时回合上限的滑动窗口
-const STEWARD_TURN_DAY_MS = 24 * 60 * 60 * 1000; // 回合时间戳表只保留 24 小时(state 的 day 口径同源)
+const { STEWARD_TURN_WINDOW_MS, STEWARD_TURN_DAY_MS } = require('./backend/steward-core.cjs');
 const STEWARD_PREEMPT_WAIT_MS = 15000;        // 抢占后等在途回合收尾的上限
 // 117l D3(§11.9;用户第四轮走查第 6 条「为啥输出完了还显示『在忙上一件』;要能让用户连续发消息」):
 // 用户回合撞用户回合时【真】排队等前一个收尾的上限。修前是一发 Promise.race(15s) 之后【不复查】,
@@ -332,3 +331,14 @@ async function ensureStewardSession(config) {
   logEvent({ kind: 'steward_session_created', sessionId: STEWARD_SESSION_ID, providerId: resolved.route.providerId, model: resolved.route.model });
   return { ok: true, session, route: resolved.route };
 }
+
+const {
+  stewardAcquireTurnSlot, stewardArbiterWait, stewardArbiterPrioritize, stewardArbiterState,
+  stewardArbiterRefresh, stewardCancelQueuedTurn,
+} = require('./backend/steward-thread-arbiter.cjs').createStewardArbiter({
+  readConfig, safeSessionId, readInterventions, assertSessionExecutionOwner,
+  ownsSessionExecution: SessionExecutionHooks.owns,
+  forEachUsageRow, usageDayKey, usageDayKeyMemo, usageRangeLowerMs, recordMissionBudgetTrippedChange,
+  notifyThreadState: sessionId => RUYI_EVENTS.emit('thread.state', { sessionId }),
+  logEvent, serverInstanceId: OVERLAY_ID, STEWARD_SESSION_ID, stewardSanitizeText, waitReasonFor,
+});

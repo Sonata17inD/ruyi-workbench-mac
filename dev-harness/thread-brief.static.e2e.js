@@ -53,7 +53,7 @@ const steward = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-thre
 // 117 波 T2(32 号文 §5):13h 拆成 13m/13n/13o/13p/13q/13h 六个文件(纯搬家),总览行装配与
 // preroute 索引行都搬进了 13o-steward-runner-prompt.js。这里要钉的事实是「总览行带 displayTitle、
 // preroute 索引行的 title 仍是原话」,与它住哪个文件无关,故与上面 13g 族同办法 —— 改读整族。
-const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-steward-runner-prompt.js',
+const runner = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
   '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js']
   .map(readSrc).join('\n');
 

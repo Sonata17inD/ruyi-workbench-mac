@@ -928,7 +928,7 @@ try {
     // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),那三个派生点里属于运行器的
     // 那一个(总览行)搬进了 13o-steward-runner-prompt.js。判据不变 —— 三个派生点都走同一个判据、
     // 兜底那句在两族里一处都不剩 —— 只是「运行器」现在是一族文件,故整族一起读。
-    const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '13n-steward-arbiter.js',
+    const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs',
       '13o-steward-runner-prompt.js', '13p-steward-runner-actions.js', '13q-steward-runner-turn.js',
       '13h-steward-runner.js'];
     const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');

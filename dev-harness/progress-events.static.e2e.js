@@ -110,16 +110,10 @@ const WAVE_116H = ['agent_resource', 'process'];
 okList(WAVE_116H.filter(type => !serverEvents.has(type)), 'D10 116h 复用的两种事件确实是服务端在发的');
 okList(WAVE_116H.filter(type => !consumed.has(type)), 'D10b 116h 复用的两种事件都已被状态机消费(零新增枚举)');
 {
-  // 117 波 T2(32 号文 §5):13h 拆成六个文件(纯搬家),仲裁器整段搬成了独立的 13n-steward-arbiter.js。
-  // 上一版是在 13h 这一个文件里用两个 marker 把仲裁器那一段截出来(为的是不把 116f 的 SSE 壳算进来 ——
-  // 那里的 steward_reply 是【通道载荷】不是回合事件,见 13h 头注)。现在那两个 marker 分落两个文件,
-  // 截取法不再成立;改成整份读 13n —— 它【整个文件就是】仲裁器,截取这一步本身就没必要了。
-  // 判据一字未变:仲裁器发出的事件类型必须全是既有登记项。段头 marker 仍然断言一次,防的是
-  // 「哪天有人把非仲裁的东西搬进 13n」这种静默扩面。
-  const arbiter = read('ruyi-workbench/app/src/13n-steward-arbiter.js');
-  const marker = '第 116 波 116h(27 号文 §3.1 116h 行';
-  ok(arbiter.includes(marker), 'D10c-pre 13n-steward-arbiter.js 就是 116h 仲裁器那一段(段头横幅在)');
-  ok(!/steward_reply/.test(arbiter), 'D10c-pre 13n 里没有 116f 的 SSE 壳(steward_reply 是通道载荷,不该被当回合事件)');
+  // 扫描仲裁服务的回合事件。递话通道的 SSE 载荷由对应通道验证。
+  const arbiter = read('ruyi-workbench/app/backend/steward-thread-arbiter.cjs');
+  ok(/module\.exports = \{ createStewardArbiter \}/.test(arbiter), 'D10c-pre 扫描实际仲裁服务');
+  ok(!/steward_reply/.test(arbiter), 'D10c-pre 仲裁服务未引入递话 SSE 载荷');
   const arbiterTypes = [...new Set((arbiter.match(/type: '([a-z_]+)'/g) || []).map(m => m.slice(7, -1)))].sort();
   ok(arbiter.length > 0 && arbiterTypes.length > 0, `D10c 扫到仲裁器发出的事件类型 ${arbiterTypes.join(',') || '(无)'}`);
   okList(arbiterTypes.filter(type => !declared.has(type)), 'D10d 仲裁器发出的事件类型全部是既有登记项(零新增)');
