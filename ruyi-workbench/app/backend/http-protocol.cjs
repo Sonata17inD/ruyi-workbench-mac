@@ -129,4 +129,10 @@ function contentTypeFor(file) {
   }[ext] || 'application/octet-stream';
 }
 
-module.exports = { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor };
+// 路径段解码:decodeURIComponent 遇到坏的百分号编码(如 `%zz`)会抛 URIError,落到顶层就是 500 + http_unhandled。
+// 路由拿到 null 按「这个 id 不存在/不合法」回 4xx(先例:/api/missions/:id/interventions/:iv/decision)。
+function safeDecodeURIComponent(segment) {
+  try { return decodeURIComponent(String(segment == null ? '' : segment)); } catch { return null; }
+}
+
+module.exports = { safeDecodeURIComponent, MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor };

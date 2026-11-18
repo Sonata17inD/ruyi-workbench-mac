@@ -4,7 +4,7 @@
 
 | 范围 | 保留原因 | 约束 |
 | --- | --- | --- |
-| `00-boot.js` 旧数据根、旧包标记；`backend/migration-center.cjs`；`backend/product-identity.cjs` 旧 MCP 标识 | 识别已有 Ruyi 数据与旧安装引用 | 仅迁移／历史识别；不启动旧 cmd/exe |
+| `backend/workbench-data-roots.cjs` 旧数据根、`backend/workbench-path-discovery.cjs` 旧包标记、`backend/migration-center.cjs`、`backend/product-identity.cjs` 旧 MCP 标识 | 识别已有 Ruyi 数据与旧安装引用 | 仅供迁移和历史识别 |
 | `01l-credential-recovery.js` 的 DPAPI 说明 | 解释旧密文为何不能在 Mac 解密 | 不含 DPAPI 执行实现；无法解密不覆盖旧库 |
 | `backend/workspace-unc-policy.cjs` 与工作区路径护栏中的 UNC／设备路径和 `path.win32`，`backend/bridged-tool-guards.cjs` 的 Office 写入签名 | 识别外来输入、历史路径及潜在绕过 | 这些判据仅用于路径与工具安全检查 |
 | `backend/attachment-store.cjs`、下载／ZIP 的双分隔符文件名解析 | 用户文件可能带外来路径；剥除目录防止越界 | 只是格式识别；原文件编码／BOM／CRLF 保留 |

@@ -178,8 +178,9 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   const caps2 = await srv.getCapabilities(null, true).catch(() => null);
   ok(caps2 && caps2.binaries && typeof caps2.binaries.rg === 'boolean' && (caps2.binaries.rg ? typeof caps2.binaries.rgSource === 'string' : caps2.binaries.rgSource === null)
     && typeof caps2.binaries.rgShell === 'string', 'G4 能力矩阵 binaries 加法字段 rgSource/rgShell (' + JSON.stringify(caps2 && caps2.binaries) + ')');
-  const boot = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '00-boot.js'), 'utf8');
-  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(boot) && !/USE_BUILTIN_RIPGREP\s*=/.test(fs.readFileSync(SERVER, 'utf8')),
+  const runtimeEnvironment = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'workbench-runtime-environment.cjs'), 'utf8');
+  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(runtimeEnvironment) &&
+    !/USE_BUILTIN_RIPGREP\s*=/.test(runtimeEnvironment + fs.readFileSync(SERVER, 'utf8')),
     'G5 只前置锚定的真目录(联接/符号链接不算),且不改 USE_BUILTIN_RIPGREP(Claude Code 自带 rg 行为不动)');
 
   console.log('');

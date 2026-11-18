@@ -35,4 +35,40 @@ function platformShellEnvironment(env) {
   return clean;
 }
 
-module.exports = { platformRuntimeEnvironment, platformOpenSpawn, platformShellEnvironment };
+function createDetachedLauncher({ cp, process }) {
+  // Attach the asynchronous spawn listeners before unref. The returned promise
+  // reports the handoff, while invalid spawn parameters still throw synchronously.
+  function spawnDetachedChecked(command, args, options) {
+    const child = cp.spawn(command, args || [], options);
+    // LaunchServices owns the destination application's lifetime. Wait only for the
+    // Mac launcher to confirm its handoff, and bound that launcher's own lifetime.
+    if (process.platform === 'darwin' && command === '/usr/bin/open') {
+      const completed = new Promise(resolve => {
+        let settled = false;
+        const finish = result => {
+          if (settled) return;
+          settled = true; clearTimeout(timer); resolve(result);
+        };
+        const timer = setTimeout(() => {
+          try { child.kill('SIGKILL'); } catch { /* report the unconfirmed handoff */ }
+          finish({ ok: false, code: 'open_timeout', error: 'macOS opener timed out', pid: child.pid });
+        }, 5000);
+        child.on('error', error => finish({ ok: false, error: error.message, code: error.code || null }));
+        child.once('exit', (code, signal) => finish(code === 0 && !signal
+          ? { ok: true, pid: child.pid }
+          : { ok: false, code: 'open_failed', error: `macOS opener exited with ${signal || code}`, exitCode: code, signal, pid: child.pid }));
+      });
+      child.unref();
+      return completed;
+    }
+    const started = new Promise(resolve => {
+      child.on('error', error => resolve({ ok: false, error: (error && error.message) || String(error), code: (error && error.code) || null }));
+      child.once('spawn', () => resolve({ ok: true, pid: child.pid }));
+    });
+    child.unref();
+    return started;
+  }
+  return spawnDetachedChecked;
+}
+
+module.exports = { createDetachedLauncher, platformRuntimeEnvironment, platformOpenSpawn, platformShellEnvironment };

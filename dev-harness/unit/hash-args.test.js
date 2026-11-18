@@ -113,9 +113,11 @@ ok(typeof hashArgs === 'function', '① server.js 导出了 hashArgs');
 
 /* ═══════════ ⑦ 静态锁:单一事实源 + 两个调用点都已迁移 ═══════════ */
 {
-  const bootSrc = fs.readFileSync(path.join(app, 'src', '00-boot.js'), 'utf8');
-  const defs = (bootSrc.match(/function hashArgs\(/g) || []).length;
-  ok(defs === 1, '⑦a 00-boot.js 里 hashArgs 只有一份定义(got ' + defs + ')');
+  const sources = ['src', 'backend'].flatMap(dir => fs.readdirSync(path.join(app, dir))
+    .filter(name => /\.(?:js|cjs)$/.test(name)).map(name => `${dir}/${name}`));
+  const defs = sources.flatMap(file => [...fs.readFileSync(path.join(app, file), 'utf8').matchAll(/\bfunction hashArgs\(/g)].map(() => file));
+  ok(defs.length === 1 && defs[0] === 'backend/execution-arguments.cjs',
+    '⑦a hashArgs 由执行参数模块定义一次(got ' + defs.join(', ') + ')');
 
   const grants = fs.readFileSync(path.join(app, 'backend', 'autonomy-grants.cjs'), 'utf8');
   ok(grants.includes('hashArgs(args)'), '⑦b autonomy-grants.cjs::consumeGrant 已改调 hashArgs(args)');
