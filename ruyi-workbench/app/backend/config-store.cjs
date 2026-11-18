@@ -20,6 +20,14 @@ function createConfigStore({
     lastGoodConfig = null;
   }
 
+  async function configSourceStillCurrent(source) {
+    if (paths.config !== source.path) return false;
+    let text = null;
+    try { text = await fsp.readFile(source.path, 'utf8'); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    return paths.config === source.path && text === source.text;
+  }
+
   // v1.4.1 (audit #4): config.json 原子写 —— 此前用裸 fsp.writeFile,崩溃/断电中途会留下截断文件,下次读
   // safeJsonParse→null → normalizeConfig 把【整份用户配置静默重置为默认】(密钥/服务商/工作区全丢)。
   // 第25波 25.1: 写体收编进 atomicWriteJson;对抗轮修: 全局写链串行化并发 config 写(同 saveSession 理由——
@@ -28,6 +36,9 @@ function createConfigStore({
   async function writeConfigAtomic(data, options = {}) {
     configReadCache = null;   // 进程内写:读缓存立刻作废(写完后再作废一次,见下)。文件戳本来也会变,这是显式的第二道保险
     const thisWrite = configWriteChain.catch(() => {}).then(async () => {
+      // A read-triggered migration can wait behind a newer settings write. Check its source
+      // inside the physical write queue before touching the config, backup, or credential vault.
+      if (options.expectedSource && !await configSourceStillCurrent(options.expectedSource)) return false;
       // 81-P1: encrypt a serialized persistence copy; never pass runtime plaintext to the disk writer.
       if (privacyHooks.protectConfig) {
         let previous; try { previous = safeJsonParse(await fsp.readFile(paths.config, 'utf8'), null); } catch { /* The existing backup/read recovery path remains authoritative. */ }
@@ -57,7 +68,7 @@ function createConfigStore({
       return atomicWriteJson(paths.config, data, { mode: 0o600 });   // 安全走查 S11:密钥落盘文件只给属主读写
     });
     configWriteChain = thisWrite;
-    try { await thisWrite; }
+    try { return await thisWrite; }
     finally { configReadCache = null; }   // 写在飞的这段时间里别的读者可能按旧戳填过缓存:落盘之后再清一次
   }
   async function readConfigPrev() {
@@ -143,8 +154,9 @@ function createConfigStore({
       const stamp = await configFileStamp();   // 必须在读盘之前取(见 configReadCache 头注)
       const cached = configReadCacheLookup(stamp);
       if (cached) { configDegraded = false; privacyHooks.configurePrivacy?.(cached); return cached; }
+      const sourcePath = paths.config;
       let text = null; let readError = null;
-      try { text = await fsp.readFile(paths.config, 'utf8'); } catch (e) { readError = e; }
+      try { text = await fsp.readFile(sourcePath, 'utf8'); } catch (e) { readError = e; }
       let raw = null; let recoveredFrom = '';
       const degrade = code => {
         privacyHooks.markPrivacyUnavailable?.();
@@ -221,10 +233,15 @@ function createConfigStore({
       if (recoveredFrom) { try { logEvent({ kind: 'config_recovered', from: recoveredFrom }); } catch { /* 日志是旁路 */ } }
       // Only rewrite when a migration actually mutated the file (avoid racy write-on-every-read)；恢复自 .prev 时也落盘。
       // 128a:写的是投影(显式键 ＋ 簿记键 ＋ 不认识的键),不是整份内存视图。
-      if (changed || recoveredFrom || credentialsNeedMigration) await writeConfigAtomic(JSON.stringify(persisted, null, 2), { credentialEncryptionDisable: preserveKnownPlaintext }).catch(error => {
-        if (config.privacyPolicyRecoveryRequiredV1 === true || String(error?.code || '').startsWith('credential_vault.')) throw error;
-      });
-      else if (!readError) configReadCacheStore(stamp, config);   // 干净读才缓存;存的是深拷贝,返回给调用方的 config 仍归调用方
+      if (changed || recoveredFrom || credentialsNeedMigration) {
+        const written = await writeConfigAtomic(JSON.stringify(persisted, null, 2), {
+          credentialEncryptionDisable: preserveKnownPlaintext,
+          expectedSource: { path: sourcePath, text },
+        }).catch(error => {
+          if (config.privacyPolicyRecoveryRequiredV1 === true || String(error?.code || '').startsWith('credential_vault.')) throw error;
+        });
+        if (written === false) return readConfig();
+      } else if (!readError) configReadCacheStore(stamp, config);   // 干净读才缓存;存的是深拷贝,返回给调用方的 config 仍归调用方
       privacyHooks.configurePrivacy?.(config);
       lastGoodConfig = config; // Do not advertise a successful encrypted state after a failed credential migration.
       lastGoodCredentialEncryptionV1 = credentialChoiceTrusted ? config.credentialEncryptionV1 : null;

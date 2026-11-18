@@ -156,7 +156,7 @@
       "owner": "../backend/config-store.cjs",
       "anchor": "paths.config",
       "schema": "object / configSchema 14 (sparse explicit-key projection)",
-      "writePrimitive": "atomicWriteJson through a physical write chain; mutateConfig serializes the complete read/modify/write; valid previous file retained first",
+      "writePrimitive": "atomicWriteJson through a physical write chain; mutateConfig serializes the complete read/modify/write; valid previous file retained first; read-triggered rewrites verify current source text in the physical write chain",
       "corruption": "missing or empty config tries the previous copy; invalid JSON is preserved when recovering; read errors and unrecoverable invalid JSON return a degraded view with privacy paused",
       "capacity": "schema normalization bounds known fields and preserves unknown keys",
       "cache": "file identity, size, mtime and ctime plus vault stamp and CLI paths; recent writes bypass cache; cached results are cloned and writes invalidate the snapshot",

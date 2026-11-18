@@ -166,4 +166,41 @@ describe('readConfig 读缓存', () => {
     await srv.mutateConfig(cfg => { cfg.appendSystemPrompt = 'x1'; return { abort: 'no-write' }; });
     assert.strictEqual((await srv.readConfig()).appendSystemPrompt, 'from-mutate');
   });
+
+  it('旧配置的迁移回写遇到并发保存时保留新配置并重读', async () => {
+    writeRaw(raw => { raw.configSchema = 11; raw.appendSystemPrompt = 'before-migration'; });
+    const readFile = fsp.readFile;
+    let entered;
+    let resume;
+    const captured = new Promise(resolve => { entered = resolve; });
+    const delayed = new Promise(resolve => { resume = resolve; });
+    let pauseFirstRead = true;
+    fsp.readFile = async (file, ...args) => {
+      const bytes = await readFile(file, ...args);
+      if (String(file) === cfgFile && pauseFirstRead) {
+        pauseFirstRead = false;
+        entered();
+        await delayed;
+      }
+      return bytes;
+    };
+    const stale = srv.readConfig();
+    try {
+      await captured;
+      const updated = await srv.mutateConfig(config => { config.appendSystemPrompt = 'newer-user-setting'; });
+      assert.strictEqual(updated.ok, true);
+      const committed = fs.readFileSync(cfgFile, 'utf8');
+      const backup = fs.readFileSync(cfgFile + '.prev', 'utf8');
+      assert.strictEqual(JSON.parse(committed).appendSystemPrompt, 'newer-user-setting');
+      resume();
+      const observed = await stale;
+      assert.strictEqual(fs.readFileSync(cfgFile, 'utf8'), committed, '旧迁移不能覆写已经保存的新配置');
+      assert.strictEqual(fs.readFileSync(cfgFile + '.prev', 'utf8'), backup, '跳过过期回写时保留上一份备份');
+      assert.strictEqual(observed.appendSystemPrompt, 'newer-user-setting');
+    } finally {
+      resume();
+      await stale.catch(() => {});
+      fsp.readFile = readFile;
+    }
+  });
 });
