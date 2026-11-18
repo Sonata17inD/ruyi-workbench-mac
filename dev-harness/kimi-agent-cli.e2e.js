@@ -174,8 +174,8 @@ ok(/from '\.\/agent-cli-registry\.js'/.test(ui)
   && /id="cfgMainProvider"/.test(html) && /settings\.agentCli\.tab/.test(html),
   'settings exposes Agent CLI selector with Kimi');
 ok(/detectedKimiPath/.test(ui) && /currentAgentCliLabel/.test(ui), 'frontend readiness and labels follow selected driver');
-const kimiBridge = fs.readFileSync(path.join(WB, 'app', 'src', '05b-kimi-bridge.js'), 'utf8');
-ok(/runKimiAcpTurnPrepared/.test(engine) && /prepareKimiAcpSpawn\(claude\)/.test(kimiBridge) && /kimi-acp-compat-register\.mjs/.test(kimiBridge), 'engine launches Kimi through ACP with the guarded non-Bash tool compatibility layer');
+const kimiTurn = fs.readFileSync(path.join(WB, 'app', 'backend', 'kimi-acp-turn.cjs'), 'utf8');
+ok(/runKimiAcpTurnPrepared/.test(engine) && /prepareKimiAcpSpawn\(claude\)/.test(kimiTurn) && /kimi-acp-compat-register\.mjs/.test(kimiTurn), 'engine launches Kimi through ACP with the guarded non-Bash tool compatibility layer');
 
 const mcpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-kimi-mcp-'));
 try {

@@ -24,7 +24,7 @@ const CENSUS = {
   '../backend/session-meta-updates.cjs': 2, // 元数据立即／延后提交，使用撤回代数闸与有界重放。
   '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
   '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
-  '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
+  '../backend/kimi-acp-turn.cjs': 2, // Kimi 回合自存，收尾走 saveTurnFinalSession。
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
   '07-autonomy.js': 1,           // steer 排空(回合自存)
   '../backend/provider-turn.cjs': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
@@ -71,7 +71,7 @@ const sites = [
   ['13-http-router.js 任务账本路由(check／start／update)', routeBlock('13-http-router.js', routeMarker('mission'), 110), true],
   ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
   ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
-  ['05b-kimi-bridge.js runKimiCompact', fnBody('05b-kimi-bridge.js', 'async function runKimiCompact('), false],
+  ['kimi-native-operations.cjs runKimiCompact', fnBody('../backend/kimi-native-operations.cjs', 'async function runKimiCompact('), false],
   ['08-agent-runs.js appendAgentWorkflowSummaryToSession', fnBody('08-agent-runs.js', 'async function appendAgentWorkflowSummaryToSession('), false],
   ['13p-steward-runner-actions.js stewardStampReply', fnBody('13p-steward-runner-actions.js', 'async function stewardStampReply('), false],
   ['13q-steward-runner-turn.js stewardArchiveConversation', fnBody('13q-steward-runner-turn.js', 'async function stewardArchiveConversation('), true],

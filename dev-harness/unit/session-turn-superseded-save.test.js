@@ -120,7 +120,7 @@ test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时�
   const engines = [
     ['../backend/provider-turn.cjs', 'runOpenAiTurn'],
     ['05-claude-engine.js', 'runClaudeTurn'],
-    ['05b-kimi-bridge.js', 'runKimiAcpTurnPrepared'],
+    ['../backend/kimi-acp-turn.cjs', 'runKimiAcpTurnPrepared'],
   ];
   for (const [file, fn] of engines) {
     const body = functionBlock(fs.readFileSync(path.join(SRC, file), 'utf8'), fn);

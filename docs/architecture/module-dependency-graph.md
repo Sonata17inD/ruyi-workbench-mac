@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2885 | 3373 | 638 | 21 | 0 | 0 |
+| 94 | 2849 | 3359 | 637 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -16,7 +16,7 @@
 | # | 模块 | 层 | provides | requires | 直接依赖 |
 |---:|---|---|---:|---:|---:|
 | 0 | `00-platform-runtime.js` | bootstrap | 3 | 0 | 0 |
-| 1 | `00-boot.js` | bootstrap | 184 | 1 | 1 |
+| 1 | `00-boot.js` | bootstrap | 183 | 1 | 1 |
 | 2 | `01o-execution-state.js` | foundation | 9 | 0 | 0 |
 | 3 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 4 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
@@ -60,7 +60,7 @@
 | 42 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
 | 43 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
 | 44 | `05-claude-engine.js` | engine | 3 | 121 | 24 |
-| 45 | `05b-kimi-bridge.js` | engine | 82 | 72 | 12 |
+| 45 | `05b-kimi-bridge.js` | engine | 47 | 58 | 11 |
 | 46 | `06-provider-engine.js` | engine | 32 | 29 | 10 |
 | 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 48 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
@@ -207,15 +207,14 @@
 | `05-claude-engine.js` | `06v-operational-services.js` | backward | `engineTranscriptCwd` |
 | `05-claude-engine.js` | `06w-capability-service.js` | backward | `getCapabilities`, `peekCapabilities` |
 | `05-claude-engine.js` | `07-autonomy.js` | forward | `classifyToolPacks` |
-| `05b-kimi-bridge.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `appRoot`, `createCappedDiagnosticText`, `dataRoot`, `externalRoot`, `fs`, `fsp`, `http`, `isSensitiveDataPath`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathToFileURL`, `pathWithinRoot`, `paths`, `redact`, `safeJsonParse`, `spawnDetachedChecked`, `text` |
-| `05b-kimi-bridge.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherUsable`, `decodeClaudeCliText`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi` |
+| `05b-kimi-bridge.js` | `00-boot.js` | backward | `RUYI_EVENTS`, `appRoot`, `dataRoot`, `externalRoot`, `isSensitiveDataPath`, `logEvent`, `makeId`, `nowIso`, `pathWithinRoot`, `paths`, `spawnDetachedChecked` |
+| `05b-kimi-bridge.js` | `01-config.js` | backward | `RUNTIME`, `agentCliLauncherUsable`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi` |
 | `05b-kimi-bridge.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
 | `05b-kimi-bridge.js` | `01o-execution-state.js` | backward | `activeChildren` |
-| `05b-kimi-bridge.js` | `02-session-store.js` | backward | `buildTurnSummary`, `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `finalizeMissionAfterTurn`, `isUntitledSessionTitle`, `journalReadIndex`, `loadSession`, `mergeMissionBeforeSave`, `mutateSession`, `normalizeTodoItems`, `reconcileWorkspaceTurnBaseline`, `saveSession`, `saveTurnFinalSession` |
+| `05b-kimi-bridge.js` | `02-session-store.js` | backward | `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `finalizeMissionAfterTurn`, `isUntitledSessionTitle`, `journalReadIndex`, `loadSession`, `mergeMissionBeforeSave`, `mutateSession`, `normalizeTodoItems`, `reconcileWorkspaceTurnBaseline`, `saveSession`, `saveTurnFinalSession` |
 | `05b-kimi-bridge.js` | `03-bridge-guard.js` | backward | `buildOpenSpawn`, `cwdWarning`, `fileAllowedRoots`, `guardFileToolPath`, `guardWorkspaceExecute`, `realpathForContainment`, `workspaceWriteRoots` |
 | `05b-kimi-bridge.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `05b-kimi-bridge.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `assertSessionExecutionOwner`, `clearPendingPermissions`, `clearPendingPlans`, `clearPendingQuestions`, `hasPendingPermissionForSession`, `kimiContextWindow`, `permissionWaitMs`, `registerSessionExecutionChild`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `stopSession` |
-| `05b-kimi-bridge.js` | `06b-prompt-registry.js` | backward | `softwareEngineeringTaskProfile` |
 | `05b-kimi-bridge.js` | `07-autonomy.js` | forward | `requestNativePermission` |
 | `05b-kimi-bridge.js` | `10-context-governance.js` | forward | `agentConversationContextMeta`, `lastSessionContextTokens`, `runAgentExternalCompact`, `upsertCompactMarker` |
 | `05b-kimi-bridge.js` | `12-tool-dispatch.js` | forward | `toolCall` |

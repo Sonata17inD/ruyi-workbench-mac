@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2885,
-    "requiredSymbols": 3373,
-    "edges": 638,
+    "providedSymbols": 2849,
+    "requiredSymbols": 3359,
+    "edges": 637,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -170,7 +170,6 @@
         "os",
         "parseMcpConfigFile",
         "path",
-        "pathToFileURL",
         "pathWithinAnyRoot",
         "pathWithinRoot",
         "paths",
@@ -4720,83 +4719,48 @@
       "provides": [
         "AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS",
         "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
+        "KimiAcpFiles",
+        "KimiAcpInterventions",
+        "KimiAcpTerminals",
         "agentAutoCompactBackingOff",
         "agentAutoCompactFailures",
         "agentAutoCompactTrigger",
-        "applyKimiAcpTurnConfig",
         "applyKimiStatusToSession",
         "buildKimiAcpPromptParts",
-        "cancelKimiAcpIntervention",
         "classifyKimiAcpReadonlySearch",
         "cleanupKimiAcpTerminals",
-        "closeKimiAcpProcess",
-        "compactKimiNative",
         "consumeKimiAcpApproval",
-        "contextResetKimiAcpPlanApproval",
         "createAcpRpc",
         "createKimiAcpInterventions",
         "createKimiAcpRpc",
         "ensureKimiAcpOperationPermission",
-        "ensureKimiServer",
-        "freeLoopbackPort",
-        "friendlyKimiAcpError",
-        "handleKimiAcpElicitation",
-        "handleKimiAcpFsRequest",
         "handleKimiAcpPermissionRequest",
         "handleKimiAcpTerminalRequest",
         "isKimiAcpPlanFilePath",
         "killKimiAcpTerminal",
-        "kimiAcpActivatedActualConfigValue",
-        "kimiAcpApplyPlan",
-        "kimiAcpCapabilityState",
-        "kimiAcpContentText",
-        "kimiAcpExplicitToolInput",
-        "kimiAcpFindConfigOption",
         "kimiAcpFreshActualForOperation",
         "kimiAcpInferConcreteToolInput",
-        "kimiAcpLifecycle",
         "kimiAcpModeOptionFromActivated",
         "kimiAcpNativeBashWrapperCandidate",
         "kimiAcpNativeBashWrapperTexts",
         "kimiAcpNativeShellQuote",
-        "kimiAcpNoteConfigActual",
-        "kimiAcpObserveNativeMode",
         "kimiAcpPermissionToolCall",
-        "kimiAcpPlanFileFromUpdate",
-        "kimiAcpPlanIdFromUpdate",
-        "kimiAcpPlanSnapshotFromUpdate",
-        "kimiAcpRememberConfigActual",
-        "kimiAcpRequestError",
-        "kimiAcpRestoreSession",
         "kimiAcpSamePath",
         "kimiAcpSessionRestoreMethods",
-        "kimiAcpStoreConfigOptions",
         "kimiAcpSuccessfulEnterPlanMode",
-        "kimiAcpSyncActualConfig",
-        "kimiAcpTerminalDisplayResult",
-        "kimiAcpTerminalRef",
         "kimiAcpUnknownSessionError",
-        "kimiAcpWireCheckpoint",
-        "kimiAcpWireOutcome",
-        "kimiApi",
-        "kimiBridgeState",
-        "kimiCodeHome",
-        "kimiHttp",
         "kimiSessionStatus",
         "kimiStatusFingerprint",
         "kimiUsageFromStatus",
         "maybeAutoCompactAgentSession",
-        "normalizeKimiStatus",
         "noteAgentAutoCompactFailure",
         "parseKimiWireAgentEvents",
         "parseKimiWireCompaction",
         "prepareKimiAcpSpawn",
-        "readKimiWireRuntime",
         "replaceSessionObject",
         "resolveKimiAcpPlanFilePath",
         "runKimiAcpTurnPrepared",
         "runKimiCompact",
-        "stopKimiServer",
         "syncKimiSessionUsage",
         "syncKimiTurnPreferences",
         "watchKimiWire"
@@ -4811,43 +4775,14 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "createCappedDiagnosticText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "dataRoot",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "externalRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "http",
           "kinds": [
             "read"
           ]
@@ -4863,7 +4798,7 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4875,28 +4810,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -4910,23 +4824,8 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "pathToFileURL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "pathWithinRoot",
           "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "redact",
-          "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4939,21 +4838,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "safeJsonParse",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -4962,28 +4847,21 @@
           "provider": "01-config.js",
           "symbol": "agentCliLauncherUsable",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "decodeClaudeCliText",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "prepareAgentCliSpawn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -4997,21 +4875,20 @@
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "syncMcpServersToKimi",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5031,65 +4908,59 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "buildTurnSummary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "finalizeMissionAfterTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "isUntitledSessionTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mergeMissionBeforeSave",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5103,21 +4974,21 @@
           "provider": "02-session-store.js",
           "symbol": "reconcileWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveTurnFinalSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5131,7 +5002,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5187,49 +5058,48 @@
           "provider": "04-permission-runtime.js",
           "symbol": "assertSessionExecutionOwner",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingPermissions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingPlans",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingQuestions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "kimiContextWindow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5237,7 +5107,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5258,14 +5128,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "softwareEngineeringTaskProfile",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -28590,26 +28453,15 @@
       "symbols": [
         "RUYI_EVENTS",
         "appRoot",
-        "createCappedDiagnosticText",
         "dataRoot",
         "externalRoot",
-        "fs",
-        "fsp",
-        "http",
         "isSensitiveDataPath",
         "logEvent",
         "makeId",
-        "normalizeCwd",
         "nowIso",
-        "os",
-        "path",
-        "pathToFileURL",
         "pathWithinRoot",
         "paths",
-        "redact",
-        "safeJsonParse",
-        "spawnDetachedChecked",
-        "text"
+        "spawnDetachedChecked"
       ],
       "direction": "backward"
     },
@@ -28619,7 +28471,6 @@
       "symbols": [
         "RUNTIME",
         "agentCliLauncherUsable",
-        "decodeClaudeCliText",
         "prepareAgentCliSpawn",
         "readConfig",
         "selectedAgentCli",
@@ -28648,7 +28499,6 @@
       "from": "05b-kimi-bridge.js",
       "to": "02-session-store.js",
       "symbols": [
-        "buildTurnSummary",
         "bumpMissionChangeSeq",
         "captureWorkspaceTurnBaseline",
         "finalizeMissionAfterTurn",
@@ -28702,14 +28552,6 @@
         "requestUserQuestion",
         "runAutomaticInterventionDecision",
         "stopSession"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "05b-kimi-bridge.js",
-      "to": "06b-prompt-registry.js",
-      "symbols": [
-        "softwareEngineeringTaskProfile"
       ],
       "direction": "backward"
     },
