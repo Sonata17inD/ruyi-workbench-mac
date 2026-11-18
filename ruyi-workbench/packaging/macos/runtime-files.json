@@ -153,6 +153,8 @@
     "app/backend/scheduler-core.cjs",
     "app/backend/server-ownership.cjs",
     "app/backend/steward-core.cjs",
+    "app/backend/steward-decisions.cjs",
+    "app/backend/steward-memory-store.cjs",
     "app/backend/steward-inbox-events.cjs",
     "app/backend/steward-inbox.cjs",
     "app/backend/steward-workspaces.cjs",

@@ -5,7 +5,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const temp = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(temp, 'ruyi-steward-privacy-'));
 const data = path.join(root, 'data'), work = path.join(root, 'work'); fs.mkdirSync(data); fs.mkdirSync(work);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runStewardTurn', 'loadSession', 'readConfig', 'mutateConfig', 'StewardHooks', 'TOOL_HANDLERS', 'stewardDecisionChain'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runStewardTurn', 'loadSession', 'readConfig', 'mutateConfig', 'StewardHooks', 'TOOL_HANDLERS', 'StewardDecisions'], { withEval: true });
 const f = require('../lib/privacy-test-fixture').fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
 const state = app.__eval(`(() => {
@@ -84,7 +84,7 @@ async function update(message, privacy, trigger = 'user') {
     console.log(JSON.stringify(report, null, 2));
   } catch (error) { console.error(error.stack); process.exitCode = 1; }
   finally {
-    await app.__eval('stewardDecisionChain');
+    await app.StewardDecisions.flush();
     if (path.dirname(root) !== temp || !path.basename(root).startsWith('ruyi-steward-privacy-')) throw Error('cleanup_scope');
     fs.rmSync(root, { recursive: true, force: true });
   }

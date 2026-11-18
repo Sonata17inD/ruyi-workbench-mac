@@ -8,7 +8,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-settings-scope-'));
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, defaultWorkspace: home,
   activeProvider: 'fake', providers: [{ id: 'fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1', apiKey: 'fixture-secret', model: 'base' }], newThreadEngine: 'last', lastUsedEngineRoute: { engine: 'openai', providerId: 'fake', model: 'base' } }));
-const s = loadServerInternals(['readConfig', 'ConfigPatchHooks', 'mutateConfig', 'createSession', 'loadSession', 'saveSession', 'updateSessionMeta', 'stewardDecisionsRead', 'stewardDecisionChain', 'activeChildren'], { withEval: true });
+const s = loadServerInternals(['readConfig', 'ConfigPatchHooks', 'mutateConfig', 'createSession', 'loadSession', 'saveSession', 'updateSessionMeta', 'stewardDecisionsRead', 'StewardDecisions', 'activeChildren'], { withEval: true });
 const ctx = { sessionId: 'steward', session: { id: 'steward', kind: 'steward', providerHistory: [] } };
 const call = args => s.__eval('StewardHooks.configSet')(args, ctx);
 (async () => {
@@ -48,9 +48,20 @@ const call = args => s.__eval('StewardHooks.configSet')(args, ctx);
     const confirmed = await s.__eval('StewardHooks.configSet')({ patch: { activeProvider: 'missing' } }, { ...ctx, userPressed: true });
     ok(confirmed.error === 'invalid_request', '确认后也不能指向不存在的端点');
     // 故意让真实写盘原语失败，不能靠假失败回包代替磁盘分支验证。
-    s.__eval('globalThis.scopeOriginalWriteConfig = writeConfig; writeConfig = async () => { throw new Error("fixture disk failure"); }');
-    const failed = await call({ patch: { questionTimeoutMs: 999000 } });
-    s.__eval('writeConfig = globalThis.scopeOriginalWriteConfig; delete globalThis.scopeOriginalWriteConfig');
+    const configPath = path.join(home, 'config.json');
+    const rename = fs.promises.rename;
+    let refusedConfigWrite = false;
+    fs.promises.rename = async (from, to) => {
+      if (to === configPath) {
+        refusedConfigWrite = true;
+        throw Object.assign(new Error('fixture disk failure'), { code: 'EIO' });
+      }
+      return rename(from, to);
+    };
+    let failed;
+    try { failed = await call({ patch: { questionTimeoutMs: 999000 } }); }
+    finally { fs.promises.rename = rename; }
+    ok(refusedConfigWrite, '故障注入命中配置原子发布');
     ok(!failed.ok && !failed.receipt && (await s.readConfig()).questionTimeoutMs === 420000, '写盘失败不返回生效值、成功回执或撤销');
     s.__eval('globalThis.scopeOriginalPatch = ConfigPatchHooks.applyConfigPatch; ConfigPatchHooks.applyConfigPatch = async (patch, options) => { await mutateConfig(current => { current.questionTimeoutMs = 450000; }); return globalThis.scopeOriginalPatch(patch, options); }');
     const raced = await call({ patch: { questionTimeoutMs: 540000 } });
@@ -64,8 +75,9 @@ const call = args => s.__eval('StewardHooks.configSet')(args, ctx);
     const saved = await s.loadSession(thread.id);
     const next = await s.createSession({ title: '后续任务', cwd: home });
     ok(saved.engineRoute.model === 'strong' && saved.engineRouteScope === 'thread' && next.engineRoute.model === 'base', '旧回合收尾保留仅此任务的模型与作用域，新任务默认不变');
-    const raw = JSON.stringify((await s.stewardDecisionsRead({ limit: 200 })).rows);
-    ok(!raw.includes('fixture-secret'), '回执、撤销与行动流水不泄露服务商密钥');
+    await s.StewardDecisions.flush();
+    const { rows } = await s.stewardDecisionsRead({ limit: 200 });
+    ok(rows.length > 0 && !JSON.stringify(rows).includes('fixture-secret'), '已写入的行动流水不泄露服务商密钥');
     const legacyCli = await s.__eval('StewardHooks.configSet')({ patch: { activeProvider: 'claude-cli', model: 'opus' } }, { ...ctx, userPressed: true });
     ok(legacyCli.ok && (await s.readConfig()).activeProvider === 'claude-cli', '合法旧 CLI 哨兵可显式设为新任务默认');
     const cliModel = await s.__eval('StewardHooks.configSet')({ patch: { model: 'sonnet' } }, { ...ctx, userPressed: true });

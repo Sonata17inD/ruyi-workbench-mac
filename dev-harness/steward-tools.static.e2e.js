@@ -637,17 +637,19 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
       '面板照常列出过期条目,只多打一枚「已过期」标(44 号文 §6 ②:时效是过滤不是删除)。逐条的 expired 由 stewardMemoryPanelRow 现算 —— 在这里滤掉等于用户再也看不见它过期了',
     '13g-steward.js:stewardMemoryPanelExport':
       '导出只滤 state !== active。含过期条目是有意的:导出再导入不该静默丢数据,expiresAt 本身也在导出字段集里',
-    '13j-steward-tool-base.js:stewardMutateMemory':
+    '../backend/steward-memory-store.cjs:stewardMutateMemory':
       '写事务必须看到全库(含过期与已否决)。滤掉的话同义写入会把过期条目当成不存在、再落一条重复的 —— 44 号文 §1.2 记的「合并时那个陷阱」正是这个',
   };
-  const srcAllFiles = fs.readdirSync(SRC).filter(n => n.endsWith('.js'));
+  const memoryStore = '../backend/steward-memory-store.cjs';
+  const srcAllFiles = [...fs.readdirSync(SRC).filter(n => n.endsWith('.js')), memoryStore];
   const READ_STORE_RE = /\bstewardReadMemoryStore\s*\(/;
   const isCommentLine = line => /^\s*(\/\/|\*|\/\*)/.test(line);
   const sites = [];
   const brokenRuler = [];
   let occurrences = 0, storeDefs = 0;
   for (const name of srcAllFiles) {
-    const lines = fs.readFileSync(path.join(SRC, name), 'utf8').split(/\r?\n/);
+    const source = read(name);
+    const lines = (name === memoryStore ? source.replace(/^ {2}/gm, '') : source).split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
       if (!READ_STORE_RE.test(lines[i]) || isCommentLine(lines[i])) continue;
       occurrences += 1;
@@ -668,7 +670,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
       });
     }
   }
-  ok(occurrences === 7, `⑫b stewardReadMemoryStore 在 src/ 出现 7 次 = 定义 1 + 调用点 6(实得 ${occurrences};扫不到 = 本条静默失效)`);
+  ok(occurrences === 7, `⑫b stewardReadMemoryStore 出现 7 次 = 定义 1 + 调用点 6(实得 ${occurrences};扫不到 = 本条静默失效)`);
   ok(storeDefs === 1, `⑫b 库读取只有一处实现(实得 ${storeDefs} 处定义)`);
   // 129g 把第 6 个读取口加在 13k 的 stewardResolveAnswerBasis(代答的依据核实:给的记忆 id 必须
   // 真在库里、仍 active、且没过期)。它【自己滤】,所以不进白名单。
@@ -690,26 +692,25 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 }
 
 // ── ⑬ 126-M01:「作用域算不算数」也只许有一个判据口 ─────────────────────────────────
-// 与 ⑫ 同一个模具:归一与匹配都在 13j 的 stewardNormalizeMemoryScope / stewardMemoryScopeMatches,
-// 管家族别处不许自己算项目键(那会造出第二套口径)。判据住 13j 而不是 06i 是被依赖图逼出来的:
-// 实测 manifest 里 06i@18 排在 06d@19 之前,06i 引用 06d 的 projectKeyForCwd 是前向边且连带
-// 造出 7 条循环边 —— 与 125-P1「06i 读 06 会造 7 条循环边」是同一个坑、同一个文件。
+// 管家记忆存储负责作用域归一与匹配。所有调用方使用同一个项目键。
 {
   const scopeFiles = fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js'));
   const offenders2 = [];
+  const scopeOwner = read('../backend/steward-memory-store.cjs');
   let matchers = 0;
   for (const name of scopeFiles) {
     const text = fs.readFileSync(path.join(SRC, name), 'utf8');
     if (/\bstewardMemoryScopeMatches\s*\(/.test(text)) matchers++;
-    if (name === '13j-steward-tool-base.js') continue;   // 判据本身住这儿
     for (const line of text.split(/\r?\n/)) {
       if (/^\s*(\/\/|\*)/.test(line)) continue;          // 注释里怎么写都行
       if (/projectKeyForCwd\s*\(/.test(line)) offenders2.push(`${name}: ${line.trim().slice(0, 90)}`);
     }
   }
+  ok(/\bfunction stewardMemoryScopeMatches\(/.test(scopeOwner) && /\bprojectKeyForCwd\(cwd\)/.test(scopeOwner),
+    '⑬ 记忆存储持有作用域判据并复用现有项目键');
   ok(matchers >= 1, `⑬ 管家族里真的在用那一个作用域判据 stewardMemoryScopeMatches（实得 ${matchers} 个文件；一个都没有 = 过滤被摘掉了）`);
   ok(offenders2.length === 0,
-    `⑬ 管家族不许自己算项目键 —— 键只由 13j 那一处从 06d 的 projectKeyForCwd 推${offenders2.length ? '；实得：' + offenders2.join(' ⏐ ') : ''}`);
+    `⑬ 管家族只通过记忆存储派生项目键${offenders2.length ? '；实得：' + offenders2.join(' ⏐ ') : ''}`);
 }
 
 console.log('');

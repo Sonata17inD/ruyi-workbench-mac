@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2384 | 3183 | 601 | 15 | 0 | 0 |
+| 87 | 2369 | 3182 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -85,7 +85,7 @@
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
 | 69 | `13i-steward-inbox.js` | transport | 22 | 25 | 7 |
-| 70 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
+| 70 | `13j-steward-tool-base.js` | transport | 65 | 22 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 54 | 126 | 18 |
 | 73 | `13l-steward-ops.js` | transport | 54 | 133 | 22 |
@@ -517,7 +517,7 @@
 | `13i-steward-inbox.js` | `04-permission-runtime.js` | backward | `turnOutcomePending` |
 | `13i-steward-inbox.js` | `06i-steward-core.js` | backward | `STEWARD_EVENT_KINDS`, `STEWARD_SESSION_ID`, `StewardHooks`, `stewardCoveringLastTurn`, `stewardSanitizeText`, `stewardWatchedThread` |
 | `13i-steward-inbox.js` | `13e-pretender-index.js` | backward | `getPretenderProjectionIndex` |
-| `13j-steward-tool-base.js` | `00-boot.js` | backward | `fsp`, `nowIso`, `path`, `safeJsonParse`, `text` |
+| `13j-steward-tool-base.js` | `00-boot.js` | backward | `fsp`, `nowIso`, `safeJsonParse`, `text` |
 | `13j-steward-tool-base.js` | `01-config.js` | backward | `atomicWriteJson`, `readFileTail`, `safeSessionId`, `sessionPath` |
 | `13j-steward-tool-base.js` | `01e-permission-modes.js` | backward | `resolvePermissionMode` |
 | `13j-steward-tool-base.js` | `01o-execution-state.js` | backward | `providerTurnQuotaKey` |

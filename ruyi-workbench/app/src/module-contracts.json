@@ -14636,14 +14636,7 @@
       "provides": [
         "STEWARD_AUDIT_LIMIT_DEFAULT",
         "STEWARD_AUDIT_LIMIT_MAX",
-        "STEWARD_DECISIONS_FILE",
-        "STEWARD_DECISIONS_FULL_READ_BYTES",
-        "STEWARD_DECISIONS_LIMIT_DEFAULT",
-        "STEWARD_DECISIONS_LIMIT_MAX",
-        "STEWARD_DECISIONS_MASK",
-        "STEWARD_DECISIONS_TAIL_BYTES",
         "STEWARD_DELIVERABLE_FILES_MAX",
-        "STEWARD_MEMORY_FILE",
         "STEWARD_MEMORY_MERGED_FROM_MAX",
         "STEWARD_MEMORY_NEW_WINDOW_MS",
         "STEWARD_MEMORY_SCHEMA",
@@ -14663,23 +14656,20 @@
         "STEWARD_READ_TAIL_DEFAULT",
         "STEWARD_READ_TAIL_MAX",
         "STEWARD_RUNS_MAX",
-        "STEWARD_SCOPE_PROJECT_PREFIX",
         "STEWARD_SEARCH_LIMIT_DEFAULT",
         "STEWARD_SEARCH_LIMIT_MAX",
         "STEWARD_STEER_TEXT_MAX",
         "STEWARD_TITLE_MAX",
+        "StewardDecisions",
         "_stewardReadBudget",
         "_stewardTurnQuota",
         "_stewardTurnTaint",
+        "createStewardMemoryStore",
         "stewardAppendDecision",
         "stewardBasisOf",
         "stewardClampInt",
-        "stewardDecisionChain",
-        "stewardDecisionSeq",
-        "stewardDecisionsPath",
         "stewardDecisionsRead",
         "stewardDisplayKind",
-        "stewardEmptyMemoryStore",
         "stewardEngineOf",
         "stewardExemptDelegationRecord",
         "stewardExemptDelegationTimes",
@@ -14687,14 +14677,10 @@
         "stewardFail",
         "stewardLastAssistantText",
         "stewardMarkTurnTainted",
-        "stewardMaskDecisionArgs",
-        "stewardMemoryChain",
-        "stewardMemoryPath",
         "stewardMemoryScopeLabel",
         "stewardMemoryScopeMatches",
         "stewardMemoryScopeOf",
         "stewardMutateMemory",
-        "stewardNormalizeMemoryEntry",
         "stewardNormalizeMemoryScope",
         "stewardNotifiesInWindow",
         "stewardNotifyRecord",
@@ -14703,7 +14689,6 @@
         "stewardQuickThread",
         "stewardRawKind",
         "stewardReadBucket",
-        "stewardReadDecisionsText",
         "stewardReadMemoryStore",
         "stewardReadSessionHead",
         "stewardTaintKeyOf",
@@ -14727,13 +14712,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
             "read"
           ]
         },
@@ -14741,7 +14719,8 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14755,21 +14734,22 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readFileTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14804,7 +14784,7 @@
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14818,14 +14798,14 @@
           "provider": "06d-memory-domain.js",
           "symbol": "cleanMemoryDate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "projectKeyForCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14867,14 +14847,15 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardDir",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

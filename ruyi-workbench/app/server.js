@@ -12429,11 +12429,6 @@ const {
 //   ④ 每个写动作追加一行决策日志 `<data>/steward/decisions-v1.ndjson`,带 undoRef 与依据。
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── 落盘常量(两个新面,已登记进 durable-state-inventory)────────────────────────────────────
-const STEWARD_DECISIONS_FILE = 'decisions-v1.ndjson';
-const STEWARD_MEMORY_FILE = 'memory-v1.json';
-const STEWARD_MEMORY_SCHEMA = 1;
-
 // ── 工具面数值口径 ──────────────────────────────────────────────────────────────────────
 const STEWARD_SEARCH_LIMIT_DEFAULT = 10, STEWARD_SEARCH_LIMIT_MAX = 50;
 const STEWARD_READ_TAIL_DEFAULT = 6, STEWARD_READ_TAIL_MAX = 20;
@@ -12452,8 +12447,6 @@ const STEWARD_NOTE_TEXT_MAX = 600;
 const STEWARD_NOTE_PREFIX = '（管家补充）';
 const STEWARD_PENDING_SUMMARY_MAX = 12;     // thread_status 里最多列几条待决摘要
 const STEWARD_RUNS_MAX = 20;                // runs_status 单次最多返回几个 run digest
-// 116-2e:同义合并时保留的来源 ref 上限(§4 ⑥「mergedFrom 最多 5 个来源 ref」)。
-const STEWARD_MEMORY_MERGED_FROM_MAX = 5;
 const STEWARD_MEMORY_NEW_WINDOW_MS = 24 * 60 * 60 * 1000;  // §4 ⑤「新写入 24 小时内带『新』标记」
 const STEWARD_PLAYBOOK_DRAFTS_PER_TURN = 1;                // §3.5 内容管理:起草要调模型,每回合一次
 const STEWARD_QUICK_ASKS_PER_TURN = 2;                     // §11.1 第 2 项:速查线程每回合最多两条
@@ -12549,275 +12542,18 @@ function stewardEngineOf(head) {
   };
 }
 
-// ── 决策日志(§3.5「所有写工具返回 undoRef,决策日志记录」)───────────────────────────────
-// 与 inbox 同款 append-only 纪律:先 repairMissionChangeTornTail 把尾部半行截干净,再整行 appendFile,
-// 全部经一条 per-process 串行链。开关关时根本走不到这里(门控壳先返回 steward.disabled)。
-const stewardDecisionsPath = () => path.join(stewardDir(), STEWARD_DECISIONS_FILE);
-let stewardDecisionChain = Promise.resolve();
-let stewardDecisionSeq = 0;
-// 116-2b:自理动作的溯源基底。13h 在【工具入参】上挂一个内部字段 stewardBasis({inboxSeq,auto,origin}),
-// 由下面两个实现并进决策日志的 basis —— 事后能分清「这一次重试是管家自理做的、由第 N 条收件箱
-// 事件触发」。它不在工具 schema 里(additionalProperties:false),模型即使编造出来也只影响日志注解,
-// 不影响任何判定;args 照旧只记摘要字段,这一坨不进 args。
-function stewardBasisOf(args, extra) {
-  const raw = (args && typeof args.stewardBasis === 'object' && args.stewardBasis) ? args.stewardBasis : null;
-  const base = (extra && typeof extra === 'object') ? { ...extra } : {};
-  if (!raw) return base;
-  if (raw.inboxSeq != null) base.inboxSeq = Number(raw.inboxSeq) || 0;
-  if (raw.auto != null) base.auto = raw.auto === true;
-  if (raw.origin) base.origin = String(raw.origin).slice(0, 40);
-  // 「没做完就续」自理动作的理由(计划进度 / 回合没收口 / 第几次),给行动流水点开时看;只是注解,不参与任何判定。
-  if (raw.reason) base.reason = String(raw.reason).slice(0, 120);
-  return base;
-}
-
-function stewardAppendDecision(row) {
-  const record = {
-    seq: ++stewardDecisionSeq,
-    at: nowIso(),
-    tool: String((row && row.tool) || ''),
-    args: (row && row.args && typeof row.args === 'object') ? row.args : {},
-    targetSessionId: String((row && row.targetSessionId) || ''),
-    permissionMode: String((row && row.permissionMode) || ''),
-    mayAct: String((row && row.mayAct) || ''),
-    undoRef: (row && row.undoRef) || null,
-    basis: (row && row.basis && typeof row.basis === 'object') ? row.basis : {},
-  };
-  const line = JSON.stringify(record) + '\n';
-  stewardDecisionChain = stewardDecisionChain.then(async () => {
-    await fsp.mkdir(stewardDir(), { recursive: true });
-    const file = stewardDecisionsPath();
-    await repairMissionChangeTornTail(file);
-    await fsp.appendFile(file, line, 'utf8');
-  }).catch(() => {}); // 记账失败绝不回滚已经做完的动作(与 usage ledger 同款 fire-and-forget 纪律)
-  return record;
-}
-
-// ── 决策日志的只读面(117e 第 0 步 · §8.6「行动流水」)────────────────────────────────────
-// 在 117e 之前决策日志【只有】工具 `steward_audit_tail` 能读 —— 也就是说,只有模型看得见管家做过
-// 什么,用户看不见。§8.6 明写「行动流水页按时间列出管家做过的每件事(依据、线程权限、undoRef、
-// 费用),支持按线程与按日期过滤」,那需要一条 HTTP 只读面。
-//
-// 纪律与 inbox 尾窗读取同源(13i stewardReadInboxText/ParseInboxText 的形状):小文件整读、大文件只读
-// 尾窗并丢首个半行、坏行整行跳过、文件不存在 = 空(绝不 mkdir —— 开关关时零持久化写入的红线)。
-const STEWARD_DECISIONS_LIMIT_DEFAULT = 50;
-const STEWARD_DECISIONS_LIMIT_MAX = 200;
-const STEWARD_DECISIONS_FULL_READ_BYTES = 8 * 1024 * 1024;
-const STEWARD_DECISIONS_TAIL_BYTES = 1024 * 1024;
-const STEWARD_DECISIONS_MASK = '••••';
-
-// args 里像密钥的值一律掩码。**判据复用 116-2e 的那一条**(06i 的 STEWARD_CONFIG_SECRET_PATTERN,
-// `/apiKey|token|secret|password/i`)—— 不另写第二份正则:两份正则迟早会漂移,而漂移的方向永远是
-// 「新面漏掉了旧面拦住的东西」。按【键名】判定(值本身可能是任意串,按值猜是猜不准的),对象递归,
-// 深度与宽度都有硬顶(决策日志的 args 本就只记摘要字段,超了说明写日志的地方出了别的问题)。
-function stewardMaskDecisionArgs(value, depth = 0) {
-  if (depth > 4 || value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.slice(0, 50).map(item => stewardMaskDecisionArgs(item, depth + 1));
-  const out = {};
-  for (const [key, item] of Object.entries(value).slice(0, 50)) {
-    if (STEWARD_CONFIG_SECRET_PATTERN.test(key)) { out[key] = STEWARD_DECISIONS_MASK; continue; }
-    out[key] = stewardMaskDecisionArgs(item, depth + 1);
-  }
-  return out;
-}
-
-async function stewardReadDecisionsText() {
-  const file = stewardDecisionsPath();
-  let size = -1;
-  try { size = (await fsp.stat(file)).size; } catch { return { text: '', droppedHead: false }; }
-  if (size <= STEWARD_DECISIONS_FULL_READ_BYTES) {
-    try { return { text: await fsp.readFile(file, 'utf8'), droppedHead: false }; } catch { return { text: '', droppedHead: false }; }
-  }
-  // 117q-B6(30 号文 P2-10):open/alloc/read/close 收编进 01-config.js 的 readFileTail —— 本处早已按
-  // bytesRead 定界(无 bug),这里只是把手写的四步换成共用原语,行为不变。
-  try {
-    const { buf, bytesRead } = await readFileTail(file, STEWARD_DECISIONS_TAIL_BYTES);
-    return { text: buf.toString('utf8', 0, bytesRead), droppedHead: true };
-  } catch { return { text: '', droppedHead: false }; }
-}
-
-// { limit, sessionId, since } -> { ok, rows, total, limit }
-//   · rows 按时间【倒序】(最近的在最前),这是行动流水页的自然阅读序;
-//   · since 认 ISO 时间串(比 seq 稳:seq 是 per-process 计数器,重启即从 1 重来),给了就只回
-//     `at > since` 的行;非法值当没给(不是报错 —— 只读面对坏参数一律降级为「不过滤」);
-//   · total = 尾窗内命中过滤的总行数(不是全量文件行数,尾窗外的行本来就读不到)。
-async function stewardDecisionsRead(opts) {
-  const o = (opts && typeof opts === 'object') ? opts : {};
-  const rawLimit = Number(o.limit);
-  const limit = Number.isFinite(rawLimit) && rawLimit > 0
-    ? Math.min(STEWARD_DECISIONS_LIMIT_MAX, Math.max(1, Math.round(rawLimit)))
-    : STEWARD_DECISIONS_LIMIT_DEFAULT;
-  const sessionId = safeSessionId(String(o.sessionId || ''));
-  const sinceRaw = String(o.since || '').trim().slice(0, 40);
-  const since = sinceRaw && !Number.isNaN(Date.parse(sinceRaw)) ? sinceRaw : '';
-  const { text, droppedHead } = await stewardReadDecisionsText();
-  const lines = String(text || '').split('\n');
-  const matched = [];
-  for (let i = droppedHead ? 1 : 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const row = safeJsonParse(line, null);
-    if (!row || typeof row !== 'object' || Array.isArray(row) || !row.tool) continue;  // 坏行整行跳过
-    const at = String(row.at || '');
-    if (sessionId && String(row.targetSessionId || '') !== sessionId) continue;
-    if (since && !(at > since)) continue;
-    matched.push({
-      seq: Number(row.seq) || 0,
-      at,
-      tool: String(row.tool || ''),
-      args: stewardMaskDecisionArgs((row.args && typeof row.args === 'object') ? row.args : {}),
-      targetSessionId: String(row.targetSessionId || ''),
-      permissionMode: String(row.permissionMode || ''),
-      mayAct: String(row.mayAct || ''),
-      undoRef: (row.undoRef && typeof row.undoRef === 'object') ? row.undoRef : null,
-      basis: (row.basis && typeof row.basis === 'object') ? stewardMaskDecisionArgs(row.basis) : {},
-      ...(row.cost != null ? { cost: Number(row.cost) || 0 } : {}),
-    });
-  }
-  matched.reverse();
-  return { ok: true, rows: matched.slice(0, limit), total: matched.length, limit };
-}
-
-// **住在 13j 不住在 06i**:实测 manifest 里 06i@18 排在 06d@19 【之前】—— 06i 引用 06d 的
-// projectKeyForCwd 是前向边,而且会连带造出 7 条循环边(依赖图 --check 当场报)。这与 125-P1
-// 「06i 读 06 会造 7 条循环边」是同一个坑、同一个文件:**06i 之后的 06 系模块,06i 一律够不着。**
-// 13j@39 在 06d 之后、在 13l/13g/13o 之前,是这组函数唯一站得住的落点。
-// ── 126-M01(44 号文 §1.2 / §6 ①):记忆的作用域 ──────────────────────────────────────
-// 取值两态:空串 = 全局;`project:<16 位十六进制>` = 只在那个项目里成立。键复用工作台库的
-// projectKeyForCwd(06d,后向边)—— **两库同一口径**,与 M02 复用 memoryIsExpired 是同一条理由。
-//
-// **键永远由服务端从一条真实会话的 cwd 推出来,模型只说「这条是不是项目级的」**。这一条是故意的:
-// 31 号文 §2.6 的红线要的是「用户自己说的稳定事实」,让模型自己填一个项目键 = 让它推断
-// 「这条管得着谁」,正是那条红线禁止的事。
-//
-// 非法值一律回落全局 —— **绝不静默当成某个项目**(那会让一条本该到处成立的偏好凭空消失一半)。
-const STEWARD_SCOPE_PROJECT_PREFIX = 'project:';
-function stewardMemoryScopeOf(cwd) {
-  const key = cwd ? projectKeyForCwd(cwd) : '';
-  return key ? STEWARD_SCOPE_PROJECT_PREFIX + key : '';
-}
-function stewardNormalizeMemoryScope(raw) {
-  const value = String(raw || '');
-  if (!value.startsWith(STEWARD_SCOPE_PROJECT_PREFIX)) return '';
-  const key = value.slice(STEWARD_SCOPE_PROJECT_PREFIX.length);
-  return /^[0-9a-f]{16}$/.test(key) ? value : '';
-}
-// 「这条记忆在这个作用域里算不算数」的**唯一判据口**。全局条目到处算数;项目条目只在同一个
-// 项目里算数。scope 传空 = 不按作用域筛(管家本来就是跨项目的看护者,见 §7 ④ 的拍板)。
-function stewardMemoryScopeMatches(entry, scope) {
-  const own = stewardNormalizeMemoryScope(entry && entry.scope);
-  if (!own) return true;
-  const want = stewardNormalizeMemoryScope(scope);
-  return !want ? true : own === want;
-}
-// **住在 06i 不住在 13o**:拼接序是 06i -> 13f -> 13j -> 13k -> 13l -> 13g -> 13m -> 13o,
-// 13g 的面板行也要用它 —— 放 13o 就成了 13g 引用它后面的符号(前向边),steward-runner.static ②
-// 当场把这条逮了出来。这类「新函数该住哪一层」的判断,机械锁比直觉靠谱。
-// 126-M01:把作用域键翻成人看得懂的项目名。**纯展示派生,不是第二套判据** —— 判据在 06i 的
-// stewardMemoryScopeMatches,本函数只负责「这一条该怎么说出来」。配置里的工作区表能对上就报名字,
-// 对不上就报键的前 8 位(绝不编一个名字出来)。
-function stewardMemoryScopeLabel(scope, config) {
-  const normalized = stewardNormalizeMemoryScope(scope);
-  if (!normalized) return '';
-  const rows = [...(Array.isArray(config && config.workspaces) ? config.workspaces : []),
-    ...(Array.isArray(config && config.recentWorkspaces) ? config.recentWorkspaces : [])];
-  for (const row of rows) {
-    const cwd = typeof row === 'string' ? row : String((row && row.cwd) || '');
-    if (cwd && stewardMemoryScopeOf(cwd) === normalized) {
-      return `,只在「${stewardSanitizeText(cwd.split(/[\\/]/).filter(Boolean).pop() || cwd)}」里成立`;
-    }
-  }
-  return `,只在某个项目里成立(${normalized.slice('project:'.length, 'project:'.length + 8)})`;
-}
-
-// ── 管家记忆存储(§4)────────────────────────────────────────────────────────────────────
-const stewardMemoryPath = () => path.join(stewardDir(), STEWARD_MEMORY_FILE);
-let stewardMemoryChain = Promise.resolve();
-function stewardEmptyMemoryStore() { return { schema: STEWARD_MEMORY_SCHEMA, updatedAt: '', entries: [] }; }
-function stewardNormalizeMemoryEntry(raw) {
-  if (!raw || typeof raw !== 'object') return null;
-  const id = String(raw.id || '');
-  const kind = String(raw.kind || '');
-  const text = String(raw.text || '');
-  if (!id || !STEWARD_MEMORY_KINDS.includes(kind) || !text) return null;
-  const confidence = Number(raw.confidence);
-  return {
-    id,
-    kind,
-    text: text.slice(0, STEWARD_MEMORY_LIMITS.textChars),
-    confidence: Number.isFinite(confidence) ? Math.min(1, Math.max(0, confidence)) : 0.6,
-    sourceSessionId: String(raw.sourceSessionId || ''),
-    sourceSeq: Math.max(0, Number(raw.sourceSeq) || 0),
-    // 走查 #14:凭哪句用户原话记的(steward_memory_write 的 sourceRef.quote,服务端已逐字核对过)。老条目没有 -> 空串,存量零迁移。
-    sourceQuote: String(raw.sourceQuote || '').slice(0, STEWARD_MEMORY_LIMITS.quoteChars),
-    ...(raw.basis === 'activity' ? { basis: 'activity', sourceToolCallId: String(raw.sourceToolCallId || '').slice(0, 200) } : {}),
-    createdAt: String(raw.createdAt || ''),
-    updatedAt: String(raw.updatedAt || ''),
-    lastUsedAt: String(raw.lastUsedAt || ''),
-    useCount: Math.max(0, Number(raw.useCount) || 0),
-    state: raw.state === 'vetoed' ? 'vetoed' : 'active',
-    // 126-M02(44 号文 §1.2):条目的时效。清洗与判据【都不在这儿】—— 复用工作台库
-    // (06d)已有的 cleanMemoryDate / memoryIsExpired,那两个原语只读 .expiresAt,与条目形状无关。
-    // 这就是本波说的「两库职责划分」:两套存储,一套「什么叫过期」的判据。
-    // 老条目没有这个字段 -> 读成空串 -> 永不过期,与今天逐字节同义(存量零迁移,同 mergedFrom 的模具)。
-    expiresAt: cleanMemoryDate(raw.expiresAt),
-    // 126-M01:作用域。空串 = 全局;非法值一律回落全局(绝不静默当成某个项目)。判据与归一都在 06i,
-    // 本文件不自己解析 —— 与 expiresAt 同一条纪律。老条目没有这个字段 -> 读成空串 = 全局,存量零迁移。
-    scope: stewardNormalizeMemoryScope(raw.scope),
-    // 128h-J12:这条曾被用户否决、又经用户在某个回合里明说而复活(steward_memory_write 带
-    // supersedesVetoed)。只留一个标记,面板与决策日志据此能说清「它回来过」。空串 = 没发生过,
-    // 老条目读成空串 —— 存量零迁移,与 mergedFrom / expiresAt 同一个模具。
-    revivedFrom: raw.revivedFrom === 'vetoed' ? 'vetoed' : '',
-    // 116-2e(§4 ⑥ 去重合并):被并进本条的来源 ref,最多 5 个(先进先出)。老条目没有这个字段,
-    // 读成空数组 —— 存量零迁移。
-    mergedFrom: Array.isArray(raw.mergedFrom)
-      ? raw.mergedFrom
-        .filter(r => r && typeof r === 'object')
-        .slice(-STEWARD_MEMORY_MERGED_FROM_MAX)
-        .map(r => ({ sessionId: String(r.sessionId || ''), turnSeq: Math.max(0, Number(r.turnSeq) || 0), at: String(r.at || ''),
-          ...(r.toolCallId ? { toolCallId: String(r.toolCallId).slice(0, 200) } : {}) }))
-      : [],
-  };
-}
-async function stewardReadMemoryStore() {
-  let raw = null;
-  try { raw = safeJsonParse(await fsp.readFile(stewardMemoryPath(), 'utf8'), null); } catch { raw = null; }
-  // 损坏/缺失/错 schema = 空库(不抢救、不 mkdir):记忆是旁路增强,坏了不该拖住任何回合。
-  if (!raw || raw.schema !== STEWARD_MEMORY_SCHEMA || !Array.isArray(raw.entries)) return stewardEmptyMemoryStore();
-  // 生效条与被否决条【各自】封顶 maxEntries:写入闸只数生效条(13l),修前读库却把【总条数】截在 maxEntries ——
-  // 200 条生效 + 否决过 1 条后再写,新条落在第 201 位,写入回 ok:true、读回来却没了,下一次写盘就永久丢掉。
-  // 被否决条要留着(去重闸靠它挡「否决过的话换个说法再写回来」),超出时留最近的那些。原顺序不变。
-  const normalized = [];
-  for (const item of raw.entries) {
-    const entry = stewardNormalizeMemoryEntry(item);
-    if (entry) normalized.push(entry);
-  }
-  const cap = STEWARD_MEMORY_LIMITS.maxEntries;
-  let activeLeft = cap;
-  let vetoedSkip = Math.max(0, normalized.filter(e => e.state === 'vetoed').length - cap);
-  const entries = normalized.filter(e => {
-    if (e.state === 'vetoed') { if (vetoedSkip > 0) { vetoedSkip -= 1; return false; } return true; }
-    if (activeLeft <= 0) return false;
-    activeLeft -= 1;
-    return true;
-  });
-  return { schema: STEWARD_MEMORY_SCHEMA, updatedAt: String(raw.updatedAt || ''), entries };
-}
-// 读-改-写全程串在一条 per-process 链上(同 usage/inbox 纪律),两次并发写不会互相盖掉。
-function stewardMutateMemory(mutator) {
-  const next = stewardMemoryChain.then(async () => {
-    const store = await stewardReadMemoryStore();
-    const outcome = await mutator(store);
-    if (outcome && outcome.persist) {
-      store.updatedAt = nowIso();
-      await fsp.mkdir(stewardDir(), { recursive: true });
-      await atomicWriteJson(stewardMemoryPath(), store);
-    }
-    return outcome ? outcome.result : null;
-  });
-  stewardMemoryChain = next.catch(() => {});
-  return next;
-}
+const StewardDecisions = require('./backend/steward-decisions.cjs').createStewardDecisions({
+  stewardDir, nowIso, safeJsonParse, safeSessionId, readFileTail, repairMissionChangeTornTail, STEWARD_CONFIG_SECRET_PATTERN,
+});
+const { stewardAppendDecision, stewardBasisOf, stewardDecisionsRead } = StewardDecisions;
+const { createStewardMemoryStore, STEWARD_MEMORY_SCHEMA, STEWARD_MEMORY_MERGED_FROM_MAX } = require('./backend/steward-memory-store.cjs');
+const {
+  stewardMemoryScopeOf, stewardNormalizeMemoryScope, stewardMemoryScopeMatches, stewardMemoryScopeLabel,
+  stewardReadMemoryStore, stewardMutateMemory,
+} = createStewardMemoryStore({
+  stewardDir, nowIso, safeJsonParse, atomicWriteJson, projectKeyForCwd, cleanMemoryDate,
+  STEWARD_MEMORY_KINDS, STEWARD_MEMORY_LIMITS, stewardSanitizeText,
+});
 
 // ── §11.2 深读预算:每回合 ≤6 次、累计字符 ≤ stewardReadBudgetChars ─────────────────────────
 // 桶键与 105a observation_recall 同款:会话 id + 回合键(10 providerTurnQuotaKey:优先 turnSeq,回合内稳定、
