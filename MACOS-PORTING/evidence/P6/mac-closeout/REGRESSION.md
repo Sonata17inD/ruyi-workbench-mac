@@ -2,6 +2,8 @@
 
 官方完整轮的594件、608总清册与14项live排除一一对应，无缺件。原始为588成功／6失败／1重试通过；32件内部SKIP逐行保存在[coverage](regression-coverage.json)。
 
+清册引用的原始运行日志可按原路径在 [P6 历史回归日志归档](../archives/README.md) 查找。
+
 | 原失败 | 后续结果 | 证据 |
 |---|---|---|
 | facts.static | README两种语言293→294，主执行及独立通过 | targeted-recheck、independent-closeout |

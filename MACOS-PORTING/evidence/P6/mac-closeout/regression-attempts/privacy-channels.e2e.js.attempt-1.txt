@@ -1,3 +1,0 @@
-SKIP production channel persistence requires Windows DPAPI
-
-PRIVACY CHANNELS E2E: ALL PASS

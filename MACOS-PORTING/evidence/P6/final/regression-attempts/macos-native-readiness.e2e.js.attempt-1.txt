@@ -1,3 +1,0 @@
-SKIP opt-in real Mac readiness/hidden-registry validation
-
-MACOS NATIVE READINESS E2E: ALL PASS
