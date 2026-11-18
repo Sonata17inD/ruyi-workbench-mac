@@ -6,7 +6,7 @@
 //
 // 加第三个 agent CLI = 在这里登记一项 + 在 05 AGENT_CLI_ADAPTERS 给一份适配器(unit/agent-cli-adapters 钉两张表键集合相同、
 // 各项成员齐全)。这里放 01/02 层就要用到的「这一家是谁、装在哪、怎么起」;回合与回合外能力(模型清单、原生压缩、
-// 上下文探测、环境说明……)在 05 的适配器上。
+// 上下文探测……)在 05 的适配器上。交互输入与原生提问的协议能力在这里供启动和环境说明共用。
 //
 // 本模块零出边、不进依赖环:02e 的会话路由归一与 01 的配置归一都要问「这是不是一个登记过的 CLI」,而 02e 够不着 01
 // (引用 01 会把它拽进 SCC)。所以登记项里要用 01 实现的钩子(路径探测、npm 入口、MCP 同步)都经第一个参数 cliHost
@@ -15,6 +15,8 @@
 // 每项成员:
 //   id / label / pathKey / detectedKey / streaming / interactive / mcp   数据(经 /api/status 的 agentCliDrivers 原样下发)
 //   installCandidates({ env, home, join, platform })   默认安装位置候选(按序探测;Claude 有自己的启动器解析,为空)
+//   usesStreamJsonInput(config)                        本回合是否走 stream-json 持续输入
+//   hasNativeQuestionPrompt()                         原生提问是否经协议进入如意提问卡
 //   detectPath(cliHost)                      自动探测到的启动器路径('' = 没找到)
 //   syncMcpManifest(cliHost, config) async   把如意的 MCP 清单推进这家 CLI 自己的用户配置(走命令行参数的 CLI 给空操作)
 // 函数成员在 JSON 里自然消失,所以 /api/status 下发的形状与只有数据成员时逐字节相同 —— 钩子一律是函数,
@@ -23,6 +25,8 @@ const AGENT_CLI_DEFAULT_TYPE = 'claude';
 const AGENT_CLI_TYPES = Object.freeze({
   claude: Object.freeze({
     id: 'claude', label: 'Claude Code', pathKey: 'claudePath', detectedKey: 'detectedClaudePath', streaming: true, interactive: true, mcp: 'argument',
+    usesStreamJsonInput: config => config.engineMode === 'interactive',
+    hasNativeQuestionPrompt: () => false,
     installCandidates: () => [],
     detectPath: cliHost => cliHost.detectClaudePath(),
     prepareSpawn: (cliHost, command, argv) => ({ command, args: argv, opts: {} }),
@@ -31,6 +35,8 @@ const AGENT_CLI_TYPES = Object.freeze({
   }),
   kimi: Object.freeze({
     id: 'kimi', label: 'Kimi Code', pathKey: 'kimiPath', detectedKey: 'detectedKimiPath', streaming: true, interactive: true, mcp: 'user-config',
+    usesStreamJsonInput: () => false,
+    hasNativeQuestionPrompt: () => true,
     installCandidates({ env, home, join, platform = process.platform }) {
       return [
         env.KIMI_CLI_PATH, 'kimi',

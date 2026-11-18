@@ -1186,7 +1186,7 @@ function engineBriefFacts({ engine, config, session, rg } = {}) {
     version: runtime.version,
     launchMode: runtime.launchMode,
     mcp: kind !== 'provider' && cfg.includeWorkbenchMcp !== false,
-    interactive: kind !== 'provider' && agentCliAdapter(kind).interactive(cfg),
+    interactive: kind !== 'provider' && AGENT_CLI_TYPES[kind].usesStreamJsonInput(cfg),
     orchestrate: Number(cfg.subagentMaxPerTurn) > 0,
     desktop: !!(cfg.desktopMcp && cfg.desktopMcp.enabled) && allowDesk,
     rgShell,
@@ -1195,7 +1195,7 @@ function engineBriefFacts({ engine, config, session, rg } = {}) {
   };
 }
 function renderCliEnvBrief(f) {
-  const askNative = agentCliAdapter(f.engine).nativeAskUserQuestion;   // 原生提问是否落到如意提问卡(适配器能力)
+  const askNative = AGENT_CLI_TYPES[f.engine].hasNativeQuestionPrompt();
   const pack = getPromptPack(f.locale);
   const b = pack.engineBrief;
   const lines = [ENGINE_BRIEF_OPEN];

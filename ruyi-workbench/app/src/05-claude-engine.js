@@ -5,7 +5,7 @@ const { effectiveSkillSelection } = require('./backend/skill-registry.cjs');
 // 都问这里的适配器,骨架本身不再写 `agentCliType === 'claude' | 'kimi'`。加第三个 CLI = 在这张表里加一项
 // (再在 01f AGENT_CLI_TYPES 登记标签/路径键/装机候选/起进程),骨架不用动。两个适配器的方法集必须逐项相同
 // (unit/agent-cli-adapters.test.js 钉着方法集与各方法的金样输出)。
-// 架构还债批 4:05 之后的模块(05b 回合前自动压缩、06 环境说明、10 上下文窗口、13 模型清单与手动压缩)按 CLI 类型
+// 架构还债批 4:05 之后的模块(05b 回合前自动压缩、10 上下文窗口、13 模型清单与手动压缩)按 CLI 类型
 // 的决定也收成这里的能力成员(下面「回合外能力」一段),各处经 agentCliAdapter(type) 取,不再与 'kimi' 字面量比较。
 //
 // 接口(ctx 形状见各方法;可选钩子取 null 表示「这一家没有这一步」,骨架据此跳过而不是空跑一次 await):
@@ -41,7 +41,7 @@ const { effectiveSkillSelection } = require('./backend/skill-registry.cjs');
 const AGENT_CLI_ADAPTERS = Object.freeze({
   claude: Object.freeze({
     id: 'claude',
-    interactive: config => config.engineMode === 'interactive',
+    interactive: AGENT_CLI_TYPES.claude.usesStreamJsonInput,
     slashCommandVerbatim: false,
     async buildArgs({ config, session, basePrompt, attachments, interactive }) {
       const args = ['-p', '--output-format', 'stream-json', '--verbose'];
@@ -99,7 +99,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     isResumeMissingError: stderrText => isClaudeResumeMissingError(stderrText),
     syncPostTurnUsage: null,
     // Claude 交互模式禁了原生 AskUserQuestion(--disallowedTools),提问走如意的 MCP 工具。
-    nativeAskUserQuestion: false,
+    nativeAskUserQuestion: AGENT_CLI_TYPES.claude.hasNativeQuestionPrompt(),
     modelCatalog: Object.freeze({
       offline: config => offlineModelList(config),
       discover: async config => ({ ok: true, engine: 'claude', agentCliType: 'claude', ...(await discoverModels(config)) }),
@@ -150,7 +150,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
   }),
   kimi: Object.freeze({
     id: 'kimi',
-    interactive: () => false,
+    interactive: AGENT_CLI_TYPES.kimi.usesStreamJsonInput,
     // Kimi ACP native slash commands must be the first content block exactly as entered.
     slashCommandVerbatim: true,
     // Kimi runs through its ACP stdio server (see 05b) rather than the legacy one-shot
@@ -182,7 +182,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
     syncPostTurnUsage: (session, config, onEvent) => (session.claudeSessionId ? syncKimiSessionUsage(session, config, onEvent) : Promise.resolve(null)),
     recordTurnUsage: () => {},
     // Kimi 的原生提问经 ACP 落到如意的提问卡。
-    nativeAskUserQuestion: true,
+    nativeAskUserQuestion: AGENT_CLI_TYPES.kimi.hasNativeQuestionPrompt(),
     // Kimi's `--model` values are aliases from `kimi provider list --json`; the offline form never lists Claude knownModels.
     modelCatalog: Object.freeze({
       offline: config => kimiModelList(config),

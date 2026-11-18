@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 3229 | 3496 | 595 | 24 | 0 | 1 |
+| 87 | 3229 | 3497 | 594 | 24 | 0 | 1 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -54,9 +54,9 @@
 | 36 | `04j-voice-lexicon.js` | foundation | 1 | 0 | 0 |
 | 37 | `04j-voice-learn.js` | foundation | 1 | 0 | 0 |
 | 38 | `06b-prompt-registry.js` | engine | 16 | 0 | 0 |
-| 39 | `05-claude-engine.js` | engine | 32 | 129 | 24 |
+| 39 | `05-claude-engine.js` | engine | 32 | 130 | 24 |
 | 40 | `05b-kimi-bridge.js` | engine | 131 | 76 | 12 |
-| 41 | `06-provider-engine.js` | engine | 104 | 63 | 17 |
+| 41 | `06-provider-engine.js` | engine | 104 | 63 | 16 |
 | 42 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 43 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 44 | `06d-memory-domain.js` | engine | 157 | 36 | 6 |
@@ -173,7 +173,7 @@
 | `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `05-claude-engine.js` | `01-config.js` | backward | `DurableJsonStore`, `agentCliLauncherUsable`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi`, `writeToChild` |
 | `05-claude-engine.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP` |
-| `05-claude-engine.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
+| `05-claude-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `05-claude-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
 | `05-claude-engine.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `05-claude-engine.js` | `02-session-store.js` | backward | `appendUsageLedger`, `buildTurnSummary`, `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `finalizeMissionAfterTurn`, `isUntitledSessionTitle`, `journalReadIndex`, `loadSession`, `mergeMissionBeforeSave`, `reconcileWorkspaceTurnBaseline`, `saveSession`, `saveTurnFinalSession` |
@@ -209,7 +209,7 @@
 | `06-provider-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `06-provider-engine.js` | `01-config.js` | backward | `RUNTIME`, `atomicWriteJson`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId` |
 | `06-provider-engine.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
-| `06-provider-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `isAgentCliType` |
+| `06-provider-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `AGENT_CLI_TYPES`, `isAgentCliType` |
 | `06-provider-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `existsExecutableAsync`, `probeGitCliAsync`, `probeRgAsync` |
 | `06-provider-engine.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `06-provider-engine.js` | `02-session-store.js` | backward | `SESSION_BRIEF_GIST_CHARS`, `SESSION_BRIEF_TITLE_CHARS`, `SESSION_INDEX_FILE`, `appendUsageLedger`, `getSessionTitleOverride`, `loadSession`, `setSessionTitleOverride`, `updateSessionMeta` |
@@ -217,7 +217,6 @@
 | `06-provider-engine.js` | `04-permission-runtime.js` | backward | `collectBridgedTools`, `mcpClients`, `sanitizeServerId` |
 | `06-provider-engine.js` | `04h-provider-http.js` | backward | `providerBaseIsLocalOrLan`, `providerBaseWithV1` |
 | `06-provider-engine.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `providerRawCompletion` |
-| `06-provider-engine.js` | `05-claude-engine.js` | backward | `agentCliAdapter` |
 | `06-provider-engine.js` | `06b-prompt-registry.js` | backward | `PROMPT_EN`, `getPromptPack` |
 | `06-provider-engine.js` | `06d-memory-domain.js` | forward | `buildMemoryCheckPrompt`, `buildMemoryPromptSection` |
 | `06-provider-engine.js` | `06e-mission-domain.js` | forward | `buildMissionPromptSection` |
@@ -705,7 +704,7 @@
 
 ## 强连通分量
 
-1. `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `06-provider-engine.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `10-context-governance.js` ↔ `11-native-tools.js` ↔ `12-tool-dispatch.js`
+1. `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `08-agent-runs.js` ↔ `09-workflow.js` ↔ `10-context-governance.js` ↔ `12-tool-dispatch.js`
 
 ## 维护规则
 

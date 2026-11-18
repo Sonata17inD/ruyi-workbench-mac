@@ -33,7 +33,10 @@ const INPUTS = ['claude', 'kimi', undefined, null, '', 'Kimi', 'KIMI', ' kimi', 
 const PROTOTYPE_NAMES = ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'valueOf'];
 
 const DATA_KEYS = { id: 'string', label: 'string', pathKey: 'string', detectedKey: 'string', streaming: 'boolean', interactive: 'boolean', mcp: 'string' };
-const HOOK_KEYS = { installCandidates: 'function', detectPath: 'function', prepareSpawn: 'function', syncMcpManifest: 'function' };
+const HOOK_KEYS = {
+  installCandidates: 'function', detectPath: 'function', prepareSpawn: 'function', syncMcpManifest: 'function',
+  usesStreamJsonInput: 'function', hasNativeQuestionPrompt: 'function',
+};
 
 test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据形状与修前逐字节相同', () => {
   assert.ok(Object.isFrozen(AGENT_CLI_TYPES));
@@ -48,6 +51,8 @@ test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据�
       assert.equal(typeof entry[key], kind, `${id}.${key} 是 ${kind}`);
     }
     assert.equal(agentCliAdapter(id).id, id);
+    assert.equal(agentCliAdapter(id).interactive, entry.usesStreamJsonInput);
+    assert.equal(agentCliAdapter(id).nativeAskUserQuestion, entry.hasNativeQuestionPrompt());
   }
   // /api/status 的 agentCliDrivers 是 `{ ...登记项, path }`:钩子是函数,JSON 里自然消失,下发形状与修前相同。
   // (所以钩子一律是函数、不用 null 表示「没有这一步」—— null 会出现在下发的 JSON 里。)
@@ -109,7 +114,7 @@ test('[N] CLI 类型归一:对输入表与修前逐项相同', () => {
 
 test('[C] 适配器回合外能力:环境说明、原生提问、模型清单、原生上下文状态与压缩', () => {
   const pack = srv.getPromptPack('zh-CN').engineBrief;
-  // 环境说明(06 engineBriefFacts):登记过的 CLI 原样、provider 族归 provider、其余归 claude;交互标志只随适配器的 interactive。
+  // 环境说明与适配器共用 CLI 登记表中的交互输入与原生提问能力。
   const kindOf = engine => srv.buildEngineEnvBrief({ engine, config: { engineMode: 'interactive' } }).facts;
   for (const [engine, kind] of [['claude', 'claude'], ['kimi', 'kimi'], ['provider', 'provider'], ['openai', 'provider'], [undefined, 'claude'], ['codex', 'claude'], ['toString', 'claude']]) {
     const facts = kindOf(engine);

@@ -19,9 +19,9 @@ const ok = (condition, label) => {
   else { failures++; console.log('FAIL ' + label); }
 };
 
-const normalized = server.normalizeConfig({ agentCliType: 'kimi', kimiPath: '  X:\\tools\\kimi.cmd  ' }).config;
+const normalized = server.normalizeConfig({ agentCliType: 'kimi', kimiPath: '  /opt/homebrew/bin/kimi  ' }).config;
 ok(normalized.agentCliType === 'kimi', 'config preserves Kimi driver selection');
-ok(normalized.kimiPath === 'X:\\tools\\kimi.cmd', 'config normalizes Kimi launcher path');
+ok(normalized.kimiPath === '/opt/homebrew/bin/kimi', 'config normalizes Kimi launcher path');
 ok(server.normalizeConfig({ agentCliType: 'kimi', model: 'k3-256k' }).config.model === 'kimi-code/k3-256k', 'legacy bare Kimi model migrates to its native alias');
 ok(server.normalizeConfig({ agentCliType: 'unknown' }).config.agentCliType === 'claude', 'unknown driver falls back to Claude');
 ok(Object.keys(server.AGENT_CLI_TYPES).join(',') === 'claude,kimi', 'driver registry contains only Claude and Kimi');
@@ -32,46 +32,37 @@ try {
   const entry = path.join(tmp, 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
   fs.mkdirSync(path.dirname(entry), { recursive: true });
   fs.mkdirSync(bin, { recursive: true });
-  fs.writeFileSync(entry, '');
-  const shim = path.join(bin, 'kimi.cmd');
-  fs.writeFileSync(shim, '');
+  fs.writeFileSync(entry, "#!/usr/bin/env node\nconsole.log('fixture')\n", { mode: 0o755 });
+  const shim = path.join(bin, 'kimi');
+  fs.symlinkSync(entry, shim);
+  const realEntry = fs.realpathSync(entry);
   const spawn = server.prepareAgentCliSpawn('kimi', shim, ['--version']);
-  ok(path.resolve(spawn.command) === path.resolve(process.execPath), 'Kimi npm shim resolves to direct Node launch');
-  ok(path.resolve(spawn.args[0]) === path.resolve(entry) && spawn.args[1] === '--version', 'direct launch preserves entrypoint and args');
-  const psShim = path.join(bin, 'kimi.ps1');
-  fs.writeFileSync(psShim, '');
-  const psSpawn = server.prepareAgentCliSpawn('kimi', psShim, ['--version']);
-  ok(path.resolve(psSpawn.command) === path.resolve(process.execPath) && path.resolve(psSpawn.args[0]) === path.resolve(entry), 'Kimi PowerShell shim resolves to the same direct Node entrypoint');
-  ok(server.probeAgentCliLauncher(psShim) === true, 'Kimi PowerShell shim passes readiness probing without PowerShell execution-policy dependence');
-  const globalRoot = path.join(tmp, 'global-npm');
-  const globalEntry = path.join(globalRoot, 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
-  fs.mkdirSync(path.dirname(globalEntry), { recursive: true });
-  fs.writeFileSync(globalEntry, '');
-  const globalShim = path.join(globalRoot, 'kimi.cmd');
-  fs.writeFileSync(globalShim, '');
-  const globalSpawn = server.prepareAgentCliSpawn('kimi', globalShim, ['--version']);
-  ok(path.resolve(globalSpawn.args[0]) === path.resolve(globalEntry), 'global npm shim layout also resolves directly');
-  if (process.platform !== 'win32') {
-    const prefix = path.join(tmp, 'posix-global');
-    const posixEntry = path.join(prefix, 'lib', 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
-    const posixShim = path.join(prefix, 'bin', 'kimi');
-    fs.mkdirSync(path.dirname(posixEntry), { recursive: true });
-    fs.mkdirSync(path.dirname(posixShim), { recursive: true });
-    fs.writeFileSync(posixEntry, ''); fs.symlinkSync(posixEntry, posixShim);
-    const posixSpawn = server.prepareAgentCliSpawn('kimi', posixShim, ['acp']);
-    ok(path.resolve(posixSpawn.command) === path.resolve(process.execPath) && path.resolve(posixSpawn.args[0]) === path.resolve(posixEntry),
-      'POSIX global npm symlink resolves to the direct package entry so ACP compatibility can attach');
-    fs.unlinkSync(posixShim); fs.writeFileSync(posixShim, 'native launcher');
-    const nativeSpawn = server.prepareAgentCliSpawn('kimi', posixShim, ['acp']);
-    ok(nativeSpawn.command === posixShim && JSON.stringify(nativeSpawn.args) === JSON.stringify(['acp']),
-      'a native POSIX launcher is not replaced by a nearby stale npm installation');
-  }
+  ok(path.resolve(spawn.command) === path.resolve(process.execPath), 'Kimi npm symlink resolves to direct Node launch');
+  ok(spawn.args[0] === realEntry && spawn.args[1] === '--version', 'direct launch preserves canonical entrypoint and args');
+  ok(server.probeAgentCliLauncher(shim) === true, 'Kimi launcher probe uses the npm entrypoint');
+
+  const prefix = path.join(tmp, 'posix-global');
+  const posixEntry = path.join(prefix, 'lib', 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
+  const posixShim = path.join(prefix, 'bin', 'kimi');
+  fs.mkdirSync(path.dirname(posixEntry), { recursive: true });
+  fs.mkdirSync(path.dirname(posixShim), { recursive: true });
+  fs.writeFileSync(posixEntry, '');
+  fs.symlinkSync(posixEntry, posixShim);
+  const posixSpawn = server.prepareAgentCliSpawn('kimi', posixShim, ['acp']);
+  ok(path.resolve(posixSpawn.command) === path.resolve(process.execPath) && posixSpawn.args[0] === fs.realpathSync(posixEntry),
+    'global npm symlink resolves to the direct package entry so ACP compatibility can attach');
+  fs.unlinkSync(posixShim);
+  fs.writeFileSync(posixShim, 'native launcher');
+  const nativeSpawn = server.prepareAgentCliSpawn('kimi', posixShim, ['acp']);
+  ok(nativeSpawn.command === posixShim && JSON.stringify(nativeSpawn.args) === JSON.stringify(['acp']),
+    'a native launcher is not replaced by a nearby stale npm installation');
+
   const originalPath = process.env.PATH;
   try {
     process.env.PATH = bin + path.delimiter + String(originalPath || '');
-    const bareSpawn = server.prepareAgentCliSpawn('kimi', 'kimi.cmd', ['--version']);
-    ok(path.resolve(bareSpawn.command) === path.resolve(process.execPath), 'bare Kimi command resolves its shim from PATH');
-    ok(path.resolve(bareSpawn.args[0]) === path.resolve(entry), 'bare PATH shim bypasses cmd.exe through the package entrypoint');
+    const bareSpawn = server.prepareAgentCliSpawn('kimi', 'kimi', ['--version']);
+    ok(path.resolve(bareSpawn.command) === path.resolve(process.execPath), 'bare Kimi command resolves its symlink from PATH');
+    ok(bareSpawn.args[0] === realEntry, 'bare PATH symlink uses the canonical package entrypoint');
   } finally {
     process.env.PATH = originalPath;
   }
@@ -617,9 +608,9 @@ async function verifyKimiPermissionAlias() {
       .replace("if(m==='session/new') return send({jsonrpc:'2.0',id:msg.id,result:{sessionId:'kimi-session-e2e',configOptions:[]}});", "if(m==='session/new') return send({jsonrpc:'2.0',id:msg.id,result:{sessionId:'kimi-session-e2e',configOptions:[{id:'model',currentValue:'',options:[{value:'kimi-code/k3-256k'},{value:'custom/fast'}]},{id:'thinking',currentValue:'high',options:[{value:'low'},{value:'medium'},{value:'high'},{value:'max'}]}],modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'plan'},{id:'auto'},{id:'yolo'}]}}});")
       .replace("if(m==='session/resume') return send({jsonrpc:'2.0',id:msg.id,result:{configOptions:[]}});", "if(m==='session/resume') return send({jsonrpc:'2.0',id:msg.id,result:{configOptions:[{id:'model',currentValue:'',options:[{value:'kimi-code/k3-256k'},{value:'custom/fast'}]},{id:'thinking',currentValue:'high',options:[{value:'low'},{value:'medium'},{value:'high'},{value:'max'}]}],modes:{currentModeId:'default',availableModes:[{id:'default'},{id:'plan'},{id:'auto'},{id:'yolo'}]}}});")
       .replace("if(m==='session/set_config_option') return send({jsonrpc:'2.0',id:msg.id,result:{configOptions:[{id:msg.params.configId,currentValue:msg.params.value}]}});", "if(m==='session/set_config_option') return send({jsonrpc:'2.0',id:msg.id,result:{configOptions:[{id:'mode',currentValue:msg.params.configId==='mode'?msg.params.value:'default',options:[{value:'default'},{value:'plan'},{value:'auto'},{value:'yolo'}]},{id:'model',currentValue:msg.params.configId==='model'?msg.params.value:'',options:[{value:'kimi-code/k3-256k'},{value:'custom/fast'}]},{id:'thinking',currentValue:msg.params.configId==='thinking'?msg.params.value:'high',options:[{value:'low'},{value:'medium'},{value:'high'},{value:'max'}]}]}});");
-    fs.writeFileSync(entry, fakeSource);
-    const shim = path.join(npmBin, 'kimi.cmd');
-    fs.writeFileSync(shim, `@"${process.execPath}" "%~dp0\\..\\@moonshot-ai\\kimi-code\\dist\\main.mjs" %*\r\n`);
+    fs.writeFileSync(entry, fakeSource, { mode: 0o755 });
+    const shim = path.join(npmBin, 'kimi');
+    fs.symlinkSync(entry, shim);
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({
       configSchema: 11, agentCliType: 'kimi', kimiPath: shim, defaultWorkspace: project,
       includeWorkbenchMcp: false, autoResumeClaudeSessions: true, killPortOnStart: false,

@@ -5,8 +5,8 @@
   "summary": {
     "modules": 87,
     "providedSymbols": 3229,
-    "requiredSymbols": 3496,
-    "edges": 595,
+    "requiredSymbols": 3497,
+    "edges": 594,
     "forwardEdges": 24,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
@@ -4030,6 +4030,13 @@
         },
         {
           "provider": "01f-agent-cli-types.js",
+          "symbol": "AGENT_CLI_TYPES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01f-agent-cli-types.js",
           "symbol": "normalizeAgentCliType",
           "kinds": [
             "call"
@@ -5693,6 +5700,13 @@
         },
         {
           "provider": "01f-agent-cli-types.js",
+          "symbol": "AGENT_CLI_TYPES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01f-agent-cli-types.js",
           "symbol": "isAgentCliType",
           "kinds": [
             "call"
@@ -5847,13 +5861,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "agentCliAdapter",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -29491,6 +29498,7 @@
       "from": "05-claude-engine.js",
       "to": "01f-agent-cli-types.js",
       "symbols": [
+        "AGENT_CLI_TYPES",
         "normalizeAgentCliType"
       ],
       "direction": "backward"
@@ -29942,6 +29950,7 @@
       "to": "01f-agent-cli-types.js",
       "symbols": [
         "AGENT_CLI_DEFAULT_TYPE",
+        "AGENT_CLI_TYPES",
         "isAgentCliType"
       ],
       "direction": "backward"
@@ -30013,14 +30022,6 @@
       "symbols": [
         "activeOpenAiProvider",
         "providerRawCompletion"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "05-claude-engine.js",
-      "symbols": [
-        "agentCliAdapter"
       ],
       "direction": "backward"
     },
@@ -36340,39 +36341,29 @@
     [
       "05-claude-engine.js",
       "05b-kimi-bridge.js",
-      "06-provider-engine.js",
       "08-agent-runs.js",
       "09-workflow.js",
       "10-context-governance.js",
-      "11-native-tools.js",
       "12-tool-dispatch.js"
     ]
   ],
   "cycleEdgeKeys": [
     "05-claude-engine.js->05b-kimi-bridge.js",
-    "05-claude-engine.js->06-provider-engine.js",
     "05-claude-engine.js->08-agent-runs.js",
     "05-claude-engine.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
-    "06-provider-engine.js->05-claude-engine.js",
-    "08-agent-runs.js->06-provider-engine.js",
     "08-agent-runs.js->09-workflow.js",
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->12-tool-dispatch.js",
-    "09-workflow.js->06-provider-engine.js",
     "09-workflow.js->08-agent-runs.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
     "10-context-governance.js->05-claude-engine.js",
-    "10-context-governance.js->06-provider-engine.js",
     "10-context-governance.js->09-workflow.js",
-    "11-native-tools.js->06-provider-engine.js",
     "12-tool-dispatch.js->05-claude-engine.js",
-    "12-tool-dispatch.js->06-provider-engine.js",
     "12-tool-dispatch.js->08-agent-runs.js",
-    "12-tool-dispatch.js->10-context-governance.js",
-    "12-tool-dispatch.js->11-native-tools.js"
+    "12-tool-dispatch.js->10-context-governance.js"
   ],
   "forwardEdgeKeys": [
     "02-session-store.js->03-bridge-guard.js",
