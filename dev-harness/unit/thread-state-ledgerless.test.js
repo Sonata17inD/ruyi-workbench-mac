@@ -17,6 +17,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { functionBlock } = require('../lib/source-slice');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-thread-state-ledgerless-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
@@ -113,7 +114,7 @@ cardBoth({ kind: 'mission', status: 'none', runCount: 0 }, 'dispatching',
 
 const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '../backend/steward-core.cjs'), 'utf8');
 const srcFront = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'public', 'js', 'mission-state.js'), 'utf8');
-const src13d = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
+const projection = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'mission-card-projection.cjs'), 'utf8');
 ok(!/turnSeq:\s*0\s*,/.test(src06i) && !/turnSeq:\s*0\s*(,|\/\/)/.test(srcFront),
   '④ 两份抄写件里都不再出现硬编码 turnSeq: 0');
 ok(src06i.includes('ledgerless') && srcFront.includes('ledgerless'), '④ 两份抄写件都出现 ledgerless 判据');
@@ -123,8 +124,7 @@ const LEDGERLESS_ROW = "{ id: 'ledgerless_ran', state: s => (s.lastTurnFailed ? 
 ok(src06i.includes(LEDGERLESS_ROW) && srcFront.includes(LEDGERLESS_ROW),
   '④ 两份抄写件都带无账本线程分支(逐字同一行)');
 // buildMissionCard 真的产出 turnSeq 与 lastTurn(函数体区间内断言,不数全文件):
-const cardFn = src13d.slice(src13d.indexOf('async function buildMissionCard'));
-const cardFnBody = cardFn.slice(0, cardFn.indexOf('\n}'));
+const cardFnBody = functionBlock(projection, 'buildMissionCard');
 ok(/\bturnSeq:\s*Math\.max\(0, Number\(head\.turnSeq\)/.test(cardFnBody), '④ buildMissionCard 产出 turnSeq(会话头投影)');
 ok(/\blastTurn:\s*head\.stewardLastTurn/.test(cardFnBody), '④ buildMissionCard 产出 lastTurn(会话头投影)');
 

@@ -2365,6 +2365,8 @@
         "collectBridgedTools",
         "collectBridgedToolsScan",
         "configureMcpFromTool",
+        "createInterventionDecisions",
+        "decideInterventionCommand",
         "decodeClaudeTaskXmlText",
         "deltaOf",
         "discoverKimiModels",
@@ -2377,6 +2379,7 @@
         "hasPendingPermissionForSession",
         "hasPendingQuestionForSession",
         "installActiveChildEventFanout",
+        "interventionCommandFailure",
         "invalidateMcpDropInCache",
         "invalidateMcpRuntime",
         "isClaudeResumeMissingError",
@@ -2519,7 +2522,8 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -2665,6 +2669,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "selectedAgentCli",
           "kinds": [
             "call",
@@ -2723,6 +2734,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "readInterventions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readSessionHeadResilient",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
             "call"
@@ -2730,9 +2755,23 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "sessionMissionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "transitionInterventionState",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -2773,13 +2812,6 @@
         {
           "provider": "06d-memory-domain.js",
           "symbol": "legacyAccMemoryMigrationComplete",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "decideIntervention",
           "kinds": [
             "call"
           ]
@@ -15670,12 +15702,10 @@
         "SESSION_SEARCH_UNIT_CAP",
         "SESSION_SEARCH_USER_CHARS",
         "addMissionCostBucket",
+        "agentInterventionAction",
         "agentRunActionCommand",
         "buildMissionAggregateRows",
-        "buildMissionCard",
         "buildSessionSearchUnit",
-        "canonicalDecisionValue",
-        "clipMissionRunText",
         "decideIntervention",
         "emptyMissionCostBucket",
         "handleAgentRunApiRoutes",
@@ -15683,19 +15713,9 @@
         "handleMissionsApiRoutes",
         "handleSessionApiRoutes",
         "importedSessionCwdAllowed",
-        "interventionCommandFailure",
-        "interventionDecisionFingerprint",
-        "lastMissionRunProgress",
-        "mapInterventionTransitionFailure",
         "missionAggregateStats",
-        "missionCardStatus",
         "missionContainerFailure",
         "missionContainerHttpStatus",
-        "missionHealthRuns",
-        "missionPendingCounts",
-        "missionRunDigest",
-        "missionRunGraph",
-        "normalizeContractQuestionDecision",
         "overlayMissionAggregateFields",
         "parseNdjsonRows",
         "pendingInterventionItem",
@@ -15789,7 +15809,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15887,7 +15908,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -16137,13 +16159,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "readInterventions",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
             "call"
@@ -16300,7 +16315,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16326,6 +16341,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "decideInterventionCommand",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "driverAutoSessions",
           "kinds": [
             "read"
@@ -16334,6 +16356,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "extendUserQuestion",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "interventionCommandFailure",
           "kinds": [
             "call"
           ]
@@ -16503,7 +16532,8 @@
           "provider": "07-autonomy.js",
           "symbol": "agentRunFile",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -16531,7 +16561,7 @@
           "provider": "07-autonomy.js",
           "symbol": "getAgentRoleLibrary",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16592,13 +16622,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunHealth",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "AgentRunStore",
           "kinds": [
             "read"
@@ -16608,21 +16631,16 @@
           "provider": "08-agent-runs.js",
           "symbol": "appendAgentRunEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "bumpRunIntervention",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "computeWaveSeq",
-          "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -16643,7 +16661,7 @@
           "provider": "08-agent-runs.js",
           "symbol": "materializePoolItem",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16664,7 +16682,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "saveAgentRun",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -16678,7 +16697,7 @@
           "provider": "09b-replan-ledger.js",
           "symbol": "applyReplanPatch",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16691,6 +16710,27 @@
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13e-pretender-index.js",
+          "symbol": "missionCardStatus",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13e-pretender-index.js",
+          "symbol": "missionPendingCounts",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13e-pretender-index.js",
+          "symbol": "missionRunDigest",
           "kinds": [
             "call"
           ]
@@ -16766,6 +16806,7 @@
         "PRETENDER_PERSIST_DEBOUNCE_MS",
         "PRETENDER_VERIFY_MS",
         "addMissionUsageRow",
+        "buildMissionCard",
         "buildMissionUsageMap",
         "buildOrLoadPretenderIndex",
         "buildPretenderSessionSlice",
@@ -16778,6 +16819,10 @@
         "getPretenderProjectionIndex",
         "getPretenderProjectionIndexShared",
         "markPretenderIndexDirty",
+        "missionCardStatus",
+        "missionHealthRuns",
+        "missionPendingCounts",
+        "missionRunDigest",
         "overlayMissionCard",
         "paginatePretenderProjection",
         "persistPretenderIndex",
@@ -16993,6 +17038,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "readInterventions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readInterventionsWithMeta",
           "kinds": [
             "call"
@@ -17000,16 +17052,32 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "sessionBriefOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionDisplayTitle",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "sessionKind",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -17023,7 +17091,8 @@
           "provider": "04-permission-runtime.js",
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -17037,7 +17106,8 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadTurnQueued",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -17072,7 +17142,15 @@
           "provider": "08-agent-runs.js",
           "symbol": "agentRunHealth",
           "kinds": [
-            "call"
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "computeWaveSeq",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -17083,17 +17161,10 @@
           ]
         },
         {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "buildMissionCard",
+          "provider": "08-agent-runs.js",
+          "symbol": "nodeDeliveryEligibility",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "missionRunDigest",
-          "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -18560,13 +18631,6 @@
         },
         {
           "provider": "13d-core-domain-routes.js",
-          "symbol": "missionPendingCounts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
           "symbol": "searchSessionsByContent",
           "kinds": [
             "call"
@@ -18589,6 +18653,13 @@
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13e-pretender-index.js",
+          "symbol": "missionPendingCounts",
           "kinds": [
             "call"
           ]
@@ -19503,15 +19574,15 @@
           ]
         },
         {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "missionRunDigest",
+          "provider": "13e-pretender-index.js",
+          "symbol": "getPretenderProjectionIndex",
           "kinds": [
             "call"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
-          "symbol": "getPretenderProjectionIndex",
+          "symbol": "missionRunDigest",
           "kinds": [
             "call"
           ]
@@ -22886,7 +22957,7 @@
           ]
         },
         {
-          "provider": "13d-core-domain-routes.js",
+          "provider": "13e-pretender-index.js",
           "symbol": "missionPendingCounts",
           "kinds": [
             "read"

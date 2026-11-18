@@ -357,12 +357,19 @@ function bridgedToolCallTimeoutMs(name, args) {
   return Math.max(1000, Math.min(configured, commandSeconds * 1000 + 10000));
 }
 
+const { createInterventionDecisions, interventionCommandFailure } = require('./backend/intervention-decisions.cjs');
+const decideInterventionCommand = createInterventionDecisions({
+  safeSessionId, makeId, readSessionHeadResilient, sessionMissionId, readInterventions,
+  transitionInterventionState, pendingPermissions, pendingQuestions, pendingPlans,
+  logEvent: (...args) => logEvent(...args),
+});
+
 // 75b: automatic timeout/teardown decisions participate in the same per-Intervention CAS as user
 // decisions. The fallback is only for storage/core failure and must re-check the registry entry so a
 // concurrently applying user command can never be overwritten by a legacy settle.
 function runAutomaticInterventionDecision(command, fallback) {
   Promise.resolve()
-    .then(() => decideIntervention({ ...command, contractRequest: false, audit: false }))
+    .then(() => decideInterventionCommand({ ...command, contractRequest: false, audit: false }))
     .then(result => { if (!result || result.status !== 200) fallback(); })
     .catch(() => fallback());
 }

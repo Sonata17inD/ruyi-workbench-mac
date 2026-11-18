@@ -228,7 +228,8 @@ function spawnFake(seq, extraEnv) {
     ok(/async function handleMissionsApiRoutes\(/.test(src13d), '(e) handleMissionsApiRoutes 在 13d 核心域路由');
     ok(/await handleMissionsApiRoutes\(req, res, pathname\)/.test(srcRouter), '(e) 路由器挂载 missions 处理器');
     ok(/kind: 'quick_ask'/.test(src02), '(e) createSession 显式写入 kind=quick_ask');
-    ok(/function sessionKind\(/.test(src02), '(e) sessionKind 只读派生器在 02');
+    const metadata = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-metadata.cjs'), 'utf8');
+    ok(/function sessionKind\(/.test(metadata), '(e) 会话类型由元数据模块只读派生');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e.message || e)); fail++; }
   finally {
     for (const c of procs) killp(c);

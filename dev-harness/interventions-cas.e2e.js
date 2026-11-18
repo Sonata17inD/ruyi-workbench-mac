@@ -91,7 +91,8 @@ async function cas(token, sid, ivId, expectedVersion, toStatus, crashAt, source)
 }
 
 (async () => {
-  const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/intervention-journal.cjs'), 'utf8');
+  const backend = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name), 'utf8');
+  const src = readServerSource() + '\n' + backend('intervention-journal.cjs');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     // 116-5a:本件隔离回合/工具/台账,不测线程自动摘要(它有自己的 thread-brief.e2e.js)
@@ -188,10 +189,10 @@ async function cas(token, sid, ivId, expectedVersion, toStatus, crashAt, source)
     ok(/interventionTransitionLocks/.test(src), 'e 02 per-ivId 串行锁 interventionTransitionLocks');
     ok(/'__cas_crash:before_applying'/.test(src) && /'__cas_crash:after_terminal'/.test(src), 'e 02 失败注入六窗口 crashAt 钩子');
     ok(/api\/_test\/intervention-cas/.test(src) && /RUYI_TEST_HOOKS/.test(src), 'e 13d 测试端点 + RUYI_TEST_HOOKS env 门控');
-    ok(/\{ m: 'POST', p: '\/api\/_test\/intervention-cas', auth: 'token' \}/.test(src), 'e 01-config ROUTE_AUTH 测试端点 token 级');
+    ok(/\{ m: 'POST', p: '\/api\/_test\/intervention-cas', auth: 'token' \}/.test(backend('http-route-policy.cjs')), 'e 测试端点的路由策略为 token 级');
     ok(/status: 'indeterminate'/.test(src), 'e 02 markInterruptedInterventions applying->indeterminate 恢复');
     // 116c: 管家来源的审计标签必须自成一档 —— 「谁按的这个批准」是事后解释与撤销的第一现场。
-    ok(/source === 'steward' \? 'steward_decision'/.test(src), "e 13d 审计标签 switch 有 source==='steward' -> 'steward_decision' 分支");
+    ok(/source === 'steward' \? 'steward_decision'/.test(backend('intervention-decisions.cjs')), 'e 待决服务保留 Steward 专用审计标签');
     ok(/source: String\(opts\.source \|\| 'contract'\)/.test(src), "e 02 transitionInterventionState 把 source 原样写进 applying/terminal 行");
     ok(/function stewardMayAct\(permissionMode, eventKind, toolTier\)/.test(fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/steward-core.cjs'), 'utf8')), 'e 06i 管家放行范围经 stewardMayAct 真值表(管家自身无档位)');
 

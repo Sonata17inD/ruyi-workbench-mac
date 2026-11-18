@@ -15,7 +15,7 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-persist-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const { mapInterventionTransitionFailure } = require('../lib/server-internals').loadServerInternals(['mapInterventionTransitionFailure']);
+const { mapInterventionTransitionFailure } = require('../../ruyi-workbench/app/backend/intervention-decisions.cjs');
 const srv = require('../../ruyi-workbench/app/backend/intervention-journal.cjs').createInterventionJournal({
   paths: { sessions: root }, nowIso: () => new Date().toISOString(), events: { emit() {} }, logEvent() {},
 

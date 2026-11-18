@@ -232,7 +232,7 @@ describe('loadSession：装载那一眼之后有人写过盘，就不许拿旧�
 
 describe('两道守卫的源码锁（把「不许在并发写盘时动手」钉住，防回改）', () => {
   const store = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'session-persistence.cjs'), 'utf8');
-  const routes = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
+  const decisions = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'intervention-decisions.cjs'), 'utf8');
 
   it('守卫①：写链在跑就等它跑完再重来，绝不截断/隔离', () => {
     assert.ok(/const inFlight = sessionWriteChains\.get\(id\);/.test(store)
@@ -248,8 +248,8 @@ describe('两道守卫的源码锁（把「不许在并发写盘时动手」钉�
   });
 
   it('守卫③：decideIntervention 的头读走带重试的那一个', () => {
-    assert.ok(/const head = await readSessionHeadResilient\(missionId\);/.test(routes)
-      && !/readFile\(sessionPath\(missionId\)/.test(routes),
+    assert.ok(/const head = await readSessionHeadResilient\(missionId\);/.test(decisions)
+      && !/readFile\(sessionPath\(missionId\)/.test(decisions),
       '它是用户动作的判定入口：读空一次就等于把「允许／回答」判成 404「会话不存在」');
   });
 

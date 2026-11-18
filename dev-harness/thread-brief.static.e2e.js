@@ -85,8 +85,8 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 
 /* ── ② 消费面六个装配点 ─────────────────────────────────────────────────────── */
 {
-  ok(/displayTitle: sessionDisplayTitle\(head\),/.test(domain),
-    '② 事项卡片(13d buildMissionCard)带 displayTitle —— 看板/抽屉/「现在这一件」读它');
+  ok(/displayTitle: sessionDisplayTitle\(head\),/.test(readSrc('../backend/mission-card-projection.cjs')),
+    '② 事项投影卡片带 displayTitle —— 看板/抽屉/「现在这一件」读它');
   ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(domain),
     '② 113b 会话搜索结果带 briefTitle/briefGist');
   // 【117l 重钉】旧断言把 `displayTitle: sessionDisplayTitle(session) }));` 整段(含收尾的 `}));`)

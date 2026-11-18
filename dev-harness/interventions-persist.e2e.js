@@ -115,7 +115,9 @@ function spawnWb() {
 }
 
 (async () => {
-  const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/intervention-journal.cjs'), 'utf8');
+  const backend = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name), 'utf8');
+  const decisions = backend('intervention-decisions.cjs');
+  const src = [readServerSource(), backend('intervention-journal.cjs'), backend('mission-card-projection.cjs'), backend('http-route-policy.cjs'), decisions].join('\n');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,
@@ -347,7 +349,10 @@ function spawnWb() {
     ok(/registerIntervention\(sessionId, 'plan', planId,/.test(src), 'e 07 plan 注册点调 registerIntervention');
     ok(/settleIntervention\(sessionId, requestId, decision && decision\.behavior === 'allow' \? 'allowed' : 'denied'/.test(src), 'e 07 permission settle 调 settleIntervention');
     ok(/source: 'legacy_permission'/.test(src) && /source: 'legacy_plan'/.test(src), 'e 13d permission/plan 经典端点适配到 decideIntervention');
-    ok(/async function decideIntervention\(command = \{\}\)/.test(src) && /transitionInterventionState\(/.test(src), 'e 13d 单一 command core 调权威 CAS');
+    ok(/async function decideInterventionCommand\(/.test(decisions) && /transitionInterventionState\(/.test(decisions)
+      && /return decideInterventionCommand\(command, agentInterventionAction\);/.test(src)
+      && /decideInterventionCommand\(\{ \.\.\.command, contractRequest: false, audit: false \}\)/.test(src),
+    'e 手动和自动待决入口共用决策服务和权威 CAS');
     ok(/\{ m: 'POST', p: '\/api\/missions\/', auth: 'token', prefix: true \}/.test(src), 'e 75b Mission decision 契约 ROUTE_AUTH=token');
     ok(src.includes("const contractMatch = pathname.match(/^\\/api\\/missions\\/") && /source: 'contract'/.test(src), 'e 75b 契约路由进入 decideIntervention');
     ok(['legacy_question', 'legacy_permission', 'legacy_plan', 'legacy_pool'].every(source => src.includes(`source: '${source}'`)), 'e 75b 经典四端点全部是 command-core 适配器');
