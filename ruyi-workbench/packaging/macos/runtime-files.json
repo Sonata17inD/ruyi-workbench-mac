@@ -70,6 +70,8 @@
     "app/backend/mission-routes.cjs",
     "app/backend/intervention-routes.cjs",
     "app/backend/migration-routes.cjs",
+    "app/backend/migration-center.cjs",
+    "app/backend/migration-toml.cjs",
     "app/backend/mcp-routes.cjs",
     "app/backend/session-steering.cjs",
     "app/backend/audio-routes.cjs",

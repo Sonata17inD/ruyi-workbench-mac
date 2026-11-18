@@ -2,9 +2,9 @@
 
 const { json, readJsonBody, send } = require('./http-protocol.cjs');
 
-function createMigrationRoutes({ MigrationHooks }) {
+function createMigrationRoutes({ migration }) {
   // ── W2 迁移中心:/api/migration/scan|apply|undo|recycle(W8 加 skills/copy)──────────────────────────────────────
-  // 实现在 13u-migration-center.js(零入边),经 00-boot 的 MigrationHooks 迟绑定调进去。五条都是 token 级
+  // 五条端点都要 token。
   // (01b-route-auth):scan 回的是本机各处配置里的路径与指令文件摘要,apply/undo 会改写外部配置文件,
   // recycle 会把一个目录移进回收站(另要 body.confirm === body.root),skills/copy 往 dataRoot/skills 写技能副本。命中返回 true,否则 false。
   async function handleMigrationApiRoutes(req, res, pathname) {
@@ -17,7 +17,7 @@ function createMigrationRoutes({ MigrationHooks }) {
       send(res, json(r, status));
       return true;
     };
-    const hook = name => (typeof MigrationHooks[name] === 'function' ? MigrationHooks[name] : null);
+    const hook = name => (typeof migration[name] === 'function' ? migration[name] : null);
     const unavailable = () => reply({ ok: false, error: 'migration center unavailable', status: 503 });
     if (req.method === 'GET' && pathname === '/api/migration/scan') {
       const fn = hook('scan'); if (!fn) return unavailable();

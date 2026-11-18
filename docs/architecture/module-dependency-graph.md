@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2768 | 3295 | 634 | 21 | 0 | 0 |
+| 93 | 2705 | 3276 | 632 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -16,7 +16,7 @@
 | # | 模块 | 层 | provides | requires | 直接依赖 |
 |---:|---|---|---:|---:|---:|
 | 0 | `00-platform-runtime.js` | bootstrap | 3 | 0 | 0 |
-| 1 | `00-boot.js` | bootstrap | 181 | 1 | 1 |
+| 1 | `00-boot.js` | bootstrap | 180 | 1 | 1 |
 | 2 | `01o-execution-state.js` | foundation | 9 | 0 | 0 |
 | 3 | `00b-ruyi-names.js` | bootstrap | 5 | 0 | 0 |
 | 4 | `01b-route-auth.js` | foundation | 1 | 0 | 0 |
@@ -82,7 +82,7 @@
 | 64 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
 | 65 | `12-tool-dispatch.js` | tools | 88 | 171 | 26 |
 | 66 | `13-http-router.js` | transport | 32 | 277 | 41 |
-| 67 | `13b-api-domain-routes.js` | transport | 8 | 41 | 10 |
+| 67 | `13b-api-domain-routes.js` | transport | 9 | 58 | 13 |
 | 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 18 |
 | 69 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
 | 70 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
@@ -100,15 +100,14 @@
 | 82 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 83 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
 | 84 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
-| 85 | `13u-migration-center.js` | transport | 63 | 36 | 5 |
-| 86 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
-| 87 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 88 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
-| 89 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 90 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
-| 91 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
-| 92 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
-| 93 | `14-main.js` | entrypoint | 1 | 588 | 50 |
+| 85 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
+| 86 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
+| 87 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
+| 88 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
+| 89 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
+| 90 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
+| 91 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
+| 92 | `14-main.js` | entrypoint | 1 | 588 | 50 |
 
 ## 模块边
 
@@ -470,15 +469,18 @@
 | `13ac-desktop-execution-runtime.js` | `02h-desktop-ledger.js` | backward | `DesktopExecutionLedger` |
 | `13ac-desktop-execution-runtime.js` | `04-permission-runtime.js` | backward | `McpStdioClient`, `mcpClients`, `probeDesktopExecutionReceipts` |
 | `13ac-desktop-execution-runtime.js` | `04h-provider-http.js` | backward | `ProviderHttpHooks` |
-| `13b-api-domain-routes.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `MigrationHooks`, `logEvent`, `nowIso`, `paths` |
-| `13b-api-domain-routes.js` | `01-config.js` | backward | `buildUserEnvelope`, `generateMcpConfig`, `mutateConfig`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `writeToChild` |
+| `13b-api-domain-routes.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `externalRoot`, `findRuyiPackageRootFor`, `logEvent`, `nowIso`, `path`, `paths`, `ruyiPackageInfo`, `samePathKey`, `tildePath` |
+| `13b-api-domain-routes.js` | `01-config.js` | backward | `agentMcpImportSources`, `atomicWriteJson`, `buildUserEnvelope`, `classifyAgentMcpCandidate`, `generateMcpConfig`, `kimiMcpManagedIds`, `mutateConfig`, `readConfig`, `readInstallRegistry`, `resolveExternalMcpServers`, `safeSessionId`, `writeInstallRegistry`, `writeToChild` |
+| `13b-api-domain-routes.js` | `01h-process-runtime.js` | backward | `DesktopShell` |
 | `13b-api-domain-routes.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `13b-api-domain-routes.js` | `02-session-store.js` | backward | `appendUsageLedger`, `saveSession` |
 | `13b-api-domain-routes.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `13b-api-domain-routes.js` | `04-permission-runtime.js` | backward | `MCP_COMPAT_MATRIX`, `ToolboxHooks`, `buildMcpConnectorInventory`, `collectBridgedTools`, `getBridgedClient`, `hasPendingQuestionForSession`, `invalidateMcpRuntime`, `mutateMcpConnector`, `probeMcpConnector`, `resolveBridge`, `sanitizeFsSegmentName` |
 | `13b-api-domain-routes.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `13b-api-domain-routes.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
+| `13b-api-domain-routes.js` | `04l-skill-registry.js` | backward | `SkillRegistry` |
 | `13b-api-domain-routes.js` | `04m-voice-service.js` | backward | `asrFixMessages`, `asrFixModeOf`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider`, `resolveAsrProvider`, `resolveAsrStreamProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor`, `voiceLexiconRead`, `voiceLexiconUpdate` |
+| `13b-api-domain-routes.js` | `06d-memory-domain.js` | backward | `syncAgentInstructionImports` |
 | `13b-api-domain-routes.js` | `07-autonomy.js` | backward | `STEER_QUEUE_MAX` |
 | `13d-core-domain-routes.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `dataRootAliases`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeDecodeURIComponent` |
 | `13d-core-domain-routes.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
@@ -680,11 +682,6 @@
 | `13t-steward-schedule.js` | `13k-steward-threads.js` | backward | `stewardCanonWorkspacePath`, `stewardDeriveThreadCwd`, `stewardUnattendedByModel`, `stewardValidateCwd` |
 | `13t-steward-schedule.js` | `13q-steward-runner-turn.js` | backward | `stewardEnsureOpenAiRoute` |
 | `13t-steward-schedule.js` | `13s-scheduler.js` | backward | `SchedulerRuntime` |
-| `13u-migration-center.js` | `00-boot.js` | backward | `MigrationHooks`, `SKILL_ID_RE`, `VERSION`, `_parseTomlMcpServers`, `_tomlKeyPath`, `agentCliHomes`, `crypto`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `os`, `parseMcpConfigFile`, `path`, `paths`, `ruyiPackageInfo`, `safeJsonParse`, `safeUrlForDisplay`, `samePathKey`, `sanitizeExternalMcpServer`, `text`, `tildePath` |
-| `13u-migration-center.js` | `01-config.js` | backward | `agentMcpImportSources`, `atomicWriteJson`, `classifyAgentMcpCandidate`, `generateMcpConfig`, `kimiMcpManagedIds`, `mutateConfig`, `readConfig`, `readInstallRegistry`, `writeInstallRegistry` |
-| `13u-migration-center.js` | `01h-process-runtime.js` | backward | `DesktopShell` |
-| `13u-migration-center.js` | `04l-skill-registry.js` | backward | `SkillRegistry` |
-| `13u-migration-center.js` | `06d-memory-domain.js` | backward | `syncAgentInstructionImports` |
 | `13v-external-channel-protocols.js` | `00-boot.js` | backward | `crypto`, `json`, `text` |
 | `13w-external-bots.js` | `00-boot.js` | backward | `ExternalBotHooks`, `OVERLAY_ID`, `URL`, `apiFailure`, `crypto`, `fsp`, `json`, `makeId`, `nowIso`, `path`, `paths`, `runKeyedChain`, `send`, `text` |
 | `13w-external-bots.js` | `01-config.js` | backward | `DurableJsonStore`, `originOk`, `tokenOk` |

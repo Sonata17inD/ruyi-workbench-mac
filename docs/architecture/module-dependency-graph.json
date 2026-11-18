@@ -3,10 +3,10 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 94,
-    "providedSymbols": 2768,
-    "requiredSymbols": 3295,
-    "edges": 634,
+    "modules": 93,
+    "providedSymbols": 2705,
+    "requiredSymbols": 3276,
+    "edges": 632,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -51,7 +51,6 @@
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
         "MCP_TOOLS",
-        "MigrationHooks",
         "NATIVE_COMMAND_TOOL_NAMES",
         "NATIVE_DESKTOP_TOOL_NAMES",
         "NATIVE_TOOL_TIER",
@@ -13990,6 +13989,7 @@
       "layer": "transport",
       "note": "迁移、MCP、插话、语音路由与附件处理的装配",
       "provides": [
+        "MigrationCenter",
         "handleAudioApiRoutes",
         "handleMcpApiRoutes",
         "handleMigrationApiRoutes",
@@ -14002,7 +14002,28 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "agentCliHomes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "externalRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "findRuyiPackageRootFor",
           "kinds": [
             "read"
           ]
@@ -14016,13 +14037,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "MigrationHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -14030,7 +14044,63 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "path",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ruyiPackageInfo",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "samePathKey",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "SKILL_ID_RE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "tildePath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "VERSION",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "agentMcpImportSources",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
           "kinds": [
             "read"
           ]
@@ -14044,7 +14114,21 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "classifyAgentMcpCandidate",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "generateMcpConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "kimiMcpManagedIds",
           "kinds": [
             "read"
           ]
@@ -14065,6 +14149,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "readInstallRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
             "read"
@@ -14079,7 +14170,21 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "writeInstallRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "writeToChild",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
           "kinds": [
             "read"
           ]
@@ -14204,6 +14309,13 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "SkillRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04m-voice-service.js",
           "symbol": "asrFixMessages",
           "kinds": [
@@ -14276,6 +14388,13 @@
         {
           "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconUpdate",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06d-memory-domain.js",
+          "symbol": "syncAgentInstructionImports",
           "kinds": [
             "read"
           ]
@@ -21740,333 +21859,8 @@
       ]
     },
     {
-      "file": "13u-migration-center.js",
-      "order": 85,
-      "layer": "transport",
-      "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环",
-      "provides": [
-        "MIGRATION_BACKUP_TAG",
-        "MIGRATION_LOG_SCHEMA",
-        "MIGRATION_SIZE_BUDGET_MS",
-        "MIGRATION_SIZE_FILE_CAP",
-        "MIGRATION_SIZE_TTL_MS",
-        "MIGRATION_SKILL_BACKUP_DIR",
-        "MIGRATION_SKILL_MAX_BYTES",
-        "MIGRATION_SKILL_MAX_DEPTH",
-        "MIGRATION_SKILL_MAX_FILES",
-        "MIGRATION_SKILL_STAGE_PREFIX",
-        "MigrationTrashHooks",
-        "SKILL_IMPORT_RECORD",
-        "migrationAnalyzeValue",
-        "migrationApply",
-        "migrationBackup",
-        "migrationChain",
-        "migrationCollect",
-        "migrationCollectRefs",
-        "migrationCopyOneSkill",
-        "migrationCopySkills",
-        "migrationCurrentRoot",
-        "migrationDir",
-        "migrationDirSize",
-        "migrationFileHash",
-        "migrationFileHashCache",
-        "migrationForgetPackage",
-        "migrationGetAt",
-        "migrationGetField",
-        "migrationHash",
-        "migrationImportMcp",
-        "migrationListPackages",
-        "migrationLogs",
-        "migrationLstat",
-        "migrationMcpSummary",
-        "migrationPackageRunning",
-        "migrationPathInside",
-        "migrationPidAlive",
-        "migrationPromptKeys",
-        "migrationRecycle",
-        "migrationRememberPackages",
-        "migrationRewriteRefs",
-        "migrationScan",
-        "migrationScanMcp",
-        "migrationScanSkills",
-        "migrationSendToRecycleBin",
-        "migrationSerial",
-        "migrationServerItem",
-        "migrationSetField",
-        "migrationSizeCache",
-        "migrationSkillKey",
-        "migrationSkillPublicRow",
-        "migrationSkillRow",
-        "migrationSkillRows",
-        "migrationSkillSources",
-        "migrationSkillTarget",
-        "migrationSkillTree",
-        "migrationStamp",
-        "migrationTomlReplace",
-        "migrationTomlSections",
-        "migrationTrashTarget",
-        "migrationTreeHash",
-        "migrationUndo",
-        "migrationUndoSkillCopy"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "_parseTomlMcpServers",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "_tomlKeyPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "agentCliHomes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "externalRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "findRuyiPackageRootFor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "MigrationHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "parseMcpConfigFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "ruyiPackageInfo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "safeJsonParse",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "safeUrlForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "samePathKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SKILL_ID_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "tildePath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "agentMcpImportSources",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "classifyAgentMcpCandidate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "generateMcpConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "kimiMcpManagedIds",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "mutateConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readInstallRegistry",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "writeInstallRegistry",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "DesktopShell",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04l-skill-registry.js",
-          "symbol": "SkillRegistry",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "syncAgentInstructionImports",
-          "kinds": [
-            "call"
-          ]
-        }
-      ]
-    },
-    {
       "file": "13v-external-channel-protocols.js",
-      "order": 86,
+      "order": 85,
       "layer": "transport",
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
       "provides": [
@@ -22098,7 +21892,7 @@
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "order": 87,
+      "order": 86,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -22123,7 +21917,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 88,
+      "order": 87,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -22162,7 +21956,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 89,
+      "order": 88,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -22172,7 +21966,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 90,
+      "order": 89,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -22316,7 +22110,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 91,
+      "order": 90,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -22554,7 +22348,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 92,
+      "order": 91,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -22719,7 +22513,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 93,
+      "order": 92,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -31015,10 +30809,18 @@
       "to": "00-boot.js",
       "symbols": [
         "ASR_MAX_BODY_BYTES",
-        "MigrationHooks",
+        "SKILL_ID_RE",
+        "VERSION",
+        "agentCliHomes",
+        "externalRoot",
+        "findRuyiPackageRootFor",
         "logEvent",
         "nowIso",
-        "paths"
+        "path",
+        "paths",
+        "ruyiPackageInfo",
+        "samePathKey",
+        "tildePath"
       ],
       "direction": "backward"
     },
@@ -31026,13 +30828,27 @@
       "from": "13b-api-domain-routes.js",
       "to": "01-config.js",
       "symbols": [
+        "agentMcpImportSources",
+        "atomicWriteJson",
         "buildUserEnvelope",
+        "classifyAgentMcpCandidate",
         "generateMcpConfig",
+        "kimiMcpManagedIds",
         "mutateConfig",
         "readConfig",
+        "readInstallRegistry",
         "resolveExternalMcpServers",
         "safeSessionId",
+        "writeInstallRegistry",
         "writeToChild"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13b-api-domain-routes.js",
+      "to": "01h-process-runtime.js",
+      "symbols": [
+        "DesktopShell"
       ],
       "direction": "backward"
     },
@@ -31097,6 +30913,14 @@
     },
     {
       "from": "13b-api-domain-routes.js",
+      "to": "04l-skill-registry.js",
+      "symbols": [
+        "SkillRegistry"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13b-api-domain-routes.js",
       "to": "04m-voice-service.js",
       "symbols": [
         "asrFixMessages",
@@ -31110,6 +30934,14 @@
         "voiceLexiconAsrPromptFor",
         "voiceLexiconRead",
         "voiceLexiconUpdate"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13b-api-domain-routes.js",
+      "to": "06d-memory-domain.js",
+      "symbols": [
+        "syncAgentInstructionImports"
       ],
       "direction": "backward"
     },
@@ -33446,77 +33278,6 @@
       "to": "13s-scheduler.js",
       "symbols": [
         "SchedulerRuntime"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13u-migration-center.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "MigrationHooks",
-        "SKILL_ID_RE",
-        "VERSION",
-        "_parseTomlMcpServers",
-        "_tomlKeyPath",
-        "agentCliHomes",
-        "crypto",
-        "externalRoot",
-        "findRuyiPackageRootFor",
-        "fs",
-        "fsp",
-        "logEvent",
-        "nowIso",
-        "os",
-        "parseMcpConfigFile",
-        "path",
-        "paths",
-        "ruyiPackageInfo",
-        "safeJsonParse",
-        "safeUrlForDisplay",
-        "samePathKey",
-        "sanitizeExternalMcpServer",
-        "text",
-        "tildePath"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13u-migration-center.js",
-      "to": "01-config.js",
-      "symbols": [
-        "agentMcpImportSources",
-        "atomicWriteJson",
-        "classifyAgentMcpCandidate",
-        "generateMcpConfig",
-        "kimiMcpManagedIds",
-        "mutateConfig",
-        "readConfig",
-        "readInstallRegistry",
-        "writeInstallRegistry"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13u-migration-center.js",
-      "to": "01h-process-runtime.js",
-      "symbols": [
-        "DesktopShell"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13u-migration-center.js",
-      "to": "04l-skill-registry.js",
-      "symbols": [
-        "SkillRegistry"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13u-migration-center.js",
-      "to": "06d-memory-domain.js",
-      "symbols": [
-        "syncAgentInstructionImports"
       ],
       "direction": "backward"
     },

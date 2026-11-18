@@ -643,7 +643,7 @@
     {
       "id": "migration-log",
       "pattern": "<data>/migrations/<ts>.json",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'migrations'",
       "schema": "object / schema 1 (files[{file,kind,backup,items[{serverId,action,changes,removed}]}], undoneAt; W8 adds type:skill-copy logs whose files[] are {kind:skill-copy,file:<data>/skills/<id>,backup,items[{key,id,source,plugin,action:created|updated,copyTreeHash}]} and undoResult.skills)",
       "writePrimitive": "atomicWriteJson once per apply / skill copy; rewritten once on undo",
@@ -657,7 +657,7 @@
     {
       "id": "migration-backups",
       "pattern": "<file>.bak-ruyi-migrate-<ts> beside ~/.claude.json / ~/.kimi-code/mcp.json / ~/.codex/config.toml / <data>/config.json / generated mcp",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'.bak-ruyi-migrate-'",
       "schema": "verbatim copy of the file before the migration edited it",
       "writePrimitive": "fsp.copyFile before the first write to that file",
@@ -685,7 +685,7 @@
     {
       "id": "migration-skill-backups",
       "pattern": "<data>/migrations/skill-backups/<ts>/<id>/",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'skill-backups'",
       "schema": "verbatim previous copy of a user skill directory (including its .ruyi-import.json)",
       "writePrimitive": "fsp.rename of the old <data>/skills/<id> when a copy is updated or overwritten",

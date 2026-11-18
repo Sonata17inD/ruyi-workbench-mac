@@ -1,5 +1,5 @@
 'use strict';
-// 走查 W1 #12 / #13(13u-migration-center)。真源码、临时 HOME / 数据根、零网络;未导出的内部函数经 lib/server-internals.js 取。
+// 走查 W1 #12 / #13。使用生产迁移中心和 TOML 改写，家目录及数据根使用夹具。
 //   [T] TOML 子表:migrationTomlSection 只认精确的 [mcp_servers.<id>],Codex 常见的 [mcp_servers.<id>.env] 子表里的老包路径
 //       解析侧(_parseTomlMcpServers)算进了改写项,这里却搜不到子表 → 改写不了(却被当成已应用 / 整体 nothing-applied)。
 //       现在区间覆盖本段 + 以 <id>. 开头的全部子表,且不越界到别的服务器(foo 与 foobar / "foo.bar" 互不串)。
@@ -23,9 +23,9 @@ process.env.KIMI_CODE_HOME = path.join(home, '.kimi-code');
 delete process.env.CODEX_HOME;
 fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({ configSchema: 7, version: '1.4.0', autoImportClaudeCodeMcp: false, activeProvider: '' }, null, 2));
 const { loadServerInternals } = require('../lib/server-internals');
-const { migrationTomlSections, migrationTomlReplace, migrationCollectRefs, migrationRewriteRefs, migrationUndo, readConfig, migrationCurrentRoot } = loadServerInternals([
-  'migrationTomlSections', 'migrationTomlReplace', 'migrationCollectRefs', 'migrationRewriteRefs', 'migrationUndo', 'readConfig', 'migrationCurrentRoot',
-]);
+const { migrationTomlSections, migrationTomlReplace } = require('../../ruyi-workbench/app/backend/migration-toml.cjs');
+const { MigrationCenter, readConfig } = loadServerInternals(['MigrationCenter', 'readConfig']);
+const { migrationCollectRefs, migrationRewriteRefs, undo: migrationUndo, migrationCurrentRoot } = MigrationCenter;
 
 const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text, 'utf8'); };
 const read = file => fs.readFileSync(file, 'utf8');

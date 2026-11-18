@@ -1,4 +1,14 @@
-const handleMigrationApiRoutes = require('./backend/migration-routes.cjs').createMigrationRoutes({ MigrationHooks });
+const MigrationCenter = require('./backend/migration-center.cjs').createMigrationCenter({
+  paths, nowIso, logEvent, VERSION, SKILL_ID_RE, process,
+  MigrationTrashHooks: {
+    helperPath: () => path.resolve(__dirname, '..', 'runtime', 'macos', 'ruyi-trash-helper'),
+    run: (...args) => DesktopShell.runProcess(...args),
+  },
+  packages: { externalRoot, findRuyiPackageRootFor, ruyiPackageInfo, samePathKey, readInstallRegistry, writeInstallRegistry },
+  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig, kimiMcpManagedIds },
+  skills: { agentCliHomes, tildePath, SkillRegistry, syncAgentInstructionImports },
+});
+const handleMigrationApiRoutes = require('./backend/migration-routes.cjs').createMigrationRoutes({ migration: MigrationCenter });
 
 const handleMcpApiRoutes = require('./backend/mcp-routes.cjs').createMcpRoutes({
   paths, logEvent, readConfig, mutateConfig, generateMcpConfig, resolveExternalMcpServers, handleMigrationApiRoutes,

@@ -492,11 +492,6 @@ const RUYI_EVENTS = {
 // Object.assign 填充实现。未填充(理论上不可能)时那一行是无操作。
 const EventStreamHooks = {};
 
-// ── 迁移中心(56 号文 §3,W2):其它 Agent CLI 的家目录 + 如意包根判定 + 安装登记表 ─────────────────
-// 迁移中心的实现住在 13u-migration-center.js(零入边);13b 的路由经这张表迟绑定调进去(13b → 00-boot 是
-// 既有后向边),与 EventStreamHooks 同款。未填充时路由回 503,不会误走别的分支。
-const MigrationHooks = {};
-
 // 子代理的记忆核心胶囊(走查 #15)的延迟绑定口。08-agent-runs 要在子代理系统提示里放用户的核心偏好,但直接引 06d 的
 // resolveMemoryPreflight / buildMemoryConflictMap 会给 08 添一条【环内】新边(06d 已在那个强连通分量里,依赖图的环债上限不许涨)。
 // 所以 08 只读 `SubAgentMemoryHooks.coreSnapshot`(08 → 00-boot 是既有后向边),由 09-workflow 加载时 Object.assign 填实现
