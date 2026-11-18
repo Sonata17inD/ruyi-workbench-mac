@@ -592,16 +592,21 @@ async function checkpointRollbackContext(sessionId) {
   };
 }
 const { journalRevertLogRead, JOURNAL_KEEP_TURNS, JOURNAL_MAX_BEFORE_BYTES, journalGcProbe, journalBytesAdjust, withJournalWriteLock, journalDir, journalReadIndex, journalResolveTurnSeq, journalRecord, journalRecordMany, workspaceBaselinePathKey, workspaceBaselineIsCodePath, captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalDropEntries, journalGc, journalRollback, journalRevertLogRecord, journalRevertNoticesPeek, journalRevertNoticesAck, journalRevertLogPrune } = require('./backend/checkpoint-journal.cjs').createCheckpointJournal({
-  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, guardFileToolPath, logEvent, nowIso, pathWithinRoot, realpathForContainment, runGit, safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
+  paths, assertSessionIdForPath, atomicWriteJson, gitReadOnlyGuard, logEvent, nowIso, pathWithinRoot, runGit,
+  safeJsonParse, sessionPath, getRollbackContext: checkpointRollbackContext, isSessionActive: id => activeChildren.has(id),
+  guardFileToolPath: (...args) => guardFileToolPath(...args),
+  realpathForContainment: (...args) => realpathForContainment(...args),
 });
 
 const { fileToolWorkspaceDir, resolveFileToolRoot, resolveFileToolPath } = require('./backend/file-tool-paths.cjs').createFileToolPaths({
   loadSession, readConfig, normalizeCwd, getMcpSessionId: () => process.env.WCW_SESSION_ID || '',
 });
-const preflightWriteBoundary = require('./backend/file-write-preflight.cjs').createWriteBoundaryPreflight({ resolveFileToolPath, guardFileToolPath });
+const preflightWriteBoundary = require('./backend/file-write-preflight.cjs').createWriteBoundaryPreflight({
+  resolveFileToolPath, guardFileToolPath: (...args) => guardFileToolPath(...args),
+});
 
 let journalBridgedWrite = require('./backend/bridged-write-journal.cjs').createBridgedWriteJournal({
-  journalSessionCtx, guardWorkspacePath, journalRecord,
+  journalSessionCtx, guardWorkspacePath: (...args) => guardWorkspacePath(...args), journalRecord,
 });
 const { writeHistorySnapshot, rehydrateObservation } = require('./backend/history-snapshot-store.cjs').createHistorySnapshotStore({
   journalDir, journalBytesAdjust, withJournalWriteLock, journalGc,

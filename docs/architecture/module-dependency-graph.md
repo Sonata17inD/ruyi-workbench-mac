@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2189 | 3148 | 601 | 15 | 0 | 0 |
+| 87 | 2146 | 3136 | 599 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -45,7 +45,7 @@
 | 27 | `02h-desktop-ledger.js` | foundation | 1 | 9 | 3 |
 | 28 | `06f-autonomy-grants.js` | engine | 13 | 4 | 1 |
 | 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
-| 30 | `03-bridge-guard.js` | foundation | 68 | 28 | 5 |
+| 30 | `03-bridge-guard.js` | foundation | 25 | 16 | 3 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
 | 32 | `04-permission-runtime.js` | foundation | 78 | 47 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
@@ -139,10 +139,8 @@
 | `02h-desktop-ledger.js` | `00-boot.js` | backward | `copyOrdinaryJsonData`, `crypto`, `fsp`, `json`, `nowIso`, `path`, `runKeyedChain` |
 | `02h-desktop-ledger.js` | `01-config.js` | backward | `DurableJsonStore` |
 | `02h-desktop-ledger.js` | `02g-desktop-executions.js` | backward | `prepareDesktopExecutionArguments` |
-| `03-bridge-guard.js` | `00-boot.js` | backward | `AUTOEXEC_DENYLIST`, `BRIDGED_WRITE_PATH_ARGS`, `URL`, `agentCliHomes`, `dataRoot`, `ensureDataRootReal`, `externalRoot`, `fs`, `fsp`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `isSensitiveHardlinkStat`, `logEvent`, `macPathAnchor`, `os`, `path`, `pathWithinAnyRoot`, `pathWithinRoot`, `sameFileIdentity`, `samePathKey`, `sensitiveDataRoots`, `spawnDetachedChecked` |
-| `03-bridge-guard.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn` |
+| `03-bridge-guard.js` | `00-boot.js` | backward | `AUTOEXEC_DENYLIST`, `agentCliHomes`, `dataRoot`, `ensureDataRootReal`, `externalRoot`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `isSensitiveHardlinkStat`, `logEvent`, `samePathKey`, `sensitiveDataRoots`, `spawnDetachedChecked` |
 | `03-bridge-guard.js` | `01-config.js` | backward | `mcpDropInDirs`, `readConfig`, `toolboxComponentsDir` |
-| `03-bridge-guard.js` | `02f-turn-effect-kinds.js` | backward | `unprefixedBridgedName` |
 | `03-bridge-guard.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `03a-privacy-gateway.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |

@@ -30,14 +30,9 @@ delete process.env.CODEX_HOME;
 delete process.env.KIMI_CODE_HOME;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
-// 反向验证(RUYI_TEST_SERVER_JS 指向修前产物)时修后才有的符号取不到 —— 退回基础名单、缺的符号补成「不拦」,让断言在旧码上红而不是整件加载失败。
-let I;
-try { I = loadServerInternals(['guardFileToolPath', 'guardDownloadDest', 'toolCall', 'zipWrite', 'AUTOEXEC_DENYLIST', 'normalizeAutoexecPath', 'userHomePersistenceHit']); }
-catch (e) {
-  if (!(e instanceof ReferenceError)) throw e;
-  I = loadServerInternals(['guardFileToolPath', 'guardDownloadDest', 'toolCall', 'zipWrite', 'AUTOEXEC_DENYLIST', 'normalizeAutoexecPath']);
-  I.userHomePersistenceHit = () => false;
-}
+const { createWorkspaceWriteProtection } = require('../../ruyi-workbench/app/backend/workspace-write-protection.cjs');
+const I = loadServerInternals(['guardFileToolPath', 'guardDownloadDest', 'toolCall', 'zipWrite', 'AUTOEXEC_DENYLIST', 'agentCliHomes']);
+Object.assign(I, createWorkspaceWriteProtection({ agentCliHomes: I.agentCliHomes }));
 
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 

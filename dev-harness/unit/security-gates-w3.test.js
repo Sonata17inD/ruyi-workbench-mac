@@ -40,20 +40,22 @@ process.env.RUYI_HOME = dataRootDir;
 process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
+const { createRemoteUncDenial, remoteUncDenial, uncHostAndPath } = require('../../ruyi-workbench/app/backend/workspace-unc-policy.cjs');
+const { createWorkspaceWriteProtection } = require('../../ruyi-workbench/app/backend/workspace-write-protection.cjs');
 
-const CORE = ['normalizeAutoexecPath', 'AUTOEXEC_DENYLIST', 'userHomePersistenceHit', 'isAutoLoadedLaunchConfigPath', 'remoteUncDenial', 'uncHostAndPath',
+const CORE = ['agentCliHomes', 'AUTOEXEC_DENYLIST',
   'guardFileToolPath', 'webPayloadReason', 'nativeToolGate', 'stewardAutoAskSensitiveKind', 'stewardImplWebFetch', 'stewardImplWebSearch',
   'FILE_TOOL_HANDLERS', 'CODE_TOOL_HANDLERS', 'dataRoot', 'ensureDirs', 'isSensitiveHardlinkAlias', 'sensitiveFileIdentities'];
-const OPTIONAL = ['remoteUncDenialResolved', 'stewardAutoAskScanIncomplete', 'stewardAutoAskReason'];
+const OPTIONAL = ['stewardAutoAskScanIncomplete', 'stewardAutoAskReason'];
 let I;
 try { I = loadServerInternals([...CORE, ...OPTIONAL], { withEval: true }); }
 catch (e) {
   if (!(e instanceof ReferenceError)) throw e;   // 反向验证:修前没有这些新符号 → 用桩补齐,让断言红而不是加载崩
   I = loadServerInternals(CORE, { withEval: true });
-  I.remoteUncDenialResolved = async (c, s, cf) => I.remoteUncDenial(c, s, cf);
   I.stewardAutoAskScanIncomplete = () => false;
   I.stewardAutoAskReason = () => '';
 }
+Object.assign(I, createWorkspaceWriteProtection({ agentCliHomes: I.agentCliHomes }), { remoteUncDenial, uncHostAndPath });
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 const dump = r => JSON.stringify(r);
 const ctxFor = (cwd, mode, extra) => ({ session: { cwd }, config: { permissionMode: mode || 'default', defaultWorkspace: home, recentWorkspaces: [], workspaces: [], ...(extra || {}) } });
@@ -147,19 +149,16 @@ describe('#6 · UNC 工作区例外同时认字面拼法与 realpath 拼法(映�
   });
   it('remoteUncDenialResolved:字面判据要拒时,把工作区根 realpath 后的拼法并进例外(映射盘 / DFS),不配置就仍拒', async () => {
     const real = new Map([['Z:\\proj', '\\\\fileserver\\dept\\proj'], ['\\\\corp.local\\dfs\\proj', '\\\\fileserver01\\dept$\\proj']]);
-    I.__eval('globalThis.__origRpc = realpathForContainment');
-    I.__eval(`realpathForContainment = async p => (${JSON.stringify([...real])}.find(([k]) => k === p) || [0, p])[1]`);
-    try {
+    const denyResolved = createRemoteUncDenial({ realpathForContainment: async p => real.get(p) || p });
     const cfg = { workspaces: [{ path: 'Z:\\proj' }, { path: '\\\\corp.local\\dfs\\proj' }] };
     const sess = { cwd: 'Z:\\proj' };
-    assert.equal(await I.remoteUncDenialResolved(['\\\\fileserver\\dept\\proj\\src\\a.js'], sess, cfg), '', '映射盘:realpath 拼法的绝对路径');
-    assert.equal(await I.remoteUncDenialResolved(['\\\\fileserver01\\dept$\\proj\\x\\a.js'], sess, cfg), '', 'DFS:目标服务器拼法');
-    assert.equal(await I.remoteUncDenialResolved(['\\\\corp.local\\dfs\\proj\\a.js'], sess, cfg), '', 'DFS:字面拼法');
-    assert.ok(await I.remoteUncDenialResolved(['\\\\fileserver\\dept\\other\\a.js'], sess, cfg), '别的共享仍拒');
-    assert.ok(await I.remoteUncDenialResolved(['\\\\evil\\dept\\proj\\a.js'], sess, cfg), '别的主机仍拒');
-    assert.ok(await I.remoteUncDenialResolved(['\\\\fileserver\\dept\\proj\\a.js'], { cwd: 'C:\\work' }, { workspaces: [] }), '没登记任何工作区:仍拒');
-    assert.ok(await I.remoteUncDenialResolved(['\\\\.\\UNC\\fileserver\\dept\\other\\a.js'], sess, cfg), '设备别名也不被 realpath 例外放行到别的共享');
-    } finally { I.__eval('realpathForContainment = globalThis.__origRpc'); }
+    assert.equal(await denyResolved(['\\\\fileserver\\dept\\proj\\src\\a.js'], sess, cfg), '', '映射盘:realpath 拼法的绝对路径');
+    assert.equal(await denyResolved(['\\\\fileserver01\\dept$\\proj\\x\\a.js'], sess, cfg), '', 'DFS:目标服务器拼法');
+    assert.equal(await denyResolved(['\\\\corp.local\\dfs\\proj\\a.js'], sess, cfg), '', 'DFS:字面拼法');
+    assert.ok(await denyResolved(['\\\\fileserver\\dept\\other\\a.js'], sess, cfg), '别的共享仍拒');
+    assert.ok(await denyResolved(['\\\\evil\\dept\\proj\\a.js'], sess, cfg), '别的主机仍拒');
+    assert.ok(await denyResolved(['\\\\fileserver\\dept\\proj\\a.js'], { cwd: 'C:\\work' }, { workspaces: [] }), '没登记任何工作区:仍拒');
+    assert.ok(await denyResolved(['\\\\.\\UNC\\fileserver\\dept\\other\\a.js'], sess, cfg), '设备别名也不被 realpath 例外放行到别的共享');
   });
 });
 

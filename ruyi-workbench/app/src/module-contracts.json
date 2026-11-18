@@ -2151,21 +2151,21 @@
           "provider": "03-bridge-guard.js",
           "symbol": "guardFileToolPath",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
           "kinds": [
-            "read"
+            "call"
           ]
         }
       ]
@@ -2174,31 +2174,9 @@
       "file": "03-bridge-guard.js",
       "layer": "foundation",
       "provides": [
-        "BRIDGED_READ_PATH_ARGS",
-        "BRIDGED_SCRIPT_TOOLS",
-        "BRIDGED_WRITE_AUDIT_EXEMPT",
-        "BRIDGED_WRITE_NAME_PATTERN",
-        "MAC_MANAGED_ROOTS",
         "OFFICE_WRITER_LIB_RE",
-        "OS_CRITICAL_ROOTS",
-        "OS_CRITICAL_ROOT_FILES",
-        "OUTSIDE_WORKSPACE_READ_ERROR",
-        "OUTSIDE_WORKSPACE_WRITE_ERROR",
-        "READDIR_TIMEOUT",
-        "REALPATH_LINK_DEPTH_MAX",
         "REVEAL_OPEN_SAFE_EXTS",
-        "STAT_TIMEOUT",
         "UNC_DENIED_ERROR",
-        "USER_HOME_PERSISTENCE_DIRS",
-        "USER_HOME_PERSISTENCE_FILES",
-        "WORKSPACE_CANDIDATE_CAP",
-        "WORKSPACE_CHILDREN_CAP",
-        "WORKSPACE_DIR_TIMEOUT_MS",
-        "WORKSPACE_MATCH_THRESHOLD",
-        "WORKSPACE_RESOLVE_BUDGET_MS",
-        "WRITE_PROTECTED_DATA_DIRS",
-        "WRITE_PROTECTED_DATA_FILES",
-        "_homeRealCache",
         "auditBridgedWriteCoverage",
         "bridgedOfficeScriptGate",
         "bridgedReadPathGate",
@@ -2207,40 +2185,19 @@
         "buildOpenSpawn",
         "buildRevealSpawn",
         "cwdWarning",
-        "deviceNamespaceIsLocalVolume",
         "fileAllowedRoots",
         "guardFileToolPath",
         "guardWorkspaceExecute",
         "guardWorkspacePath",
-        "homeRealpathSync",
-        "isAutoLoadedLaunchConfigPath",
         "isBrowserDocumentTarget",
-        "isMacManagedPath",
-        "isOsCriticalPath",
-        "isWriteProtectedDataPath",
         "launchCodeEditor",
-        "listChildDirs",
-        "macSystemPolicyPath",
-        "nameSetJaccard",
-        "normalizeAutoexecPath",
-        "normalizeGuardPath",
         "providerIsLocal",
-        "readdirTimed",
-        "realUncWorkspaceRoots",
         "realpathForContainment",
-        "remoteUncDenial",
         "remoteUncDenialResolved",
         "resolveContainmentPath",
         "resolveExecCwd",
         "resolvePreferredCodeEditor",
         "resolveWorkspace",
-        "statTimed",
-        "stripWin32VerbatimPrefix",
-        "uncHostAndPath",
-        "uncIsLocalHost",
-        "userHomePersistenceHit",
-        "userHomePersistenceTargets",
-        "wideWriteModeEnabled",
         "workspaceWriteRoots"
       ],
       "requires": [
@@ -2248,7 +2205,7 @@
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2260,23 +2217,16 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "BRIDGED_WRITE_PATH_ARGS",
+          "symbol": "dataRoot",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "ensureDataRootReal",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2288,156 +2238,79 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "isSensitiveHardlinkStat",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "macPathAnchor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinAnyRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "sameFileIdentity",
-          "kinds": [
-            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "sensitiveDataRoots",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformOpenSpawn",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "mcpDropInDirs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "toolboxComponentsDir",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02f-turn-effect-kinds.js",
-          "symbol": "unprefixedBridgedName",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

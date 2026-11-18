@@ -52,13 +52,11 @@ process.env.RUYI_HOME = dataRootDir;
 process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
-let I;
-try { I = loadServerInternals(['guardFileToolPath', 'toolCall', 'remoteUncDenial', 'uncHostAndPath', 'UNC_DENIED_ERROR'], { withEval: NO_RG }); }
-catch (e) {
-  if (!(e instanceof ReferenceError)) throw e;   // 反向验证:修前没有 UNC 闸符号 → 退回基础名单、UNC 单元断言自然红
-  I = loadServerInternals(['guardFileToolPath', 'toolCall'], { withEval: NO_RG });
-  I.remoteUncDenial = () => ''; I.uncHostAndPath = () => null; I.UNC_DENIED_ERROR = '<none>';
-}
+const { remoteUncDenial, uncHostAndPath } = require('../../ruyi-workbench/app/backend/workspace-unc-policy.cjs');
+const I = {
+  ...loadServerInternals(['guardFileToolPath', 'toolCall', 'UNC_DENIED_ERROR'], { withEval: NO_RG }),
+  remoteUncDenial, uncHostAndPath,
+};
 // 随仓 rg.exe 不走 PATH(Windows CI f2dfa62 红:子进程仍报 engine=rg):直接把模块级探测缓存设为 null = 「探过,没有 rg」。
 if (NO_RG) I.__eval('hasRgAsync = async () => false; probeRg = () => null');
 

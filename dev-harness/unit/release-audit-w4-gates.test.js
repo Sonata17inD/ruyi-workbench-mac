@@ -90,7 +90,7 @@ for (const k of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_
 const { loadServerInternals } = require('../lib/server-internals');
 const I = loadServerInternals([
   'readConfig', 'writeConfigAtomic', 'paths', 'toolCall', 'nativeToolGate', 'TOOL_HANDLERS', 'httpRequest',
-  'isSensitiveDataPath', 'isWriteProtectedDataPath', 'dataRoot', 'WRITE_PROTECTED_DATA_DIRS',
+  'isSensitiveDataPath', 'guardFileToolPath', 'dataRoot',
   'syncAgentRolesToClaude', 'RUYI_AGENT_FILE_MARKER', 'authorizeRoute', 'RUNTIME',
   'stewardMarkTurnTainted', 'openToolUncDenied', 'startStewardInbox', 'stopStewardInbox', 'stewardInboxRead', 'turnSettlers',
 ]);
@@ -220,14 +220,16 @@ test('[F] steward_file_read:工作区关掉「读」后管家不读;打开后照
 });
 
 // ── [S] 敏感闸剥 NTFS 流后缀 ─────────────────────────────────────────────────
-test('[S] 敏感闸 / 写保护闸:NTFS 流后缀与尾随点不能绕过', () => {
+test('[S] 敏感闸 / 写保护闸:NTFS 流后缀与尾随点不能绕过', async () => {
   const dr = I.dataRoot();
   for (const p of [path.join(dr, 'config.json') + '::$DATA', path.join(dr, 'config.json') + ':stream', path.join(dr, 'config.json') + '.',
     path.join(dr, 'runtime.json') + '::$DATA', path.join(dr, 'sessions::$INDEX_ALLOCATION', 'a.json'), path.join(dr, 'sessions .', 'a.json')]) {
     assert.equal(I.isSensitiveDataPath(p), true, p);
   }
-  const protectedDir = I.WRITE_PROTECTED_DATA_DIRS[0];
-  assert.equal(I.isWriteProtectedDataPath(path.join(dr, protectedDir + '::$INDEX_ALLOCATION', 'x.json')), true);
+  const target = path.join(dr, 'mcp::$INDEX_ALLOCATION', 'x.json');
+  const result = await I.guardFileToolPath(target, { session: { cwd: dr }, config: baseCfg() }, { tool: 'file_write', write: true });
+  assert.equal(result.code, 'not-allowed');
+  assert.match(result.error, /已禁止文件工具写入/);
   assert.equal(I.isSensitiveDataPath(path.join(ws, 'config.json::$DATA')), false, '工作区里的同名文件不受影响');
 });
 
