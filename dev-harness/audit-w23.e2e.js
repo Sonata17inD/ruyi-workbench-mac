@@ -27,6 +27,8 @@ const { getFreePort } = require('./free-port.js');
 const WB = path.join(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
 const src = readServerSource();
+const readBackend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
+const workflow = readBackend('agent-workflow');
 
 // 端口登记(第23波,均在既有 8792-8999 段之外,避免撞车): WB=8751, fake401=8752。
 
@@ -139,14 +141,15 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P2 #6a: 回合级 401/403 归 provider_misconfigured(源形状) ----
   {
-    const i = src.indexOf("else if (!ok && errorMsg) {");
-    const slice = i > 0 ? src.slice(i, i + 700) : '';
+    const providerTurn = readBackend('provider-turn');
+    const i = providerTurn.indexOf("else if (!ok && errorMsg) {");
+    const slice = i > 0 ? providerTurn.slice(i, i + 700) : '';
     ok(/provider_misconfigured/.test(slice), 'P2#6a 回合失败分类新增 provider_misconfigured 分支');
     ok(/HTTP 401[\s\S]*provider_misconfigured/.test(slice), 'P2#6a 401/403 命中鉴权分支(在 network/tool_error 之前)');
   }
 
   // ---- P2 #7: interrupted 并入 retry reset ----
-  ok(/for \(const n of nodes\) if \(n\.status === 'interrupted'\) reset\.add\(n\.id\);/.test(src),
+  ok(/for \(const n of nodes\) if \(n\.status === 'interrupted'\) reset\.add\(n\.id\);/.test(workflow),
     "P2#7 续跑把 'interrupted' 死状态并入 reset 重新入队(修「依赖图存在环」误诊)");
 
   // ---- P2 #8: 唯一 tmp 名 —— 第25波 25.1 后不变量【中心化】到 atomicWriteJson,saveSession/writeConfigAtomic
@@ -157,7 +160,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
     // 代码走查 C2(旧副本补齐:写链内先把盘上多出来的消息补进旧副本再写)又加了约 430 字,头写落在 6320 处,窗口 6000 → 8000。
     const ss = require('./lib/source-slice').functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
     // hunt2-P7 在写链里加了「只在当前 config 可解析时才刷新 .prev」的注释与判断,固定 600 字窗口够不着委托行 → 改按函数切。
-    const wc = src.includes('let configWriteChain') ? require('./lib/source-slice').functionBlock(src, 'writeConfigAtomic') : '';
+    const wc = require('./lib/source-slice').functionBlock(readBackend('config-store'), 'writeConfigAtomic');
     ok(/atomicWriteJson\(finalPath, payload\)/.test(ss) && /sessionWriteChains/.test(ss), 'P2#8 saveSession 委托 atomicWriteJson + per-id 写链(对抗轮:防重试窗口旧覆新)');
     // 安全走查 S11 起委托调用多带一个 { mode: 0o600 }(密钥文件只给属主读写):委托这件事不变,判据放宽到「data 之后可以有选项」,
     // 另钉 0600 确实传下去了。
@@ -169,7 +172,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   }
 
   // ---- P2 #9: degraded 透传 ----
-  ok(/node\.degraded = !sub\.cleanupIncomplete && !!\(sub && sub\.degraded\);/.test(src), 'P2#9 DAG透传sub.degraded且清理未确认时不得伪装降级成功');
+  ok(/node\.degraded = !sub\.cleanupIncomplete && !!\(sub && sub\.degraded\);/.test(workflow), 'P2#9 DAG透传sub.degraded且清理未确认时不得伪装降级成功');
 
   // ---- 节点数上限 bug(回合内 orchestrate 误用 subagentMaxPerTurn)+ 迁移 + 上限放宽 ----
   {
@@ -222,7 +225,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   const fake401 = http.createServer((rq, rs) => { rs.writeHead(401, { 'content-type': 'application/json' }); rs.end('{"error":{"message":"invalid api key"}}'); });
   await new Promise(r => fake401.listen(FAKE401_PORT, '127.0.0.1', r));
 
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   const wbLog = [];
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push(l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push('[!] ' + l.trim())));

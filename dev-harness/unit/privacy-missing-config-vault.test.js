@@ -189,6 +189,7 @@ test('an unknown previous config respects a newer committed plaintext snapshot i
   assert.equal(cfg.privacyPolicyRecoveryRequiredV1, true); assert.equal(f.hash(), hash); await readable(f); await paused(f.app);
 });
 test('recovery choice matrix prioritizes real refs, real boolean choices, committed snapshots and conservative existing-vault protection', t => {
+  const { configRecoveryCredentialChoice } = require('../../ruyi-workbench/app/backend/config-store.cjs');
   const f = setup(t, null);
   const unknown = [[null, false, true], [true, false, true]];
   const shapes = [
@@ -205,7 +206,7 @@ test('recovery choice matrix prioritizes real refs, real boolean choices, commit
   let cases = 0;
   for (const shape of shapes) for (const [vaultIndex, nonempty] of [false, true].entries()) {
     for (const [snapshotIndex, snapshot] of [null, false, true].entries()) {
-      const actual = f.app.__eval('configRecoveryCredentialChoice(' + JSON.stringify(shape.raw) + ',' + JSON.stringify(snapshot) + ',' + nonempty + ')');
+      const actual = configRecoveryCredentialChoice(shape.raw, snapshot, nonempty);
       assert.equal(actual, shape.expected[vaultIndex][snapshotIndex], shape.source + '/vault=' + nonempty + '/snapshot=' + snapshot); cases++;
     }
   }

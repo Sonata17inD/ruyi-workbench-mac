@@ -20,5 +20,5 @@ Object.assign(PrivacyCore.configHooks, CredentialRecovery.create({
   },
   writeJournal: value => credentialRecoveryJournal.write(value),
   removeJournal: () => fsp.unlink(path.join(paths.data, 'credential-import-v1.json')).catch(error => { if (error.code !== 'ENOENT') throw error; }),
-  invalidate: () => { configReadCache = null; lastGoodConfig = null; },
+  invalidate: invalidateConfigRecoveryState,
 }));

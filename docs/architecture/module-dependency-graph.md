@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 3012 | 3395 | 640 | 21 | 0 | 0 |
+| 94 | 2994 | 3394 | 640 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -34,9 +34,9 @@
 | 16 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 17 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 18 | `04i-provider-wire.js` | foundation | 45 | 21 | 2 |
-| 19 | `01-config.js` | foundation | 207 | 47 | 8 |
+| 19 | `01-config.js` | foundation | 189 | 47 | 8 |
 | 20 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
-| 21 | `01l-credential-recovery.js` | foundation | 2 | 12 | 3 |
+| 21 | `01l-credential-recovery.js` | foundation | 2 | 11 | 3 |
 | 22 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
 | 23 | `02d-session-overrides.js` | foundation | 11 | 1 | 1 |
 | 24 | `02e-session-engine-route.js` | foundation | 4 | 1 | 1 |
@@ -130,7 +130,7 @@
 | `01k-credential-vault.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01k-credential-vault.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `01l-credential-recovery.js` | `00-boot.js` | backward | `fsp`, `path`, `paths` |
-| `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `configReadCache`, `lastGoodConfig`, `mutateConfig`, `normalizeConfig`, `readConfig` |
+| `01l-credential-recovery.js` | `01-config.js` | backward | `DurableJsonStore`, `atomicWriteJson`, `configEmitWritten`, `invalidateConfigRecoveryState`, `mutateConfig`, `normalizeConfig`, `readConfig` |
 | `01l-credential-recovery.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01m-privacy-regex.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `02-session-store.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SESSION_SCHEMA`, `SKILL_ID_RE`, `SessionExecutionHooks`, `clearDeletedSession`, `ensureDirs`, `fsp`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `runKeyedChain`, `safeJsonParse`, `sessionAssociatedSaveIsTombstoned`, `sessionSaveIsTombstoned`, `text` |

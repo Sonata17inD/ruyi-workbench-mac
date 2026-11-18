@@ -1025,11 +1025,22 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
     return { config, changed, persisted };
   }
 
-  return {
-    defaultConfig, normalizeConfig, CONFIG_MIGRATIONS,
-    CONFIG_BOOKKEEPING_KEYS, configExplicitKeysOf, configValueEquals,
-    configComparableValue, persistableConfig, finalizeConfigExplicitKeys,
-  };
+  function prepareConfigWrite(next, before) {
+    if (!before) return normalizeConfig(next);
+    const { config } = normalizeConfig(next, { inferExplicit: false });
+    const explicit = new Set([...configExplicitKeysOf(before), ...configExplicitKeysOf(config)]);
+    const base = defaultConfig();
+    for (const key of Object.keys(config)) {
+      if (CONFIG_BOOKKEEPING_KEYS.includes(key)) continue;
+      // next 上被 delete 掉的已知键 = 「恢复默认」:从显式集合里拿掉,回到跟随产品默认。
+      if (Object.prototype.hasOwnProperty.call(base, key) && !Object.prototype.hasOwnProperty.call(next, key)) { explicit.delete(key); continue; }
+      if (!configValueEquals(configComparableValue(config, key), configComparableValue(before, key))) explicit.add(key);
+    }
+    finalizeConfigExplicitKeys(config, explicit);
+    return { config, persisted: persistableConfig(config, base) };
+  }
+
+  return { defaultConfig, normalizeConfig, CONFIG_MIGRATIONS, configValueEquals, prepareConfigWrite };
 }
 
 module.exports = { createConfigSchema, BROWSER_AUTOMATION_MODES };

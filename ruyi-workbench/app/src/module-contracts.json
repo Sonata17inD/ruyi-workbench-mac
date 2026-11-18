@@ -801,8 +801,6 @@
         "BRIDGED_ENV_KEEP",
         "BROWSER_AUTOMATION_MODES",
         "CLAUDEPATH_CACHE_MS",
-        "CONFIG_BOOKKEEPING_KEYS",
-        "CONFIG_CACHE_MIN_AGE_MS",
         "CONFIG_MIGRATIONS",
         "ConfigPatchHooks",
         "ConfigWorkspaces",
@@ -854,21 +852,9 @@
         "classifyAgentMcpCandidate",
         "claudeInstallCandidates",
         "claudeProbeCandidates",
-        "cloneConfigSnapshot",
         "commandForSelfMcp",
-        "configComparableValue",
-        "configDegraded",
-        "configDirsEnsuredFor",
         "configEmitWritten",
-        "configExplicitKeysOf",
-        "configFileStamp",
-        "configMutateChain",
-        "configReadCache",
-        "configReadCacheLookup",
-        "configReadCacheStore",
-        "configRecoveryCredentialChoice",
         "configValueEquals",
-        "configWriteChain",
         "createConfigSchema",
         "createDesktopPythonProbe",
         "decodeClaudeCliStream",
@@ -910,10 +896,8 @@
         "effectiveAnthropicEnv",
         "enabledToolboxComponents",
         "ensureDesktopMcpWarm",
-        "ensureDirsForConfigRead",
         "externalServerJs",
         "fetchProxyModels",
-        "finalizeConfigExplicitKeys",
         "finishBootCliPathProbes",
         "generateAgentNodeMcpConfig",
         "generateMcpConfig",
@@ -923,6 +907,7 @@
         "hostAllowed",
         "invalidateAgentCliPathCaches",
         "invalidateClaudePathCache",
+        "invalidateConfigRecoveryState",
         "invalidateMcpDropInCache",
         "isAskUserTool",
         "isDesktopMcpRepo",
@@ -932,8 +917,6 @@
         "isLoopbackBindHost",
         "kimiMcpManagedIds",
         "kimiMcpSyncChains",
-        "lastGoodConfig",
-        "lastGoodCredentialEncryptionV1",
         "legacyAccMemoryMigrationComplete",
         "looksLikeRuyiSelfMcp",
         "mcpConfigFilePath",
@@ -946,10 +929,10 @@
         "noteSessionsDirOwnWrite",
         "offlineModelList",
         "originOk",
-        "persistableConfig",
         "pickPython",
         "pickPythonAsync",
         "prepareAgentCliSpawn",
+        "prepareConfigWrite",
         "probeAgentCliLauncher",
         "probeAgentCliLauncherAsync",
         "probeAgentCliLauncherRemembered",
@@ -960,7 +943,6 @@
         "queueBootCliPathProbe",
         "readClaudeProjectAgentRoles",
         "readConfig",
-        "readConfigPrev",
         "readDesktopPythonDiskEntries",
         "readDesktopPythonDiskEntry",
         "readFileTail",
@@ -1056,7 +1038,8 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -1440,13 +1423,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "configReadCache",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
             "read"
@@ -1454,7 +1430,7 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "lastGoodConfig",
+          "symbol": "invalidateConfigRecoveryState",
           "kinds": [
             "read"
           ]

@@ -1,5 +1,5 @@
 // Unit(perf · readConfig 读缓存):readConfig 有 ~45 个调用点,85 KB 的配置每次 ~10 ms(parse + normalizeConfig)。
-// 缓存的设计与理由在 01-config.js 的 configReadCache 头注(上一版因「e2e 直接写 config.json 拿不到」「别名被调用方改脏」被回退,
+// 缓存的设计与理由在 config-store.cjs 的 configReadCache 头注(上一版因「e2e 直接写 config.json 拿不到」「别名被调用方改脏」被回退,
 // 这一版靠文件戳失效 + 近期改动不入缓存 + 命中给深拷贝)。这里用【读盘计数】而不是计时来断言,全部确定性:
 //   [C1] 命中:文件没变,连续多次 readConfig 一次盘都不读(fsp.readFile 计数器不动);
 //   [C2] 等价:命中的结果与真读盘归一化的结果 deepStrictEqual(含 Symbol 键 CONFIG_GIVEN_CLAUDE_PATH);

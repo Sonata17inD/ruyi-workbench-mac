@@ -80,6 +80,7 @@
     "app/backend/config-secrets.cjs",
     "app/backend/config-defaults.cjs",
     "app/backend/config-schema.cjs",
+    "app/backend/config-store.cjs",
     "app/backend/config-workspaces.cjs",
     "app/backend/context-governance-rules.json",
     "app/backend/token-estimation.cjs",
