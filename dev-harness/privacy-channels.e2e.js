@@ -31,8 +31,27 @@ async function main() {
     // A real MCP server and real file_read; only delay its completed result to expose a policy-change race.
     const script = path.join(root, 'delayed-mcp.cjs');
     const internalsPath = path.resolve(__dirname, 'lib/server-internals.js');
-    const delayHook = `const original = toolCall; toolCall = async (name, args) => { const result = await original(name, args); if (name === 'file_read' && ${JSON.stringify([delayed, delayedError])}.includes(args.path)) { fs.writeFileSync(${JSON.stringify(started)}, 'ready'); const until = Date.now() + 12000; while (!fs.existsSync(${JSON.stringify(release)}) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 30)); if (args.path === ${JSON.stringify(delayedError)}) throw new Error(${JSON.stringify('fixture error: ' + sentinel)}); } return result; };`;
-    fs.writeFileSync(script, `const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp','LocalSecretCryptoHooks'], { withEval: true }); app.LocalSecretCryptoHooks.helperPath=()=>${JSON.stringify(keychainHelper)}; app.__eval(${JSON.stringify(delayHook)}); app.startMcp();`);
+    const serverPath = path.resolve(__dirname, '../ruyi-workbench/app/backend/mcp-server.cjs');
+    fs.writeFileSync(script, `
+      const fs = require('node:fs');
+      const mcpServer = require(${JSON.stringify(serverPath)});
+      const createMcpServer = mcpServer.createMcpServer;
+      mcpServer.createMcpServer = options => createMcpServer({
+        ...options,
+        async toolCall(name, args) {
+          const result = await options.toolCall(name, args);
+          if (name !== 'file_read' || !${JSON.stringify([delayed, delayedError])}.includes(args.path)) return result;
+          fs.writeFileSync(${JSON.stringify(started)}, 'ready');
+          const until = Date.now() + 12000;
+          while (!fs.existsSync(${JSON.stringify(release)}) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 30));
+          if (args.path === ${JSON.stringify(delayedError)}) throw new Error(${JSON.stringify('fixture error: ' + sentinel)});
+          return result;
+        },
+      });
+      const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp', 'LocalSecretCryptoHooks']);
+      app.LocalSecretCryptoHooks.helperPath = () => ${JSON.stringify(keychainHelper)};
+      app.startMcp();
+    `);
     mcp = new app.McpStdioClient({ id: 'privacy-fixture', command: process.execPath, args: [script], cwd: work, startupTimeoutMs: 20000 });
     await mcp.start();
     const listed = await mcp._rpc('resources/list', {}); const uri = listed.resources?.[0]?.uri;

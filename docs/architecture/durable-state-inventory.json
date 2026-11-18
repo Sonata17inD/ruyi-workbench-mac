@@ -811,7 +811,7 @@
     {
       "id": "voice-lexicon",
       "pattern": "<data>/voice-lexicon.json",
-      "owner": "05-claude-engine.js",
+      "owner": "../backend/voice-service.cjs",
       "anchor": "'voice-lexicon.json'",
       "schema": "object / schema 1 (base: use the built-in list; learn: learn from the user's edits, default on; terms.<lower-cased term>: {term, heard[<=8 misheard forms], src manual|learned|typed, n, at, off}; pending.<lower-cased term>: {term, heard[], n, at, kind pair|window|typed, group} = learning candidates still gathering evidence)",
       "writePrimitive": "DurableJsonStore -> atomicWriteJson; read-modify-write serialized per key through runKeyedChain (voiceLexiconUpdate, the only writer path: the settings page and learning from edits via POST /api/audio/lexicon/observe)",

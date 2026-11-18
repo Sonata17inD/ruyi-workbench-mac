@@ -113,7 +113,31 @@ function createKimiModelDiscovery({ ProcessRuntime, selectedAgentCli, prepareAge
     })().catch(reject);
     });
   }
-  return { kimiModelList, discoverKimiModels };
+  const modelWindows = new Map();
+  let modelsTriedAt = 0;
+
+  async function kimiContextWindow(config, model) {
+    const id = String(model || config && config.model || '').trim();
+    const lower = id.toLowerCase();
+    if (/k3-256k|kimi-for-coding/.test(lower)) return 262144;
+    if (/(^|[\/-])k3$/.test(lower)) return 1048576;   // 含 'kimi-k3'：k3 的 256K 变体已在上一行拦走
+    // 3.0 预览收口:修前条件是「超过 60 s 或当前 id 不在表里」—— 默认模型 id 是 ''、清单外的别名也永远不在表里,
+    // 于是每次 /api/status 都真起一趟 `kimi provider list --json`(实测 ~950 ms;探测失败也不记时间,照样每次起)。
+    // 现在按「上次尝试」节流:60 s 内全量不再探;当前 id 不在表里时最多 10 s 探一次。先记尝试时间再 await,并发请求不叠发。
+    const sinceTry = Date.now() - modelsTriedAt;
+    if (sinceTry > 60000 || (!modelWindows.has(id) && sinceTry > 10000)) {
+      modelsTriedAt = Date.now();
+      try {
+        const discovered = await discoverKimiModels(config);
+        if (discovered && Array.isArray(discovered.models)) {
+          for (const item of discovered.models) if (item && item.id && Number(item.contextLength) > 0) modelWindows.set(item.id, Number(item.contextLength));
+        }
+      } catch { /* use conservative fallback */ }
+    }
+    return modelWindows.get(id) || 262144;
+  }
+
+  return { kimiModelList, discoverKimiModels, kimiContextWindow };
 }
 
 module.exports = { createKimiModelDiscovery };

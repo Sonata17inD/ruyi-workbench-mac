@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 91 | 3211 | 3521 | 625 | 21 | 0 | 1 |
+| 92 | 3195 | 3522 | 632 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -47,7 +47,7 @@
 | 29 | `02-session-store.js` | foundation | 230 | 59 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 68 | 28 | 5 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 32 | `04-permission-runtime.js` | foundation | 116 | 55 | 6 |
+| 32 | `04-permission-runtime.js` | foundation | 118 | 55 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 35 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
@@ -56,56 +56,57 @@
 | 38 | `06b-prompt-registry.js` | engine | 16 | 0 | 0 |
 | 39 | `06c-agent-workflow-catalog.js` | engine | 11 | 2 | 2 |
 | 40 | `04l-skill-registry.js` | foundation | 4 | 6 | 2 |
-| 41 | `05-claude-engine.js` | engine | 31 | 131 | 24 |
-| 42 | `05b-kimi-bridge.js` | engine | 131 | 76 | 12 |
-| 43 | `06-provider-engine.js` | engine | 104 | 63 | 16 |
-| 44 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
-| 45 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
-| 46 | `06d-memory-domain.js` | engine | 157 | 36 | 6 |
-| 47 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
-| 48 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
-| 49 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
-| 50 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
-| 51 | `07-autonomy.js` | orchestration | 117 | 75 | 16 |
-| 52 | `08-agent-runs.js` | orchestration | 76 | 108 | 22 |
-| 53 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
-| 54 | `09-workflow.js` | orchestration | 27 | 274 | 27 |
-| 55 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
-| 56 | `10-context-governance.js` | orchestration | 191 | 60 | 13 |
-| 57 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
-| 58 | `11-native-tools.js` | tools | 52 | 46 | 11 |
-| 59 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
-| 60 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
-| 61 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
-| 62 | `12-tool-dispatch.js` | tools | 88 | 171 | 25 |
-| 63 | `13-http-router.js` | transport | 39 | 277 | 39 |
-| 64 | `13b-api-domain-routes.js` | transport | 41 | 68 | 13 |
-| 65 | `13d-core-domain-routes.js` | transport | 53 | 149 | 21 |
-| 66 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
-| 67 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
-| 68 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
-| 69 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
-| 70 | `13k-steward-threads.js` | transport | 60 | 127 | 18 |
-| 71 | `13l-steward-ops.js` | transport | 54 | 133 | 21 |
-| 72 | `13g-steward.js` | transport | 20 | 75 | 12 |
-| 73 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
-| 74 | `13n-steward-arbiter.js` | transport | 42 | 21 | 7 |
-| 75 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 17 |
-| 76 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
-| 77 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 22 |
-| 78 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
-| 79 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
-| 80 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
-| 81 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
-| 82 | `13u-migration-center.js` | transport | 63 | 36 | 5 |
-| 83 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
-| 84 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
-| 85 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
-| 86 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 87 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
-| 88 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
-| 89 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
-| 90 | `14-main.js` | entrypoint | 1 | 588 | 47 |
+| 41 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
+| 42 | `05-claude-engine.js` | engine | 3 | 121 | 22 |
+| 43 | `05b-kimi-bridge.js` | engine | 130 | 76 | 12 |
+| 44 | `06-provider-engine.js` | engine | 104 | 63 | 16 |
+| 45 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
+| 46 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
+| 47 | `06d-memory-domain.js` | engine | 157 | 36 | 6 |
+| 48 | `06e-mission-domain.js` | engine | 9 | 33 | 6 |
+| 49 | `06g-resource-leases.js` | engine | 9 | 2 | 1 |
+| 50 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
+| 51 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
+| 52 | `07-autonomy.js` | orchestration | 117 | 75 | 16 |
+| 53 | `08-agent-runs.js` | orchestration | 76 | 108 | 22 |
+| 54 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
+| 55 | `09-workflow.js` | orchestration | 27 | 274 | 27 |
+| 56 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
+| 57 | `10-context-governance.js` | orchestration | 191 | 61 | 14 |
+| 58 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
+| 59 | `11-native-tools.js` | tools | 52 | 46 | 11 |
+| 60 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
+| 61 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
+| 62 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
+| 63 | `12-tool-dispatch.js` | tools | 88 | 171 | 25 |
+| 64 | `13-http-router.js` | transport | 39 | 277 | 39 |
+| 65 | `13b-api-domain-routes.js` | transport | 41 | 68 | 13 |
+| 66 | `13d-core-domain-routes.js` | transport | 53 | 149 | 21 |
+| 67 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
+| 68 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
+| 69 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
+| 70 | `13aa-steward-delivery.js` | unclassified | 10 | 31 | 7 |
+| 71 | `13k-steward-threads.js` | transport | 60 | 127 | 18 |
+| 72 | `13l-steward-ops.js` | transport | 54 | 133 | 21 |
+| 73 | `13g-steward.js` | transport | 20 | 75 | 12 |
+| 74 | `13m-steward-runner-base.js` | transport | 49 | 16 | 7 |
+| 75 | `13n-steward-arbiter.js` | transport | 42 | 21 | 7 |
+| 76 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 17 |
+| 77 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
+| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 22 |
+| 79 | `13h-steward-runner.js` | transport | 7 | 49 | 13 |
+| 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
+| 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
+| 82 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
+| 83 | `13u-migration-center.js` | transport | 63 | 36 | 5 |
+| 84 | `13v-external-channel-protocols.js` | transport | 1 | 3 | 1 |
+| 85 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
+| 86 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
+| 87 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
+| 88 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
+| 89 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
+| 90 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
+| 91 | `14-main.js` | entrypoint | 1 | 588 | 48 |
 
 ## 模块边
 
@@ -175,9 +176,16 @@
 | `04i-provider-wire.js` | `04i-provider-anthropic.js` | backward | `anthropicApiBase`, `anthropicMessagesUrl`, `anthropicModelsUrl`, `anthropicRequestHeaders`, `anthropicRetryBodyOn400`, `applyAnthropicEffort`, `applyAnthropicTemperature`, `applyAnthropicTools`, `createAnthropicStreamDecoder`, `decodeAnthropicCompletion`, `encodeAnthropicMessages`, `encodeAnthropicQuick`, `normalizeAnthropicAuth`, `normalizeAnthropicFallbacks`, `normalizeAnthropicThinking`, `normalizeAnthropicUsage` |
 | `04l-skill-registry.js` | `00-boot.js` | backward | `SKILL_ID_RE`, `agentCliHomes`, `externalRoot`, `paths`, `safeJsonParse` |
 | `04l-skill-registry.js` | `03a-privacy-gateway.js` | backward | `readIfExists` |
-| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `computeProviderCost`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `crypto`, `fsp`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `path`, `paths`, `redact`, `runKeyedChain`, `safeJsonParse`, `text` |
+| `04m-voice-service.js` | `00-boot.js` | backward | `logEvent`, `paths` |
+| `04m-voice-service.js` | `01-config.js` | backward | `DurableJsonStore`, `readConfig` |
+| `04m-voice-service.js` | `02-session-store.js` | backward | `appendUsageLedger` |
+| `04m-voice-service.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
+| `04m-voice-service.js` | `04-permission-runtime.js` | backward | `ToolboxHooks` |
+| `04m-voice-service.js` | `04h-provider-http.js` | backward | `providerBaseWithV1`, `providerPostJsonOnce` |
+| `04m-voice-service.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |
+| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `crypto`, `fsp`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `path`, `paths`, `redact`, `safeJsonParse` |
 | `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
-| `05-claude-engine.js` | `01-config.js` | backward | `DurableJsonStore`, `agentCliLauncherUsable`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi`, `writeToChild` |
+| `05-claude-engine.js` | `01-config.js` | backward | `agentCliLauncherUsable`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `syncMcpServersToKimi`, `writeToChild` |
 | `05-claude-engine.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP` |
 | `05-claude-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `05-claude-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
@@ -187,12 +195,10 @@
 | `05-claude-engine.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
 | `05-claude-engine.js` | `03-bridge-guard.js` | backward | `cwdWarning` |
 | `05-claude-engine.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `05-claude-engine.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `ToolboxHooks`, `appendLiveTail`, `assertSessionExecutionOwner`, `buildClaudeRecoveryHistory`, `claudeProviderTailSince`, `claudeResumeRouteKey`, `clearPendingPermissions`, `clearPendingQuestions`, `discoverKimiModels`, `formatQuestionGuidance`, `hasPendingPermissionForSession`, `hasPendingQuestionForSession`, `installActiveChildEventFanout`, `isClaudeResumeMissingError`, `kimiModelList`, `lastSuccessfulClaudeModel`, `nativeClaudeAgentResultInfo`, `parseClaudeEvent`, `parseKimiStreamJsonEvent`, `permissionWaitMs`, `registerSessionExecutionChild`, `registerUserQuestion`, `sameClaudeResumeCwd`, `stopSession` |
-| `05-claude-engine.js` | `04h-provider-http.js` | backward | `providerBaseWithV1`, `providerPostJsonOnce` |
-| `05-claude-engine.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `providerWireProtocol`, `resolveProvider` |
-| `05-claude-engine.js` | `04j-voice-lexicon.js` | backward | `VoiceLexicon` |
+| `05-claude-engine.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `appendLiveTail`, `assertSessionExecutionOwner`, `buildClaudeRecoveryHistory`, `claudeProviderTailSince`, `claudeResumeRouteKey`, `clearPendingPermissions`, `clearPendingQuestions`, `discoverKimiModels`, `formatQuestionGuidance`, `hasPendingPermissionForSession`, `hasPendingQuestionForSession`, `installActiveChildEventFanout`, `isClaudeResumeMissingError`, `kimiContextWindow`, `kimiModelList`, `lastSuccessfulClaudeModel`, `nativeClaudeAgentResultInfo`, `parseClaudeEvent`, `parseKimiStreamJsonEvent`, `permissionWaitMs`, `registerSessionExecutionChild`, `registerUserQuestion`, `sameClaudeResumeCwd`, `stopSession` |
+| `05-claude-engine.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `05-claude-engine.js` | `04l-skill-registry.js` | backward | `effectiveSkillSelection`, `resolveEnabledSkillEntries` |
-| `05-claude-engine.js` | `05b-kimi-bridge.js` | forward | `applyKimiStatusToSession`, `kimiContextWindow`, `kimiSessionStatus`, `kimiUsageFromStatus`, `maybeAutoCompactAgentSession`, `runKimiAcpTurnPrepared`, `runKimiCompact`, `syncKimiSessionUsage`, `syncKimiTurnPreferences`, `watchKimiWire` |
+| `05-claude-engine.js` | `05b-kimi-bridge.js` | forward | `applyKimiStatusToSession`, `kimiSessionStatus`, `kimiUsageFromStatus`, `maybeAutoCompactAgentSession`, `runKimiAcpTurnPrepared`, `runKimiCompact`, `syncKimiSessionUsage`, `syncKimiTurnPreferences`, `watchKimiWire` |
 | `05-claude-engine.js` | `06-provider-engine.js` | forward | `buildBrowserAutomationHint`, `buildPlaybookIndexSection`, `buildSkillsPromptSection`, `buildToolCustomizationHint`, `engineTranscriptCwd`, `evalPlaybookAvailability`, `getCapabilities`, `loadAllPlaybooks`, `peekCapabilities`, `resolveEngineEnvBrief` |
 | `05-claude-engine.js` | `06b-prompt-registry.js` | backward | `PROMPT_PACK_VERSION`, `appendMemorySection`, `appendTurnPolicies`, `buildPromptTaskContext`, `getPromptPack`, `softwareEngineeringTaskProfile` |
 | `05-claude-engine.js` | `06c-agent-workflow-catalog.js` | backward | `buildOrchestrateHint`, `getAgentWorkflows` |
@@ -206,7 +212,7 @@
 | `05b-kimi-bridge.js` | `02-session-store.js` | backward | `buildTurnSummary`, `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `finalizeMissionAfterTurn`, `isUntitledSessionTitle`, `journalReadIndex`, `loadSession`, `mergeMissionBeforeSave`, `mutateSession`, `normalizeTodoItems`, `reconcileWorkspaceTurnBaseline`, `saveSession`, `saveTurnFinalSession` |
 | `05b-kimi-bridge.js` | `03-bridge-guard.js` | backward | `buildOpenSpawn`, `cwdWarning`, `fileAllowedRoots`, `guardFileToolPath`, `guardWorkspaceExecute`, `realpathForContainment`, `workspaceWriteRoots` |
 | `05b-kimi-bridge.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `05b-kimi-bridge.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `assertSessionExecutionOwner`, `clearPendingPermissions`, `clearPendingPlans`, `clearPendingQuestions`, `discoverKimiModels`, `hasPendingPermissionForSession`, `permissionWaitMs`, `registerSessionExecutionChild`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `stopSession` |
+| `05b-kimi-bridge.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `assertSessionExecutionOwner`, `clearPendingPermissions`, `clearPendingPlans`, `clearPendingQuestions`, `hasPendingPermissionForSession`, `kimiContextWindow`, `permissionWaitMs`, `registerSessionExecutionChild`, `requestUserQuestion`, `runAutomaticInterventionDecision`, `stopSession` |
 | `05b-kimi-bridge.js` | `06b-prompt-registry.js` | backward | `softwareEngineeringTaskProfile` |
 | `05b-kimi-bridge.js` | `07-autonomy.js` | forward | `requestNativePermission` |
 | `05b-kimi-bridge.js` | `10-context-governance.js` | forward | `agentConversationContextMeta`, `lastSessionContextTokens`, `runAgentExternalCompact`, `upsertCompactMarker` |
@@ -328,13 +334,14 @@
 | `10-context-governance.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `URL`, `cachedInputTokensFromUsage`, `computeProviderCost`, `countCjkCodeUnits`, `crypto`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `fsp`, `isContextOverflowError`, `logEvent`, `nativeToolTier`, `nowIso`, `path`, `paths`, `redact`, `resolveContextWindow`, `text`, `tokensFromTextCounts`, `toolImageSessionTag` |
 | `10-context-governance.js` | `01-config.js` | backward | `DurableJsonStore`, `readConfig` |
 | `10-context-governance.js` | `01c-runtime-flags.js` | backward | `evaporateBudgetBoundaryEnabled`, `historyReadDedupEnabled`, `observationRecallEnabled`, `reseedReattachFilesEnabled`, `reseedTailUnitsEnabled`, `sessionNotesEnabled`, `sessionNotesInjectEnabled`, `sessionNotesMergeEnabled`, `summaryEntityCheckEnabled`, `summaryFactTableCap`, `summaryFactTableEnabled`, `summaryPromptI18nEnabled`, `summaryRefineEnabled`, `summarySingleShotEnabled` |
+| `10-context-governance.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
 | `10-context-governance.js` | `02-session-store.js` | backward | `appendUsageLedger`, `loadSession`, `mutateSession`, `readSessionNotes`, `repairProviderHistoryPairing`, `saveSession`, `sessionObjectIsStale`, `writeHistorySnapshot`, `writeSessionNotes` |
 | `10-context-governance.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
 | `10-context-governance.js` | `02e-session-engine-route.js` | backward | `configForSessionEngineRoute` |
 | `10-context-governance.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
+| `10-context-governance.js` | `04-permission-runtime.js` | backward | `AGENT_CLI_CONTEXT_WINDOW_PROBES` |
 | `10-context-governance.js` | `04h-provider-http.js` | backward | `providerBaseWithV1` |
 | `10-context-governance.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `normalizeProviderApiStyle`, `providerWireProtocol` |
-| `10-context-governance.js` | `05-claude-engine.js` | backward | `agentCliAdapter` |
 | `10-context-governance.js` | `06-provider-engine.js` | backward | `buildProviderSystemPrompt`, `buildStableSystemPrompt` |
 | `10-context-governance.js` | `06i-steward-core.js` | backward | `StewardHooks` |
 | `10-context-governance.js` | `07-autonomy.js` | backward | `buildOpenAiTools`, `fetchOpenAiModels` |
@@ -382,7 +389,7 @@
 | `12-tool-dispatch.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `12-tool-dispatch.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `providerWireProtocol` |
 | `12-tool-dispatch.js` | `04l-skill-registry.js` | backward | `SkillRegistry`, `effectiveSkillSelection` |
-| `12-tool-dispatch.js` | `05-claude-engine.js` | backward | `resolveAsrProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor` |
+| `12-tool-dispatch.js` | `04m-voice-service.js` | backward | `resolveAsrProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor` |
 | `12-tool-dispatch.js` | `06-provider-engine.js` | backward | `buildRuntimeIdentityFacts`, `getCapabilities`, `listPlaybooksWithAvailability`, `loadAllPlaybooks`, `markNetworkOnline`, `neutralizeAuthoredText`, `peekCapabilities`, `updateAutomaticThreadTitle` |
 | `12-tool-dispatch.js` | `06c-agent-workflow-catalog.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `getAgentWorkflows` |
 | `12-tool-dispatch.js` | `06d-memory-domain.js` | backward | `listWorkbenchMemories`, `proposeMemoryRelationRevoke`, `proposeMemoryRelationTool`, `proposeMemoryRevision`, `proposeWorkbenchMemory`, `readWorkbenchMemory` |
@@ -469,7 +476,7 @@
 | `13b-api-domain-routes.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `13b-api-domain-routes.js` | `04j-voice-learn.js` | backward | `VoiceLearn` |
 | `13b-api-domain-routes.js` | `04j-voice-lexicon.js` | backward | `VoiceLexicon` |
-| `13b-api-domain-routes.js` | `05-claude-engine.js` | backward | `asrFixMessages`, `asrFixModeOf`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider`, `resolveAsrProvider`, `resolveAsrStreamProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor`, `voiceLexiconRead`, `voiceLexiconUpdate` |
+| `13b-api-domain-routes.js` | `04m-voice-service.js` | backward | `asrFixMessages`, `asrFixModeOf`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider`, `resolveAsrProvider`, `resolveAsrStreamProvider`, `transcribeAudioViaProvider`, `voiceLexiconAsrPromptFor`, `voiceLexiconRead`, `voiceLexiconUpdate` |
 | `13b-api-domain-routes.js` | `06-provider-engine.js` | backward | `storageSweep` |
 | `13b-api-domain-routes.js` | `07-autonomy.js` | backward | `STEER_QUEUE_MAX` |
 | `13d-core-domain-routes.js` | `00-boot.js` | backward | `DESKTOP_MCP_SERVER_ID`, `EventStreamHooks`, `RUYI_EVENTS`, `URL`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `cliBridgeToolTier`, `crypto`, `dataRootAliases`, `fsp`, `json`, `logEvent`, `makeId`, `normalizeCwd`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `readJsonBody`, `redact`, `runKeyedChain`, `safeDecodeURIComponent`, `safeJsonParse`, `send`, `text`, `toolDisabledByPolicy` |
@@ -707,7 +714,8 @@
 | `14-main.js` | `04g-session-deletion.js` | backward | `deleteSession` |
 | `14-main.js` | `04h-provider-http.js` | backward | `abortableDelay`, `providerApiBase`, `providerBaseWithV1`, `providerCallIsTransient`, `providerCompletionUrl`, `providerRequestHeaders`, `providerResponsesBase`, `withTransientRetry` |
 | `14-main.js` | `04i-provider-wire.js` | backward | `PROVIDER_WIRE_PROTOCOLS`, `applyProviderReasoningEffort`, `buildResponsesInputItems`, `normalizeProviderApiStyle`, `providerRawCompletion`, `providerReasoningEffort`, `providerWireProtocol`, `responsesHistoryWithCompleteToolPairs` |
-| `14-main.js` | `05-claude-engine.js` | backward | `AGENT_CLI_ADAPTERS`, `agentCliAdapter`, `asrFixMessages`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider` |
+| `14-main.js` | `04m-voice-service.js` | backward | `asrFixMessages`, `asrFixSanity`, `providerFixCompletion`, `resolveAsrFixProvider` |
+| `14-main.js` | `05-claude-engine.js` | backward | `AGENT_CLI_ADAPTERS`, `agentCliAdapter` |
 | `14-main.js` | `05b-kimi-bridge.js` | backward | `consumeKimiAcpApproval`, `isKimiAcpPlanFilePath`, `kimiAcpFreshActualForOperation`, `kimiAcpInferConcreteToolInput`, `kimiAcpModeOptionFromActivated`, `kimiAcpNativeBashWrapperCandidate`, `kimiAcpNativeBashWrapperTexts`, `kimiAcpNativeShellQuote`, `kimiAcpPermissionToolCall`, `kimiAcpSessionRestoreMethods`, `kimiAcpSuccessfulEnterPlanMode`, `kimiAcpUnknownSessionError`, `kimiSessionStatus`, `parseKimiWireAgentEvents`, `parseKimiWireCompaction`, `prepareKimiAcpSpawn`, `resolveKimiAcpPlanFilePath`, `runKimiCompact`, `watchKimiWire` |
 | `14-main.js` | `06-provider-engine.js` | backward | `CAP_UNKNOWN_TTL_MS`, `ERROR_CLASSES`, `TOOL_ITERATION_BUDGETS`, `buildBrowserAutomationHint`, `buildEngineEnvBrief`, `buildMetricsPayload`, `buildPlaybookIndexSection`, `buildProviderSystemPrompt`, `buildRuntimeIdentityFacts`, `buildStableSystemPrompt`, `buildToolCustomizationHint`, `buildVolatileParts`, `claudeProjectDirKey`, `claudeProjectsRoot`, `collectStorageStats`, `desktopAuditEntriesFromResult`, `evalPlaybookAvailability`, `getCapabilities`, `invalidateCapabilityCache`, `matchServiceEntry`, `maybeRecordStorageTrend`, `maybeWriteThreadBrief`, `networkAnchors`, `normalizeMetricsPath`, `normalizePlaybook`, `parseThreadBrief`, `peekCapabilities`, `probeAny`, `readStorageTrend`, `recordEngineTranscript`, `recordRequestMetric`, `resolveEngineEnvBrief`, `resolveToolIterationBudget`, `shouldExtendToolIterationBudget`, `storageSweep` |
 | `14-main.js` | `06b-prompt-registry.js` | backward | `PROMPT_PACK_VERSION`, `appendResponseLanguagePolicy`, `appendTurnPolicies`, `buildAgentTeamHint`, `buildClaudeNativeAgentPolicy`, `buildPromptTaskContext`, `buildSoftwareEngineeringPolicy`, `clampAppendWithSkills`, `fenceSafeSlice`, `getPromptPack`, `shrinkFencedSection`, `softwareEngineeringTaskProfile` |
@@ -739,10 +747,10 @@
 
 ## 强连通分量
 
-1. `05-claude-engine.js` ↔ `05b-kimi-bridge.js` ↔ `10-context-governance.js` ↔ `12-tool-dispatch.js`
+无。
 
 ## 维护规则
 
 - 源码新增或删除跨模块引用时，契约与本图必须同步更新；`--check`/CI 会拒绝漂移。
-- 重复顶层导出名始终拒绝。循环边和前向边只能减少；若确需增加，必须显式修改 `module-dependency-policy.json` 并说明理由。
+- 禁止重复顶层导出名和生产依赖环。新增前向边必须显式更新 `module-dependency-policy.json` 并说明理由。
 - 隔离批次优先把内部符号收进命名空间，只暴露真实公共面；每批保持拼接顺序和运行语义。

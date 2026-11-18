@@ -2737,6 +2737,7 @@
       "layer": "foundation",
       "provides": [
         "ACTIVE_CHILD_EVENT_TAPS",
+        "AGENT_CLI_CONTEXT_WINDOW_PROBES",
         "AgentLoopHooks",
         "BRIDGED_CATALOG_INCOMPLETE_TTL_MS",
         "BRIDGED_CATALOG_SCAN_TIMEOUT_MS",
@@ -2800,6 +2801,7 @@
         "isClaudeResumeMissingError",
         "isNativeToolName",
         "killAllMcpClients",
+        "kimiContextWindow",
         "kimiModelList",
         "lastSuccessfulClaudeModel",
         "makeAttachmentRecord",
@@ -3720,40 +3722,101 @@
       ]
     },
     {
-      "file": "05-claude-engine.js",
-      "layer": "engine",
+      "file": "04m-voice-service.js",
+      "layer": "foundation",
       "provides": [
-        "AGENT_CLI_ADAPTERS",
-        "ASR_FIX_CONTEXT",
-        "ASR_FIX_CONTEXT_MAX",
-        "ASR_FIX_GLOSSARY",
-        "ASR_FIX_GLOSSARY_MAX",
-        "ASR_FIX_HARDEN",
-        "ASR_FIX_MODES",
-        "ASR_FIX_SYSTEM_MERGE",
-        "ASR_FIX_SYSTEM_TEXT",
-        "agentCliAdapter",
-        "asrAudioFormat",
-        "asrChatContentText",
-        "asrDashscopeNativeText",
-        "asrDashscopeNativeUrl",
-        "asrFixContextTail",
-        "asrFixGlossaryBlock",
         "asrFixMessages",
         "asrFixModeOf",
         "asrFixSanity",
-        "asrUsesDashscopeNative",
         "providerFixCompletion",
         "resolveAsrFixProvider",
         "resolveAsrProvider",
         "resolveAsrStreamProvider",
-        "runClaudeTurn",
         "transcribeAudioViaProvider",
         "voiceLexiconAsrPromptFor",
-        "voiceLexiconChains",
         "voiceLexiconRead",
-        "voiceLexiconStore",
         "voiceLexiconUpdate"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "DurableJsonStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendUsageLedger",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "ToolboxHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseWithV1",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerPostJsonOnce",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
+          "symbol": "providerWireProtocol",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "05-claude-engine.js",
+      "layer": "engine",
+      "provides": [
+        "AGENT_CLI_ADAPTERS",
+        "agentCliAdapter",
+        "runClaudeTurn"
       ],
       "requires": [
         {
@@ -3774,13 +3837,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "claudeCostFields",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
           "kinds": [
             "call"
           ]
@@ -3885,13 +3941,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -3902,13 +3951,6 @@
           "symbol": "safeJsonParse",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -3958,13 +4000,6 @@
           "symbol": "discoverModels",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "DurableJsonStore",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -4284,6 +4319,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "kimiContextWindow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "kimiModelList",
           "kinds": [
             "call"
@@ -4353,52 +4395,10 @@
           ]
         },
         {
-          "provider": "04-permission-runtime.js",
-          "symbol": "ToolboxHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseWithV1",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerPostJsonOnce",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "resolveProvider",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04j-voice-lexicon.js",
-          "symbol": "VoiceLexicon",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -4418,13 +4418,6 @@
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "applyKimiStatusToSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiContextWindow",
           "kinds": [
             "call"
           ]
@@ -4783,7 +4776,6 @@
         "kimiApi",
         "kimiBridgeState",
         "kimiCodeHome",
-        "kimiContextWindow",
         "kimiHttp",
         "kimiSessionStatus",
         "kimiStatusFingerprint",
@@ -5255,14 +5247,14 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "discoverKimiModels",
+          "symbol": "hasPendingPermissionForSession",
           "kinds": [
             "call"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "hasPendingPermissionForSession",
+          "symbol": "kimiContextWindow",
           "kinds": [
             "call"
           ]
@@ -11129,6 +11121,13 @@
           ]
         },
         {
+          "provider": "01f-agent-cli-types.js",
+          "symbol": "normalizeAgentCliType",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
@@ -11213,6 +11212,13 @@
           ]
         },
         {
+          "provider": "04-permission-runtime.js",
+          "symbol": "AGENT_CLI_CONTEXT_WINDOW_PROBES",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
@@ -11236,13 +11242,6 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "agentCliAdapter",
           "kinds": [
             "call"
           ]
@@ -12857,21 +12856,21 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "resolveAsrProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "transcribeAudioViaProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconAsrPromptFor",
           "kinds": [
             "call"
@@ -15774,77 +15773,77 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "asrFixMessages",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "asrFixModeOf",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "asrFixSanity",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "providerFixCompletion",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "resolveAsrFixProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "resolveAsrProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "resolveAsrStreamProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "transcribeAudioViaProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconAsrPromptFor",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconRead",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04m-voice-service.js",
           "symbol": "voiceLexiconUpdate",
           "kinds": [
             "call"
@@ -26181,6 +26180,34 @@
           ]
         },
         {
+          "provider": "04m-voice-service.js",
+          "symbol": "asrFixMessages",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04m-voice-service.js",
+          "symbol": "asrFixSanity",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04m-voice-service.js",
+          "symbol": "providerFixCompletion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04m-voice-service.js",
+          "symbol": "resolveAsrFixProvider",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "05-claude-engine.js",
           "symbol": "AGENT_CLI_ADAPTERS",
           "kinds": [
@@ -26190,34 +26217,6 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "asrFixMessages",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "asrFixSanity",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "providerFixCompletion",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "resolveAsrFixProvider",
           "kinds": [
             "read"
           ]

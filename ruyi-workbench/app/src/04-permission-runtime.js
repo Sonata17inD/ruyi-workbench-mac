@@ -235,9 +235,10 @@ function permissionWaitMs(sessionId, config, sessionHead) {
 // loopback 的 /api/permission/request)拿不到 driverAuto,故用此集判定。runClaudeTurn 的 driverAuto 回合进出维护。纯内存。
 const driverAutoSessions = new Set();
 
-const { kimiModelList, discoverKimiModels } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
+const { kimiModelList, discoverKimiModels, kimiContextWindow } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
   ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
 });
+const AGENT_CLI_CONTEXT_WINDOW_PROBES = Object.freeze({ kimi: kimiContextWindow });
 
 // 47b/长工具保活:按工具声明式超时表(裸名小写)。未知工具默认 15min 有界上限;
 // 已知工具仍按其自身参数上限收紧 ——

@@ -357,7 +357,8 @@
     "app/backend/http-chat-stream.cjs",
     "app/backend/session-turn-runtime.cjs",
     "app/backend/agent-workflow-catalog.cjs",
-    "app/backend/history-snapshot-store.cjs"
+    "app/backend/history-snapshot-store.cjs",
+    "app/backend/voice-service.cjs"
   ],
   "acc": [
     "LICENSE",

@@ -506,8 +506,8 @@ function buildContract(graph) {
 function buildPolicy(graph) {
   return {
     schema: 1,
-    note: '104 reviewed rebase of the 103b debt ceiling after zero-behavior physical ownership splits. Module edges 197→239 reflect one former 07/10 owner becoming six explicit domains; forward edges 59→65, duplicate exports remain 0, SCC count remains 1. Future additions still require explicit architecture review.',
-    allowedCycleEdges: graph.cycleEdgeKeys,
+    note: 'Production cycles are forbidden. Existing acyclic forward references are recorded below until their services move into explicit modules.',
+    allowedCycleEdges: [],
     allowedForwardEdges: graph.forwardEdgeKeys,
   };
 }
@@ -536,16 +536,15 @@ function buildMarkdown(graph) {
   else graph.stronglyConnectedComponents.forEach((scc, index) => lines.push(`${index + 1}. ${scc.map(file => `\`${file}\``).join(' ↔ ')}`));
   lines.push('', '## 维护规则', '',
     '- 源码新增或删除跨模块引用时，契约与本图必须同步更新；`--check`/CI 会拒绝漂移。',
-    '- 重复顶层导出名始终拒绝。循环边和前向边只能减少；若确需增加，必须显式修改 `module-dependency-policy.json` 并说明理由。',
+    '- 禁止重复顶层导出名和生产依赖环。新增前向边必须显式更新 `module-dependency-policy.json` 并说明理由。',
     '- 隔离批次优先把内部符号收进命名空间，只暴露真实公共面；每批保持拼接顺序和运行语义。', '');
   return lines.join('\n');
 }
 
 function policyViolations(graph, policy) {
-  const allowedCycles = new Set((policy && policy.allowedCycleEdges) || []);
   const allowedForward = new Set((policy && policy.allowedForwardEdges) || []);
   return {
-    cycles: graph.cycleEdgeKeys.filter(key => !allowedCycles.has(key)),
+    cycles: graph.cycleEdgeKeys.slice(),
     forward: graph.forwardEdgeKeys.filter(key => !allowedForward.has(key)),
   };
 }
@@ -574,7 +573,7 @@ function checkGraph(graph) {
   if (!fs.existsSync(POLICY_PATH)) errors.push(`${rel(path.relative(ROOT, POLICY_PATH))} 缺失`);
   else {
     const violations = policyViolations(graph, readJson(POLICY_PATH));
-    if (violations.cycles.length) errors.push(`新增循环边: ${violations.cycles.join(', ')}`);
+    if (violations.cycles.length) errors.push(`生产依赖循环: ${violations.cycles.join(', ')}`);
     if (violations.forward.length) errors.push(`新增前向/越层边: ${violations.forward.join(', ')}`);
   }
   return errors;

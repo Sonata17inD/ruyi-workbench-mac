@@ -18,10 +18,11 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 
 const APP = path.join(__dirname, '..', 'ruyi-workbench', 'app');
 const providerConfigSource = fs.readFileSync(path.join(APP, 'backend', 'provider-config.cjs'), 'utf8');
-const src05 = fs.readFileSync(path.join(APP, 'src', '05-claude-engine.js'), 'utf8');
+const voiceService = fs.readFileSync(path.join(APP, 'backend', 'voice-service.cjs'), 'utf8');
 const src06 = fs.readFileSync(path.join(APP, 'src', '06-provider-engine.js'), 'utf8');
 const src01 = fs.readFileSync(path.join(APP, 'src', '01-config.js'), 'utf8');
 const src00 = fs.readFileSync(path.join(APP, 'src', '00-boot.js'), 'utf8');
@@ -248,25 +249,24 @@ assert.equal(voiceBad, -1, 'composer-voice.js 含控制字符／CR @' + voiceBad
 //   composer-voice.browser.e2e.js ①c/c2 红（请求体退回 EBML 魔数）。
 assert.match(providerConfigSource, /const asrProtocol = raw\.asrProtocol === 'chat-audio' \? 'chat-audio' : '';/, 'Provider 配置: asrProtocol 只落合法值（⑦a）');
 assert.match(providerConfigSource, /\.\.\.\(asrProtocol \? \{ asrProtocol \} : \{\}\), \/\/ 107-A1/, 'Provider 配置: asrProtocol 空不落字段（⑦a 零漂移）');
-assert.match(src05, /const chatAudio = provider\.asrProtocol === 'chat-audio';/, '05: 转写出站按协议分叉（⑦b）');
-assert.match(src05, /target = base \+ '\/chat\/completions';/, "05: chat-audio 打 /chat/completions（⑦b）");
-assert.match(src05, /type: 'input_audio', input_audio: \{ data: 'data:' \+ mime \+ ';base64,'/, '05: chat-audio 用 input_audio data URI（⑦b）');
-assert.match(src05, /const realIn = chatAudio \? pick\('prompt_tokens', 'input_tokens'\)/, '05: chat 回体 usage 映射 prompt_tokens（⑦b）');
-assert.match(src05, /const realOut = chatAudio \? pick\('completion_tokens', 'output_tokens'\)/, '05: chat 回体 usage 映射 completion_tokens（⑦b）');
+assert.match(voiceService, /const chatAudio = provider\.asrProtocol === 'chat-audio';/, '语音服务: 转写出站按协议分叉（⑦b）');
+assert.match(voiceService, /target = base \+ '\/chat\/completions';/, "语音服务: chat-audio 打 /chat/completions（⑦b）");
+assert.match(voiceService, /type: 'input_audio', input_audio: \{ data: 'data:' \+ mime \+ ';base64,'/, '语音服务: chat-audio 用 input_audio data URI（⑦b）');
+assert.match(voiceService, /const realIn = chatAudio \? pick\('prompt_tokens', 'input_tokens'\)/, '语音服务: chat 回体 usage 映射 prompt_tokens（⑦b）');
+assert.match(voiceService, /const realOut = chatAudio \? pick\('completion_tokens', 'output_tokens'\)/, '语音服务: chat 回体 usage 映射 completion_tokens（⑦b）');
 {
   // ⑦c 安全与记账性质【只有一份】：这些行必须落在两条协议都会经过的公共段里，不许某一支独有。
-  const fn = src05.slice(src05.indexOf('async function transcribeAudioViaProvider('));
-  const body = fn.slice(0, fn.indexOf('\n}\n') + 3);
-  assert.ok(body.includes("const base = providerBaseWithV1(provider.audioBaseUrl || provider.baseUrl);"), '05: 目标 URL 只来自配置（⑦c）');
-  assert.equal((body.match(/AbortSignal\.timeout\(120000\)/g) || []).length, 1, '05: 120s 超时只有一处（⑦c 两协议共用）');
+  const body = functionBlock(voiceService, 'transcribeAudioViaProvider');
+  assert.ok(body.includes("const base = providerBaseWithV1(provider.audioBaseUrl || provider.baseUrl);"), '语音服务: 目标 URL 只来自配置（⑦c）');
+  assert.equal((body.match(/AbortSignal\.timeout\(120000\)/g) || []).length, 1, '语音服务: 120s 超时只有一处（⑦c 两协议共用）');
   // 2026-10 工具走查重钉:成功体上限放到 4MB(长录音的转写 JSON 修前被 8KB 拦腰截断),错误体仍是 8KB —— 还是只有一处。
-  assert.equal((body.match(/const bodyCap = upstream\.ok \? 4 \* 1024 \* 1024 : 8192;/g) || []).length, 1, '05: 回体上限只有一处,错误体 8KB / 成功体 4MB（⑦c）');
-  assert.equal((body.match(/if \(upstreamText\.length > bodyCap\) upstreamText = upstreamText\.slice\(0, bodyCap\);/g) || []).length, 1, '05: 回体上限只裁一处（⑦c）');
-  assert.equal((body.match(/const snippet = redact\(/g) || []).length, 1, '05: 上游错误体脱敏只有一处（⑦c）');
-  assert.match(body, /redact\(upstreamText\.replace\([^)]*\)\)\.slice\(0, 1000\)/, '05: 顺序仍是【先脱敏再裁 1000】（⑦c，107-S1 的教训）');
-  assert.equal((body.match(/kind: 'aux', note: 'asr'/g) || []).length, 1, "05: 记账 kind:'aux' note:'asr' 只有一处（⑦c）");
+  assert.equal((body.match(/const bodyCap = upstream\.ok \? 4 \* 1024 \* 1024 : 8192;/g) || []).length, 1, '语音服务: 回体上限只有一处,错误体 8KB / 成功体 4MB（⑦c）');
+  assert.equal((body.match(/if \(upstreamText\.length > bodyCap\) upstreamText = upstreamText\.slice\(0, bodyCap\);/g) || []).length, 1, '语音服务: 回体上限只裁一处（⑦c）');
+  assert.equal((body.match(/const snippet = redact\(/g) || []).length, 1, '语音服务: 上游错误体脱敏只有一处（⑦c）');
+  assert.match(body, /redact\(upstreamText\.replace\([^)]*\)\)\.slice\(0, 1000\)/, '语音服务: 顺序仍是【先脱敏再裁 1000】（⑦c，107-S1 的教训）');
+  assert.equal((body.match(/kind: 'aux', note: 'asr'/g) || []).length, 1, "语音服务: 记账 kind:'aux' note:'asr' 只有一处（⑦c）");
   for (const code of ['asr.upstream_unreachable', 'asr.upstream', 'asr.bad_response']) {
-    assert.ok(body.includes("code: '" + code + "'"), '05: 错误码 ' + code + ' 沿用（⑦c）');
+    assert.ok(body.includes("code: '" + code + "'"), '语音服务: 错误码 ' + code + ' 沿用（⑦c）');
   }
 }
 // ⑦d 浏览器端无条件转 WAV（不看协议）
@@ -308,7 +308,7 @@ assert.ok(voiceJs.includes('session.queue = session.queue.then(() => transcribeS
 assert.ok(voiceJs.includes('const skip = silent && (!last || session.sent > 0);'), 'composer-voice: 静音段不出网（整次唯一的一段除外）');
 assert.ok(!/setInterval\([^)]*request|while \(.*recording/.test(voiceJs), 'composer-voice: 没有「每隔几秒把整段重发」的轮询式转写');
 assert.ok(voiceJs.includes("try { notify(t(key), 'err'); }"), 'composer-voice: 失败原因用看得见的 toast 说出来（修前只在悬停提示与读屏播报里）');
-assert.ok(src05.includes("logEvent({ kind: 'asr_transcribe_failed', code: failure.code,"), '05: 转写失败落日志（修前本地运行记录里零痕迹）');
+assert.ok(voiceService.includes("logEvent({ kind: 'asr_transcribe_failed', code: failure.code,"), '语音服务: 转写失败落日志（修前本地运行记录里零痕迹）');
 assert.match(voiceJs, /const upload = wav \|\| blob;/, 'composer-voice: 转码失败原样发 webm（⑦d 回退）');
 {
   // ⑦d 的要害是【代码】不许读协议（注释里说清楚「为什么无条件转」反而是要留的）。所以判的是

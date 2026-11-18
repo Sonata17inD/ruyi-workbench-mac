@@ -2207,10 +2207,10 @@ async function agentConversationContextMeta(config, session) {
   const manualModel = String(config && config.model || '').trim();
   let contextWindow = configuredConversationWindow(config, 'agent', agentCliType, manualModel);
   let contextWindowSource = contextWindow ? 'manual' : '';
-  // CLI 自己能报上下文窗口(适配器 contextStatus;Kimi = Server API 探测)时先问它;未登记的类型归 claude,不探测。
-  const nativeStatus = agentCliAdapter(agentCliType).contextStatus;
-  if (!contextWindow && nativeStatus) {
-    try { contextWindow = await nativeStatus.probeWindow(config, model); } catch { /* fall through to name table */ }
+  // Query a native model-discovery probe when the selected CLI has one.
+  const probeWindow = AGENT_CLI_CONTEXT_WINDOW_PROBES[normalizeAgentCliType(agentCliType)];
+  if (!contextWindow && probeWindow) {
+    try { contextWindow = await probeWindow(config, model); } catch { /* fall through to name table */ }
     if (contextWindow > 0) contextWindowSource = 'probe';
   }
   if (!contextWindow) {
