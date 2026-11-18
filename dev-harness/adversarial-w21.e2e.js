@@ -6,12 +6,11 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  D-P3  行内 JSON(前有含 { 的 prose)可解析。
 //  B-P2  normalizeAgentGate: 显式 false 持久化(经两轮 normalize 仍为 false,不被 reviewer autoMode 回填);
 //        编辑器条件文本 parse 支持 无node前缀 / 空path / 纯op 形态(与 evaluateWorkflowCondition 合法形态对齐)。
-// 纯函数按锚点从 server.js / app.js 逐字节抽出实跑(不 spawn 服务,不碰 dataRoot)。
+// 后端直接调用所属模块，前端按锚点抽取编辑器纯函数，不启动服务。
 'use strict';
-const { readServerSource } = require('./src-reader');
 const { readFrontendSrc } = require('./read-frontend-src.js'); // 2.2 门修复:845bb8c 拆域后条件文本函数搬到 js/agent-workflows.js,单读 app.js 锚点全失
-const fs = require('fs');
-const path = require('path');
+const { normalizeAgentWorkflow } = require('../ruyi-workbench/app/backend/agent-workflow-catalog.cjs');
+const S = require('../ruyi-workbench/app/backend/agent-quality.cjs');
 
 let failures = 0;
 function ok(cond, label) { if (cond) { console.log(`PASS ${label}`); } else { failures++; console.log(`FAIL ${label}`); } }
@@ -23,12 +22,6 @@ function cutBlock(src, startAnchor, endAnchor, what) {
   if (s < 0 || e < 0 || e <= s) { console.error(`anchor not found for ${what}: ${s}..${e}`); process.exit(1); }
   return lines.slice(s, e).join('\n');
 }
-
-// ---- 抽取 server.js 纯函数 ----
-const serverSrc = readServerSource();
-const blockB = cutBlock(serverSrc, 'function normalizeWorkflowCondition(', 'function projectAgentWorkflowsFile(', 'normalize fns');
-const S = { ...require('../ruyi-workbench/app/backend/agent-quality.cjs') };
-new Function('exports', 'const { sanitizeAgentOutputSchema, normalizeAgentGate } = exports;\n' + blockB + '\nexports.normalizeAgentWorkflow=normalizeAgentWorkflow;')(S);
 
 // ---- 抽取前端条件文本纯函数(聚合读:拆域后在 js/agent-workflows.js) ----
 const appSrc = readFrontendSrc();
@@ -121,9 +114,9 @@ const p2a = [
   ok(S.normalizeAgentGate(false, 'reviewer') === false, 'B-P2 normalizeAgentGate(false, reviewer) → false(不回填)');
   const auto = S.normalizeAgentGate(null, 'reviewer');
   ok(auto && auto.mode === 'review', 'B-P2 normalizeAgentGate(null, reviewer) → 角色自动门(内置模板默认保持)');
-  const wf1 = S.normalizeAgentWorkflow({ id: 'g-test', title: 'G', nodes: [{ id: 'review', task: 't', role: 'reviewer', gate: false }] }, { source: 'personal' });
+  const wf1 = normalizeAgentWorkflow({ id: 'g-test', title: 'G', nodes: [{ id: 'review', task: 't', role: 'reviewer', gate: false }] }, { source: 'personal' });
   ok(wf1 && wf1.nodes[0].gate === false, 'B-P2 保存期 normalize: reviewer 节点 gate:false 持久为 false');
-  const wf2 = S.normalizeAgentWorkflow(JSON.parse(JSON.stringify(wf1)), { source: 'personal' });
+  const wf2 = normalizeAgentWorkflow(JSON.parse(JSON.stringify(wf1)), { source: 'personal' });
   ok(wf2 && wf2.nodes[0].gate === false, 'B-P2 launch 期二次 normalize: gate 仍为 false(不被 autoMode 复活)');
 }
 

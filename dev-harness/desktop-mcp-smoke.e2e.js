@@ -91,10 +91,16 @@ const { McpStdioClient, detectDesktopMcp, desktopMcpFromInstalledRoot, desktopPy
   catch (e) { console.log('SKIP real desktop MCP smoke — could not start (needs target machine / python deps): ' + (e && e.message || e)); }
   if (started) {
     const names = new Set(client.listTools().map(tool => tool.name));
-    ok(toolCount >= 80, 'real desktop MCP exposes the Mac/shared tool catalog (got ' + toolCount + ')');
-    for (const name of ['diagnostics', 'run_command', 'hotkey', 'ocr_find_text']) {
-      ok(names.has(name), 'real desktop MCP exposes ' + name);
-    }
+    const diagnostics = await client.callTool('diagnostics', {});
+    const capture = diagnostics.capabilities?.['desktop.capture'];
+    const ocr = diagnostics.capabilities?.['desktop.ocr'];
+    ok(diagnostics.ok && diagnostics.tool_count >= 80 && toolCount >= 50 && toolCount <= diagnostics.tool_count,
+      `real MCP exposes the shared catalog and eligible Mac tools (${toolCount} listed / ${diagnostics.tool_count} registered)`);
+    ok(names.has('diagnostics') && names.has('run_command'), 'real desktop MCP exposes the shared diagnostics and shell tools');
+    ok(typeof capture?.inputReady === 'boolean' && names.has('hotkey') === capture.inputReady,
+      'hotkey discovery matches current native input readiness');
+    ok(typeof ocr?.screenReady === 'boolean' && names.has('ocr_find_text') === ocr.screenReady,
+      'screen OCR discovery matches current native OCR readiness');
     if (names.has('run_command')) {
       const commandProbe = await client.callTool('run_command', { command: 'echo ACC_RUN_COMMAND_OK', timeout: 10 });
       ok(/ACC_RUN_COMMAND_OK/.test(JSON.stringify(commandProbe)) && !/timed out|timeout/i.test(String(commandProbe.error || '')),

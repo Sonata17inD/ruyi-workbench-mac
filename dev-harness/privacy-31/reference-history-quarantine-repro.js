@@ -6,22 +6,24 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const temp = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(temp, 'ruyi-reference-history-'));
 const data = path.join(root, 'data'), work = path.join(root, 'work'); fs.mkdirSync(data); fs.mkdirSync(work);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runSessionTurn', 'runSubAgentCore', 'createSession', 'loadSession', 'readConfig', 'mutateConfig', 'TOOL_HANDLERS'], { withEval: true });
+const { fixture, loadWithProviderStream } = require('../lib/privacy-test-fixture');
+const { loadServerInternals } = require('../lib/server-internals');
+const state = { steps: [], wire: [], executions: [] };
+const app = loadWithProviderStream(() => loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runSessionTurn',
+  'runSubAgentCore', 'createSession', 'loadSession', 'readConfig', 'mutateConfig', 'TOOL_HANDLERS'], { withEval: true }),
+PrivacyGateway => async ({ body }) => {
+  const projected = await PrivacyGateway.beforeRequest(body);
+  PrivacyGateway.assertPolicyAvailable();
+  state.wire.push(structuredClone(projected));
+  const step = state.steps.shift();
+  if (!step) throw Error('synthetic_model_steps_exhausted');
+  return step;
+});
 const protocol = process.argv.find(arg => arg.startsWith('--protocol='))?.split('=')[1] || 'chat';
 if (!['chat', 'responses', 'anthropic'].includes(protocol)) throw Error('synthetic_protocol_invalid');
-const f = require('../lib/privacy-test-fixture').fixture();
+const f = fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
-const state = app.__eval(`(() => {
-  const state = { steps: [], wire: [], executions: [] };
-  detectClaudePath = () => ''; detectKimiPath = () => '';
-  openAiStreamOnce = async function(options) {
-    const projected = await PrivacyGateway.beforeRequest(options.body);
-    PrivacyGateway.assertPolicyAvailable(); state.wire.push(structuredClone(projected));
-    const step = state.steps.shift(); if (!step) throw Error('synthetic_model_steps_exhausted');
-    return step;
-  };
-  return state;
-})()`);
+app.__eval("detectClaudePath = () => ''; detectKimiPath = () => '';");
 const writeTool = app.TOOL_HANDLERS.file_write;
 const writeFile = writeTool.handler;
 writeTool.handler = (args, context) => {

@@ -9,13 +9,12 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ③ 修改文件 → git_diff → 输出含 `+` 新行与 `-` 旧行;
 //   ④ 走私探针:git_diff {path:'--output=<临时文件>'} → 该文件不存在(`--` 分隔防御生效)、且不崩溃;
 //   ⑤ git 仓库外目录调 git_status → 人话引导错误(非崩溃);
-//   ⑥ 静态:server.js 的 git_commit tier 为 exec;app.js 含 .diff-view 渲染(textContent 构建);
+//   ⑥ 静态:git_commit tier 为 exec 且需要 Git 和进程监督;app.js 含 .diff-view 渲染(textContent 构建);
 //      styles.css 的 .diff-add/.diff-del 只用令牌 / color-mix。
 //
 // 末行判定固定为 `GIT E2E: ALL PASS`(任何失败打印明细并以非零码退出)。finally 清临时 HOME/仓库。
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -62,17 +61,17 @@ function gitAvailable() {
 
   // ══════════ 静态断言(不依赖 git,总是跑)══════════
   {
-    const server = readServerSource();
     const gitSource = fs.readFileSync(path.join(WB, 'app/backend/git-tools.cjs'), 'utf8');
     const runtimeSource = fs.readFileSync(path.join(WB, 'app/backend/git-runtime.cjs'), 'utf8');
     const { NATIVE_TOOL_TIER } = require('../ruyi-workbench/app/backend/native-tool-tiers.cjs');
+    const { TOOL_REQUIRES } = require('../ruyi-workbench/app/backend/tool-capability-policy.cjs');
     const appjs = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆分后函数不再只在 app.js)
     const css = require('./read-frontend-css.js').readFrontendCss();
 
     ok(NATIVE_TOOL_TIER.git_commit === 'exec', "⑥ git_commit === 'exec'");
     ok(NATIVE_TOOL_TIER.git_diff === 'read' && NATIVE_TOOL_TIER.git_log === 'read', "⑥ git_diff/git_log === 'read'");
     ok(NATIVE_TOOL_TIER.git_status === 'read', "⑥ git_status === 'read'");
-    ok(/git_commit:\s*\{\s*requires:\s*\['gitCli',\s*'processSupervisor'\]/.test(server), '⑥ TOOL_REQUIRES git_commit requires Git and process supervision');
+    ok(JSON.stringify(TOOL_REQUIRES.git_commit?.requires) === '["gitCli","processSupervisor"]', '⑥ TOOL_REQUIRES git_commit requires Git and process supervision');
     // ⑥d 安全加固(对抗复核 CRITICAL防回潮,git 缺失机器也守):runGit 前置 GIT_SAFE_FLAGS 中和仓库自带
     // core.fsmonitor / diff.external;gitDiff 加 --no-textconv。全部覆盖仓库配置的代码执行面。
     ok(/GIT_SAFE_FLAGS\s*=\s*\[[^\]]*core\.fsmonitor=/.test(runtimeSource), '⑥ Git 运行时关闭 core.fsmonitor');

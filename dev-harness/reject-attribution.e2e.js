@@ -20,7 +20,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      code-review coverage here — this asserts the exact guard text.
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -126,7 +125,7 @@ async function runRejectScenario({ label, wording, ok }) {
   // no-tools 400 is not reproducible offline). Assert the fix keeps the stream_options retry reachable
   // ONLY when the 400 is not a tools/function rejection, guarded by `requestHasTools`.
   {
-    const src = readServerSource();
+    const src = fs.readFileSync(path.join(WB, 'app/backend/provider-stream.cjs'), 'utf8');
     // String.raw keeps the single backslash in `not\s*support` exact (a regex literal here is brittle).
     ok(src.includes('const requestHasTools = Array.isArray(body.tools) && body.tools.length > 0;'),
       '(no-tools) requestHasTools guard present (tools-first branch cannot fire for tool-less requests)');

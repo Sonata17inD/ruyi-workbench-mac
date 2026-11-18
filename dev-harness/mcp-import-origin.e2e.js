@@ -16,7 +16,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   否则「跳过」可能是把整条同步弄坏了，而不是按来源跳过。
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -134,7 +133,6 @@ async function bootOnce(oldToken) {
     ok(addJsonSeen('origin-x'), `第四次启动:X 恢复同步，日志里有 mcp add-json origin-x（日志：${JSON.stringify(logText().trim().slice(0, 300))}）`);
 
     // ── 形状锁 ──
-    const src = readServerSource();
     const readBackend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
     const secrets = readBackend('config-secrets');
     const importSource = readBackend('cli-mcp-import');
@@ -149,7 +147,7 @@ async function bootOnce(oldToken) {
       's autoImportClaudeCodeMcp 给新导入条目按来源打 origin(~/.claude.json 来的是 claude-code)');
     ok(/if \(fromClaudeCode\.has\(String\(s\.id\)\)\) \{ skippedIds\.push/.test(syncSource),
       's syncMcpServersToClaude 跳过 claude-code 来源');
-    ok(/delete clean\.origin;/.test(src), 's /api/mcp upsert 落盘时清掉 origin（用户接管）');
+    ok(/delete clean\.origin;/.test(readBackend('mcp-connector-settings')), 's /api/mcp upsert 落盘时清掉 origin（用户接管）');
     // W2:Kimi 现在也是来源 —— Kimi 同步只多了一件事:从 Kimi 导进来的(origin kimi)不写回、不接管;其余逐字不变。
     const { functionBlock } = require('./lib/source-slice');
     const kimi = functionBlock(syncSource, 'syncMcpServersToKimiNow');

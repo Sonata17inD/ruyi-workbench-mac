@@ -5,6 +5,9 @@ const path = require('path');
 const { startBrowserFixture, sleep } = require('./lib/browser-fixture');
 const { createRunner } = require('./lib/harness');
 const t = createRunner('MACOS CAPABILITY POPOVER');
+const executionReady = ['process.supervisor', 'shell.exec', 'shell.session']
+  .map(id => `.cap-pop [data-capability="${id}"] .cap-v`);
+const execution = JSON.stringify(executionReady.join(', '));
 (async () => {
   let fx;
   try {
@@ -17,10 +20,16 @@ const t = createRunner('MACOS CAPABILITY POPOVER');
       window.capDomain.openCapPopover(document.querySelector('#appGearBtn'));
       return true;
     })()`);
-    const ready = await fx.waitForEval(`document.querySelectorAll('.cap-pop [data-capability] .cap-v.ok').length===3`);
+    const ready = await fx.waitForEval(`document.querySelectorAll(${execution}).length===3 && [...document.querySelectorAll(${execution})].every(node=>node.classList.contains('ok'))`);
     t.ok(ready, 'real helper API renders three ready execution capabilities in the opened popover');
-    t.ok(await fx.evaluate(`(()=>{const text=document.querySelector('.cap-pop').textContent;return text.includes('文件、文档与浏览器')&&text.includes('当前 Mac 桌面后端尚未实现')&&!text.includes('DOM 浏览器自动化可用')})()`),
-      'Mac popover separates the shared ACC connection from unsupported desktop and unverified DOM control');
+    t.ok(await fx.evaluate(`(()=>{
+      const pop=document.querySelector('.cap-pop');
+      const dm=window.capBaseline.desktopMcp;
+      return pop.textContent.includes('文件、文档与浏览器') && ['capture','input','accessibility','ocr','screenOcr'].every(id=>{
+        const row=pop.querySelector('[data-capability="'+id+'"]');
+        return row && row.dataset.reasonCode===(dm[id]?.reasonCode || '') && Boolean(row.querySelector('.cap-v.ok'))===(dm[id]?.ready===true);
+      }) && !pop.querySelector('[data-browser-capability="dom"] .cap-v.ok');
+    })()`), 'Mac popover reports native capabilities individually and keeps unverified DOM control separate');
     await fx.waitForEval(`!document.documentElement.dataset.vt && document.querySelector('.popover').getAnimations({subtree:true}).every(animation=>animation.playState==='finished')`);
     const capture = async name => {
       if (!process.env.RUYI_E2E_SCREENSHOT_DIR) return;
@@ -44,18 +53,19 @@ const t = createRunner('MACOS CAPABILITY POPOVER');
       window.capDomain.fetchCapabilities(true);
       return true;
     })()`);
-    t.ok(await fx.waitForEval(`document.querySelectorAll('.cap-pop [data-capability] .cap-v').length===3 && [...document.querySelectorAll('.cap-pop [data-capability] .cap-v')].every(node=>node.textContent==='检查中')`),
+    t.ok(await fx.waitForEval(`document.querySelectorAll('.cap-pop [data-capability] .cap-v').length===8 && [...document.querySelectorAll('.cap-pop [data-capability] .cap-v')].every(node=>node.textContent==='检查中')`),
       'in-flight refresh displays checking instead of stale ready status');
     await fx.evaluate('window.resolveCap(0,false);true');
-    t.ok(await fx.waitForEval(`document.querySelectorAll('.cap-pop [data-capability] .cap-v.bad').length===3`),
+    const executionUnavailable = `document.querySelectorAll(${execution}).length===3 && [...document.querySelectorAll(${execution})].every(node=>node.classList.contains('bad'))`;
+    t.ok(await fx.waitForEval(executionUnavailable),
       'unavailable response updates the already-open popover');
     await capture('unavailable');
     await fx.evaluate('window.capDomain.fetchCapabilities(true);window.capDomain.fetchCapabilities(true);true');
     await fx.waitForEval('window.capRequests.length===3');
     await fx.evaluate('window.resolveCap(2,false);true');
-    await fx.waitForEval(`document.querySelectorAll('.cap-pop [data-capability] .cap-v.bad').length===3`);
+    await fx.waitForEval(executionUnavailable);
     await fx.evaluate('window.resolveCap(1,true);true'); await sleep(100);
-    t.ok(await fx.evaluate(`document.querySelectorAll('.cap-pop [data-capability] .cap-v.bad').length===3`),
+    t.ok(await fx.evaluate(executionUnavailable),
       'late older response cannot overwrite the latest unavailable state');
     await fx.evaluate('window.capDomain.fetchCapabilities(true);true');
     await fx.waitForEval('window.capRequests.length===4');
@@ -69,8 +79,8 @@ const t = createRunner('MACOS CAPABILITY POPOVER');
     await fx.evaluate(`(async()=>{(await import('/js/popover.js')).closePopover();window.fetch=window.capOriginalFetch;return true})()`);
     t.ok(await fx.evaluate(`!document.querySelector('.cap-pop')`), 'closing popover removes the active capability view');
     await fx.evaluate(`(async()=>{await (await import('/js/i18n.js')).setLocale('en-US');window.capDomain.openCapPopover(document.querySelector('#appGearBtn'));return true})()`);
-    t.ok(await fx.waitForEval(`(()=>{const text=document.querySelector('.cap-pop')?.textContent||'';return text.includes('Files, documents and browser')&&text.includes('Mac desktop backend is not implemented')})()`),
-      'English popover reports the same shared and unsupported capability boundaries');
+    t.ok(await fx.waitForEval(`(()=>{const text=document.querySelector('.cap-pop')?.textContent||'';return text.includes('Files, documents and browser')&&text.includes('Screen capture')&&text.includes('Keyboard and mouse input')})()`),
+      'English popover labels the shared tools and native capabilities');
     t.ok(await fx.evaluate(`(async()=>{const skills=(await import('/js/skills-memory.js')).createSkillsMemoryDomain({});const reasons=['当前平台尚未实现 OCR 后端','当前平台尚未实现桌面操控后端','后端未就绪或系统授权已拒绝','需要可用的 OCR 后端','需要桌面操控后端','系统浏览器只接收网址；填表需要桌面后端或配置 DOM 浏览器目标','需要配置浏览器自动化并预备 Playwright 与浏览器运行时'];return reasons.every(reason=>{const translated=skills.playbookDisplayUnavailableReason({unavailableReason:reason});return translated!==reason&&!/[\\u3400-\\u9fff]/.test(translated)})})()`),
       'all new capability reasons are translated by the actual English Playbook UI');
     await fx.waitForEval(`!document.documentElement.dataset.vt && document.querySelector('.popover').getAnimations({subtree:true}).every(animation=>animation.playState==='finished') && [...document.querySelectorAll('.cap-pop [data-capability] .cap-v')].every(node=>node.textContent!=='Checking')`);

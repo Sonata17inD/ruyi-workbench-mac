@@ -247,7 +247,9 @@ function spawnWb() {
     // 那句已经收编进三引擎共用的 mergeMissionBeforeSave。改钉【哪件事必须成立】（纪律 5）：
     // 收尾落盘前先把磁盘账本合并进来，并且盖章（finalizeMissionAfterTurn）排在合并【之后】，
     // 否则章会被合并连同 mission 整份换掉。顺序判据用切片位置，不钉行号也不钉写法。
-    const claudeTail = src.slice(src.indexOf("if (stderrText.trim()) {\n    session.messages.push({ role: 'system'"));
+    const cliTurn = backendSource('agent-cli-turn.cjs');
+    const tailAt = cliTurn.indexOf('if (stderrText.trim()) {');
+    const claudeTail = tailAt >= 0 ? cliTurn.slice(tailAt) : '';
     const mergeAt = claudeTail.indexOf('mergeMissionBeforeSave(session, onDisk);');
     const stampAt = claudeTail.indexOf("if (session.__missionFinalizeHow) {");
     ok(mergeAt > 0 && stampAt > mergeAt && /async function finalizeMissionAfterTurn\(session, how\)/.test(src),

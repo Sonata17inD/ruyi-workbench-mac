@@ -392,14 +392,15 @@ try {
   const src = readServerSource();
   const inbox = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox.cjs'), 'utf8');
   const admission = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-thread-admission.cjs'), 'utf8');
+  const overlay = fs.readFileSync(path.join(WB, 'app', 'backend', 'pretender-live-overlay.cjs'), 'utf8');
   ok(/function stewardApplyPresenceGate\(events\)/.test(inbox) && !/function stewardApplyPresenceGate\(/.test(src),
     'S3 收件箱服务持有唯一的在场门');
   ok(/function stewardSeatedByUser\(sessionId\)/.test(admission) && !/function stewardSeatedByUser\(/.test(src),
     'S4 线程准入服务持有唯一的工具在场判据');
-  ok(/EventStreamHooks\.presenceSnapshot/.test(src) && !/13r[^\n]*stewardPresenceSnapshot\(\)[^\n]*13i/.test(src),
-    'S5 三个消费面都经 EventStreamHooks 延迟绑定取在场(不直引 13r 的符号 = 零前向边)');
+  ok([inbox, admission, overlay].every(source => /EventStreamHooks\.presenceSnapshot\(\)/.test(source) && !/stewardPresenceSnapshot/.test(source)),
+    'S5 收件箱、线程准入、实时叠加均经 EventStreamHooks 读取在场状态');
   const presenceGuards = source => (source.match(/typeof EventStreamHooks\.presenceSnapshot === 'function'/g) || []).length;
-  ok(presenceGuards(inbox) === 1 && presenceGuards(admission) === 1 && presenceGuards(src) === 2,
+  ok(presenceGuards(inbox) === 1 && presenceGuards(admission) === 1 && presenceGuards(overlay) === 2,
     'S6 四个消费面各自带 typeof 守卫(钩子未填充时 fail-open,不反噬)');
 } finally {
   try { if (seat) seat.close(); } catch { /* ignore */ }

@@ -19,4 +19,12 @@ function gateway(root, f) {
   return service;
 }
 
-module.exports = { fixture, gateway, clone };
+function loadWithProviderStream(load, createStream) {
+  const providerStream = require('../../ruyi-workbench/app/backend/provider-stream.cjs');
+  const original = providerStream.createProviderStream;
+  providerStream.createProviderStream = ({ PrivacyGateway }) => createStream(PrivacyGateway);
+  try { return load(); }
+  finally { providerStream.createProviderStream = original; }
+}
+
+module.exports = { fixture, gateway, clone, loadWithProviderStream };

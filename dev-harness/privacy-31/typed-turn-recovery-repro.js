@@ -7,25 +7,27 @@ Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(p
 const server = path.resolve(__dirname, '../../ruyi-workbench/app/server.js');
 const candidate = process.argv.find(value => value.startsWith('--candidate='))?.slice(12);
 const names = ['PrivacyCore', 'PrivacyGateway', 'runSessionTurn', 'runSubAgentCore', 'createSession', 'loadSession', 'readConfig', 'mutateConfig'];
-let app;
-if (candidate) {
+const { fixture, loadWithProviderStream } = require('../lib/privacy-test-fixture');
+const { loadServerInternals } = require('../lib/server-internals');
+const state = { steps: [], wire: [] };
+const createStream = gateway => async ({ body }) => {
+  const sent = await (gateway.beforeModelRequest || gateway.beforeRequest)(body);
+  state.wire.push(structuredClone(sent));
+  const step = state.steps.shift();
+  if (!step) throw Error('synthetic_steps_exhausted');
+  return step;
+};
+const app = loadWithProviderStream(() => {
+  if (!candidate) return loadServerInternals(names, { withEval: true });
   const { resolveRuntimeComposition } = require('../src-reader');
   const mod = new Module(server, module); mod.filename = server; mod.paths = Module._nodeModulePaths(path.dirname(server));
-  mod._compile(fs.readFileSync(resolveRuntimeComposition(candidate), 'utf8') + '\nmodule.exports.__internals={' + names.join(',') + '};module.exports.__internals.__eval=code=>eval(code);', server);
-  app = mod.exports.__internals;
-} else app = require('../lib/server-internals').loadServerInternals(names, { withEval: true });
-const f = require('../lib/privacy-test-fixture').fixture();
+  mod._compile(fs.readFileSync(resolveRuntimeComposition(candidate), 'utf8') + '\nmodule.exports.__internals={' + names.join(',') + '};module.exports.__internals.__eval=code=>eval(code);module.exports.__internals.setLegacyStream=stream=>{openAiStreamOnce=stream;};', server);
+  return mod.exports.__internals;
+}, createStream);
+const f = fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
-const state = app.__eval(`(() => {
-  const state = { steps: [], wire: [] };
-  detectClaudePath = () => ''; detectKimiPath = () => '';
-  openAiStreamOnce = async ({ body }) => {
-    const sent = await (PrivacyGateway.beforeModelRequest || PrivacyGateway.beforeRequest)(body);
-    state.wire.push(structuredClone(sent));
-    const step = state.steps.shift(); if (!step) throw Error('synthetic_steps_exhausted'); return step;
-  };
-  return state;
-})()`);
+app.__eval("detectClaudePath = () => ''; detectKimiPath = () => '';");
+app.setLegacyStream?.(createStream(app.PrivacyGateway));
 const protocol = process.argv.find(arg => arg.startsWith('--protocol='))?.split('=')[1] || 'chat';
 if (!['chat', 'responses', 'anthropic'].includes(protocol)) throw Error('protocol_invalid');
 const text = value => ({ text: value, reasoning: '', toolCalls: [], finishReason: 'stop' });

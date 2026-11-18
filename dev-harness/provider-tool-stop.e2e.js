@@ -2,6 +2,7 @@
 require('./lib/self-isolate-home');
 const fs = require('fs');
 const fsp = require('fs/promises');
+const { getEventListeners } = require('node:events');
 const os = require('os');
 const path = require('path');
 const wt = require('worker_threads');
@@ -25,7 +26,7 @@ async function until(check) {
 (async () => {
   try {
     S = loadServerInternals(['runOpenAiTurn', 'createSession', 'defaultConfig', 'stopSession', 'activeChildren',
-      'TOOL_HANDLERS', 'withFileToolWriteLock', 'FileMutationQueue', 'fileToolWriteLockKey', 'journalReadIndex', 'journalDir']);
+      'TOOL_HANDLERS', 'withFileToolWriteLock', 'journalReadIndex', 'journalDir']);
     for (const name of ['file_list', 'file_write']) {
       const handler = S.TOOL_HANDLERS[name].handler; handlers.set(name, handler);
       S.TOOL_HANDLERS[name].handler = (args, ctx) => {
@@ -75,16 +76,18 @@ async function until(check) {
     let release;
     const held = S.withFileToolWriteLock([target], null, () => new Promise(resolve => { release = resolve; }));
     await until(() => release);
-    const previous = S.FileMutationQueue.pendingCount;
     let queued;
     try {
       queued = await start({ name: 'file_write', args: { path: target, content: 'changed' } });
-      await until(() => S.FileMutationQueue.pendingCount !== previous);
+      await until(() => {
+        const signal = signals.get('file_write');
+        return signal && getEventListeners(signal, 'abort').length > 0;
+      });
       t.ok(S.activeChildren.get(queued.session.id)?.interruptToolWait === null, 'file tools retain their existing steer and time-budget interruption boundary');
       t.ok(S.stopSession(queued.session.id), 'normal Stop accepts the queued write turn');
     } finally { release(); await held; }
     await queued.turn;
-    await until(() => !S.FileMutationQueue.busy && S.FileMutationQueue.pendingCount === 0);
+    await S.withFileToolWriteLock([target], null, () => {});
     t.ok(signals.get('file_write')?.aborted && fs.readFileSync(target, 'utf8') === 'original' && (await S.journalReadIndex(queued.session.id)).length === 0,
       'main-turn Stop cancels a queued write before target or checkpoint mutation');
 
@@ -96,7 +99,7 @@ async function until(check) {
     };
     committing = await start({ name: 'file_write', args: { path: committed, content: 'after' } });
     await committing.turn;
-    await until(() => !S.FileMutationQueue.busy && S.FileMutationQueue.pendingCount === 0);
+    await S.withFileToolWriteLock([committed], null, () => {});
     t.ok(commitStopped && fs.readFileSync(committed, 'utf8') === 'after', 'late Stop preserves an already committed write');
     const index = await S.journalReadIndex(committing.session.id);
     const entry = index.find(row => row.path === committed && row.tool === 'file_write');
