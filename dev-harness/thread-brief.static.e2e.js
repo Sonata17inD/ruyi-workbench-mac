@@ -46,10 +46,9 @@ const config = readSrc('../backend/config-schema.cjs');
 const search = readSrc('../backend/session-search.cjs');
 const sessionRoutes = readSrc('../backend/session-routes.cjs');
 const steward = readSrc('../backend/steward-thread-queries.cjs');
-// 117 波 T2(32 号文 §5):13h 拆成 13m/13n/13o/13p/13q/13h 六个文件(纯搬家),总览行装配与
-// preroute 索引行都搬进了 13o-steward-runner-prompt.js。这里要钉的事实是「总览行带 displayTitle、
-// preroute 索引行的 title 仍是原话」,与它住哪个文件无关,故与上面 13g 族同办法 —— 改读整族。
+// 总览行使用 displayTitle，预路由索引保留原始标题。
 const runner = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+  '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
   '13p-steward-runner-actions.js', '../backend/steward-conversation-replies.cjs', '../backend/steward-inbox-prompt.cjs',
   '13q-steward-runner-turn.js', '13h-steward-runner.js']
   .map(readSrc).join('\n');

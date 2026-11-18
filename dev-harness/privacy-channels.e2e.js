@@ -7,6 +7,7 @@ const { killOwnTree } = require('./lib/kill-own-tree');
 const { EventEmitter } = require('node:events');
 const { Readable } = require('node:stream');
 const { createAttachmentEnrichment } = require('../ruyi-workbench/app/backend/attachment-enrichment.cjs');
+const { createStewardPreroute } = require('../ruyi-workbench/app/backend/steward-preroute.cjs');
 const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-openai-provider');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-channels-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
@@ -252,16 +253,21 @@ async function main() {
     t.ok(offIndex.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F9 disabled privacy preserves exact newlines, angle brackets and alias spelling in the actual preroute index');
     // Hold the real projection snapshot stable: unrelated index rebuilds must not
     // accidentally hide a missing privacy component in the preroute cache key.
-    const restoreIndex = await app.__eval('(async () => { const original = getPretenderProjectionIndex, snapshot = await original(); getPretenderProjectionIndex = async () => snapshot; return () => { getPretenderProjectionIndex = original; }; })()');
-    try {
-      const cachedOff = await app.stewardPrerouteIndexRows(await app.readConfig());
-      await policy('enhanced');
-      const onIndex = await app.stewardPrerouteIndexRows(await app.readConfig());
-      await policy('off');
-      const offAgain = await app.stewardPrerouteIndexRows(await app.readConfig());
-      t.ok(cachedOff.find(row => row.sessionId === offHead.id)?.summary === offSummary && !onIndex.find(row => row.sessionId === offHead.id)?.summary.includes('[[RUYI_PVT:')
-        && offAgain.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F10 cached preroute rows follow both privacy transitions with a stable real index and unchanged source head');
-    } finally { restoreIndex(); }
+    const snapshot = await app.__eval('getPretenderProjectionIndex()');
+    const dependencies = app.__eval('({ stewardThreadDigestRows, stewardForeignProjection })');
+    const { stewardPrerouteIndexRows } = createStewardPreroute({
+      dependencies: { ...dependencies, getPretenderProjectionIndex: async () => snapshot },
+    });
+    const offConfig = await app.readConfig();
+    const cachedOff = await stewardPrerouteIndexRows(offConfig);
+    t.ok(await stewardPrerouteIndexRows(offConfig) === cachedOff, 'F10a stable index and privacy mode reuse cached preroute rows');
+    await policy('enhanced');
+    const onIndex = await stewardPrerouteIndexRows(await app.readConfig());
+    await policy('off');
+    const offAgain = await stewardPrerouteIndexRows(await app.readConfig());
+    const onRow = onIndex.find(row => row.sessionId === offHead.id);
+    t.ok(cachedOff.find(row => row.sessionId === offHead.id)?.summary === offSummary && onRow && !onRow.summary.includes('[[RUYI_PVT:')
+      && offAgain.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F10 cached preroute rows follow both privacy transitions with a stable real index and unchanged source head');
   } catch (error) { t.fail('fixture failure: ' + String(error.stack || error.code || error.message).slice(0, 600)); }
   finally {
     if (mcp?.child) killOwnTree(mcp.child);

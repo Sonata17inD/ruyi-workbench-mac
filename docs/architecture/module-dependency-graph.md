@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2085 | 3114 | 597 | 14 | 0 | 0 |
+| 87 | 2077 | 3111 | 597 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -91,7 +91,7 @@
 | 73 | `13l-steward-ops.js` | transport | 28 | 127 | 22 |
 | 74 | `13g-steward.js` | transport | 17 | 64 | 11 |
 | 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
-| 76 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 16 |
+| 76 | `13o-steward-runner-prompt.js` | transport | 14 | 64 | 16 |
 | 77 | `13p-steward-runner-actions.js` | transport | 16 | 63 | 12 |
 | 78 | `13q-steward-runner-turn.js` | transport | 13 | 83 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
@@ -570,7 +570,7 @@
 | `13m-steward-runner-base.js` | `04-permission-runtime.js` | backward | `assertSessionExecutionOwner`, `stopSession` |
 | `13m-steward-runner-base.js` | `06-provider-engine.js` | backward | `ERROR_CLASSES` |
 | `13m-steward-runner-base.js` | `06i-steward-core.js` | backward | `STEWARD_PERMISSION_MODE`, `STEWARD_SESSION_ID`, `STEWARD_SESSION_TITLE`, `stewardSanitizeText`, `waitReasonFor` |
-| `13o-steward-runner-prompt.js` | `00-boot.js` | backward | `fsp`, `logEvent`, `path`, `redact`, `text` |
+| `13o-steward-runner-prompt.js` | `00-boot.js` | backward | `logEvent`, `redact` |
 | `13o-steward-runner-prompt.js` | `01-config.js` | backward | `readConfig`, `safeSessionId` |
 | `13o-steward-runner-prompt.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `13o-steward-runner-prompt.js` | `02-session-store.js` | backward | `listSessions`, `readMissionContainer`, `sessionDisplayTitle`, `sessionMeta`, `sessionMetaIsSteward`, `sessionMissionId` |

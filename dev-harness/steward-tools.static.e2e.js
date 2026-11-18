@@ -122,13 +122,17 @@ const settingsTools = '../backend/steward-settings-tools.cjs';
 const contentTools = '../backend/steward-content-tools.cjs';
 const decisionTools = '../backend/steward-decision-tools.cjs';
 const actReceipts = '../backend/steward-act-receipts.cjs';
+const actionContract = '../backend/steward-action-contract.cjs';
+const promptMemory = '../backend/steward-prompt-memory.cjs';
+const workspaceOverview = '../backend/steward-workspace-overview.cjs';
+const preroute = '../backend/steward-preroute.cjs';
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
   .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs',
     '../backend/steward-thread-create.cjs', '../backend/steward-thread-launch.cjs',
     threadEdits, threadAdmission, '../backend/steward-thread-delivery.cjs',
     '../backend/steward-inbox.cjs', '../backend/steward-status-tools.cjs', decisionTools,
     '../backend/steward-notification-tool.cjs', '../backend/steward-external-read-tools.cjs',
-    memoryTools, settingsTools, contentTools, actReceipts).sort();
+    memoryTools, settingsTools, contentTools, actReceipts, actionContract, workspaceOverview, preroute).sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('../backend/provider-tool-offer.cjs');
 const src11 = read('11-native-tools.js');
@@ -140,6 +144,8 @@ const src13h = read('13h-steward-runner.js');
 // 与 STEWARD_TOOL_LABELS)随共享常量块搬进 13m;⑦ 的 userPressed 三处分落 13m(注释)/13q(唯一置 true)
 // /13h(act 路由那段「不置」的注释)。故这两组判据改读确切的那个文件与整族,期望值一字未改。
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+  actionContract, workspaceOverview, preroute, promptMemory,
+  '../backend/steward-system-prompt.cjs', '../backend/steward-thread-overview.cjs',
   '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', actReceipts, '13h-steward-runner.js'];
 
 /* ═════════════ ① 四处登记一致(真实产物内省,不靠 grep 形状) ═════════════ */
@@ -263,7 +269,7 @@ ok(srv.stewardActLabel('steward_thread_stop', {}) === '暂停这条线程',
 {
   // 批 3·D:①g 改成行为 —— 真调 stewardNormalizeAct:只读工具(不在表里)画不出按钮,写类工具照常画。
   // ①g2 的审计落在异步日志流里,静态件里读不回来,仍钉在函数体上(公共切片取整个函数,不再按 2600 字截)。
-  const body = functionBlock(read('13o-steward-runner-prompt.js'), 'stewardNormalizeAct');
+  const body = functionBlock(read(actionContract), 'stewardNormalizeAct');
   ok(body.length > 200, '①g0 找得到 stewardNormalizeAct(找不到 = 本条静默失效)');
   const readOnlyActs = ['steward_threads_search', 'steward_schedule_list', 'steward_skills'].filter(actable);
   ok(!actable('steward_bot_setup') && srv.stewardNormalizeAct({kind:'external_bot_setup',connectionId:'forged'}) === null, '67 setup cannot become an executable act or a model-forged navigation');
@@ -511,14 +517,14 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 }
 
 // ⑨ 117w-W1 提交③(27 号文 §11.19.2 + §11.19.7 裁决):候选表上限【一处定义、两处读】。
-// 被钉的事实:06i 定义 STEWARD_WORKSPACE_TABLE_MAX,工作区服务的 cwd 拒绝文案与 13o 的候选表投影都读它。
+// 共享常量 STEWARD_WORKSPACE_TABLE_MAX 同时约束工作区拒绝文案和候选表投影。
 // 为什么静态与行为两层都要:steward-tools.e2e 的 O6 用 20 行夹具比较两个【运行期产出】,能抓住
 // 「有人把其中一处改小」;「有人把其中一处改大」在行为层要造一张比上限还大的表才看得见,不是
 // 这条锁的形状 —— 那一半靠这里的源码锁。
 {
   const src06i = read('../backend/steward-core.cjs');
   const workspaceSource = read('../backend/steward-workspaces.cjs');
-  const src13o = read('13o-steward-runner-prompt.js');
+  const overviewSource = read(workspaceOverview);
   const defs = (src06i.match(/const STEWARD_WORKSPACE_TABLE_MAX = /g) || []).length;
   ok(defs === 1, `⑨ STEWARD_WORKSPACE_TABLE_MAX 在 06i 只定义一次(got ${defs})`);
   const others = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => f !== '06i-steward-core.js' && /const STEWARD_WORKSPACE_TABLE_MAX/.test(read(f)));
@@ -527,20 +533,20 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const codeUses = (src, name) => src.split(/\r?\n/)
     .filter(line => line.includes(name) && !/^\s*(\/\/|\*|\/\*)/.test(line)).length;
   ok(codeUses(workspaceSource, 'STEWARD_WORKSPACE_TABLE_MAX') >= 1, '⑨ 工作区服务的拒绝文案读同一个常量');
-  ok(codeUses(src13o, 'STEWARD_WORKSPACE_TABLE_MAX') >= 1, '⑨ 13o 的候选表投影读同一个常量');
+  ok(codeUses(functionBlock(overviewSource, 'stewardWorkspaceTableBlock'), 'STEWARD_WORKSPACE_TABLE_MAX') >= 1,
+    '⑨ 候选表投影读同一个常量');
   // 反向保护:提交① 那个自立门户的 8 不许留在任何 src 模块里。
   const zombie = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => /STEWARD_CWD_CANDIDATES_MAX/.test(read(f)));
   ok(zombie.length === 0, '⑨ 提交① 的 STEWARD_CWD_CANDIDATES_MAX 已零残留' + (zombie.length ? ' → ' + zombie.join(',') : ''));
 }
 
 // ⑩ 117w-W1 提交③:候选表是【只读投影】,不是配置转储。
-// 被钉的事实:13o 的投影函数体里只出现 path / note / write 三个字段名,围栏字段一个都不出现。
+// 投影函数体只使用 path / note / write 字段。
 // e2e 那边是按渲染出来的文本 grep 的(「上下文里没有这几个词」);这里钉的是【源码上取不到它们】——
 // 有人日后往投影里加一行 `allowOutsideWorkspace: config.allowOutsideWorkspace` 时,哪怕它当时恰好
 // 渲染成空串,这一条也会红。
 {
-  const src13o = read('13o-steward-runner-prompt.js');
-  const body = functionBlock(src13o, 'stewardWorkspaceTableBlock');
+  const body = functionBlock(read(workspaceOverview), 'stewardWorkspaceTableBlock');
   ok(!!body, '⑩ 取到 stewardWorkspaceTableBlock 函数体');
   for (const fence of ['allowOutsideWorkspace', 'additionalDirectories', 'recentWorkspaces', 'defaultWorkspace', 'apiKey']) {
     ok(!body.includes(fence), `⑩ 投影函数体里零「${fence}」`);
@@ -612,7 +618,8 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // 划分」:两套存储,一套判据。这把锁钉住这件事,否则哪天有人在某个读取口里顺手写一句
 // `Date.parse(e.expiresAt) < Date.now()`,两处判据就开始各说各话(与 125 波「判据唯一」同一个模具)。
 {
-  const stewardFiles = fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js'));
+  const stewardFiles = fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js'))
+    .concat(memoryTools, threadAdmission, promptMemory, preroute);
   const offenders = [];
   let callers = 0;
   for (const name of stewardFiles) {
@@ -653,7 +660,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
       '写事务必须看到全库(含过期与已否决)。滤掉的话同义写入会把过期条目当成不存在、再落一条重复的 —— 44 号文 §1.2 记的「合并时那个陷阱」正是这个',
   };
   const memoryStore = '../backend/steward-memory-store.cjs';
-  const factoryFiles = [memoryStore, threadAdmission, memoryTools];
+  const factoryFiles = [memoryStore, threadAdmission, memoryTools, preroute];
   const srcAllFiles = [...fs.readdirSync(SRC).filter(n => n.endsWith('.js')), ...factoryFiles];
   const READ_STORE_RE = /\bstewardReadMemoryStore\s*\(/;
   const isCommentLine = line => /^\s*(\/\/|\*|\/\*)/.test(line);
@@ -698,7 +705,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const thinReasons = Object.entries(EXPIRY_FILTER_EXEMPT).filter(([, why]) => String(why || '').trim().length < 20);
   ok(thinReasons.length === 0, `⑫b 白名单逐条带理由,不是一张光秃秃的名单${thinReasons.length ? '；理由过短的:' + thinReasons.map(([k]) => k).join('、') : ''}`);
   // 这两口必须【自己滤】,不许改成往白名单里一塞就放行 —— 107-M1 修的就是第二个。
-  for (const key of [`${memoryTools}:stewardImplMemorySearch`, '13o-steward-runner-prompt.js:stewardPreroute']) {
+  for (const key of [`${memoryTools}:stewardImplMemorySearch`, `${preroute}:stewardPreroute`]) {
     const site = sites.find(s => s.key === key);
     ok(!!(site && site.filters), `⑫b ${key} 自己滤过期(不许用白名单绕过)${site ? '' : '；连这个调用点都没扫到'}`);
   }
@@ -707,7 +714,9 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // ── ⑬ 126-M01:「作用域算不算数」也只许有一个判据口 ─────────────────────────────────
 // 管家记忆存储负责作用域归一与匹配。所有调用方使用同一个项目键。
 {
-  const scopeFiles = [...fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js')), memoryTools];
+  const scopeFiles = [...fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js')), memoryTools, preroute,
+    workspaceOverview, promptMemory, '../backend/steward-thread-overview.cjs',
+    '../backend/steward-system-prompt.cjs', actionContract];
   const offenders2 = [];
   const scopeOwner = read('../backend/steward-memory-store.cjs');
   let matchers = 0;

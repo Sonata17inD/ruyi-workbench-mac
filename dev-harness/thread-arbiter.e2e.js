@@ -662,12 +662,10 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
       const STEWARD_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', queries];
       ok(/waitReasonFor\(/.test(rd(queries)), '单点:steward_thread_status 经 waitReasonFor');
       ok(/waitReasonFor\(/.test(rd('../backend/mission-aggregate.cjs')), '单点:GET /api/missions 的线程行经 waitReasonFor');
-      // 117 波 T2(32 号文 §5)重钉:13h 也拆了(六个文件,纯搬家),这三处 waitReasonFor 随之分落
-      // 三个文件 —— 总览行进 13o、仲裁器读模型进 13n、插队工具留在 13h(还多一处是 13q 的递话通道)。
-      // 判据不变(三处都经 06i 的 waitReasonFor、没有第二处自己拼的等待人话),只是「运行器」现在是
-      // 一族文件,故整族一起读、整族一起查。
+      // 总览行、仲裁器读模型和插队工具共用 waitReasonFor。
       const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs',
-        '13o-steward-runner-prompt.js', '13p-steward-runner-actions.js', '../backend/steward-autonomous-actions.cjs',
+        '13o-steward-runner-prompt.js', '../backend/steward-thread-overview.cjs',
+        '13p-steward-runner-actions.js', '../backend/steward-autonomous-actions.cjs',
         '../backend/steward-inbox-prompt.cjs', '../backend/steward-thread-relay.cjs', '13q-steward-runner-turn.js',
         '13h-steward-runner.js'];
       const src13h = STEWARD_RUNNER_FAMILY.map(rd).join('\n');

@@ -91,7 +91,11 @@ const runnerTurnServices = [
   '../backend/steward-inbox-queue.cjs', turnRunner, conversationVisits,
   '../backend/steward-thread-relay.cjs', '../backend/steward-act-receipts.cjs',
 ];
+const actionContract = '../backend/steward-action-contract.cjs';
+const systemPrompt = '../backend/steward-system-prompt.cjs';
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+  '../backend/steward-prompt-memory.cjs', '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
+  '../backend/steward-workspace-overview.cjs', systemPrompt, actionContract,
   '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
 const src01b = read('../backend/http-route-policy.cjs');
@@ -330,29 +334,29 @@ const srv = require(path.join(APP, 'server.js'));
 
   // ── 117y-S1/S2(27 号文 §11.18):say 的长度由【提示词】管,运行期只剩一道病态载荷天花板。──
   // 钉四件事实,一条一条都可证伪:
-  //   (a) 600 已经不是运行期的刀 —— 13o 里再没有任何 `slice(0, STEWARD_SAY…)`,旧名 STEWARD_SAY_MAX
+  //   (a) 600 已经不是运行期的刀 —— 动作契约里再没有任何 `slice(0, STEWARD_SAY…)`,旧名 STEWARD_SAY_MAX
   //       全族绝迹(留着它 = 留着第二套语义,谁都不知道该信哪个);
   //   (b) 两条解析路径(JSON 解析失败的兜底 / 解析成功的 say)走【同一个函数、同一个天花板】,
   //       不许只改一处 —— 数出现次数,不是「至少有一处」;
   //   (c) 句界裁剪那个纯函数住在 06i(纯函数与常量的归宿),不在运行器族里另抄一份;
   //   (d) 06b 输出契约里写给模型看的那个数字与 STEWARD_SAY_TARGET 是同一个 600(不另立第二套数字)。
-  const src13o = read('13o-steward-runner-prompt.js');
+  const actionSource = read(actionContract);
+  const promptSource = read(systemPrompt);
   const src13m = read('13m-steward-runner-base.js');
   const sayMaxHits = (srcRunnerFamily.match(/STEWARD_SAY_MAX/g) || []).length;
   ok(sayMaxHits === 0, `③ 117y-S1(a) 旧名 STEWARD_SAY_MAX 在运行器族里绝迹(got ${sayMaxHits} 处)`);
-  const bareSliceHits = (src13o.match(/slice\(0, STEWARD_SAY/g) || []).length;
-  ok(bareSliceHits === 0, `③ 117y-S1(a) 13o 里再没有按 say 常量裸 slice 的写法(got ${bareSliceHits} 处)`);
-  const trimHits = (src13o.match(/stewardTrimSayAtSentence\(/g) || []).length;
-  ok(trimHits === 2, `③ 117y-S1(b) 13o 恰有两处走句界裁剪 = 兜底那条 + say 那条(got ${trimHits} 处)`);
+  const bareSliceHits = (actionSource.match(/slice\(0, STEWARD_SAY/g) || []).length;
+  ok(bareSliceHits === 0, `③ 117y-S1(a) 动作契约没有按 say 常量裸 slice 的写法(got ${bareSliceHits} 处)`);
+  const trimHits = (actionSource.match(/stewardTrimSayAtSentence\(/g) || []).length;
+  ok(trimHits === 2, `③ 117y-S1(b) 动作契约恰有两处走句界裁剪 = 兜底那条 + say 那条(got ${trimHits} 处)`);
   // 注意别写成 `\([^)]*STEWARD_SAY_CEILING\)`:兜底那一处的实参是 `raw.trim()`,里面自带一对括号,
   // 那种写法只数得到一处并给出一条假红(本刀实测)。按「同一行内」定界。
-  const ceilingHits = (src13o.match(/stewardTrimSayAtSentence\([^\n;]*STEWARD_SAY_CEILING\)/g) || []).length;
+  const ceilingHits = (actionSource.match(/stewardTrimSayAtSentence\([^\n;]*STEWARD_SAY_CEILING\)/g) || []).length;
   ok(ceilingHits === 2, `③ 117y-S1(b) 两处用的是同一个天花板常量 STEWARD_SAY_CEILING(got ${ceilingHits} 处)`);
-  // 136:13o 的两个新装配点 —— 人设块(空配置不输出)与可配的预算系数(再夹一道防 raw config 旁路)。
-  ok(/function stewardPersonaBlock\(/.test(src13o) && /if \(persona\) parts\.push\(persona\)/.test(src13o),
-    '③ 136 13o 装配人设块:两键皆空时整段不输出(零字节纪律,与 routeHintBlock 同)');
-  ok(/stewardContextBudgetRatio/.test(src13o) && /Math\.min\(0\.95, Math\.max\(0\.3, ratioRaw\)\)/.test(src13o),
-    '③ 136 13o 预算系数从 stewardContextBudgetRatio 读,缺省回 0.6 并按 [0.3,0.95] 再夹一道');
+  ok(/function stewardPersonaBlock\(/.test(promptSource) && /if \(persona\) parts\.push\(persona\)/.test(promptSource),
+    '③ 136 系统提示词装配人设块:两键皆空时整段不输出(零字节纪律,与 routeHintBlock 同)');
+  ok(/stewardContextBudgetRatio/.test(promptSource) && /Math\.min\(0\.95, Math\.max\(0\.3, ratioRaw\)\)/.test(promptSource),
+    '③ 136 系统提示词预算系数从 stewardContextBudgetRatio 读,缺省回 0.6 并按 [0.3,0.95] 再夹一道');
   ok(/const STEWARD_SAY_TARGET = 600;/.test(src13m) && /const STEWARD_SAY_CEILING = 4000;/.test(src13m),
     '③ 117y-S1 两个常量拆开定在 13m(TARGET 600 只是提示词目标 / CEILING 4000 只防病态载荷)');
   ok(/function stewardTrimSayAtSentence\(/.test(src06i) && !/function stewardTrimSayAtSentence\(/.test(srcRunnerFamily),

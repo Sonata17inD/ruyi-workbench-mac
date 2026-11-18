@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2085,
-    "requiredSymbols": 3114,
+    "providedSymbols": 2077,
+    "requiredSymbols": 3111,
     "edges": 597,
     "forwardEdges": 14,
     "duplicateProvides": 0,
@@ -17163,23 +17163,15 @@
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
-        "STEWARD_ACT_CONFIRM_MASK",
-        "_stewardDigestHeadCache",
-        "_stewardPrerouteCache",
         "buildStewardSystemPrompt",
         "stewardActConfirmLines",
-        "stewardActConfirmValueText",
         "stewardActLabel",
         "stewardContextBudget",
-        "stewardDigestHead",
         "stewardKnownWorkspaceRows",
         "stewardMemoryBlock",
-        "stewardMemoryVetoedBlock",
         "stewardNormalizeAct",
-        "stewardNormalizeActs",
         "stewardOverviewBlock",
         "stewardParseReply",
-        "stewardPersonaBlock",
         "stewardPreroute",
         "stewardPrerouteIndexRows",
         "stewardThreadDigestRows",
@@ -17189,21 +17181,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -17212,13 +17190,6 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
             "read"
           ]
         },
@@ -17226,14 +17197,14 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17247,84 +17218,84 @@
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readMissionContainer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMetaIsSteward",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "applySessionPermissionModeOverride",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "memoryIsExpired",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "buildStewardDigestLine",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "prerouteText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17373,14 +17344,14 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardActConfirmSpec",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardForeignProjection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17394,154 +17365,154 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardThreadStateFromHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardTrimSayAtSentence",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "waitReasonFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06j-scheduler-core.js",
           "symbol": "normalizeSchedulerTask",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolSchema",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "parseStructuredAgentOutput",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "12-tool-dispatch.js",
           "symbol": "jsonSchemaObjectProblems",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "getPretenderProjectionIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "overlayMissionCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardMemoryScopeLabel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardQuickThread",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardRawKind",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadMemoryStore",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardThreadPermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardCanonWorkspacePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardFoldWorkspacePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardKnownWorkspaces",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardSeatedByUser",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardThreadDisplayTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -17646,7 +17617,7 @@
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardArbiterWait",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -30175,11 +30146,8 @@
       "from": "13o-steward-runner-prompt.js",
       "to": "00-boot.js",
       "symbols": [
-        "fsp",
         "logEvent",
-        "path",
-        "redact",
-        "text"
+        "redact"
       ],
       "direction": "backward"
     },
