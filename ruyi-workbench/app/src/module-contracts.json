@@ -14499,12 +14499,14 @@
         "stewardQueueThreadAdopted",
         "stewardReadInboxRows",
         "stewardReadInboxText",
+        "stewardReadStateFromDisk",
         "stewardReadTurnHead",
         "stewardResetRuntimeState",
         "stewardRunTick",
         "stewardRuntime",
         "stewardSaveCursor",
         "stewardScheduleWake",
+        "stewardStateLoad",
         "stewardThreadBackgroundBusy",
         "stewardTickOnce",
         "stewardTrimCursorMap",
@@ -20395,28 +20397,7 @@
         },
         {
           "provider": "13i-steward-inbox.js",
-          "symbol": "stewardInboxRowDedupeKeys",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
           "symbol": "stewardIsoAt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
-          "symbol": "stewardLoadState",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
-          "symbol": "stewardRuntime",
           "kinds": [
             "read"
           ]

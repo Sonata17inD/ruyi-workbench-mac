@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2450,
-    "requiredSymbols": 3191,
+    "providedSymbols": 2452,
+    "requiredSymbols": 3188,
     "edges": 601,
     "forwardEdges": 15,
     "duplicateProvides": 0,
@@ -14649,12 +14649,14 @@
         "stewardQueueThreadAdopted",
         "stewardReadInboxRows",
         "stewardReadInboxText",
+        "stewardReadStateFromDisk",
         "stewardReadTurnHead",
         "stewardResetRuntimeState",
         "stewardRunTick",
         "stewardRuntime",
         "stewardSaveCursor",
         "stewardScheduleWake",
+        "stewardStateLoad",
         "stewardThreadBackgroundBusy",
         "stewardTickOnce",
         "stewardTrimCursorMap",
@@ -20571,28 +20573,7 @@
         },
         {
           "provider": "13i-steward-inbox.js",
-          "symbol": "stewardInboxRowDedupeKeys",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
           "symbol": "stewardIsoAt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
-          "symbol": "stewardLoadState",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
-          "symbol": "stewardRuntime",
           "kinds": [
             "read"
           ]
@@ -31973,10 +31954,7 @@
       "symbols": [
         "stewardAppendInboxRows",
         "stewardClipSummary",
-        "stewardInboxRowDedupeKeys",
-        "stewardIsoAt",
-        "stewardLoadState",
-        "stewardRuntime"
+        "stewardIsoAt"
       ],
       "direction": "backward"
     },

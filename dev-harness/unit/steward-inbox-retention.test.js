@@ -37,16 +37,18 @@ function harness(t, rows = []) {
   const file = path.join(home, 'steward', 'inbox-v1.ndjson');
   fs.mkdirSync(path.dirname(file));
   fs.writeFileSync(file, rows.map(value => JSON.stringify(value)).join('\n') + (rows.length ? '\n' : ''));
+  const events = [];
   const context = vm.createContext({ require: createRequire(path.join(src, '../server.js')), fs, fsp: { ...fsp }, path, crypto, Buffer, Date, process, setTimeout, clearTimeout,
-    paths: { data: home }, RUYI_EVENTS: { subscribe() {}, emit() {} }, STEWARD_SESSION_ID: 'steward',
+    paths: { data: home }, RUYI_EVENTS: { subscribe() {}, emit(name, frame) { if (name === 'inbox.appended') events.push(frame); } },
+    STEWARD_SESSION_ID: 'steward', StewardHooks: {}, logEvent() {},
     STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn,
     safeJsonParse: (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } },
     repairMissionChangeTornTail: async () => {}, safeSessionId: value => value, nowIso: () => new Date().toISOString(),
     getPretenderProjectionIndex: async () => ({ sessions: [{ sessionId: 'sess_test', interventions: [] }] }),
   });
   vm.runInContext(atomicSource + '\n' + inboxSource + '\n' + projectionSource + '\n' + toolSource + '\n' +
-    'globalThis.api = { stewardRuntime, stewardMaintainInbox, stewardAppendInboxRows, stewardInboxRead, stewardImplInboxRead, stewardSaveCursor, stewardLoadState };', context);
-  return { context, ...context.api, file, read: () => fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) };
+    'globalThis.api = { stewardRuntime, stewardMaintainInbox, stewardAppendInboxRows, stewardInboxRead, stewardImplInboxRead, stewardSaveCursor, stewardLoadState, stewardTickOnce };', context);
+  return { context, ...context.api, events, file, read: () => fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) };
 }
 
 test('清理过期通知,保留当前待决、仍有待决的合并组和未知组;保留重启序号水位', async t => {
@@ -98,6 +100,37 @@ test('整理和追加共用写链,重写前后的新通知都不丢;一小时内
   assert.deepEqual(h.read().map(r => r.inboxSeq), [2, 3, 4]);
   h.context.fs = { ...fs, createReadStream() { throw new Error('must not rescan'); } };
   await h.stewardMaintainInbox(NOW + 1);
+});
+
+test('轮询增强期间发布的提醒保有其序号，失败的轮询重试后仍可增量读取', async t => {
+  const h = harness(t);
+  h.context.collect = async () => ({ events: [row(100)], activeSessionIds: [], activeRunIds: [] });
+  vm.runInContext('stewardCollectEvents = collect', h.context);
+  let release;
+  const entered = new Promise(resolve => {
+    h.context.StewardHooks.enrichInboxRows = () => new Promise(continueTick => {
+      release = continueTick;
+      resolve();
+    });
+  });
+  const tick = h.stewardTickOnce();
+  await entered;
+  const [first] = await h.stewardAppendInboxRows([row(101, 0, { kind: 'reminder' })]);
+  h.context.fsp.appendFile = async () => { throw Object.assign(new Error('injected write failure'), { code: 'EIO' }); };
+  release();
+  await assert.rejects(tick, { code: 'EIO' });
+  h.context.fsp.appendFile = fsp.appendFile;
+  h.context.StewardHooks.enrichInboxRows = null;
+  h.context.collect = async () => ({ events: [], activeSessionIds: [], activeRunIds: [] });
+  vm.runInContext('stewardCollectEvents = collect', h.context);
+  await h.stewardTickOnce();
+  const [last] = await h.stewardAppendInboxRows([row(102, 0, { kind: 'reminder' })]);
+  assert.equal(first.inboxSeq, 1);
+  assert.equal(last.inboxSeq, 3);
+  assert.deepEqual(h.read().map(row => [row.kind, row.inboxSeq]), [['reminder', 1], ['done', 2], ['reminder', 3]]);
+  assert.deepEqual(h.events.map(frame => frame.inboxSeq), [1, 2, 3]);
+  const page = await h.stewardInboxRead({ since: first.inboxSeq });
+  assert.deepEqual(Array.from(page.items, row => row.inboxSeq), [2, 3]);
 });
 
 test('读失败、坏行或原子替换失败都保留原文件;整理故障也有节流', async t => {

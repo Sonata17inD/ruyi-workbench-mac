@@ -4,7 +4,7 @@ const fsp = require('node:fs/promises');
 function createSchedulerSteward({ scheduler, domain, inbox, workspaces, policy, makeId, nowIso, readConfig, safeSessionId }) {
   const { schedulerClockNow, schedulerEmitChanged, schedulerEnabled, schedulerEnsureTimer, schedulerLoad, schedulerReadFireRows, schedulerRunNow, schedulerRuntime, schedulerSaveTasks } = scheduler;
   const { STEWARD_SESSION_ID, describeSchedule, nextFireAt, normalizeSchedulerTask, SCHEDULER_LIMITS } = domain;
-  const { stewardAppendInboxRows, stewardClipSummary, stewardInboxRowDedupeKeys, stewardIsoAt, stewardLoadState, stewardRuntime, stewardAppendDecision } = inbox;
+  const { stewardAppendInboxRows, stewardClipSummary, stewardIsoAt, stewardAppendDecision } = inbox;
   const { stewardCanonWorkspacePath, stewardDeriveThreadCwd, stewardValidateCwd, stewardEnsureOpenAiRoute } = workspaces;
   const { stewardSanitizeText, stewardFail, stewardRawKind, stewardReadSessionHead, stewardUnattendedByModel, StewardHooks } = policy;
 // ── 工具面:六条共用的前置(开关 -> 装载)。返回稳定信封 = 已经答完,调用方直接 return。─────────
@@ -285,10 +285,7 @@ const SCHEDULER_INBOX_TEXT_MAX = 200;
 async function schedulerInboxAppend(schedRow) {
   const config = await readConfig().catch(() => null);
   if (!config || config.stewardEnabledV1 !== true) return null;
-  await stewardLoadState();
-  stewardRuntime.inboxSeq += 1;
   const row = {
-    inboxSeq: stewardRuntime.inboxSeq,
     kind: SCHEDULER_INBOX_KIND,
     sessionId: String(schedRow.sessionId || ''),
     missionId: String(schedRow.sessionId || ''),
@@ -300,10 +297,8 @@ async function schedulerInboxAppend(schedRow) {
     payload: schedRow.payload,
     count: 1,
   };
-  await stewardAppendInboxRows([row]);
-  for (const key of stewardInboxRowDedupeKeys(row)) stewardRuntime.seen.add(key);
-  stewardRuntime.lastInboxAt = nowIso();
-  return row;
+  const [published] = await stewardAppendInboxRows([row]);
+  return published;
 }
 
 // reminder 到点。payload.quiet:true —— 提醒【就是】要打扰用户那一下(用户自己下的单);

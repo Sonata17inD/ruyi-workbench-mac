@@ -1,7 +1,7 @@
 const { stewardImplScheduleCreate, stewardImplScheduleList, stewardImplSchedulePause, stewardImplScheduleResume, stewardImplScheduleRunNow, stewardImplScheduleDelete, schedulerOnReminderDue, schedulerOnSchedulerNotice, schedulerCommitmentsSince, schedulerPrepareThread } = require('./backend/scheduler-steward.cjs').createSchedulerSteward({
   scheduler: SchedulerRuntime, makeId, nowIso, readConfig, safeSessionId,
   domain: { STEWARD_SESSION_ID, describeSchedule, nextFireAt, normalizeSchedulerTask, SCHEDULER_LIMITS },
-  inbox: { stewardAppendInboxRows, stewardClipSummary, stewardInboxRowDedupeKeys, stewardIsoAt, stewardLoadState, stewardRuntime, stewardAppendDecision },
+  inbox: { stewardAppendInboxRows, stewardClipSummary, stewardIsoAt, stewardAppendDecision },
   workspaces: { stewardCanonWorkspacePath, stewardDeriveThreadCwd, stewardValidateCwd, stewardEnsureOpenAiRoute },
   policy: { stewardSanitizeText, stewardFail, stewardRawKind, stewardReadSessionHead, stewardUnattendedByModel, StewardHooks },
 });

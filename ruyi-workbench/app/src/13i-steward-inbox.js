@@ -127,6 +127,7 @@ const stewardRuntime = {
 const STEWARD_ADOPTED_QUEUE_MAX = 50;
 const STEWARD_ADOPTED_DEDUPE_MS = 10 * 60 * 1000;   // 135:同一线程同一句委托在 10 分钟内重复交接只算一次
 let stewardAppendChain = Promise.resolve();
+let stewardStateLoad = null;
 
 // 121-K3:订阅总线。装在模块加载期,进程生命周期内不卸(同 13r 的纪律)。它【只排队,不落盘】——
 // 收件箱的写面只有 stewardTickOnce 一处,旁路事件不许绕过去重、合并、在场门三道工序。
@@ -379,8 +380,15 @@ function stewardMaintainInbox(now = Date.now()) {
 
 // 游标读取。读坏/缺失 → 冷启动(inboxSeq 从 inbox 尾行恢复,去重集合从 inbox 尾部 N 行重建,
 // 三源只建基线不补历史)。这条正是「cursor 读坏 → 从零开始但不重复已在 inbox 里的键」。
-async function stewardLoadState() {
-  if (stewardRuntime.loaded) return;
+function stewardLoadState() {
+  if (stewardRuntime.loaded) return Promise.resolve();
+  if (!stewardStateLoad) {
+    stewardStateLoad = stewardReadStateFromDisk().finally(() => { stewardStateLoad = null; });
+  }
+  return stewardStateLoad;
+}
+
+async function stewardReadStateFromDisk() {
   stewardResetRuntimeState();
   const rows = await stewardReadInboxRows();
   const tail = rows.slice(-STEWARD_DEDUPE_TAIL_ROWS);
@@ -445,11 +453,15 @@ async function stewardLoadState() {
 }
 
 // append:与 session-changes 同款原语(repairMissionChangeTornTail + appendFile),per-process 串行。
-function stewardAppendInboxRows(rows) {
-  if (!rows.length) return Promise.resolve();
-  const file = stewardInboxPath();
-  const payload = rows.map(row => JSON.stringify(row)).join('\n') + '\n';
+function stewardAppendInboxRows(drafts) {
+  if (!drafts.length) return Promise.resolve([]);
   const next = stewardAppendChain.catch(() => {}).then(async () => {
+    await stewardLoadState();
+    const file = stewardInboxPath();
+    // 轮询与定时提醒按实际落盘顺序分配序号。失败的批次不推进已发布水位。
+    const previousSeq = stewardRuntime.inboxSeq;
+    const rows = drafts.map(({ inboxSeq: _inboxSeq, ...row }, index) => ({ inboxSeq: previousSeq + index + 1, ...row }));
+    const payload = rows.map(row => JSON.stringify(row)).join('\n') + '\n';
     await fsp.mkdir(stewardDir(), { recursive: true });
     await repairMissionChangeTornTail(file); // 尾部半行先截干净,再整行 append(防焊接)
     // Windows 上杀软/备份软件短暂持锁的 EBUSY/EPERM/EACCES:与 02 appendIntervention 同款有界重试。
@@ -458,6 +470,9 @@ function stewardAppendInboxRows(rows) {
       try { await fsp.appendFile(file, payload, 'utf8'); break; }
       catch (e) { if (attempt >= 3 || !/^(EPERM|EBUSY|EACCES)$/.test(String(e && e.code))) throw e; await new Promise(r => setTimeout(r, 10 + attempt * 20)); }
     }
+    stewardRuntime.inboxSeq = rows.at(-1).inboxSeq;
+    stewardRuntime.lastInboxAt = nowIso();
+    for (const row of rows) for (const key of stewardInboxRowDedupeKeys(row)) stewardRuntime.seen.add(key);
     // 121-K2a(§6.1 第 3 条):箱子真的多了这些行之后才派。正文不进事件面 —— 只有「哪条线程、哪一类」;
     // 想看内容仍走 GET /api/steward/inbox(§6.1 红线:事件流不承载正文)。
     // 121-K6a(34 号文 §4.3 安静卡):补 quiet(在场门②情形打的旗)与卡上要印的一句话(ask)——
@@ -483,6 +498,12 @@ function stewardAppendInboxRows(rows) {
       if (Array.isArray(payload.options) && payload.options.length) frame.options = payload.options;
       RUYI_EVENTS.emit('inbox.appended', frame);
     }
+    // 按装载时的尾窗重建去重集合。与写入串行，避免重建覆盖期间追加的新键。
+    if (stewardRuntime.seen.size > STEWARD_SEEN_MAX_KEYS) {
+      const recent = (await stewardReadInboxRows()).slice(-STEWARD_DEDUPE_TAIL_ROWS);
+      stewardRuntime.seen = new Set(recent.flatMap(stewardInboxRowDedupeKeys));
+    }
+    return rows;
   });
   stewardAppendChain = next.catch(() => {});
   return next;
@@ -831,53 +852,24 @@ async function stewardTickOnce() {
     stewardRuntime.carry = kept;
     logEvent({ kind: 'steward_inbox_deferred', deferred: kept.length, dropped: rest.length - kept.length });
   }
-  const merged = stewardMergeInboxEvents(head, STEWARD_MERGE_WINDOW_MS);
-  const seqBefore = stewardRuntime.inboxSeq;
-  const rows = [];
-  for (const row of merged) {
-    stewardRuntime.inboxSeq += 1;
-    rows.push({
-      inboxSeq: stewardRuntime.inboxSeq,
-      kind: row.kind,
-      sessionId: row.sessionId,
-      missionId: row.missionId,
-      runId: row.runId,
-      seq: row.seq,
-      at: row.at,
-      payload: row.payload,
-      count: row.count,
-    });
-  }
+  const drafts = stewardMergeInboxEvents(head, STEWARD_MERGE_WINDOW_MS);
   // 116-2e(§11.1 第 2 项「速查线程」):落盘【前】给速查会话的 done 行补 quick:true 与 answer
   // (最后一句助手原话)。实现住 13g(它要装载会话正文),经 06i 的延迟绑定命名空间调 —— 直接写
   // 13g 的函数名会是前向边。旁路纪律:钩子未填充或抛错都不影响这一轮已经归一好的行。
-  if (rows.length && typeof StewardHooks.enrichInboxRows === 'function') {
-    try { await StewardHooks.enrichInboxRows(rows); } catch { /* 增强失败只是少两个字段,不反噬轮询器 */ }
+  if (drafts.length && typeof StewardHooks.enrichInboxRows === 'function') {
+    try { await StewardHooks.enrichInboxRows(drafts); } catch { /* 增强失败只是少两个字段,不反噬轮询器 */ }
   }
   // 落盘失败(有界重试之后仍是 EBUSY/EIO/ENOSPC …)不许丢事件:四源游标、待决集合、budgetSeen、交接队列
   // 在 stewardCollectEvents 里都已经越过了这一批 —— 修前异常直接冒出去,这些事件从此永远读不回来
   // (一条「需要你」的权限请求就此从收件箱里消失)。这里不去逐个回滚游标(交接队列与 budgetSeen 是内存态,
   // 回滚不全),而是把这一批【原始】事件整批放回结转队列的最前面 —— 与 P0-3 的单轮上限结转同一条通路:
-  // 下一拍它们排在最前、照样过去重、不再过在场门(已经过过一次)。inboxSeq 退回本批之前,
-  // 不留空号;游标这一拍不落盘(异常照旧冒到 stewardRunTick 记 lastError),重启则从旧游标重读 + seen 去重。
-  if (rows.length) {
-    try { await stewardAppendInboxRows(rows); }
-    catch (error) {
-      stewardRuntime.inboxSeq = seqBefore;
-      stewardRuntime.carry = head.concat(stewardRuntime.carry).slice(0, STEWARD_CARRY_MAX_EVENTS);
-      try { logEvent({ kind: 'steward_inbox_append_failed', code: String((error && error.code) || ''), requeued: head.length }); } catch { /* 观测绝不反噬 */ }
-      throw error;
-    }
-  }
-  if (rows.length) stewardRuntime.lastInboxAt = nowIso();   // 116-4:唤醒链诚实 —— 「箱子最后一次真的收到东西」
-  for (const row of rows) for (const key of stewardInboxRowDedupeKeys(row)) stewardRuntime.seen.add(key);
-  // 去重集合在长跑进程里只增不减 —— 超过硬顶就按「装载时」的口径从 inbox 尾部重建(旧键本来也已经
-  // 被游标挡住了,重建只是把内存占用重新压回上限)。
-  if (stewardRuntime.seen.size > STEWARD_SEEN_MAX_KEYS) {
-    const recent = (await stewardReadInboxRows()).slice(-STEWARD_DEDUPE_TAIL_ROWS);
-    const rebuilt = new Set();
-    for (const row of recent) for (const key of stewardInboxRowDedupeKeys(row)) rebuilt.add(key);
-    stewardRuntime.seen = rebuilt;
+  // 下一拍它们排在最前、照样过去重、不再过在场门。游标这一拍不落盘，重启从旧游标重读并去重。
+  let rows;
+  try { rows = await stewardAppendInboxRows(drafts); }
+  catch (error) {
+    stewardRuntime.carry = head.concat(stewardRuntime.carry).slice(0, STEWARD_CARRY_MAX_EVENTS);
+    try { logEvent({ kind: 'steward_inbox_append_failed', code: String((error && error.code) || ''), requeued: head.length }); } catch { /* 观测绝不反噬 */ }
+    throw error;
   }
   // 冷启动只建基线,基线本身也必须落盘 —— 否则下次仍是冷启动,永远补不上历史增量。
   await stewardSaveCursor(activeSessionIds, activeRunIds);

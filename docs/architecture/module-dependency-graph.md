@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2450 | 3191 | 601 | 15 | 0 | 0 |
+| 87 | 2452 | 3188 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -84,7 +84,7 @@
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
-| 69 | `13i-steward-inbox.js` | transport | 81 | 29 | 7 |
+| 69 | `13i-steward-inbox.js` | transport | 83 | 29 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 61 | 126 | 18 |
@@ -97,7 +97,7 @@
 | 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
-| 82 | `13t-steward-schedule.js` | transport | 10 | 29 | 10 |
+| 82 | `13t-steward-schedule.js` | transport | 10 | 26 | 10 |
 | 83 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
 | 84 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
 | 85 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
@@ -644,7 +644,7 @@
 | `13t-steward-schedule.js` | `06i-steward-core.js` | backward | `STEWARD_SESSION_ID`, `StewardHooks`, `stewardSanitizeText` |
 | `13t-steward-schedule.js` | `06j-scheduler-core.js` | backward | `SCHEDULER_LIMITS`, `SchedulerHooks`, `describeSchedule`, `nextFireAt`, `normalizeSchedulerTask` |
 | `13t-steward-schedule.js` | `13g-steward.js` | backward | `stewardToolHandler` |
-| `13t-steward-schedule.js` | `13i-steward-inbox.js` | backward | `stewardAppendInboxRows`, `stewardClipSummary`, `stewardInboxRowDedupeKeys`, `stewardIsoAt`, `stewardLoadState`, `stewardRuntime` |
+| `13t-steward-schedule.js` | `13i-steward-inbox.js` | backward | `stewardAppendInboxRows`, `stewardClipSummary`, `stewardIsoAt` |
 | `13t-steward-schedule.js` | `13j-steward-tool-base.js` | backward | `stewardAppendDecision`, `stewardFail`, `stewardRawKind`, `stewardReadSessionHead` |
 | `13t-steward-schedule.js` | `13k-steward-threads.js` | backward | `stewardCanonWorkspacePath`, `stewardDeriveThreadCwd`, `stewardUnattendedByModel`, `stewardValidateCwd` |
 | `13t-steward-schedule.js` | `13q-steward-runner-turn.js` | backward | `stewardEnsureOpenAiRoute` |
