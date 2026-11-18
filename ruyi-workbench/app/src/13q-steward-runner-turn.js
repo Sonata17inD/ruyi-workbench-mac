@@ -265,7 +265,7 @@ async function stewardRunClaimedTurn(trigger, opts, config, entry, controller, o
         source: 'steward',
         engineRoute: ensured.route,
         // 收件箱回合的这条 user 消息【不是用户本人说的话】:origin 随会话正文落盘,
-        // steward_memory_write 的来源校验据此确定性拒绝它(13g stewardSourceIsUserMessage)。
+        // steward_memory_write 的来源校验据此拒绝它(steward-memory-tools 的 stewardSourceUserTexts)。
         messageMeta: trigger === 'inbox' ? { origin: 'inbox', inboxSeqs: events.map(e => Number(e && e.inboxSeq) || 0).slice(0, STEWARD_INBOX_EVENTS_PER_TURN) }
           : trigger === 'external' ? { origin: 'external-owner', externalSource: entry.externalSource } : null,
         requestMeta: { steward: true, trigger, ...(trigger === 'external' ? { external: entry.externalSource } : {}) },

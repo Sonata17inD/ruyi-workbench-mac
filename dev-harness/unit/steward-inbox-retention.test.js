@@ -18,8 +18,6 @@ const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const configSource = fs.readFileSync(path.join(src, '01-config.js'), 'utf8');
 const atomicSource = functionBlock(configSource, 'atomicWriteJson');
 assert.ok(atomicSource.includes('fsp.rename('), 'load the actual atomic JSON writer for disk failure injection');
-const opsSource = fs.readFileSync(path.join(src, '13l-steward-ops.js'), 'utf8');
-const toolSource = functionBlock(opsSource, 'stewardImplInboxRead');
 const NOW = Date.now(), DAY = 86400000;
 const row = (inboxSeq, age = 0, extra = {}) => ({ inboxSeq, at: new Date(NOW - age * DAY).toISOString(),
   kind: 'done', sessionId: 'sess_test', seq: inboxSeq, payload: {}, count: 1, ...extra });
@@ -61,11 +59,7 @@ function harness(t, rows = []) {
     timers: { setTimeout() { return {}; }, clearTimeout() {}, setInterval() { return {}; }, clearInterval() {} },
   });
   t.after(inbox.stopStewardInbox);
-  const stewardImplInboxRead = vm.runInNewContext(`(${toolSource})`, {
-    stewardInboxRead: inbox.stewardInboxRead, stewardInboxPendingState: inbox.stewardInboxPendingState,
-    stewardForeignProjection: rules.stewardForeignProjection, getPretenderProjectionIndex,
-  });
-  return { ...inbox, stewardImplInboxRead, hooks, fixtureFs, fixtureFsp, projected, emit, events, file,
+  return { ...inbox, hooks, fixtureFs, fixtureFsp, projected, emit, events, file,
     tick: () => inbox.startStewardInbox(config),
     read: () => fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean).map(JSON.parse) };
 }

@@ -51,7 +51,7 @@ function createStewardInbox({
   const { fs = nodeFs, fsp = nodeFsp, atomicWriteJson, repairMissionChangeTornTail } = io;
   const { getPretenderProjectionIndex, sessionPath, listAgentRuns, readAgentRunEvents, readMissionChangesWithMeta } = sources;
   const { activeAgentRuns, activeChildren, turnSettlers, turnOutcomePending } = execution;
-  const { STEWARD_EVENT_KINDS, STEWARD_SESSION_ID, stewardWatchedThread } = rules;
+  const { STEWARD_EVENT_KINDS, STEWARD_SESSION_ID, stewardForeignProjection, stewardWatchedThread } = rules;
   const {
     stewardEventDedupeKey, stewardInboxRowDedupeKeys, stewardMergeInboxEvents,
     stewardNormalizeBudgetExhausted, stewardNormalizeMissionChange, stewardNormalizePendingIntervention,
@@ -942,6 +942,28 @@ function createStewardInbox({
     };
   }
 
+  // 6) 默认读最新通知;显式 since 仍按序增量。历史通知的类别不能证明此刻还在等待用户。
+  async function stewardImplInboxRead(args) {
+    const order = args.order === 'asc' || args.order === 'desc' ? args.order : args.since == null ? 'desc' : 'asc';
+    const result = await stewardInboxRead({ since: args.since, limit: args.limit, order });
+    let pending = null;
+    try {
+      const index = await getPretenderProjectionIndex();
+      if (!Array.isArray(index?.sessions)) throw new Error('steward.projection_unavailable');
+      pending = new Set();
+      for (const row of index.sessions) {
+        for (const iv of (Array.isArray(row.interventions) ? row.interventions : [])) {
+          if (iv && iv.id && iv.status === 'pending') pending.add(String(row.sessionId) + '\u0000' + String(iv.id));
+        }
+      }
+    } catch { pending = null; /* 无当前投影就明确 unknown,不能把读失败说成已处理 */ }
+    return stewardForeignProjection({ ok: true, ...result, order, pendingCount: pending ? pending.size : null,
+      items: result.items.map(row => row.kind === 'needs_you'
+        ? { ...row, pendingState: stewardInboxPendingState(row, pending) }
+        : row),
+    });
+  }
+
   // 收件箱的「按类计数 + 最大 inboxSeq」备忘。/api/steward/state 由前端 30 秒(SSE 断时 5–15 秒)轮询,
   // 每个管家回合的状态块也会取一次;修前每次都把整份 inbox-v1.ndjson(全读上限 8MB)重读重解析,
   // 只为数这两样(7MB / 1.7 万行实测每次 80–130ms)。
@@ -997,7 +1019,7 @@ function createStewardInbox({
   }
 
   return {
-    stewardDir, stewardInboxRead, stewardInboxState, stewardAppendInboxRows, stewardInboxPendingState,
+    stewardDir, stewardInboxRead, stewardInboxState, stewardAppendInboxRows, stewardImplInboxRead,
     stewardPendingStillOpen, stewardViewingSessionIds, stewardPresenceRows, startStewardInbox, stopStewardInbox,
     stewardMaintainInbox,
   };

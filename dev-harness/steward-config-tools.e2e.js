@@ -255,7 +255,8 @@ try {
     // (纯搬家,逐字节不变)。原来钉的是「13g 这个文件里有这一行」—— 钉的是落点;改成钉
     // 「整个 13g 族里恰好一处走 applyConfigPatch」:跟着搬家走,而且比原来严 —— 原来只要有就绿,
     // 现在族里再冒出第二条落盘路径也红。
-    const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js']
+    const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
+      '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs']
       .map(f => fs.readFileSync(path.join(WB, 'app', 'src', f), 'utf8')).join('\n');
     // capture/expected 是同一写口的内部选项，不以调用括号紧接 patch 来限定参数数量。
     ok((stewardFamilySrc.match(/await (?:ConfigPatchHooks\.)?applyConfigPatch\(patch(?:,|\))/g) || []).length === 1,

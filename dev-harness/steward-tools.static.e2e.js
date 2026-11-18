@@ -117,10 +117,17 @@ const HOOK_KEY = {
 const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 const threadEdits = '../backend/steward-thread-edits.cjs';
 const threadAdmission = '../backend/steward-thread-admission.cjs';
+const memoryTools = '../backend/steward-memory-tools.cjs';
+const settingsTools = '../backend/steward-settings-tools.cjs';
+const contentTools = '../backend/steward-content-tools.cjs';
+const decisionTools = '../backend/steward-decision-tools.cjs';
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
   .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs', '../backend/steward-thread-queries.cjs',
     '../backend/steward-thread-create.cjs', '../backend/steward-thread-launch.cjs',
-    threadEdits, threadAdmission, '../backend/steward-thread-delivery.cjs').sort();
+    threadEdits, threadAdmission, '../backend/steward-thread-delivery.cjs',
+    '../backend/steward-inbox.cjs', '../backend/steward-status-tools.cjs', decisionTools,
+    '../backend/steward-notification-tool.cjs', '../backend/steward-external-read-tools.cjs',
+    memoryTools, settingsTools, contentTools).sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
@@ -390,7 +397,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 //   · 13g-steward.js      —— 门控壳剥字段(117 波 T1 之后这里只剩剥字段那一处);
 //   · steward-thread-edits.cjs —— 派活原语那段的注释,加 117z-E2 的一处读点
 //     (steward_thread_permission 的 capabilities.desktop === true 那一支,见下面的逐名对账);
-//   · 13l-steward-ops.js  —— config_set / skill_toggle 两处「须确认」判定(T1 随实现从 13g 搬来);
+//   · 设置和内容管理服务 —— config_set / skill_toggle 两处「须确认」判定;
 //   · 13h-steward-runner.js —— 唯一置 true 的那一行(act 执行路径)。
 // 任何第六个文件出现它 = 锁红。
 // 117 波 T1 重钉:白名单从三个文件扩到五个,读点计数从「13g 里两处」改成「13g 族里两处、且都在
@@ -401,7 +408,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const NEWLINE_RE = /\r?\n/;
   const COMMENT_RE = /^\s*(\/\/|\*|\/\*)/;
   const STEWARD_TOOL_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
-    '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs', threadEdits];
+    '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs', threadEdits, settingsTools, contentTools, decisionTools];
   // 117 波 T2 重钉:白名单里的「13h」扩成 T2 拆出的运行器族六个文件(纯搬家)。三处出现点各自的
   // 落点:13m 是 ACTION_HOOKS 表头那两行注释、13q 是【唯一】置 true 的那一行(stewardRunAct)、
   // 13h 是 act 路由里「不置 userPressed」的那句注释。被钉的事实(唯一置 true 点在 act 路径、读点
@@ -429,16 +436,16 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   // 全局 allowDesktopTools 仍在 06i 的 forbidden 清册里,管家一个字都改不了;而且它只在放宽方向
   // 上读 userPressed,收紧方向(desktop:false)与档位轴的收紧一样不读 —— 「能自动的只有降,升永远
   // 要人按」这条机械规则在新那条轴上原样成立。下面三条断言一起看住这件事:
-  //   (a) 全仓读点恰好三处;(b) 落点是 13l 两处、线程编辑服务一处;
+  //   (a) 全仓读点恰好三处;(b) 设置、内容管理和线程编辑服务各一处;
   //   (c) 线程编辑服务的读点必须写在 stewardImplThreadPermission 的函数体里,而且它的条件里带 wantDesktop
   //       === true —— 挪到别的线程族工具里、或者去掉「只在放宽方向上读」这个限定,都当场红。
   const readerLines = STEWARD_TOOL_FAMILY.flatMap(f => read(f).split(NEWLINE_RE)
     .filter(line => line.includes('ctx.userPressed') && !COMMENT_RE.test(line)).map(() => f));
   ok(readerLines.length === 3, `⑦ 13g 族里恰好三处读 ctx.userPressed(config_set / skill_toggle 的须确认判定 + thread_permission 的桌面放宽;got ${readerLines.length})`);
   const readerTally = readerLines.reduce((acc, f) => { acc[f] = (acc[f] || 0) + 1; return acc; }, {});
-  ok(readerTally['13l-steward-ops.js'] === 2 && readerTally[threadEdits] === 1
-    && Object.keys(readerTally).length === 2,
-    `⑦ 落点逐名对账:13l 两处(设置族与内容管理族)+ 线程编辑服务一处(桌面放宽);got ${JSON.stringify(readerTally)}`);
+  ok([settingsTools, contentTools, threadEdits].every(file => readerTally[file] === 1)
+    && Object.keys(readerTally).length === 3,
+    `⑦ 设置、内容管理和线程编辑服务各一处读点(got ${JSON.stringify(readerTally)})`);
   {
     const body = functionBlock(read(threadEdits), 'stewardImplThreadPermission');
     ok(/ctx\.userPressed !== true/.test(body),
@@ -646,7 +653,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
       '写事务必须看到全库(含过期与已否决)。滤掉的话同义写入会把过期条目当成不存在、再落一条重复的 —— 44 号文 §1.2 记的「合并时那个陷阱」正是这个',
   };
   const memoryStore = '../backend/steward-memory-store.cjs';
-  const factoryFiles = [memoryStore, threadAdmission];
+  const factoryFiles = [memoryStore, threadAdmission, memoryTools];
   const srcAllFiles = [...fs.readdirSync(SRC).filter(n => n.endsWith('.js')), ...factoryFiles];
   const READ_STORE_RE = /\bstewardReadMemoryStore\s*\(/;
   const isCommentLine = line => /^\s*(\/\/|\*|\/\*)/.test(line);
@@ -691,7 +698,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const thinReasons = Object.entries(EXPIRY_FILTER_EXEMPT).filter(([, why]) => String(why || '').trim().length < 20);
   ok(thinReasons.length === 0, `⑫b 白名单逐条带理由,不是一张光秃秃的名单${thinReasons.length ? '；理由过短的:' + thinReasons.map(([k]) => k).join('、') : ''}`);
   // 这两口必须【自己滤】,不许改成往白名单里一塞就放行 —— 107-M1 修的就是第二个。
-  for (const key of ['13l-steward-ops.js:stewardImplMemorySearch', '13o-steward-runner-prompt.js:stewardPreroute']) {
+  for (const key of [`${memoryTools}:stewardImplMemorySearch`, '13o-steward-runner-prompt.js:stewardPreroute']) {
     const site = sites.find(s => s.key === key);
     ok(!!(site && site.filters), `⑫b ${key} 自己滤过期(不许用白名单绕过)${site ? '' : '；连这个调用点都没扫到'}`);
   }
@@ -700,7 +707,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // ── ⑬ 126-M01:「作用域算不算数」也只许有一个判据口 ─────────────────────────────────
 // 管家记忆存储负责作用域归一与匹配。所有调用方使用同一个项目键。
 {
-  const scopeFiles = fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js'));
+  const scopeFiles = [...fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js')), memoryTools];
   const offenders2 = [];
   const scopeOwner = read('../backend/steward-memory-store.cjs');
   let matchers = 0;

@@ -63,6 +63,12 @@ const threadServices = [
 ];
 const threadServiceSource = threadServices.map(([, source]) => source).join('\n');
 const src13l = read('13l-steward-ops.js');
+const decisionTools = 'steward-decision-tools.cjs';
+const toolServices = [
+  'steward-status-tools.cjs', decisionTools, 'steward-memory-tools.cjs', 'steward-external-read-tools.cjs',
+  'steward-notification-tool.cjs', 'steward-settings-tools.cjs', 'steward-content-tools.cjs',
+].map(file => [file, read('../backend/' + file)]);
+const toolServiceSource = toolServices.map(([, source]) => source).join('\n');
 const inboxComposition = read('13i-steward-inbox.js');
 const inboxSource = read('../backend/steward-inbox.cjs');
 const src13h = read('13h-steward-runner.js');
@@ -106,14 +112,14 @@ const src01b = read('../backend/http-route-policy.cjs');
   // T2 已经把那笔债还了(13h 拆成六个文件,纯搬家)。故那条豁免删掉,运行器族六个文件与工具族三个
   // 一起进这道闸:以后再往管家回合层加东西,超线的是哪个文件当场就看得见。
   for (const [name, text] of [['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k],
-    ['13l-steward-ops.js', src13l], ...threadServices, ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
+    ['13l-steward-ops.js', src13l], ...threadServices, ...toolServices, ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
     const n = text.split('\n').length;
     ok(n < 2000, `① ${name} 也在 SPEC 目标 2000 行以内(got ${n};拆分不许把债换个文件放)`);
   }
   // 117l companion:这条预算不是靠少写注释守住的,而是靠「新判定不往 13g 堆」。本波三个新判据
   // 一个都不在 13g 里 —— 递话通道的判定与执行在 13h,id 人话化 / 模型分档 / 「它在问你」在 06i。
   // 117 波 T1:判据面从 13g 一个文件扩到整个 13g 族 —— 否则拆完之后把新判定塞进 13k/13l 就绕过去了。
-  const famText = src13g + src13j + src13k + src13l + threadServiceSource;
+  const famText = src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource;
   for (const symbol of ['stewardRelayChannelFor', 'stewardHumanizeIds', 'stewardThreadEngineRoute', 'stewardAsksYou']) {
     ok(!new RegExp('function ' + symbol + '\\s*\\(').test(famText), `① 117l companion: ${symbol} 的实现不在 13g 族(新判定往 13h/06i 放)`);
   }
@@ -137,7 +143,7 @@ const src01b = read('../backend/http-route-policy.cjs');
     ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
-    ...threadServices,
+    ...threadServices, ...toolServices,
     ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['06k-config-patch.js', src06k]];
   const leaks = [];
   for (const [name, text] of consumers) {
@@ -203,7 +209,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -556,12 +562,15 @@ const srv = require(path.join(APP, 'server.js'));
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
   const src13p = read('13p-steward-runner-actions.js');
   const stopConsumers = [['steward-thread-edits.cjs', threadEdits],
-    ['13l-steward-ops.js', src13l], ['13p-steward-runner-actions.js', src13p]];
+    [decisionTools, read('../backend/' + decisionTools)], ['13p-steward-runner-actions.js', src13p]];
 
   // (a) 判据唯一:函数体只有一处,且在 06i。
   ok((src06i.match(/function stewardStoppedTarget\(/g) || []).length === 1,
     '⑦a 判据 stewardStoppedTarget 的函数体恰一处,且在 06i(现算的判据不许有第二份)');
-  for (const [name, text] of [['13k-steward-threads.js', src13k], ...threadServices, ...stopConsumers.slice(1)]) {
+  for (const [name, text] of [
+    ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l], ['13p-steward-runner-actions.js', src13p],
+    ...threadServices, ...toolServices,
+  ]) {
     ok(!/function stewardStoppedTarget\(/.test(text), `⑦a2 ${name} 没有自己那一份判据(只调,不抄)`);
   }
   // (b) 三处调用点都在,且都只调不抄。
