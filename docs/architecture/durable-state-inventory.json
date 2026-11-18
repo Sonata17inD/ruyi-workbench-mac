@@ -181,7 +181,7 @@
     {
       "id": "runtime-handshake",
       "pattern": "<data>/runtime.json",
-      "owner": "13-http-router.js",
+      "owner": "../backend/server-startup.cjs",
       "anchor": "'runtime.json'",
       "schema": "ephemeral object",
       "writePrimitive": "atomicWriteJson",

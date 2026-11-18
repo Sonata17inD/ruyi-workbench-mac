@@ -1,3 +1,27 @@
+const { createOwnedServerStartup, createServerStartup } = require('./backend/server-startup.cjs');
+const { startServerInner, resolveBindHost, stopAllActiveTurnsSync } = createServerStartup({
+  paths, RUNTIME, process, identity: { APP_NAME, VERSION, OVERLAY_ID, DEFAULT_PORT, externalServerJs },
+  notices: ServerStartNotices,
+  network: { isLoopbackBindHost, recordRequestMetric, hostAllowed, handleApi, serveStatic },
+  storage: { ensureDirs, mutateSession, safeJsonParse, invalidateSessionIndex, flushSessionIndexSync,
+    flushUsageLedgerSync, atomicWriteJson, storageSweep, sweepStaleScriptFiles },
+  recovery: { markInterruptedAgentRuns, markInterruptedInterventions, scheduleAgentWakesAtBoot,
+    warmPretenderProjectionIndex, autoResumeInterruptedRuns, migrateLegacyAccMemory },
+  config: { readConfig, syncClaudeCliSettings, syncAgentRolesToClaude, autoImportClaudeCodeMcp,
+    recordInstallLaunch, syncAgentInstructionImports, syncMcpServersToClaude,
+    syncAgentCliMcpManifests, getCapabilities, generateMcpConfig },
+  probes: { beginBootCliPathProbes, waitForBootCliPathProbes, finishBootCliPathProbes, ensureDesktopMcpWarm },
+  runtime: { activeChildren, stopSession, startScheduler, stopScheduler, killAllMcpClients, killAllShellSessions,
+    EventStreamHooks, ExternalBotHooks, StewardHooks, ToolboxHooks, platformOpenSpawn, spawnDetachedChecked },
+  nowIso, logEvent,
+});
+const startServer = createOwnedServerStartup({
+  paths, process, resolveBindHost, defaultDataRoots, lstatOrNull, isDirectServeInvocation, migrateLegacyDataRoot,
+  ServerOwnership, DesktopExecutionHooks, finishBootCliPathProbes, startServerInner,
+  startupGuidance: error => PrivacyCore.configHooks.startupGuidance?.(error),
+  writeStartError: ServerStartNotices.writeStartError,
+});
+
 async function main() {
   const argv = parseArgs(process.argv.slice(2));
   const command = argv._[0] || 'serve';

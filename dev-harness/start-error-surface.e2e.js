@@ -248,7 +248,7 @@ function killTree(child) {
   for (const s of holders) await closeServer(s);
 
   /* ═══ ⑤ 源码锁 ═══ */
-  const routerSrc = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+  const startupSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'server-startup.cjs'), 'utf8');
   const noticesSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'server-start-notices.cjs'), 'utf8');
   ok(/const START_ERROR_KINDS = Object\.freeze\(\['port-unavailable', 'data-dir-unwritable', 'startup-failed'\]\);/.test(noticesSrc),
     '⑤ 三类 kind 是源码写死的 Object.freeze 常量');
@@ -258,17 +258,17 @@ function killTree(child) {
   const consumeBlock = require('./lib/source-slice').functionBlock(noticesSrc, 'consumeStartError');
   ok(!!consumeBlock && consumeBlock.includes('fsp.unlink(file)') && consumeBlock.indexOf('fsp.unlink(file)') > consumeBlock.indexOf('fsp.readFile(file'),
     '⑤ 先读后删,且删除在形状判定【之前】(坏记录也会被清掉)');
-  ok(/const port = await listenWithFallback\(server, requestedPort, host\);/.test(routerSrc)
-    && /\{ port, host, pid: process\.pid/.test(routerSrc),
+  ok(/const port = await listenWithFallback\(server, requestedPort, host\);/.test(startupSrc)
+    && /\{ port, host, pid: process\.pid/.test(startupSrc),
     '⑤ runtime.json 写的是 listenWithFallback 返回的【实际】端口,不是请求的端口');
   ok(/START_NOTICE\.portFallback = \{ requested: port, actual: candidate \};/.test(noticesSrc),
     '⑤ 改用端口时如实登记 requested/actual 两端');
   // 本刀真实踩过的坑:第一版把 consumeStartError 放在 listen 之后,于是「已经在监听」与「握手常量写好」
   // 之间多了一个 await -- 那段窗口里进来的请求看到空 RUNTIME.token,能力探测与桥接回调偶发失败
   // (capabilities e2e 稳定复现)。这条断言防止任何人再往这段临界区里塞 await。
-  const listenAt = routerSrc.indexOf('const port = await listenWithFallback(server, requestedPort, host);');
-  const runtimeAt = routerSrc.indexOf('RUNTIME.token = runtimeToken;');
-  const criticalSection = listenAt >= 0 && runtimeAt > listenAt ? routerSrc.slice(listenAt, runtimeAt) : 'await';
+  const listenAt = startupSrc.indexOf('const port = await listenWithFallback(server, requestedPort, host);');
+  const runtimeAt = startupSrc.indexOf('RUNTIME.token = runtimeToken;');
+  const criticalSection = listenAt >= 0 && runtimeAt > listenAt ? startupSrc.slice(listenAt, runtimeAt) : 'await';
   const hasHandshakeAwait = section => /\bawait\b/.test(stripJsComments(section).replace('const port = await listenWithFallback', ''));
   ok(!hasHandshakeAwait(criticalSection),
     '⑤ listen 与 RUNTIME 握手常量赋值之间零 await(服务可服务时 token 必须已就位)');
@@ -276,7 +276,7 @@ function killTree(child) {
     '⑤ 临界区检查忽略注释中的 await');
   ok(hasHandshakeAwait(criticalSection + '\nawait Promise.resolve();\n') && hasHandshakeAwait('await'),
     '⑤ 临界区检查仍拒绝真实 await 和缺失锚点');
-  const consumeAt = routerSrc.indexOf('START_NOTICE.lastError = await consumeStartError();');
+  const consumeAt = startupSrc.indexOf('START_NOTICE.lastError = await consumeStartError();');
   ok(consumeAt >= 0 && consumeAt < listenAt,
     '⑤ 上次失败记录在 listen 【之前】读出(不占用上面那段临界区)');
   const inventory = fs.readFileSync(path.join(__dirname, 'durable-state-inventory.js'), 'utf8');

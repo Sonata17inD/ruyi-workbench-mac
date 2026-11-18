@@ -170,8 +170,9 @@ function typeExpressionLiterals(text) {
 
 {
   const router = read('13-http-router.js');
+  const startup = read('../backend/server-startup.cjs');
   ok(router.includes('StewardHooks.handleApiRoutes'), 'D5 13-http-router 经 StewardHooks.handleApiRoutes 挂路由');
-  ok(router.includes('StewardHooks.stopInbox'), 'D5 13-http-router 关服收尾经 StewardHooks.stopInbox 停轮询');
+  ok(startup.includes('StewardHooks.stopInbox'), 'D5 关服收尾经 StewardHooks.stopInbox 停轮询');
   ok(!router.includes('handleStewardApiRoutes'), 'D5 13-http-router 不含 handleStewardApiRoutes 字面量(直接引用 13g = 新前向边,红线)');
   ok(!/\bstartStewardInbox\b/.test(router), 'D5 13-http-router 不直接引用 startStewardInbox');
 

@@ -22,7 +22,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      —— ① 在「本机没装任何 python」的机器上会变弱（探针本来就不慢），③ 是与机器无关的那一半。
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
-const { readServerSource } = require('./src-reader');
 const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -112,10 +111,8 @@ function getJson(pathname, token, timeoutMs) {
       '/api/status 仍带 mcpConfigPath（探完现算；在飞时只回路径、不重新生成）');
 
     // ── 形状锁:与机器无关的那一半 ──
-    const src = readServerSource();
-    // 锚点必须落在 boot 段【自己】那一句上:`await invalidateSessionIndex();` 在全文里第一处出现于 02，
-    // 拿它切片会把半个仓库都算进 "listen 之前"。这一句带注释的 readConfig 是 boot 段独有的。
-    const bootStart = src.indexOf('let config = await readConfig(); // let: autoImportClaudeCodeMcp 写回后需重绑到最新引用');
+    const src = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/server-startup.cjs'), 'utf8'), 'startServerInner');
+    const bootStart = src.indexOf('let config = await readConfig();');
     const listenAt = src.indexOf('const port = await listenWithFallback(server, requestedPort, host);');
     ok(bootStart > 0 && listenAt > bootStart, 's 定位到 boot 段与 listenWithFallback');
     const beforeListen = src.slice(bootStart, listenAt);

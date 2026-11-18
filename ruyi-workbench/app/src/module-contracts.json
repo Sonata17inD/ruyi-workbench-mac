@@ -26,7 +26,6 @@
         "CONFIG_SCHEMA",
         "CONTEXT_OVERFLOW_PATTERNS",
         "CONTEXT_WINDOW_FALLBACK",
-        "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
         "DESKTOP_MCP_SERVER_ID",
         "DeliveryHooks",
@@ -10516,7 +10515,6 @@
         "FILE_TOOL_HANDLERS",
         "FileMutationQueue",
         "INTEGRATION_TOOL_HANDLERS",
-        "LAUNCH_MODE",
         "MANIFEST_FULL_VERIFY_MS",
         "NETWORK_TOOL_HANDLERS",
         "OBSERVATION_RECALL_MAX_CHARS",
@@ -11809,13 +11807,9 @@
       "file": "13-http-router.js",
       "layer": "transport",
       "provides": [
-        "START_ERROR_KINDS",
-        "START_NOTICE",
+        "ServerStartNotices",
         "agentWorkflowLoopbackRoute",
         "buildUsageSummary",
-        "consumeStartError",
-        "createServerStartNotices",
-        "createWorkbenchHttpServer",
         "doctor",
         "doctorHealthSeverity",
         "doctorHumanLines",
@@ -11830,17 +11824,10 @@
         "handleSkillApiRoutes",
         "handleUsageApiRoutes",
         "installIntegration",
-        "listenWithFallback",
         "parseArgs",
-        "resetOrphanedMissionDrivers",
-        "resolveBindHost",
         "setSessionSkillsCore",
         "startMcp",
-        "startServer",
-        "startServerInner",
-        "stopAllActiveTurnsSync",
-        "streamChat",
-        "writeStartError"
+        "streamChat"
       ],
       "requires": [
         {
@@ -11901,35 +11888,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "DATA_ROOT_MIGRATION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "dataRootAliases",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "DEFAULT_PORT",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "defaultDataRoots",
           "kinds": [
             "call"
           ]
@@ -12002,13 +11961,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "isDirectServeInvocation",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "isSensitiveDataPath",
           "kinds": [
             "read"
@@ -12034,13 +11986,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "lstatOrNull",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12077,13 +12022,6 @@
           "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "migrateLegacyDataRoot",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12177,7 +12115,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12198,20 +12135,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -12245,13 +12168,6 @@
           ]
         },
         {
-          "provider": "00-platform-runtime.js",
-          "symbol": "platformOpenSpawn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "00b-ruyi-names.js",
           "symbol": "LEGACY_RUYI_MCP_SERVER_IDS",
           "kinds": [
@@ -12269,27 +12185,12 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "authorizeRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "autoImportClaudeCodeMcp",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "beginBootCliPathProbes",
           "kinds": [
             "call"
           ]
@@ -12346,20 +12247,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "externalServerJs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "finishBootCliPathProbes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
             "call",
@@ -12369,20 +12256,6 @@
         {
           "provider": "01-config.js",
           "symbol": "getAgentRoleLibrary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "hostAllowed",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "isLoopbackBindHost",
           "kinds": [
             "call"
           ]
@@ -12433,13 +12306,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "recordInstallLaunch",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "requestIsLoopback",
           "kinds": [
             "call"
@@ -12483,27 +12349,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "serveStatic",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sweepStaleScriptFiles",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncAgentCliMcpManifests",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "syncAgentRolesToClaude",
           "kinds": [
             "call"
@@ -12536,13 +12381,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "waitForBootCliPathProbes",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12591,13 +12429,6 @@
         {
           "provider": "01f-agent-cli-types.js",
           "symbol": "AGENT_CLI_TYPES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01g-server-ownership.js",
-          "symbol": "ServerOwnership",
           "kinds": [
             "read"
           ]
@@ -12683,30 +12514,9 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "flushSessionIndexSync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "flushUsageLedgerSync",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "forEachUsageRow",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "invalidateSessionIndex",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12743,13 +12553,6 @@
           "kinds": [
             "call",
             "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "markInterruptedInterventions",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12940,7 +12743,6 @@
           "provider": "04-permission-runtime.js",
           "symbol": "killAllMcpClients",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12949,13 +12751,6 @@
           "symbol": "requestSessionExecutionStop",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "stopSession",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13213,13 +13008,6 @@
         },
         {
           "provider": "06d-memory-domain.js",
-          "symbol": "migrateLegacyAccMemory",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
           "symbol": "migrateMemory",
           "kinds": [
             "read"
@@ -13279,13 +13067,6 @@
           "symbol": "saveMemory",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "syncAgentInstructionImports",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13403,16 +13184,8 @@
         },
         {
           "provider": "06v-operational-services.js",
-          "symbol": "recordRequestMetric",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06v-operational-services.js",
           "symbol": "storageSweep",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -13522,20 +13295,6 @@
           ]
         },
         {
-          "provider": "09b-agent-recovery.js",
-          "symbol": "autoResumeInterruptedRuns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09b-agent-recovery.js",
-          "symbol": "markInterruptedAgentRuns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
           "kinds": [
@@ -13578,31 +13337,10 @@
           ]
         },
         {
-          "provider": "10a-session-turn.js",
-          "symbol": "scheduleAgentWakesAtBoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "killAllShellSessions",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "12-tool-dispatch.js",
           "symbol": "computeHealth",
           "kinds": [
             "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "LAUNCH_MODE",
-          "kinds": [
             "read"
           ]
         },
@@ -13685,29 +13423,8 @@
           ]
         },
         {
-          "provider": "13e-pretender-index.js",
-          "symbol": "warmPretenderProjectionIndex",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "13s-scheduler.js",
           "symbol": "handleSchedulerApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "startScheduler",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "stopScheduler",
           "kinds": [
             "call"
           ]
@@ -22211,7 +21928,13 @@
       "file": "14-main.js",
       "layer": "entrypoint",
       "provides": [
-        "main"
+        "createOwnedServerStartup",
+        "createServerStartup",
+        "main",
+        "resolveBindHost",
+        "startServer",
+        "startServerInner",
+        "stopAllActiveTurnsSync"
       ],
       "requires": [
         {
@@ -22231,6 +21954,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "adaptiveMetaToolSchemas",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "APP_NAME",
           "kinds": [
             "read"
           ]
@@ -22307,6 +22037,34 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "DEFAULT_PORT",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "defaultDataRoots",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "DesktopExecutionHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ensureDirs",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "estimateHistoryTokens",
           "kinds": [
             "read"
@@ -22322,6 +22080,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "ExternalBotHooks",
           "kinds": [
             "read"
           ]
@@ -22363,6 +22128,27 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isDirectServeInvocation",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "lstatOrNull",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "maskedSecretConflicts",
           "kinds": [
             "read"
@@ -22371,6 +22157,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "maskSecrets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "migrateLegacyDataRoot",
           "kinds": [
             "read"
           ]
@@ -22405,7 +22198,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "OVERLAY_ID",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "parseMcpConfigFile",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
           "kinds": [
             "read"
           ]
@@ -22448,6 +22262,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeJsonParse",
           "kinds": [
             "read"
           ]
@@ -22530,8 +22351,36 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "VERSION",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-platform-runtime.js",
+          "symbol": "platformOpenSpawn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "autoImportClaudeCodeMcp",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "beginBootCliPathProbes",
           "kinds": [
             "read"
           ]
@@ -22615,9 +22464,24 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "externalServerJs",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "finishBootCliPathProbes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -22636,7 +22500,21 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "hostAllowed",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "invalidateMcpDropInCache",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "isLoopbackBindHost",
           "kinds": [
             "read"
           ]
@@ -22714,6 +22592,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "recordInstallLaunch",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
             "read"
@@ -22721,7 +22606,21 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "RUNTIME",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "saveProjectAgentRoles",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "serveStatic",
           "kinds": [
             "read"
           ]
@@ -22742,7 +22641,35 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "syncAgentRolesToClaude",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "syncClaudeCliSettings",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "syncMcpServersToClaude",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "syncMcpServersToKimi",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "waitForBootCliPathProbes",
           "kinds": [
             "read"
           ]
@@ -22993,6 +22920,13 @@
           ]
         },
         {
+          "provider": "01g-server-ownership.js",
+          "symbol": "ServerOwnership",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01h-privacy-core.js",
           "symbol": "PrivacyCore",
           "kinds": [
@@ -23212,6 +23146,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "markInterruptedInterventions",
           "kinds": [
             "read"
           ]
@@ -23772,6 +23713,20 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "safeMcpInventory",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "stopSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "ToolboxHooks",
           "kinds": [
             "read"
           ]
@@ -24521,6 +24476,13 @@
         {
           "provider": "06d-memory-domain.js",
           "symbol": "saveMemory",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06d-memory-domain.js",
+          "symbol": "syncAgentInstructionImports",
           "kinds": [
             "read"
           ]
@@ -25856,6 +25818,13 @@
           ]
         },
         {
+          "provider": "10a-session-turn.js",
+          "symbol": "scheduleAgentWakesAtBoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "11-native-tools.js",
           "symbol": "adaptiveCatalogForMcp",
           "kinds": [
@@ -25865,6 +25834,13 @@
         {
           "provider": "11-native-tools.js",
           "symbol": "crc32",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "11-native-tools.js",
+          "symbol": "killAllShellSessions",
           "kinds": [
             "read"
           ]
@@ -26004,6 +25980,13 @@
         },
         {
           "provider": "13-http-router.js",
+          "symbol": "handleApi",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
           "symbol": "installIntegration",
           "kinds": [
             "call"
@@ -26018,14 +26001,14 @@
         },
         {
           "provider": "13-http-router.js",
-          "symbol": "startMcp",
+          "symbol": "ServerStartNotices",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13-http-router.js",
-          "symbol": "startServer",
+          "symbol": "startMcp",
           "kinds": [
             "call"
           ]

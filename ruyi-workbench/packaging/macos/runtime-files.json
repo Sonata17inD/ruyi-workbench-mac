@@ -83,6 +83,7 @@
     "app/backend/attachment-store.cjs",
     "app/backend/server-start-notices.cjs",
     "app/backend/workbench-http-server.cjs",
+    "app/backend/server-startup.cjs",
     "app/backend/attachment-enrichment.cjs",
     "app/backend/agent-workflow.cjs",
     "app/backend/persisted-agent-launch.cjs",

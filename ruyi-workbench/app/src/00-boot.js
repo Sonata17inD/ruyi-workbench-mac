@@ -141,9 +141,6 @@ function isDirectServeInvocation() {
   if (require.main !== module) return false;
   return !process.argv.slice(2).some(a => ['mcp', 'install', 'doctor', 'mcp-config'].includes(String(a)));
 }
-// Migration writes are deferred until startServer owns both source and destination.
-let DATA_ROOT_MIGRATION = null;
-
 
 function externalRoot() {
   return appRoot();

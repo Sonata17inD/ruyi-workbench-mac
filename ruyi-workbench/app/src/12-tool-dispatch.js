@@ -1420,8 +1420,6 @@ const { TOOL_HANDLERS, isControlPlaneToolName, suggestToolNames, unknownToolErro
   levenshtein, isStewardToolName, nativeToolSchema, DesktopExecutionHooks, PrivacyGateway, readConfig, NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, policySessionFor, nativeToolDisabledByPolicy, sessionDesktopToolsOf, toolDisabledResult, normalizeToolInvokeArgs, toolInvokeMissingNameResult, normalizeMetaToolArgs, ProcessRuntime, makeId, FileTextIo,
 });
 
-let LAUNCH_MODE = 'unknown';
-
 // 48b(P2):overlay 清单校验缓存。verifyManifest 经 computeHealth -> /api/status 被前端轮询,旧实现每轮全文件
 // SHA-256 是纯浪费。mtime+size 快路径:文件未变则复用上次算的 sha,跳过读盘+hash;60s 强制全量校验防
 // mtime 伪造/同 mtime 异内容边角。缓存按 manifest.version 失效(新 overlay 落地即重算)。

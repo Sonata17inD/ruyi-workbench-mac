@@ -2,7 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { fixture, clone } = require('../lib/privacy-test-fixture');
 const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
-const { createServerStartNotices, START_ERROR_KINDS } = require('../../ruyi-workbench/app/backend/server-start-notices.cjs');
+const { createServerStartNotices } = require('../../ruyi-workbench/app/backend/server-start-notices.cjs');
+const { createOwnedServerStartup } = require('../../ruyi-workbench/app/backend/server-startup.cjs');
 function setup() {
   const f = fixture(); let disk, journal, busy = false, fault = '', invalidations = 0; const notifications = [];
   const original = { credentialEncryptionV1: true, defaultWorkspace: 'KEEP-WORKSPACE', privacyModeV1: 'enhanced', providers: [{ id: 'same', apiKey: 'old-test-key', baseUrl: 'https://old.test' }, { id: 'keep', apiKey: 'kept-test-key', baseUrl: 'https://keep.test' }] };
@@ -179,10 +180,7 @@ test('CLI startup prints fresh-profile recovery guidance only for a locked crede
 });
 
 test('startup diagnostic retains its schema, size limit and original error while exposing safe locked-vault guidance', async t => {
-  const f = fixture(), { functionBlock } = require('../lib/source-slice');
-  const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13-http-router.js'), 'utf8');
-  const startServer = functionBlock(source, 'startServer');
-  assert.ok(startServer);
+  const f = fixture();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-start-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const paths = { data: path.join(root, 'synthetic-data') };
@@ -194,12 +192,12 @@ test('startup diagnostic retains its schema, size limit and original error while
       paths, DesktopExecutionHooks, atomicWriteJson: async (_file, value) => records.push(value),
       nowIso: () => '2026-10-20T00:00:00.000Z',
     });
-    const start = vm.runInNewContext(startServer + '\nstartServer', {
-      PrivacyCore: { configHooks: { startupGuidance: f.CredentialRecovery.startupGuidance } },
-      paths, path, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
+    const start = createOwnedServerStartup({
+      startupGuidance: f.CredentialRecovery.startupGuidance,
+      paths, process, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
       lstatOrNull: () => null, isDirectServeInvocation: () => false, ServerOwnership: { acquire: async () => ({ portable: false, releaseStartup: async () => {} }) },
       startServerInner: async () => { throw error; }, finishBootCliPathProbes: () => { finished++; },
-      DesktopExecutionHooks, START_ERROR_KINDS, writeStartError,
+      DesktopExecutionHooks, writeStartError,
     });
     await assert.rejects(() => start({}), caught => caught === error && caught.code === code);
     assert.equal(finished, 1); assert.equal(records.length, 1);
