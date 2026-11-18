@@ -59,7 +59,7 @@ function computeRanges(parts) {
 function syntaxGate(text, label) {
   // 产物落盘前过 node --check(经 stdin,不落临时文件):模块尾部半成品(缺闭合)在此拦截,
   // 失败不覆盖旧产物(43e 对抗轮:首行自检只守头不守尾)。
-  const r = cp.spawnSync(process.execPath, ['--check', '-'], { input: text, encoding: 'utf8', windowsHide: true });
+  const r = cp.spawnSync(process.execPath, ['--check', '-'], { input: text, encoding: 'utf8' });
   if (r.status !== 0) throw new Error(`产物语法校验失败(${label}):\n${r.stderr || r.stdout}`);
 }
 
@@ -106,14 +106,13 @@ if (bad.length) {
   console.log("build: manifest 行区间已回填(" + bad.length + " 处漂移修正)");
 }
 
-// 原子写(tmp+rename;tmp 带 PID 防并发 build 互踩)。Windows 上 AV/索引器瞬时锁会 EPERM,
-// 短退避重试 3 次(43e 对抗轮实测 rename 覆盖已存在目标 OK,EPERM 来自句柄占用)。
+// 先写入本次构建的临时文件，再原子替换产物。
 const tmp = OUT + '.build-tmp.' + process.pid;
-fs.writeFileSync(tmp, out, 'utf8');
-let renamed = false, lastErr = null;
-for (let i = 0; i < 3 && !renamed; i++) {
-  try { fs.renameSync(tmp, OUT); renamed = true; }
-  catch (e) { lastErr = e; if (e.code !== 'EPERM' && e.code !== 'EBUSY') break; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 150); }
+try {
+  fs.writeFileSync(tmp, out, 'utf8');
+  fs.renameSync(tmp, OUT);
+} catch (error) {
+  try { fs.unlinkSync(tmp); } catch { /* write may have failed before creating the temporary file */ }
+  throw error;
 }
-if (!renamed) { try { fs.unlinkSync(tmp); } catch { /* ignore */ } throw new Error(`产物落盘失败(rename ${lastErr && lastErr.code}): ${lastErr && lastErr.message} —— 可能有程序锁住了 server.js(编辑器/杀软),重试或关闭后重跑`); }
 console.log(`build: ${out.split('\n').length} 行 → ${path.relative(process.cwd(), OUT)}`);
