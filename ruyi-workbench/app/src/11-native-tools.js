@@ -44,8 +44,6 @@ EventStreamHooks.backgroundShells = ShellSessions.backgroundShells;
 //   · 模式超过 WALK_PATTERN_MAX_CHARS 直接拒。遍历顺序、maxFiles 截断与 truncated 口径与主线程路径一致。
 const { walkFiles, walkDepthHint, walkEnvelopeEntries, walkTruncationHint } = require('./backend/file-walker.cjs').createFileWalker({ ensureDataRootReal, isSensitiveDataPath, isSensitiveHardlinkAlias, pathWithinRoot, realpathForContainment, sensitiveFileIdentities });
 
-const { privacySourceActive, privacySourceMark, privacySourceLineOffsets, privacySourceLine, privacySourceFragment, privacyReadTextWindow, privacyProjectSearch, readIfExists, sourceViewOf } = require('./backend/privacy-sources.cjs').createPrivacySources({ PrivacyGateway });
-
 const { searchFileContent, regexScanFilesBounded, searchMaxFileBytes, explicitAllowDirs, prunedDirsHint, searchFileContentJs, searchFileContentRg } = require('./backend/content-search.cjs').createContentSearch({
   ProcessRuntime, walkFiles, sensitiveGlobsForRg,
   probe: { hasRgAsync: () => hasRgAsync(), probeRg: () => probeRg() },

@@ -626,6 +626,9 @@ const preflightWriteBoundary = require('./backend/file-write-preflight.cjs').cre
 let journalBridgedWrite = require('./backend/bridged-write-journal.cjs').createBridgedWriteJournal({
   journalSessionCtx, guardWorkspacePath, journalRecord,
 });
+const { writeHistorySnapshot, rehydrateObservation } = require('./backend/history-snapshot-store.cjs').createHistorySnapshotStore({
+  journalDir, journalBytesAdjust, withJournalWriteLock, journalGc,
+});
 const materializeCheckpointEditorDiff = require('./backend/checkpoint-editor-diff.cjs').createCheckpointEditorDiff({ journalDir });
 
 // v0.8-S4b B2 — conversation REWIND (Claude Code-style "back up to just before this message"). Truncates

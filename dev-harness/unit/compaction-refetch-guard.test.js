@@ -1,5 +1,5 @@
 'use strict';
-// 压缩后重取守卫(10 createCompactionRefetchGuard)与每回合配额的回合键(10 providerTurnQuotaKey)的判据细节。
+// 压缩后重取守卫与每回合配额的回合键。
 // 真源码整段切进 vm(这几个函数不出 module.exports);端到端的抖动复现与接线见 compaction-refetch-guard.e2e.js。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -7,6 +7,7 @@ const vm = require('vm');
 const { readServerSource } = require('../src-reader');
 const { sliceBlock } = require('../lib/source-slice');
 const { nativeToolTier } = require('../../ruyi-workbench/app/backend/native-tool-tiers.cjs');
+const { providerTurnQuotaKey } = require('../../ruyi-workbench/app/backend/execution-state.cjs');
 
 const source = readServerSource();
 const block = sliceBlock(source, '// ── 压缩后重取守卫(回合内)', '// True shadow evaluation for 20-C1');
@@ -81,7 +82,6 @@ test('[R4] 拒绝与提醒的文案:错误码稳定、给出换做法', () => {
 });
 
 test('[R5] 每回合配额的回合键:优先 turnSeq(压缩改 user 条数不换桶);没有 turnSeq 时退回 user 条数', () => {
-  const { providerTurnQuotaKey } = load();
   const before = { turnSeq: 7, providerHistory: [{ role: 'user' }, { role: 'assistant' }, { role: 'user' }, { role: 'assistant' }, { role: 'user' }] };
   const afterReseed = { turnSeq: 7, providerHistory: [{ role: 'user' }, { role: 'assistant' }, { role: 'user' }] };
   assert.equal(providerTurnQuotaKey(before), providerTurnQuotaKey(afterReseed));

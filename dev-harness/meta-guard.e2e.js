@@ -82,7 +82,8 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
 // ── E) 两引擎能力对称:orchestrate_agents 的模板/意图提示必须【两个引擎都注入】。历史上 Claude 引擎从不告知有哪些
 //        模板(注入只在 Provider 路径)→ Claude 侧模型无从用 workflowId,是"能力面不对称"缺口(同第22波联网那类)。 ──
 {
-  const fnM = src.match(/function buildOrchestrateHint\(workflows\) \{[\s\S]*?\n\}/);
+  const catalog = fs.readFileSync(path.join(WB, 'app', 'backend', 'agent-workflow-catalog.cjs'), 'utf8');
+  const fnM = catalog.match(/function buildOrchestrateHint\(workflows\) \{[\s\S]*?\n\}/);
   ok(!!fnM, 'E buildOrchestrateHint 定义存在(两引擎共用的编排提示构造)');
   if (fnM) {
     ok(/主动编排指引/.test(fnM[0]), 'E 提示含【意图触发】编排指引(非仅"形状匹配时"被动)');
@@ -93,7 +94,7 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   // 第35波 P2: Claude 侧编排提示从 --append-system-prompt 改走 stdin 索引注入(indexSecs → <workbench-context>),
   // 信道变了但「受 subagentMaxPerTurn 门控 + 与 Provider 同源」的对称契约不变。
   const calls = (src.match(/buildOrchestrateHint\(/g) || []).length;
-  ok(calls >= 3, 'E buildOrchestrateHint 被定义 + 两引擎各一次调用(≥3 处,实 ' + calls + ')');
+  ok(calls >= 2, 'E buildOrchestrateHint 两引擎各一次调用(≥2 处,实 ' + calls + ')');
   const claudeStart = src.indexOf('async function runClaudeTurn(');
   const claudeEnd = src.indexOf('async function runOpenAiTurn(');
   const claudeRegion = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
@@ -134,7 +135,8 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
 {
   // ① 文本只有一份:定义在 06b 的提示词包里,两条路都经 getPromptPack(...).answerShape 取,
   //    src/ 里不许出现第二处自己写的结论先行文字(那是「同一条规则两份口径」的老毛病)。
-  const accessors = (src.match(/getPromptPack\([^)]*\)\.answerShape/g) || []).length;
+  const providerPrompt = fs.readFileSync(path.join(WB, 'app/backend/provider-stable-prompt.cjs'), 'utf8');
+  const accessors = ((src + '\n' + providerPrompt).match(/getPromptPack\([^)]*\)\.answerShape/g) || []).length;
   ok(accessors >= 2, 'G answerShape 经 getPromptPack 取用 ≥2 处(两个引擎各一次;实 ' + accessors + ')');
   const backend = path.join(WB, 'app/backend');
   const promptOwners = src + '\n' + fs.readdirSync(backend).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backend, name), 'utf8')).join('\n');
@@ -166,8 +168,8 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   ok(appendIdx >= 0 && sectionLimitIdx > appendIdx,
     'G CLI 侧结论先行在无条件前缀里(排在 sectionLimit 之前,不参与 fits-or-drop;降级一律从尾部切)');
   // ④ Provider 那一路仍然注入(对称的另一半;117v-V3 建的那条线没被这一刀动过)。
-  ok(/if \(!identityOnly\) lines\.push\(getPromptPack\([^)]*\)\.answerShape\)/.test(src),
-    'G Provider 引擎(buildStableSystemPrompt)也注入结论先行,且仍受 !identityOnly 门控(对称)');
+  ok(/if \(!identityOnly\) lines\.push\(getPromptPack\([^)]*\)\.answerShape\)/.test(providerPrompt),
+    'G Provider 稳定提示也注入结论先行,且仍受 !identityOnly 门控(对称)');
 }
 
 console.log('');

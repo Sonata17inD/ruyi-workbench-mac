@@ -461,7 +461,7 @@
     {
       "id": "journal-history",
       "pattern": "<data>/checkpoints/<id>/history-*.json.gz",
-      "owner": "10-context-governance.js",
+      "owner": "../backend/history-snapshot-store.cjs",
       "anchor": "history-",
       "schema": "gzip JSON",
       "writePrimitive": "binary write",
@@ -769,7 +769,7 @@
     {
       "id": "project-workflows",
       "pattern": "<workspace>/.ruyi/workflows.json",
-      "owner": "08-agent-runs.js",
+      "owner": "../backend/agent-workflow-catalog.cjs",
       "anchor": "'workflows.json'",
       "schema": "object / schemaVersion 1",
       "writePrimitive": "atomicWriteJson",
@@ -783,8 +783,8 @@
     {
       "id": "personal-workflows",
       "pattern": "<data>/agent-workflows/<id>.json",
-      "owner": "08-agent-runs.js",
-      "anchor": "paths.agentWorkflows",
+      "owner": "../backend/agent-workflow-catalog.cjs",
+      "anchor": "agentWorkflowsDirectory",
       "schema": "object / normalized",
       "writePrimitive": "atomicWriteJson",
       "corruption": "invalid workflow skipped",

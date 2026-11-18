@@ -215,9 +215,11 @@
       "provides": [
         "activeAgentRuns",
         "activeChildren",
+        "createExecutionState",
         "pendingPermissions",
         "pendingPlans",
         "pendingQuestions",
+        "providerTurnQuotaKey",
         "sessionWriteChains",
         "turnSettlers"
       ],
@@ -452,7 +454,16 @@
       "file": "03a-privacy-gateway.js",
       "layer": "foundation",
       "provides": [
-        "PrivacyGateway"
+        "PrivacyGateway",
+        "privacyProjectSearch",
+        "privacyReadTextWindow",
+        "privacySourceActive",
+        "privacySourceFragment",
+        "privacySourceLine",
+        "privacySourceLineOffsets",
+        "privacySourceMark",
+        "readIfExists",
+        "sourceViewOf"
       ],
       "requires": [
         {
@@ -1941,6 +1952,7 @@
         "recordRunBudgetTrippedEvent",
         "recordRunStalledEvent",
         "registerIntervention",
+        "rehydrateObservation",
         "rememberLastUsedEngineRoute",
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
@@ -2007,6 +2019,7 @@
         "withSessionMutateLock",
         "workspaceBaselineIsCodePath",
         "workspaceBaselinePathKey",
+        "writeHistorySnapshot",
         "writeMissionContainer",
         "writeSessionNotes"
       ],
@@ -3620,6 +3633,93 @@
       "requires": []
     },
     {
+      "file": "06c-agent-workflow-catalog.js",
+      "layer": "engine",
+      "provides": [
+        "BUILTIN_AGENT_WORKFLOWS",
+        "agentWorkflowSaveProblem",
+        "buildOrchestrateHint",
+        "createAgentWorkflowCatalog",
+        "deleteAgentWorkflow",
+        "getAgentWorkflows",
+        "normalizeAgentWorkflow",
+        "normalizeWaitSpec",
+        "normalizeWorkflowCondition",
+        "normalizeWorkflowLoop",
+        "saveAgentWorkflow"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04l-skill-registry.js",
+      "layer": "foundation",
+      "provides": [
+        "SkillRegistry",
+        "createSkillRegistry",
+        "effectiveSkillSelection",
+        "resolveEnabledSkillEntries"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "agentCliHomes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "externalRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeJsonParse",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "SKILL_ID_RE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "readIfExists",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "05-claude-engine.js",
       "layer": "engine",
       "provides": [
@@ -3643,7 +3743,6 @@
         "asrFixModeOf",
         "asrFixSanity",
         "asrUsesDashscopeNative",
-        "effectiveSkillSelection",
         "providerFixCompletion",
         "resolveAsrFixProvider",
         "resolveAsrProvider",
@@ -4303,6 +4402,20 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "effectiveSkillSelection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04l-skill-registry.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "05b-kimi-bridge.js",
           "symbol": "applyKimiStatusToSession",
           "kinds": [
@@ -4485,6 +4598,20 @@
           ]
         },
         {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "buildOrchestrateHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryCheckPrompt",
           "kinds": [
@@ -4543,27 +4670,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "classifyToolPacks",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "buildOrchestrateHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "resolveEnabledSkillEntries",
           "kinds": [
             "call"
           ]
@@ -7577,8 +7683,6 @@
         "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
-        "BUILTIN_AGENT_WORKFLOWS",
-        "C3_HIGH_RISK_GATE",
         "EVIDENCE_REFS_MAX_ITEMS",
         "NODE_SUMMARY_MAX",
         "NODE_WRITE_FAMILY",
@@ -7590,7 +7694,6 @@
         "agentRunCapabilities",
         "agentRunResultSlice",
         "agentRunRoster",
-        "agentWorkflowSaveProblem",
         "agentWorkflowStatusText",
         "aggregateAgentVote",
         "aggregateCoverage",
@@ -7599,7 +7702,6 @@
         "balancedJsonSpan",
         "buildAgentRunEnvelope",
         "buildNodeEvidenceCatalog",
-        "buildOrchestrateHint",
         "buildUpstreamContext",
         "canonicalWorkflowValue",
         "cleanupAgentWorktree",
@@ -7609,7 +7711,6 @@
         "createAgentWorktree",
         "cutAtSentence",
         "dedupeAgentFindings",
-        "deleteAgentWorkflow",
         "deriveNodeOutputs",
         "evalWaitCondition",
         "evaluateNodeToolEvidence",
@@ -7617,27 +7718,19 @@
         "finalizeAgentWorktree",
         "findingHandledItems",
         "formatNodeEvidencePrompt",
-        "getAgentWorkflows",
         "gitExec",
         "indexNodeEvidence",
         "materializePoolItem",
         "nodeDeliveryEligibility",
         "normalizeAgentGate",
-        "normalizeAgentWorkflow",
-        "normalizeWaitSpec",
-        "normalizeWorkflowCondition",
-        "normalizeWorkflowLoop",
         "orchestrateArgsProblem",
         "orchestrateModelNotes",
         "ownAgentMessageReceipt",
         "parseStructuredAgentOutput",
         "poolChainDepth",
-        "projectAgentWorkflowsFile",
         "propagateAssignments",
         "purgeNodeEvidence",
         "readAgentRunRecord",
-        "readPersonalAgentWorkflows",
-        "readProjectAgentWorkflows",
         "recordAgentNodeProgress",
         "repairJson",
         "requestDelegationPermission",
@@ -7649,7 +7742,6 @@
         "runSubAgentCoreBody",
         "runWorkspaceHash",
         "sanitizeAgentOutputSchema",
-        "saveAgentWorkflow",
         "singleAgentShorthandNode",
         "structuredJsonCandidates",
         "structuredOfNode",
@@ -7854,13 +7946,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "resolveNodeModel",
           "kinds": [
             "call"
@@ -7971,6 +8056,13 @@
           "symbol": "saveAgentRun",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8165,6 +8257,13 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "appendResponseLanguagePolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
           "kinds": [
             "call"
           ]
@@ -8396,13 +8495,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "truncateToolResult",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
           "kinds": [
             "call"
           ]
@@ -9169,6 +9261,13 @@
           ]
         },
         {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02c-turn-segments.js",
           "symbol": "createTurnSegmentBuilder",
           "kinds": [
@@ -9429,6 +9528,13 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
@@ -9543,6 +9649,41 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "buildOrchestrateHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWaitSpec",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowCondition",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "call"
           ]
@@ -9957,13 +10098,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "buildOrchestrateHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildUpstreamContext",
           "kinds": [
             "call"
@@ -10049,13 +10183,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
           "kinds": [
             "call"
@@ -10078,27 +10205,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "normalizeAgentGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWaitSpec",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "call"
           ]
@@ -10387,20 +10493,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "upsertCompactMarker",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "resolveEnabledSkillEntries",
           "kinds": [
             "call"
           ]
@@ -10718,12 +10810,10 @@
         "providerConversationContextWindow",
         "providerSummaryCall",
         "providerSummaryCallCore",
-        "providerTurnQuotaKey",
         "recentFileReads",
         "recentTurnsBoundary",
         "recordCompactUsage",
         "reduceObservationContent",
-        "rehydrateObservation",
         "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
@@ -10768,8 +10858,7 @@
         "truncateToolResult",
         "upsertCompactMarker",
         "userBlockStarts",
-        "validateStructuredSummary",
-        "writeHistorySnapshot"
+        "validateStructuredSummary"
       ],
       "requires": [
         {
@@ -10928,13 +11017,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -11055,27 +11137,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "journalBytesAdjust",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalGc",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -11118,7 +11179,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "withJournalWriteLock",
+          "symbol": "writeHistorySnapshot",
           "kinds": [
             "call"
           ]
@@ -11576,16 +11637,8 @@
         "killAllShellSessions",
         "levenshtein",
         "persistBackgroundJob",
-        "privacyProjectSearch",
-        "privacyReadTextWindow",
-        "privacySourceActive",
-        "privacySourceFragment",
-        "privacySourceLine",
-        "privacySourceLineOffsets",
-        "privacySourceMark",
         "prunedDirsHint",
         "readBackgroundJobs",
-        "readIfExists",
         "readWebCache",
         "regexScanFilesBounded",
         "searchFileContent",
@@ -11600,7 +11653,6 @@
         "shellSessions",
         "shellStart",
         "shellVisibleTo",
-        "sourceViewOf",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -11821,6 +11873,62 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacyProjectSearch",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceActive",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceFragment",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLine",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLineOffsets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "readIfExists",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
@@ -11954,7 +12062,6 @@
         "SKILL_TOOL_ROWS_MAX",
         "STEWARD_GUARD_NOTE",
         "STEWARD_TOOL_HANDLERS",
-        "SkillRegistry",
         "TOOL_ARGS_ERROR_TEXT",
         "TOOL_HANDLERS",
         "UTF8_BOM_BYTES",
@@ -11970,7 +12077,6 @@
         "checkpointListResult",
         "clampCatalogToolLimit",
         "computeHealth",
-        "createSkillRegistry",
         "defaultTextLineEnding",
         "desktopControlComponentOnDisk",
         "desktopControlState",
@@ -12000,7 +12106,6 @@
         "observationRecallError",
         "observationRecallQuotaTake",
         "openToolUncDenied",
-        "resolveEnabledSkillEntries",
         "resolveGitToolCwd",
         "respellWalkPaths",
         "runPythonScript",
@@ -12022,13 +12127,6 @@
         "workbenchMemoryReadLoopback"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "agentCliHomes",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
@@ -12190,20 +12288,12 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SKILL_ID_RE",
           "kinds": [
             "read"
           ]
@@ -12371,6 +12461,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "providerTurnQuotaKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "fileToolWorkspaceDir",
           "kinds": [
@@ -12479,6 +12576,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionScratchpad",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "rehydrateObservation",
           "kinds": [
             "call"
           ]
@@ -12641,6 +12745,48 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacyReadTextWindow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceActive",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLine",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLineOffsets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04-permission-runtime.js",
           "symbol": "bridgedServerUnavailableMessage",
           "kinds": [
@@ -12697,10 +12843,17 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04l-skill-registry.js",
           "symbol": "effectiveSkillSelection",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "04l-skill-registry.js",
+          "symbol": "SkillRegistry",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -12735,8 +12888,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -12777,6 +12929,20 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "updateAutomaticThreadTitle",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "BUILTIN_AGENT_WORKFLOWS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
           "kinds": [
             "call"
           ]
@@ -12925,34 +13091,6 @@
           ]
         },
         {
-          "provider": "08-agent-runs.js",
-          "symbol": "BUILTIN_AGENT_WORKFLOWS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "providerTurnQuotaKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "rehydrateObservation",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "11-native-tools.js",
           "symbol": "adaptiveCatalogForMcp",
           "kinds": [
@@ -13073,49 +13211,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "privacyReadTextWindow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceActive",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceLine",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceLineOffsets",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceMark",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "prunedDirsHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "readIfExists",
           "kinds": [
             "read"
           ]
@@ -13167,13 +13263,6 @@
           "symbol": "shellStart",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "sourceViewOf",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -14660,6 +14749,41 @@
           ]
         },
         {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "agentWorkflowSaveProblem",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "deleteAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "saveAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "analyzeMemoryMaintenance",
           "kinds": [
@@ -14942,13 +15066,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentWorkflowSaveProblem",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
             "call"
@@ -14956,35 +15073,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "deleteAgentWorkflow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeAgentWorkflow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateNodes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentWorkflow",
           "kinds": [
             "call"
           ]
@@ -17721,6 +17810,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "providerTurnQuotaKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "foldTurnSummaries",
           "kinds": [
@@ -17793,13 +17889,6 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "providerTurnQuotaKey",
           "kinds": [
             "call"
           ]
@@ -19262,6 +19351,20 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "collectAudit",
           "kinds": [
@@ -19581,20 +19684,6 @@
           "symbol": "AgentRecovery",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceMark",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "sourceViewOf",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -23805,17 +23894,17 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "SkillRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "syncAgentInstructionImports",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "SkillRegistry",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -25547,6 +25636,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "rehydrateObservation",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
           "kinds": [
             "read"
@@ -25667,6 +25763,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "usageLedgerCacheStats",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
           "kinds": [
             "read"
           ]
@@ -26577,6 +26680,55 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "BUILTIN_AGENT_WORKFLOWS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "deleteAgentWorkflow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeAgentWorkflow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowCondition",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowLoop",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "saveAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -27514,13 +27666,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "BUILTIN_AGENT_WORKFLOWS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "createAgentWorktree",
           "kinds": [
             "read"
@@ -27536,13 +27681,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "dedupeAgentFindings",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "deleteAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -27577,13 +27715,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
           "kinds": [
             "read"
@@ -27592,27 +27723,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "normalizeAgentGate",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeAgentWorkflow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "read"
           ]
@@ -27669,13 +27779,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "runWorkspaceHash",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -28025,13 +28128,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "rehydrateObservation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "renderSessionNotesMarkdown",
           "kinds": [
             "read"
@@ -28089,13 +28185,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "validateStructuredSummary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
           "kinds": [
             "read"
           ]

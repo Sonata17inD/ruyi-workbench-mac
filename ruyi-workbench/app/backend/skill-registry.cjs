@@ -19,7 +19,7 @@ function effectiveSkillSelection(session, config) {
   return out;
 }
 
-function createSkillRegistry({ SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, loadAllPlaybooks, readIfExists, safeJsonParse }) {
+function createSkillRegistry({ SKILL_ID_RE, agentCliHomes, externalRoot, paths, readIfExists, safeJsonParse }) {
 // v1 技能体系: 解析 SKILL.md frontmatter 的 requires 字段为能力键数组(取值同 PLAYBOOK_REQUIRES)。
 // parseFrontmatter 把整行值当字符串,故支持「requires: network, vision」与「requires: [network, vision]」两写法。
 function parseSkillRequires(val) {
@@ -117,10 +117,11 @@ async function claudePluginSkillDirs() {
   }
   return out;
 }
-async function loadSkillRegistry(cwd, config, caps) {
-  if (caps === undefined) caps = await getCapabilities(config).catch(() => null);
-  const out = [];
-  const tk = path.join(externalRoot(), 'resources', 'plugins', 'ruyi-offline', 'offline-toolkit');
+function toolkitDirectory() {
+  return path.join(externalRoot(), 'resources', 'plugins', 'ruyi-offline', 'offline-toolkit');
+}
+
+async function loadSkillEntries(cwd, caps, tk = toolkitDirectory(), cliHomes = agentCliHomes()) {
   // ---- 技能: builtin(toolkit)→ user(dataRoot/skills)→ project(<cwd>/.ruyi/skills),后写覆盖同 id ----
   const skillMap = new Map();
   {
@@ -145,7 +146,6 @@ async function loadSkillRegistry(cwd, config, caps) {
   for (const dir of await claudePluginSkillDirs()) {
     for (const [id, e] of await readSkillDir(dir.skillsDir, 'claude-plugin', caps)) skillMap.set(id, { ...e, plugin: dir.plugin });
   }
-  const cliHomes = agentCliHomes();
   for (const [id, e] of await readSkillDir(path.join(cliHomes.kimi, 'skills'), 'kimi', caps)) skillMap.set(id, e);
   for (const [id, e] of await readSkillDir(path.join(cliHomes.codex, 'skills'), 'codex', caps)) skillMap.set(id, e);
   // 本机 Claude Code 个人技能(~/.claude/skills/<id>/SKILL.md)作为第 4 源映射进来(只读直连,不复制)。
@@ -154,8 +154,13 @@ async function loadSkillRegistry(cwd, config, caps) {
   for (const [id, e] of await readSkillDir(path.join(cliHomes.claude, 'skills'), 'claude-code', caps)) skillMap.set(id, e);
   for (const [id, e] of await readSkillDir(paths.skills, 'user', caps)) skillMap.set(id, e);
   if (cwd) for (const [id, e] of await readSkillDir(path.join(path.resolve(String(cwd)), '.ruyi', 'skills'), 'project', caps)) skillMap.set(id, e);
-  for (const e of skillMap.values()) out.push(e);
+  return [...skillMap.values()];
+}
 
+async function loadSkillRegistry(cwd, caps, loadAllPlaybooks) {
+  const tk = toolkitDirectory();
+  const cliHomes = agentCliHomes();
+  const out = await loadSkillEntries(cwd, caps, tk, cliHomes);
   // ---- 命令: builtin(toolkit commands)+ user(~/.claude/commands),沿用旧 scanSkills 的 '/'+name 语义 ----
   const seenCmd = new Set();
   const addCmd = (name, raw, src) => {
@@ -191,8 +196,8 @@ async function resolveEnabledSkillEntries(session, config, cwd, caps, onSourceMi
   const enabled = effectiveSkillSelection(session, config);
   if (!enabled.length) return [];
   let registry = [];
-  try { registry = await loadSkillRegistry(cwd, config, caps); } catch { return []; }
-  const byId = new Map(registry.filter(e => e.kind === 'skill').map(e => [e.id, e]));
+  try { registry = await loadSkillEntries(cwd, caps); } catch { return []; }
+  const byId = new Map(registry.map(e => [e.id, e]));
   const out = [];
   for (const raw of enabled) {
     const id = typeof raw === 'string' ? raw : String((raw && raw.id) || '');

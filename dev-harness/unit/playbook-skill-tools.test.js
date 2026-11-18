@@ -221,10 +221,9 @@ test('standalone skill registry respects injected CLI homes, source precedence a
   put(user, 'same', 'user body'); put(path.join(project, '.ruyi/skills'), 'same', 'project body');
   const parse = (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } };
   const registry = createSkillRegistry({ paths: { skills: user }, agentCliHomes: () => cli, externalRoot: () => base,
-    SKILL_ID_RE: /^[a-z0-9_-]+$/, getCapabilities: async () => ({}),
-    loadAllPlaybooks: async () => [],
+    SKILL_ID_RE: /^[a-z0-9_-]+$/,
     readIfExists: async (file, cap) => { try { return (await fs.promises.readFile(file, 'utf8')).slice(0, cap); } catch { return ''; } }, safeJsonParse: parse });
-  const entries = await registry.loadSkillRegistry(project, {});
+  const entries = await registry.loadSkillRegistry(project, {}, async () => []);
   assert.equal(entries.find(e => e.id === 'external').source, 'claude-code');
   assert.equal(entries.find(e => e.id === 'same').source, 'project');
   const mismatches = [];

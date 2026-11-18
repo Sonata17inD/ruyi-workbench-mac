@@ -3,11 +3,11 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 89,
-    "providedSymbols": 3213,
-    "requiredSymbols": 3510,
-    "edges": 614,
-    "forwardEdges": 23,
+    "modules": 91,
+    "providedSymbols": 3211,
+    "requiredSymbols": 3521,
+    "edges": 625,
+    "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -231,9 +231,11 @@
       "provides": [
         "activeAgentRuns",
         "activeChildren",
+        "createExecutionState",
         "pendingPermissions",
         "pendingPlans",
         "pendingQuestions",
+        "providerTurnQuotaKey",
         "sessionWriteChains",
         "turnSettlers"
       ],
@@ -494,7 +496,16 @@
       "layer": "foundation",
       "note": "81-P2: scoped bidirectional privacy gateway",
       "provides": [
-        "PrivacyGateway"
+        "PrivacyGateway",
+        "privacyProjectSearch",
+        "privacyReadTextWindow",
+        "privacySourceActive",
+        "privacySourceFragment",
+        "privacySourceLine",
+        "privacySourceLineOffsets",
+        "privacySourceMark",
+        "readIfExists",
+        "sourceViewOf"
       ],
       "requires": [
         {
@@ -2011,6 +2022,7 @@
         "recordRunBudgetTrippedEvent",
         "recordRunStalledEvent",
         "registerIntervention",
+        "rehydrateObservation",
         "rememberLastUsedEngineRoute",
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
@@ -2077,6 +2089,7 @@
         "withSessionMutateLock",
         "workspaceBaselineIsCodePath",
         "workspaceBaselinePathKey",
+        "writeHistorySnapshot",
         "writeMissionContainer",
         "writeSessionNotes"
       ],
@@ -3708,8 +3721,99 @@
       "requires": []
     },
     {
-      "file": "05-claude-engine.js",
+      "file": "06c-agent-workflow-catalog.js",
       "order": 39,
+      "layer": "engine",
+      "note": "Built-in, project and personal workflow definitions",
+      "provides": [
+        "BUILTIN_AGENT_WORKFLOWS",
+        "agentWorkflowSaveProblem",
+        "buildOrchestrateHint",
+        "createAgentWorkflowCatalog",
+        "deleteAgentWorkflow",
+        "getAgentWorkflows",
+        "normalizeAgentWorkflow",
+        "normalizeWaitSpec",
+        "normalizeWorkflowCondition",
+        "normalizeWorkflowLoop",
+        "saveAgentWorkflow"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04l-skill-registry.js",
+      "order": 40,
+      "layer": "foundation",
+      "note": "Shared discovery and resolution of session skills",
+      "provides": [
+        "SkillRegistry",
+        "createSkillRegistry",
+        "effectiveSkillSelection",
+        "resolveEnabledSkillEntries"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "agentCliHomes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "externalRoot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeJsonParse",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "SKILL_ID_RE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "readIfExists",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "05-claude-engine.js",
+      "order": 41,
       "layer": "engine",
       "note": "runClaudeTurn/stream-json 解析/spawn 环境/权限桥接线",
       "provides": [
@@ -3733,7 +3837,6 @@
         "asrFixModeOf",
         "asrFixSanity",
         "asrUsesDashscopeNative",
-        "effectiveSkillSelection",
         "providerFixCompletion",
         "resolveAsrFixProvider",
         "resolveAsrProvider",
@@ -4393,6 +4496,20 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "effectiveSkillSelection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04l-skill-registry.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "05b-kimi-bridge.js",
           "symbol": "applyKimiStatusToSession",
           "kinds": [
@@ -4575,6 +4692,20 @@
           ]
         },
         {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "buildOrchestrateHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryCheckPrompt",
           "kinds": [
@@ -4636,33 +4767,12 @@
           "kinds": [
             "call"
           ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "buildOrchestrateHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "resolveEnabledSkillEntries",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
     {
       "file": "05b-kimi-bridge.js",
-      "order": 40,
+      "order": 42,
       "layer": "engine",
       "note": "Kimi Code ACP 驱动：会话/流式/工具/权限/提问/排队 steer；Server API 原生压缩与 wire 状态补强",
       "provides": [
@@ -5342,7 +5452,7 @@
     },
     {
       "file": "06-provider-engine.js",
-      "order": 41,
+      "order": 43,
       "layer": "engine",
       "note": "provider 引擎助手/能力探测/metrics/转录 GC/存储管家/playbooks",
       "provides": [
@@ -5909,7 +6019,7 @@
     },
     {
       "file": "06h-retrieval-index.js",
-      "order": 42,
+      "order": 44,
       "layer": "engine",
       "note": "113a:离线检索原语(特征哈希向量/TF-IDF/余弦/RRF),记忆召回与会话搜索共用",
       "provides": [
@@ -5922,7 +6032,7 @@
     },
     {
       "file": "06i-steward-core.js",
-      "order": 43,
+      "order": 45,
       "layer": "engine",
       "note": "第116波116a:管家(Steward)引擎侧纯函数与延迟绑定命名空间 StewardHooks(不实现,契约声明)",
       "provides": [
@@ -6106,7 +6216,7 @@
     },
     {
       "file": "06d-memory-domain.js",
-      "order": 44,
+      "order": 46,
       "layer": "engine",
       "note": "第104波：跨会话记忆、提议、关系图与检索",
       "provides": [
@@ -6530,7 +6640,7 @@
     },
     {
       "file": "06e-mission-domain.js",
-      "order": 45,
+      "order": 47,
       "layer": "engine",
       "note": "第104波：Mission 提示摘要与 until-done 驱动",
       "provides": [
@@ -6780,7 +6890,7 @@
     },
     {
       "file": "06g-resource-leases.js",
-      "order": 46,
+      "order": 48,
       "layer": "engine",
       "note": "第104波：Agent 资源归一化、冲突检测与租约",
       "provides": [
@@ -6813,7 +6923,7 @@
     },
     {
       "file": "06j-scheduler-core.js",
-      "order": 47,
+      "order": 49,
       "layer": "engine",
       "note": "第123波 M1(37 号文 §3.1;设计权威 29 号文 §3):定时任务纯函数内核 —— normalizeSchedulerTask / nextFireAt / parseCronExpr / describeSchedule / occurrenceKey / missedOccurrence(零 I/O、零全局状态、时间全由入参喂)",
       "provides": [
@@ -6866,7 +6976,7 @@
     },
     {
       "file": "06k-config-patch.js",
-      "order": 48,
+      "order": 50,
       "layer": "engine",
       "note": "架构还债批 2 B2: 从 13-http-router.js 搬出 applyConfigPatch(配置补丁落盘与副作用;纯搬家,零行为变更),经 01 的 ConfigPatchHooks 调用、零入边",
       "provides": [
@@ -7024,7 +7134,7 @@
     },
     {
       "file": "07-autonomy.js",
-      "order": 49,
+      "order": 51,
       "layer": "orchestration",
       "note": "Provider 工具目录、权限 gate、failover 与 Agent 角色支撑",
       "provides": [
@@ -7678,7 +7788,7 @@
     },
     {
       "file": "08-agent-runs.js",
-      "order": 50,
+      "order": 52,
       "layer": "orchestration",
       "note": "run 事件日志/恢复分级/runSubAgentCore",
       "provides": [
@@ -7689,8 +7799,6 @@
         "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
-        "BUILTIN_AGENT_WORKFLOWS",
-        "C3_HIGH_RISK_GATE",
         "EVIDENCE_REFS_MAX_ITEMS",
         "NODE_SUMMARY_MAX",
         "NODE_WRITE_FAMILY",
@@ -7702,7 +7810,6 @@
         "agentRunCapabilities",
         "agentRunResultSlice",
         "agentRunRoster",
-        "agentWorkflowSaveProblem",
         "agentWorkflowStatusText",
         "aggregateAgentVote",
         "aggregateCoverage",
@@ -7711,7 +7818,6 @@
         "balancedJsonSpan",
         "buildAgentRunEnvelope",
         "buildNodeEvidenceCatalog",
-        "buildOrchestrateHint",
         "buildUpstreamContext",
         "canonicalWorkflowValue",
         "cleanupAgentWorktree",
@@ -7721,7 +7827,6 @@
         "createAgentWorktree",
         "cutAtSentence",
         "dedupeAgentFindings",
-        "deleteAgentWorkflow",
         "deriveNodeOutputs",
         "evalWaitCondition",
         "evaluateNodeToolEvidence",
@@ -7729,27 +7834,19 @@
         "finalizeAgentWorktree",
         "findingHandledItems",
         "formatNodeEvidencePrompt",
-        "getAgentWorkflows",
         "gitExec",
         "indexNodeEvidence",
         "materializePoolItem",
         "nodeDeliveryEligibility",
         "normalizeAgentGate",
-        "normalizeAgentWorkflow",
-        "normalizeWaitSpec",
-        "normalizeWorkflowCondition",
-        "normalizeWorkflowLoop",
         "orchestrateArgsProblem",
         "orchestrateModelNotes",
         "ownAgentMessageReceipt",
         "parseStructuredAgentOutput",
         "poolChainDepth",
-        "projectAgentWorkflowsFile",
         "propagateAssignments",
         "purgeNodeEvidence",
         "readAgentRunRecord",
-        "readPersonalAgentWorkflows",
-        "readProjectAgentWorkflows",
         "recordAgentNodeProgress",
         "repairJson",
         "requestDelegationPermission",
@@ -7761,7 +7858,6 @@
         "runSubAgentCoreBody",
         "runWorkspaceHash",
         "sanitizeAgentOutputSchema",
-        "saveAgentWorkflow",
         "singleAgentShorthandNode",
         "structuredJsonCandidates",
         "structuredOfNode",
@@ -7966,13 +8062,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "resolveNodeModel",
           "kinds": [
             "call"
@@ -8083,6 +8172,13 @@
           "symbol": "saveAgentRun",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8277,6 +8373,13 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "appendResponseLanguagePolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
           "kinds": [
             "call"
           ]
@@ -8513,13 +8616,6 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "12-tool-dispatch.js",
           "symbol": "toolCall",
           "kinds": [
@@ -8537,7 +8633,7 @@
     },
     {
       "file": "09b-replan-ledger.js",
-      "order": 51,
+      "order": 53,
       "layer": "orchestration",
       "note": "110-4a: 节点续点与重规划补丁账本(自 09-workflow.js 纯搬家)",
       "provides": [
@@ -8583,7 +8679,7 @@
     },
     {
       "file": "09-workflow.js",
-      "order": 52,
+      "order": 54,
       "layer": "orchestration",
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
@@ -9285,6 +9381,13 @@
           ]
         },
         {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02c-turn-segments.js",
           "symbol": "createTurnSegmentBuilder",
           "kinds": [
@@ -9545,6 +9648,13 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
@@ -9659,6 +9769,41 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "buildOrchestrateHint",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWaitSpec",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowCondition",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "call"
           ]
@@ -10073,13 +10218,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "buildOrchestrateHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildUpstreamContext",
           "kinds": [
             "call"
@@ -10165,13 +10303,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
           "kinds": [
             "call"
@@ -10194,27 +10325,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "normalizeAgentGate",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWaitSpec",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "call"
           ]
@@ -10508,20 +10618,6 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "resolveEnabledSkillEntries",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "12-tool-dispatch.js",
           "symbol": "toolCall",
           "kinds": [
@@ -10546,7 +10642,7 @@
     },
     {
       "file": "09b-agent-recovery.js",
-      "order": 53,
+      "order": 55,
       "layer": "orchestration",
       "note": "Workflow restart and interrupted-run recovery composition",
       "provides": [
@@ -10692,7 +10788,7 @@
     },
     {
       "file": "10-context-governance.js",
-      "order": 54,
+      "order": 56,
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
@@ -10838,12 +10934,10 @@
         "providerConversationContextWindow",
         "providerSummaryCall",
         "providerSummaryCallCore",
-        "providerTurnQuotaKey",
         "recentFileReads",
         "recentTurnsBoundary",
         "recordCompactUsage",
         "reduceObservationContent",
-        "rehydrateObservation",
         "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
@@ -10888,8 +10982,7 @@
         "truncateToolResult",
         "upsertCompactMarker",
         "userBlockStarts",
-        "validateStructuredSummary",
-        "writeHistorySnapshot"
+        "validateStructuredSummary"
       ],
       "requires": [
         {
@@ -11048,13 +11141,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "zlib",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -11175,27 +11261,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "journalBytesAdjust",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalGc",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
@@ -11238,7 +11303,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "withJournalWriteLock",
+          "symbol": "writeHistorySnapshot",
           "kinds": [
             "call"
           ]
@@ -11345,7 +11410,7 @@
     },
     {
       "file": "10a-session-turn.js",
-      "order": 55,
+      "order": 57,
       "layer": "orchestration",
       "note": "Session execution admission and wake composition",
       "provides": [
@@ -11674,7 +11739,7 @@
     },
     {
       "file": "11-native-tools.js",
-      "order": 56,
+      "order": 58,
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
@@ -11700,16 +11765,8 @@
         "killAllShellSessions",
         "levenshtein",
         "persistBackgroundJob",
-        "privacyProjectSearch",
-        "privacyReadTextWindow",
-        "privacySourceActive",
-        "privacySourceFragment",
-        "privacySourceLine",
-        "privacySourceLineOffsets",
-        "privacySourceMark",
         "prunedDirsHint",
         "readBackgroundJobs",
-        "readIfExists",
         "readWebCache",
         "regexScanFilesBounded",
         "searchFileContent",
@@ -11724,7 +11781,6 @@
         "shellSessions",
         "shellStart",
         "shellVisibleTo",
-        "sourceViewOf",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -11945,6 +12001,62 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacyProjectSearch",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceActive",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceFragment",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLine",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLineOffsets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "readIfExists",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
@@ -12011,7 +12123,7 @@
     },
     {
       "file": "11b-file-text-io.js",
-      "order": 57,
+      "order": 59,
       "layer": "tools",
       "note": "单文件工具的文本 I/O 内核:编码嗅探/GB18030 编码、有界流式读、原子写、file_edit 未命中诊断;零出边(冻结对象 FileTextIo),不进依赖环",
       "provides": [
@@ -12021,7 +12133,7 @@
     },
     {
       "file": "11c-file-visual-io.js",
-      "order": 58,
+      "order": 60,
       "layer": "tools",
       "note": "",
       "provides": [
@@ -12039,7 +12151,7 @@
     },
     {
       "file": "11d-media-inspection.js",
-      "order": 59,
+      "order": 61,
       "layer": "tools",
       "note": "Local dependency discovery, bounded audio measurement and parse-only syntax validation; built-ins only",
       "provides": [
@@ -12057,7 +12169,7 @@
     },
     {
       "file": "12-tool-dispatch.js",
-      "order": 60,
+      "order": 62,
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
@@ -12086,7 +12198,6 @@
         "SKILL_TOOL_ROWS_MAX",
         "STEWARD_GUARD_NOTE",
         "STEWARD_TOOL_HANDLERS",
-        "SkillRegistry",
         "TOOL_ARGS_ERROR_TEXT",
         "TOOL_HANDLERS",
         "UTF8_BOM_BYTES",
@@ -12102,7 +12213,6 @@
         "checkpointListResult",
         "clampCatalogToolLimit",
         "computeHealth",
-        "createSkillRegistry",
         "defaultTextLineEnding",
         "desktopControlComponentOnDisk",
         "desktopControlState",
@@ -12132,7 +12242,6 @@
         "observationRecallError",
         "observationRecallQuotaTake",
         "openToolUncDenied",
-        "resolveEnabledSkillEntries",
         "resolveGitToolCwd",
         "respellWalkPaths",
         "runPythonScript",
@@ -12154,13 +12263,6 @@
         "workbenchMemoryReadLoopback"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "agentCliHomes",
-          "kinds": [
-            "read"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "ASR_MAX_BODY_BYTES",
@@ -12322,20 +12424,12 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "sensitiveFileIdentities",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SKILL_ID_RE",
           "kinds": [
             "read"
           ]
@@ -12503,6 +12597,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "providerTurnQuotaKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "fileToolWorkspaceDir",
           "kinds": [
@@ -12611,6 +12712,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionScratchpad",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "rehydrateObservation",
           "kinds": [
             "call"
           ]
@@ -12773,6 +12881,48 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacyReadTextWindow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceActive",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLine",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceLineOffsets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04-permission-runtime.js",
           "symbol": "bridgedServerUnavailableMessage",
           "kinds": [
@@ -12829,10 +12979,17 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04l-skill-registry.js",
           "symbol": "effectiveSkillSelection",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "04l-skill-registry.js",
+          "symbol": "SkillRegistry",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -12867,8 +13024,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -12909,6 +13065,20 @@
         {
           "provider": "06-provider-engine.js",
           "symbol": "updateAutomaticThreadTitle",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "BUILTIN_AGENT_WORKFLOWS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
           "kinds": [
             "call"
           ]
@@ -13057,34 +13227,6 @@
           ]
         },
         {
-          "provider": "08-agent-runs.js",
-          "symbol": "BUILTIN_AGENT_WORKFLOWS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "providerTurnQuotaKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "rehydrateObservation",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "11-native-tools.js",
           "symbol": "adaptiveCatalogForMcp",
           "kinds": [
@@ -13205,49 +13347,7 @@
         },
         {
           "provider": "11-native-tools.js",
-          "symbol": "privacyReadTextWindow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceActive",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceLine",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceLineOffsets",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceMark",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
           "symbol": "prunedDirsHint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "readIfExists",
           "kinds": [
             "read"
           ]
@@ -13299,13 +13399,6 @@
           "symbol": "shellStart",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "sourceViewOf",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -13382,7 +13475,7 @@
     },
     {
       "file": "13-http-router.js",
-      "order": 61,
+      "order": 63,
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
@@ -14794,6 +14887,41 @@
           ]
         },
         {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "agentWorkflowSaveProblem",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "deleteAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "saveAgentWorkflow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "analyzeMemoryMaintenance",
           "kinds": [
@@ -15076,13 +15204,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentWorkflowSaveProblem",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
             "call"
@@ -15090,35 +15211,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "deleteAgentWorkflow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeAgentWorkflow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateNodes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentWorkflow",
           "kinds": [
             "call"
           ]
@@ -15388,7 +15481,7 @@
     },
     {
       "file": "13b-api-domain-routes.js",
-      "order": 62,
+      "order": 64,
       "layer": "transport",
       "note": "第49波49f(A1): handleApi 域分组拆分第一批 — MCP/checkpoint·storage/steer 三组域路由",
       "provides": [
@@ -15915,7 +16008,7 @@
     },
     {
       "file": "13d-core-domain-routes.js",
-      "order": 63,
+      "order": 65,
       "layer": "transport",
       "note": "第65波 EC-D 收口:session CRUD、question/permission/plan 干预、Agent Run 查询/事件/控制三组后端域路由",
       "provides": [
@@ -17027,7 +17120,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 64,
+      "order": 66,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -17405,7 +17498,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 65,
+      "order": 67,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -17708,7 +17801,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 66,
+      "order": 68,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -17865,6 +17958,13 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "providerTurnQuotaKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "foldTurnSummaries",
           "kinds": [
@@ -17942,13 +18042,6 @@
           ]
         },
         {
-          "provider": "10-context-governance.js",
-          "symbol": "providerTurnQuotaKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardDir",
           "kinds": [
@@ -17959,7 +18052,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 67,
+      "order": 69,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -18196,7 +18289,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 68,
+      "order": 70,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -19155,7 +19248,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 69,
+      "order": 71,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -19407,6 +19500,20 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "privacySourceMark",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "sourceViewOf",
           "kinds": [
             "call"
           ]
@@ -19731,20 +19838,6 @@
           "symbol": "AgentRecovery",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "privacySourceMark",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "11-native-tools.js",
-          "symbol": "sourceViewOf",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -20150,7 +20243,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 70,
+      "order": 72,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -20712,7 +20805,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 71,
+      "order": 73,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -20883,7 +20976,7 @@
     },
     {
       "file": "13n-steward-arbiter.js",
-      "order": 72,
+      "order": 74,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):116h 线程间仲裁 —— 并发位/同 cwd 写锁/预算/可解释排队/饥饿提升(零行为搬家自 13h)",
       "provides": [
@@ -21082,7 +21175,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 73,
+      "order": 75,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -21583,7 +21676,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 74,
+      "order": 76,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -22069,7 +22162,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 75,
+      "order": 77,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -22727,7 +22820,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 76,
+      "order": 78,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -23088,7 +23181,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 77,
+      "order": 79,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -23227,7 +23320,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 78,
+      "order": 80,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -23446,7 +23539,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 79,
+      "order": 81,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -23669,7 +23762,7 @@
     },
     {
       "file": "13u-migration-center.js",
-      "order": 80,
+      "order": 82,
       "layer": "transport",
       "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环",
       "provides": [
@@ -23977,24 +24070,24 @@
           ]
         },
         {
+          "provider": "04l-skill-registry.js",
+          "symbol": "SkillRegistry",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06d-memory-domain.js",
           "symbol": "syncAgentInstructionImports",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "SkillRegistry",
-          "kinds": [
-            "read"
           ]
         }
       ]
     },
     {
       "file": "13v-external-channel-protocols.js",
-      "order": 81,
+      "order": 83,
       "layer": "transport",
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
       "provides": [
@@ -24026,7 +24119,7 @@
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "order": 82,
+      "order": 84,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -24051,7 +24144,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 83,
+      "order": 85,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -24090,7 +24183,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 84,
+      "order": 86,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -24100,7 +24193,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 85,
+      "order": 87,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -24244,7 +24337,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 86,
+      "order": 88,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -24482,7 +24575,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 87,
+      "order": 89,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -24647,7 +24740,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 88,
+      "order": 90,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -25735,6 +25828,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "rehydrateObservation",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
           "kinds": [
             "read"
@@ -25855,6 +25955,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "usageLedgerCacheStats",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "writeHistorySnapshot",
           "kinds": [
             "read"
           ]
@@ -26765,6 +26872,55 @@
         {
           "provider": "06b-prompt-registry.js",
           "symbol": "softwareEngineeringTaskProfile",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "BUILTIN_AGENT_WORKFLOWS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "deleteAgentWorkflow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "getAgentWorkflows",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeAgentWorkflow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowCondition",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "normalizeWorkflowLoop",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06c-agent-workflow-catalog.js",
+          "symbol": "saveAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -27702,13 +27858,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "BUILTIN_AGENT_WORKFLOWS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "createAgentWorktree",
           "kinds": [
             "read"
@@ -27724,13 +27873,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "dedupeAgentFindings",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "deleteAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -27765,13 +27907,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "getAgentWorkflows",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
           "kinds": [
             "read"
@@ -27780,27 +27915,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "normalizeAgentGate",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeAgentWorkflow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "read"
           ]
@@ -27857,13 +27971,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "runWorkspaceHash",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentWorkflow",
           "kinds": [
             "read"
           ]
@@ -28213,13 +28320,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "rehydrateObservation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "renderSessionNotesMarkdown",
           "kinds": [
             "read"
@@ -28277,13 +28377,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "validateStructuredSummary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "writeHistorySnapshot",
           "kinds": [
             "read"
           ]
@@ -29523,6 +29616,26 @@
       "direction": "backward"
     },
     {
+      "from": "04l-skill-registry.js",
+      "to": "00-boot.js",
+      "symbols": [
+        "SKILL_ID_RE",
+        "agentCliHomes",
+        "externalRoot",
+        "paths",
+        "safeJsonParse"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "04l-skill-registry.js",
+      "to": "03a-privacy-gateway.js",
+      "symbols": [
+        "readIfExists"
+      ],
+      "direction": "backward"
+    },
+    {
       "from": "05-claude-engine.js",
       "to": "00-boot.js",
       "symbols": [
@@ -29728,6 +29841,15 @@
     },
     {
       "from": "05-claude-engine.js",
+      "to": "04l-skill-registry.js",
+      "symbols": [
+        "effectiveSkillSelection",
+        "resolveEnabledSkillEntries"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "05-claude-engine.js",
       "to": "05b-kimi-bridge.js",
       "symbols": [
         "applyKimiStatusToSession",
@@ -29775,6 +29897,15 @@
     },
     {
       "from": "05-claude-engine.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "buildOrchestrateHint",
+        "getAgentWorkflows"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "05-claude-engine.js",
       "to": "06d-memory-domain.js",
       "symbols": [
         "buildMemoryCheckPrompt",
@@ -29800,23 +29931,6 @@
       "to": "07-autonomy.js",
       "symbols": [
         "classifyToolPacks"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "05-claude-engine.js",
-      "to": "08-agent-runs.js",
-      "symbols": [
-        "buildOrchestrateHint",
-        "getAgentWorkflows"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "05-claude-engine.js",
-      "to": "12-tool-dispatch.js",
-      "symbols": [
-        "resolveEnabledSkillEntries"
       ],
       "direction": "forward"
     },
@@ -30154,6 +30268,22 @@
         "toolPackForName"
       ],
       "direction": "forward"
+    },
+    {
+      "from": "06c-agent-workflow-catalog.js",
+      "to": "00-boot.js",
+      "symbols": [
+        "paths"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "06c-agent-workflow-catalog.js",
+      "to": "01-config.js",
+      "symbols": [
+        "atomicWriteJson"
+      ],
+      "direction": "backward"
     },
     {
       "from": "06d-memory-domain.js",
@@ -30631,7 +30761,6 @@
       "from": "08-agent-runs.js",
       "to": "01-config.js",
       "symbols": [
-        "atomicWriteJson",
         "resolveNodeModel",
         "safeSessionId"
       ],
@@ -30682,7 +30811,8 @@
         "mutateSession",
         "preflightWriteBoundary",
         "providerHistoryToolCalls",
-        "saveAgentRun"
+        "saveAgentRun",
+        "writeHistorySnapshot"
       ],
       "direction": "backward"
     },
@@ -30779,6 +30909,14 @@
     },
     {
       "from": "08-agent-runs.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "getAgentWorkflows"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "08-agent-runs.js",
       "to": "06g-resource-leases.js",
       "symbols": [
         "acquireResourceLease",
@@ -30834,8 +30972,7 @@
         "noteWindowOvershoot",
         "recordCompactUsage",
         "runForcedOverflowCompaction",
-        "truncateToolResult",
-        "writeHistorySnapshot"
+        "truncateToolResult"
       ],
       "direction": "forward"
     },
@@ -30981,7 +31118,8 @@
         "saveTurnFinalSession",
         "settleIntervention",
         "syncProviderHistoryFromDisplay",
-        "syncRunEventSeq"
+        "syncRunEventSeq",
+        "writeHistorySnapshot"
       ],
       "direction": "backward"
     },
@@ -31080,6 +31218,14 @@
     },
     {
       "from": "09-workflow.js",
+      "to": "04l-skill-registry.js",
+      "symbols": [
+        "resolveEnabledSkillEntries"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "09-workflow.js",
       "to": "06-provider-engine.js",
       "symbols": [
         "buildStableSystemPrompt",
@@ -31106,6 +31252,18 @@
         "getPromptPack",
         "revertNoticeTurns",
         "softwareEngineeringTaskProfile"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "09-workflow.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "buildOrchestrateHint",
+        "getAgentWorkflows",
+        "normalizeWaitSpec",
+        "normalizeWorkflowCondition",
+        "normalizeWorkflowLoop"
       ],
       "direction": "backward"
     },
@@ -31206,7 +31364,6 @@
         "aggregateAgentVote",
         "aggregateCoverage",
         "buildAgentRunEnvelope",
-        "buildOrchestrateHint",
         "buildUpstreamContext",
         "cleanupAgentWorktree",
         "cleanupAgentWorktreeForRetry",
@@ -31219,14 +31376,10 @@
         "evaluateWorkflowCondition",
         "finalizeAgentWorktree",
         "formatNodeEvidencePrompt",
-        "getAgentWorkflows",
         "indexNodeEvidence",
         "materializePoolItem",
         "nodeDeliveryEligibility",
         "normalizeAgentGate",
-        "normalizeWaitSpec",
-        "normalizeWorkflowCondition",
-        "normalizeWorkflowLoop",
         "orchestrateArgsProblem",
         "orchestrateModelNotes",
         "ownAgentMessageReceipt",
@@ -31281,8 +31434,7 @@
         "recordCompactUsage",
         "runForcedOverflowCompaction",
         "truncateToolResult",
-        "upsertCompactMarker",
-        "writeHistorySnapshot"
+        "upsertCompactMarker"
       ],
       "direction": "forward"
     },
@@ -31290,7 +31442,6 @@
       "from": "09-workflow.js",
       "to": "12-tool-dispatch.js",
       "symbols": [
-        "resolveEnabledSkillEntries",
         "toolCall",
         "toolFailureResult",
         "validateNativeToolArgs"
@@ -31408,8 +31559,7 @@
         "resolveContextWindow",
         "text",
         "tokensFromTextCounts",
-        "toolImageSessionTag",
-        "zlib"
+        "toolImageSessionTag"
       ],
       "direction": "backward"
     },
@@ -31448,16 +31598,13 @@
       "to": "02-session-store.js",
       "symbols": [
         "appendUsageLedger",
-        "journalBytesAdjust",
-        "journalDir",
-        "journalGc",
         "loadSession",
         "mutateSession",
         "readSessionNotes",
         "repairProviderHistoryPairing",
         "saveSession",
         "sessionObjectIsStale",
-        "withJournalWriteLock",
+        "writeHistorySnapshot",
         "writeSessionNotes"
       ],
       "direction": "backward"
@@ -31769,7 +31916,15 @@
       "from": "11-native-tools.js",
       "to": "03a-privacy-gateway.js",
       "symbols": [
-        "PrivacyGateway"
+        "PrivacyGateway",
+        "privacyProjectSearch",
+        "privacySourceActive",
+        "privacySourceFragment",
+        "privacySourceLine",
+        "privacySourceLineOffsets",
+        "privacySourceMark",
+        "readIfExists",
+        "sourceViewOf"
       ],
       "direction": "backward"
     },
@@ -31835,10 +31990,8 @@
         "NATIVE_COMMAND_TOOL_NAMES",
         "NATIVE_DESKTOP_TOOL_NAMES",
         "OVERLAY_ID",
-        "SKILL_ID_RE",
         "TOOL_TIER_RANK",
         "URL",
-        "agentCliHomes",
         "bridgedWriteRelativePathArg",
         "crypto",
         "externalRoot",
@@ -31912,6 +32065,14 @@
     },
     {
       "from": "12-tool-dispatch.js",
+      "to": "01o-execution-state.js",
+      "symbols": [
+        "providerTurnQuotaKey"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
       "to": "02-session-store.js",
       "symbols": [
         "JOURNAL_KEEP_TURNS",
@@ -31931,6 +32092,7 @@
         "normalizeScratchpadText",
         "normalizeTodoItems",
         "readSessionScratchpad",
+        "rehydrateObservation",
         "resolveFileToolPath",
         "resolveFileToolRoot",
         "scratchpadTotalChars",
@@ -31979,7 +32141,13 @@
       "from": "12-tool-dispatch.js",
       "to": "03a-privacy-gateway.js",
       "symbols": [
-        "PrivacyGateway"
+        "PrivacyGateway",
+        "privacyReadTextWindow",
+        "privacySourceActive",
+        "privacySourceLine",
+        "privacySourceLineOffsets",
+        "privacySourceMark",
+        "sourceViewOf"
       ],
       "direction": "backward"
     },
@@ -32014,9 +32182,17 @@
     },
     {
       "from": "12-tool-dispatch.js",
+      "to": "04l-skill-registry.js",
+      "symbols": [
+        "SkillRegistry",
+        "effectiveSkillSelection"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
       "to": "05-claude-engine.js",
       "symbols": [
-        "effectiveSkillSelection",
         "resolveAsrProvider",
         "transcribeAudioViaProvider",
         "voiceLexiconAsrPromptFor"
@@ -32035,6 +32211,15 @@
         "neutralizeAuthoredText",
         "peekCapabilities",
         "updateAutomaticThreadTitle"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "12-tool-dispatch.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "BUILTIN_AGENT_WORKFLOWS",
+        "getAgentWorkflows"
       ],
       "direction": "backward"
     },
@@ -32081,24 +32266,6 @@
     },
     {
       "from": "12-tool-dispatch.js",
-      "to": "08-agent-runs.js",
-      "symbols": [
-        "BUILTIN_AGENT_WORKFLOWS",
-        "getAgentWorkflows"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "12-tool-dispatch.js",
-      "to": "10-context-governance.js",
-      "symbols": [
-        "providerTurnQuotaKey",
-        "rehydrateObservation"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "12-tool-dispatch.js",
       "to": "11-native-tools.js",
       "symbols": [
         "adaptiveCatalogForMcp",
@@ -32118,13 +32285,7 @@
         "gitStatus",
         "httpRequest",
         "levenshtein",
-        "privacyReadTextWindow",
-        "privacySourceActive",
-        "privacySourceLine",
-        "privacySourceLineOffsets",
-        "privacySourceMark",
         "prunedDirsHint",
-        "readIfExists",
         "searchFileContent",
         "shellKill",
         "shellList",
@@ -32132,7 +32293,6 @@
         "shellPoll",
         "shellSend",
         "shellStart",
-        "sourceViewOf",
         "walkDepthHint",
         "walkEnvelopeEntries",
         "walkFiles",
@@ -32516,6 +32676,18 @@
     },
     {
       "from": "13-http-router.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "agentWorkflowSaveProblem",
+        "deleteAgentWorkflow",
+        "getAgentWorkflows",
+        "normalizeAgentWorkflow",
+        "saveAgentWorkflow"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13-http-router.js",
       "to": "06d-memory-domain.js",
       "symbols": [
         "MEMORY_EXCLUSION_MAX",
@@ -32593,13 +32765,8 @@
       "to": "08-agent-runs.js",
       "symbols": [
         "agentRunResultSlice",
-        "agentWorkflowSaveProblem",
         "buildAgentRunEnvelope",
-        "deleteAgentWorkflow",
-        "getAgentWorkflows",
-        "normalizeAgentWorkflow",
-        "resolveOrchestrateNodes",
-        "saveAgentWorkflow"
+        "resolveOrchestrateNodes"
       ],
       "direction": "backward"
     },
@@ -33935,6 +34102,14 @@
     },
     {
       "from": "13j-steward-tool-base.js",
+      "to": "01o-execution-state.js",
+      "symbols": [
+        "providerTurnQuotaKey"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13j-steward-tool-base.js",
       "to": "02-session-store.js",
       "symbols": [
         "foldTurnSummaries",
@@ -33969,14 +34144,6 @@
         "STEWARD_MEMORY_LIMITS",
         "STEWARD_NOTIFY_WINDOW_MS",
         "stewardSanitizeText"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13j-steward-tool-base.js",
-      "to": "10-context-governance.js",
-      "symbols": [
-        "providerTurnQuotaKey"
       ],
       "direction": "backward"
     },
@@ -34320,6 +34487,15 @@
     },
     {
       "from": "13l-steward-ops.js",
+      "to": "03a-privacy-gateway.js",
+      "symbols": [
+        "privacySourceMark",
+        "sourceViewOf"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "13l-steward-ops.js",
       "to": "06-provider-engine.js",
       "symbols": [
         "collectAudit",
@@ -34403,8 +34579,6 @@
       "from": "13l-steward-ops.js",
       "to": "11-native-tools.js",
       "symbols": [
-        "privacySourceMark",
-        "sourceViewOf",
         "webFetch",
         "webSearch"
       ],
@@ -35537,17 +35711,17 @@
     },
     {
       "from": "13u-migration-center.js",
-      "to": "06d-memory-domain.js",
+      "to": "04l-skill-registry.js",
       "symbols": [
-        "syncAgentInstructionImports"
+        "SkillRegistry"
       ],
       "direction": "backward"
     },
     {
       "from": "13u-migration-center.js",
-      "to": "12-tool-dispatch.js",
+      "to": "06d-memory-domain.js",
       "symbols": [
-        "SkillRegistry"
+        "syncAgentInstructionImports"
       ],
       "direction": "backward"
     },
@@ -35895,6 +36069,7 @@
         "readUsageRows",
         "reconcileWorkspaceTurnBaseline",
         "registerIntervention",
+        "rehydrateObservation",
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
         "repairProviderHistoryToolArgs",
@@ -35913,6 +36088,7 @@
         "transitionInterventionState",
         "updateSessionMeta",
         "usageLedgerCacheStats",
+        "writeHistorySnapshot",
         "writeSessionNotes"
       ],
       "direction": "backward"
@@ -36132,6 +36308,20 @@
     },
     {
       "from": "14-main.js",
+      "to": "06c-agent-workflow-catalog.js",
+      "symbols": [
+        "BUILTIN_AGENT_WORKFLOWS",
+        "deleteAgentWorkflow",
+        "getAgentWorkflows",
+        "normalizeAgentWorkflow",
+        "normalizeWorkflowCondition",
+        "normalizeWorkflowLoop",
+        "saveAgentWorkflow"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "14-main.js",
       "to": "06d-memory-domain.js",
       "symbols": [
         "analyzeMemoryMaintenance",
@@ -36304,7 +36494,6 @@
       "from": "14-main.js",
       "to": "08-agent-runs.js",
       "symbols": [
-        "BUILTIN_AGENT_WORKFLOWS",
         "QUALITY_GATE_OUTPUT_SCHEMA",
         "aggregateAgentVote",
         "aggregateCoverage",
@@ -36314,17 +36503,12 @@
         "createAgentWorktree",
         "cutAtSentence",
         "dedupeAgentFindings",
-        "deleteAgentWorkflow",
         "evaluateNodeToolEvidence",
         "evaluateWorkflowCondition",
         "finalizeAgentWorktree",
         "formatNodeEvidencePrompt",
-        "getAgentWorkflows",
         "indexNodeEvidence",
         "normalizeAgentGate",
-        "normalizeAgentWorkflow",
-        "normalizeWorkflowCondition",
-        "normalizeWorkflowLoop",
         "parseStructuredAgentOutput",
         "propagateAssignments",
         "purgeNodeEvidence",
@@ -36332,7 +36516,6 @@
         "resolveAgentTeamRoute",
         "runSubAgentCore",
         "runWorkspaceHash",
-        "saveAgentWorkflow",
         "singleAgentShorthandNode",
         "validateAgentJsonSchema",
         "verifyNodeClaims",
@@ -36403,7 +36586,6 @@
         "recentFileReads",
         "recentTurnsBoundary",
         "reduceObservationContent",
-        "rehydrateObservation",
         "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
@@ -36412,8 +36594,7 @@
         "summarySingleShotCap",
         "summarySingleShotReserveTokens",
         "upsertCompactMarker",
-        "validateStructuredSummary",
-        "writeHistorySnapshot"
+        "validateStructuredSummary"
       ],
       "direction": "backward"
     },
@@ -36590,23 +36771,16 @@
     [
       "05-claude-engine.js",
       "05b-kimi-bridge.js",
-      "08-agent-runs.js",
       "10-context-governance.js",
       "12-tool-dispatch.js"
     ]
   ],
   "cycleEdgeKeys": [
     "05-claude-engine.js->05b-kimi-bridge.js",
-    "05-claude-engine.js->08-agent-runs.js",
-    "05-claude-engine.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",
-    "08-agent-runs.js->10-context-governance.js",
-    "08-agent-runs.js->12-tool-dispatch.js",
     "10-context-governance.js->05-claude-engine.js",
-    "12-tool-dispatch.js->05-claude-engine.js",
-    "12-tool-dispatch.js->08-agent-runs.js",
-    "12-tool-dispatch.js->10-context-governance.js"
+    "12-tool-dispatch.js->05-claude-engine.js"
   ],
   "forwardEdgeKeys": [
     "02-session-store.js->03-bridge-guard.js",
@@ -36615,8 +36789,6 @@
     "05-claude-engine.js->06d-memory-domain.js",
     "05-claude-engine.js->06e-mission-domain.js",
     "05-claude-engine.js->07-autonomy.js",
-    "05-claude-engine.js->08-agent-runs.js",
-    "05-claude-engine.js->12-tool-dispatch.js",
     "05b-kimi-bridge.js->07-autonomy.js",
     "05b-kimi-bridge.js->10-context-governance.js",
     "05b-kimi-bridge.js->12-tool-dispatch.js",

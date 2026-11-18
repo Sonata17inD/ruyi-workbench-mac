@@ -1410,6 +1410,11 @@ const INTEGRATION_TOOL_HANDLERS = {
   } },
 };
 
+async function loadSkillRegistry(cwd, config, caps) {
+  const capabilities = caps === undefined ? await getCapabilities(config).catch(() => null) : caps;
+  return SkillRegistry.loadSkillRegistry(cwd, capabilities, loadAllPlaybooks);
+}
+
 const { TOOL_HANDLERS, isControlPlaneToolName, suggestToolNames, unknownToolError, toolFailureResult, jsonSchemaTypeName, jsonSchemaValueProblems, jsonSchemaObjectProblems, jsonSchemaCoerceValue, jsonSchemaCoerceObject, validateNativeToolArgs, toolCall } = require('./backend/tool-dispatcher.cjs').createToolDispatcher({
   groups: [CORE_TOOL_HANDLERS, FILE_TOOL_HANDLERS, ARCHIVE_TOOL_HANDLERS, SHELL_TOOL_HANDLERS, DESKTOP_TOOL_HANDLERS, NETWORK_TOOL_HANDLERS, CODE_TOOL_HANDLERS, AGENT_TOOL_HANDLERS, INTEGRATION_TOOL_HANDLERS, STEWARD_TOOL_HANDLERS],
   levenshtein, isStewardToolName, nativeToolSchema, DesktopExecutionHooks, PrivacyGateway, readConfig, NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, policySessionFor, nativeToolDisabledByPolicy, sessionDesktopToolsOf, toolDisabledResult, normalizeToolInvokeArgs, toolInvokeMissingNameResult, normalizeMetaToolArgs, ProcessRuntime, makeId, FileTextIo,
@@ -1566,9 +1571,3 @@ async function computeHealth(config, { desktopPending = false } = {}) {
 
   return { health, manifest: mani, runtime };
 }
-
-// hunt2-mcp:Windows 记事本存的 SKILL.md 带 UTF-8 BOM,修前 `^---` 对不上,整段 frontmatter 被当正文(name/description
-// 全丢,描述变成「---」)。三个读 frontmatter 的入口都先剥 BOM。
-const { createSkillRegistry } = require('./backend/skill-registry.cjs');
-const SkillRegistry = createSkillRegistry({ SKILL_ID_RE, agentCliHomes, externalRoot, paths, getCapabilities, loadAllPlaybooks, readIfExists, safeJsonParse });
-const { loadSkillRegistry, resolveEnabledSkillEntries } = SkillRegistry;

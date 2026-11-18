@@ -1,4 +1,3 @@
-const { effectiveSkillSelection } = require('./backend/skill-registry.cjs');
 // ============================================================================
 // 架构还债批 3 A:Agent CLI 适配器。runClaudeTurn 是 Claude Code 与 Kimi Code 两个命令行引擎共用的唯一回合骨架;
 // 凡是「这一家 CLI 怎么做」的决定(命令行参数、续接旗标、子进程环境、事件解析、回合后用量、原生子代理……)
