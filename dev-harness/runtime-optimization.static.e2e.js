@@ -7,6 +7,8 @@ const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-e
 const { readServerSource } = require('./src-reader');
 const src = readServerSource() + '\n' + require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/runtime-policy.cjs'), 'utf8');
 const fileToolsSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-tools.cjs'), 'utf8');
+const summarySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-summary.cjs'), 'utf8');
+const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
@@ -37,20 +39,20 @@ ok(/function summarySingleShotEnabled\(config\)/.test(src), 'S summarySingleShot
 ok(/summarySingleShotMaxTokensV1: 32768/.test(src) && /Math\.min\(131072, Math\.max\(8192, Math\.round\(n\)\)\) : 32768/.test(src), 'S 单发上限默认 32768 且 sanitize 钳位 [8192,131072](无无限档)');
 // 126-111d 重钉签名:reserve 的预算里含「摘要 prompt 有多长」,而 prompt 从此分中英两份 ——
 // 它必须知道这次用的是哪一份,否则英文那份的长度会按中文的算(估算偏差直接进单发预算)。
-ok(/function summarySingleShotCap\(config, provider, model\)/.test(src) && /function summarySingleShotReserveTokens\(config\)/.test(src), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
+ok(/function summarySingleShotCap\(config, provider, model\)/.test(summarySource) && /function summarySingleShotReserveTokens\(config\)/.test(summarySource), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
 ok(isDeepStrictEqual(rules.summary.singleShotReserve, { systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 })
   && isDeepStrictEqual(rules.summary.singleShotCap, { default: 32768, min: 8192, max: 131072 }),
   'S 运行时 JSON 锁定单发余量与上限');
-ok(/if \(sc\.ok \|\| !singleOn \|\| !isContextOverflowError\(sc\.error\)\) return sc;/.test(src), 'S 105f 仅可识别上下文超窗 400 才降级,其余失败原样上浮');
-ok(/degradedFromSingle: true/.test(src), 'S 105f 降级标记落 mapReduce 元数据(失败调用成本可归因)');
+ok(/if \(sc\.ok \|\| !singleOn \|\| !isContextOverflowError\(sc\.error\)\) return sc;/.test(summarySource), 'S 105f 仅可识别上下文超窗 400 才降级,其余失败原样上浮');
+ok(/degradedFromSingle: true/.test(summarySource), 'S 105f 降级标记落 mapReduce 元数据(失败调用成本可归因)');
 // 105g(4.3 首项): map-reduce 全局事实表 —— 真实 history-24 配对 A/B 门(实体保留 18.8%→75.0%,调用数零增加)通过后默认开启。
 ok(/runtimeSummaryFactTableV1: true/.test(src), 'S runtimeSummaryFactTableV1 defaults true (105g 真实历史 A/B 门已过,显式 false 回退)');
 ok(/'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1', 'runtimeSummaryRefineV1'/.test(src), 'S runtimeSummaryFactTableV1 入严格布尔 sanitize 表(105f 邻接不动;105h 顺排其后)');
 ok(/function summaryFactTableEnabled\(config\)/.test(src), 'S summaryFactTableEnabled 唯一判定点存在');
 ok(/summaryFactTableMaxSamplesV1: 64/.test(src) && /function summaryFactTableCap\(config\)/.test(src), 'S 105g 事实表甜点位上限配置与唯一解析点存在(超长历史门选 64)');
-ok(/function buildSummaryFactTableMessages\(history(?:, maxSamplesOverride)?\)/.test(src), 'S 105g 事实表构建助手存在(复用 105c 抽取器,零 LLM 调用)');
+ok(/function buildSummaryFactTableMessages\(history(?:, maxSamplesOverride)?\)/.test(evidenceSource), 'S 105g 事实表构建助手存在(复用 105c 抽取器,零 LLM 调用)');
 ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
-ok(/factChunkMsg \? \[\.\.\.chunks\[ci\], factChunkMsg\] : chunks\[ci\]/.test(src), 'S 105g 分段注入守门(null 时请求体逐字节不变)');
+ok(/factChunkMsg \? \[\.\.\.chunks\[ci\], factChunkMsg\] : chunks\[ci\]/.test(summarySource), 'S 105g 分段注入守门(null 时请求体逐字节不变)');
 ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
 // 105h(4.3 第二项): <=4 块顺序 refine —— 总门取证前默认关,任一步失败整条回退现有 map-reduce。
 ok(/runtimeSummaryRefineV1: false/.test(src), 'S runtimeSummaryRefineV1 总门无净收益,默认关闭');

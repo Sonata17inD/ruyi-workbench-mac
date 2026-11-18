@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 3110,
-    "requiredSymbols": 3507,
+    "providedSymbols": 3070,
+    "requiredSymbols": 3498,
     "edges": 646,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -10718,7 +10718,6 @@
         "CONTEXT_CALIBRATION_MAX",
         "CONTEXT_GOVERNANCE_RULES",
         "CompactionPlan",
-        "ECON_AUX_FLAG_CACHE",
         "EVAPORATED_PREFIX",
         "MANUAL_COMPACTION_SUMMARY_HEADER",
         "MANUAL_COMPACT_MAX_FRESH_TOKENS",
@@ -10733,29 +10732,11 @@
         "OBSERVATION_TEXT_HEAD",
         "OBSERVATION_TEXT_TAIL",
         "READ_DEDUP_PREFIX",
-        "SUMMARY_CALL_CAP_CACHE",
-        "SUMMARY_CALL_POLICY_RULE",
-        "SUMMARY_EFFORT_ORDER",
-        "SUMMARY_ENTITY_PATTERNS",
-        "SUMMARY_ENTITY_RULES",
-        "SUMMARY_FACT_TABLE_RULES",
-        "SUMMARY_INPUT_BUDGET_RATIO",
-        "SUMMARY_MAX_CONCURRENT_RULE",
-        "SUMMARY_POLICY_STAGES",
         "SUMMARY_PROMPT",
         "SUMMARY_PROMPT_EN",
-        "SUMMARY_REFINE_RULES",
-        "SUMMARY_SINGLE_SHOT_CAP_RULE",
-        "SUMMARY_SINGLE_SHOT_MAX_EST",
-        "SUMMARY_SINGLE_SHOT_RESERVE",
-        "SUMMARY_TASK_EVIDENCE_RULES",
         "_calibKey",
         "agentConversationContextMeta",
         "agentNodeContextWindow",
-        "aggregateSummaryCalls",
-        "anySummarySignal",
-        "applySummaryCallPolicy",
-        "applySummaryEntityCheck",
         "buildCompactionToolIndex",
         "buildObservationRecallPrompt",
         "buildSummaryFactTableMessages",
@@ -10775,8 +10756,8 @@
         "contextCalibrationStore",
         "contextWindowOverrideKey",
         "createCompactionRefetchGuard",
+        "createProviderSummary",
         "dedupeRepeatedReads",
-        "economicsShadowEnabledCached",
         "estimateFactor",
         "evaporateBudgetBoundary",
         "evaporateHistory",
@@ -10792,23 +10773,18 @@
         "loadContextCalibration",
         "manualCompactPromptShape",
         "mapSummaryWithLimit",
-        "markSummaryCallPolicyUnsupported",
         "maybeAutoCompact",
         "maybeCompactSubHistory",
         "measureObservationReductionShadow",
-        "mergeSummaryTaskEvidence",
         "noteEstimateSample",
         "noteWindowOvershoot",
         "observationToolNames",
         "openCompactMarker",
         "persistContextCalibration",
-        "pickSummaryFailure",
-        "privacySummarySliceEnd",
         "protectedObservation",
         "providerContextWindow",
         "providerConversationContextWindow",
         "providerSummaryCall",
-        "providerSummaryCallCore",
         "recentFileReads",
         "recentTurnsBoundary",
         "recordCompactUsage",
@@ -10819,28 +10795,12 @@
         "runAutoCompaction",
         "runForcedOverflowCompaction",
         "runProviderCompact",
-        "singleSummaryCall",
-        "stripSummaryTaskEvidence",
-        "summaryCallPolicyKey",
-        "summaryCallPolicyMetadata",
-        "summaryEffortFromRule",
         "summaryMaxConcurrent",
-        "summaryModelPolicy",
-        "summaryPolicyTiers",
-        "summaryPromptIsEnglish",
         "summaryPromptWithGuidance",
         "summarySectionLocations",
         "summarySingleShotCap",
         "summarySingleShotReserveTokens",
-        "summarySourceText",
-        "summaryStopSignal",
-        "summaryStoppedResult",
-        "summaryTaskEvidenceDirective",
-        "summaryTaskEvidenceMessage",
-        "summaryTaskEvidenceScope",
         "summaryTaskSourceHistory",
-        "summaryTaskSourceRole",
-        "summaryUnsupportedParameterFields",
         "toolResultIsFull",
         "upsertCompactMarker",
         "userBlockStarts",
@@ -10851,8 +10811,7 @@
           "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -10894,14 +10853,16 @@
           "provider": "00-boot.js",
           "symbol": "estimateHistoryTokens",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "estimateTextTokens",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10913,23 +10874,17 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "historyStartsWithCompactionSummary",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10962,16 +10917,10 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "resolveContextWindow",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10979,13 +10928,6 @@
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -10999,7 +10941,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -11033,41 +10976,6 @@
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "reseedTailUnitsEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summaryEntityCheckEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summaryFactTableCap",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summaryFactTableEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summaryRefineEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summarySingleShotEnabled",
           "kinds": [
             "call"
           ]
@@ -11167,7 +11075,7 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11181,21 +11089,14 @@
           "provider": "04i-provider-wire.js",
           "symbol": "normalizeProviderApiStyle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildProviderSystemPrompt",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -11223,7 +11124,7 @@
           "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -31442,7 +31343,6 @@
       "to": "00-boot.js",
       "symbols": [
         "DesktopExecutionHooks",
-        "URL",
         "cachedInputTokensFromUsage",
         "compactionSummaryPairEnd",
         "computeProviderCost",
@@ -31451,14 +31351,12 @@
         "estimateHistoryTokens",
         "estimateTextTokens",
         "fmtTokensServer",
-        "historyStartsWithCompactionSummary",
         "isContextOverflowError",
         "logEvent",
         "nativeToolTier",
         "nowIso",
         "path",
         "paths",
-        "redact",
         "resolveContextWindow",
         "text"
       ],
@@ -31481,12 +31379,7 @@
         "historyReadDedupEnabled",
         "observationRecallEnabled",
         "reseedReattachFilesEnabled",
-        "reseedTailUnitsEnabled",
-        "summaryEntityCheckEnabled",
-        "summaryFactTableCap",
-        "summaryFactTableEnabled",
-        "summaryRefineEnabled",
-        "summarySingleShotEnabled"
+        "reseedTailUnitsEnabled"
       ],
       "direction": "backward"
     },
@@ -31567,7 +31460,6 @@
       "from": "10-context-governance.js",
       "to": "06-provider-engine.js",
       "symbols": [
-        "buildProviderSystemPrompt",
         "buildStableSystemPrompt"
       ],
       "direction": "backward"

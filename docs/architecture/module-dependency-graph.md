@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 3110 | 3507 | 646 | 21 | 0 | 0 |
+| 94 | 3070 | 3498 | 646 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -74,7 +74,7 @@
 | 56 | `09b-replan-ledger.js` | orchestration | 8 | 4 | 1 |
 | 57 | `09-workflow.js` | orchestration | 27 | 274 | 28 |
 | 58 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
-| 59 | `10-context-governance.js` | orchestration | 145 | 54 | 14 |
+| 59 | `10-context-governance.js` | orchestration | 105 | 45 | 14 |
 | 60 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
 | 61 | `11-native-tools.js` | tools | 52 | 46 | 11 |
 | 62 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
@@ -341,9 +341,9 @@
 | `09b-agent-recovery.js` | `08-agent-runs.js` | backward | `NODE_WRITE_FAMILY`, `buildAgentRunEnvelope` |
 | `09b-agent-recovery.js` | `09-workflow.js` | backward | `launchPersistedAgentRun` |
 | `09b-replan-ledger.js` | `00-boot.js` | backward | `TOOL_TIER_RANK`, `hashArgs`, `makeId`, `nowIso` |
-| `10-context-governance.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `URL`, `cachedInputTokensFromUsage`, `compactionSummaryPairEnd`, `computeProviderCost`, `crypto`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `historyStartsWithCompactionSummary`, `isContextOverflowError`, `logEvent`, `nativeToolTier`, `nowIso`, `path`, `paths`, `redact`, `resolveContextWindow`, `text` |
+| `10-context-governance.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `cachedInputTokensFromUsage`, `compactionSummaryPairEnd`, `computeProviderCost`, `crypto`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateTextTokens`, `fmtTokensServer`, `isContextOverflowError`, `logEvent`, `nativeToolTier`, `nowIso`, `path`, `paths`, `resolveContextWindow`, `text` |
 | `10-context-governance.js` | `01-config.js` | backward | `DurableJsonStore`, `readConfig` |
-| `10-context-governance.js` | `01c-runtime-flags.js` | backward | `evaporateBudgetBoundaryEnabled`, `historyReadDedupEnabled`, `observationRecallEnabled`, `reseedReattachFilesEnabled`, `reseedTailUnitsEnabled`, `summaryEntityCheckEnabled`, `summaryFactTableCap`, `summaryFactTableEnabled`, `summaryRefineEnabled`, `summarySingleShotEnabled` |
+| `10-context-governance.js` | `01c-runtime-flags.js` | backward | `evaporateBudgetBoundaryEnabled`, `historyReadDedupEnabled`, `observationRecallEnabled`, `reseedReattachFilesEnabled`, `reseedTailUnitsEnabled` |
 | `10-context-governance.js` | `01f-agent-cli-types.js` | backward | `normalizeAgentCliType` |
 | `10-context-governance.js` | `02-session-store.js` | backward | `appendUsageLedger`, `loadSession`, `maybeWriteSessionNotes`, `mutateSession`, `repairProviderHistoryPairing`, `saveSession`, `sessionObjectIsStale`, `writeHistorySnapshot` |
 | `10-context-governance.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
@@ -352,7 +352,7 @@
 | `10-context-governance.js` | `04-permission-runtime.js` | backward | `AGENT_CLI_CONTEXT_WINDOW_PROBES` |
 | `10-context-governance.js` | `04h-provider-http.js` | backward | `providerBaseWithV1` |
 | `10-context-governance.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `normalizeProviderApiStyle`, `providerWireProtocol` |
-| `10-context-governance.js` | `06-provider-engine.js` | backward | `buildProviderSystemPrompt`, `buildStableSystemPrompt` |
+| `10-context-governance.js` | `06-provider-engine.js` | backward | `buildStableSystemPrompt` |
 | `10-context-governance.js` | `06i-steward-core.js` | backward | `StewardHooks` |
 | `10-context-governance.js` | `07-autonomy.js` | backward | `buildOpenAiTools`, `fetchOpenAiModels` |
 | `10a-session-turn.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `SessionExecutionHooks`, `logEvent`, `makeId`, `nowIso` |
