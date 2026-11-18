@@ -23,7 +23,9 @@ const { functionBlock } = require('./lib/source-slice');
 const APP = path.join(__dirname, '..', 'ruyi-workbench', 'app');
 const providerConfigSource = fs.readFileSync(path.join(APP, 'backend', 'provider-config.cjs'), 'utf8');
 const voiceService = fs.readFileSync(path.join(APP, 'backend', 'voice-service.cjs'), 'utf8');
-const src06 = fs.readFileSync(path.join(APP, 'src', '06-provider-engine.js'), 'utf8');
+const runtimeCapabilitySources = ['src/06w-capability-service.js', 'backend/capability-service.cjs',
+  'backend/desktop-capability-probe.cjs', 'backend/playbook-policy.cjs']
+  .map(file => fs.readFileSync(path.join(APP, file), 'utf8')).join('\n');
 const src01 = fs.readFileSync(path.join(APP, 'src', '01-config.js'), 'utf8');
 const src00 = fs.readFileSync(path.join(APP, 'src', '00-boot.js'), 'utf8');
 const providersJs = fs.readFileSync(path.join(APP, 'public', 'js', 'provider-settings.js'), 'utf8');
@@ -39,8 +41,8 @@ assert.deepStrictEqual(Array.from(PLAYBOOK_REQUIRES), ['network', 'desktopMcp', 
   '06: runtime requirements retain the original capabilities and explicitly separate shared ACC from UI/OCR/browser control');
 const capsModelDomain = ['asr', 'embedding', 'asr-stream'], capsRuntimeDomain = ['network', 'desktopMcp', 'vision'];
 assert.ok(!capsModelDomain.some(v => capsRuntimeDomain.includes(v)), '两个 caps 取值域必须不相交');
-assert.ok(!src06.includes('PROVIDER_MODEL_CAPS'), '06 不得引用模型能力标签域（PROVIDER_MODEL_CAPS）');
-assert.ok(!src06.includes("'asr'") && !src06.includes('"asr"'), "06 不得出现 'asr' 字面量（串域）");
+assert.ok(!runtimeCapabilitySources.includes('PROVIDER_MODEL_CAPS'), '运行时能力独立于模型能力标签域');
+assert.ok(!/['"]asr['"]/.test(runtimeCapabilitySources), '运行时能力不包括语音模型标签');
 const mentions = providerConfigSource.split('\n').filter(l => l.includes('PLAYBOOK_REQUIRES'));
 assert.ok(mentions.length === 1 && /^\s*\/\//.test(mentions[0].trimStart()) || (mentions.length === 1 && mentions[0].trim().startsWith('//')), 'Provider 配置只允许 114a 隔离注释点名 PLAYBOOK_REQUIRES 一次（不许代码引用）：实得 ' + mentions.length + ' 处');
 // ② schema:114a 自己不 bump（45 号文 §6.1），但常量是全仓共用的 —— 107-T1 为了把 126-111b/d/e

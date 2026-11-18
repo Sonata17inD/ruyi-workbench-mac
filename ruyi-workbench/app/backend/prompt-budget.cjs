@@ -75,4 +75,9 @@ function appendMemorySection(base, memSec, limit) {
   return b + SEP + s;
 }
 
-module.exports = { appendMemorySection, clampAppendWithSkills, fenceSafeSlice, shrinkFencedSection };
+// Preserve the size of untrusted text while disarming a matching fence prefix.
+function neutralizeFenceTag(text, tagName) {
+  return String(text).replace(new RegExp('<(/?)' + tagName, 'gi'), '[$1' + tagName);
+}
+
+module.exports = { neutralizeFenceTag, appendMemorySection, clampAppendWithSkills, fenceSafeSlice, shrinkFencedSection };

@@ -16,7 +16,7 @@
 //      本函数只做「中和」这一步,null/undefined 的兜底是调用方各自的既有职责,不在本函数内)
 //   ⑥ 前缀匹配是既有行为(不是新引入的宽松化):正则本就没有词边界/结尾锚点,`<workbench-memory-core>`
 //      在按 tagName='workbench-memory' 中和时前缀一样会命中——这是六处原实现共有的既有行为,原样保留
-//   ⑦ 静态锁:00-boot.js 里 neutralizeFenceTag 只定义一份;06d/06e/06/09 六个调用点全部改调它,
+//   ⑦ 静态锁:prompt-budget.cjs 只定义一份 neutralizeFenceTag，六个调用点共享它,
 //      不再各自手写 `.replace(/<(\/?)…/gi, ...)` 字面量
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-wait-reason.test.js):require server.js 前先把
@@ -91,16 +91,19 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
 
 /* ═══════════ ⑦ 静态锁:单一事实源 + 六个调用点都已迁移 ═══════════ */
 {
-  const bootSrc = fs.readFileSync(path.join(app, 'src', '00-boot.js'), 'utf8');
-  const defs = (bootSrc.match(/function neutralizeFenceTag\(/g) || []).length;
-  ok(defs === 1, '⑦a 00-boot.js 里 neutralizeFenceTag 只有一份定义(got ' + defs + ')');
+  const modules = ['src', 'backend'].flatMap(dir => fs.readdirSync(path.join(app, dir))
+    .filter(file => /\.c?js$/.test(file)).map(file => path.join(dir, file)));
+  const owners = modules.filter(file => /function neutralizeFenceTag\(/.test(fs.readFileSync(path.join(app, file), 'utf8')));
+  ok(owners.length === 1 && owners[0] === path.join('backend', 'prompt-budget.cjs')
+    && neutralizeFenceTag === require(path.join(app, owners[0])).neutralizeFenceTag,
+  '⑦a 宿主与提示词模块共用 prompt-budget.cjs 的唯一围栏实现');
 
   const sites = [
     { file: '../backend/memory-prompts.cjs', needle: "neutralizeFenceTag(t, 'workbench-memory')" },
     { file: '../backend/memory-prompts.cjs', needle: "neutralizeFenceTag(String(value || ''), 'workbench-memory-core')" },
     { file: '../backend/mission-driver.cjs', needle: "neutralizeFenceTag(t == null ? '' : t, 'mission-ledger')" },
-    { file: '06-provider-engine.js', needle: "neutralizeFenceTag(text, 'project-memory')" },
-    { file: '06-provider-engine.js', needle: "neutralizeFenceTag(t, 'skill-index')" },
+    { file: '../backend/prompt-context.cjs', needle: "neutralizeFenceTag(text, 'project-memory')" },
+    { file: '../backend/prompt-context.cjs', needle: "neutralizeFenceTag(t, 'skill-index')" },
     { file: '09-workflow.js', needle: "neutralizeFenceTag(note, 'workbench-plan-approved')" },
   ];
   for (const s of sites) {
@@ -109,14 +112,14 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
   }
 
   // 六处不应再各自手写同款字面量正则(排除 00-boot.js 自身的实现)。
-  const callerFiles = ['../backend/memory-prompts.cjs', '06e-mission-domain.js', '06-provider-engine.js', '09-workflow.js'];
+  const callerFiles = [...new Set(sites.map(site => site.file))];
   let leftoverLiterals = 0;
   for (const f of callerFiles) {
     const src = fs.readFileSync(path.join(app, 'src', f), 'utf8');
     const m = src.match(/replace\(\/<\(\\\/\?\)/g);
     if (m) leftoverLiterals += m.length;
   }
-  ok(leftoverLiterals === 0, '⑦c 06d/06e/06/09 里不再残留手写的 `<(\\/?)…` 字面量正则(got ' + leftoverLiterals + ' 处)');
+  ok(leftoverLiterals === 0, '⑦c 提示词调用方无重复的围栏正则(got ' + leftoverLiterals + ' 处)');
 }
 
 console.log('\nNEUTRALIZE-FENCE-TAG UNIT: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));

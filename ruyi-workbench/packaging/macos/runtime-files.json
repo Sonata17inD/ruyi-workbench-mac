@@ -364,7 +364,12 @@
     "app/backend/storage-steward.cjs",
     "app/backend/capability-service.cjs",
     "app/backend/desktop-capability-probe.cjs",
-    "app/backend/thread-brief.cjs"
+    "app/backend/thread-brief.cjs",
+    "app/backend/turn-error-classes.cjs",
+    "app/backend/tool-iteration-budget.cjs",
+    "app/backend/prompt-context.cjs",
+    "app/backend/engine-env-brief.cjs",
+    "app/backend/provider-prompt.cjs"
   ],
   "acc": [
     "LICENSE",

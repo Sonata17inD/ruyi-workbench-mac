@@ -183,6 +183,7 @@ test('[M] MCP 清单同步一个入口:选中推、切走清、Claude 不碰、�
 
 test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const src = readServerSource();
+  const envBrief = fs.readFileSync(path.join(app, 'backend', 'engine-env-brief.cjs'), 'utf8');
   const code = text => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
   // 判据:与 'kimi' 字面量比较(kimi 只可能是 CLI 类型);agentCliType 与任何字面量比较;旧的 kind === 'claude';
   // ['claude', 'kimi'] 白名单;`? 'kimi' : 'claude'` 二选一。`engine === 'claude'` 不算 —— 那是引擎族的历史 id(CLI 族 vs provider 族)。
@@ -196,8 +197,8 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
     syncAgentCliMcpManifests: functionBlock(src, 'syncAgentCliMcpManifests'),
     agentCliAdapter: functionBlock(src, 'agentCliAdapter'),
     maybeAutoCompactAgentSession: functionBlock(src, 'maybeAutoCompactAgentSession'),
-    engineBriefFacts: functionBlock(src, 'engineBriefFacts'),
-    renderCliEnvBrief: functionBlock(src, 'renderCliEnvBrief'),
+    engineBriefFacts: functionBlock(envBrief, 'engineBriefFacts'),
+    renderCliEnvBrief: functionBlock(envBrief, 'renderCliEnvBrief'),
     agentConversationContextMeta: functionBlock(src, 'agentConversationContextMeta'),
     applyConfigPatch: functionBlock(src, 'applyConfigPatch'),
     startServerInner: functionBlock(src, 'startServerInner'),

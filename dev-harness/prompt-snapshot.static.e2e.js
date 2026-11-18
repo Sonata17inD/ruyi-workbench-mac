@@ -79,7 +79,13 @@ const closeCount = (full.match(/<\/skill-index>/g) || []).length;
 ok(openCount === closeCount && openCount >= 1, '$2 skill-index 围栏开/闭数相等(防悬空围栏,伪造中和防线前提) got ' + openCount + '/' + closeCount);
 // 04 Phase A "预算断言":每层预算的静态存在(技能 3000 字上限在 buildSkillsPromptSection)。
 const src = fs.readFileSync(SERVER, 'utf8');
-ok(/整段上限 3000 字符/.test(src) || /budget = 3000/.test(src), '$3 技能索引预算 3000 字上限在(buildSkillsPromptSection)');
+const { buildSkillsPromptSection } = require('../ruyi-workbench/app/backend/prompt-context.cjs');
+const manySkills = Array.from({ length: 40 }, (_, i) => ({
+  kind: 'skill', id: 'skill-' + i, dir: '/fixture', description: 'a'.repeat(160),
+}));
+const boundedSkills = buildSkillsPromptSection(manySkills, 'openai', config);
+ok(boundedSkills.length <= 3000 && boundedSkills.endsWith('</skill-index>') && boundedSkills.includes('skill-0') && !boundedSkills.includes('skill-39'),
+  '$3 技能索引超出 3000 字时截断条目并保留闭合围栏');
 
 console.log('── D 段: 51d C1a 稳定/易变层拆分(prefix-cache 分层基础) ──');
 // buildStableSystemPrompt 不含 volatile 标记(身份+工具协议+provider,逐字节稳定)

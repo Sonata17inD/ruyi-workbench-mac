@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 3156,
-    "requiredSymbols": 3528,
-    "edges": 650,
+    "providedSymbols": 3146,
+    "requiredSymbols": 3514,
+    "edges": 646,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -5674,15 +5674,10 @@
       "file": "06-provider-engine.js",
       "order": 46,
       "layer": "engine",
-      "note": "provider 引擎助手/能力探测/metrics/转录 GC/存储管家/playbooks",
+      "note": "Provider prompt, playbooks, and auxiliary service composition",
       "provides": [
-        "ENGINE_BRIEF_CLOSE",
-        "ENGINE_BRIEF_OPEN",
         "ERROR_CLASSES",
-        "PROJECT_MEMORY_CAP",
-        "RUYI_MCP_TOOL_PREFIX",
         "TOOL_ITERATION_BUDGETS",
-        "_engineBriefMemo",
         "buildBrowserAutomationHint",
         "buildEngineEnvBrief",
         "buildPlaybookIndexSection",
@@ -5695,9 +5690,7 @@
         "createThreadBriefService",
         "deleteUserPlaybook",
         "draftPlaybookFromSession",
-        "engineBriefFacts",
         "evalPlaybookAvailability",
-        "isLongToolTask",
         "listPlaybooksWithAvailability",
         "loadAllPlaybooks",
         "matchServiceEntry",
@@ -5706,10 +5699,7 @@
         "normalizePlaybook",
         "parseThreadBrief",
         "playbookReuseSources",
-        "providerEnvLines",
         "readProjectMemory",
-        "renderCliEnvBrief",
-        "renderProviderStablePrompt",
         "repairNodeJsonViaProvider",
         "resolveEngineEnvBrief",
         "resolveToolIterationBudget",
@@ -5722,13 +5712,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "APP_NAME",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -5757,23 +5740,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "neutralizeFenceTag",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -5786,13 +5755,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "OVERLAY_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -5820,35 +5782,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "TOOL_REQUIRES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "toolRequirementsMet",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "RUYI_MCP_CLI_TOOL_PREFIX",
           "kinds": [
             "read"
           ]
@@ -5882,38 +5816,10 @@
           ]
         },
         {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "AGENT_CLI_DEFAULT_TYPE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "AGENT_CLI_TYPES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "isAgentCliType",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5973,31 +5879,17 @@
           ]
         },
         {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "getPromptPack",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "PROMPT_EN",
+          "provider": "06d-memory-domain.js",
+          "symbol": "buildMemoryCheckPrompt",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryCheckPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryPromptSection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6018,7 +5910,7 @@
           "provider": "07-autonomy.js",
           "symbol": "toolPackForName",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -30164,28 +30056,13 @@
         "DEFAULT_PORT",
         "OVERLAY_ID",
         "RUYI_EVENTS",
-        "TOOL_REQUIRES",
         "VERSION",
-        "crypto",
         "dataRoot",
         "externalRoot",
-        "fsp",
         "logEvent",
-        "neutralizeFenceTag",
         "nowIso",
-        "path",
         "paths",
-        "safeJsonParse",
-        "text",
-        "toolRequirementsMet"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "00b-ruyi-names.js",
-      "symbols": [
-        "RUYI_MCP_CLI_TOOL_PREFIX"
+        "safeJsonParse"
       ],
       "direction": "backward"
     },
@@ -30197,24 +30074,6 @@
         "atomicWriteJson",
         "readConfig",
         "safeSessionId"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "01e-permission-modes.js",
-      "symbols": [
-        "PERMISSION_MODES"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "01f-agent-cli-types.js",
-      "symbols": [
-        "AGENT_CLI_DEFAULT_TYPE",
-        "AGENT_CLI_TYPES",
-        "isAgentCliType"
       ],
       "direction": "backward"
     },
@@ -30252,15 +30111,6 @@
       "symbols": [
         "activeOpenAiProvider",
         "providerRawCompletion"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "06-provider-engine.js",
-      "to": "06b-prompt-registry.js",
-      "symbols": [
-        "PROMPT_EN",
-        "getPromptPack"
       ],
       "direction": "backward"
     },

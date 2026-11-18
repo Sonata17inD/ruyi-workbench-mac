@@ -26,6 +26,8 @@ const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 
 const manifest = JSON.parse(read('manifest.json'));
 const src06 = read('06-provider-engine.js');
+const providerServices = ['thread-brief', 'playbooks', 'provider-raw-completion', 'provider-prompt', 'prompt-context', 'engine-env-brief']
+  .map(name => [name + '.cjs', read('../backend/' + name + '.cjs')]);
 const src06b = read('../backend/prompt-registry.cjs');
 const src06i = read('../backend/steward-core.cjs');
 const src06k = read('06k-config-patch.js'); // 架构还债批 2 B2:applyConfigPatch(消费 StewardHooks.arbiterRefresh)从 13 搬到这里
@@ -109,7 +111,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // (12 的工具 handler、13 的 /api/stop、13d 的事项聚合行)。加入样本让「零前向边」的判据【更严】
   // (这三个文件同样不许出现 13h 的符号),同时让下面反向的 unused 判据仍然覆盖全部消费者。
   // 117 波 T1 再扩:13g 拆出的三个新文件同属 13g 族,同样不许出现 13h 的符号(判据更严,不是放宽)。
-  const consumers = [['06-provider-engine.js', src06], ['09-workflow.js', src09], ['10-context-governance.js', src10], ['session-turn-runtime.cjs', turnRuntime],
+  const consumers = [['06-provider-engine.js', src06], ...providerServices, ['09-workflow.js', src09], ['10-context-governance.js', src10], ['session-turn-runtime.cjs', turnRuntime],
     ['12-tool-dispatch.js', src12], ['13-http-router.js', src13], ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
     ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];

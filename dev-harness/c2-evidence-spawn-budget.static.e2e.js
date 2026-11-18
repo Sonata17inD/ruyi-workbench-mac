@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const runs = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '08-agent-runs.js'), 'utf8');
 const evidence = fs.readFileSync(path.join(root, 'ruyi-workbench/app/backend/agent-evidence.cjs'), 'utf8');
 const workflow = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '09-workflow.js'), 'utf8');
-const provider = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '06-provider-engine.js'), 'utf8');
+const budget = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'backend', 'tool-iteration-budget.cjs'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'public', 'js', 'interaction-prompts.js'), 'utf8');
 
 function ok(value, message) {
@@ -23,8 +23,8 @@ ok(!evidence.includes('rawValue:'), 'evidence graph does not persist raw determi
 
 ok(runs.includes('Math.min(1000, Math.max(1, Number(maxIters'), 'sub-agent request budget accepts up to 1000');
 ok(runs.includes('budget = Math.min(adaptiveBudgetLimit, budget + TOOL_ITERATION_BUDGETS.extension)'), 'sub-agent grows budget in bounded increments');
-ok(provider.includes('standardHard: 300, hard: 1000'), 'ordinary and complex hard caps remain distinct');
-ok(provider.includes('hardLimit: elevated ? TOOL_ITERATION_BUDGETS.hard : TOOL_ITERATION_BUDGETS.standardHard'), '1000 cap requires elevated task complexity');
+ok(budget.includes('standardHard: 300, hard: 1000'), 'ordinary and complex hard caps remain distinct');
+ok(budget.includes('hardLimit: elevated ? TOOL_ITERATION_BUDGETS.hard : TOOL_ITERATION_BUDGETS.standardHard'), '1000 cap requires elevated task complexity');
 ok(workflow.includes('Math.min(1000, Math.max(1, Number(raw.maxIters'), 'workflow normalization preserves requested adaptive ceiling');
 
 ok(ui.includes("syncAgentRunsPolling().then"), 'spawn workflow event refreshes persisted runs');
