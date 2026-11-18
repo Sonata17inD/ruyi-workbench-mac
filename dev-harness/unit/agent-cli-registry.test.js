@@ -187,6 +187,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const configSchema = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
   const sessionEngineRoute = fs.readFileSync(path.join(app, 'backend', 'session-engine-route.cjs'), 'utf8');
   const configPatch = fs.readFileSync(path.join(app, 'backend', 'config-patch.cjs'), 'utf8');
+  const agentAutoCompaction = fs.readFileSync(path.join(app, 'backend', 'agent-auto-compaction.cjs'), 'utf8');
   const compactionRouting = fs.readFileSync(path.join(app, 'backend', 'compaction-routing.cjs'), 'utf8');
   const cliMcp = fs.readFileSync(path.join(app, 'backend', 'cli-mcp-sync.cjs'), 'utf8');
   const discovery = fs.readFileSync(path.join(app, 'backend', 'agent-cli-discovery.cjs'), 'utf8');
@@ -207,7 +208,7 @@ test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
     prepareAgentCliSpawn: functionBlock(src, 'prepareAgentCliSpawn'),
     syncAgentCliMcpManifests: functionBlock(cliMcp, 'syncAgentCliMcpManifests'),
     agentCliAdapter: functionBlock(adapters, 'agentCliAdapter'),
-    maybeAutoCompactAgentSession: functionBlock(src, 'maybeAutoCompactAgentSession'),
+    maybeAutoCompactAgentSession: functionBlock(agentAutoCompaction, 'maybeAutoCompactAgentSession'),
     engineBriefFacts: functionBlock(envBrief, 'engineBriefFacts'),
     renderCliEnvBrief: functionBlock(envBrief, 'renderCliEnvBrief'),
     agentConversationContextMeta: functionBlock(compactionRouting, 'agentConversationContextMeta'),

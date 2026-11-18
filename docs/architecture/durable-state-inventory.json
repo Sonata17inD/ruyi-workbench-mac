@@ -321,7 +321,7 @@
     {
       "id": "session-messages",
       "pattern": "<data>/sessions/<id>.messages.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-files.cjs",
       "anchor": ".messages.ndjson",
       "schema": "NDJSON messages",
       "writePrimitive": "append whole newline records",
@@ -335,7 +335,7 @@
     {
       "id": "session-provider",
       "pattern": "<data>/sessions/<id>.provider.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-files.cjs",
       "anchor": ".provider.ndjson",
       "schema": "NDJSON provider history",
       "writePrimitive": "append whole newline records",

@@ -23,7 +23,7 @@ const {
   usage: { forEachUsageRow, usageLedgerChangesSince },
   config: {
     THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MAX, THREAD_INDEX_RECENT_MIN, paths, readConfig,
-    getSessionsDirOwnWriteSeq: () => sessionsDirOwnWriteSeq,
+    getSessionsDirOwnWriteSeq,
   },
 });
 

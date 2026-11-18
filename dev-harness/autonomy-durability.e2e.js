@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // E2E: 第25波「耐久基座」(AUTONOMY-PLAN 25.1-25.5) —— 崩溃注入 + 断点续跑 + 幂等写 + 事件日志。
 // 端口: FAKE 9109 / WB 9110(已登记 dev-harness/README 端口表)。离线,Node 直跑。
 // 断言面:
-//  A) atomicWriteJson 源抽取单测:20 路并发写同一目标 → 终稿是完整 JSON(无交错撕裂)、无 *.tmp 孤儿。
+//  A) 实际 atomicWriteJson单测:20 路并发写同一目标 → 终稿是完整 JSON(无交错撕裂)、无 *.tmp 孤儿。
 //  B) 静态锁:七处原子写全部收编(旧手写 tmp 模式清零);persistenceDegraded 经 live 叠加下发;阈值常量在。
 //  C) 崩溃注入·杀点1(≥1 个工具步骤完成后强杀):重启 → run/node 标 interrupted、continuation 存活、
 //     interruptedAttempt 记录;resume → 子代理提示词含【断点续跑】(FAKE_CAPTURE_DIR 断言)、
@@ -87,21 +87,16 @@ function capturesContaining(dir, needle) {
   fs.mkdirSync(WS, { recursive: true });
   const src = readServerSource();
 
-  // ── A) atomicWriteJson 源抽取 + 并发单测 ──
+  // ── A) 实际 atomicWriteJson + 并发单测 ──
   {
-    const m = src.match(/async function atomicWriteJson\(finalPath, value, opts = \{\}\) \{[\s\S]*?\n\}/);
-    ok(!!m, 'A atomicWriteJson 可抽取');
-    if (m) {
-      const fsp = fs.promises, crypto = require('crypto');
-      const make = new Function('fsp', 'crypto', m[0] + '\nreturn atomicWriteJson;');
-      const awj = make(fsp, crypto);
-      const dest = path.join(HOME, 'concurrent.json');
-      await Promise.all(Array.from({ length: 20 }, (_, i) => awj(dest, { writer: i, payload: 'x'.repeat(2048) })));
-      const parsed = readJson(dest);
-      ok(parsed && typeof parsed.writer === 'number' && parsed.payload.length === 2048, 'A 20 路并发写终稿是完整 JSON(无撕裂),writer=' + (parsed && parsed.writer));
-      const orphans = fs.readdirSync(HOME).filter(f => f.includes('.tmp'));
-      ok(orphans.length === 0, 'A 无 *.tmp 孤儿(实 ' + orphans.length + ')');
-    }
+    const { createAtomicFileStore } = require('../ruyi-workbench/app/backend/file-persistence.cjs');
+    const { atomicWriteJson } = createAtomicFileStore({ paths: {}, process });
+    const dest = path.join(HOME, 'concurrent.json');
+    await Promise.all(Array.from({ length: 20 }, (_, i) => atomicWriteJson(dest, { writer: i, payload: 'x'.repeat(2048) })));
+    const parsed = readJson(dest);
+    ok(parsed && typeof parsed.writer === 'number' && parsed.payload.length === 2048, 'A 20 路并发写终稿是完整 JSON(无撕裂),writer=' + (parsed && parsed.writer));
+    const orphans = fs.readdirSync(HOME).filter(f => f.includes('.tmp'));
+    ok(orphans.length === 0, 'A 无 *.tmp 孤儿(实 ' + orphans.length + ')');
   }
 
   // ── B) 静态锁 ──

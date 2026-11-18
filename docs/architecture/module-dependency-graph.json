@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2052,
-    "requiredSymbols": 3088,
-    "edges": 596,
+    "providedSymbols": 2048,
+    "requiredSymbols": 3083,
+    "edges": 595,
     "forwardEdges": 14,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -827,6 +827,7 @@
         "ACC_MEMORY_IMPORT_SCHEMA",
         "AGENT_CLI_HOST",
         "AgentCliDiscovery",
+        "AtomicFiles",
         "BROWSER_AUTOMATION_MODES",
         "CONFIG_MIGRATIONS",
         "ConfigPatchHooks",
@@ -834,7 +835,6 @@
         "DesktopMcpDiscovery",
         "DurableJsonStore",
         "HttpAuthorization",
-        "RESERVED_SESSION_FILE_IDS",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
         "SCRIPT_FILE_MAX_AGE_MS",
@@ -864,8 +864,10 @@
         "commandForSelfMcp",
         "configEmitWritten",
         "configValueEquals",
+        "createAtomicFileStore",
         "createClaudeConfigSync",
         "createConfigSchema",
+        "createSessionFiles",
         "decodeClaudeCliText",
         "defaultConfig",
         "desktopMcpDetectionPending",
@@ -891,6 +893,7 @@
         "generateSessionMcpConfig",
         "getAgentRoleLibrary",
         "getProxyModelsCache",
+        "getSessionsDirOwnWriteSeq",
         "hostAllowed",
         "invalidateAgentCliPathCaches",
         "invalidateClaudePathCache",
@@ -935,8 +938,8 @@
         "scanMcpDropIns",
         "selectedAgentCli",
         "serveStatic",
+        "sessionBodyPaths",
         "sessionPath",
-        "sessionsDirOwnWriteSeq",
         "setProxyModelsCache",
         "staticBase",
         "sweepStaleScriptFiles",
@@ -966,13 +969,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -1397,36 +1393,7 @@
       "provides": [
         "prepareDesktopExecutionArguments"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "executionArgumentsDigest",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "02h-desktop-ledger.js",
@@ -1709,7 +1676,6 @@
         "sessionBodyCommitValid",
         "sessionBodyDanglingFromLines",
         "sessionBodyDigest",
-        "sessionBodyPaths",
         "sessionBodyPerfStats",
         "sessionBodyRecord",
         "sessionBodyRecordFromRead",
@@ -1896,7 +1862,6 @@
           "provider": "01-config.js",
           "symbol": "assertSessionIdForPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1955,6 +1920,13 @@
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -2789,6 +2761,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
             "read"
@@ -2923,13 +2902,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SESSION_TOMBSTONE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -4151,7 +4123,7 @@
           "provider": "05b-kimi-bridge.js",
           "symbol": "maybeAutoCompactAgentSession",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -4386,14 +4358,10 @@
       "layer": "engine",
       "note": "Kimi Code ACP 驱动：会话/流式/工具/权限/提问/排队 steer；Server API 原生压缩与 wire 状态补强",
       "provides": [
-        "AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS",
         "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
         "KimiAcpFiles",
         "KimiAcpInterventions",
         "KimiAcpTerminals",
-        "agentAutoCompactBackingOff",
-        "agentAutoCompactFailures",
-        "agentAutoCompactTrigger",
         "applyKimiStatusToSession",
         "buildKimiAcpPromptParts",
         "classifyKimiAcpReadonlySearch",
@@ -4422,11 +4390,9 @@
         "kimiStatusFingerprint",
         "kimiUsageFromStatus",
         "maybeAutoCompactAgentSession",
-        "noteAgentAutoCompactFailure",
         "parseKimiWireAgentEvents",
         "parseKimiWireCompaction",
         "prepareKimiAcpSpawn",
-        "replaceSessionObject",
         "resolveKimiAcpPlanFilePath",
         "runKimiAcpTurnPrepared",
         "runKimiCompact",
@@ -4614,7 +4580,6 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4810,13 +4775,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "lastSessionContextTokens",
           "kinds": [
             "call"
           ]
@@ -9413,7 +9371,7 @@
           "provider": "00-boot.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9448,7 +9406,7 @@
           "provider": "00-boot.js",
           "symbol": "runtimeToolRequirementsMet",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9504,7 +9462,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "observationRecallEnabled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9630,14 +9588,14 @@
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9665,14 +9623,14 @@
           "provider": "07-autonomy.js",
           "symbol": "buildToolCatalog",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "dropPolicyDisabledBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12777,6 +12735,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "getSessionsDirOwnWriteSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "read"
@@ -12792,13 +12757,6 @@
         {
           "provider": "01-config.js",
           "symbol": "sessionPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sessionsDirOwnWriteSeq",
           "kinds": [
             "read"
           ]
@@ -13125,6 +13083,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
             "read"
@@ -13393,13 +13358,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SESSION_LOAD_OMIT_PROVIDER",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -20640,6 +20598,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sweepStaleScriptFiles",
           "kinds": [
             "read"
@@ -21376,13 +21341,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -24567,7 +24525,6 @@
         "SKILL_ID_RE",
         "VERSION",
         "agentCliHomes",
-        "crypto",
         "dataRoot",
         "ensureDirs",
         "externalRoot",
@@ -24764,6 +24721,7 @@
         "readFileTail",
         "safeSessionId",
         "selectedAgentCli",
+        "sessionBodyPaths",
         "sessionPath"
       ],
       "direction": "backward"
@@ -24849,17 +24807,6 @@
       "to": "01e-permission-modes.js",
       "symbols": [
         "PERMISSION_MODES"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "02g-desktop-executions.js",
-      "to": "00-boot.js",
-      "symbols": [
-        "copyOrdinaryJsonData",
-        "crypto",
-        "executionArgumentsDigest",
-        "json"
       ],
       "direction": "backward"
     },
@@ -25084,6 +25031,7 @@
       "symbols": [
         "assertSessionIdForPath",
         "safeSessionId",
+        "sessionBodyPaths",
         "sessionPath"
       ],
       "direction": "backward"
@@ -25119,7 +25067,6 @@
         "removeSessionNotes",
         "scheduleSessionIndexUpdate",
         "scratchpadWriteInFlight",
-        "sessionBodyPaths",
         "sessionMissionId",
         "sessionScratchpadPath",
         "stopMissionAgentRuns"
@@ -25690,7 +25637,6 @@
       "to": "10-context-governance.js",
       "symbols": [
         "agentConversationContextMeta",
-        "lastSessionContextTokens",
         "runAgentExternalCompact",
         "upsertCompactMarker"
       ],
@@ -28537,6 +28483,7 @@
         "getAgentRoleLibrary",
         "readConfig",
         "safeSessionId",
+        "sessionBodyPaths",
         "sessionPath",
         "tokenMatches",
         "tokenOk"
@@ -28590,7 +28537,6 @@
         "registerIntervention",
         "saveAgentRun",
         "saveSession",
-        "sessionBodyPaths",
         "sessionBriefOf",
         "sessionDisplayTitle",
         "sessionKind",
@@ -28763,10 +28709,10 @@
         "THREAD_INDEX_RECENT_MAX",
         "THREAD_INDEX_RECENT_MIN",
         "atomicWriteJson",
+        "getSessionsDirOwnWriteSeq",
         "readConfig",
         "safeSessionId",
-        "sessionPath",
-        "sessionsDirOwnWriteSeq"
+        "sessionPath"
       ],
       "direction": "backward"
     },
@@ -30884,6 +30830,7 @@
         "resolveExternalMcpServers",
         "saveProjectAgentRoles",
         "serveStatic",
+        "sessionBodyPaths",
         "sweepStaleScriptFiles",
         "syncAgentCliMcpManifests",
         "syncAgentRolesToClaude",
@@ -31053,7 +31000,6 @@
         "rewindSession",
         "saveAgentRun",
         "saveSession",
-        "sessionBodyPaths",
         "sessionBodyPerfStats",
         "sessionDisplayTitle",
         "sessionMessagesDelta",

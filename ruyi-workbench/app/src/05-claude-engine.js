@@ -25,7 +25,8 @@ const { runClaudeTurn } = require('./backend/agent-cli-turn.cjs').createAgentCli
   cli: {
     agentCliAdapter, agentCliLauncherUsable, buildClaudeRecoveryHistory, claudeProviderTailSince,
     claudeResumeRouteKey, decodeClaudeCliText, engineTranscriptCwd, lastSuccessfulClaudeModel,
-    maybeAutoCompactAgentSession, nativeClaudeAgentResultInfo, sameClaudeResumeCwd, selectedAgentCli,
+    maybeAutoCompactAgentSession: (...args) => maybeAutoCompactAgentSession(...args),
+    nativeClaudeAgentResultInfo, sameClaudeResumeCwd, selectedAgentCli,
     writeToChild,
   },
   runtime: {

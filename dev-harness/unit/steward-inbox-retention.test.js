@@ -6,18 +6,12 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const vm = require('node:vm');
-const crypto = require('node:crypto');
-const { functionBlock } = require('../lib/source-slice');
+const { createAtomicFileStore } = require('../../ruyi-workbench/app/backend/file-persistence.cjs');
 const { createStewardCore } = require('../../ruyi-workbench/app/backend/steward-core.cjs');
 const { createStewardInboxEvents } = require('../../ruyi-workbench/app/backend/steward-inbox-events.cjs');
 const { createStewardInbox } = require('../../ruyi-workbench/app/backend/steward-inbox.cjs');
 const rules = createStewardCore({});
 const inboxEvents = createStewardInboxEvents(rules);
-const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const configSource = fs.readFileSync(path.join(src, '01-config.js'), 'utf8');
-const atomicSource = functionBlock(configSource, 'atomicWriteJson');
-assert.ok(atomicSource.includes('fsp.rename('), 'load the actual atomic JSON writer for disk failure injection');
 const NOW = Date.now(), DAY = 86400000;
 const row = (inboxSeq, age = 0, extra = {}) => ({ inboxSeq, at: new Date(NOW - age * DAY).toISOString(),
   kind: 'done', sessionId: 'sess_test', seq: inboxSeq, payload: {}, count: 1, ...extra });
@@ -40,7 +34,7 @@ function harness(t, rows = []) {
   const hooks = {};
   const fixtureFs = { ...fs };
   const fixtureFsp = { ...fsp };
-  const atomicWriteJson = vm.runInNewContext(`(${atomicSource})`, { fsp: fixtureFsp, crypto, process });
+  const { atomicWriteJson } = createAtomicFileStore({ paths: {}, process, fsp: fixtureFsp });
   const projected = { read: async () => ({ sessions: [{ sessionId: 'sess_test', interventions: [] }] }) };
   const getPretenderProjectionIndex = () => projected.read();
   const emit = (name, frame) => {

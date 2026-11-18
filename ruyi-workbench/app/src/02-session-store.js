@@ -17,14 +17,6 @@
 const SESSION_STORAGE_VERSION = 2;
 // 架构还债批 3·B: 会话级内存覆盖表(sessionEngineRouteOverrides/权限档/桌面工具)与其归一、应用函数抽至 02d-session-overrides.js。
 
-function sessionBodyPaths(id) {
-  assertSessionIdForPath(id);
-  return {
-    messages: path.join(paths.sessions, `${id}.messages.ndjson`),
-    provider: path.join(paths.sessions, `${id}.provider.ndjson`),
-  };
-}
-
 const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, parseSessionNotesMarkdown,
   mergeSessionNotes, buildSessionNotesInjectPrompt } = require('./backend/session-notes.cjs');
 const { sessionNotesPath, readSessionNotes, writeSessionNotes, removeSessionNotes, maybeWriteSessionNotes } =

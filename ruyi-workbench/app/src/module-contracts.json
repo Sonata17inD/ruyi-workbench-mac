@@ -777,6 +777,7 @@
         "ACC_MEMORY_IMPORT_SCHEMA",
         "AGENT_CLI_HOST",
         "AgentCliDiscovery",
+        "AtomicFiles",
         "BROWSER_AUTOMATION_MODES",
         "CONFIG_MIGRATIONS",
         "ConfigPatchHooks",
@@ -784,7 +785,6 @@
         "DesktopMcpDiscovery",
         "DurableJsonStore",
         "HttpAuthorization",
-        "RESERVED_SESSION_FILE_IDS",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
         "SCRIPT_FILE_MAX_AGE_MS",
@@ -814,8 +814,10 @@
         "commandForSelfMcp",
         "configEmitWritten",
         "configValueEquals",
+        "createAtomicFileStore",
         "createClaudeConfigSync",
         "createConfigSchema",
+        "createSessionFiles",
         "decodeClaudeCliText",
         "defaultConfig",
         "desktopMcpDetectionPending",
@@ -841,6 +843,7 @@
         "generateSessionMcpConfig",
         "getAgentRoleLibrary",
         "getProxyModelsCache",
+        "getSessionsDirOwnWriteSeq",
         "hostAllowed",
         "invalidateAgentCliPathCaches",
         "invalidateClaudePathCache",
@@ -885,8 +888,8 @@
         "scanMcpDropIns",
         "selectedAgentCli",
         "serveStatic",
+        "sessionBodyPaths",
         "sessionPath",
-        "sessionsDirOwnWriteSeq",
         "setProxyModelsCache",
         "staticBase",
         "sweepStaleScriptFiles",
@@ -916,13 +919,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -1333,36 +1329,7 @@
       "provides": [
         "prepareDesktopExecutionArguments"
       ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "copyOrdinaryJsonData",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "executionArgumentsDigest",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
+      "requires": []
     },
     {
       "file": "02h-desktop-ledger.js",
@@ -1639,7 +1606,6 @@
         "sessionBodyCommitValid",
         "sessionBodyDanglingFromLines",
         "sessionBodyDigest",
-        "sessionBodyPaths",
         "sessionBodyPerfStats",
         "sessionBodyRecord",
         "sessionBodyRecordFromRead",
@@ -1826,7 +1792,6 @@
           "provider": "01-config.js",
           "symbol": "assertSessionIdForPath",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1885,6 +1850,13 @@
         {
           "provider": "01-config.js",
           "symbol": "selectedAgentCli",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -2711,6 +2683,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
             "read"
@@ -2845,13 +2824,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SESSION_TOMBSTONE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -4051,7 +4023,7 @@
           "provider": "05b-kimi-bridge.js",
           "symbol": "maybeAutoCompactAgentSession",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -4284,14 +4256,10 @@
       "file": "05b-kimi-bridge.js",
       "layer": "engine",
       "provides": [
-        "AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS",
         "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
         "KimiAcpFiles",
         "KimiAcpInterventions",
         "KimiAcpTerminals",
-        "agentAutoCompactBackingOff",
-        "agentAutoCompactFailures",
-        "agentAutoCompactTrigger",
         "applyKimiStatusToSession",
         "buildKimiAcpPromptParts",
         "classifyKimiAcpReadonlySearch",
@@ -4320,11 +4288,9 @@
         "kimiStatusFingerprint",
         "kimiUsageFromStatus",
         "maybeAutoCompactAgentSession",
-        "noteAgentAutoCompactFailure",
         "parseKimiWireAgentEvents",
         "parseKimiWireCompaction",
         "prepareKimiAcpSpawn",
-        "replaceSessionObject",
         "resolveKimiAcpPlanFilePath",
         "runKimiAcpTurnPrepared",
         "runKimiCompact",
@@ -4512,7 +4478,6 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -4708,13 +4673,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "lastSessionContextTokens",
           "kinds": [
             "call"
           ]
@@ -9281,7 +9239,7 @@
           "provider": "00-boot.js",
           "symbol": "nativeToolDisabledByPolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9316,7 +9274,7 @@
           "provider": "00-boot.js",
           "symbol": "runtimeToolRequirementsMet",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9372,7 +9330,7 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "observationRecallEnabled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9498,14 +9456,14 @@
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9533,14 +9491,14 @@
           "provider": "07-autonomy.js",
           "symbol": "buildToolCatalog",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "dropPolicyDisabledBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12631,6 +12589,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "getSessionsDirOwnWriteSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
             "read"
@@ -12646,13 +12611,6 @@
         {
           "provider": "01-config.js",
           "symbol": "sessionPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sessionsDirOwnWriteSeq",
           "kinds": [
             "read"
           ]
@@ -12977,6 +12935,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
             "read"
@@ -13245,13 +13210,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "SESSION_LOAD_OMIT_PROVIDER",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]
@@ -20456,6 +20414,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "sweepStaleScriptFiles",
           "kinds": [
             "read"
@@ -21192,13 +21157,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBodyPaths",
           "kinds": [
             "read"
           ]

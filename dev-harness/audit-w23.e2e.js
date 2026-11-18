@@ -166,7 +166,8 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
     // 另钉 0600 确实传下去了。
     ok(/atomicWriteJson\(paths\.config, data[,)]/.test(wc) && /configWriteChain/.test(wc), 'P2#8 writeConfigAtomic 委托 atomicWriteJson + 全局写链');
     ok(/atomicWriteJson\(paths\.config, data, \{ mode: 0o600 \}\)/.test(wc), 'P2#8b writeConfigAtomic 写 config.json 用 0600(S11)');
-    const awj = src.slice(src.indexOf('async function atomicWriteJson('), src.indexOf('async function atomicWriteJson(') + 1200);
+    const awj = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/file-persistence.cjs'), 'utf8');
+    ok(/async function atomicWriteJson\(/.test(awj), 'P2#8 原子写由文件持久化模块持有');
     ok(/finalPath \+ '\.' \+ process\.pid \+ '\.' \+ crypto\.randomBytes/.test(awj), 'P2#8 atomicWriteJson 用 pid+随机 tmp 名(不变量中心化)');
     ok(/fsp\.unlink\(tmpPath\)/.test(awj), 'P2#8 atomicWriteJson 失败清 tmp(唯一名无覆写自愈路径)');
   }
@@ -177,8 +178,13 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   // ---- 节点数上限 bug(回合内 orchestrate 误用 subagentMaxPerTurn)+ 迁移 + 上限放宽 ----
   {
     // 修:in-turn orchestrate 的 maxNodes 用 agentWorkflowMaxNodes,不再用 subagentTurnCap(=subagentMaxPerTurn)
-    ok(!/maxNodes: subagentTurnCap - subagentTotal/.test(src), 'BUG 修: 回合内 orchestrate 不再用 subagentTurnCap(=subagentMaxPerTurn)做节点数上限');
-    ok((src.match(/maxNodes: Math\.max\(0, Number\(config\.agentWorkflowMaxNodes\)/g) || []).length >= 2, 'BUG 修: in-turn 与 launch 两条 orchestrate 路径都用 agentWorkflowMaxNodes 作节点上限(口径统一,内置模板不再被卡)');
+    const providerTurn = readBackend('provider-turn');
+    const launchRoutes = readBackend('agent-workflow-routes');
+    const persistedLaunch = readBackend('persisted-agent-launch');
+    ok(!/maxNodes: subagentTurnCap - subagentTotal/.test(providerTurn), 'BUG 修: 回合内 orchestrate 不再用 subagentTurnCap(=subagentMaxPerTurn)做节点数上限');
+    const workflowLimit = /maxNodes: Math\.max\(0, Number\(config\.agentWorkflowMaxNodes\)/g;
+    ok([providerTurn, launchRoutes, persistedLaunch].every((source, i) => (source.match(workflowLimit) || []).length === [1, 2, 1][i]),
+      '回合内、HTTP 前后台及持久运行启动都采用 agentWorkflowMaxNodes');
     // 迁移:旧默认 4 → 32(带 flag);deliberate 低值不动;clamp 上限 64;默认 agentWorkflowMaxNodes=48
     const legacy = mod.normalizeConfig({ subagentMaxPerTurn: 4, agentWorkflowMaxNodes: 32 }).config;
     ok(legacy.subagentMaxPerTurn === 32 && legacy.subagentBudgetMigrated === true, '迁移: 存量 subagentMaxPerTurn=4(旧默认)→ 32 + 置 migrated 标记');

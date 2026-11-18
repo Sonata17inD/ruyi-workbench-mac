@@ -138,7 +138,7 @@ const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
     memoryTools, settingsTools, contentTools, actReceipts, actionContract, workspaceOverview, preroute, memoryPanel, toolAdmission, threadControl).sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('../backend/provider-tool-offer.cjs');
-const src11 = read('11-native-tools.js');
+const mcpCatalog = read('../backend/adaptive-mcp-catalog.cjs');
 const statusRoutes = read('../backend/status-routes.cjs');
 const src13f = read('../backend/native-tool-schemas.cjs');
 const src13g = read('13g-steward.js');
@@ -333,8 +333,8 @@ ok(/if \(isStewardToolName\(t\.name\) && !\(opts && opts\.stewardSession === tru
 const mcpServerSource = fs.readFileSync(path.join(APP, 'backend/mcp-server.cjs'), 'utf8');
 ok(/isStewardToolName\(t\.name\) && !stewardSession/.test(mcpServerSource) && /env\.WCW_SESSION_KIND === 'steward'/.test(mcpServerSource),
   '⑤ 面 2:13 MCP tools/list 桥有 isStewardToolName 门(身份来自注入的 WCW_SESSION_KIND,缺失即隐藏)');
-ok(/!isStewardToolName\(t\.name\) \|\| stewardSession/.test(src11),
-  '⑤ 面 3:11 adaptiveCatalogForMcp 有 isStewardToolName 门');
+ok(/!isStewardToolName\(t\.name\) \|\| stewardSession/.test(mcpCatalog),
+  '⑤ 面 3:adaptiveCatalogForMcp 有 isStewardToolName 门');
 ok(/!isStewardToolName\(t\.name\)\)\.map\(t => \(\{ name: t\.name/.test(statusRoutes),
   '⑤ 面 4:13 /api/status 工具清单无条件排除 steward_*');
 // 真实回环:四个面里能在进程内直测的三个(buildOpenAiTools / adaptive 目录 / handler 二次校验)。

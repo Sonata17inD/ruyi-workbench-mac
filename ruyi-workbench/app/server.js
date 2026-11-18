@@ -301,78 +301,14 @@ const {
 // 本进程落进 sessions 目录【本层】的原子写次数(会话头、会话索引、搜索索引……)。13e 投影索引据此区分
 // 「目录 mtime 变了是自己写的」还是外部改动(外部改动当次做全量比对,自己写的只比名单)。写前、写后各记一次:
 // 临时文件落下与 rename 各改一次目录 mtime,两次之间来的读也得认得出是自己。
-let sessionsDirOwnWriteSeq = 0;
-function noteSessionsDirOwnWrite(file) {
-  if (paths && paths.sessions && path.dirname(String(file || '')) === paths.sessions) sessionsDirOwnWriteSeq += 1;
-}
-
-// ============================================================================
-// 原子 JSON 写入：唯一临时文件、可选私有权限，失败清理自己创建的临时文件。
-// Mac rename 原子发布；权限或路径冲突立即报错，保留旧目标。
-async function atomicWriteJson(finalPath, value, opts = {}) {
-  // typeof 守卫:本函数体会被 autonomy-durability 单独抽取执行(那里没有这个钩子)。
-  const noteOwn = typeof noteSessionsDirOwnWrite === 'function' ? noteSessionsDirOwnWrite : () => {};
-  noteOwn(finalPath);
-  try {
-    const payload = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-    const tmpPath = finalPath + '.' + process.pid + '.' + crypto.randomBytes(4).toString('hex') + '.tmp';
-    // 对抗轮修(第25波): writeFile 自身失败(ENOSPC 典型——目录项已建、写入失败)同样必须清 tmp,否则
-    // 节流重试每 1.5s 造一个新孤儿(唯一名无覆写自愈路径)。不变量③对 write 与 rename 两个失败点都成立。
-    if (opts.exclusiveTemp === true) {
-      let file, created = false;
-      try {
-        file = await fsp.open(tmpPath, 'wx', Number.isInteger(opts.mode) ? opts.mode : 0o600);
-        created = true;
-        try { await file.writeFile(payload, 'utf8'); } finally { await file.close(); file = null; }
-      } catch (error) {
-        if (file) { try { await file.close(); } catch { /* preserve the failed write */ } }
-        // EEXIST is someone else's inode. Never unlink it while recovering our own attempt.
-        if (created) { try { await fsp.unlink(tmpPath); } catch { /* best effort; no publication */ } }
-        throw error;
-      }
-    } else {
-      try { await fsp.writeFile(tmpPath, payload, Number.isInteger(opts.mode) ? { encoding: 'utf8', mode: opts.mode } : 'utf8'); }
-      catch (e) { fsp.unlink(tmpPath).catch(() => {}); throw e; }
-    }
-    try { await fsp.rename(tmpPath, finalPath); }
-    catch (e) {
-      try { await fsp.unlink(tmpPath); } catch { /* best-effort tmp cleanup */ }
-      throw e;
-    }
-  } finally { noteOwn(finalPath); }
-}
+const { createAtomicFileStore, readFileTail } = require('./backend/file-persistence.cjs');
+const AtomicFiles = createAtomicFileStore({ paths, process });
+const { noteSessionsDirOwnWrite, getSessionsDirOwnWriteSeq } = AtomicFiles;
+let atomicWriteJson = AtomicFiles.atomicWriteJson;
 
 const { readInstallRegistry, writeInstallRegistry, recordInstallLaunch } = require('./backend/install-registry.cjs').createInstallRegistry({
   paths, externalRoot, samePathKey, nowIso, version: VERSION, atomicWriteJson,
 });
-
-// 117q-B6(30 号文 P2-10):「读文件末尾 N 字节」原语【统一入口】。此前四处独立手写同一套动作
-// (stat 拿 size -> 算尾窗起点 -> open -> 分配 buffer -> read -> finally 关 fd):02-session-store.js 的
-// repairMissionChangeTornTail/repairInterventionTornTail 两处【不检查 bytesRead】——直接对整段已分配
-// buffer 取最后一字节 / lastIndexOf,若 fd.read 实际读到的字节数少于请求量(stat 与 read 之间文件被
-// 截短等罕见竞态),就会对 buffer 里未被写入的那一截(未初始化或陈旧内存)算截断点——而这个截断点
-// 会被直接拿去 fsp.truncate()。算错就是真的截错数据。08-agent-runs.js/13g-steward.js 的两处已经在
-// 检查 bytesRead,行为不变,只是把手写的 open/alloc/read/close 换成本函数。
-// 返回 { buf, bytesRead, size }：size < 0 表示文件不存在(或 stat 失败,与原四处"stat 出错即当无文件"
-// 同口径)；buf.length === 请求要读的字节数(= min(maxBytes, size) 且已 clamp 到 >=0),但【只有
-// buf[0..bytesRead) 是本次 read 实际写入的有效数据】——调用方必须按 bytesRead 定界(取最后一个有效
-// 字节要用 buf[bytesRead-1],扫 \n 要把 lastIndexOf 的搜索起点钉在 bytesRead-1),不能假设 bytesRead
-// === buf.length。空文件(size===0)与「尾窗一字节都不用读」的退化情形直接返回 bytesRead:0,不开 fd。
-async function readFileTail(file, maxBytes) {
-  let size = -1;
-  try { size = (await fsp.stat(file)).size; } catch { return { buf: Buffer.alloc(0), bytesRead: 0, size: -1 }; }
-  const max = Math.max(0, Math.floor(Number(maxBytes) || 0));
-  const start = Math.max(0, size - max);
-  const want = size - start;
-  if (!want) return { buf: Buffer.alloc(0), bytesRead: 0, size };
-  let fh = null;
-  try {
-    fh = await fsp.open(file, 'r');
-    const buf = Buffer.alloc(want);
-    const { bytesRead } = await fh.read(buf, 0, want, start);
-    return { buf, bytesRead, size };
-  } finally { if (fh) await fh.close().catch(() => {}); }
-}
 
 // ── 103c: composable lifecycle for small durable JSON state ──────────────────
 // This is deliberately narrower than a database abstraction. NDJSON append logs, session v2 bodies,
@@ -535,38 +471,9 @@ function tokenMatches(...args) { return HttpAuthorization.tokenMatches(...args);
 function tokenOk(...args) { return HttpAuthorization.tokenOk(...args); }
 function authorizeRoute(...args) { return HttpAuthorization.authorizeRoute(...args); }
 
-// F4 (安全·消毒): accept only a well-formed session id. Returns the id unchanged when it matches the
-// canonical shape (letters/digits/_/-, 1..64), else null. Real ids look like `session_<hex>` → pass
-// naturally. Callers treat null as a 400. Blocks path-ish / oversized / control-char ids from ever
-// reaching loadSession / journal / activeChildren lookups.
-// 会话目录里还住着不是会话的 .json:侧栏索引 index.json、内容搜索索引 _search-index-v1.json(13d)。它们的文件名
-// 本身形状合法,修前 GET /api/sessions/_search-index-v1 会把搜索索引当成 v1 会话「懒迁移」(头被改写、旁边长出
-// 两个正文),DELETE /api/sessions/index 直接 unlink 侧栏索引。所以保留名一律不是会话 id:`index`,以及任何以
-// `_` 开头的名字(工作台自己往会话目录里放的旁车文件都用这个前缀,以后新加的也照此起名)。真会话 id 的形状是
-// makeId('sess') 的 `sess_<16 hex>`、管家会话的 `steward`,都不受影响。
-// 同一张表里还有 Windows 的保留设备名:`CON.json` / `NUL.json` 在 Win32 路径语义下指向设备而不是文件
-// (大小写不敏感,所以比对前先转小写 —— `INDEX.json` 在 NTFS 上也就是 index.json)。
-const RESERVED_SESSION_FILE_IDS = new Set([
-  'index', 'con', 'prn', 'aux', 'nul',
-  ...Array.from({ length: 9 }, (_, i) => `com${i + 1}`), ...Array.from({ length: 9 }, (_, i) => `lpt${i + 1}`),
-]);
-function safeSessionId(raw) {
-  const s = String(raw == null ? '' : raw);
-  if (!/^[A-Za-z0-9_-]{1,64}$/.test(s)) return null;
-  if (s.startsWith('_') || RESERVED_SESSION_FILE_IDS.has(s.toLowerCase())) return null;
-  return s;
-}
+const { createSessionFiles } = require('./backend/session-files.cjs');
+const { safeSessionId, assertSessionIdForPath, sessionPath, sessionBodyPaths } = createSessionFiles({ paths });
 
-// 会话 id 拼成文件名的咽喉点:不合形的 id 在这里就拒掉(抛错),不靠每个调用方记得先 safeSessionId ——
-// 修前有几条路由(/api/chat/stream、/api/session/skills、/api/session/memories、工具上下文)直接拿请求体里的
-// sessionId 拼路径,`../config` 就读到了 <数据根>/config.json(连同服务商密钥)当会话回显出去。
-function assertSessionIdForPath(id) {
-  if (safeSessionId(id) === null) throw new Error('invalid session id');
-  return String(id);
-}
-function sessionPath(id) {
-  return path.join(paths.sessions, `${assertSessionIdForPath(id)}.json`);
-}
 // 第25波对抗轮: per-session 写链(见 saveSession)—— 与 agentRunWriteChains 同范式。
 
 // 81-P1: Immutable encrypted credential records; config holds typed references, never vault plaintext.
@@ -699,19 +606,7 @@ const {
 
 const { unprefixedBridgedName, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, normalizeToolInvokeArgs } = require('./backend/turn-effect-kinds.cjs');
 
-// Prepare once at the final host dispatch boundary. Reject values whose implicit JSON conversion
-// could change approved data; copy property descriptors without invoking getters or toJSON hooks.
-// The returned bytes, decoded-value fingerprint and frozen outgoing object describe the same JSON.
-function prepareDesktopExecutionArguments(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('tool arguments must be a JSON object');
-  const snapshot = copyOrdinaryJsonData(value);
-  const semanticSha256 = executionArgumentsDigest(snapshot);
-  const json = JSON.stringify(snapshot);
-  const bytes = Buffer.byteLength(json, 'utf8');
-  if (bytes > 8 * 1024 * 1024) throw new Error('execution argument snapshot exceeds capacity');
-  return Object.freeze(Object.assign(Object.create(null), { snapshot, json, bytes, sha256: crypto.createHash('sha256').update(json, 'utf8').digest('hex'),
-    codec: 'javascript-json-utf8-v1', semanticSha256, semanticCodec: 'ruyi-sdk-json-v1' }));
-}
+const { prepareDesktopExecutionArguments } = require('./backend/execution-arguments.cjs');
 
 // Root-owned execution preparation/result ledger; this factory itself performs no MCP/native IO.
 // The default-off root/provider candidate supplies actual OS ownership and live turn assertions.
@@ -745,14 +640,6 @@ const { grantIssueTierInfo, resolveToolPermissionContext, normalizeGrant, consum
 // 迁移:legacy <id>.json 首次 load 时原样备份 <id>.json.v1bak 再落 v2;v2 下次成功读取后自动删 v1bak。
 const SESSION_STORAGE_VERSION = 2;
 // 架构还债批 3·B: 会话级内存覆盖表(sessionEngineRouteOverrides/权限档/桌面工具)与其归一、应用函数抽至 02d-session-overrides.js。
-
-function sessionBodyPaths(id) {
-  assertSessionIdForPath(id);
-  return {
-    messages: path.join(paths.sessions, `${id}.messages.ndjson`),
-    provider: path.join(paths.sessions, `${id}.provider.ndjson`),
-  };
-}
 
 const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, parseSessionNotesMarkdown,
   mergeSessionNotes, buildSessionNotesInjectPrompt } = require('./backend/session-notes.cjs');
@@ -1407,7 +1294,8 @@ const { runClaudeTurn } = require('./backend/agent-cli-turn.cjs').createAgentCli
   cli: {
     agentCliAdapter, agentCliLauncherUsable, buildClaudeRecoveryHistory, claudeProviderTailSince,
     claudeResumeRouteKey, decodeClaudeCliText, engineTranscriptCwd, lastSuccessfulClaudeModel,
-    maybeAutoCompactAgentSession, nativeClaudeAgentResultInfo, sameClaudeResumeCwd, selectedAgentCli,
+    maybeAutoCompactAgentSession: (...args) => maybeAutoCompactAgentSession(...args),
+    nativeClaudeAgentResultInfo, sameClaudeResumeCwd, selectedAgentCli,
     writeToChild,
   },
   runtime: {
@@ -1514,102 +1402,11 @@ const { runKimiAcpTurnPrepared, prepareKimiAcpSpawn } = require('./backend/kimi-
   hooks: { AgentLoopHooks, PrivacyGateway, RUYI_EVENTS, logEvent, nowIso, cwdWarning },
 });
 
-async function replaceSessionObject(target, fresh) {
-  if (!target || !fresh) return;
-  for (const key of Object.keys(target)) if (!Object.prototype.hasOwnProperty.call(fresh, key)) delete target[key];
-  Object.assign(target, fresh);
-}
-
-// hunt2-engines#7:Agent CLI 回合前自动压缩的滞回与失败退避。修前每个回合都会重判、重试:Kimi 原生压缩坏了时
-// 每回合开头都要白等最多 3 分钟(compactKimiNative 的轮询上限),外部摘要模型坏了时每回合都再烧一次摘要调用。
-//   ① 成功后:runKimiCompact / runAgentExternalCompact 已把压后实测写进 session.autoCompactWatermark,这里照 10
-//      runAutoCompaction 的口径把触发线抬到 max(阈值线, 水位 + max(2K, 2% 窗口)) —— 两路引擎同一种滞回。
-//   ② 失败后:只在内存里记「哪条会话、在多少 token 时、何时失败」(不进会话头:它是运行时退避,重启即清零合理);
-//      冷却期内且上下文没有再涨过一个重武装余量,就不再尝试。
-const AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS = 10 * 60 * 1000;
-const agentAutoCompactFailures = new Map();   // sessionId -> { at, tokens }
-function agentAutoCompactTrigger(session, threshold, limit) {
-  const base = threshold * limit;
-  const rearmMargin = Math.max(2000, Math.round(limit * 0.02));
-  const wm = Number(session && session.autoCompactWatermark);
-  return { trigger: Number.isFinite(wm) && wm > 0 ? Math.max(base, wm + rearmMargin) : base, rearmMargin };
-}
-function agentAutoCompactBackingOff(sessionId, used, rearmMargin) {
-  const failed = agentAutoCompactFailures.get(String(sessionId || ''));
-  if (!failed) return false;
-  if (Date.now() - failed.at >= AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS || used >= failed.tokens + rearmMargin) {
-    agentAutoCompactFailures.delete(String(sessionId || ''));
-    return false;
-  }
-  return true;
-}
-function noteAgentAutoCompactFailure(sessionId, used) {
-  agentAutoCompactFailures.set(String(sessionId || ''), { at: Date.now(), tokens: Number(used) || 0 });
-  while (agentAutoCompactFailures.size > 500) agentAutoCompactFailures.delete(agentAutoCompactFailures.keys().next().value);
-}
-
-// Called before an Agent CLI turn. A CLI with a native status surface (adapter.contextStatus; Kimi) uses its
-// authoritative status; Claude can opt into an external model and uses the latest measured CLI usage. The
-// default Claude path remains Claude's own auto-compact.
-// 架构还债批 4:第三个参数由 CLI 类型名改成该 CLI 的适配器(05 runClaudeTurn 传入;05b 不反向引用 05 的符号)。
-async function maybeAutoCompactAgentSession(session, config, cliAdapter, onEvent) {
-  const nativeStatus = cliAdapter.contextStatus;
-  const nativeCompact = cliAdapter.nativeCompact;
-  try {
-    const threshold = Number(config.autoCompactThreshold) || 0.8;
-    if (config.compactProviderId) {
-      let used = lastSessionContextTokens(session);
-      const contextMeta = await agentConversationContextMeta({ ...config, agentCliType: cliAdapter.id }, session);
-      let limit = contextMeta.contextWindow;
-      if (nativeStatus && session.claudeSessionId) {
-        const status = await nativeStatus.read(config, session);
-        if (status.ok) {
-          used = status.contextTokens;
-          if (contextMeta.contextWindowSource !== 'manual' && status.contextWindow > 0) limit = status.contextWindow;
-          nativeStatus.apply(session, status);
-        }
-      }
-      const armed = limit > 0 ? agentAutoCompactTrigger(session, threshold, limit) : null;
-      if (used > 0 && armed && used >= armed.trigger && !agentAutoCompactBackingOff(session.id, used, armed.rearmMargin)) {
-        onEvent({ type: 'compact', mode: 'external-summary', phase: 'started', trigger: 'auto', beforeTokens: used, contextWindow: limit });
-        const result = await runAgentExternalCompact(session.id, config, 'auto');
-        if (!result.ok) {
-          noteAgentAutoCompactFailure(session.id, used);
-          onEvent({ type: 'compact', mode: 'external-summary', phase: 'failed', error: result.error });
-          return false;
-        }
-        agentAutoCompactFailures.delete(String(session.id));
-        const fresh = await loadSession(session.id);
-        await replaceSessionObject(session, fresh);
-        onEvent({ type: 'compact', mode: 'external-summary', phase: 'completed', trigger: 'auto', beforeTokens: result.beforeTokens, afterTokens: result.afterTokens });
-        return true;
-      }
-      return false;
-    }
-    if (!nativeStatus || !nativeCompact || !session.claudeSessionId) return false;
-    const status = await nativeStatus.read(config, session);
-    if (!status.ok) return false;
-    nativeStatus.apply(session, status);
-    onEvent({ type: 'usage', ...nativeStatus.usage(status) });
-    const armed = status.contextWindow > 0 ? agentAutoCompactTrigger(session, threshold, status.contextWindow) : null;
-    if (armed && status.contextTokens >= armed.trigger && !agentAutoCompactBackingOff(session.id, status.contextTokens, armed.rearmMargin)) {
-      const result = await nativeCompact.run(session.id, config, 'auto', onEvent);
-      if (!result.ok) {
-        noteAgentAutoCompactFailure(session.id, status.contextTokens);
-        onEvent({ type: 'compact', mode: nativeCompact.mode, phase: 'failed', error: result.error });
-        return false;
-      }
-      agentAutoCompactFailures.delete(String(session.id));
-      const fresh = await loadSession(session.id);
-      await replaceSessionObject(session, fresh);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    try { onEvent({ type: 'compact', mode: nativeCompact ? nativeCompact.mode : 'external-summary', phase: 'failed', error: (error && error.message) || String(error) }); } catch { /* ignore */ }
-    return false;
-  }
-}
+const maybeAutoCompactAgentSession = require('./backend/agent-auto-compaction.cjs').createAgentAutoCompaction({
+  loadSession,
+  agentConversationContextMeta: (...args) => agentConversationContextMeta(...args),
+  runAgentExternalCompact: (...args) => runAgentExternalCompact(...args),
+});
 
 // Compose the Provider helpers and prompt services used by the execution engines.
 const { ERROR_CLASSES } = require('./backend/turn-error-classes.cjs');
@@ -2469,31 +2266,10 @@ const { webFetch, webSearch, webCachePath, readWebCache, writeWebCache } = requi
 const { crc32, zipWrite, zipReadCentralDir, zipReadEntryData } = require('./backend/archive-codec.cjs');
 const { zipCollectEntries } = require('./backend/archive-collector.cjs').createArchiveCollector({ ensureDataRootReal, isSensitiveDataPath, isSensitiveHardlinkAlias });
 
-// v0.8-S4a: `ctx` optionally carries checkpoint-journal context {sessionId, turnSeq}. The provider loop
-// passes its live session.id/turnSeq; the MCP child passes nothing (journalSessionCtx resolves both from
-// the injected WCW_SESSION_ID env + the session file). File-mutating tools (file_write/file_edit/
-// file_delete) record a `before` checkpoint immediately before executing.
-// 116c: opts.stewardSession === true 时才把 steward_* 放进目录(四个 offer 面之一);缺省 fail-closed
-// 隐藏 —— list_tools/tool_search/tool_invoke_* 三条控制面都走本目录,普通会话既检索不到也代理不到管家工具。
-async function adaptiveCatalogForMcp(config, opts) {
-  const runtime = await ProcessRuntime.capabilitySnapshot();
-  const recallEnabled = observationRecallEnabled(config);
-  const stewardSession = !!(opts && opts.stewardSession === true);
-  const desktopOverride = (opts && opts.desktopOverride != null) ? opts.desktopOverride : null;
-  const native = MCP_TOOLS
-    .filter(t => t && t.name && !t.name.startsWith('tool_invoke_') && t.name !== 'tool_load' && t.name !== 'permission_prompt') // permission_prompt 是 CLI 权限桥的内部入口,不能代理调用,别进 list_tools / tool_search
-    .filter(t => runtimeToolRequirementsMet(t.name, runtime).met)
-    .filter(t => !nativeToolDisabledByPolicy(t.name, config, desktopOverride))
-    .filter(t => t.name !== 'observation_recall' || recallEnabled) // 105a: 目录同样按双开关隐藏
-    .filter(t => !isStewardToolName(t.name) || stewardSession) // 116c: 管家工具只进管家会话的目录
-    .map(t => ({ type: 'function', function: { name: t.name, description: t.description || t.name, parameters: t.inputSchema || { type: 'object', properties: {} } } }));
-  let bridged = { tools: [], route: {} };
-  try { bridged = await collectBridgedTools(config); } catch { /* native-only catalog is still useful */ }
-  // 2026-10 能力总闸补桥接面:被 allowCommandTools / allowDesktopTools(+ opts.desktopOverride,调用方按会话取)关掉的内置
-  // 桌面 MCP 工具不进 list_tools / tool_search / 代理的目录。route 原样交回:12 invokeAdaptiveMcpTool 先按它认出被关的目标、回 tool-disabled。
-  const offeredBridged = dropPolicyDisabledBridgedTools(bridged.tools, bridged.route, config, desktopOverride);
-  return { bridged, runtime, catalog: buildToolCatalog(native.concat(offeredBridged), bridged.route, config) };
-}
+const adaptiveCatalogForMcp = require('./backend/adaptive-mcp-catalog.cjs').createAdaptiveMcpCatalog({
+  MCP_TOOLS, ProcessRuntime, observationRecallEnabled, runtimeToolRequirementsMet, nativeToolDisabledByPolicy,
+  isStewardToolName, collectBridgedTools, dropPolicyDisabledBridgedTools, buildToolCatalog,
+});
 
 // Explicit shared file-text-io service.
 const { FileTextIo } = require('./backend/file-text-io.cjs');
@@ -2836,7 +2612,7 @@ const {
   usage: { forEachUsageRow, usageLedgerChangesSince },
   config: {
     THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MAX, THREAD_INDEX_RECENT_MIN, paths, readConfig,
-    getSessionsDirOwnWriteSeq: () => sessionsDirOwnWriteSeq,
+    getSessionsDirOwnWriteSeq,
   },
 });
 
