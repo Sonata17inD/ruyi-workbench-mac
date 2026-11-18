@@ -127,8 +127,9 @@ with tempfile.TemporaryDirectory(prefix='ruyi-paired-performance-') as directory
         str(baseline / 'resources/macos-process-helper.c'), '-o', str(runtime / 'ruyi-process-helper')], check=True)
     current = root / 'ruyi-workbench'
     samples = {'baseline': [], 'candidate': []}
+    warmups = {}
     for label, app in [('baseline', baseline), ('candidate', current)]:
-        measure(app, temp / (label + '-warmup'))
+        warmups[label] = measure(app, temp / (label + '-warmup'))
     for i in range(3):
         for label, app in ([('baseline', baseline), ('candidate', current)] if i % 2 == 0 else
                            [('candidate', current), ('baseline', baseline)]):
@@ -150,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='ruyi-paired-performance-') as directory
         'limitations': ['No model or tool execution; not a full workload performance claim.',
                          'Baseline supervisor compiled from baseline source with identical flags; native leaf helpers and optional Python/MCP installation shared.',
                          'RSS is summed ps snapshots; no physical power or hardware wakeup measurement.'],
-        'samples': samples, 'medians': medians, 'ratios': ratios,
+        'warmups': warmups, 'samples': samples, 'medians': medians, 'ratios': ratios,
         'withinTenPercent': all(value <= 1.10 for value in ratios.values())}
     Path(args.output).write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps({'medians': medians, 'ratios': ratios, 'withinTenPercent': report['withinTenPercent']}), flush=True)
