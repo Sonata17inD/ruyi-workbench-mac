@@ -1424,7 +1424,19 @@
 
 ## 集成交付：首次完整 Mac 回归与夹具修复
 
-- 产品提交 `7f9232c1` 开始完整源码回归，选择 588 件并排除 14 件 live。完整单元 2,786 项通过、7 项跳过、0 失败，构建新鲜度通过。五路并行用例结束，47 件独占用例正在运行。保留 [总日志](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/source-regression.log) 和逐尝试结果。
+- 产品提交 `7f9232c1` 的首轮完整源码回归已结束。588 件中 563 件退出成功、25 件失败，2 件首跑失败后重试成功，31 件含内部跳过，另排除 14 件 live。完整单元 2,786 项通过、7 项跳过、0 失败，构建新鲜度通过。 [总日志](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/source-regression.log) · [逐件对账](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/source-regression-results.json)
 - 16 件旧夹具修订后定向通过。函数与路由断言改读实际生产模块，文件队列用实际等待信号作同步点，Mac 设置、能力投影和 WKWebView 通知夹具跟到现行契约。真实 ACC 在锁屏时列出 54 个可用工具，诊断登记 93 个，热键与屏幕 OCR 的发现结果与实时能力一致。
 - 结构化隐私夹具在装配 Provider 传输时接入合成响应，主回合和子代理共同经过实际隐私投影。引用隔离与类型化内容恢复各三种 Provider 协议均满足原有断言。完整浏览器隐私回归仍待复跑。
-- 等整轮结束后按逐尝试证据处理其余失败及跳过，再冻结发行源码。最终 Full／Slim 构建与复验仍待执行。
+- 原始失败中，两件真实桌面专项记录锁屏，其余 23 件继续走夹具修复及定向复验。真实 ACC 裸名路由和机器人浏览器凭据流程也已改为使用 Mac 环境。事项索引规模性能及就绪队列实跑断言通过，静态检查迁到实际模块后 12 项通过，独占重跑待执行。最终 Full／Slim 构建与验收仍待执行。
+
+## 集成交付：源码原生宿主、媒体及锁屏证据
+
+- 同一产品提交 `7f9232c1` 的整轮回归中，原生桌面宿主 32 条、WKWebView 桥接 53 条、模拟挂起与唤醒 23 条均通过。真实 WKWebView 合成媒体 36 条通过，其中页面内断言 24 条，验证 WAV 和 MP4、流式 PCM、取消及轨道释放。 [源码媒体证据](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/native-media-source-validation.json)
+- LaunchServices 截图与输入专项各两次到达产品的 `session_locked` 分支。截图与输入仍需在解锁且具备相应系统权限时对最终候选复验，真实 Mac 睡眠唤醒也待执行。 [截图证据](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/native-capture-lock.json) · [输入证据](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/native-input-lock.json)
+- 七件定向补跑在单元门发现工作流夹具迁移后留下的闲置 `normalizeWorkflowCondition` 入口导出，端到端部分未启动。`add603e4` 删除入口导出和冗余装配绑定，归一化实现仍由实际工作流模块使用。导出上限降为 547，导出面三项、生成物与依赖图定向检查通过，生产依赖仍无环。已启动完整单元、静态及受影响端到端用例的复跑。 [单元门原始结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/post-996b09ab-unit-gate.log) · [复跑日志](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/after-export-cleanup-retests.log)
+
+## 集成交付：源码回归对账完成
+
+- 重新运行完整单元，2,786 项通过、7 项跳过、0 失败。76 件静态检查分别在批量或定向复跑通过，ACC Mac CI 14 件通过。隔离密钥浏览器夹具接入现行 CLI 入口后，隐私网关和机器人凭据、配对、投递流程通过。路由清册保持 171 个判定点和 157 条鉴权规则，更新夹具引用。 [ACC Mac CI](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/acc-mac-ci-retest.log)
+- 合并首轮和定向复验的 588 件结果中，586 件退出成功，其中 28 件仍含内部跳过；两件真实桌面专项因锁屏失败。原始 25 件失败中的其余 23 件已定向通过。两次首跑失败后成功的记录、14 件 live 排除及内部跳过原因均保留。产品运行时相对首轮仅删除无引用的工作流条件入口导出及绑定。 [逐件合并结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-7f9232c1/validation/source-regression-reconciled.json)
+- 源码可冻结并进入同源 Full／Slim 构建。最终产物的安装、离线、升级回退、性能绑定与实机门仍待取得证据。

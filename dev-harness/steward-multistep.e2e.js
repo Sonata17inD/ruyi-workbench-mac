@@ -4,13 +4,26 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const { startFakeProvider, toolCallFrames } = require('./lib/fake-openai-provider');
+const subagent = require('../ruyi-workbench/app/backend/subagent-runner.cjs');
 const t = createRunner('STEWARD MULTISTEP'); const { ok } = t;
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-multistep-'));
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let fake, s, holdReached = false;
 let releaseTighten;
+let bridgeFixture;
 const calls = [];
+function loadFixtureRuntime(names) {
+  const createSubagentRunner = subagent.createSubagentRunner;
+  subagent.createSubagentRunner = ports => createSubagentRunner({ ...ports, bridge: {
+    ...ports.bridge,
+    collectBridgedTools: (...args) => (bridgeFixture?.collectBridgedTools || ports.bridge.collectBridgedTools)(...args),
+    getBridgedClient: (...args) => (bridgeFixture?.getBridgedClient || ports.bridge.getBridgedClient)(...args),
+    journalBridgedWrite: (...args) => (bridgeFixture?.journalBridgedWrite || ports.bridge.journalBridgedWrite)(...args),
+  } });
+  try { return loadServerInternals(names, { withEval: true }); }
+  finally { subagent.createSubagentRunner = createSubagentRunner; }
+}
 async function until(test, label) { for (let i = 0; i < 800; i++) { if (await test()) return; await sleep(25); } throw new Error('timeout: ' + label); }
 (async () => {
   try {
@@ -19,7 +32,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
       const hasTool = req.messages.slice(req.messages.findLastIndex(m => m.role === 'user') + 1).some(m => m.role === 'tool');
       if (text.includes('NODE_TIGHTEN_FIRST')) return new Promise(resolve => { releaseTighten = () => resolve('EVIDENCE_42 前序完成。'); });
       if (text.includes('NODE_DISABLED')) return hasTool ? '不会继续执行。' : toolCallFrames('shell_run', { command: 'echo fixture-disabled' });
-      if (text.includes('NODE_BRIDGE_WRITE')) return hasTool ? '检查点后不可执行。' : toolCallFrames('mcp__fixture__write', { path: 'late.txt' });
+      if (text.includes('NODE_BRIDGE_WRITE')) return hasTool ? '检查点后不可执行。' : toolCallFrames('mcp__fixture__write', { path: path.join(home, 'late.txt') });
       if (text.includes('NODE_DENY_BATCH')) return toolCallFrames([{ name: 'file_write', args: { path: 'denied-first.txt', content: 'not allowed' }, id: 'batch_first' }, { name: 'file_write', args: { path: 'denied-second.txt', content: 'not allowed' }, id: 'batch_second' }]);
       if (text.includes('NODE_WRITE')) return hasTool ? '已写入 organized.txt。' : toolCallFrames('file_write', { path: 'organized.txt', content: 'EVIDENCE_42\n' });
       if (text.includes('NODE_READ')) return hasTool ? '已回读 organized.txt 并核对 EVIDENCE_42。' : toolCallFrames('file_read', { path: 'organized.txt' });
@@ -33,7 +46,7 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, stewardPollMs: 120000, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
       permissionMode: 'auto', toolLoadingMode: 'full', defaultWorkspace: home, workspaces: [{ path: home }], subagentMaxPerTurn: 8, subagentMaxConcurrent: 2,
       providers: [{ id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'fixture', model: 'fake-model' }], activeProvider: 'fake' }));
-    s = loadServerInternals(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchPending', 'activeAgentRuns', 'runSessionTurn', 'AgentRecovery', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks'], { withEval: true });
+    s = loadFixtureRuntime(['StewardHooks', 'readConfig', 'loadSession', 'listSessions', 'listAgentRuns', 'stewardLaunchPending', 'activeAgentRuns', 'runSessionTurn', 'AgentRecovery', 'saveAgentRun', 'autoResumeInterruptedRuns', 'mutateConfig', 'markInterruptedAgentRuns', 'deliverAgentRunEnvelope', 'readInterventions', 'decideIntervention', 'updateSessionMeta', 'createSession', 'runSubAgent', 'paths', 'EventStreamHooks']);
     const ctx = { sessionId: 'steward', trigger: 'user', session: { id: 'steward', kind: 'steward', providerHistory: [] } };
     const make = (title, tasks) => s.StewardHooks.threadNew({ title, cwd: home, brief: { userText: title + '，按前后顺序办理并统一交付。' }, steps: tasks.map(task => ({ task })) }, ctx);
     const settle = async id => { await until(() => !s.stewardLaunchPending(id), 'settle ' + id); return s.loadSession(id); };
@@ -143,12 +156,25 @@ async function until(test, label) { for (let i = 0; i < 800; i++) { if (await te
     const explicitCfg = { ...await s.readConfig(), permissionMode: 'acceptEdits', permissionModeFromRequest: true };
     const explicitResult = await s.runSubAgent({ parentSession: explicit, provider: explicitCfg.providers[0], config: explicitCfg, task: 'NODE_WRITE', toolTier: 'edit', interactivePermissions: true, permModeOverride: 'acceptEdits', depth: 1, ctrl: new AbortController(), onEvent: () => {} });
     ok(explicitResult.ok && fs.existsSync(path.join(home, 'organized.txt')), '显式请求级权限仍优先于会话快切，普通权限边界不被本片改写');
-    s.__eval('globalThis.multistepBridgeOriginals = { collectBridgedTools, getBridgedClient, journalBridgedWrite }; globalThis.multistepBridgeCalls = 0; collectBridgedTools = async () => ({ tools: [{ type: "function", function: { name: "mcp__fixture__write", description: "fixture write", parameters: { type: "object", properties: { path: { type: "string" } } } } }], route: { mcp__fixture__write: { serverId: "fixture", toolName: "write" } } }); getBridgedClient = async () => ({ callTool: async () => { globalThis.multistepBridgeCalls++; return { ok: true }; } }); journalBridgedWrite = async (name, args, parent) => { await updateSessionMeta(parent.id, { permissionMode: "plan" }); };');
     const bridgeParent = await s.createSession({ title: '检查点窗口收紧', cwd: home });
     const bridgeCfg = { ...await s.readConfig(), permissionMode: 'bypass' };
-    const bridgeResult = await s.runSubAgent({ parentSession: bridgeParent, provider: bridgeCfg.providers[0], config: bridgeCfg, task: 'NODE_BRIDGE_WRITE', toolTier: 'exec', interactivePermissions: true, permModeOverride: 'bypass', depth: 1, ctrl: new AbortController(), onEvent: () => {} });
-    ok(!bridgeResult.ok && s.__eval('globalThis.multistepBridgeCalls') === 0, '桥接检查点异步写入期间收紧plan，真正派发前再次拒绝，外部调用为零');
-    s.__eval('collectBridgedTools = globalThis.multistepBridgeOriginals.collectBridgedTools; getBridgedClient = globalThis.multistepBridgeOriginals.getBridgedClient; journalBridgedWrite = globalThis.multistepBridgeOriginals.journalBridgedWrite;');
+    let bridgeCalls = 0, bridgeCheckpoints = 0;
+    bridgeFixture = {
+      collectBridgedTools: async () => ({
+        tools: [{ type: 'function', function: { name: 'mcp__fixture__write', description: 'fixture write',
+          parameters: { type: 'object', properties: { path: { type: 'string' } } } } }],
+        route: { mcp__fixture__write: { serverId: 'fixture', toolName: 'write' } },
+      }),
+      getBridgedClient: async () => ({ callTool: async () => { bridgeCalls++; return { ok: true }; } }),
+      journalBridgedWrite: async (_name, _args, parent) => {
+        bridgeCheckpoints++;
+        await s.updateSessionMeta(parent.id, { permissionMode: 'plan' });
+      },
+    };
+    try {
+      const bridgeResult = await s.runSubAgent({ parentSession: bridgeParent, provider: bridgeCfg.providers[0], config: bridgeCfg, task: 'NODE_BRIDGE_WRITE', toolTier: 'exec', interactivePermissions: true, permModeOverride: 'bypass', depth: 1, ctrl: new AbortController(), onEvent: () => {} });
+      ok(!bridgeResult.ok && bridgeCheckpoints === 1 && bridgeCalls === 0, '桥接检查点异步写入期间收紧 plan，真正派发前再次拒绝，外部调用为零');
+    } finally { bridgeFixture = null; }
     await s.mutateConfig(c => { c.permissionMode = 'auto'; });
     const beforeFailure = calls.length;
     const failed = await make('前序失败', ['NODE_FAIL', 'NODE_AFTER']);

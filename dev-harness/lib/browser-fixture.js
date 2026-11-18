@@ -293,7 +293,7 @@ async function startBrowserFixture(opts = {}) {
   if (opts.isolatedKeychain) {
     const helper = require('./isolated-keychain-fixture').createIsolatedKeychain(root);
     const entry = path.join(root, 'fixture-server.cjs');
-    fs.writeFileSync(entry, `const app=require(${JSON.stringify(path.join(__dirname, 'server-internals.js'))}).loadServerInternals(['main','LocalSecretCryptoHooks']);app.LocalSecretCryptoHooks.helperPath=()=>${JSON.stringify(helper)};app.main().catch(error=>{console.error(error);process.exit(1)});`);
+    fs.writeFileSync(entry, `const app=require(${JSON.stringify(path.join(__dirname, 'server-internals.js'))}).loadServerInternals(['startWorkbenchFromCommandLine','LocalSecretCryptoHooks']);app.LocalSecretCryptoHooks.helperPath=()=>${JSON.stringify(helper)};app.startWorkbenchFromCommandLine().catch(error=>{console.error(error);process.exit(1)});`);
     serverArgs = [entry, 'serve', '--port', String(appPort)];
   }
   fx.server = cp.spawn(process.execPath, serverArgs, {

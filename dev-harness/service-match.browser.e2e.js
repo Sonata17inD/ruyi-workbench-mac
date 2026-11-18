@@ -186,6 +186,8 @@ let server = null, browser = null, cdp = null;
 try {
   server = spawnWb();
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', r => r.status === 200)), 'A0 workbench started');
+  const page = await waitForHttp(appPort, 'GET', '/', r => r.status === 200 && r.text.includes('id="skillBtn"'));
+  if (!page) throw new Error('workbench did not serve the skill panel page');
   const executable = findBrowserExecutable();
   ok(Boolean(executable), 'A1 Edge/Chrome found');
   if (!executable) throw new Error('browser unavailable');
@@ -193,6 +195,7 @@ try {
   browser = cp.spawn(executable, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
+    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1280,900',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + path.join(root, 'profile'), appUrl,
   ], { windowsHide: true, stdio: 'ignore' });
@@ -201,7 +204,15 @@ try {
   if (!target) throw new Error('no CDP target');
   cdp = new CdpClient(target.webSocketDebuggerUrl);
   await cdp.connect();
-  ok(Boolean(await waitForEval(cdp, READY)), 'A3 app booted (state + skillBtn/skillSearch present)');
+  await cdp.send('Page.enable');
+  const navigation = await cdp.send('Page.navigate', { url: appUrl });
+  if (navigation.errorText) throw new Error(`workbench navigation failed: ${navigation.errorText}`);
+  const ready = await waitForEval(cdp, READY);
+  ok(Boolean(ready), 'A3 app booted (state + skillBtn/skillSearch present)');
+  if (!ready) {
+    const state = await cdp.evaluate('({ url: location.href, title: document.title, ready: document.readyState, hasSkill: Boolean(document.getElementById("skillBtn")) })');
+    throw new Error('workbench page did not finish booting: ' + JSON.stringify(state));
+  }
 
   // 真实入口:点 #skillBtn 开技能库,等注册表渲出分组。
   await cdp.evaluate(`document.getElementById('skillBtn').click()`, false);
@@ -240,7 +251,7 @@ try {
   const c1 = await cdp.evaluate(`${TYPE_AND_STRIP}('帮我写代码修 bug')`);
   const c1Text = (c1 && c1.text) || '';
   ok(/代码任务/.test(c1Text) && /未知/.test(c1Text) && !/可用|可直接用/.test(c1Text), 'C1 「写代码修 bug」服务条 = 代码任务·状态未知、不含「可用」 — 实得 ' + JSON.stringify(c1Text));
-  // C2 同一条模板在技能库行上:状态行说「未知」,行里不出现「可用」,且照旧可点(未知不改放行)。
+  // C2 技能库显示「未知」及重新检查提示，能力确认前停止执行。
   const c2 = await cdp.evaluate(`(async () => {
     const s = document.getElementById('skillSearch');
     s.value = '代码体检'; s.dispatchEvent(new Event('input', { bubbles: true }));
@@ -255,8 +266,8 @@ try {
     }
     return null;
   })()`);
-  ok(c2 && /未知/.test(c2.status || '') && c2.dataStatus === 'unknown' && !/可用|可直接用/.test(c2.rowText || '') && c2.greyed === false,
-    'C2 技能库行 pb:f01-unknown-coding:状态行「未知」、整行不含「可用」、未置灰 — 实得 ' + JSON.stringify(c2));
+  ok(c2 && /未知/.test(c2.status || '') && c2.dataStatus === 'unknown' && /重新检查/.test(c2.rowText || '') && !/可用|可直接用/.test(c2.rowText || '') && c2.greyed,
+    'C2 技能库行标明能力未知，并置灰提示重新检查 — 实得 ' + JSON.stringify(c2));
   // C3 混合类(可用内置 + 一条未知):「可直接用」只数 status===available,未知的单独说。2026-10 起 pdf-summarize 声明
   // requires desktopMcp —— 可用条数随这台机器有没有桌面控制而变(研究类里 compare-documents 无前置能力恒可用),按实况数,不写死。
   const c3 = await cdp.evaluate(`${TYPE_AND_STRIP}('对比')`);
@@ -264,7 +275,7 @@ try {
   const c3Count = Number((c3Text.match(/(\d+) 个模板可直接用/) || [])[1]);
   ok(researchAvail >= 1 && c3Count === researchAvail && /1 个状态未知/.test(c3Text),
     'C3 研究比较服务条可直接用数 = ' + researchAvail + '(status===available),未知 1 条单独说 — 实得 ' + JSON.stringify(c3Text));
-  // C4 首页任务卡:状态行只长在非可用模板上;未知卡说「未知」且仍是可点的 <button>。
+  // C4 首页未知任务卡保留状态和恢复提示，确认能力后才允许执行。
   await cdp.evaluate(`(() => { const s = document.getElementById('skillSearch'); s.value = ''; s.dispatchEvent(new Event('input', { bubbles: true })); })()`, false);
   const c4 = await waitForEval(cdp, `(() => {
     const pbs = (window.state && window.state.playbooks) || [];
@@ -287,8 +298,8 @@ try {
       visionCard: pick('看图夹具'),
     };
   })()`, 150);
-  ok(c4 && c4.unknownCard && c4.unknownCard.tag === 'BUTTON' && /未知/.test(c4.unknownCard.status || '') && !/可用|可直接用/.test(c4.unknownCard.text || ''),
-    'C4 首页未知卡:状态行「未知」、整卡不含「可用」、仍是可点的 button — 实得 ' + JSON.stringify(c4 && c4.unknownCard));
+  ok(c4 && c4.unknownCard && c4.unknownCard.tag === 'DIV' && /未知/.test(c4.unknownCard.status || '') && /重新检查/.test(c4.unknownCard.reason || '') && !/可用|可直接用/.test(c4.unknownCard.text || ''),
+    'C4 首页未知卡说明状态、提示重新检查，并禁止执行 — 实得 ' + JSON.stringify(c4 && c4.unknownCard));
   ok(c4 && c4.statusLines === c4.expectedLines && c4.availableWithLine === 0,
     'C4 状态行只长在非可用模板上(可用卡零新增节点)— 实得 ' + JSON.stringify(c4 && { cards: c4.cards, statusLines: c4.statusLines, expectedLines: c4.expectedLines, availableWithLine: c4.availableWithLine }));
   ok(c4 && c4.visionCard && c4.visionCard.tag === 'DIV' && c4.visionCard.status === '需要配置' && /视觉/.test(c4.visionCard.reason || ''),

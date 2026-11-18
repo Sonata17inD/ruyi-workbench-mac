@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:38:44.334Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T17:34:42.697Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -329,7 +329,7 @@
 | POST | `/api/workspace/resolve` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, workspace-resolve.e2e.js |
 | POST | `/api/pick-folder` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, onboarding-workspace.browser.e2e.js, settings-wave1.browser.e2e.js 等 5 件 |
 | POST | `/api/workspace/dedicated` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | onboarding-workspace.browser.e2e.js |
-| POST | `/api/pick-file` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, settings-wave1.browser.e2e.js, workspace-resolve.e2e.js |
+| POST | `/api/pick-file` | exact | token | ../backend/workspace-routes.cjs · `handleWorkspaceApiRoutes` | macos-desktop-bridge.e2e.js, workspace-resolve.e2e.js |
 
 ## 域路由委派(handleApi → 域 handler)
 
