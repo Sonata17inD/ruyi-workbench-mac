@@ -112,6 +112,17 @@ const handleMemoryApiRoutes = require('./backend/memory-routes.cjs').createMemor
     confirmMemoryRelation, deleteMemoryRelation },
 });
 
+const handlePlaybookApiRoutes = require('./backend/playbook-routes.cjs').createPlaybookRoutes({
+  safeSessionId, readConfig, listPlaybooksWithAvailability, normalizePlaybook,
+  saveUserPlaybook, deleteUserPlaybook, playbookReuseSources, draftPlaybookFromSession,
+});
+
+const handleSessionExecutionApiRoutes = require('./backend/session-execution-routes.cjs').createSessionExecutionRoutes({
+  safeSessionId, readConfig, loadSession, mutateSession, logEvent, activeChildren, requestSessionExecutionStop, StewardHooks,
+  compaction: { runProviderCompactTracked, runAgentExternalCompact, configForSessionEngineRoute, agentCliAdapter },
+  kimi: { kimiSessionStatus, kimiStatusFingerprint, applyKimiStatusToSession, kimiUsageFromStatus },
+});
+
 // 架构还债批 2 B2:POST /api/config 的落盘与全部副作用 applyConfigPatch 搬到 06k-config-patch.js(配置域),本文件只剩 body 解析与错误翻译。
 
 // 代理模式 v2:MCP 子进程(Claude/Kimi)的 wait_agents / agent_result 回环。鉴权同 launch(body.token = 进程 token,
@@ -273,45 +284,7 @@ async function handleApi(req, res, pathname) {
     if (!caps) return send(res, json({ ok: false, error: 'capability probe failed' }, 500));
     return send(res, json({ ok: true, ...caps }));
   }
-  // ── v0.9-S2 Playbooks (§7.8 / §4 C2) ──────────────────────────────────────────────────────────────
-  // GET: 内置 ∪ 用户 playbook,每项经能力矩阵评 available + unavailableReason(read-only, same-origin only).
-  if (req.method === 'GET' && pathname === '/api/playbooks') {
-    const config = await readConfig();
-    const playbooks = await listPlaybooksWithAvailability(config);
-    return send(res, json({ ok: true, playbooks }));
-  }
-  // 127-A-S02(41 号文 §5.9):自然语言 → 服务入口匹配。read-only 计算(评既有清单,零持久化),
-  // 鉴权在 ROUTE_AUTH 按 token-browser 档(与 GET 同);匹配逻辑与引导上限全在 06 的 matchServiceEntry。
-  if (req.method === 'POST' && pathname === '/api/playbooks/service-match') {
-    const body = await readJsonBody(req);
-    const config = await readConfig();
-    const playbooks = await listPlaybooksWithAvailability(config);
-    return send(res, json({ ok: true, match: matchServiceEntry(body && body.query, playbooks) }));
-  }
-  // POST /api/playbooks/draft {sessionId} — 让当前引擎从会话起草一个 playbook 草稿(token-gated above).
-  // Must come BEFORE the generic POST /api/playbooks handler so the /draft suffix isn't swallowed.
-  if (req.method === 'POST' && pathname === '/api/playbooks/draft') {
-    const body = await readJsonBody(req);
-    const sessionId = safeSessionId(body && body.sessionId);
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    return send(res, json(body.mode === 'sources' ? await playbookReuseSources(sessionId) : await draftPlaybookFromSession(sessionId, { selection: body.selection })));
-  }
-  // POST /api/playbooks — save a user playbook (normalized; token-gated). Body = the playbook object.
-  if (req.method === 'POST' && pathname === '/api/playbooks') {
-    const body = await readJsonBody(req);
-    const pb = normalizePlaybook(body && body.playbook ? body.playbook : body);
-    if (!pb) return send(res, json({ ok: false, error: '无效的 playbook(缺 id/title/promptTemplate)' }, 400));
-    const saved = await saveUserPlaybook(pb);
-    return send(res, json({ ok: true, playbook: saved }));
-  }
-  // DELETE user playbook via POST /api/playbooks/<id> + x-http-method:DELETE (sessions convention).
-  // Built-in ids (no user override file) → 403. A user override CAN be deleted (reverts to built-in).
-  if (pathname.startsWith('/api/playbooks/') && (req.method === 'DELETE' || (req.method === 'POST' && req.headers['x-http-method'] === 'DELETE'))) {
-    const id = path.basename(pathname); // guards traversal
-    const r = await deleteUserPlaybook(id);
-    if (r.ok) return send(res, json(r));
-    return send(res, json(r, r.builtin ? 403 : 404));
-  }
+  await handlePlaybookApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // ── v0.9-S3 (C3) Workspace-by-fingerprint + native folder picker ────────────────────────────────────
   // POST /api/workspace/resolve {name, children[]} — locate the dropped folder's real absolute path by
   // fingerprint (basename + first-level child names). Token-gated (whitelisted above). Never throws.
@@ -540,80 +513,7 @@ async function handleApi(req, res, pathname) {
   await handleMissionsApiRoutes(req, res, pathname); if (res.writableEnded) return;
   await handleSkillApiRoutes(req, res, pathname); if (res.writableEnded) return;
   await handleMemoryApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  if (req.method === 'POST' && pathname === '/api/stop') {
-    const body = await readJsonBody(req);
-    const sid = safeSessionId(body.sessionId);
-    if (!sid) return send(res, apiSessionIdInvalid());
-    const receipt = requestSessionExecutionStop(sid, body.expectedExecution, 'stopped');
-    if (!receipt.ok) return send(res, apiFailure(receipt.error, {}, receipt.error, 409));
-    const { stopped, queuedStopped, alreadyRequested } = receipt;
-    // 121-K5(34 号文 §4.4 末条;33 号文 §0 记的那条不对称):管家按的停止进决策日志,用户手按的不进 ——
-    // 于是「行动流水」上看得见模型停了哪条线程,看不见人停了哪条。这里补上,形状与 13h 的
-    // steward_thread_stop 同款(tool:'user_stop'、mayAct:'user'、basis.origin:'ui_stop')。
-    // 与 cancelQueuedTurn 同一条迟绑定纪律(13h 拼在本文件之后,直引它的符号是前向边);
-    // **只在真停下了什么之后才记**——什么都没停时那不是一次行动,不该在流水上占一行。
-    // await 它是为了让 e2e 能在响应回来之后立刻读到那一行(实现自己也是 fire-and-forget,不会抛)。
-    if (!alreadyRequested && (stopped || queuedStopped) && sid && typeof StewardHooks.appendUserStop === 'function') {
-      try { await StewardHooks.appendUserStop(sid, { stopped, queuedStopped }); } catch { /* 记账失败绝不影响停止本身 */ }
-    }
-    return send(res, json({ ok: true, stopped, queuedStopped, execution: receipt.execution }));
-  }
-  if (req.method === 'POST' && pathname === '/api/provider/compact') {
-    // §5.2: native-provider context compaction. Same-origin protected (mutating) like /api/stop and
-    // /api/chat/answer — deliberately NOT in needsToken (commander's amendment) to stay consistent.
-    const body = await readJsonBody(req);
-    const sessionId = safeSessionId(String(body.sessionId || ''));
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    if (activeChildren.has(sessionId)) return send(res, json({ ok: false, error: '回合进行中，请先停止或等待完成' }, 409));
-    // mode:'summary' = 跳过「L1 够了就停」直接做摘要(缺省 'auto':先 L1,不够再摘要,见 runProviderCompact)。
-    return send(res, json(await runProviderCompactTracked(sessionId, { mode: body.mode })));
-  }
-  if (req.method === 'POST' && pathname === '/api/agent/compact') {
-    const body = await readJsonBody(req);
-    const storedConfig = await readConfig();
-    const sessionId = safeSessionId(String(body.sessionId || ''));
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    // Native Kimi compaction and external summary reseeding both mutate the same session a live turn
-    // owns. Enforce the UI's no-overlap rule at the API boundary to avoid last-writer-wins data loss.
-    if (activeChildren.has(sessionId)) return send(res, json({ ok: false, error: '回合进行中，请先停止或等待完成' }, 409));
-    const compactSession = await loadSession(sessionId);
-    const config = compactSession ? configForSessionEngineRoute(storedConfig, compactSession) : storedConfig;
-    // 没选通用压缩模型时,只有带原生压缩的 CLI(适配器 nativeCompact;Kimi)能从这里压;Claude 请用户在 CLI 里打 /compact。
-    const nativeCompact = agentCliAdapter(config.agentCliType).nativeCompact;
-    const result = config.compactProviderId
-      ? await runAgentExternalCompact(sessionId, config, 'manual')
-      : (nativeCompact
-        ? await nativeCompact.run(sessionId, config, 'manual')
-        : { ok: false, error: 'Claude 默认压缩请使用原生 /compact；或先选择通用压缩模型' });
-    return send(res, json(result, result.ok ? 200 : 400));
-  }
-  if (req.method === 'GET' && pathname === '/api/kimi/status') {
-    const config = await readConfig();
-    if (config.agentCliType !== 'kimi') return send(res, json({ ok: false, error: '当前不是 Kimi Code 接入' }, 400));
-    const u = new URL(req.url, 'http://x');
-    const sessionId = safeSessionId(String(u.searchParams.get('sessionId') || ''));
-    if (!sessionId) return send(res, apiSessionIdInvalid());
-    const session = await loadSession(sessionId).catch(() => null);
-    if (!session) return send(res, apiSessionNotFound());
-    const status = await kimiSessionStatus(config, session.claudeSessionId, session.claudeSessionModel);
-    if (!status.ok) return send(res, json(status, 400));
-    // 「打开看一眼」只是读状态,不是这条会话的新活动:走 mutateSession(与活回合/其它改写者按 id 串行,撞撤回会重放)、
-    // keepUpdatedAt(不把会话顶到列表最上面),而且状态值与已存的一致就不写(前端每次切会话都会调这里)。
-    // 修前:无条件裸 saveSession 刷新 updatedAt、可能与活回合并发整份覆盖、失败被吞。
-    let usage = null;
-    try {
-      await mutateSession(sessionId, fresh => {
-        const before = kimiStatusFingerprint(fresh);
-        usage = applyKimiStatusToSession(fresh, status);
-        if (kimiStatusFingerprint(fresh) === before) return { abort: 'unchanged' };
-      }, { writer: 'kimi_status', saveOpts: { keepUpdatedAt: true } });
-    } catch (error) {
-      // 状态本身已读到,落盘只是缓存:失败不挡响应,但留一条日志而不是吞掉。
-      logEvent({ kind: 'kimi_status_persist_failed', sessionId, error: String((error && error.message) || error).slice(0, 200) });
-    }
-    if (!usage) usage = kimiUsageFromStatus(status);   // 会话期间被删/撤回等没跑到 apply:回读到的状态照样给前端
-    return send(res, json({ ...status, usage }));
-  }
+  await handleSessionExecutionApiRoutes(req, res, pathname); if (res.writableEnded) return;
   // EC-D Wave 65: question, permission, and plan routes live in 13d-core-domain-routes.js.
   await handleInterventionApiRoutes(req, res, pathname); if (res.writableEnded) return;
   if (req.method === 'POST' && pathname === '/api/todo') {
@@ -945,40 +845,7 @@ async function handleApi(req, res, pathname) {
   // 那三条域路由的先例就是直调,路由清册的扫描器也按 `await handleXxxApiRoutes(` 这个形状认委派行;
   // 再造一个 Hooks 只会让清册多一个看不见的入口(13g/13r 走 Hooks 是因为它们【必须】,不是偏好)。
   await handleSchedulerApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  if (req.method === 'POST' && pathname === '/api/upload') {
-    const body = await readJsonBody(req);
-    const file = await makeAttachmentRecord(body);
-    // 127-114c②:音频附件尽力转写(函数内部绝不 throw —— 未配置零行为,失败只落 transcribeError,
-    // 文件已落盘可下载,转写是增量)。13→13b 既有边,委派行形状同下楼几条域路由。
-    await maybeTranscribeAudioAttachment(file);
-    // v1.9:图片附件预处理(OCR 文本兜底 / 超限压缩派生件;两函数内部各自零 throw,绝不挡上传)。
-    await maybeOcrImageAttachment(file);
-    await maybeCompressImageAttachment(file);
-    return send(res, json({ ok: true, file }));
-  }
-  // 图片/附件回显:读取 makeAttachmentRecord 写下的上传件原字节(聊天气泡里的图片缩略图/大图)。
-  // 只读内容型 GET:token 门 + handler 自查(同 /api/file/preview 纵深);第二道闸把目标锁死在
-  // uploads 根内(词法 + realpath 双校验,符号链接也逃不出),服务面 = 工作台自己写过的上传目录。
-  if (req.method === 'GET' && pathname === '/api/upload/content') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const q = new URL(req.url, 'http://x').searchParams;
-    const id = String(q.get('id') || '');
-    const name = String(q.get('name') || '');
-    if (!/^[A-Za-z0-9_-]{1,64}$/.test(id)) return send(res, apiFailure('upload.id_invalid', {}, 'invalid upload id', 400));
-    // name 只许纯 basename(无分隔符/无 ..);与 makeAttachmentRecord 的 safeName 同域。
-    if (!name || name.length > 255 || name !== path.basename(name) || name === '.' || name === '..') {
-      return send(res, apiFailure('upload.name_invalid', {}, 'invalid attachment name', 400));
-    }
-    const uploadsRoot = await fsp.realpath(paths.uploads).catch(() => paths.uploads);
-    const target = path.resolve(path.join(paths.uploads, id, name));
-    if (!pathWithinRoot(target, path.normalize(paths.uploads))) return send(res, apiFailure('upload.not_found', {}, 'attachment not found', 404));
-    const real = await fsp.realpath(target).catch(() => null);
-    if (!real || !pathWithinRoot(real, uploadsRoot)) return send(res, apiFailure('upload.not_found', {}, 'attachment not found', 404));
-    let buffer = null;
-    try { buffer = await fsp.readFile(real); } catch { buffer = null; }
-    if (!buffer) return send(res, apiFailure('upload.not_found', {}, 'attachment not found', 404));
-    return send(res, { status: 200, headers: { 'content-type': contentTypeFor(name), 'cache-control': 'private, max-age=86400' }, body: buffer });
-  }
+  await handleAttachmentApiRoutes(req, res, pathname); if (res.writableEnded) return;
   if (req.method === 'POST' && pathname === '/api/chat/stream') {
     // 116-3 A2:管家会话不接受普通聊天入口发起的回合(判据与抛点在 10 的 runSessionTurn 顶部;
     // 那里抛得比 onStart 早,响应头还没发出,所以这里能给一条正经的 403 稳定信封)。

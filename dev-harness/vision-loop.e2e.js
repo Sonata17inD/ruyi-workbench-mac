@@ -13,12 +13,12 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // Scenarios:
 //  (a) VISION 路径 · 图片附件:vision:true + FAKE_VISION + 上传一张 png 附件 → 请求体 user content 是数组含
-//      image_url part;回复含 SEEN_IMAGE: 证明图到达模型;系统提示词含「桌面操控(视觉路径)」规程。
+//      image_url part;回复含 SEEN_IMAGE: 证明图到达模型;提示词包含 Mac 桌面能力核验规程。
 //  (b) 工具截图入回路:FAKE_TOOL_SEQUENCE=[ai_computer_control__screenshot_full] + vision:true → tool 消息 content 图字段被剥离
 //      为占位、其后紧跟一条 user 图片消息(位置在完整 tool 块之后,连续性校验)、tool_image 事件、SEEN_IMAGE 回显。
 //  (c) 保图≤2:连开 3 张截图 → providerHistory 里 image_url part ≤2,最老的被替换为文本占位「[截图已淘汰:…]」。
 //  (d) 无 VISION 路径:vision:false + 同样 png 附件 → 请求体 user content 是字符串(纯文本);系统提示词含
-//      「桌面操控(文本路径)」规程;工具截图字段保留在 tool 结果里、不转 image 消息。
+//      同一份 Mac 桌面能力核验规程;工具截图字段以占位文本放进 tool 结果、不转 image 消息。
 //  (e) 配对+连续性:全程 providerHistory 每个 assistant.tool_calls 后紧跟连续 tool 应答块,图片 user 消息只在块后。
 //  (f) 127-114c② 音频附件:kind:'audio' 白名单 + 服务端尽力转写(record.transcript 原文) +
 //      <attachment kind="audio-transcript" untrusted> 围栏＋尖括号中和(fake fencepayload 真载荷) +
@@ -89,6 +89,15 @@ function readCaptures() {
   try { return fs.readdirSync(CAP_DIR).filter(f => /^req-\d+\.json$/.test(f)).sort().map(f => { try { return JSON.parse(fs.readFileSync(path.join(CAP_DIR, f), 'utf8')); } catch { return null; } }).filter(Boolean); }
   catch { return []; }
 }
+function assertMacDesktopGuidance(ok, capture, scenario) {
+  const text = (capture?.messages || [])
+    .filter(message => message && (message.role === 'system' || message.role === 'user'))
+    .flatMap(({ content }) => Array.isArray(content) ? content.map(part => part?.text) : [content])
+    .join('\n');
+  ok(/Mac 的 ai-computer-control[^\n]*diagnostics 分别核验截图、输入、AX、本地图片 OCR 与屏幕 OCR/.test(text)
+    && text.includes('installed/runtimeInstalled 不等于 ready'), scenario + ' prompt includes the Mac desktop capability checks');
+  ok(!/桌面操控\((视觉|文本)路径\)/.test(text), scenario + ' prompt omits the retired desktop regimens');
+}
 // CONTIGUITY check (reused from steering.e2e §连续性铁律): each assistant.tool_calls (N ids) must be followed
 // IMMEDIATELY by exactly N role:'tool' replies whose id-set equals the ids — nothing of any other role wedged in.
 function checkToolBlockContiguity(ph) {
@@ -158,10 +167,7 @@ function hasEvictedPlaceholder(ph) {
     ok(userMsgA && Array.isArray(userMsgA.content), '(a) user content is a PARTS array (vision)');
     ok(userMsgA && Array.isArray(userMsgA.content) && userMsgA.content.some(p => p && p.type === 'image_url'), '(a) user content has an image_url part');
     ok(userMsgA && Array.isArray(userMsgA.content) && userMsgA.content.some(p => p && p.type === 'text'), '(a) user content still has the text part');
-    // System prompt carries the VISION 操控规程 (desktop bridge is present via fake-mcp).
-    const sysA = capsA.length && { content: (capsA[0].messages || []).filter(m => m && (m.role === 'system' || m.role === 'user')).map(m => typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(p => p && p.text || '').join('\n') : '')).join('\n') };
-    ok(sysA && (process.platform === 'darwin' ? /Mac 的 ai-computer-control 连接只证明/.test(String(sysA.content || '')) : /桌面操控\(视觉路径\)/.test(String(sysA.content || ''))), '(a) system prompt has 桌面操控(视觉路径) regimen');
-    ok(sysA && !/桌面操控\(文本路径\)/.test(String(sysA.content || '')), '(a) vision path does NOT inject the text-path regimen');
+    assertMacDesktopGuidance(ok, capsA[0], '(a)');
 
     killp(fake);
 
@@ -228,9 +234,7 @@ function hasEvictedPlaceholder(ph) {
     const capsD = readCaptures();
     const userMsgD = capsD.length && [...(capsD[0].messages || [])].reverse().find(m => m && m.role === 'user');
     ok(userMsgD && typeof userMsgD.content === 'string', '(d) no-vision: user content is a STRING (no image parts)');
-    const sysD = capsD.length && { content: (capsD[0].messages || []).filter(m => m && (m.role === 'system' || m.role === 'user')).map(m => typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(p => p && p.text || '').join('\n') : '')).join('\n') };
-    ok(sysD && (process.platform === 'darwin' ? /Mac 的 ai-computer-control 连接只证明/.test(String(sysD.content || '')) : /桌面操控\(文本路径\)/.test(String(sysD.content || ''))), '(d) system prompt has 桌面操控(文本路径) regimen');
-    ok(sysD && !/桌面操控\(视觉路径\)/.test(String(sysD.content || '')), '(d) text path does NOT inject the vision-path regimen');
+    assertMacDesktopGuidance(ok, capsD[0], '(d)');
     // (d2) 审计 N7:非视觉模型的历史里图像字段换成一行占位(修前原样保留 base64 文字 —— 模型看不了,只白占上下文);
     //      也不转成图像消息。
     const gotD = await getJson(WB_PORT, '/api/sessions/' + sidD, hdr);

@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 93,
-    "providedSymbols": 2706,
-    "requiredSymbols": 3268,
+    "providedSymbols": 2710,
+    "requiredSymbols": 3262,
     "edges": 632,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -2583,6 +2583,7 @@
         "collectBridgedTools",
         "collectBridgedToolsScan",
         "configureMcpFromTool",
+        "createAttachmentStore",
         "createInterventionDecisions",
         "decideInterventionCommand",
         "decodeClaudeTaskXmlText",
@@ -2679,13 +2680,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "decodeTextFileBytes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
           "kinds": [
             "read"
@@ -2695,7 +2689,7 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -2703,13 +2697,6 @@
           "symbol": "executionArgumentsDigest",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -2752,7 +2739,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -11983,6 +11971,8 @@
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
         "handleMemoryApiRoutes",
+        "handlePlaybookApiRoutes",
+        "handleSessionExecutionApiRoutes",
         "handleSkillApiRoutes",
         "handleUsageApiRoutes",
         "installIntegration",
@@ -12050,13 +12040,6 @@
           "symbol": "CONFIG_SCHEMA",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "contentTypeFor",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12316,13 +12299,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13056,7 +13032,8 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "configForSessionEngineRoute",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -13132,16 +13109,9 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "makeAttachmentRecord",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13211,49 +13181,50 @@
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "applyKimiStatusToSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "kimiSessionStatus",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "kimiStatusFingerprint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "05b-kimi-bridge.js",
           "symbol": "kimiUsageFromStatus",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "deleteUserPlaybook",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "draftPlaybookFromSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13267,35 +13238,28 @@
           "provider": "06-provider-engine.js",
           "symbol": "listPlaybooksWithAvailability",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "matchServiceEntry",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "normalizePlaybook",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "playbookReuseSources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "saveUserPlaybook",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13759,14 +13723,14 @@
           "provider": "10-context-governance.js",
           "symbol": "runAgentExternalCompact",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "10a-session-turn.js",
           "symbol": "runProviderCompactTracked",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13829,6 +13793,13 @@
         },
         {
           "provider": "13b-api-domain-routes.js",
+          "symbol": "handleAttachmentApiRoutes",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13b-api-domain-routes.js",
           "symbol": "handleAudioApiRoutes",
           "kinds": [
             "call"
@@ -13844,27 +13815,6 @@
         {
           "provider": "13b-api-domain-routes.js",
           "symbol": "handleSteerApiRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "maybeCompressImageAttachment",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "maybeOcrImageAttachment",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "maybeTranscribeAudioAttachment",
           "kinds": [
             "call"
           ]
@@ -13934,6 +13884,7 @@
       "note": "迁移、MCP、插话、语音路由与附件处理的装配",
       "provides": [
         "MigrationCenter",
+        "handleAttachmentApiRoutes",
         "handleAudioApiRoutes",
         "handleMcpApiRoutes",
         "handleMigrationApiRoutes",
@@ -14114,6 +14065,13 @@
         },
         {
           "provider": "01-config.js",
+          "symbol": "tokenOk",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
           "symbol": "writeInstallRegistry",
           "kinds": [
             "read"
@@ -14192,6 +14150,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "invalidateMcpRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "makeAttachmentRecord",
           "kinds": [
             "read"
           ]
@@ -27033,10 +26998,8 @@
         "_expandMcpVar",
         "collectDisplayUrlRestores",
         "crypto",
-        "decodeTextFileBytes",
         "ensureDirs",
         "executionArgumentsDigest",
-        "fsp",
         "logEvent",
         "makeId",
         "maskKey",
@@ -29943,7 +29906,6 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "cachedContextLength",
-        "contentTypeFor",
         "contextWindowFromTable",
         "crypto",
         "dataRootAliases",
@@ -29972,7 +29934,6 @@
         "nowIso",
         "os",
         "path",
-        "pathWithinRoot",
         "paths",
         "readJsonBody",
         "redact",
@@ -30190,7 +30151,6 @@
       "symbols": [
         "ToolboxHooks",
         "killAllMcpClients",
-        "makeAttachmentRecord",
         "requestSessionExecutionStop",
         "stopSession"
       ],
@@ -30251,7 +30211,6 @@
         "deleteUserPlaybook",
         "draftPlaybookFromSession",
         "listPlaybooksWithAvailability",
-        "matchServiceEntry",
         "normalizePlaybook",
         "playbookReuseSources",
         "saveUserPlaybook"
@@ -30442,12 +30401,10 @@
       "from": "13-http-router.js",
       "to": "13b-api-domain-routes.js",
       "symbols": [
+        "handleAttachmentApiRoutes",
         "handleAudioApiRoutes",
         "handleMcpApiRoutes",
-        "handleSteerApiRoute",
-        "maybeCompressImageAttachment",
-        "maybeOcrImageAttachment",
-        "maybeTranscribeAudioAttachment"
+        "handleSteerApiRoute"
       ],
       "direction": "forward"
     },
@@ -30775,6 +30732,7 @@
         "readInstallRegistry",
         "resolveExternalMcpServers",
         "safeSessionId",
+        "tokenOk",
         "writeInstallRegistry",
         "writeToChild"
       ],
@@ -30824,6 +30782,7 @@
         "getBridgedClient",
         "hasPendingQuestionForSession",
         "invalidateMcpRuntime",
+        "makeAttachmentRecord",
         "mutateMcpConnector",
         "probeMcpConnector",
         "resolveBridge",

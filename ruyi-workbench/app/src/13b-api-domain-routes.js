@@ -32,3 +32,8 @@ const { maybeTranscribeAudioAttachment, maybeOcrImageAttachment, maybeCompressIm
     collectBridgedTools, resolveBridge, getBridgedClient,
     resolveAsrProvider, voiceLexiconAsrPromptFor, transcribeAudioViaProvider,
   });
+
+const handleAttachmentApiRoutes = require('./backend/attachment-routes.cjs').createAttachmentRoutes({
+  paths, tokenOk, makeAttachmentRecord,
+  maybeTranscribeAudioAttachment, maybeOcrImageAttachment, maybeCompressImageAttachment,
+});

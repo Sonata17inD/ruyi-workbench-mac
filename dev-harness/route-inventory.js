@@ -53,6 +53,9 @@ const ROUTER_FILES = [
   '../backend/audio-routes.cjs',
   '../backend/skill-routes.cjs',
   '../backend/memory-routes.cjs',
+  '../backend/session-execution-routes.cjs',
+  '../backend/playbook-routes.cjs',
+  '../backend/attachment-routes.cjs',
   '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
@@ -106,6 +109,9 @@ const DOMAIN_BY_FILE = {
   '../backend/audio-routes.cjs': 'audio',
   '../backend/skill-routes.cjs': 'skills',
   '../backend/memory-routes.cjs': 'memory',
+  '../backend/session-execution-routes.cjs': 'session-execution',
+  '../backend/playbook-routes.cjs': 'playbook',
+  '../backend/attachment-routes.cjs': 'attachment',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
   '../backend/local-support-routes.cjs': 'local-support',

@@ -40,6 +40,7 @@ const src13 = read('13-http-router.js');
 const src13d = read('13d-core-domain-routes.js');
 const sessionEnvelope = read('../backend/session-envelope.cjs');
 const sessionRoutes = read('../backend/session-routes.cjs');
+const sessionExecutionRoutes = read('../backend/session-execution-routes.cjs');
 const src13s = read('../backend/scheduler-runtime.cjs'); // scheduler timeout still consumes the internal queue-cancellation hook
 const src13g = read('13g-steward.js');
 // 117 波 T1(32 号文 §2.1):13g 的工具实现与共享原语拆到了三个新文件(纯搬家)。它们与 13g 同属
@@ -118,7 +119,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   const consumers = [['06-provider-engine.js', src06], ...providerServices, ['10-context-governance.js', src10],
     ['session-compaction.cjs', sessionCompaction], ['compaction-kernel.cjs', read('../backend/compaction-kernel.cjs')], ['session-turn-runtime.cjs', turnRuntime],
     ['12-tool-dispatch.js', src12], ['13-http-router.js', src13], ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
-    ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes],
+    ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
     ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];
   const leaks = [];
@@ -185,7 +186,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');

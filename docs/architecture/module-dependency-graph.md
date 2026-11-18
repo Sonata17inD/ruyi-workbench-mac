@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 93 | 2706 | 3268 | 632 | 21 | 0 | 0 |
+| 93 | 2710 | 3262 | 632 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -47,7 +47,7 @@
 | 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 68 | 28 | 5 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 32 | `04-permission-runtime.js` | foundation | 117 | 54 | 6 |
+| 32 | `04-permission-runtime.js` | foundation | 118 | 52 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 35 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
@@ -81,8 +81,8 @@
 | 63 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 64 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
 | 65 | `12-tool-dispatch.js` | tools | 88 | 171 | 26 |
-| 66 | `13-http-router.js` | transport | 34 | 271 | 41 |
-| 67 | `13b-api-domain-routes.js` | transport | 9 | 58 | 13 |
+| 66 | `13-http-router.js` | transport | 36 | 265 | 41 |
+| 67 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 18 |
 | 69 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
 | 70 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
@@ -152,7 +152,7 @@
 | `03-bridge-guard.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `03a-privacy-gateway.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
-| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `_expandMcpVar`, `collectDisplayUrlRestores`, `crypto`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `fsp`, `logEvent`, `makeId`, `maskKey`, `mcpArgsForDisplay`, `nowIso`, `path`, `paths`, `redact`, `restoreExternalMcpServerSecrets`, `safeJsonParse`, `safeUrlForDisplay`, `sanitizeExternalMcpServer`, `text` |
+| `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `_expandMcpVar`, `collectDisplayUrlRestores`, `crypto`, `ensureDirs`, `executionArgumentsDigest`, `logEvent`, `makeId`, `maskKey`, `mcpArgsForDisplay`, `nowIso`, `path`, `paths`, `redact`, `restoreExternalMcpServerSecrets`, `safeJsonParse`, `safeUrlForDisplay`, `sanitizeExternalMcpServer`, `text` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
 | `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `detectDesktopMcp`, `enabledToolboxComponents`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `invalidateMcpDropInCache`, `mutateConfig`, `prepareAgentCliSpawn`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `scanMcpDropIns`, `selectedAgentCli` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
@@ -400,7 +400,7 @@
 | `12-tool-dispatch.js` | `11b-file-text-io.js` | backward | `FileTextIo` |
 | `12-tool-dispatch.js` | `11c-file-visual-io.js` | backward | `FileVisualIo` |
 | `12-tool-dispatch.js` | `11d-media-inspection.js` | backward | `MediaInspection` |
-| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CLAUDE_ENDPOINT_PRESETS`, `CONFIG_SCHEMA`, `DATA_ROOT_MIGRATION`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SKILL_ID_RE`, `URL`, `VERSION`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `cachedContextLength`, `contentTypeFor`, `contextWindowFromTable`, `crypto`, `dataRootAliases`, `defaultDataRoots`, `ensureDataRootReal`, `ensureDirs`, `exePath`, `externalRoot`, `fs`, `fsp`, `http`, `isDirectServeInvocation`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `json`, `logEvent`, `lstatOrNull`, `makeId`, `maskProviders`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `migrateLegacyDataRoot`, `nativeToolDisabledByPolicy`, `normalizeCwd`, `normalizeStoragePolicy`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `readJsonBody`, `redact`, `resolveContextWindow`, `runtimeToolRequirementsMet`, `safeJsonParse`, `samePathKey`, `send`, `sendError`, `spawnDetachedChecked`, `text`, `truncateToolResult`, `unmaskProviders` |
+| `13-http-router.js` | `00-boot.js` | backward | `APP_NAME`, `CLAUDE_ENDPOINT_PRESETS`, `CONFIG_SCHEMA`, `DATA_ROOT_MIGRATION`, `DEFAULT_PORT`, `DesktopExecutionHooks`, `EventStreamHooks`, `ExternalBotHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SKILL_ID_RE`, `URL`, `VERSION`, `apiFailure`, `apiSessionIdInvalid`, `apiSessionNotFound`, `cachedContextLength`, `contextWindowFromTable`, `crypto`, `dataRootAliases`, `defaultDataRoots`, `ensureDataRootReal`, `ensureDirs`, `exePath`, `externalRoot`, `fs`, `fsp`, `http`, `isDirectServeInvocation`, `isSensitiveDataPath`, `isSensitiveHardlinkAlias`, `json`, `logEvent`, `lstatOrNull`, `makeId`, `maskProviders`, `maskedSecretConflictMessage`, `maskedSecretConflicts`, `migrateLegacyDataRoot`, `nativeToolDisabledByPolicy`, `normalizeCwd`, `normalizeStoragePolicy`, `nowIso`, `os`, `path`, `paths`, `readJsonBody`, `redact`, `resolveContextWindow`, `runtimeToolRequirementsMet`, `safeJsonParse`, `samePathKey`, `send`, `sendError`, `spawnDetachedChecked`, `text`, `truncateToolResult`, `unmaskProviders` |
 | `13-http-router.js` | `00-platform-runtime.js` | backward | `platformOpenSpawn` |
 | `13-http-router.js` | `00b-ruyi-names.js` | backward | `LEGACY_RUYI_MCP_SERVER_IDS`, `RUYI_MCP_SERVER_ID` |
 | `13-http-router.js` | `01-config.js` | backward | `ConfigPatchHooks`, `RUNTIME`, `atomicWriteJson`, `authorizeRoute`, `autoImportClaudeCodeMcp`, `beginBootCliPathProbes`, `buildClaudeAgentDefinitions`, `desktopMcpDetectionPending`, `detectClaudePath`, `detectDesktopMcp`, `detectKimiPath`, `ensureDesktopMcpWarm`, `externalServerJs`, `finishBootCliPathProbes`, `generateMcpConfig`, `getAgentRoleLibrary`, `hostAllowed`, `isLoopbackBindHost`, `mcpConfigFilePath`, `mutateConfig`, `projectAgentRoleFile`, `readClaudeProjectAgentRoles`, `readConfig`, `readProjectAgentRoles`, `recordInstallLaunch`, `requestIsLoopback`, `resolveExternalMcpServers`, `safeSessionId`, `saveProjectAgentRoles`, `selectedAgentCli`, `serveStatic`, `sweepStaleScriptFiles`, `syncAgentCliMcpManifests`, `syncAgentRolesToClaude`, `syncClaudeCliSettings`, `syncMcpServersToClaude`, `tokenMatches`, `tokenOk`, `waitForBootCliPathProbes` |
@@ -415,13 +415,13 @@
 | `13-http-router.js` | `02e-session-engine-route.js` | backward | `configForSessionEngineRoute` |
 | `13-http-router.js` | `03-bridge-guard.js` | backward | `buildCodeEditorSpawn`, `buildRevealSpawn`, `fileAllowedRoots`, `guardWorkspacePath`, `launchCodeEditor`, `remoteUncDenialResolved`, `resolvePreferredCodeEditor`, `resolveWorkspace` |
 | `13-http-router.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `13-http-router.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `killAllMcpClients`, `makeAttachmentRecord`, `requestSessionExecutionStop`, `stopSession` |
+| `13-http-router.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `killAllMcpClients`, `requestSessionExecutionStop`, `stopSession` |
 | `13-http-router.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `13-http-router.js` | `04h-provider-http.js` | backward | `providerScrubSecrets` |
 | `13-http-router.js` | `04i-provider-wire.js` | backward | `PROVIDER_PRESETS`, `activeOpenAiProvider`, `normalizeProviderApiStyle`, `resolveProvider`, `sanitizeProvider` |
 | `13-http-router.js` | `05-claude-engine.js` | backward | `agentCliAdapter` |
 | `13-http-router.js` | `05b-kimi-bridge.js` | backward | `applyKimiStatusToSession`, `kimiSessionStatus`, `kimiStatusFingerprint`, `kimiUsageFromStatus` |
-| `13-http-router.js` | `06-provider-engine.js` | backward | `ERROR_CLASSES`, `deleteUserPlaybook`, `draftPlaybookFromSession`, `listPlaybooksWithAvailability`, `matchServiceEntry`, `normalizePlaybook`, `playbookReuseSources`, `saveUserPlaybook` |
+| `13-http-router.js` | `06-provider-engine.js` | backward | `ERROR_CLASSES`, `deleteUserPlaybook`, `draftPlaybookFromSession`, `listPlaybooksWithAvailability`, `normalizePlaybook`, `playbookReuseSources`, `saveUserPlaybook` |
 | `13-http-router.js` | `06c-agent-workflow-catalog.js` | backward | `agentWorkflowSaveProblem`, `deleteAgentWorkflow`, `getAgentWorkflows`, `normalizeAgentWorkflow`, `saveAgentWorkflow` |
 | `13-http-router.js` | `06d-memory-domain.js` | backward | `MEMORY_EXCLUSION_MAX`, `analyzeMemoryMaintenance`, `applyMemoryRelationProposal`, `confirmMemoryRelation`, `decideMemoryProposal`, `deleteMemory`, `deleteMemoryRelation`, `draftMemoryFromSession`, `listMemoryProjectGroups`, `listMemoryRelations`, `loadMemoryRegistry`, `migrateLegacyAccMemory`, `migrateMemory`, `moveMemoryScope`, `projectKeyForCwd`, `proposeMemoryFromSession`, `proposeMemoryRelation`, `readMemoryItem`, `replayPendingMemoryProposal`, `resolveCoreMemoryState`, `saveMemory`, `syncAgentInstructionImports`, `validateMemoryProposalSave` |
 | `13-http-router.js` | `06e-mission-domain.js` | backward | `missionControlCommand` |
@@ -437,7 +437,7 @@
 | `13-http-router.js` | `10a-session-turn.js` | backward | `runProviderCompactTracked`, `runSessionTurn`, `scheduleAgentWakesAtBoot` |
 | `13-http-router.js` | `11-native-tools.js` | backward | `killAllShellSessions` |
 | `13-http-router.js` | `12-tool-dispatch.js` | backward | `LAUNCH_MODE`, `TOOL_HANDLERS`, `computeHealth`, `loadSkillRegistry`, `toolCall` |
-| `13-http-router.js` | `13b-api-domain-routes.js` | forward | `handleAudioApiRoutes`, `handleMcpApiRoutes`, `handleSteerApiRoute`, `maybeCompressImageAttachment`, `maybeOcrImageAttachment`, `maybeTranscribeAudioAttachment` |
+| `13-http-router.js` | `13b-api-domain-routes.js` | forward | `handleAttachmentApiRoutes`, `handleAudioApiRoutes`, `handleMcpApiRoutes`, `handleSteerApiRoute` |
 | `13-http-router.js` | `13d-core-domain-routes.js` | forward | `handleAgentRunApiRoutes`, `handleInterventionApiRoutes`, `handleMissionsApiRoutes`, `handleSessionApiRoutes` |
 | `13-http-router.js` | `13e-pretender-index.js` | forward | `warmPretenderProjectionIndex` |
 | `13-http-router.js` | `13s-scheduler.js` | forward | `handleSchedulerApiRoutes`, `startScheduler`, `stopScheduler` |
@@ -470,12 +470,12 @@
 | `13ac-desktop-execution-runtime.js` | `04-permission-runtime.js` | backward | `McpStdioClient`, `mcpClients`, `probeDesktopExecutionReceipts` |
 | `13ac-desktop-execution-runtime.js` | `04h-provider-http.js` | backward | `ProviderHttpHooks` |
 | `13b-api-domain-routes.js` | `00-boot.js` | backward | `ASR_MAX_BODY_BYTES`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `externalRoot`, `findRuyiPackageRootFor`, `logEvent`, `nowIso`, `path`, `paths`, `ruyiPackageInfo`, `samePathKey`, `tildePath` |
-| `13b-api-domain-routes.js` | `01-config.js` | backward | `agentMcpImportSources`, `atomicWriteJson`, `buildUserEnvelope`, `classifyAgentMcpCandidate`, `generateMcpConfig`, `kimiMcpManagedIds`, `mutateConfig`, `readConfig`, `readInstallRegistry`, `resolveExternalMcpServers`, `safeSessionId`, `writeInstallRegistry`, `writeToChild` |
+| `13b-api-domain-routes.js` | `01-config.js` | backward | `agentMcpImportSources`, `atomicWriteJson`, `buildUserEnvelope`, `classifyAgentMcpCandidate`, `generateMcpConfig`, `kimiMcpManagedIds`, `mutateConfig`, `readConfig`, `readInstallRegistry`, `resolveExternalMcpServers`, `safeSessionId`, `tokenOk`, `writeInstallRegistry`, `writeToChild` |
 | `13b-api-domain-routes.js` | `01h-process-runtime.js` | backward | `DesktopShell` |
 | `13b-api-domain-routes.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `13b-api-domain-routes.js` | `02-session-store.js` | backward | `appendUsageLedger`, `saveSession` |
 | `13b-api-domain-routes.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `13b-api-domain-routes.js` | `04-permission-runtime.js` | backward | `MCP_COMPAT_MATRIX`, `ToolboxHooks`, `buildMcpConnectorInventory`, `collectBridgedTools`, `getBridgedClient`, `hasPendingQuestionForSession`, `invalidateMcpRuntime`, `mutateMcpConnector`, `probeMcpConnector`, `resolveBridge`, `sanitizeFsSegmentName` |
+| `13b-api-domain-routes.js` | `04-permission-runtime.js` | backward | `MCP_COMPAT_MATRIX`, `ToolboxHooks`, `buildMcpConnectorInventory`, `collectBridgedTools`, `getBridgedClient`, `hasPendingQuestionForSession`, `invalidateMcpRuntime`, `makeAttachmentRecord`, `mutateMcpConnector`, `probeMcpConnector`, `resolveBridge`, `sanitizeFsSegmentName` |
 | `13b-api-domain-routes.js` | `04-visual-pipeline.js` | backward | `VisualPipeline` |
 | `13b-api-domain-routes.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `13b-api-domain-routes.js` | `04l-skill-registry.js` | backward | `SkillRegistry` |
