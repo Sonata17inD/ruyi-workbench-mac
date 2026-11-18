@@ -11,6 +11,7 @@ const summarySource = require('node:fs').readFileSync(require('node:path').join(
 const kernelSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-kernel.cjs'), 'utf8');
 const compactionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
 const providerTurn = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
+const providerStream = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-stream.cjs'), 'utf8');
 const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
 const toolCatalogSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/tool-catalog.cjs'), 'utf8');
 const t1 = require('../ruyi-workbench/app/backend/tool-catalog.cjs');
@@ -199,7 +200,7 @@ ok(/econLog\('model_call_started'/.test(providerTurn) && /econLog\('model_call_c
 ok(/econLog\('assistant_tool_batch'/.test(providerTurn), 'E0 assistant_tool_batch event wired');
 ok(/econLog\('tool_call_completed'/.test(providerTurn) && /econLog\('tool_phase_completed'/.test(providerTurn), 'E0 tool_call/tool_phase completed events wired');
 ok(/ECON_EVENT_CAP = 400/.test(providerTurn) && /econSampledIter = iter => iter < ECON_SAMPLE_FULL_ITERS/.test(providerTurn), 'E0 sampling + per-turn event cap present');
-ok(/providerResponseId/.test(src), 'E0 provider response id surfaced from stream layer');
+ok(/providerResponseId: d\.responseId/.test(providerStream) && /providerResponseId: call\.providerResponseId/.test(providerTurn), 'E0 provider response id surfaced from stream layer and recorded by the turn');
 ok(/usageSource: usageCalls > usageSnapshot\.calls \? 'provider' : 'estimated'/.test(providerTurn), 'E0 usage source distinguishes provider-reported vs estimated');
 ok(/assistantBatchId: activeProviderBatchId, toolCallId: tc\.id/.test(providerTurn), 'E0 tool_call_completed carries the three-layer link');
 ok(!/toolEconomicsShadowV1: false/.test(src), 'E0 economics shadow is not an opt-in-only flag');

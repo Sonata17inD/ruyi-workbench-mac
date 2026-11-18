@@ -624,31 +624,46 @@ function createMemoryProposals({ paths, store, relations, memorySearchTerms, res
     } catch { /* 记账失败不影响安静降级 */ }
   }
 
-  async function proposeMemoryFromSessionUnlocked(sessionId) {
+  function replayMemoryProposalForTurn(state, turnSeq) {
+    const current = state.current;
+    if (current?.source === 'tool' && toolMemoryProposalAlreadyPending(state, turnSeq)) {
+      return { ok: true, proposal: current.proposal, proposalId: current.id, replayed: true, reason: 'tool_proposal' };
+    }
+    if (state.lastEvaluatedTurn > turnSeq) return { ok: true, proposal: null, reason: 'conversation_advanced' };
+    if (state.lastEvaluatedTurn !== turnSeq) return null;
+    const pending = current?.status === 'pending' ? current : null;
+    return { ok: true, proposal: pending?.proposal ?? null, proposalId: pending?.id, replayed: true, reason: 'already_evaluated' };
+  }
+
+  async function evaluateMemoryProposal(sessionId) {
     if (activeChildren.has(String(sessionId || ''))) return { ok: true, proposal: null, reason: 'turn_active' };
     let session;
     try { session = await loadSession(String(sessionId || '')); } catch { return { ok: true, proposal: null, reason: 'session_unavailable' }; }
     if (!session) return { ok: true, proposal: null, reason: 'session_unavailable' };
     const state = await readMemoryProposalState(session.id);
-    // workbench_memory_propose 在主回合内已经完成候选结构化；回合结束这里只负责把同轮 pending
-    // 交给 UI，不再要求最终回复长度/关键词或另走 provider 审稿。
-    if (state.current && state.current.status === 'pending' && state.current.source === 'tool'
-      && Number(state.current.proposal && state.current.proposal.sourceTurnSeq) === Number(session.turnSeq)) {
-      return { ok: true, proposal: state.current.proposal, proposalId: state.current.id, replayed: true, reason: 'tool_proposal' };
-    }
+    // 工具已经在回合内提交时，直接复用结果，省去一次辅助审稿。
+    const fromTool = state.current?.source === 'tool' && toolMemoryProposalAlreadyPending(state, Number(session.turnSeq));
+    if (fromTool) return replayMemoryProposalForTurn(state, Number(session.turnSeq));
     const gate = memoryProposalPrefilter(session);
     if (!gate.eligible) return { ok: true, proposal: null, reason: gate.reason };
-    if (state.lastEvaluatedTurn === gate.turnSeq) {
-      return { ok: true, proposal: state.current && state.current.status === 'pending' ? state.current.proposal : null, proposalId: state.current && state.current.status === 'pending' ? state.current.id : undefined, replayed: true, reason: 'already_evaluated' };
-    }
+    const existing = replayMemoryProposalForTurn(state, gate.turnSeq);
+    if (existing) return existing;
     if (!gate.explicit && state.lastEvaluatedTurn > 0 && gate.turnSeq - state.lastEvaluatedTurn < MEMORY_PROPOSAL_MIN_JUDGE_GAP) {
       return { ok: true, proposal: null, reason: 'judge_cooldown' };
     }
     if (!gate.explicit && state.lastShownTurn > 0 && gate.turnSeq - state.lastShownTurn < MEMORY_PROPOSAL_MIN_TURN_GAP) {
-      state.lastEvaluatedTurn = gate.turnSeq;
-      state.current = null;
-      await writeMemoryProposalState(session.id, state).catch(() => {});
-      return { ok: true, proposal: null, reason: 'cooldown' };
+      return runKeyedChain(memoryProposalStateChains, session.id, async () => {
+        const latest = await readMemoryProposalState(session.id);
+        if (activeChildren.has(session.id)) return { ok: true, proposal: null, reason: 'turn_active' };
+        const replay = replayMemoryProposalForTurn(latest, gate.turnSeq);
+        if (replay) return replay;
+        if (latest.lastShownTurn > 0 && gate.turnSeq - latest.lastShownTurn < MEMORY_PROPOSAL_MIN_TURN_GAP) {
+          latest.lastEvaluatedTurn = gate.turnSeq;
+          latest.current = null;
+          await writeMemoryProposalState(session.id, latest).catch(() => {});
+        }
+        return { ok: true, proposal: null, reason: 'cooldown' };
+      });
     }
     const config = await readConfig();
     const provider = activeOpenAiProvider(config);
@@ -673,47 +688,54 @@ function createMemoryProposals({ paths, store, relations, memorySearchTerms, res
     if (activeChildren.has(session.id)) return { ok: true, proposal: null, reason: 'turn_active' };
     const sc = await providerRawCompletion(provider, [{ role: 'system', content: judgeSystem }, { role: 'user', content: judgeInput }]);
     recordMemoryProposalUsage(sc, provider, session);
-    if (activeChildren.has(session.id)) return { ok: true, proposal: null, reason: 'turn_started_during_judge' };
-    // A fast new turn may have started and finished entirely while the judge was
-    // running, so activeChildren alone is insufficient. Re-read durable session state;
-    // this also prevents recreating proposal metadata after the session was deleted.
-    let latestSession;
-    try { latestSession = await loadSession(session.id); } catch { latestSession = null; }
-    const latestCompletedAssistant = latestSession && [...(latestSession.messages || [])].reverse().find(m => m && m.role === 'assistant');
-    if (!latestSession || Number(latestSession.turnSeq) !== Number(gate.turnSeq)
-      || Number(latestCompletedAssistant && latestCompletedAssistant.turnSeq) !== Number(gate.turnSeq)) {
-      return { ok: true, proposal: null, reason: latestSession ? 'conversation_advanced' : 'session_deleted' };
-    }
-    const proposal = sc && sc.ok ? parseMemoryProposalDecision(sc.content) : null;
-    state.lastEvaluatedTurn = gate.turnSeq;
-    state.current = null;
-    const sourceText = gate.userText + ' ' + gate.assistantText;
-    const grounded = proposal
-      && memoryProposalSimilarity([proposal.name, proposal.description].join(' '), sourceText) >= 0.24
-      && memoryProposalSimilarity(proposal.body, sourceText) >= 0.12;
-    if (!proposal || !grounded || memoryProposalLooksSensitive(proposal) || memoryProposalIsDuplicate(proposal, registry, state)) {
+    // 审稿调用在锁外运行。提交时与工具候选和用户决定共用会话写链，并重新读取权威状态。
+    return runKeyedChain(memoryProposalStateChains, session.id, async () => {
+      if (activeChildren.has(session.id)) return { ok: true, proposal: null, reason: 'turn_started_during_judge' };
+      const state = await readMemoryProposalState(session.id);
+      // A fast new turn may have started and finished entirely while the judge was
+      // running, so activeChildren alone is insufficient. Re-read durable session state;
+      // this also prevents recreating proposal metadata after the session was deleted.
+      let latestSession;
+      try { latestSession = await loadSession(session.id); } catch { latestSession = null; }
+      const latestCompletedAssistant = latestSession && [...(latestSession.messages || [])].reverse().find(m => m && m.role === 'assistant');
+      if (!latestSession || Number(latestSession.turnSeq) !== Number(gate.turnSeq)
+        || Number(latestCompletedAssistant && latestCompletedAssistant.turnSeq) !== Number(gate.turnSeq)) {
+        return { ok: true, proposal: null, reason: latestSession ? 'conversation_advanced' : 'session_deleted' };
+      }
+      if (activeChildren.has(session.id)) return { ok: true, proposal: null, reason: 'turn_started_during_judge' };
+      const replay = replayMemoryProposalForTurn(state, gate.turnSeq);
+      if (replay) return replay;
+      const proposal = sc && sc.ok ? parseMemoryProposalDecision(sc.content) : null;
+      state.lastEvaluatedTurn = gate.turnSeq;
+      state.current = null;
+      const sourceText = gate.userText + ' ' + gate.assistantText;
+      const grounded = proposal
+        && memoryProposalSimilarity([proposal.name, proposal.description].join(' '), sourceText) >= 0.24
+        && memoryProposalSimilarity(proposal.body, sourceText) >= 0.12;
+      if (!proposal || !grounded || memoryProposalLooksSensitive(proposal) || memoryProposalIsDuplicate(proposal, registry, state)) {
+        await writeMemoryProposalState(session.id, state).catch(() => {});
+        return { ok: true, proposal: null, reason: !proposal ? 'model_declined' : (!grounded ? 'ungrounded' : (memoryProposalLooksSensitive(proposal) ? 'sensitive' : 'duplicate')) };
+      }
+      // 与 workbench_memory_propose 同一道作用域闸(同一份关键词、最近几条用户消息),另要求本轮有「长期偏好」信号;
+      // 被改的记进 proposal,卡片上和模型工具那条路一样标出「AI 建议全局」。
+      proposal.requestedScope = proposal.scope;
+      proposal.scopeAdjusted = false;
+      const globalAllowed = memoryAutoGlobalAllowed(gate, proposal.type, [gate.userText, ...memoryRecentUserTexts(session, 3)]);
+      if (proposal.scope === 'global' && !globalAllowed) { proposal.scope = 'project'; proposal.scopeAdjusted = true; }
+      const id = makeId('proposal'); // 117q-B2(P2-15):统一走 makeId
+      const safeProposal = { ...proposal, sourceSessionId: session.id, sourceTurnSeq: gate.turnSeq };
+      state.lastShownTurn = gate.turnSeq;
+      state.current = { id, status: 'pending', source: 'automatic', semanticKey: memoryProposalSemanticKey(safeProposal), summary: [safeProposal.name, safeProposal.description].join(' '), proposal: safeProposal, createdAt: nowIso(), projectKey: projectKeyForCwd(cwd) };
       await writeMemoryProposalState(session.id, state).catch(() => {});
-      return { ok: true, proposal: null, reason: !proposal ? 'model_declined' : (!grounded ? 'ungrounded' : (memoryProposalLooksSensitive(proposal) ? 'sensitive' : 'duplicate')) };
-    }
-    // 与 workbench_memory_propose 同一道作用域闸(同一份关键词、最近几条用户消息),另要求本轮有「长期偏好」信号;
-    // 被改的记进 proposal,卡片上和模型工具那条路一样标出「AI 建议全局」。
-    proposal.requestedScope = proposal.scope;
-    proposal.scopeAdjusted = false;
-    const globalAllowed = memoryAutoGlobalAllowed(gate, proposal.type, [gate.userText, ...memoryRecentUserTexts(session, 3)]);
-    if (proposal.scope === 'global' && !globalAllowed) { proposal.scope = 'project'; proposal.scopeAdjusted = true; }
-    const id = makeId('proposal'); // 117q-B2(P2-15):统一走 makeId
-    const safeProposal = { ...proposal, sourceSessionId: session.id, sourceTurnSeq: gate.turnSeq };
-    state.lastShownTurn = gate.turnSeq;
-    state.current = { id, status: 'pending', source: 'automatic', semanticKey: memoryProposalSemanticKey(safeProposal), summary: [safeProposal.name, safeProposal.description].join(' '), proposal: safeProposal, createdAt: nowIso(), projectKey: projectKeyForCwd(cwd) };
-    await writeMemoryProposalState(session.id, state).catch(() => {});
-    return { ok: true, proposalId: id, proposal: safeProposal };
+      return { ok: true, proposalId: id, proposal: safeProposal };
+    });
   }
 
   async function proposeMemoryFromSession(sessionId) {
     const sid = safeSessionId(sessionId);
     if (!sid) return { ok: true, proposal: null, reason: 'invalid_session' };
     if (memoryProposalInFlight.has(sid)) return memoryProposalInFlight.get(sid);
-    const work = proposeMemoryFromSessionUnlocked(sid).catch(() => ({ ok: true, proposal: null, reason: 'proposal_failed' }));
+    const work = evaluateMemoryProposal(sid).catch(() => ({ ok: true, proposal: null, reason: 'proposal_failed' }));
     memoryProposalInFlight.set(sid, work);
     try { return await work; }
     finally { if (memoryProposalInFlight.get(sid) === work) memoryProposalInFlight.delete(sid); }
