@@ -797,7 +797,7 @@
     {
       "id": "context-calibration",
       "pattern": "<data>/context-calibration.json",
-      "owner": "10-context-governance.js",
+      "owner": "../backend/context-calibration.cjs",
       "anchor": "'context-calibration.json'",
       "schema": "object / schema 1",
       "writePrimitive": "DurableJsonStore -> atomicWriteJson",

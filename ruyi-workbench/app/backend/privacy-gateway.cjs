@@ -725,6 +725,18 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
     }
     record.revision = context.scope.revision();
   }
+  function referenceSafeSliceEnd(text, start, end) {
+    if (!active() || end >= text.length) return end;
+    // All issued categories fit in this bounded window. Never clip the opaque alias
+    // itself after complete source protection; a split marker is not usable data.
+    const references = pattern();
+    references.lastIndex = Math.max(start, end - 80);
+    let match;
+    while ((match = references.exec(text)) && match.index < end) {
+      if (match.index + match[0].length > end) return match.index > start ? match.index : match.index + match[0].length;
+    }
+    return end;
+  }
   function sliceSource(view, start, end) {
     const context = active(), record = sourceViews.get(view);
     if (!context || !record || record.scope !== context.scope) fail('source_proof_invalid');
@@ -1210,6 +1222,6 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
   const assertCliAllowed = () => assertSupported({ privacyModeV1: currentPolicy.mode }, 'cli');
   function assertToolChannel() { assertPolicyAvailable(); if (!active() && currentPolicy.mode !== 'off') fail('tool_channel_not_supported'); }
   function assertMediaAllowed(config) { assertPolicyAvailable(config); if (config ? enabled(config) : currentPolicy.mode !== 'off') fail('media_not_supported'); }
-  return Object.freeze({ enabled, configure, active, run, withPolicy, foreignView, preview, ruleVersion, restoreHistory, bindHostHistory, bindRestoredHostHistory, projectHostHistory, protectHostHistory, restoreHostHistoryProjection, displayCacheKey, displayText, displayMessages, displayEnvelope, createDisplayStream, beforeRequest, beforeModelRequest, toolResult, modelToolResult, projectSource, sliceSource, markSourceView, prepareCall, assertSupported, assertCliAllowed, assertPolicyAvailable, assertMediaAllowed, assertToolChannel, markUnavailable: () => { unavailable = true; }, recoveryRequired: () => unavailable, setHost: value => Object.assign(host, value) });
+  return Object.freeze({ enabled, configure, active, run, withPolicy, foreignView, preview, ruleVersion, restoreHistory, bindHostHistory, bindRestoredHostHistory, projectHostHistory, protectHostHistory, restoreHostHistoryProjection, displayCacheKey, displayText, displayMessages, displayEnvelope, createDisplayStream, beforeRequest, beforeModelRequest, toolResult, modelToolResult, projectSource, sliceSource, referenceSafeSliceEnd, markSourceView, prepareCall, assertSupported, assertCliAllowed, assertPolicyAvailable, assertMediaAllowed, assertToolChannel, markUnavailable: () => { unavailable = true; }, recoveryRequired: () => unavailable, setHost: value => Object.assign(host, value) });
 }
 module.exports = { createPrivacyGateway };

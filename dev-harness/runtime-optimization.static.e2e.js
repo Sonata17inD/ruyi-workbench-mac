@@ -133,11 +133,10 @@ const comparison = t1.compareToolRetrievalShadow(legacy, shadowCandidate);
 ok(shadowCandidate.retrievalVersion === 'deterministic-v1' && comparison.queryHash && !('query' in comparison), 'T1 shadow evaluates v1 without exposing the raw query');
 
 console.log('\n── [C1] deterministic observation reduction ──');
-const c1Start = src.indexOf('const OBSERVATION_REDUCE_MIN = 1200;');
-const c1End = src.indexOf('\n// v0.8-S5 SHARED SUMMARY KERNEL', c1Start);
-ok(c1Start >= 0 && c1End > c1Start, 'C1 source block found');
-const c1Block = src.slice(c1Start, c1End);
-const c1 = new Function('crypto', 'EVAPORATED_PREFIX', c1Block + '\nreturn { reduceObservationContent, protectedObservation, evaporateHistory, measureObservationReductionShadow };')(crypto, '[已省略:');
+const reductionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/observation-reduction.cjs'), 'utf8');
+const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
+const { READ_DEDUP_PREFIX } = require('../ruyi-workbench/app/backend/provider-history.cjs');
+const c1 = createObservationReduction(estimator);
 const large = JSON.stringify({ ok: true, query: 'needle', matches: Array.from({ length: 80 }, (_, i) => ({ path: `src/f${i}.js`, line: i, text: 'X'.repeat(180) })) });
 const reduced = c1.reduceObservationContent('file_search', large, 'history:3:aaaaaaaaaaaaaaaa:2:bbbbbbbbbbbbbbbb');
 ok(reduced.reduced && reduced.visibleChars < reduced.originalChars && reduced.content.includes('rawRef'), 'C1 large JSON becomes a smaller structured model view with rawRef');
@@ -236,8 +235,8 @@ console.log('\n── [F1] 126-111a · L1 蒸发边界改 token 预算 ──');
 ok(/runtimeEvaporateBudgetBoundaryV1: false/.test(src), 'F1 开关默认关');
 ok(!/runtimeEvaporateBudgetBoundaryV1: true/.test(src), 'F1 没有在别处被默认翻开');
 ok(/function evaporateBudgetBoundaryEnabled\(config\)/.test(src), 'F1 判定函数存在(唯一判定口)');
-ok(/function historyUnitStarts\(history\)/.test(src) && /role !== 'tool'/.test(src), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
-ok(/l1ProtectRatio/.test(src) && /l1ProtectMinTokens/.test(src) && /l1ProtectMaxTokens/.test(src), 'F1 保护区三个数来自规则文件(值域唯一,代码里不写死)');
+ok(/function historyUnitStarts\(history\)/.test(reductionSource) && /role !== 'tool'/.test(reductionSource), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
+ok(/l1ProtectRatio/.test(reductionSource) && /l1ProtectMinTokens/.test(reductionSource) && /l1ProtectMaxTokens/.test(reductionSource), 'F1 保护区三个数来自规则文件(值域唯一,代码里不写死)');
 {
   // **机械锁**:`boundaryBudget` 是「已经过开关把门的」预算 —— evaporateHistory 自己不读开关
   // (它要能被上面 [C1] 那段 new Function 原样切出来跑)。这条推导一旦有人绕过去写个裸预算,
@@ -262,10 +261,10 @@ ok(/runtimeHistoryReadDedupV1: true/.test(src), 'F2 开关默认开(107-T1 起;�
   ok(hits === 1, `F2 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function historyReadDedupEnabled\(config\)/.test(src), 'F2 判定函数存在(唯一判定口)');
-ok(/function fileReadDedupKey\(raw\)/.test(src) && /createHash\('sha256'\)\.update\(body\)/.test(src),
+ok(/function fileReadDedupKey\(raw\)/.test(reductionSource) && /createHash\('sha256'\)\.update\(body\)/.test(reductionSource),
   'F2 去重键 = 路径 ＋ 文件正文的哈希（不是「路径＋mtime＋size」那种版本推断 → 零误报）');
-ok(/const READ_DEDUP_PREFIX = /.test(src) && /startsWith\(READ_DEDUP_PREFIX\)/.test(src), 'F2 指针有独立前缀且被跳过(幂等)');
-ok(/rawRef=\$\{rawRefPrefix\}/.test(src), 'F2 指针带 rawRef —— 换掉的是重复不是信息,原件一直回查得到');
+ok(READ_DEDUP_PREFIX === '[重复读取:' && /startsWith\(READ_DEDUP_PREFIX\)/.test(reductionSource), 'F2 指针有独立前缀且被跳过(幂等)');
+ok(/rawRef=\$\{rawRefPrefix\}/.test(reductionSource), 'F2 指针带 rawRef —— 换掉的是重复不是信息,原件一直回查得到');
 {
   // 与 F1 同一把机械锁：`dedupeReads` 也是「已经过开关把门的」布尔，evaporateHistory 自己不读开关。
   const lines = src.split(/\r?\n/).filter(line => /\bdedupeReads\s*:/.test(line));

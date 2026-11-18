@@ -1,28 +1,17 @@
 'use strict';
 // 压缩后重取守卫与每回合配额的回合键。
-// 真源码整段切进 vm(这几个函数不出 module.exports);端到端的抖动复现与接线见 compaction-refetch-guard.e2e.js。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const vm = require('vm');
-const { readServerSource } = require('../src-reader');
-const { sliceBlock } = require('../lib/source-slice');
-const { nativeToolTier } = require('../../ruyi-workbench/app/backend/native-tool-tiers.cjs');
+const guard = require('../../ruyi-workbench/app/backend/compaction-refetch.cjs');
 const { providerTurnQuotaKey } = require('../../ruyi-workbench/app/backend/execution-state.cjs');
 
-const source = readServerSource();
-const block = sliceBlock(source, '// ── 压缩后重取守卫(回合内)', '// True shadow evaluation for 20-C1');
-function load() {
-  const ctx = vm.createContext({ EVAPORATED_PREFIX: '[已省略:', nativeToolTier });
-  vm.runInContext(block + '\nglobalThis.__limits = COMPACTION_REFETCH_LIMITS;', ctx);
-  return ctx;
-}
 const call = (id, name, args) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });
 const asst = (...calls) => ({ role: 'assistant', content: '', tool_calls: calls });
 const tool = (id, content) => ({ role: 'tool', tool_call_id: id, content });
 const READ_A = JSON.stringify({ path: 'a.txt' });
 
 test('[R1] 完整 / 压缩后的判据:蒸发占位、两种缩减视图、守卫自己的拒绝都不算完整;正文里只是提到这几个字不误判', () => {
-  const { toolResultIsFull } = load();
+  const { toolResultIsFull } = guard;
   assert.equal(toolResultIsFull('{"ok":true,"content":"hello"}'), true);
   assert.equal(toolResultIsFull('[已省略:{"ok":true,"content":"hel]'), false);
   assert.equal(toolResultIsFull('[Ruyi observation reduced · policy=text_head_tail · originalChars=9000 · rawRef=history:1]\nabc'), false);
@@ -31,11 +20,12 @@ test('[R1] 完整 / 压缩后的判据:蒸发占位、两种缩减视图、守�
   // 读到的文件正文里恰好有这些字:在 JSON 串值里引号被转义,不命中
   const fileBody = JSON.stringify({ ok: true, content: 'x = {"_ruyiObservation":{"reduced":true}} // "error":"compaction_refetch_refused"' });
   assert.equal(toolResultIsFull(fileBody), true);
+  assert.equal(toolResultIsFull('[重复读取:全文见后文]'), false);
   assert.equal(toolResultIsFull(undefined), false);
 });
 
 test('[R2] 历史里有没有这次调用的完整结果:按单元就近配对(跨迭代复用 call_1 不串味),参数逐字比', () => {
-  const { historyHasFullToolResult } = load();
+  const { historyHasFullToolResult } = guard;
   const h = [
     { role: 'user', content: 'go' },
     asst(call('call_1', 'file_read', { path: 'a.txt' })), tool('call_1', '[已省略:a]'),
@@ -53,8 +43,8 @@ test('[R2] 历史里有没有这次调用的完整结果:按单元就近配对(�
 });
 
 test('[R3] 守卫计数:第一次调用不算;完整结果还在时重调不算;被压掉后重取依次 无 → 提醒 → 拒绝,拒绝后原样再来仍拒绝', () => {
-  const ctx = load();
-  const { WARN_AT, REFUSE_AT } = ctx.__limits;
+  const ctx = guard;
+  const { WARN_AT, REFUSE_AT } = ctx.COMPACTION_REFETCH_LIMITS;
   assert.deepEqual([WARN_AT, REFUSE_AT], [2, 3]);
   const check = ctx.createCompactionRefetchGuard();
   const full = [asst(call('c1', 'file_read', { path: 'a.txt' })), tool('c1', '{"ok":true,"content":"A"}')];
@@ -73,7 +63,7 @@ test('[R3] 守卫计数:第一次调用不算;完整结果还在时重调不算;
 });
 
 test('[R4] 拒绝与提醒的文案:错误码稳定、给出换做法', () => {
-  const ctx = load();
+  const ctx = guard;
   const refusal = ctx.compactionRefetchRefusal(3);
   assert.equal(refusal.ok, false);
   assert.equal(refusal.error, 'compaction_refetch_refused');
@@ -91,7 +81,7 @@ test('[R5] 每回合配额的回合键:优先 turnSeq(压缩改 user 条数不�
 });
 
 test('[R6] 只数内容型读取:结果会随状态变的调用(跑测试、git_status、截图、agent_result)重复多少次都不算重取', () => {
-  const ctx = load();
+  const ctx = guard;
   const check = ctx.createCompactionRefetchGuard();
   const gone = [{ role: 'user', content: '【压缩摘要】…' }, { role: 'assistant', content: '收到' }];
   const npmTest = JSON.stringify({ command: 'npm test' });
@@ -104,7 +94,7 @@ test('[R6] 只数内容型读取:结果会随状态变的调用(跑测试、git_
 });
 
 test('[R7] 本回合有非 read 档的调用(改文件、跑命令、桥接工具)就清零:改完再读是新信息,不是重取;纯 A/B 来回照样抓', () => {
-  const ctx = load();
+  const ctx = guard;
   const check = ctx.createCompactionRefetchGuard();
   const gone = [{ role: 'user', content: '【压缩摘要】…' }, { role: 'assistant', content: '收到' }];
   // 边改边读(review 复现的场景):读 → 压掉 → 改 → 读 …… 每一轮中间都有 file_edit,永远不提醒、不拒绝

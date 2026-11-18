@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 3070,
-    "requiredSymbols": 3498,
+    "providedSymbols": 3050,
+    "requiredSymbols": 3496,
     "edges": 646,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -10703,9 +10703,6 @@
         "COMPACTION_HISTORY_PREFIX",
         "COMPACTION_PATH_ARG_KEYS",
         "COMPACTION_RAWREF_PATTERN",
-        "COMPACTION_REFETCH_LIMITS",
-        "COMPACTION_REFETCH_REFUSED",
-        "COMPACTION_REFETCH_TOOLS",
         "COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS",
         "COMPACTION_TASK_PREFIX",
         "COMPACTION_TOOL_INDEX_HEADER",
@@ -10715,7 +10712,6 @@
         "COMPACTION_TOOL_INDEX_SKIP",
         "COMPACT_MARKER_MIN_SAVED_TOKENS",
         "COMPACT_RESEED_TAIL_MAX_TOKENS",
-        "CONTEXT_CALIBRATION_MAX",
         "CONTEXT_GOVERNANCE_RULES",
         "CompactionPlan",
         "EVAPORATED_PREFIX",
@@ -10725,16 +10721,9 @@
         "MANUAL_COMPACT_MIN_FRESH_TOKENS",
         "MANUAL_COMPACT_MIN_L1_SAVED_RATIO",
         "MANUAL_COMPACT_MIN_L1_SAVED_TOKENS",
-        "OBSERVATION_ARRAY_SAMPLE",
-        "OBSERVATION_CRITICAL_KEYS",
-        "OBSERVATION_OBJECT_KEYS",
-        "OBSERVATION_REDUCE_MIN",
-        "OBSERVATION_TEXT_HEAD",
-        "OBSERVATION_TEXT_TAIL",
         "READ_DEDUP_PREFIX",
         "SUMMARY_PROMPT",
         "SUMMARY_PROMPT_EN",
-        "_calibKey",
         "agentConversationContextMeta",
         "agentNodeContextWindow",
         "buildCompactionToolIndex",
@@ -10745,7 +10734,6 @@
         "checkSummaryEntities",
         "chunkHistoryByBudget",
         "compactHistoryFromSession",
-        "compactObservationValue",
         "compactionIndexText",
         "compactionRefetchRefusal",
         "compactionRefetchWarning",
@@ -10753,7 +10741,6 @@
         "compactionTaskText",
         "compactionToolArgsDigest",
         "configuredConversationWindow",
-        "contextCalibrationStore",
         "contextWindowOverrideKey",
         "createCompactionRefetchGuard",
         "createProviderSummary",
@@ -10765,12 +10752,9 @@
         "extractSummaryTaskEvidence",
         "fileReadDedupKey",
         "fitHistoryForSummary",
-        "historyHasFullToolResult",
         "historyUnitStarts",
-        "isReducedObservationView",
         "lastSessionContextTokens",
         "learnedWindowCap",
-        "loadContextCalibration",
         "manualCompactPromptShape",
         "mapSummaryWithLimit",
         "maybeAutoCompact",
@@ -10778,10 +10762,7 @@
         "measureObservationReductionShadow",
         "noteEstimateSample",
         "noteWindowOvershoot",
-        "observationToolNames",
         "openCompactMarker",
-        "persistContextCalibration",
-        "protectedObservation",
         "providerContextWindow",
         "providerConversationContextWindow",
         "providerSummaryCall",
@@ -10801,7 +10782,6 @@
         "summarySingleShotCap",
         "summarySingleShotReserveTokens",
         "summaryTaskSourceHistory",
-        "toolResultIsFull",
         "upsertCompactMarker",
         "userBlockStarts",
         "validateStructuredSummary"
@@ -10889,22 +10869,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "nativeToolTier",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -31353,9 +31320,7 @@
         "fmtTokensServer",
         "isContextOverflowError",
         "logEvent",
-        "nativeToolTier",
         "nowIso",
-        "path",
         "paths",
         "resolveContextWindow",
         "text"

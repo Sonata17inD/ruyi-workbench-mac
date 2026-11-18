@@ -222,4 +222,8 @@ function appendPromptToLastUserMessage(msgs, text) {
   return false;
 }
 
-module.exports = { createProviderHistory, lastAssistantEngine, readCompactionSummaryText, historyStartsWithCompactionSummary, compactionSummaryPairEnd, appendPromptToLastUserMessage };
+const EVAPORATED_PREFIX = '[已省略:';
+const READ_DEDUP_PREFIX = '[重复读取:';
+const COMPACTION_TOOL_INDEX_HEADER = '【已执行的工具调用(机器生成的索引,结论以上文摘要为准)】';
+
+module.exports = { EVAPORATED_PREFIX, READ_DEDUP_PREFIX, COMPACTION_TOOL_INDEX_HEADER, createProviderHistory, lastAssistantEngine, readCompactionSummaryText, historyStartsWithCompactionSummary, compactionSummaryPairEnd, appendPromptToLastUserMessage };

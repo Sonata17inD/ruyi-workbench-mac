@@ -150,18 +150,6 @@ function createProviderSummary({
   // 消息（长 Agent 工具循环），整块可远超预算；这种块不能只截每条消息后继续整块发送，也不能在
   // tool_call/tool_result 中间硬切。把超大块无损序列化成带角色标签的纯文本 transcript，再按实测
   // token 估算切成独立 user 片段：既不触发 Provider 的工具配对校验，也不会丢掉块的中后段。
-  function privacySummarySliceEnd(text, start, end) {
-    if (!PrivacyGateway.active() || end >= text.length) return end;
-    // All issued categories fit in this bounded window. Never clip the opaque alias
-    // itself after complete source protection; a split marker is not usable data.
-    const references = /\[\[RUYI_PVT:[A-Z]+:[a-f0-9]{32}\]\]/g;
-    references.lastIndex = Math.max(start, end - 80);
-    let match;
-    while ((match = references.exec(text)) && match.index < end) {
-      if (match.index + match[0].length > end) return match.index > start ? match.index : match.index + match[0].length;
-    }
-    return end;
-  }
   function chunkHistoryByBudget(history, budgetTokens, sourceIndexes) {
     const starts = userBlockStarts(history);
     const blocks = [];
@@ -197,7 +185,7 @@ function createProviderSummary({
         // The kernel checks actual payload budgets before dispatch. If even one character cannot fit,
         // return one oversized node for that check instead of making an unbounded one-character loop.
         if (!row) { end = text.length; row = { role: 'user', content: `【超长回合分片】${sourceHeader}\n${text.slice(offset)}` }; }
-        const atomicEnd = privacySummarySliceEnd(text, offset, end);
+        const atomicEnd = PrivacyGateway.referenceSafeSliceEnd(text, offset, end);
         if (atomicEnd !== end) { end = atomicEnd; row = { role: 'user', content: `【超长回合分片】${sourceHeader}\n${text.slice(offset, end)}` }; }
         const piece = [row];
         if (sourceIndexes) piece.summarySources = spans.filter(span => span.start < end && span.end > offset).map(span => span.source);
@@ -517,4 +505,4 @@ function createProviderSummary({
   };
 }
 
-module.exports = { createProviderSummary, userBlockStarts, buildSummaryRefineMessages, summaryMaxConcurrent, mapSummaryWithLimit };
+module.exports = { createProviderSummary, pickSummaryFailure, userBlockStarts, buildSummaryRefineMessages, summaryMaxConcurrent, mapSummaryWithLimit };

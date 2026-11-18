@@ -13,8 +13,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compaction-bughunt-'));
 process.env.RUYI_HOME = root;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { readServerSource } = require('../src-reader');
-const { functionBlock } = require('../lib/source-slice');
+const { pickSummaryFailure: pick } = require('../../ruyi-workbench/app/backend/provider-summary.cjs');
 
 const plan = (task, extra = {}) => ({ scope: 'main', trigger: 'auto', task, kept: [], recentFiles: [], ...extra });
 
@@ -44,9 +43,6 @@ test('[C2] 带图片的首问钉成文字', () => {
 });
 
 test('[C6] 分段摘要取真实失败,不取被连带取消的那一块', () => {
-  const src = functionBlock(readServerSource(), 'pickSummaryFailure');
-  assert.ok(src.length > 50, '切到了 pickSummaryFailure');
-  const pick = new Function(src + '\nreturn pickSummaryFailure;')();
   const cancelled = { ok: false, error: 'summary request cancelled (sibling chunk failed)', cancelledBySibling: true };
   const real = { ok: false, error: 'HTTP 400: REAL CAUSE' };
   assert.equal(pick([{ ok: true }, cancelled, real]), real, '块序在前的是被取消的那块,也要报真实原因');

@@ -112,24 +112,13 @@ const mm = src.match(/async function maybeCompactSubHistory\(opts\) \{[\s\S]*?\n
 // 子代理与主回合共用的两级压缩内核(10 runAutoCompaction)—— 一起抽出来跑,判据只有一处。
 const km = src.match(/async function runAutoCompaction\(ctx\) \{[\s\S]*?\n\}/);
 ok(!!mm && !!km, 'A 源抽取 maybeCompactSubHistory + 共用内核 runAutoCompaction');
-// 抽真 evaporateHistory + recentTurnsBoundary(保真);其余注入桩。
-const em = src.match(/function evaporateHistory\(history(?:, opts)?\) \{[\s\S]*?\n\}/);
-const evaporateHistory = new Function('EVAPORATED_PREFIX', em[0] + '\nreturn evaporateHistory;')('[已省略:'); // 注入模块级常量
-// 126-111b:签名多了第三个形参 byUnits(已过门的布尔)。抽取式跟着放宽 —— 写死旧签名的话,
-// 一改签名这里就 match 到 null,而 null[0] 的报错离真因隔着十万八千里(实测就是这么炸的)。
+const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
 const rm = src.match(/function recentTurnsBoundary\(history, maxTailTokens(?:, byUnits)?\) \{[\s\S]*?\n\}/);
 // 桩:窗口 1000 token;估算 = 各消息 content 长度/4 + 40/条;摘要内核可控 ok/summary。
 const providerContextWindow = () => 1000;
 const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((t, m) => t + 40 + Math.ceil(String((m && m.content) || '').length / 4), 0);
-const userBlockStarts = history => {
-  const idx = [];
-  for (let i = 0; i < history.length; i++) if (history[i] && history[i].role === 'user') idx.push(i);
-  return idx;
-};
-// 126-111b:退化那一支要用 historyUnitStarts(与 111a 同一个原语)。从源码里【抽真的那一份】注进来,
-// 不在这儿另写一遍 —— 判据只有一处这条纪律在沙箱里也得成立(与 evaporateBudgetBoundaryEnabled 同理)。
-const um = src.match(/function historyUnitStarts\(history\) \{[\s\S]*?\n\}/);
-const historyUnitStarts = new Function(um[0] + '\nreturn historyUnitStarts;')();
+const { userBlockStarts } = require('../ruyi-workbench/app/backend/provider-summary.cjs');
+const { evaporateHistory, historyUnitStarts } = createObservationReduction({ estimateHistoryTokens });
 const recentTurnsBoundary = new Function('estimateHistoryTokens', 'userBlockStarts', 'COMPACT_RESEED_TAIL_MAX_TOKENS', 'historyUnitStarts', rm[0] + '\nreturn recentTurnsBoundary;')(
   estimateHistoryTokens, userBlockStarts, 16000, historyUnitStarts
 );
