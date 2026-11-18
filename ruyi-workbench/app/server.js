@@ -818,10 +818,17 @@ const { createClaudeConfigSync, RUYI_AGENT_FILE_MARKER } = require('./backend/cl
 const { syncClaudeCliSettings, syncAgentRolesToClaude } = createClaudeConfigSync({
   paths, atomicWriteJson, getAgentRoleLibrary, logEvent,
 });
+// Loopback coordinates for per-session permission callbacks; only startMcp marks a child.
+const RUNTIME = { port: DEFAULT_PORT, host: '127.0.0.1', token: '', isMcpChild: false };
+const { externalServerJs, bundledNodeExe, commandForSelfMcp, mcpConfigFilePath, generateMcpConfig,
+  generateSessionMcpConfig, generateAgentNodeMcpConfig } = require('./backend/mcp-manifests.cjs').createMcpManifests({
+  paths, runtime: RUNTIME, hostFile: __filename, externalRoot, ensureDirs, readConfig, resolveExternalMcpServers,
+  ensureDesktopMcpWarm: config => ensureDesktopMcpWarm(config), atomicWriteJson, process,
+});
 const { syncMcpServersToClaude, syncAgentCliMcpManifests, syncMcpServersToKimi } =
   require('./backend/cli-mcp-sync.cjs').createCliMcpSync({
     paths, ensureDirs, generateMcpConfig, resolveExternalMcpServers, existsExecutableAsync,
-    desktopMcpPolicyEnv, DesktopShell, getAgentCliHost: () => AGENT_CLI_HOST, atomicWriteJson, logEvent,
+    DesktopShell, getAgentCliHost: () => AGENT_CLI_HOST, atomicWriteJson, logEvent,
   });
 const { autoImportClaudeCodeMcp, agentMcpImportSources, kimiMcpManagedIds, classifyAgentMcpCandidate } =
   require('./backend/cli-mcp-import.cjs').createCliMcpImport({
@@ -867,20 +874,6 @@ const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabil
   dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
 });
 
-function externalServerJs() {
-  const p = path.join(externalRoot(), 'app', 'server.js');
-  return fs.existsSync(p) ? p : '';
-}
-
-function bundledNodeExe() {
-  const bundled = path.join(externalRoot(), 'runtime', 'node', 'bin', 'node');
-  return fs.existsSync(bundled) ? bundled : process.execPath;
-}
-
-function commandForSelfMcp() {
-  return { command: bundledNodeExe(), args: [externalServerJs() || path.resolve(__filename), 'mcp'], via: 'node' };
-}
-
 const {
   pickPython, pickPythonAsync, probeDesktopPython, probeDesktopPythonAsync, desktopPythonCandidates,
 } = require('./backend/desktop-python-selection.cjs').createDesktopPythonSelection({ ProcessRuntime, process });
@@ -889,129 +882,6 @@ const DesktopMcpDiscovery = require('./backend/desktop-mcp-discovery.cjs').creat
 });
 const { detectDesktopMcp, detectDesktopMcpAsync, desktopMcpFromInstalledRoot, ensureDesktopMcpWarm } = DesktopMcpDiscovery;
 function desktopMcpDetectionPending(config) { return DesktopMcpDiscovery.desktopMcpDetectionPending(config); }
-
-// Runtime coordinates for loopback callbacks (permission bridge). Set in startServer().
-// v0.8-S2: isMcpChild is set true only in startMcp() — the one-shot MCP subprocess the Claude CLI spawns.
-// Shell-session tools guard on it: their state lives in the serve process, so the child cannot serve them.
-const RUNTIME = { port: DEFAULT_PORT, host: '127.0.0.1', token: '', isMcpChild: false };
-
-// 安全修复(审计 A①)的判据:桥接 MCP 服务器(ACC 桌面控制、第三方 stdio MCP)不得从启动它的进程继承工作台凭据。
-// 去掉所有 WCW_*(工作台内部键:回环令牌 / 端口 / 会话号等;唯一例外 WCW_DATA_DIR —— ACC paths.py 认的数据目录覆盖,
-// 由用户/测试设置,不是凭据),以及工作台按配置注入 CLI 环境的模型凭据 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY
-// (buildClaudeCliEnv;桌面/文档类 MCP 用不到)。两处共用这一个判据:
-//   · 工作台自己 spawn 桥接服务器(04 bridgedServerSpawnEnv:直接从继承环境里删);
-//   · 交给 agent CLI 去 spawn(下面 bridgedCliServerEnv:写进 --mcp-config / Kimi mcp.json 的条目 env 块)。
-const BRIDGED_ENV_KEEP = new Set(['WCW_DATA_DIR']);
-const BRIDGED_ENV_DROP = new Set(['ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY']);
-function bridgedEnvKeyStripped(key) {
-  const up = String(key).toUpperCase();
-  if (BRIDGED_ENV_KEEP.has(up)) return false;
-  return up.startsWith('WCW_') || BRIDGED_ENV_DROP.has(up);
-}
-// 后续补漏(审计 A① 的 CLI 直挂面):toolLoadingMode:'full' 的会话与 exec 档 Claude DAG 节点把桥接服务器直接写进
-// --mcp-config,由 Claude CLI 自己 spawn —— 子进程环境 = CLI 的环境叠条目 env。CLI 的环境里有工作台注入的模型密钥
-// (buildClaudeCliEnv),Kimi 进程的环境里还有回合级 WCW_TOKEN 等(05b 靠继承把它们交给如意的 MCP 子进程),
-// 修前 ACC 的 get_environment_variable 一问就拿到。配置文件只能【加/盖】变量、不能删,所以把这些键在条目 env 块里
-// 盖成空串:固定一组已知凭据键,再加本进程环境里此刻存在的其它 WCW_*(被别的如意回合拉起时继承来的)。
-// 条目自己声明的 env 叠在最后,照常生效(与 04 同口径)。
-const BRIDGED_CLI_ENV_BLANK_KEYS = Object.freeze(['WCW_TOKEN', 'WCW_PORT', 'WCW_HOST', 'WCW_SESSION_ID', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY']);
-function bridgedCliServerEnv(ownEnv, baseEnv = process.env) {
-  const blanks = {};
-  for (const k of BRIDGED_CLI_ENV_BLANK_KEYS) blanks[k] = '';
-  for (const k of Object.keys(baseEnv || {}).sort()) if (bridgedEnvKeyStripped(k)) blanks[k] = '';
-  return { ...blanks, ...(ownEnv && typeof ownEnv === 'object' ? ownEnv : {}) };
-}
-
-// 2026-10 能力总闸的 CLI 直挂面:交给 agent CLI 自己 spawn、自己调的 ACC 不经工作台的分发点(09/08/12),唯一能插手的是它的
-// 启动环境 —— 把 07 toolDisabledByPolicy 判下来被关掉的 ACC 工具名(accPolicyHiddenToolNames,与分发面同一张表)经
-// ACC_HIDE_TOOLS 交给 ACC,它在注册表里摘掉:tools/list 里没有,batch_actions / macro_run 也转调不到。只给内置桌面 MCP
-// 条目;一个都没关时不加这个键(生成的配置与修前逐字节相同)。旧版 ACC 不认这个变量 —— 那时只剩 13d 权限桥那道纵深。
-function desktopMcpPolicyEnv(entryId, config, desktopOverride = null) {
-  if (entryId !== DESKTOP_MCP_SERVER_ID || !config) return {};
-  const hidden = accPolicyHiddenToolNames(config, desktopOverride);
-  return hidden.length ? { ACC_HIDE_TOOLS: hidden.join(',') } : {};
-}
-
-// v0.7d: mutate an mcpServers map in place, adding the desktop MCP (id 'ai-computer-control') and every
-// enabled user externalMcpServers entry. Back-compat: when nothing is detected/configured, the map is
-// left exactly as it was, so the generated config equals the pre-0.7d output.
-// stdio 条目一律带 env 块(bridgedCliServerEnv:置空工作台凭据 + 条目自己的 env);远程(sse/http)条目没有子进程。
-// opts.desktopOverride:会话级 desktopTools(null = 跟随全局;只有按会话生成的配置才传,见 generateSessionMcpConfig)。
-function addExternalMcpServersToMap(mcpServers, config, opts) {
-  if (!config) return;
-  const desktopOverride = (opts && opts.desktopOverride != null) ? opts.desktopOverride : null;
-  try {
-    for (const entry of resolveExternalMcpServers(config)) {
-      if (mcpServers[entry.id]) continue;    // never clobber Ruyi's own server (id 'ruyi') or an earlier entry
-      let server;
-      if (entry.transport === 'sse' || entry.transport === 'http') {
-        server = { type: entry.transport, url: entry.url };
-        if (entry.headers && Object.keys(entry.headers).length) server.headers = entry.headers;
-        if (entry.bearerTokenEnvVar) server.bearerTokenEnvVar = entry.bearerTokenEnvVar;
-      } else {
-        server = { type: 'stdio', command: entry.command, args: entry.args || [] };
-        if (entry.cwd) server.cwd = entry.cwd;
-        server.env = { ...bridgedCliServerEnv(entry.env), ...desktopMcpPolicyEnv(entry.id, config, desktopOverride) };
-      }
-      mcpServers[entry.id] = server;
-    }
-  } catch { /* detection must never break config generation */ }
-}
-
-// 生成的 MCP 配置文件路径(唯一一处拼它)。128f-③:探测在飞时 /api/status 只回这条路径、不重新生成。
-function mcpConfigFilePath() { return path.join(paths.generated, 'workbench.mcp.json'); }
-async function generateMcpConfig(mode) {
-  await ensureDirs();
-  const cfg = await readConfig().catch(() => null);
-  // 39 号文:本函数下面 addExternalMcpServersToMap → resolveExternalMcpServers → detectDesktopMcp 是
-  // 【同步】的,冷缓存时会把整个进程钉住一轮探针。它自己是 async,所以先等那趟异步预热——
-  // 实测就是这一处:只在 /api/status 的 desktopMcp 那一段等预热不够,mcpConfigPath 排在它【前面】,
-  // 同一个响应里先被这一处堵住(boot-listen-budget 的「探针在飞时 /health 秒答」因此偶红)。
-  // 排在 readConfig 之后,是因为「该不该预热」要看 config(停用/显式覆盖时一发都不放)。
-  await ensureDesktopMcpWarm(cfg);
-  if (!mode) mode = cfg?.mcpCommandMode || 'auto';
-  const self = commandForSelfMcp(mode);
-  const configPath = mcpConfigFilePath();
-  const mcp = {
-    mcpServers: {
-      // 3.0 收口:server id 由 'win-claude-workbench' 改为 'ruyi'(RUYI_MCP_SERVER_ID;存量登记的清理见 00-boot 注释)。
-      [RUYI_MCP_SERVER_ID]: {
-        type: 'stdio',
-        command: self.command,
-        args: self.args,
-        env: {
-          // MCP 子进程的数据根 = 父进程已解析的 dataRoot(3.0 起只写 RUYI_HOME;旧变量名 WIN_CLAUDE_WORKBENCH_HOME 只读兼容)。
-          RUYI_HOME: paths.data,
-        },
-      },
-    },
-  };
-  addExternalMcpServersToMap(mcp.mcpServers, cfg);
-  await atomicWriteJson(configPath, mcp);
-  return configPath;
-}
-
-// hunt2-P9:每会话 / 每子代理节点的 MCP 配置(workbench.mcp.<id>.json)里有 loopback token 与外部 MCP 的 env,
-// 修前从不删除 —— 删会话只删会话本身,子代理节点那一份更是跑完就没人管,generated/ 里无界堆积带密钥的文件。
-// 删会话时 02 deleteSession 顺手删对应那份;这里再按年龄兜底:每次起引擎都会重写自己那份(mtime 刷新),
-// 超过 SESSION_MCP_CONFIG_MAX_AGE_MS 没被重写的就是没人再用的。每进程只扫一次,失败静默(旁路清理)。
-const SESSION_MCP_CONFIG_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
-let sessionMcpConfigSweepDone = false;
-async function sweepStaleSessionMcpConfigs(nowMs = Date.now()) {
-  let removed = 0;
-  let names = [];
-  try { names = await fsp.readdir(paths.generated); } catch { return removed; }
-  for (const name of names) {
-    // 只认 workbench.mcp.<id>.json;共享的 workbench.mcp.json 不在此列。
-    if (!/^workbench\.mcp\.[A-Za-z0-9_-]{1,64}\.json$/.test(name)) continue;
-    const file = path.join(paths.generated, name);
-    try {
-      const st = await fsp.stat(file);
-      if (st.isFile() && nowMs - st.mtimeMs > SESSION_MCP_CONFIG_MAX_AGE_MS) { await fsp.unlink(file); removed += 1; }
-    } catch { /* 并发删除 / 一时被锁:下个进程再扫 */ }
-  }
-  return removed;
-}
 
 // 走查 W1·F10:script_run 把脚本明文落在 <generated>/scripts/,正常路径执行完立刻删(12 script_run 的 finally);进程被强杀 / 杀毒占着删不掉时
 // 会留下孤儿 —— 里面可能有模型嵌进去的密钥。这里按龄兜底:启动时扫一次(13 起服务处调),超过 SCRIPT_FILE_MAX_AGE_MS 没动过的删。
@@ -1031,66 +901,6 @@ async function sweepStaleScriptFiles(nowMs = Date.now()) {
     } catch { /* 并发删除 / 一时被锁:下个进程再扫 */ }
   }
   return removed;
-}
-
-// Per-session MCP config that injects the session id + loopback port/token into the MCP child's env,
-// so the permission-bridge tool (running in that child) can call back and be routed to the right UI stream.
-// opts.desktopOverride:这条线程的会话级 desktopTools(05 Claude 引擎按会话头传;子代理节点不传 = 跟随全局),只影响直挂 ACC
-// 条目的 ACC_HIDE_TOOLS(见 desktopMcpPolicyEnv)。
-async function generateSessionMcpConfig(sessionId, mode, toolPacks, opts) {
-  await ensureDirs();
-  if (!sessionMcpConfigSweepDone) { sessionMcpConfigSweepDone = true; void sweepStaleSessionMcpConfigs().catch(() => {}); }
-  const cfg = await readConfig().catch(() => null);
-  if (!mode) mode = cfg?.mcpCommandMode || 'auto';
-  const self = commandForSelfMcp(mode);
-  const configPath = path.join(paths.generated, `workbench.mcp.${sessionId}.json`);
-  const mcp = {
-    mcpServers: {
-      // 同 generateMcpConfig:server id 是 RUYI_MCP_SERVER_ID。
-      [RUYI_MCP_SERVER_ID]: {
-        type: 'stdio',
-        command: self.command,
-        args: self.args,
-        env: {
-          RUYI_HOME: paths.data,
-          WCW_SESSION_ID: sessionId,
-          WCW_PORT: String(RUNTIME.port),
-          WCW_HOST: RUNTIME.host,
-          WCW_TOKEN: RUNTIME.token,
-          WCW_TOOL_LOADING_MODE: cfg?.toolLoadingMode || 'auto',
-          WCW_TOOL_PACKS: Array.isArray(toolPacks) ? toolPacks.join(',') : '',
-        },
-      },
-    },
-  };
-  // In adaptive mode external schemas stay behind the typed invoke proxies, so a simple Claude turn
-  // does not ingest an entire desktop/Office catalog. Full mode retains the historical direct servers.
-  if (!cfg || cfg.toolLoadingMode === 'full') addExternalMcpServersToMap(mcp.mcpServers, cfg, { desktopOverride: opts && opts.desktopOverride });
-  await atomicWriteJson(configPath, mcp);
-  return configPath;
-}
-
-// One-shot analog of generateSessionMcpConfig for a DAG node's Claude-engine spawn (runClaudeSubAgentOnce)
-// — same content, keyed by subagentId instead of a session id. When allowedServerIds is a non-empty array
-// (role.mcpServers) the config is narrowed to just those server ids, mirroring the OpenAI subagent path's
-// own rule (runSubAgentCore): an explicit mcpServers list restricts which bridged servers a node can reach;
-// leaving it unset/empty means "everything the workbench has configured" for exec-tier nodes.
-async function generateAgentNodeMcpConfig(subagentId, mode, allowedServerIds) {
-  const configPath = await generateSessionMcpConfig(subagentId, mode, Object.keys(TOOL_PACK_DESCRIPTIONS));
-  try {
-    const raw = JSON.parse(await fsp.readFile(configPath, 'utf8'));
-    const own = raw.mcpServers && raw.mcpServers[RUYI_MCP_SERVER_ID];
-    if (own) own.env = { ...(own.env || {}), WCW_DISABLE_USER_INPUT: '1' };
-    // This helper is used only for exec-tier Claude nodes. Preserve their explicit direct-MCP contract;
-    // the main interactive Claude path uses adaptive proxies instead.
-    addExternalMcpServersToMap(raw.mcpServers, await readConfig().catch(() => null));
-    if (Array.isArray(allowedServerIds) && allowedServerIds.length) {
-      const allowed = new Set(allowedServerIds.map(canonicalRuyiMcpServerId)); // 3.0:未经清洗的角色(.md 前言)里的旧 id 也认
-      raw.mcpServers = Object.fromEntries(Object.entries(raw.mcpServers || {}).filter(([id]) => allowed.has(id)));
-    }
-    await atomicWriteJson(configPath, raw);
-  } catch { /* best-effort — fall through with the unfiltered config rather than fail the node */ }
-  return configPath;
 }
 
 // --- Interactive stream-json envelopes (defensive; exact shapes are underdocumented). ---
@@ -4107,8 +3917,8 @@ function clearPendingPlans(sessionId, message) {
 // 单行上限:MCP 一条响应就是一行 JSON,读大文件/截图类工具一行几 MB 是常态。修前 4MB 处直接「截掉前半行」,
 // 结果那一行永远拼不回完整 JSON、调用干等到超时再被杀进程。现在上限放宽,真超了就丢弃到下一个换行并
 // 如实拒掉那一次调用(按行首的 id 找得到时),绝不在行中间切。
-const { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, bridgedServerSpawnEnv, mcpCallToolParams } = require('./backend/mcp-transports.cjs').createMcpTransports({
-  safeJsonParse, bridgedEnvKeyStripped, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION,
+const { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, mcpCallToolParams } = require('./backend/mcp-transports.cjs').createMcpTransports({
+  safeJsonParse, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION,
 });
 
 // A real, safe tools/call roundtrip must preserve both reserved metadata and SDK numeric types.
@@ -5302,7 +5112,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
       if (config.betaInterleavedThinking) args.push('--betas', 'interleaved-thinking');
       if (config.includeWorkbenchMcp) {
         const claudeToolPacks = classifyToolPacks(basePrompt, attachments);
-        // 会话级 desktopTools 一并交过去:full 模式直挂的 ACC 按这条线程的桌面闸裁剪(01 desktopMcpPolicyEnv)。
+        // full 模式直挂的 ACC 按这条线程的 desktopTools 裁剪。
         args.push('--mcp-config', await generateSessionMcpConfig(session.id, config.mcpCommandMode, claudeToolPacks, { desktopOverride: sessionDesktopToolsOf(session) }));
         // In print mode the documented stream-json input accepts text user messages, not arbitrary tool_result
         // envelopes. Route questions through our MCP tool instead of Claude's terminal-only native prompt.
@@ -11592,7 +11402,7 @@ async function applyConfigPatch(rawBody, options = {}) {
     await syncAgentCliMcpManifests(next, null, { requireWorkbenchMcp: true });
   } else if (body && ['allowCommandTools', 'allowDesktopTools'].some(k => Object.prototype.hasOwnProperty.call(body, k)
       && (current && current[k]) !== (next && next[k]))) {
-    // 2026-10 能力总闸:两个开关一变,写给 CLI 的直挂 ACC 条目里的 ACC_HIDE_TOOLS(01 desktopMcpPolicyEnv)就过时了 —— 推一次
+    // 2026-10 能力总闸:两个开关一变,写给 CLI 的直挂 ACC 条目里的 ACC_HIDE_TOOLS 就过时了 —— 推一次
     // Claude 的用户级条目与 Kimi 的 mcp.json(同一次保存里 externalMcpServers 也改了的话上面那支已经推过)。不等它:claude mcp
     // add-json 串行可达十几秒,开关的保存不该卡在这里;Kimi 每个回合起手还会再推一次(05b),这里只是把空窗缩短。
     void syncMcpServersToClaude(next).catch(() => {});

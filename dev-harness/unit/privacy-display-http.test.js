@@ -8,15 +8,14 @@ const { EventEmitter } = require('node:events');
 const { createHttpChatStream } = require('../../ruyi-workbench/app/backend/http-chat-stream.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-display-http-'));
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), path.join(root, 'data')));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'safeSessionId', 'nowIso', 'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'handleSessionApiRoutes', 'sessionMessagesStamp'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'readConfig', 'paths', 'safeSessionId', 'nowIso', 'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'handleSessionApiRoutes', 'sessionMessagesStamp'], { withEval: true });
 const fixture = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return fixture.vault.sealLocal(...args); };
 app.PrivacyCore.configHooks.openLocal = (...args) => { opens++; return fixture.vault.openLocal(...args); };
 const state = app.__eval(`(() => {
-  const state = { config: null, session: null, live: { live: false }, run: null, steward: null, runner: {} };
+  const state = { session: null, live: { live: false }, run: null, steward: null, runner: {} };
   tokenOk = () => true;
-  readConfig = async () => state.config;
   runStewardTurn = opts => state.steward(opts);
   loadSession = async id => state.session && state.session.id === id ? state.session : null;
   readSessionHeadResilient = async () => state.session;
@@ -30,7 +29,13 @@ const streamChat = createHttpChatStream({
   runSessionTurn: input => state.run(input), PrivacyGateway: app.PrivacyGateway,
   safeSessionId: app.safeSessionId, nowIso: app.nowIso,
 });
-const policy = mode => ({ privacyModeV1: mode, privacyRulesV1: [], privacyTechnicalV1: false, providers: [], stewardEnabledV1: true });
+function setPolicy(mode, overrides = {}) {
+  fs.mkdirSync(app.paths.data, { recursive: true });
+  fs.writeFileSync(app.paths.config, JSON.stringify({ configSchema: 14, credentialEncryptionV1: mode !== 'off',
+    privacyModeV1: mode, privacyRulesV1: [], privacyTechnicalV1: false, privacyPolicyRecoveryRequiredV1: false,
+    providers: [], stewardEnabledV1: true, ...overrides }));
+  return app.readConfig();
+}
 const request = (method, url, body = {}) => Object.assign(new EventEmitter(), {
   method, url, headers: {}, socket: { setNoDelay() {} },
   async *[Symbol.asyncIterator]() { yield Buffer.from(JSON.stringify(body)); },
@@ -48,8 +53,8 @@ const frames = res => res.chunks.join('').trim().split('\n').filter(Boolean).map
 const envelope = res => JSON.parse(res.chunks.join(''));
 const synthetic = 'synthetic-display-http@example.test';
 async function reference(id) {
-  state.config = policy('enhanced'); app.PrivacyGateway.configure(state.config);
-  return app.PrivacyGateway.run(id, state.config, async () => (await app.PrivacyGateway.toolResult({ email: synthetic })).email);
+  const config = await setPolicy('enhanced');
+  return app.PrivacyGateway.run(id, config, async () => (await app.PrivacyGateway.toolResult({ email: synthetic })).email);
 }
 function canonical(id, token) {
   return { id, title: 'Synthetic display task', messages: [{ role: 'user', content: 'Public task', createdAt: '2026-10-20T01:00:00Z' },
@@ -85,7 +90,7 @@ test('main HTTP projects only display copies and awaits split-token output befor
 });
 
 test('actual history and streaming HTTP routes translate complete diagnostics while preserving ordinary bracket endings', async () => {
-  state.config = { ...policy('enhanced'), locale: 'zh-CN' }; app.PrivacyGateway.configure(state.config);
+  await setPolicy('enhanced', { locale: 'zh-CN' });
   const marker = '[Local privacy validation refused an unavailable reference in an earlier model message. No value was recovered; inspect the original local transcript and tool error before retrying.]';
   const id = 'sess_display_http_diagnostic', session = canonical(id, marker), before = JSON.stringify(session);
   state.session = session; state.live = { live: false };
@@ -102,7 +107,7 @@ test('actual history and streaming HTTP routes translate complete diagnostics wh
 });
 
 test('HTTP display snapshots the session synchronously before the engine appends the next user message', async () => {
-  state.config = policy('off'); app.PrivacyGateway.configure(state.config);
+  await setPolicy('off');
   const observed = [];
   for (const kind of ['main', 'steward']) {
     const session = { id: kind === 'main' ? 'sess_display_sync_snapshot' : 'steward',
@@ -165,7 +170,7 @@ test('full, delta, since and live history use display copies and private mapping
   state.live = { live: true, liveTail: { text: token, full: token }, liveTurn: { segments: [{ type: 'text', text: token }, { type: 'thinking', text: token }], toolCalls: [] } };
   const before = JSON.stringify(state.session), stamp = app.sessionMessagesStamp(state.session.messages.slice(0, 1));
   for (const mode of ['enhanced', 'off']) for (const suffix of ['', '?fromIndex=1&prefixStamp=' + encodeURIComponent(stamp), '?since=2026-10-20T01:30:00Z', '?view=live']) {
-    state.config = policy(mode); app.PrivacyGateway.configure(state.config);
+    await setPolicy(mode);
     const req = request('GET', '/api/sessions/steward' + suffix); req.headers['if-none-match'] = '*';
     const res = response(); await app.handleSessionApiRoutes(req, res, '/api/sessions/steward'); const shown = envelope(res);
     assert.equal(res.statusCode, 200); assert.equal(res.headers.etag, undefined); assert.equal(res.headers['cache-control'], 'no-store');
@@ -191,7 +196,7 @@ test('steward state projects only lastReply say/why and keeps the stored runner 
 });
 
 test('fresh off history preserves ETag/delta paths without initializing mappings or key wrapping', async () => {
-  state.config = policy('off'); app.PrivacyGateway.configure(state.config);
+  await setPolicy('off');
   state.session = canonical('sess_display_http_off', 'Public text'); state.live = { live: false };
   const oldSeals = seals, oldOpens = opens, req = request('GET', '/api/sessions/sess_display_http_off'), first = response();
   await app.handleSessionApiRoutes(req, first, '/api/sessions/sess_display_http_off'); assert.ok(first.headers.etag);

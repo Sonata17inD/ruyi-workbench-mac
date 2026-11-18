@@ -797,9 +797,6 @@
         "ACC_MEMORY_IMPORT_SCHEMA",
         "AGENT_CLI_HOST",
         "AgentCliDiscovery",
-        "BRIDGED_CLI_ENV_BLANK_KEYS",
-        "BRIDGED_ENV_DROP",
-        "BRIDGED_ENV_KEEP",
         "BROWSER_AUTOMATION_MODES",
         "CONFIG_MIGRATIONS",
         "ConfigPatchHooks",
@@ -811,13 +808,11 @@
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
         "SCRIPT_FILE_MAX_AGE_MS",
-        "SESSION_MCP_CONFIG_MAX_AGE_MS",
         "THREAD_INDEX_RECENT_DEFAULT",
         "THREAD_INDEX_RECENT_MAX",
         "THREAD_INDEX_RECENT_MIN",
         "ToolboxRegistry",
         "accMemoryImportStore",
-        "addExternalMcpServersToMap",
         "agentCliInstallCandidates",
         "agentCliLauncherOk",
         "agentCliLauncherUsable",
@@ -828,8 +823,6 @@
         "authorizeRoute",
         "autoImportClaudeCodeMcp",
         "beginBootCliPathProbes",
-        "bridgedCliServerEnv",
-        "bridgedEnvKeyStripped",
         "buildClaudeAgentDefinitions",
         "buildClaudeCliEnv",
         "buildModelHint",
@@ -847,7 +840,6 @@
         "defaultConfig",
         "desktopMcpDetectionPending",
         "desktopMcpFromInstalledRoot",
-        "desktopMcpPolicyEnv",
         "desktopPythonCandidates",
         "detectAgentCliPath",
         "detectAgentCliPathUncachedAsync",
@@ -913,13 +905,11 @@
         "scanMcpDropIns",
         "selectedAgentCli",
         "serveStatic",
-        "sessionMcpConfigSweepDone",
         "sessionPath",
         "sessionsDirOwnWriteSeq",
         "setProxyModelsCache",
         "staticBase",
         "sweepStaleScriptFiles",
-        "sweepStaleSessionMcpConfigs",
         "syncAgentCliMcpManifests",
         "syncAgentRolesToClaude",
         "syncClaudeCliSettings",
@@ -936,13 +926,6 @@
         "writeToChild"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "accPolicyHiddenToolNames",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
@@ -980,16 +963,8 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "DESKTOP_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -997,7 +972,6 @@
           "provider": "00-boot.js",
           "symbol": "externalRoot",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1094,28 +1068,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "TOOL_PACK_DESCRIPTIONS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "canonicalRuyiMcpServerId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "RUYI_MCP_SERVER_ID",
           "kinds": [
             "read"
           ]
@@ -2543,7 +2496,6 @@
         "assertSessionExecutionOwner",
         "bridgedCatalogCache",
         "bridgedCatalogInflight",
-        "bridgedServerSpawnEnv",
         "bridgedServerUnavailableMessage",
         "bridgedToolCallTimeoutMs",
         "bridgedToolFunctionName",
@@ -2827,13 +2779,6 @@
         {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "bridgedEnvKeyStripped",
           "kinds": [
             "read"
           ]

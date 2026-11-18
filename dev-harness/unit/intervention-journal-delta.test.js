@@ -158,7 +158,7 @@ test('[D6] 缓存生命周期(结构锁):结算与落终态摘缓存,删会话�
   assert.match(drop, /interventionRecordCache\.delete\(/);
   assert.match(drop, /interventionAppendCounts\.delete\(/);
   assert.match(del, /invalidateSessionState\(id\)/, '删除调用显式状态失效接口');
-  const composition = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/02-session-store.js'), 'utf8');
+  const composition = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/04g-session-deletion.js'), 'utf8');
   assert.match(composition, /invalidateSessionState: id => \{[^}]*dropInterventionSessionState\(id\)/, '组合入口连接介入缓存与节拍计数清理');
 });
 

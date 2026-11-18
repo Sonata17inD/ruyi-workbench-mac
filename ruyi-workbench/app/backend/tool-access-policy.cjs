@@ -23,7 +23,7 @@ function nativeToolDisabledByPolicy(name, config, desktopOverride = null) {
 // mcp/ai-computer-control/src/ai_computer_control/tools/*.py:平台源码注册名并集 109 件里收 56 件),【只认内置桌面 MCP】—— 外部 MCP 服务器
 // 哪怕有同名工具也不受影响(它们的语义由用户接入时自己负责,工作台不替它猜)。判据收在 toolDisabledByPolicy 一个函数里,
 // offer 面(09 目录 / 08 子代理 / 11 MCP 子进程目录 / 07 createToolLoadingState)与分发面(09 / 08 / 12 代理 / 13d CLI 权限桥)
-// 都调它;CLI 直挂 ACC 的那一路(01 addExternalMcpServersToMap / syncMcpServersToClaude)按同一张表算出 ACC_HIDE_TOOLS 交给
+// 都调它;CLI 直挂 ACC 的环境(mcp-child-env.cjs)按同一张表算出 ACC_HIDE_TOOLS 交给
 // ACC 自己在注册表里摘掉。
 //   命令族(随 allowCommandTools):起进程 / 跑命令 / 杀进程,与原生 shell_run / script_run / shell_* 同一类能力。
 //     list_processes 只读进程表、不执行任何东西,不收。

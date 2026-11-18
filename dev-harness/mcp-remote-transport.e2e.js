@@ -169,10 +169,13 @@ function startLegacySseMcp(port, state) {
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
   const fs = require('fs'), path = require('path');
-  const src = fs.readFileSync(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js'), 'utf8');
-  ok(/class McpHttpClient/.test(src) && /streamable HTTP \(2025-03-26\)/.test(src), 'S1 McpHttpClient 在(双 transport)');
-  ok(/typeRaw === 'sse' \|\| typeRaw === 'http' \|\| typeRaw === 'streamable-http'/.test(src), 'S2 sanitize 远程分支在');
-  ok(/notifications\/tools\/list_changed/.test(src), 'S3 tools/list_changed 响应在');
+  const appDir = path.resolve(__dirname, '..', 'ruyi-workbench', 'app');
+  const src = fs.readFileSync(path.join(appDir, 'server.js'), 'utf8');
+  const transports = fs.readFileSync(path.join(appDir, 'backend', 'mcp-transports.cjs'), 'utf8');
+  const secrets = fs.readFileSync(path.join(appDir, 'backend', 'config-secrets.cjs'), 'utf8');
+  ok(/class McpHttpClient/.test(transports) && /streamable HTTP \(2025-03-26\)/.test(transports), 'S1 McpHttpClient 在(双 transport)');
+  ok(/typeRaw === 'sse' \|\| typeRaw === 'http' \|\| typeRaw === 'streamable-http'/.test(secrets), 'S2 sanitize 远程分支在');
+  ok(/notifications\/tools\/list_changed/.test(transports), 'S3 tools/list_changed 响应在');
   ok(/new McpHttpClient\(entry\) : new McpStdioClient\(entry\)|new McpHttpClient\(entry\)/.test(src), 'S4 getMcpClient 按 transport 选类');
   const sanBad = srv.sanitizeExternalMcpServer({ id: 'x', type: 'http', url: 'ftp://nope' });
   ok(sanBad === null, 'S5 sanitize 拒绝非 http(s) url');

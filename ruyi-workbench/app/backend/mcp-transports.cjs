@@ -1,8 +1,9 @@
 'use strict';
 const http = require('node:http');
 const { copyOrdinaryJsonData } = require('./ordinary-json.cjs');
+const { bridgedServerSpawnEnv } = require('./mcp-child-env.cjs');
 // Transport instances receive host policy and process ownership explicitly.
-function createMcpTransports({ safeJsonParse, bridgedEnvKeyStripped, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION }) {
+function createMcpTransports({ safeJsonParse, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION }) {
 const MCP_STDIO_LINE_MAX_CHARS = 64 * 1024 * 1024;
 // tools/list 分页(nextCursor)最多跟这么多页 —— 防对端回同一个游标/无限翻页把握手拖死。
 const MCP_TOOLS_LIST_MAX_PAGES = 20;
@@ -98,22 +99,6 @@ async function mcpListAllTools(rpc, timeoutMs) {
 function mcpServerRequestReply(msg) {
   if (msg.method === 'ping') return { jsonrpc: '2.0', id: msg.id, result: {} };
   return { jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: 'method not supported by client: ' + String(msg.method).slice(0, 80) } };
-}
-
-// 安全修复(审计 A①):桥接 MCP 服务器(ACC 桌面控制、第三方 stdio MCP)不得继承工作台自己的回环凭据。
-// 每会话 MCP 子进程(`server.js mcp`)的环境里有 WCW_TOKEN / WCW_PORT / WCW_HOST / WCW_SESSION_ID(01 generateSessionMcpConfig
-// 塞进去的),修前它再 spawn 桥接服务器时整份 process.env 原样传下去 —— ACC 的 get_environment_variable 一问就把
-// 令牌交给了模型(令牌 = 可调 /api/permission/decision 等 body-token 路由,自己批自己的权限)。
-// 规则见 01 bridgedEnvKeyStripped(与交给 agent CLI 去 spawn 的 --mcp-config 条目同一个判据):继承来的环境里去掉
-// 所有 WCW_*(WCW_DATA_DIR 除外)与 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_API_KEY。服务器条目【自己声明】的 env(ownEnv)
-// 原样叠在最后,仍然生效。
-function bridgedServerSpawnEnv(baseEnv, ownEnv) {
-  const out = {};
-  for (const [k, v] of Object.entries(baseEnv || {})) {
-    if (bridgedEnvKeyStripped(k)) continue;
-    out[k] = v;
-  }
-  return { ...out, ...(ownEnv && typeof ownEnv === 'object' ? ownEnv : {}) };
 }
 
 // 走查 W1·F7:桥接超时 / 用户插话中断的 reject 打【标记】(err.mcpTimeout / err.mcpAborted),callTool 只认标记。
@@ -739,6 +724,6 @@ class McpHttpClient {
   }
 }
 
-return { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, bridgedServerSpawnEnv, mcpCallToolParams };
+return { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, mcpCallToolParams };
 }
 module.exports = { createMcpTransports };

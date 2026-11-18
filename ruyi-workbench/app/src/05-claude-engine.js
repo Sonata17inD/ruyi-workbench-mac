@@ -49,7 +49,7 @@ const AGENT_CLI_ADAPTERS = Object.freeze({
       if (config.betaInterleavedThinking) args.push('--betas', 'interleaved-thinking');
       if (config.includeWorkbenchMcp) {
         const claudeToolPacks = classifyToolPacks(basePrompt, attachments);
-        // 会话级 desktopTools 一并交过去:full 模式直挂的 ACC 按这条线程的桌面闸裁剪(01 desktopMcpPolicyEnv)。
+        // full 模式直挂的 ACC 按这条线程的 desktopTools 裁剪。
         args.push('--mcp-config', await generateSessionMcpConfig(session.id, config.mcpCommandMode, claudeToolPacks, { desktopOverride: sessionDesktopToolsOf(session) }));
         // In print mode the documented stream-json input accepts text user messages, not arbitrary tool_result
         // envelopes. Route questions through our MCP tool instead of Claude's terminal-only native prompt.

@@ -464,8 +464,8 @@ function clearPendingPlans(sessionId, message) {
 // 单行上限:MCP 一条响应就是一行 JSON,读大文件/截图类工具一行几 MB 是常态。修前 4MB 处直接「截掉前半行」,
 // 结果那一行永远拼不回完整 JSON、调用干等到超时再被杀进程。现在上限放宽,真超了就丢弃到下一个换行并
 // 如实拒掉那一次调用(按行首的 id 找得到时),绝不在行中间切。
-const { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, bridgedServerSpawnEnv, mcpCallToolParams } = require('./backend/mcp-transports.cjs').createMcpTransports({
-  safeJsonParse, bridgedEnvKeyStripped, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION,
+const { McpStdioClient, McpHttpClient, mcpToolAllowed, normalizeMcpToolResult, mcpCallToolParams } = require('./backend/mcp-transports.cjs').createMcpTransports({
+  safeJsonParse, DesktopExecutionHooks, ProcessRuntime, killChildTree, bridgedToolCallTimeoutMs, mcpChildExitResult, _expandMcpVar, RUYI_MCP_SERVER_ID, VERSION,
 });
 
 // A real, safe tools/call roundtrip must preserve both reserved metadata and SDK numeric types.

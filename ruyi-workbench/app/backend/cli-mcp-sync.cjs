@@ -5,12 +5,13 @@ const os = require('node:os');
 const path = require('node:path');
 const { AGENT_CLI_TYPES, normalizeAgentCliType } = require('./agent-cli-types.cjs');
 const { RUYI_MCP_SERVER_ID } = require('./product-identity.cjs');
+const { desktopMcpPolicyEnv } = require('./mcp-child-env.cjs');
 const { runKeyedChain } = require('./keyed-chain.cjs');
 const { safeJsonParse, readUserJsonObjectForMerge } = require('./ordinary-json.cjs');
 
 function createCliMcpSync({
   paths, ensureDirs, generateMcpConfig, resolveExternalMcpServers, existsExecutableAsync,
-  desktopMcpPolicyEnv, DesktopShell, getAgentCliHost, atomicWriteJson, logEvent,
+  DesktopShell, getAgentCliHost, atomicWriteJson, logEvent,
 }) {
   // v1.4.3: Sync external MCP servers to Claude CLI's user-level config so they are available
   // when running `claude` directly. Uses `claude mcp add-json` (idempotent).

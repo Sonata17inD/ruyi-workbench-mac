@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2945 | 3383 | 639 | 21 | 0 | 0 |
+| 94 | 2934 | 3377 | 638 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -34,7 +34,7 @@
 | 16 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 17 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 18 | `04i-provider-wire.js` | foundation | 45 | 21 | 2 |
-| 19 | `01-config.js` | foundation | 140 | 36 | 7 |
+| 19 | `01-config.js` | foundation | 130 | 31 | 6 |
 | 20 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
 | 21 | `01l-credential-recovery.js` | foundation | 2 | 11 | 3 |
 | 22 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
@@ -47,7 +47,7 @@
 | 29 | `02-session-store.js` | foundation | 236 | 59 | 9 |
 | 30 | `03-bridge-guard.js` | foundation | 68 | 28 | 5 |
 | 31 | `04-visual-pipeline.js` | foundation | 1 | 0 | 0 |
-| 32 | `04-permission-runtime.js` | foundation | 118 | 55 | 6 |
+| 32 | `04-permission-runtime.js` | foundation | 117 | 54 | 6 |
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 35 | `04j-hanzi-pinyin.js` | foundation | 1 | 0 | 0 |
@@ -115,8 +115,7 @@
 | 调用方 | 提供方 | 方向 | 符号 |
 |---|---|---|---|
 | `00-boot.js` | `00-platform-runtime.js` | backward | `platformRuntimeEnvironment` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `DESKTOP_MCP_SERVER_ID`, `RUYI_EVENTS`, `SKILL_ID_RE`, `TOOL_PACK_DESCRIPTIONS`, `VERSION`, `accPolicyHiddenToolNames`, `agentCliHomes`, `crypto`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `samePathKey`, `text` |
-| `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `RUYI_EVENTS`, `SKILL_ID_RE`, `VERSION`, `agentCliHomes`, `crypto`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `samePathKey`, `text` |
 | `01-config.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `01-config.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01-config.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `ProcessRuntime`, `existsExecutableAsync`, `spawnProbeAsync`, `spawnProbeSync` |
@@ -156,7 +155,7 @@
 | `03a-privacy-gateway.js` | `01m-privacy-regex.js` | backward | `PrivacyRegex` |
 | `04-permission-runtime.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `MCP_TOOLS`, `OVERLAY_ID`, `SessionExecutionHooks`, `URL`, `VERSION`, `_expandMcpVar`, `collectDisplayUrlRestores`, `crypto`, `decodeTextFileBytes`, `ensureDirs`, `executionArgumentsDigest`, `fsp`, `logEvent`, `makeId`, `maskKey`, `mcpArgsForDisplay`, `nowIso`, `path`, `paths`, `redact`, `restoreExternalMcpServerSecrets`, `safeJsonParse`, `safeUrlForDisplay`, `sanitizeExternalMcpServer`, `text` |
 | `04-permission-runtime.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `isRuyiMcpServerId` |
-| `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `bridgedEnvKeyStripped`, `detectDesktopMcp`, `enabledToolboxComponents`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `invalidateMcpDropInCache`, `mutateConfig`, `prepareAgentCliSpawn`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `scanMcpDropIns`, `selectedAgentCli` |
+| `04-permission-runtime.js` | `01-config.js` | backward | `BROWSER_AUTOMATION_MODES`, `detectDesktopMcp`, `enabledToolboxComponents`, `ensureDesktopMcpWarm`, `generateMcpConfig`, `invalidateMcpDropInCache`, `mutateConfig`, `prepareAgentCliSpawn`, `readConfig`, `resolveExternalMcpServers`, `safeSessionId`, `scanMcpDropIns`, `selectedAgentCli` |
 | `04-permission-runtime.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
 | `04-permission-runtime.js` | `01o-execution-state.js` | backward | `activeChildren`, `pendingPermissions`, `pendingPlans`, `pendingQuestions`, `turnSettlers` |
 | `04-permission-runtime.js` | `02-session-store.js` | backward | `readInterventions`, `readSessionHeadResilient`, `registerIntervention`, `sessionMissionId`, `settleIntervention`, `transitionInterventionState` |

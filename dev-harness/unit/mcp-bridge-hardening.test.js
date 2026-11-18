@@ -31,7 +31,7 @@ const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'
 const { collectBridgedTools, probeMcpConnector, killAllMcpClients, parseMcpConfigFile,
   resolveExternalMcpServers, invalidateMcpDropInCache } = srv;
 const transportPorts = require('../lib/server-internals').loadServerInternals([
-  'safeJsonParse', 'bridgedEnvKeyStripped', 'DesktopExecutionHooks', 'ProcessRuntime', 'killChildTree',
+  'safeJsonParse', 'DesktopExecutionHooks', 'ProcessRuntime', 'killChildTree',
   'bridgedToolCallTimeoutMs', 'mcpChildExitResult', '_expandMcpVar', 'RUYI_MCP_SERVER_ID', 'VERSION',
 ]);
 const { McpStdioClient, McpHttpClient } = require('../../ruyi-workbench/app/backend/mcp-transports.cjs').createMcpTransports(transportPorts);
