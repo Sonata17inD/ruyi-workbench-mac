@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T10:22:58.804Z",
+  "generatedAt": "2026-11-18T10:33:30.383Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -38,7 +38,7 @@
       "ruyi-workbench/app/backend/event-stream.cjs",
       "ruyi-workbench/app/backend/scheduler-routes.cjs",
       "ruyi-workbench/app/src/13w-external-bots.js",
-      "ruyi-workbench/app/src/13ab-privacy-api.js"
+      "ruyi-workbench/app/backend/privacy-routes.cjs"
     ]
   },
   "summary": {
@@ -3800,6 +3800,162 @@
     },
     {
       "kind": "exact",
+      "path": "/api/privacy/status",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\config-read-safety.e2e.js",
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/settings",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-config-health.test.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/settings",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-config-health.test.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/encryption",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\offline-upgrade-drill.e2e.js",
+        "dev-harness\\onboard.e2e.js",
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/rules/test",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/use-native",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/backup/export",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/backup/preview",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/privacy/backup/import",
+      "file": "../backend/privacy-routes.cjs",
+      "handler": "handlePrivacyApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "privacy",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness\\privacy-gateway.e2e.js",
+        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
+      ]
+    },
+    {
+      "kind": "exact",
       "path": "/api/models",
       "file": "../backend/provider-routes.cjs",
       "handler": "handleModelsApiRoute",
@@ -5751,162 +5907,6 @@
         "dev-harness\\macos-desktop-bridge.e2e.js",
         "dev-harness\\settings-wave1.browser.e2e.js",
         "dev-harness\\workspace-resolve.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/status",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\config-read-safety.e2e.js",
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/settings",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "GET"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-config-health.test.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/settings",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-config-health.test.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/encryption",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\offline-upgrade-drill.e2e.js",
-        "dev-harness\\onboard.e2e.js",
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/rules/test",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/use-native",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/backup/export",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/backup/preview",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
-      ]
-    },
-    {
-      "kind": "exact",
-      "path": "/api/privacy/backup/import",
-      "file": "13ab-privacy-api.js",
-      "handler": "PrivacySettings",
-      "methods": [
-        "POST"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "13ab-privacy-api.js",
-      "auth": "token",
-      "coveredBy": [
-        "dev-harness\\privacy-gateway.e2e.js",
-        "dev-harness\\unit\\privacy-missing-config-vault.test.js"
       ]
     },
     {

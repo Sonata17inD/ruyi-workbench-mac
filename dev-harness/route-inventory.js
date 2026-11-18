@@ -74,7 +74,7 @@ const ROUTER_FILES = [
   // 经 handleApi 里一行 `await handleSchedulerApiRoutes(...)` 直调委派，同 13b/13c/13d）。
   '../backend/scheduler-routes.cjs',
   '13w-external-bots.js',
-  '13ab-privacy-api.js',
+  '../backend/privacy-routes.cjs',
 ];
 const ROUTE_AUTH_FILE = '../backend/http-route-policy.cjs';
 
@@ -114,6 +114,7 @@ const DOMAIN_BY_HANDLER = [
   ['handleSchedulerApiRoutes', 'scheduler'],
 ];
 const DOMAIN_BY_FILE = {
+  '../backend/privacy-routes.cjs': 'privacy',
   '../backend/workbench-http-server.cjs': 'listener',
   '../backend/http-chat-stream.cjs': 'chat',
   '../backend/tool-routes.cjs': 'tools',

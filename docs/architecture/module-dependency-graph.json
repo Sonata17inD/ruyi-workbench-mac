@@ -5,7 +5,7 @@
   "summary": {
     "modules": 93,
     "providedSymbols": 2705,
-    "requiredSymbols": 3255,
+    "requiredSymbols": 3252,
     "edges": 625,
     "forwardEdges": 17,
     "duplicateProvides": 0,
@@ -21276,30 +21276,9 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21313,14 +21292,14 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21369,7 +21348,7 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21404,7 +21383,7 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]
@@ -30268,10 +30247,7 @@
       "from": "13ab-privacy-api.js",
       "to": "00-boot.js",
       "symbols": [
-        "apiFailure",
-        "json",
-        "paths",
-        "send"
+        "paths"
       ],
       "direction": "backward"
     },

@@ -1,23 +1,9 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:22:58.804Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:33:30.383Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
-
-## 13ab-privacy-api.js(9)
-
-| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
-|---|---|---|---|---|---|
-| GET | `/api/privacy/status` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | config-read-safety.e2e.js, privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
-| GET | `/api/privacy/settings` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js, privacy-config-health.test.js, privacy-missing-config-vault.test.js |
-| POST | `/api/privacy/settings` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js, privacy-config-health.test.js, privacy-missing-config-vault.test.js |
-| POST | `/api/privacy/encryption` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | offline-upgrade-drill.e2e.js, onboard.e2e.js, privacy-gateway.e2e.js 等 4 件 |
-| POST | `/api/privacy/rules/test` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js |
-| POST | `/api/privacy/use-native` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js |
-| POST | `/api/privacy/backup/export` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
-| POST | `/api/privacy/backup/preview` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
-| POST | `/api/privacy/backup/import` | exact | token | 13ab-privacy-api.js · `PrivacySettings` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
 
 ## agent-run(5)
 
@@ -229,6 +215,20 @@
 | POST | `/api/playbooks/draft` | exact | token | ../backend/playbook-routes.cjs · `handlePlaybookApiRoutes` | playbook-reuse.browser.e2e.js, playbooks.e2e.js |
 | POST | `/api/playbooks` | exact | token | ../backend/playbook-routes.cjs · `handlePlaybookApiRoutes` | auth-deny-default.e2e.js, macos-platform-templates.e2e.js, meta-guard.e2e.js 等 8 件 |
 | DELETE/POST | `/api/playbooks/` | prefix | token | ../backend/playbook-routes.cjs · `handlePlaybookApiRoutes` | auth-deny-default.e2e.js, playbook-reuse.browser.e2e.js, playbooks.e2e.js |
+
+## privacy(9)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/privacy/status` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | config-read-safety.e2e.js, privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
+| GET | `/api/privacy/settings` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js, privacy-config-health.test.js, privacy-missing-config-vault.test.js |
+| POST | `/api/privacy/settings` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js, privacy-config-health.test.js, privacy-missing-config-vault.test.js |
+| POST | `/api/privacy/encryption` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | offline-upgrade-drill.e2e.js, onboard.e2e.js, privacy-gateway.e2e.js 等 4 件 |
+| POST | `/api/privacy/rules/test` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js |
+| POST | `/api/privacy/use-native` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js |
+| POST | `/api/privacy/backup/export` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
+| POST | `/api/privacy/backup/preview` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
+| POST | `/api/privacy/backup/import` | exact | token | ../backend/privacy-routes.cjs · `handlePrivacyApiRoutes` | privacy-gateway.e2e.js, privacy-missing-config-vault.test.js |
 
 ## provider(2)
 

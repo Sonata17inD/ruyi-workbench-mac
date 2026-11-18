@@ -538,25 +538,25 @@
     {
       "file": "13ab-privacy-api.js",
       "startLine": 26317,
-      "endLine": 26486,
+      "endLine": 26335,
       "note": "81-P2: token-authenticated security settings and recovery API"
     },
     {
       "file": "13w-external-bots.js",
-      "startLine": 26487,
-      "endLine": 27236,
+      "startLine": 26336,
+      "endLine": 27085,
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker"
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "startLine": 27237,
-      "endLine": 27690,
+      "startLine": 27086,
+      "endLine": 27539,
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open"
     },
     {
       "file": "14-main.js",
-      "startLine": 27691,
-      "endLine": 28456,
+      "startLine": 27540,
+      "endLine": 28305,
       "note": "main()/module.exports"
     }
   ]

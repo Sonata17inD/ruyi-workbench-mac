@@ -108,6 +108,8 @@
     "app/backend/privacy-gateway.cjs",
     "app/backend/privacy-regex.cjs",
     "app/backend/privacy-rule-catalog.cjs",
+    "app/backend/privacy-settings-service.cjs",
+    "app/backend/privacy-routes.cjs",
     "app/backend/executable-probes.cjs",
     "app/backend/process-runtime.cjs",
     "app/backend/mac-child-cleanup.cjs",

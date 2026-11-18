@@ -21086,30 +21086,9 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21123,14 +21102,14 @@
           "provider": "01-config.js",
           "symbol": "mutateConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21179,7 +21158,7 @@
           "provider": "02e-session-engine-route.js",
           "symbol": "sessionEngineRouteFromConfig",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21214,7 +21193,7 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

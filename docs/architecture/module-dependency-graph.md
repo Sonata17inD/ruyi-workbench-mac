@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 93 | 2705 | 3255 | 625 | 17 | 0 | 0 |
+| 93 | 2705 | 3252 | 625 | 17 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -104,7 +104,7 @@
 | 86 | `13x-external-channel-delivery.js` | transport | 1 | 2 | 1 |
 | 87 | `13y-external-bot-credentials.js` | transport | 1 | 4 | 3 |
 | 88 | `13z-external-bot-discovery.js` | transport | 1 | 0 | 0 |
-| 89 | `13ab-privacy-api.js` | unclassified | 1 | 19 | 13 |
+| 89 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
 | 90 | `13w-external-bots.js` | transport | 67 | 23 | 8 |
 | 91 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 22 | 8 |
 | 92 | `14-main.js` | entrypoint | 10 | 662 | 55 |
@@ -436,7 +436,7 @@
 | `13aa-steward-delivery.js` | `04-permission-runtime.js` | backward | `sessionExecutionSnapshot` |
 | `13aa-steward-delivery.js` | `06i-steward-core.js` | backward | `StewardHooks` |
 | `13aa-steward-delivery.js` | `13j-steward-tool-base.js` | backward | `stewardFail`, `stewardRawKind` |
-| `13ab-privacy-api.js` | `00-boot.js` | backward | `apiFailure`, `json`, `paths`, `send` |
+| `13ab-privacy-api.js` | `00-boot.js` | backward | `paths` |
 | `13ab-privacy-api.js` | `01-config.js` | backward | `DurableJsonStore`, `mutateConfig`, `readConfig` |
 | `13ab-privacy-api.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `13ab-privacy-api.js` | `01i-privacy-rules.js` | backward | `PrivacyRuleCatalog` |
