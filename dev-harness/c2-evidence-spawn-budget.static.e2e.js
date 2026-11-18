@@ -5,7 +5,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const runs = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '08-agent-runs.js'), 'utf8');
 const evidence = fs.readFileSync(path.join(root, 'ruyi-workbench/app/backend/agent-evidence.cjs'), 'utf8');
-const workflow = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'src', '09-workflow.js'), 'utf8');
+const workflow = fs.readFileSync(path.join(root, 'ruyi-workbench/app/backend/agent-workflow.cjs'), 'utf8');
 const budget = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'backend', 'tool-iteration-budget.cjs'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'ruyi-workbench', 'app', 'public', 'js', 'interaction-prompts.js'), 'utf8');
 

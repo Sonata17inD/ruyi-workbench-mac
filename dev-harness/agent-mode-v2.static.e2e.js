@@ -22,6 +22,7 @@ process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const src = f => fs.readFileSync(path.join(app, 'src', f), 'utf8');
+const workflowRunner = src('../backend/agent-workflow.cjs');
 const pub = f => fs.readFileSync(path.join(app, 'public', f), 'utf8');
 const srv = require(path.join(app, 'server.js'));
 let fail = 0;
@@ -84,8 +85,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 {
   const s09 = src('09-workflow.js') + src('../backend/agent-results.cjs');
   ok(/onEvent: detachedOnEvent, ctrl: null, onComplete: run => deliverAgentRunEnvelope\(session\.id, run\)/.test(s09), '③ 09 后台分支:不传 ctrl(回合结束不杀)、完成走信封投递');
-  ok(/onEvent = evt => baseOnEvent\(evt && typeof evt === 'object' && !evt\.background \? \{ \.\.\.evt, background: true \} : evt\);/.test(s09), '③ 09 runAgentWorkflow 后台 run 的事件打 background:true');
-  ok(/background: isBackgroundRun,/.test(s09), '③ 09 run 记录 background 字段');
+  ok(/onEvent = evt => baseOnEvent\(evt && typeof evt === 'object' && !evt\.background \? \{ \.\.\.evt, background: true \} : evt\);/.test(workflowRunner), '③ runAgentWorkflow 后台 run 的事件打 background:true');
+  ok(/background: isBackgroundRun,/.test(workflowRunner), '③ run 记录 background 字段');
   ok(/const AGENT_RUN_TERMINAL = new Set\(\['succeeded', 'failed', 'partial', 'stopped', 'interrupted', 'cancelled'\]\);/.test(s09), '③ 09 终态集');
   ok(/if \(subagentTurnCap > 0 && subagentTotal \+ nodeCount > subagentTurnCap\)/.test(s09), '③ 09 subagentMaxPerTurn 语义平移:本回合累计节点数上限');
   ok(!/spawnDispatches|subagentFanoutMax|reservedSubagentKeys/.test(s09), '③ 09 旧 spawn 批处理旁路已删');
@@ -143,7 +144,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const key = srv.contextWindowOverrideKey('agent', 'claude', 'm-x');
   ok(srv.agentNodeContextWindow({ engine: 'claude', model: 'm-x' }, null, { contextWindowOverrides: { [key]: 300000 } }) === 300000, '⑥ Claude 节点手填窗口优先');
   ok(srv.agentNodeContextWindow({ engine: 'openai', model: 'm' }, { id: 'p', contextWindow: 64000 }, {}) === 64000, '⑥ openai 节点走 providerContextWindow(手填)');
-  ok(!/contextWindowFromTable\(node\.model\) \|\| 200000/.test(src('09-workflow.js')) && /const dsWindow = agentNodeContextWindow\(node, provider, config\);/.test(src('09-workflow.js')), '⑥ 09 runNode 用同一条链,200K 兜底已删');
+  ok(!/contextWindowFromTable\(node\.model\) \|\| 200000/.test(workflowRunner) && /const dsWindow = agentNodeContextWindow\(node, provider, config\);/.test(workflowRunner), '⑥ runNode 用同一条链,200K 兜底已删');
 }
 
 // ⑦ 旧会话兼容

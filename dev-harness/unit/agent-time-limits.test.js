@@ -21,9 +21,10 @@ process.env.HOME = root;
 process.env.USERPROFILE = root;
 const { loadServerInternals } = require('../lib/server-internals');
 const { functionBlock } = require('../lib/source-slice');
+const { agentNodeTimeLimits, nodeWrapUpAction } = require('../../ruyi-workbench/app/backend/agent-workflow.cjs');
 const {
-  agentNodeTimeLimits, nodeWrapUpAction, resolveWaitAgentsMs, WAIT_AGENTS_DEFAULT_MS, WAIT_AGENTS_MAX_MS, defaultConfig, normalizeConfig, buildOpenAiTools,
-} = loadServerInternals(['agentNodeTimeLimits', 'nodeWrapUpAction', 'resolveWaitAgentsMs', 'WAIT_AGENTS_DEFAULT_MS', 'WAIT_AGENTS_MAX_MS', 'defaultConfig', 'normalizeConfig', 'buildOpenAiTools']);
+  resolveWaitAgentsMs, WAIT_AGENTS_DEFAULT_MS, WAIT_AGENTS_MAX_MS, defaultConfig, normalizeConfig, buildOpenAiTools,
+} = loadServerInternals(['resolveWaitAgentsMs', 'WAIT_AGENTS_DEFAULT_MS', 'WAIT_AGENTS_MAX_MS', 'defaultConfig', 'normalizeConfig', 'buildOpenAiTools']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 const MIN = 60000;

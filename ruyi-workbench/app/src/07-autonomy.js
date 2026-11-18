@@ -1916,23 +1916,13 @@ async function drainSteerQueue(reg, session, onEvent) {
 // mode. It is a TURN-LOCAL override only; global config.permissionMode is never mutated. When absent (or the
 // plan is not yet approved, in which case the parent still passes 'plan'), the gate falls back to
 // config.permissionMode, so an UN-approved plan-mode turn still hard-blocks its sub-agents' edit/exec tools.
-// 第46波46e(双冷 resume 窄窗修复):resume「在飞」标记。activeAgentRuns 只在 runtime 构造好才注册,
-// 而 existingRun 分支从校验到注册之间有 await(getAgentRoleLibrary/cleanupAgentWorktree)——两个近同时
-// 的 resume 会都穿过 activeAgentRuns.has 守卫。此集合在分支【入口同步】占位,成功注册或早退/异常即释,
-// 把窄窗从「await 全程」关到「零」。只在 runAgentWorkflow 内使用(09-workflow.js)。
-const resumeInFlight = new Set();
 // v1 定向插话（steer 到指定运行中子代理节点）: per-node steer queue cap. Reused BOTH by the workflow node
 // steer action and by /api/steer's per-turn cap so the two steering surfaces stay symmetric.
 const STEER_QUEUE_MAX = 3;
 // 团队模式 v2 (A/B): 任务池与 Agent 邮箱的硬上限。全部防御式——任何越限只拒绝该次调用,绝不 crash 调度循环。
-const POOL_MAX_TOTAL = 8;      // 每 run 提案总数上限(防提案洪水)
-const POOL_CHAIN_MAX = 2;      // proposedBy 链深上限(池生池只允许一层)
 const MAIL_QUEUE_MAX = 3;      // 每目标邮箱队列 cap(与 steerQueues 分池,用户插话优先)
 const MAIL_TEXT_MAX = 2000;    // 单条消息截断
 const MAIL_PER_SENDER_MAX = 8; // 每发送者每 run 消息上限
-const MAIL_GLOBAL_MAX = 24;    // 每 run 全局消息上限
-// 收尾宽限窗:全节点终态但任务池有待批提案时,manual 策略延迟收尾的时长(env WCW_POOL_GRACE_MS 可缩短供测试)。
-const POOL_GRACE_MS = Math.max(500, Number(process.env.WCW_POOL_GRACE_MS) || 60000);
 // 团队模式 v2 (P2-2 消息围栏,原则4): 来自其它节点/提案的文本进入提示词前,把行首伪造的 [编排者插话] / [节点 …]
 // 前缀中和为全角括号版本,阻断子代理冒充编排者(用户)或冒充别的节点消息。仅改行首匹配,正文其余内容原样保留;
 // 任何异常都回退原文(围栏失败绝不阻断投递/执行)。调用点:邮箱注入(runSubAgentCore)与提案物化(materializePoolItem)。

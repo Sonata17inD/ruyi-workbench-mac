@@ -46,6 +46,8 @@
     "app/backend/agent-recovery.cjs",
     "app/backend/agent-worktrees.cjs",
     "app/backend/agent-run-store.cjs",
+    "app/backend/agent-workflow.cjs",
+    "app/backend/persisted-agent-launch.cjs",
     "app/backend/audit-log.cjs",
     "app/backend/autoexec-paths.cjs",
     "app/backend/autonomy-grants.cjs",

@@ -32,7 +32,10 @@ function req(method, p, body, headers = {}) {
 }
 async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.6-6.3s 且余量过窄,是「FAIL workbench up」假红的根(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { try { const r = await req('GET', '/health'); if (r.status === 200) return true; } catch {} await sleep(150); } return false; }
-const src = readServerSource() + '\n' + fs.readFileSync(path.join(WB, 'app/backend/agent-recovery.cjs'), 'utf8');
+const readBackend = file => fs.readFileSync(path.join(WB, 'app/backend', file), 'utf8');
+const src = readServerSource() + '\n' + readBackend('agent-recovery.cjs');
+const launchedRun = readBackend('persisted-agent-launch.cjs');
+const workflow = readBackend('agent-workflow.cjs');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
@@ -47,11 +50,11 @@ ok(/const AUTO_RESUME_MAX = 2;/.test(src), 'S 崩溃环上限 AUTO_RESUME_MAX=2'
 // continue 变 return(回调内早退 == 旧循环 continue 语义);fail-closed 语义不变:护栏没落盘就不启动。
 ok(/try \{ await saveAgentRun\(run\); \} catch \{ guardPersisted = false; \}/.test(src) && /if \(!guardPersisted\) return;/.test(src), 'S 崩溃环护栏先落盘,写不进就不启动(fail-closed)');
 ok((src.match(/await saveAgentRun\(run\)\.catch\(\(\) => \{\}\); \/\/ 29b 顺手修/g) || []).length >= 1 && /if \(dirty\) await saveAgentRun\(run\)\.catch\(\(\) => \{\}\);/.test(src), 'S boot 标死写盘防炸(磁盘故障不再放倒 startServer)');
-ok(/if \(interventionKind\) bumpRunIntervention\(run, interventionKind\);/.test(src) && /interventionKind: 'resume'/.test(src) && /interventionKind: 'retry_node'/.test(src), 'S 冷 resume/retry 计干预;boot 自动续跑不传(不计)');
-ok(/delete run\.resumeTier; delete run\.resumeTierReasons;/.test(src) && /delete run\.pendingReview;/.test(src), 'S resume 清分级戳 + 顺手清 28d pendingReview(此前只设不清)');
+ok(/if \(interventionKind\) bumpRunIntervention\(run, interventionKind\);/.test(launchedRun) && /interventionKind: 'resume'/.test(src) && /interventionKind: 'retry_node'/.test(src), 'S 冷 resume/retry 计干预;boot 自动续跑不传(不计)');
+ok(/delete run\.resumeTier; delete run\.resumeTierReasons;/.test(workflow) && /delete run\.pendingReview;/.test(workflow), 'S resume 清分级戳 + 顺手清 28d pendingReview(此前只设不清)');
 // 2026-10:比对用线程的生效档(agentRunPermissionMode:会话级 > 全局),与续跑、自动续跑决策同一个解析。
 ok(/if \(bootConfig\) \{ const cls = classifyRunResumeTier\(run, await agentRunPermissionMode\(run\.sessionId, bootConfig\)\);/.test(src), 'S 中断标记时盖分级戳(展示用;决策时重算)');
-ok(/permissionModeAtLaunch: String\(permModeOverride \|\| config\.permissionMode \|\| ''\)/.test(src), 'S run 创建存档首跑权限面');
+ok(/permissionModeAtLaunch: String\(permModeOverride \|\| config\.permissionMode \|\| ''\)/.test(workflow), 'S run 创建存档首跑权限面');
 ok(/type: 'run_resume_deferred'/.test(src) && /type: 'run_auto_resume'/.test(src), 'S 恢复决策入事件日志(取证)');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -105,7 +108,7 @@ const writeConfig = (autoResume) => fs.writeFileSync(path.join(HOME, 'config.jso
   configSchema: 7, permissionMode: 'bypass', defaultWorkspace: WS, autonomyAutoResume: autoResume,
   providers: [{ id: 'dummy', label: 'Dummy', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1/v1', apiKey: 'k', model: 'm', models: [{ id: 'm', label: 'm' }] }], activeProvider: 'dummy',
 }, null, 2));
-const bootWb = () => { const p = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; };
+const bootWb = () => { const p = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; };
 const craftRun = (dir, rid, extra) => fs.writeFileSync(path.join(dir, rid + '.json'), JSON.stringify({
   schemaVersion: 4, id: rid, sessionId: extra.sessionId, status: extra.status || 'running', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   concurrency: 2, taskPool: [], messages: [], poolPolicy: 'manual', poolAutoCap: 3, permissionModeAtLaunch: 'bypass', metrics: { interventions: {} }, ...extra.top,

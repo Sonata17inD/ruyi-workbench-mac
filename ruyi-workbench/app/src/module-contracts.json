@@ -6947,15 +6947,11 @@
         "FAILOVER_HTTP_STATUSES",
         "LOOP_GUARD_LIMITS",
         "LOOP_POLLING_TOOLS",
-        "MAIL_GLOBAL_MAX",
         "MAIL_PER_SENDER_MAX",
         "MAIL_QUEUE_MAX",
         "MAIL_TEXT_MAX",
         "MEMORY_WRITE_TOOL_NAMES",
         "NATIVE_TOOL_PACKS",
-        "POOL_CHAIN_MAX",
-        "POOL_GRACE_MS",
-        "POOL_MAX_TOTAL",
         "PROVIDER_STARTER_TOOLS",
         "REVERTIBLE_TOOLS",
         "RUNTIME_CODE_BUDGET",
@@ -7018,7 +7014,6 @@
         "rankToolCatalog",
         "requestNativePermission",
         "requestPlanApproval",
-        "resumeInFlight",
         "retrievalHintForTool",
         "runClaudeSubAgentOnce",
         "runtimeToolBlockedReason",
@@ -8467,11 +8462,12 @@
       "provides": [
         "AGENT_RUN_TERMINAL",
         "AgentResults",
+        "AgentWorkflow",
         "LEGACY_SPAWN_NOTE",
         "ToolPolicy",
         "WAIT_AGENTS_DEFAULT_MS",
         "WAIT_AGENTS_MAX_MS",
-        "agentNodeTimeLimits",
+        "agentWorkflowPorts",
         "canonicalToolInvokeCall",
         "commonPrefixChars",
         "deliverAgentRunEnvelope",
@@ -8479,7 +8475,6 @@
         "launchPersistedAgentRun",
         "layoutShadowPrevBySessionMap",
         "legacySpawnToOrchestrateArgs",
-        "nodeWrapUpAction",
         "planDiscoveryToolBatchAllowed",
         "planParallelReadIsland",
         "resolveWaitAgentsMs",
@@ -8488,7 +8483,6 @@
         "runOpenAiTurn",
         "settleWaitEnvelopes",
         "toolSchemaNamesSentBySession",
-        "unmarkAgentEnvelopeDelivered",
         "unwrapProxiedControlCall",
         "waitAgentsMaxMs",
         "waitForAgentRunResults"
@@ -8594,13 +8588,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
             "call"
@@ -8625,7 +8612,8 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8654,7 +8642,8 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -8675,14 +8664,14 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "sessionSaveIsTombstoned",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8738,21 +8727,23 @@
           "provider": "01-config.js",
           "symbol": "getAgentRoleLibrary",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "resolveNodeModel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8848,27 +8839,6 @@
           ]
         },
         {
-          "provider": "01e-permission-modes.js",
-          "symbol": "agentRoleIsUntrusted",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "clampAgentRoleToParent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "resolvePermissionMode",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01o-execution-state.js",
           "symbol": "activeAgentRuns",
           "kinds": [
@@ -8884,16 +8854,9 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "accumulateRunUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "agentRunFile",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8901,13 +8864,6 @@
           "symbol": "AgentRunStore",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "appendAgentRunEvent",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -8947,13 +8903,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "bumpRunIntervention",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
           "kinds": [
             "call"
@@ -8961,21 +8910,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "classifyNodeErrorText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "finalizeMissionAfterTurn",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "flushAgentRunEvents",
           "kinds": [
             "call"
           ]
@@ -9026,7 +8961,8 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -9047,7 +8983,7 @@
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9122,23 +9058,9 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "recordRunBudgetTrippedEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "recordRunStalledEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9180,19 +9102,12 @@
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "syncProviderHistoryFromDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "syncRunEventSeq",
           "kinds": [
             "call"
           ]
@@ -9403,13 +9318,6 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
           "symbol": "applyProviderReasoningEffort",
           "kinds": [
             "call"
@@ -9446,13 +9354,6 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "resolveProvider",
           "kinds": [
             "call"
           ]
@@ -9524,7 +9425,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "repairNodeJsonViaProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9605,45 +9506,25 @@
           ]
         },
         {
-          "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "normalizeWaitSpec",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "normalizeWorkflowLoop",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryCheckPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryConflictMap",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryPromptSection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9657,14 +9538,14 @@
           "provider": "06d-memory-domain.js",
           "symbol": "extractMemoryRelationProposals",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "filterMemoryForNativeCli",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9699,7 +9580,7 @@
           "provider": "06d-memory-domain.js",
           "symbol": "proposeMemoryRelation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9713,7 +9594,8 @@
           "provider": "06d-memory-domain.js",
           "symbol": "resolveMemoryPreflight",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -9741,7 +9623,7 @@
           "provider": "06g-resource-leases.js",
           "symbol": "normalizeAgentResources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9755,7 +9637,7 @@
           "provider": "06g-resource-leases.js",
           "symbol": "remapAgentResources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9894,13 +9776,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "MAIL_GLOBAL_MAX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "MAIL_PER_SENDER_MAX",
           "kinds": [
             "read"
@@ -9936,27 +9811,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "POOL_CHAIN_MAX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "POOL_GRACE_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "POOL_MAX_TOTAL",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "projectActionModelView",
           "kinds": [
             "call"
@@ -9974,13 +9828,6 @@
           "symbol": "requestPlanApproval",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "resumeInFlight",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -10015,21 +9862,8 @@
           "provider": "08-agent-runs.js",
           "symbol": "agentRunRoster",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "aggregateAgentVote",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "aggregateCoverage",
-          "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10044,63 +9878,48 @@
           "provider": "08-agent-runs.js",
           "symbol": "buildUpstreamContext",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "cleanupAgentWorktree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "cleanupAgentWorktreeForRetry",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "computeSchedulerStep",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "createAgentWorktree",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "dedupeAgentFindings",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "deriveNodeOutputs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "evaluateNodeToolEvidence",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "evaluateWorkflowCondition",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10108,49 +9927,42 @@
           "provider": "08-agent-runs.js",
           "symbol": "evalWaitCondition",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "finalizeAgentWorktree",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "formatNodeEvidencePrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "materializePoolItem",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "nodeDeliveryEligibility",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "normalizeAgentGate",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10171,35 +9983,22 @@
           "provider": "08-agent-runs.js",
           "symbol": "ownAgentMessageReceipt",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "parseStructuredAgentOutput",
-          "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "poolChainDepth",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "propagateAssignments",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "purgeNodeEvidence",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10214,14 +10013,14 @@
           "provider": "08-agent-runs.js",
           "symbol": "recordAgentNodeProgress",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "resolveAgentTeamRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10242,70 +10041,49 @@
           "provider": "08-agent-runs.js",
           "symbol": "runSubAgent",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "sanitizeAgentOutputSchema",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "summarizeAgentWorkflowRun",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "validateAgentJsonSchema",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "verdictPasses",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "verifyNodeClaims",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "workflowProgressFingerprint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09b-replan-ledger.js",
           "symbol": "proposeReplanPatch",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09b-replan-ledger.js",
           "symbol": "recordNodeContinuation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "09b-replan-ledger.js",
           "symbol": "validateReplanPatch",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

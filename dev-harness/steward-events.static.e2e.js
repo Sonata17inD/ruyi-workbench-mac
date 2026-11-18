@@ -218,12 +218,12 @@ function typeExpressionLiterals(text) {
     'D6 adaptive_tool_budget 不在 agentRun 子表(它没有 appendAgentRunEvent 写入端,放进去会变僵尸条目)');
   // 写入端存在性:两个新 run 事件必须真有人写,两个新 change type 也必须真有人写。
   const src08 = read('../backend/agent-run-store.cjs');
-  const src09 = read('09-workflow.js');
+  const workflow = read('../backend/agent-workflow.cjs');
   const src02 = read('../backend/mission-changes.cjs');
   ok(/type: 'run_stalled'/.test(src08) && /type: 'run_budget_tripped'/.test(src08),
     'D6 08 有 run_stalled / run_budget_tripped 的写入端');
-  ok(/recordRunStalledEvent\(run,/.test(src09) && /recordRunBudgetTrippedEvent\(run,/.test(src09),
-    'D6 09 的节点事件壳与节点跑者调用了两个写入端');
+  ok(/recordRunStalledEvent\(run,/.test(workflow) && /recordRunBudgetTrippedEvent\(run,/.test(workflow),
+    'D6 工作流节点的事件壳与执行器调用了两个写入端');
   ok(/type: 'stalled'/.test(src02) && /type: 'budget_tripped'/.test(src02),
     'D6 02 有 stalled / budget_tripped 的账本写入端');
   ok(/missionSignalThrottleAllow\(/.test(src02) && /MISSION_STALL_SIGNAL_WINDOW_MS = 5 \* 60 \* 1000/.test(src02),
