@@ -78,7 +78,6 @@ const openCount = (full.match(/<skill-index>/g) || []).length;
 const closeCount = (full.match(/<\/skill-index>/g) || []).length;
 ok(openCount === closeCount && openCount >= 1, '$2 skill-index 围栏开/闭数相等(防悬空围栏,伪造中和防线前提) got ' + openCount + '/' + closeCount);
 // 04 Phase A "预算断言":每层预算的静态存在(技能 3000 字上限在 buildSkillsPromptSection)。
-const src = fs.readFileSync(SERVER, 'utf8');
 const providerTurn = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
 const { buildSkillsPromptSection } = require('../ruyi-workbench/app/backend/prompt-context.cjs');
 const manySkills = Array.from({ length: 40 }, (_, i) => ({

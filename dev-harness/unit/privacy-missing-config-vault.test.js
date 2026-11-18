@@ -23,7 +23,8 @@ after(() => {
 });
 const REPO = process.env.RUYI_REVIEW_REPO || path.resolve(__dirname, '../..');
 const SERVER = path.join(REPO, 'ruyi-workbench/app/server.js');
-const CANDIDATE = process.env.RUYI_TEST_SERVER_JS || SERVER;
+const RUNTIME = path.join(REPO, 'ruyi-workbench/app/workbench-runtime.cjs');
+const CANDIDATE = process.env.RUYI_TEST_SERVER_JS || (fs.existsSync(RUNTIME) ? RUNTIME : SERVER);
 const TEMP = path.resolve(os.tmpdir());
 const PASSWORD = 'synthetic-missing-config-recovery-password';
 const SECRET = 'SYNTHETIC-MISSING-CONFIG-CREDENTIAL';

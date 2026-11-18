@@ -254,14 +254,14 @@
 
 | 序 | 命令 | 语义 |
 |---|---|---|
-| 1 | `node ruyi-workbench/app/build.js` | 无参 = 写：拼接 `src/` 生成 `server.js`（tmp+rename 原子写，产物先过 `node --check` 才落盘）。 |
+| 1 | `node ruyi-workbench/app/build.js` | 按清单生成 `app/workbench-runtime.cjs`。通过 `node --check` 后原子写入。 |
 | 2 | `node dev-harness/module-dependency-graph.js --write` | `--write` = 写：重新扫描并覆盖 `module-contracts.json`、`docs/architecture/module-dependency-graph.{json,md}`。 |
 | 2′ | `node dev-harness/module-dependency-graph.js --check` | `--check` = 只读：三份产物逐字节新鲜度校验，不写文件；出现新前向边/环边即退出 1，需人工评审后才能改 `module-dependency-policy.json`。 |
 | 3 | `node dev-harness/route-inventory.js` | **无参 = 写**：重新生成 `docs/architecture/route-inventory.{json,md}`；该生成器另支持独立 `--check`（只读比对，不写文件，见 `route-inventory.js:408-422`），本步链路里用的是写模式。 |
 | 4 | `node dev-harness/architecture-contract-snapshots.js --write` | **`--write` = 写**；**不传 `--write` 则默认是只读校验**（`architecture-contract-snapshots.js:98-108`：无参时比对现有产物与重算结果，漂移则退出 1 并提示「run with --write」）——与 `module-dependency-graph.js` 的显式 `--check` 命名习惯相反，注意不要漏传 `--write`。 |
 | 5 | `node dev-harness/durable-state-inventory.js --write` | **`--write` = 写**；同样不传 `--write` 时默认走只读 `check()` 分支（`durable-state-inventory.js:118`），命名习惯与上一步一致。 |
 | 6 | `node dev-harness/facts-generate.js` | **仅门面数字变化时才需要跑**；该生成器**没有 `--check`/`--write` 区分**，运行即直接重算并覆写 `facts.json`（`facts-generate.js` 头部用法注释：「重算并覆写」），无只读模式。 |
-| 7 | `node ruyi-workbench/app/build.js --check` | `--check` = 只读：收尾复核 `server.js` 产物新鲜度，不一致退出 1。 |
+| 7 | `node ruyi-workbench/app/build.js --check` | 只读校验生成装配与源码一致。不一致时退出 1。 |
 | 8 | `node dev-harness/run-all.js --fast` | 快通道：只跑 `*.static.e2e.js`（秒级，无端口/无子进程）。 |
 | 9 | `node dev-harness/run-all.js --parallel 4` | 全量并行回归。 |
 

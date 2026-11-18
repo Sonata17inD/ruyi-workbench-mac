@@ -235,7 +235,7 @@ const baseConfig = extra => ({
 
   // ────────────────────────────── S 段: 静态锁 ─────────────────────────────────────────────────
   console.log('── S 段: 静态锁 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const src = require('./src-reader').readServerSource();
   const configStore = fs.readFileSync(path.join(WB, 'app/backend/config-store.cjs'), 'utf8');
   const configPatch = fs.readFileSync(path.join(WB, 'app/backend/config-patch.cjs'), 'utf8');
   const connectors = fs.readFileSync(path.join(WB, 'app/backend/mcp-connector-settings.cjs'), 'utf8');

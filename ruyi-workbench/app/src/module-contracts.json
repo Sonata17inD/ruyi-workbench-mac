@@ -74,6 +74,7 @@
         "claudeCostFields",
         "clearDeletedSession",
         "cliBridgeToolTier",
+        "cliEntryFile",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
         "collectDisplayUrlRestores",
@@ -177,6 +178,7 @@
         "setEstimateBucketsV1",
         "spawnDetachedChecked",
         "ssrfCheck",
+        "startedFromCommandLine",
         "text",
         "tildePath",
         "toolDisabledByPolicy",
@@ -911,6 +913,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "cliEntryFile",
           "kinds": [
             "read"
           ]
@@ -19642,15 +19651,18 @@
       "file": "14-main.js",
       "layer": "entrypoint",
       "provides": [
+        "createIntegrationCommands",
         "createOwnedServerStartup",
         "createServerStartup",
+        "createWorkbenchApi",
+        "createWorkbenchCli",
         "handleApi",
         "installIntegration",
-        "main",
         "resolveBindHost",
         "startMcp",
         "startServer",
         "startServerInner",
+        "startWorkbenchFromCommandLine",
         "stopAllActiveTurnsSync"
       ],
       "requires": [
@@ -19818,13 +19830,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "fmtTokensServer",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "hashArgs",
           "kinds": [
             "read"
           ]
@@ -20062,6 +20067,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "startedFromCommandLine",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "TOOL_REQUIRES",
           "kinds": [
             "read"
@@ -20239,7 +20251,6 @@
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -20338,7 +20349,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -21094,20 +21104,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "repairMissionChangeTornTail",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "repairProviderHistoryPairing",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "repairProviderHistoryToolArgs",
           "kinds": [
             "read"
           ]
@@ -22758,104 +22754,6 @@
           ]
         },
         {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "describeSchedule",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "missedOccurrence",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "nextFireAt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "normalizeSchedulerTask",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "occurrenceKey",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "parseCronExpr",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_DEFAULT_POLICY",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_DESCRIBE_KEYS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_DOW_KEYS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_FIRE_MODES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_FORBIDDEN_PAYLOAD_KEYS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_LIMITS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_OUTCOMES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06j-scheduler-core.js",
-          "symbol": "SCHEDULER_THREAD_TIERS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "06v-operational-services.js",
           "symbol": "buildMetricsPayload",
           "kinds": [
@@ -23783,7 +23681,7 @@
           "provider": "13-http-router.js",
           "symbol": "doctor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -23923,7 +23821,7 @@
           "provider": "13-http-router.js",
           "symbol": "parseArgs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -24028,7 +23926,6 @@
           "provider": "13i-steward-inbox.js",
           "symbol": "startStewardInbox",
           "kinds": [
-            "call",
             "read"
           ]
         },

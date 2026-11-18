@@ -28,12 +28,14 @@ function prepareMacHost(root) {
       copyTree(path.join(repo, 'ruyi-workbench', name), path.join(workbenchRoot, name));
     }
   }
-  const server = path.join(workbenchRoot, 'app/server.js');
-  const serverSha256 = digest(server);
-  if (serverSha256 !== digest(path.join(repo, 'ruyi-workbench/app/server.js'))) {
-    throw new Error('App fixture backend differs from the current candidate');
+  const runtimeHashes = {};
+  for (const [field, file] of [['serverSha256', 'app/server.js'], ['runtimeSha256', 'app/workbench-runtime.cjs']]) {
+    runtimeHashes[field] = digest(path.join(workbenchRoot, file));
+    if (runtimeHashes[field] !== digest(path.join(repo, 'ruyi-workbench', file))) {
+      throw new Error('App fixture differs from the current candidate: ' + file);
+    }
   }
-  const result = { bundle, bundled, workbenchRoot: fs.realpathSync(workbenchRoot), serverSha256 };
+  const result = { bundle, bundled, workbenchRoot: fs.realpathSync(workbenchRoot), ...runtimeHashes };
   fs.writeFileSync(path.join(root, 'runtime-source.json'), JSON.stringify(result, null, 2) + '\n');
   return result;
 }

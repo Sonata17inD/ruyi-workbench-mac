@@ -16,8 +16,7 @@ const { getFreePort } = require('./free-port.js');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
-// 架构还债批 3·D:AUTOEXEC_DENYLIST / hashArgs / pathWithinRoot 三者都经 14-main 导出,直接取产物里的那一份
-// 授权书和路径匹配规则直接引用所属模块。
+// 对照实际装配的路径阻断名单，授权书与参数指纹直接引用所属模块。
 const srv = require(SERVER);
 const WB_PORT = await getFreePort();
 const HOME = path.join(os.tmpdir(), 'wcw-autonomy-grant-e2e');
@@ -97,9 +96,10 @@ const blockCheckIdx = providerTurn.indexOf("if (gate === 'block') {", nativeCons
 ok(nativeConsumeIdx > 0 && blockCheckIdx > nativeConsumeIdx, 'S4 native 消耗点在 gate===block 判定之前(只降 ask,永不碰 block)');
 
 // S5 R-P1-1:runSubAgentCore 内【绝不】调用 consumeGrant(子代理不消耗父授权)。
-const subCore = (src.match(/async function runSubAgentCore\([\s\S]*?\nasync function runSubAgent\(opts\)/) || [''])[0];
-ok(subCore.length > 1000, 'S5 runSubAgentCore 可定位');
-ok(!/consumeGrant/.test(subCore), 'S5 子代理执行体【无】consumeGrant(R-P1-1:不消耗父授权)');
+const subagentSource = fs.readFileSync(path.join(WB, 'app/backend/subagent-runner.cjs'), 'utf8');
+ok(/function runSubAgentCore\(/.test(subagentSource) && /function runSubAgentCoreBody\(/.test(subagentSource),
+  'S5 生产子代理模块包含回合入口与执行体');
+ok(!/\bconsumeGrant\s*\(/.test(subagentSource), 'S5 子代理执行不消耗父授权');
 
 // S6 exec 永不持久:saveSession / normalizeConfig 体内【不】触碰 autonomyGrants。
 // 122 波合并（36 号文 §5.4）：saveSession 的签名从 (session) 变成 (session, opts)（§2.4 写链内合并旗子），
@@ -162,10 +162,7 @@ let _idc = 0; const makeId = pfx => pfx + '_' + (++_idc);
 const { AUTOEXEC_DENYLIST } = require('../ruyi-workbench/app/backend/autoexec-paths.cjs');
 ok(srv.AUTOEXEC_DENYLIST === AUTOEXEC_DENYLIST, 'P 文件护栏和授权书共用 AUTOEXEC_DENYLIST');
 
-// 真 hashArgs(00-boot.js,117q-B7(P2-16)单一事实源;consumeGrant 现在调它算 argsHash,不再手写 sha1 字面量)。
-const hashArgs = srv.hashArgs;
-ok(typeof hashArgs === 'function', 'P 取到 hashArgs(00-boot.js 单一事实源,产物导出)');
-if (typeof hashArgs !== 'function') { console.log('\nAUTONOMY-GRANT E2E: FAIL (hashArgs 未导出)'); process.exit(1); }
+const { hashArgs } = require('../ruyi-workbench/app/backend/execution-arguments.cjs');
 
 const createGrantService = () => require('../ruyi-workbench/app/backend/autonomy-grants.cjs').createAutonomyGrants({
   isSensitiveDataPath, makeId, logEvent() {}, hashArgs,

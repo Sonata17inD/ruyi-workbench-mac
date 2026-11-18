@@ -9,7 +9,8 @@ const handleApi = require('./backend/workbench-api-router.cjs').createWorkbenchA
   handleSchedulerApiRoutes, handleAttachmentApiRoutes, handleChatApiRoute, handleToolApiRoutes,
 });
 
-const { startMcp, installIntegration } = require('./backend/integration-commands.cjs').createIntegrationCommands({
+const { createIntegrationCommands, createWorkbenchCli } = require('./backend/integration-commands.cjs');
+const { startMcp, installIntegration } = createIntegrationCommands({
   paths, RUNTIME, process, APP_NAME, VERSION, ensureDirs, readConfig, generateMcpConfig,
   existsExecutable, DesktopShell, syncClaudeCliSettings, syncAgentRolesToClaude, syncMcpServersToClaude,
   mcpServices: { PrivacyGateway, ProcessRuntime, observationRecallEnabled, policyDesktopOverrideFor,
@@ -41,41 +42,15 @@ const startServer = createOwnedServerStartup({
   writeStartError: ServerStartNotices.writeStartError,
 });
 
-async function main() {
-  const argv = parseArgs(process.argv.slice(2));
-  const command = argv._[0] || 'serve';
-  if (command === 'serve') {
-    const served = await startServer(argv);
-    // 第116波116b(27号文§11.3): 服务就绪(已 listen、runtime.json 已落)之后才起管家收件箱轮询。
-    // stewardEnabledV1 !== true 时 startStewardInbox 立即返回,不建目录、不起 interval、零写入。
-    // 失败绝不阻断已经开起来的服务(管家是旁路,不是主链路)。
-    await startStewardInbox(await readConfig()).catch(() => {});
-    return served;
-  }
-  if (command === 'mcp') return startMcp();
-  if (command === 'install') return installIntegration();
-  if (command === 'doctor') return doctor(argv); // 118b: --human 走人话体检,默认仍只打 JSON
-  if (command === 'mcp-config') {
-    console.log(await generateMcpConfig());
-    return;
-  }
-  console.error(`Unknown command: ${command}`);
-  process.exitCode = 1;
+function startWorkbenchFromCommandLine() {
+  startedFromCommandLine = true;
+  return createWorkbenchCli({ process, parseArgs, startServer, startStewardInbox, readConfig,
+    startMcp, installIntegration, doctor, generateMcpConfig,
+    startupGuidance: error => PrivacyCore.configHooks.startupGuidance?.(error),
+  })();
 }
 
-// Run the CLI only when executed directly; when require()'d (e.g. by an offline self-test) just export
-// the internals so tests can exercise McpStdioClient / detectDesktopMcp without spawning a full server.
-if (require.main === module) {
-  main().catch(err => {
-    const recoveryHelp = PrivacyCore.configHooks.startupGuidance?.(err);
-    console.error(recoveryHelp || err.stack || err.message || String(err));
-    // Startup can create watchers/timers before listen() discovers a non-Ruyi port occupant. Merely setting
-    // exitCode leaves those handles alive and makes the failed CLI look hung; a direct invocation must fail fast.
-    process.exit(1);
-  });
-}
-
-module.exports = {
+const createWorkbenchApi = () => ({
   // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A14/F3/NE-12;走查 W1·F10 的 sweepStaleScriptFiles)的纯函数与钩子,一个键收口 —— unit/tool-dispatch-hardening.test.js 直调(sweepStaleScriptFiles:unit/script-run-cleanup.test.js)。
   // 2026-10 能力总闸补桥接面:toolDisabledByPolicy / accPolicyHiddenToolNames / dropPolicyDisabledBridgedTools / ACC_POLICY_TOOL_FAMILIES 同住这个键(unit/acc-capability-gates.test.js 直调)。
   dispatchTestHooks: { sweepStaleScriptFiles, validateNativeToolArgs, suggestToolNames, toolFailureResult, nativeToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, dropPolicyDisabledBridgedTools, ACC_POLICY_TOOL_FAMILIES, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, toolArgsSkeleton, withToolArgsGuide, toolArgsMissingRequired, normalizeMcpToolResult, attachScreenshotImage, desktopAuditEntriesFromResult, bridgedDesktopLeaseMode, mcpChildExitResult, bridgedServerUnavailableMessage },
@@ -347,8 +322,6 @@ module.exports = {
   maybeWriteThreadBrief,
   parseThreadBrief,
   detectDanglingTurn,
-  repairProviderHistoryPairing, // 配对铁律自愈(孤儿 tool_calls 补合成 tool 回复) — exposed for e2e 直测
-  repairProviderHistoryToolArgs, // 参数铁律自愈(arguments 不是 JSON 对象 -> 改写成实际执行用的 '{}') — exposed for e2e 直测
   bridgedToolTier,
   bridgedReadPathGate,   // 安全修复(审计 A②):桥接读文件的读边界 —— unit/security-audit-fixes.test.js 直调
   cwdWarning,
@@ -460,7 +433,6 @@ module.exports = {
   // 第117波117q-B7(30号文§3 总表 P2-16): argsHash 指纹算法 —— 纯函数(只吃入参、无 IO),06f-autonomy-grants.js
   //   ::consumeGrant 与 09b-replan-ledger.js::recordNodeContinuation 两个调用点的单一事实源。
   //   exposed for 单测(unit/hash-args.test.js)。
-  hashArgs,
   // 第116波116c-0(27号文§1/§3.5): 会话回合核心 —— 进程内(不经 HTTP)在任意会话上发起一个完整回合,
   //   自带 sink;HTTP 的 /api/chat/stream 现在也只是它的一层壳。exposed for e2e 等价性直测与后续切片调用。
   runSessionTurn,
@@ -723,23 +695,6 @@ module.exports = {
   buildResponsesInputItems,
   // 117q-B1(30 号文 §4.1): 子进程 NDJSON 逐行喂入器 — exposed for unit 直测(chunk 边界切开 CJK 字节不得产生 U+FFFD)。
   createNdjsonLineFeeder,
-  // 第 123 波 M1 §3.1(37 号文):定时任务纯函数内核 —— 零 I/O、时间全由入参喂,
-  //   exposed for 单测 unit/scheduler-core.test.js 与三件 scheduler*.e2e.js 的直测。
-  normalizeSchedulerTask,
-  nextFireAt,
-  parseCronExpr,
-  describeSchedule,
-  occurrenceKey,
-  missedOccurrence,
-  SCHEDULER_FIRE_MODES,
-  SCHEDULER_OUTCOMES,
-  SCHEDULER_FORBIDDEN_PAYLOAD_KEYS,
-  SCHEDULER_LIMITS,
-  SCHEDULER_DEFAULT_POLICY,
-  SCHEDULER_DESCRIBE_KEYS,
-  SCHEDULER_DOW_KEYS,
-  // 127 波 2-ter S-a:档位值域 —— exposed for unit/scheduler-core ⑧ 与 13f steward_thread_new 枚举的相等锁。
-  SCHEDULER_THREAD_TIERS,
   // 第 123 波 M1 §3.2/§3.4:调度器生命周期与假时钟 —— exposed for e2e 直测与 14 的 boot 起停。
   startScheduler,
   stopScheduler,
@@ -762,4 +717,6 @@ module.exports = {
   //   的确定性计数器,并把 sessionMessagesDelta 的字节戳路径与逐条序列化路径逐格比对。
   perfCounters: { missionAggregate: missionAggregateStats, agentRunDigest: AgentRunStore.stats, sessionBody: sessionBodyPerfStats },
   sessionMessagesDelta,
-};
+});
+
+module.exports = { startWorkbenchFromCommandLine, createWorkbenchApi };

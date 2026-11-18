@@ -51,4 +51,35 @@ function createIntegrationCommands({
   return { startMcp, installIntegration };
 }
 
-module.exports = { createIntegrationCommands };
+function createWorkbenchCli({ process, console = globalThis.console, parseArgs, startServer, startStewardInbox, readConfig,
+  startMcp, installIntegration, doctor, generateMcpConfig, startupGuidance }) {
+  async function main() {
+    const argv = parseArgs(process.argv.slice(2));
+    const command = argv._[0] || 'serve';
+    if (command === 'serve') {
+      const served = await startServer(argv);
+      // Start the inbox after the server has published its runtime metadata.
+      await startStewardInbox(await readConfig()).catch(() => {});
+      return served;
+    }
+    if (command === 'mcp') return startMcp();
+    if (command === 'install') return installIntegration();
+    if (command === 'doctor') return doctor(argv);
+    if (command === 'mcp-config') {
+      console.log(await generateMcpConfig());
+      return;
+    }
+    console.error(`Unknown command: ${command}`);
+    process.exitCode = 1;
+  }
+
+  return function runWorkbenchCli() {
+    return main().catch(err => {
+      console.error(startupGuidance(err) || err.stack || err.message || String(err));
+      // Startup may fail after opening watchers or timers, so exit immediately.
+      process.exit(1);
+    });
+  };
+}
+
+module.exports = { createIntegrationCommands, createWorkbenchCli };

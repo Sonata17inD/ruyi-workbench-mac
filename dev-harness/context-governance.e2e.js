@@ -1,16 +1,17 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E: 第28波「上下文与产物治理」(AUTONOMY-PLAN §28)。无端口(纯源抽取 + 静态锁,离线 Node 直跑)。
+// E2E: 第28波「上下文与产物治理」(AUTONOMY-PLAN §28)。无端口，直接验证生产模块与装配契约。
 // 覆盖:§28c 预算化上游上下文 buildUpstreamContext(取代 12000/32000 定长,两站点)· §28b 节点输出四分 deriveNodeOutputs ·
 //       §28a 子代理两级压缩 maybeCompactSubHistory(关键:const 原地 splice + 钉住 task[0] + L1/L2 分级)· §28d degradedPolicy(4 归一 + 翻译接缝)。
-// 技术同 scheduler-reducer/audit-w23:源抽取 + new Function 实跑纯逻辑 + 正则静态锁接线。
 'use strict';
-const { readServerSource } = require('./src-reader');
 const fs = require('node:fs');
 const path = require('node:path');
-const { constBlock, functionBlock } = require('./lib/source-slice');
 const { isDeepStrictEqual } = require('node:util');
 const { MCP_TOOLS } = require('../ruyi-workbench/app/backend/native-tool-schemas.cjs');
-const src = readServerSource();
+const { createWorkflowNodeOutcomes } = require('../ruyi-workbench/app/backend/workflow-node-outcomes.cjs');
+const { createAgentWorkflowReport } = require('../ruyi-workbench/app/backend/agent-workflow-report.cjs');
+const backend = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name), 'utf8');
+const workflow = backend('agent-workflow.cjs');
+const runner = backend('subagent-runner.cjs');
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
@@ -19,95 +20,89 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态源锁 ──');
 // §28c:两处上游装配点都改用 buildUpstreamContext,旧 12000/32000 定长常量在装配点消失。
-ok(/const priorText = buildUpstreamContext\(depNodes, upstreamBudgetTokens\)/.test(src), 'S §28c DAG runNode 用 buildUpstreamContext');
-ok(!/const dependencyText = buildUpstreamContext\(dependsOn\.map/.test(src) && /function singleAgentShorthandNode\(args\)/.test(src), 'S §28c 代理模式 v2:旧 spawn 站点已删,单代理简写走 DAG 同一条 buildUpstreamContext 链');
-ok(!/\.join\('\\n\\n'\)\.slice\(0, 32000\)/.test(src), 'S §28c 旧 join.slice(0,32000) 定长截断已消失');
+ok(/const priorText = buildUpstreamContext\(depNodes, upstreamBudgetTokens\)/.test(workflow), 'S §28c DAG runNode 用 buildUpstreamContext');
+ok(!/const dependencyText = buildUpstreamContext\(dependsOn\.map/.test(workflow)
+  && /function singleAgentShorthandNode\(args\)/.test(backend('agent-workflow-input.cjs')), 'S §28c 单代理简写走 DAG 同一条 buildUpstreamContext 链');
+ok(!/\.join\('\\n\\n'\)\.slice\(0, 32000\)/.test(workflow), 'S §28c DAG 输入使用动态预算');
 // §28b:节点完成派生四分。
-ok(/deriveNodeOutputs\(node\);/.test(src), 'S §28b runNode 完成调 deriveNodeOutputs');
-ok(/function deriveNodeOutputs\(node\)/.test(src) && /node\.summary =/.test(src) && /node\.evidence =/.test(src) && /node\.artifacts =/.test(src), 'S §28b deriveNodeOutputs 产 summary/evidence/artifacts');
+ok(/deriveNodeOutputs\(node\);/.test(workflow), 'S §28b runNode 完成调 deriveNodeOutputs');
 // §28a:子代理循环边界压缩;Claude 引擎不引入。
-ok(/await SessionCompaction\.maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(src), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
-const sessionCompactionSource = fs.readFileSync(path.resolve(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
+ok(/await maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(runner), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
+const sessionCompactionSource = backend('session-compaction.cjs');
 ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(sessionCompactionSource)
-  && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(src), 'S §28a 自动和强制重播种都原地更新子代理历史');
+  && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(runner), 'S §28a 自动和强制重播种都原地更新子代理历史');
 {
-  const claudeOnce = (src.match(/async function runClaudeSubAgentOnce\([\s\S]*?\nasync function runSubAgentCore\(/) || [''])[0];
+  const claudeOnce = backend('claude-subagent.cjs');
   // 排除注释里对这些词的提及,只查真实代码模式(声明/调用)。
-  ok(claudeOnce.length > 500 && !/const subHistory|maybeCompactSubHistory\(/.test(claudeOnce), 'S §28a Claude 引擎【不】引入 subHistory 压缩(有意不对称)');
+  ok(/async function runClaudeSubAgentOnce\(/.test(claudeOnce) && !/const subHistory|maybeCompactSubHistory\(/.test(claudeOnce), 'S §28a Claude 子代理由 CLI 管理上下文压缩');
 }
 // §28d:degradedPolicy 归一(模板/新建/resume/工具 schema)+ 翻译接缝。
-const catalog = fs.readFileSync(path.resolve(__dirname, '../ruyi-workbench/app/backend/agent-workflow-catalog.cjs'), 'utf8');
+const catalog = backend('agent-workflow-catalog.cjs');
 ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(item\.degradedPolicy\)/.test(catalog),
   'S §28d 工作流模板目录归一 degradedPolicy');
-ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(raw\.degradedPolicy\)/.test(src),
+ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(raw\.degradedPolicy\)/.test(workflow),
   'S §28d 工作流新建时归一 degradedPolicy');
-ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(src), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
-ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(src), 'S §28d 翻译接缝(仅降级成功节点)');
+ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(workflow), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
+ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(workflow), 'S §28d 翻译接缝(仅降级成功节点)');
 const orchestrate = MCP_TOOLS.find(tool => tool.name === 'orchestrate_agents');
 const degradedPolicy = orchestrate?.inputSchema.properties.nodes.items.properties.degradedPolicy;
 ok(degradedPolicy?.type === 'string' && isDeepStrictEqual(degradedPolicy.enum, ['accept', 'retry', 'request_review', 'fail']), 'S §28d orchestrate 工具 schema 含 degradedPolicy');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-// [P] 纯逻辑源抽取:§28c buildUpstreamContext + §28b deriveNodeOutputs
+// [P] 直接验证 §28c buildUpstreamContext 和 §28b deriveNodeOutputs
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] §28b/§28c 纯逻辑 ──');
-const upstreamContextBlocks = [
-  constBlock(src, 'NODE_SUMMARY_MAX'),
-  constBlock(src, 'NODE_WRITE_FAMILY'),
-  functionBlock(src, 'deriveNodeOutputs'),
-  functionBlock(src, 'buildUpstreamContext'),
-];
-ok(upstreamContextBlocks.every(Boolean), 'P 源抽取 28b/28c 块');
 // estimateContentTokens 注入桩:~1 token / 4 字符(测预算/分级逻辑,非精确 token)。
 const estimateContentTokens = s => Math.ceil(String(s || '').length / 4);
-const g = new Function('estimateContentTokens', upstreamContextBlocks.join('\n') + '\nreturn { deriveNodeOutputs, buildUpstreamContext };')(estimateContentTokens);
+const { deriveNodeOutputs } = createWorkflowNodeOutcomes();
+const { buildUpstreamContext } = createAgentWorkflowReport({ estimateContentTokens });
 
 // deriveNodeOutputs:结构化 summary/verdict 优先;findings→evidence;续点写族步骤→artifacts。
 {
   const n1 = { structuredResult: { summary: '核心结论X', findings: [{ a: 1 }, { b: 2 }] }, result: '整段很长的 rawTranscript'.repeat(50), continuation: { steps: [{ tool: 'file_write', argsPreview: 'path=a.js' }, { tool: 'file_read', argsPreview: 'path=b.js' }] } };
-  g.deriveNodeOutputs(n1);
+  deriveNodeOutputs(n1);
   ok(n1.summary === '核心结论X', 'P §28b summary 取结构化 summary');
   ok(Array.isArray(n1.evidence) && n1.evidence.length === 2, 'P §28b evidence 取 findings');
   ok(n1.artifacts.length === 1 && n1.artifacts[0].tool === 'file_write', 'P §28b artifacts 只收写族步骤(file_read 不算)');
   const n2 = { structuredResult: null, result: '  这是   最终   结论文本  ', continuation: null };
-  g.deriveNodeOutputs(n2);
+  deriveNodeOutputs(n2);
   ok(n2.summary === '这是 最终 结论文本', 'P §28b 无结构化→result 扁平化为 summary');
   const n3 = { structuredResult: { verdict: 'fail', confidence: 0.9 }, result: '', continuation: null };
-  g.deriveNodeOutputs(n3);
+  deriveNodeOutputs(n3);
   ok(/verdict=fail/.test(n3.summary), 'P §28b 无 summary 有 verdict→verdict= 摘要');
 }
 // buildUpstreamContext:rung 分级 + 均分预算 + degraded 标注。
 {
-  const empty = g.buildUpstreamContext([], 1000);
+  const empty = buildUpstreamContext([], 1000);
   ok(empty === '', 'P §28c 无依赖→空串');
   // 全文放得下 → rung1 全文无损。
   const deps1 = [{ id: 'a', status: 'succeeded', result: 'short result' }];
-  const t1 = g.buildUpstreamContext(deps1, 1000);
+  const t1 = buildUpstreamContext(deps1, 1000);
   ok(t1.includes('short result') && t1.includes('### a (succeeded)'), 'P §28c rung1:全文放得下→无损全文 + 头');
   // 全文超份额、summary 放得下 → rung2 摘要。
   const bigFull = 'X'.repeat(4000); // ~1000 token
   const deps2 = [{ id: 'b', status: 'succeeded', result: bigFull, summary: '简短摘要' }];
-  const t2 = g.buildUpstreamContext(deps2, 100); // 份额 ~100 token,全文 1000 超,摘要 <100 放得下
+  const t2 = buildUpstreamContext(deps2, 100); // 份额 ~100 token,全文 1000 超,摘要 <100 放得下
   ok(t2.includes('简短摘要') && t2.includes('精简结论') && !t2.includes(bigFull), 'P §28c rung2:全文超份额→用 summary');
   // 无 summary、全文超份额 → rung3 截断(单依赖小预算下,总量硬钳制会接管 → 「按总预算截断」标注)。
   const deps3 = [{ id: 'c', status: 'succeeded', result: bigFull }];
-  const t3 = g.buildUpstreamContext(deps3, 100);
+  const t3 = buildUpstreamContext(deps3, 100);
   ok(/截断/.test(t3) && t3.length < bigFull.length, 'P §28c rung3/总钳:超预算→截断 + 标注');
   // 对抗轮 P3:总量硬钳制 —— 多个各自放得下但【累计超预算】的依赖,拼接结果被总预算截断(旧 32000 硬顶的等价物)。
   const many = Array.from({ length: 20 }, (_, i) => ({ id: 'n' + i, status: 'succeeded', result: 'body-' + i + '-'.repeat(60) }));
-  const tMany = g.buildUpstreamContext(many, 300); // 20 依赖 × 200 下限 body 远超 300 → 总钳制
+  const tMany = buildUpstreamContext(many, 300); // 20 依赖 × 200 下限 body 远超 300 → 总钳制
   ok(estimateContentTokens(tMany) <= 300 + 20, 'P §28c 总量硬钳制:拼接结果 ≤ 预算(+标注余量)不击穿');
   ok(tMany.includes('按总预算截断'), 'P §28c 总钳标注出现');
   // degraded 标注(§28d 上游可见)。
-  const t4 = g.buildUpstreamContext([{ id: 'd', status: 'succeeded', degraded: true, result: 'x' }], 1000);
+  const t4 = buildUpstreamContext([{ id: 'd', status: 'succeeded', degraded: true, result: 'x' }], 1000);
   ok(t4.includes('· 降级'), 'P §28c degraded 前序在标题标注');
   // 多依赖均分:靠后依赖不被靠前大依赖整段挤掉(旧 join.slice 的病)。
-  const t5 = g.buildUpstreamContext([{ id: 'p', status: 'succeeded', result: 'Y'.repeat(8000) }, { id: 'q', status: 'succeeded', result: 'q-body' }], 400);
+  const t5 = buildUpstreamContext([{ id: 'p', status: 'succeeded', result: 'Y'.repeat(8000) }, { id: 'q', status: 'succeeded', result: 'q-body' }], 400);
   ok(t5.includes('### q (succeeded)') && t5.includes('q-body'), 'P §28c 均分预算:靠后依赖 q 仍完整可见(不被 p 挤掉)');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-// [A] 源抽取实跑:§28a maybeCompactSubHistory(L1/L2 + 原地 splice + 钉 task[0])
+// [A] 生产压缩内核:§28a maybeCompactSubHistory(L1/L2 + 原地 splice + 钉 task[0])
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [A] §28a maybeCompactSubHistory ──');
 const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
@@ -123,7 +118,7 @@ const providerSummaryCall = async () => (summaryOk ? { ok: true, summary: 'SUMMA
 let recordCalls = 0; const recordCompactUsage = () => { recordCalls++; };
 // 第45波:maybeCompactSubHistory 预算判定改走 calibratedEstimate(45d 校准入口)—— 桩镜像「无样本=因子1」。
 const calibratedEstimate = (p, m, h) => estimateHistoryTokens(h);
-const { repairProviderHistoryPairing } = require('../ruyi-workbench/app/server.js');
+const { repairProviderHistoryPairing } = require('../ruyi-workbench/app/backend/provider-history.cjs').createProviderHistory({ logEvent() {} });
 const kernel = createCompactionKernel({ CompactionPlan, estimateHistoryTokens, calibratedEstimate, providerSummaryCall,
   repairProviderHistoryPairing, logEvent() {}, ...reduction });
 const { maybeCompactSubHistory } = createSessionCompaction({ kernel, CompactionPlan, recordCompactUsage });

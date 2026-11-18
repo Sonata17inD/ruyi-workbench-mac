@@ -516,7 +516,7 @@ function buildMarkdown(graph) {
   const lines = [
     '# 后端模块依赖图（第 103b／104 波）', '',
     '> 本文件由 `node dev-harness/module-dependency-graph.js --write` 从 `app/src/manifest.json` 与源码生成。请勿手改。',
-    '> `provides/requires` 是构建期拼接作用域的显式契约；运行时仍执行单文件 `app/server.js`。', '',
+    '> `provides/requires` 记录生成装配的符号依赖。`app/server.js` 加载 `app/workbench-runtime.cjs`。', '',
     '## 摘要', '',
     '| 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |',
     '|---:|---:|---:|---:|---:|---:|---:|',

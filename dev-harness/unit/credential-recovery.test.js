@@ -1,9 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { fixture, clone } = require('../lib/privacy-test-fixture');
-const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
+const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const { createServerStartNotices } = require('../../ruyi-workbench/app/backend/server-start-notices.cjs');
 const { createOwnedServerStartup } = require('../../ruyi-workbench/app/backend/server-startup.cjs');
+const { createWorkbenchCli } = require('../../ruyi-workbench/app/backend/integration-commands.cjs');
 function setup() {
   const f = fixture(); let disk, journal, busy = false, fault = '', invalidations = 0; const notifications = [];
   const original = { credentialEncryptionV1: true, defaultWorkspace: 'KEEP-WORKSPACE', privacyModeV1: 'enhanced', providers: [{ id: 'same', apiKey: 'old-test-key', baseUrl: 'https://old.test' }, { id: 'keep', apiKey: 'kept-test-key', baseUrl: 'https://keep.test' }] };
@@ -158,9 +159,7 @@ test('an unavailable old wrapping key cannot mutate the old profile; the portabl
 });
 
 test('CLI startup prints fresh-profile recovery guidance only for a locked credential vault', async () => {
-  const f = fixture(), { bracedBlock } = require('../lib/source-slice');
-  const mainSource = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/14-main.js'), 'utf8');
-  const directCli = bracedBlock(mainSource, 'if (require.main === module)'); assert.ok(directCli);
+  const f = fixture();
   const startupGuidance = f.CredentialRecovery.startupGuidance;
   const guidance = startupGuidance({ code: 'credential_vault.unlock_failed', message: 'MUST-NOT-SHOW-PRIVATE-DETAIL' });
   for (const phrase of ['保留原数据目录', '不要删除密钥或覆盖旧库', 'RUYI_HOME', '独立、全新的空目录', 'Mac 启动方式', '先预览再确认导入', '不恢复旧聊天']) assert.ok(guidance.includes(phrase), phrase);
@@ -170,10 +169,13 @@ test('CLI startup prints fresh-profile recovery guidance only for a locked crede
   assert.ok(startupGuidance({ code: 'credential_vault.keychain_locked' }, 'darwin').includes('已解锁'));
   for (const code of ['credential_vault.backup_authentication', 'credential_vault.backup_password', 'credential_vault.unsupported', 'EACCES']) assert.equal(startupGuidance({ code }), '');
   for (const code of ['credential_vault.unlock_failed', 'credential_vault.backup_authentication', 'EACCES']) {
-    const error = Object.assign(new Error('synthetic ' + code), { code }), lines = [], exits = [], entryModule = {};
-    vm.runInNewContext(directCli, { module: entryModule, require: { main: entryModule }, main: async () => { throw error; },
-      PrivacyCore: { configHooks: { startupGuidance } }, console: { error: value => lines.push(value) }, process: { exit: value => exits.push(value) } });
-    await new Promise(setImmediate);
+    const error = Object.assign(new Error('synthetic ' + code), { code }), lines = [], exits = [];
+    const run = createWorkbenchCli({
+      process: { argv: ['node', 'server.js', 'serve'], exit: value => exits.push(value) },
+      console: { error: value => lines.push(value) }, parseArgs: argv => ({ _: argv }),
+      startServer: async () => { throw error; }, startupGuidance,
+    });
+    await run();
     assert.deepEqual(exits, [1]); assert.equal(lines.length, 1);
     assert.equal(lines[0], code === 'credential_vault.unlock_failed' ? startupGuidance(error) : error.stack);
   }

@@ -17,7 +17,7 @@
 // hashArgs 这一个纯函数)。
 //
 // 覆盖:
-//   ① server.js 导出了 hashArgs
+//   ① 执行参数模块提供 hashArgs
 //   ② 对象形态与「预先 JSON.stringify 好的字符串」形态,对同一份逻辑参数得到同一指纹(两处调用点的
 //      两种入参形状统一到一条真值表)
 //   ③ 输出形状:12 位十六进制小写字符串(sha1 截 12 位的既有形状,不是新引入的宽松化)
@@ -32,24 +32,18 @@
 // WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-hash-args-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
-const srv = require(path.join(app, 'server.js'));
+const { hashArgs } = require(path.join(app, 'backend/execution-arguments.cjs'));
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
-const { hashArgs } = srv;
-
 /* ═══════════ ① 导出形状 ═══════════ */
-ok(typeof hashArgs === 'function', '① server.js 导出了 hashArgs');
+ok(typeof hashArgs === 'function', '① 执行参数模块提供 hashArgs');
 
 /* ═══════════ ② 对象形态与字符串形态对同一逻辑参数得到同一指纹 ═══════════ */
 {

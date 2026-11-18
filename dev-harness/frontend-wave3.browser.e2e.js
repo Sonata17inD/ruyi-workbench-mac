@@ -417,7 +417,8 @@ const TOPBAR_PROBE = `(() => {
       ok(pure.en === 'Waiting for your approval: Write file “a.txt”', `M4.4 stewardAskText：英文拼成「${pure.en}」`);
       ok(pure.old === '等你放行:xx' && pure.q === '要等吗?', 'M4.5 缺 toolName/target（老服务端）与 question 原样退回服务端原句');
       // ⑤ 子代理进度：服务端带 noteCode，前端词表两种语言都有
-      const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+      const server = ['claude-subagent.cjs', 'subagent-runner.cjs']
+        .map(file => fs.readFileSync(path.join(ROOT, 'backend', file), 'utf8')).join('\n');
       ok(/noteCode: 'streaming'/.test(server) && /noteCode: 'init'/.test(server) && /noteCode: 'generating'/.test(server), 'M4.6 服务端三处 subagent_progress 都带 noteCode');
       for (const code of ['init', 'streaming', 'generating', 'kimiRunning', 'kimiRunningFor', 'kimiPaused', 'kimiPausedWaiting']) {
         const key = `chat.subagent.note.${code}`;

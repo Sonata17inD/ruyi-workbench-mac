@@ -13,7 +13,8 @@ const rulePath = 'app/backend/context-governance-rules.json';
 test('the Mac release includes the only rule source and can render both summary prompts without src', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cg-release-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const release = filesFor('workbench').filter(file => file === 'app/server.js' || file.startsWith('app/backend/'));
+  const release = filesFor('workbench').filter(file => file === 'app/server.js'
+    || file === 'app/workbench-runtime.cjs' || file.startsWith('app/backend/'));
   assert.equal(release.filter(file => file === rulePath).length, 1);
   for (const file of release) {
     const target = path.join(root, file);

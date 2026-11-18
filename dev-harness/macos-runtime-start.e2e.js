@@ -177,7 +177,9 @@ cp.spawn = function(command, args, options) {
     fs.mkdirSync(path.join(bundle, 'runtime', 'node', 'bin'), { recursive: true });
     fs.mkdirSync(path.join(bundle, 'runtime', 'macos'), { recursive: true });
     fs.copyFileSync(path.join(wb, 'start-macos.command'), path.join(bundle, 'start-macos.command'));
-    fs.copyFileSync(path.join(wb, 'app', 'server.js'), path.join(bundle, 'app', 'server.js'));
+    for (const file of ['server.js', 'workbench-runtime.cjs']) {
+      fs.copyFileSync(path.join(wb, 'app', file), path.join(bundle, 'app', file));
+    }
     fs.cpSync(path.join(wb, 'app', 'backend'), path.join(bundle, 'app', 'backend'), { recursive: true });
     fs.cpSync(path.join(wb, 'app', 'public'), path.join(bundle, 'app', 'public'), { recursive: true });
     fs.copyFileSync(process.execPath, path.join(bundle, 'runtime', 'node', 'bin', 'node'));

@@ -390,6 +390,7 @@
     "app/public/vendor/marked.min.js",
     "app/public/vendor/mermaid.min.js",
     "app/server.js",
+    "app/workbench-runtime.cjs",
     "config/example.claude-settings.json",
     "config/example.mcp.json",
     "config/workbench.defaults.json",

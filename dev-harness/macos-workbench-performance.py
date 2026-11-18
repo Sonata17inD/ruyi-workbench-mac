@@ -142,6 +142,7 @@ with tempfile.TemporaryDirectory(prefix='ruyi-paired-performance-') as directory
     report = {'baselineCommit': args.baseline, 'candidateCommit': subprocess.check_output(
         ['git', 'rev-parse', 'HEAD'], cwd=root).decode().strip(),
         'candidateServerSha256': hashlib.sha256((current / 'app/server.js').read_bytes()).hexdigest(),
+        'candidateRuntimeSha256': hashlib.sha256((current / 'app/workbench-runtime.cjs').read_bytes()).hexdigest(),
         'candidateBackendSha256': {str(file.relative_to(current)): hashlib.sha256(file.read_bytes()).hexdigest()
             for file in sorted((current / 'app/backend').glob('*.cjs'))},
         'platform': platform.platform(), 'node': subprocess.check_output([node, '--version']).decode().strip(),

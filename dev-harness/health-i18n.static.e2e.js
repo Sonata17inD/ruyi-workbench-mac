@@ -34,6 +34,7 @@ const sessionSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'session-experience.j
 const helpViewerSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'help-viewer.js'), 'utf8');
 const healthSource = fs.readFileSync(path.join(SRC, '..', 'backend', 'workbench-health.cjs'), 'utf8');
 const mainSrc = fs.readFileSync(path.join(SRC, '14-main.js'), 'utf8');
+const cliSrc = fs.readFileSync(path.join(SRC, '..', 'backend', 'integration-commands.cjs'), 'utf8');
 // 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
 const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
@@ -217,7 +218,8 @@ function healthIdsFromServer() {
     && healthSource.includes('peekCapabilities()') && accLogInCode.length === 0,
     'G2 服务端 desktop-control 只用工作台已有的数据(config + 只读能力缓存 + 桥接解析),不去读安装器日志');
   ok(doctorSrc.includes('function doctorHumanLines(') && doctorSrc.includes("argv.human === true")
-    && doctorSrc.includes('doctorLocaleCatalog(') && mainSrc.includes('doctor(argv)'),
+    && doctorSrc.includes('doctorLocaleCatalog(') && cliSrc.includes("if (command === 'doctor') return doctor(argv)")
+    && /createWorkbenchCli\(\{[\s\S]*?\bdoctor,/.test(mainSrc),
     'G3 CLI doctor --human 已接线且默认仍走 JSON');
   ok(/console\.log\(JSON\.stringify\(info, null, 2\)\);\r?\n\s*\/\/ 118b/.test(doctorSrc),
     'G4 默认 JSON 输出在 --human 判定之前打印,脚本调用逐字节不变');

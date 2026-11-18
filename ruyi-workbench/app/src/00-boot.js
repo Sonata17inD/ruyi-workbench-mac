@@ -1,12 +1,8 @@
 'use strict';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 如意工作台 server(第43波 构建期拼接模块化)
-//
-// 本文件(app/src/00-boot.js)是【源码模块】之一:app/server.js 是由 app/build.js
-// 把 app/src/*.js 按 src/manifest.json 顺序拼接出的【产物】。改代码请改 src/ 对应
-// 模块,然后 `node app/build.js` 重建产物;不要手改 app/server.js(会被下次构建覆盖)。
-// build --check 校验生成入口。入口装配 backend/ 下的 CommonJS 服务。
+// app/build.js 依据 src/manifest.json 生成 workbench-runtime.cjs。
+// 此处装配 backend/ 下的服务。修改装配后运行 node app/build.js。
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fs = require('fs');
@@ -56,9 +52,11 @@ const { createWorkbenchDataRoots, createWorkbenchPaths } = require('./backend/wo
 const { defaultDataRoots, lstatOrNull, dataRoot, dataRootAliases, migrateLegacyDataRoot } =
   createWorkbenchDataRoots({ process });
 
-// 默认命令是 serve。直接运行服务时才检查旧数据根迁移。
+const cliEntryFile = path.join(__dirname, 'server.js');
+let startedFromCommandLine = false;
+// 默认命令是 serve。只有 CLI 启动服务才检查旧数据根迁移。
 function isDirectServeInvocation() {
-  if (require.main !== module) return false;
+  if (!startedFromCommandLine) return false;
   return !process.argv.slice(2).some(a => ['mcp', 'install', 'doctor', 'mcp-config'].includes(String(a)));
 }
 

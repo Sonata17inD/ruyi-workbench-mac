@@ -70,7 +70,7 @@ const { syncClaudeCliSettings, syncAgentRolesToClaude } = createClaudeConfigSync
 const RUNTIME = { port: DEFAULT_PORT, host: '127.0.0.1', token: '', isMcpChild: false, launchMode: 'unknown' };
 const { externalServerJs, bundledNodeExe, commandForSelfMcp, mcpConfigFilePath, generateMcpConfig,
   generateSessionMcpConfig, generateAgentNodeMcpConfig } = require('./backend/mcp-manifests.cjs').createMcpManifests({
-  paths, runtime: RUNTIME, hostFile: __filename, externalRoot, ensureDirs, readConfig, resolveExternalMcpServers,
+  paths, runtime: RUNTIME, hostFile: cliEntryFile, externalRoot, ensureDirs, readConfig, resolveExternalMcpServers,
   ensureDesktopMcpWarm: config => ensureDesktopMcpWarm(config), atomicWriteJson, process,
 });
 const { syncMcpServersToClaude, syncAgentCliMcpManifests, syncMcpServersToKimi } =

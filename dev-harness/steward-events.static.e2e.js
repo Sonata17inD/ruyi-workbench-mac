@@ -188,7 +188,10 @@ function typeExpressionLiterals(text) {
   ok(inbox.includes('atomicWriteJson(stewardCursorPath()'), 'D5 游标经 atomicWriteJson 落盘');
 
   const main = read('14-main.js');
-  ok(/startStewardInbox\(await readConfig\(\)\)/.test(main), 'D5 14-main 在 startServer 返回后调用 startStewardInbox(config)');
+  const cli = read('../backend/integration-commands.cjs');
+  ok(/createWorkbenchCli\(\{[\s\S]*?startServer, startStewardInbox, readConfig/.test(main)
+    && /await startServer\(argv\);[\s\S]*?await startStewardInbox\(await readConfig\(\)\)/.test(cli),
+  'D5 CLI 在服务启动后启用已装配的管家收件箱');
 
   const auth = read('../backend/http-route-policy.cjs');
   for (const p of ['/api/steward/start', '/api/steward/stop', '/api/steward/state', '/api/steward/inbox']) {

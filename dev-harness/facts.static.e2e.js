@@ -25,8 +25,8 @@ ok(pkg.version === bootV, `版本一致: package.json(${pkg.version}) == 00-boot
 ok(facts.workbenchVersion === pkg.version, `facts.workbenchVersion(${facts.workbenchVersion}) == package.json(${pkg.version})`);
 
 // 产物里的版本(防改了 src 忘 build)。
-const built = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'), 'utf8');
-ok(built.includes(`const VERSION = '${pkg.version}'`), `产物 server.js 版本与 package.json 一致(${pkg.version})`);
+const built = require('./src-reader').readServerSource();
+ok(built.includes(`const VERSION = '${pkg.version}'`), `生成装配的版本与 package.json 一致(${pkg.version})`);
 
 // 原生工具数:require 产物真身重算。
 const srv = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));

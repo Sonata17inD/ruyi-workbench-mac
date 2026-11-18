@@ -30,11 +30,10 @@ fs.mkdirSync(path.join(process.env.HOME, '.claude'), { recursive: true });
 const PROJ = path.join(root, 'proj');
 fs.mkdirSync(PROJ, { recursive: true });
 
-const { loadServerInternals } = require('../lib/server-internals');
+const { loadServerInternals, readTestRuntimeSource } = require('../lib/server-internals');
 // 反向验证时 server.js 是修前那份:新符号不存在会让 loadServerInternals 直接抛 ReferenceError(整件加载失败)。
 // 这里只取源码里真有的名字,缺的留 undefined,让用到它的用例各自红在「功能不存在」上,而不是整件一起死。
-const SERVER = process.env.RUYI_TEST_SERVER_JS ? path.resolve(process.env.RUYI_TEST_SERVER_JS) : path.resolve(__dirname, '..', '..', 'ruyi-workbench', 'app', 'server.js');
-const SERVER_SRC = fs.readFileSync(SERVER, 'utf8');
+const SERVER_SRC = readTestRuntimeSource();
 const WANT = ['memoryGlobalScopeAllowed', 'memoryRecentUserTexts', 'normalizeMemoryProposalCandidate', 'findMemoryProposalDuplicate', 'memoryProposalDuplicateFailure',
   'saveMemory', 'readMemoryItem', 'moveMemoryScope', 'memoryGlobalDir', 'memoryProjectDir', 'memoryUsageKey', 'touchMemoryUsage', 'readMemoryUsageState',
   'proposeMemoryRelation', 'confirmMemoryRelation', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
