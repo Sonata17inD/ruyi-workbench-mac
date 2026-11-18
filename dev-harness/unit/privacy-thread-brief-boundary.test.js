@@ -15,11 +15,11 @@ app.PrivacyCore.configHooks.openLocal = (...args) => { opens++; return f.vault.o
 const threads = require('node:worker_threads'), OriginalWorker = threads.Worker;
 threads.Worker = class extends OriginalWorker { constructor(...args) { workerStarts++; super(...args); } };
 const state = app.__eval(`(() => {
-  const state = { gate: null, writes: [], logs: [] };
+  const state = { gate: null };
   loadSession = async id => { if (state.gate) await state.gate(); return { id, kind: 'quick_ask', title: 'New session', rewindGen: 0, turnSeq: 1 }; };
-  updateSessionMeta = async (id, patch) => { state.writes.push({ id, patch }); return { ok: true }; };
+  saveSession = async () => {};
   threadBriefRateLimited = () => false;
-  logEvent = event => { state.logs.push({ kind: event.kind, error: event.error }); };
+  logEvent = () => {};
   return state;
 })()`);
 const captured = [], savedFetch = global.fetch;

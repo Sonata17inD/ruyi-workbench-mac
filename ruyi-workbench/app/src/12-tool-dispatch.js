@@ -2,6 +2,7 @@
 // 概念脱节 —— MCP/API 调用不带 root 时永远列到 dist/Ruyi-full 这类产物目录)。
 // 回退链:显式 args.root > 回合注入 ctx.workingDir > 会话 cwd ctx.session.cwd > MCP 子进程会话(env WCW_SESSION_ID)> 配置 defaultWorkspace > 用户主目录(末位兜底)。
 const { accCpName, buildNonAsciiReport, accAnnotateNonAscii, detectTextLineEnding, normalizeTextLineEndings, hasTextLineBreak, isUtf8Encoding, defaultTextLineEnding, textFileWantsUtf8Bom, UTF8_BOM_BYTES } = require('./backend/file-text-format.cjs');
+const { embeddedIpv4FromV6 } = require('./backend/network-policy.cjs');
 
 // hunt2 #17:检查点结果 → 模型可见的警告。此前只有 file_write 看 journalRecord 的返回值,file_edit/file_move/
 // file_copy/archive_*/http_download 在检查点没写进去(>5MB 被标 skipped、写盘失败)时照样回 ok:true 且一字不提,

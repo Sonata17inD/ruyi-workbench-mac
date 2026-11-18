@@ -4,7 +4,7 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 92,
-    "providedSymbols": 3366,
+    "providedSymbols": 3367,
     "requiredSymbols": 3465,
     "edges": 649,
     "forwardEdges": 59,
@@ -12011,6 +12011,7 @@
         "desktopControlComponentOnDisk",
         "desktopControlState",
         "detectTextLineEnding",
+        "embeddedIpv4FromV6",
         "execCwdProblem",
         "fileToolBeforeForCheckpoint",
         "fileToolFsFailure",

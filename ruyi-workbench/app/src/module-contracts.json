@@ -11875,6 +11875,7 @@
         "desktopControlComponentOnDisk",
         "desktopControlState",
         "detectTextLineEnding",
+        "embeddedIpv4FromV6",
         "execCwdProblem",
         "fileToolBeforeForCheckpoint",
         "fileToolFsFailure",
