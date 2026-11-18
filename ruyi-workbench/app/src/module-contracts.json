@@ -6732,34 +6732,20 @@
       "file": "08-agent-runs.js",
       "layer": "orchestration",
       "provides": [
-        "AGENT_ENVELOPE_ERROR_MAX",
-        "AGENT_ENVELOPE_NODE_SUMMARY_MAX",
-        "AGENT_ENVELOPE_STRUCTURED_MAX",
-        "AGENT_ENVELOPE_STRUCTURED_TOTAL_MAX",
-        "AGENT_ENVELOPE_TOTAL_SUMMARY_MAX",
-        "AGENT_RESULT_DEFAULT_CHARS",
-        "AGENT_RESULT_MAX_CHARS",
         "EVIDENCE_REFS_MAX_ITEMS",
-        "NODE_SUMMARY_MAX",
         "NODE_WRITE_FAMILY",
-        "ORCHESTRATE_TOOL_TIERS",
         "QUALITY_GATE_OUTPUT_SCHEMA",
         "agentEnvelopeArtifacts",
-        "agentMessageReceipt",
-        "agentPoolExpansionEligibility",
         "agentRunCapabilities",
         "agentRunResultSlice",
         "agentRunRoster",
-        "agentWorkflowStatusText",
         "aggregateAgentVote",
         "aggregateCoverage",
-        "appendAgentWorkflowSummaryToSession",
         "applyAgentWorktree",
         "balancedJsonSpan",
         "buildAgentRunEnvelope",
         "buildNodeEvidenceCatalog",
         "buildUpstreamContext",
-        "canonicalWorkflowValue",
         "cleanupAgentWorktree",
         "cleanupAgentWorktreeForRetry",
         "computeSchedulerStep",
@@ -6789,13 +6775,11 @@
         "readAgentRunRecord",
         "recordAgentNodeProgress",
         "repairJson",
-        "requestDelegationPermission",
         "resolveAgentTeamRoute",
         "resolveOrchestrateFollowup",
         "resolveOrchestrateNodes",
         "runSubAgent",
         "runSubAgentCore",
-        "runSubAgentCoreBody",
         "runWorkspaceHash",
         "sanitizeAgentOutputSchema",
         "singleAgentShorthandNode",
@@ -6806,41 +6790,33 @@
         "verdictPasses",
         "verifyNodeClaims",
         "workflowDependencyClosure",
-        "workflowProgressFingerprint",
-        "workflowValueAt"
+        "workflowProgressFingerprint"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
           "symbol": "boundToolResultForDisplay",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "cachedInputTokensFromUsage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -6856,14 +6832,14 @@
           "provider": "00-boot.js",
           "symbol": "estimateContentTokens",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "estimateHistoryTokens",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -6875,64 +6851,49 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "httpGetGuarded",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nativeToolTier",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "normalizeCwd",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "path",
+          "symbol": "nowIso",
           "kinds": [
             "read"
           ]
@@ -6955,40 +6916,33 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "setEstimateBucketsV1",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "ssrfCheck",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SubAgentMemoryHooks",
-          "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "text",
+          "symbol": "SubAgentMemoryHooks",
           "kinds": [
             "read"
           ]
@@ -7004,28 +6958,27 @@
           "provider": "00-boot.js",
           "symbol": "toolDisabledByPolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "truncateToolResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "resolveNodeModel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -7033,14 +6986,14 @@
           "provider": "01c-runtime-flags.js",
           "symbol": "estimateBucketsEnabled",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01e-permission-modes.js",
           "symbol": "clampAgentRoleToParent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7068,7 +7021,6 @@
           "provider": "02-session-store.js",
           "symbol": "agentRunFile",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -7076,49 +7028,42 @@
           "provider": "02-session-store.js",
           "symbol": "appendAgentRunEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "isProviderToolArgsObject",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalBridgedWrite",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "mutateSession",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "providerHistoryToolCalls",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7132,42 +7077,42 @@
           "provider": "02-session-store.js",
           "symbol": "writeHistorySnapshot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "liveSessionPermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedOfficeScriptGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedReadPathGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "guardWorkspacePath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7181,42 +7126,42 @@
           "provider": "04-permission-runtime.js",
           "symbol": "bridgedServerUnavailableMessage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "collectBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "getBridgedClient",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "runAutomaticInterventionDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7230,84 +7175,84 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerBaseWithV1",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerCallIsTransient",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "withTransientRetry",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "applyProviderReasoningEffort",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerServerSearchCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireOutputLimited",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "resolveProvider",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "buildProviderSystemPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "readProjectMemory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "resolveToolIterationBudget",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "shouldExtendToolIterationBudget",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7321,91 +7266,91 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "appendResponseLanguagePolicy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "getAgentWorkflows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "acquireResourceLease",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "inferToolResources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "normalizeAgentResources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "releaseResourceLease",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardAutoAskReason",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06w-capability-service.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "buildOpenAiTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "classifyToolPacks",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "dropPolicyDisabledBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "fetchOpenAiModels",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7419,14 +7364,14 @@
           "provider": "07-autonomy.js",
           "symbol": "loopAbortExempt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "loopWarnOnly",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -7447,77 +7392,56 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "neutralizeInjectedPrefixes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "openAiStreamOnce",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "requestNativePermission",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "runClaudeSubAgentOnce",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "toolDisabledResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "toolPackForName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "webPayloadReason",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "compactionRefetchRefusal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "compactionRefetchWarning",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "createCompactionRefetchGuard",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {

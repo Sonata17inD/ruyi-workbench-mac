@@ -28,7 +28,7 @@ ok(context.includes('createCompactionPlan({') && plan.includes('CompactionPlan: 
 // forced-400 的快照/蒸发/摘要重播种由 10 的共用内核 runForcedOverflowCompaction 做(用 CompactionPlan 的 forced_400 计划),主回合与子代理都调它。
 const kernel = read('ruyi-workbench/app/backend/compaction-kernel.cjs');
 ok(/async function runForcedOverflowCompaction\(ctx\)/.test(kernel) && kernel.includes("trigger: 'forced_400'"), 'shared forced-400 kernel uses CompactionPlan');
-ok(/runForcedOverflowCompaction\(\{\s*history: subHistory, privacyHistoryOwner, scope: 'subagent'/.test(read('ruyi-workbench/app/src/08-agent-runs.js')), 'subagent forced-400 uses the shared kernel and its own privacy history owner');
+ok(/runForcedOverflowCompaction\(\{\s*history: subHistory, privacyHistoryOwner, scope: 'subagent'/.test(read('ruyi-workbench/app/backend/subagent-runner.cjs')), 'subagent forced-400 uses the shared kernel and its own privacy history owner');
 ok(/runForcedOverflowCompaction\(\{\s*history: session\.providerHistory, privacyHistoryOwner: session, scope: 'main'/.test(read('ruyi-workbench/app/backend/provider-turn.cjs')), 'main forced-400 uses the shared kernel and the session privacy history owner');
 ok(context.includes("require('./backend/context-governance-rules.json')"), 'versioned context rules are runtime-authoritative');
 process.exitCode = failures ? 1 : 0;

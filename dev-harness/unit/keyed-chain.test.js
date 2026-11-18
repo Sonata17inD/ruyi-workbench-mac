@@ -49,7 +49,7 @@ test('[K3] 结算后自清;新接上的链不被旧链删掉', async () => {
 test('[K4] 修前的手写副本都已收编', () => {
   const handRolled = /(\w+Chains|\w+Locks)\.get\([^)]*\) \|\| Promise\.resolve\(\);\s*\n\s*const \w+ = \w+\.catch\(\(\) => \{\}\)\.then/g;
   const found = [];
-  for (const f of ['02-session-store.js', '08-agent-runs.js', '../backend/session-meta-updates.cjs']) {
+  for (const f of ['02-session-store.js', '08-agent-runs.js', '../backend/subagent-runner.cjs', '../backend/session-meta-updates.cjs']) {
     const text = fs.readFileSync(path.join(SRC, f), 'utf8');
     for (const m of text.matchAll(handRolled)) found.push(`${f}:${m[1]}`);
   }

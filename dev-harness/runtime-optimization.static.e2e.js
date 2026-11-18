@@ -38,7 +38,8 @@ ok(typeof estimator.setEstimateBucketsV1 === 'function' && typeof estimator.clas
   'S 105e 实际估算模块提供分桶 setter 和分类器');
 ok(isDeepStrictEqual(rules.estimation, { sampleChars: 2048, jsonStructDensity: 0.05, codeSignalThreshold: 3, factors: { json: 2.8, code: 3.2 } }),
   'S 运行时 JSON 锁定估算分桶规则');
-ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(src) && /setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(providerTurn), 'S 入口镜像刷新接线(runOpenAiTurn/runSubAgentCore;maybeAutoCompact 唯一调用点在回合内,不重复刷新)');
+const subagentRunner = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/subagent-runner.cjs'), 'utf8');
+ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(subagentRunner) && /setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(providerTurn), 'S 主回合与子代理入口均刷新估算设置');
 // 105f: 摘要单发优先 —— 历史派生 20–28K 配对模拟与 400 降级门通过后默认开启;显式 false 回退 45a/22-S0。
 ok(/runtimeSummarySingleShotV1: true/.test(src), 'S runtimeSummarySingleShotV1 defaults true (105f 历史派生模拟门已过)');
 ok(/'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1'/.test(src), 'S runtimeSummarySingleShotV1 入严格布尔 sanitize 表(105e 邻接不动;105g 顺排其后)');

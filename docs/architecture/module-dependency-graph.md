@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2244 | 3163 | 601 | 15 | 0 | 0 |
+| 87 | 2227 | 3155 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -70,7 +70,7 @@
 | 52 | `06j-scheduler-core.js` | engine | 44 | 0 | 0 |
 | 53 | `06k-config-patch.js` | engine | 1 | 21 | 7 |
 | 54 | `07-autonomy.js` | orchestration | 68 | 68 | 16 |
-| 55 | `08-agent-runs.js` | orchestration | 76 | 108 | 23 |
+| 55 | `08-agent-runs.js` | orchestration | 59 | 100 | 23 |
 | 56 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
 | 57 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
 | 58 | `10-context-governance.js` | orchestration | 66 | 31 | 12 |
@@ -269,13 +269,13 @@
 | `07-autonomy.js` | `04i-provider-wire.js` | backward | `ProviderWireHooks`, `providerWireProtocol`, `providerWireProtocolForBody` |
 | `07-autonomy.js` | `06b-prompt-registry.js` | backward | `appendResponseLanguagePolicy` |
 | `07-autonomy.js` | `06i-steward-core.js` | backward | `isStewardToolName`, `stewardAutoAskIndirect`, `stewardAutoAskScanIncomplete`, `stewardAutoAskSensitiveKind`, `stewardToolPermanentlyExempt` |
-| `08-agent-runs.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `SubAgentMemoryHooks`, `TOOL_TIER_RANK`, `boundToolResultForDisplay`, `bridgedWriteRelativePathArg`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `estimateContentTokens`, `estimateHistoryTokens`, `fsp`, `httpGetGuarded`, `isContextOverflowError`, `logEvent`, `makeId`, `nativeToolTier`, `normalizeCwd`, `nowIso`, `path`, `paths`, `redact`, `safeJsonParse`, `samePathKey`, `setEstimateBucketsV1`, `ssrfCheck`, `text`, `toolDisabledByPolicy`, `truncateToolResult` |
+| `08-agent-runs.js` | `00-boot.js` | backward | `DesktopExecutionHooks`, `EventStreamHooks`, `SubAgentMemoryHooks`, `TOOL_TIER_RANK`, `boundToolResultForDisplay`, `bridgedWriteRelativePathArg`, `cachedInputTokensFromUsage`, `computeProviderCost`, `estimateContentTokens`, `estimateHistoryTokens`, `httpGetGuarded`, `isContextOverflowError`, `logEvent`, `makeId`, `nativeToolTier`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeJsonParse`, `samePathKey`, `setEstimateBucketsV1`, `ssrfCheck`, `toolDisabledByPolicy`, `truncateToolResult` |
 | `08-agent-runs.js` | `01-config.js` | backward | `resolveNodeModel`, `safeSessionId` |
 | `08-agent-runs.js` | `01c-runtime-flags.js` | backward | `estimateBucketsEnabled` |
 | `08-agent-runs.js` | `01e-permission-modes.js` | backward | `clampAgentRoleToParent` |
 | `08-agent-runs.js` | `01h-process-runtime.js` | backward | `runGit` |
 | `08-agent-runs.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `pendingPermissions` |
-| `08-agent-runs.js` | `02-session-store.js` | backward | `agentRunFile`, `appendAgentRunEvent`, `appendUsageLedger`, `isProviderToolArgsObject`, `journalBridgedWrite`, `mutateSession`, `preflightWriteBoundary`, `providerHistoryToolCalls`, `saveAgentRun`, `writeHistorySnapshot` |
+| `08-agent-runs.js` | `02-session-store.js` | backward | `agentRunFile`, `appendAgentRunEvent`, `appendUsageLedger`, `isProviderToolArgsObject`, `journalBridgedWrite`, `preflightWriteBoundary`, `providerHistoryToolCalls`, `saveAgentRun`, `writeHistorySnapshot` |
 | `08-agent-runs.js` | `02d-session-overrides.js` | backward | `liveSessionPermissionMode`, `sessionDesktopToolsOf` |
 | `08-agent-runs.js` | `03-bridge-guard.js` | backward | `bridgedOfficeScriptGate`, `bridgedReadPathGate`, `guardWorkspacePath` |
 | `08-agent-runs.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
@@ -290,7 +290,7 @@
 | `08-agent-runs.js` | `06i-steward-core.js` | backward | `stewardAutoAskReason` |
 | `08-agent-runs.js` | `06w-capability-service.js` | backward | `getCapabilities` |
 | `08-agent-runs.js` | `07-autonomy.js` | backward | `LOOP_GUARD_LIMITS`, `MAIL_QUEUE_MAX`, `MEMORY_WRITE_TOOL_NAMES`, `bridgedToolTier`, `buildOpenAiTools`, `classifyToolPacks`, `dropPolicyDisabledBridgedTools`, `fetchOpenAiModels`, `loopAbortExempt`, `loopWarnOnly`, `nativeToolGate`, `neutralizeInjectedPrefixes`, `openAiStreamOnce`, `requestNativePermission`, `runClaudeSubAgentOnce`, `toolDisabledResult`, `toolPackForName`, `webPayloadReason` |
-| `08-agent-runs.js` | `10-context-governance.js` | forward | `SessionCompaction`, `compactionRefetchRefusal`, `compactionRefetchWarning`, `createCompactionRefetchGuard`, `estimateFactor`, `noteWindowOvershoot`, `recordCompactUsage`, `runForcedOverflowCompaction` |
+| `08-agent-runs.js` | `10-context-governance.js` | forward | `SessionCompaction`, `estimateFactor`, `noteWindowOvershoot`, `recordCompactUsage`, `runForcedOverflowCompaction` |
 | `08-agent-runs.js` | `12-tool-dispatch.js` | forward | `toolCall`, `toolFailureResult` |
 | `09-workflow.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `SubAgentMemoryHooks`, `TOOL_TIER_RANK`, `boundToolResultForDisplay`, `estimateContentTokens`, `estimateHistoryTokens`, `estimateToolSchemaTokens`, `hashArgs`, `isContextOverflowError`, `localTurnTimeParts`, `logEvent`, `makeId`, `nativeToolTier`, `nowIso`, `safeJsonParse`, `sessionSaveIsTombstoned`, `setEstimateBucketsV1` |
 | `09-workflow.js` | `01-config.js` | backward | `buildModelHint`, `getAgentRoleLibrary`, `readConfig`, `resolveNodeModel`, `safeSessionId` |

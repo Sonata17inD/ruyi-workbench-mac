@@ -72,7 +72,6 @@ const sites = [
   ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
   ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
   ['kimi-native-operations.cjs runKimiCompact', fnBody('../backend/kimi-native-operations.cjs', 'async function runKimiCompact('), false],
-  ['08-agent-runs.js appendAgentWorkflowSummaryToSession', fnBody('08-agent-runs.js', 'async function appendAgentWorkflowSummaryToSession('), false],
   ['steward-conversation-replies.cjs stewardStampReply', fnBody('../backend/steward-conversation-replies.cjs', 'async function stewardStampReply('), false],
   ['steward-conversation-visits.cjs stewardArchiveConversation', fnBody('../backend/steward-conversation-visits.cjs', 'async function stewardArchiveConversation('), true],
   ['mission-control.cjs missionControlCommand', fnBody('../backend/mission-control.cjs', 'async function missionControlCommand('), false],

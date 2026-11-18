@@ -77,8 +77,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(cut === '一句话。第二句话很长很长很长很长很长很长很长。…', '② cutAtSentence 在句末截 + 省略号(' + cut + ')');
   ok(srv.cutAtSentence('一句话。' + '长'.repeat(40), 30).length === 31 && srv.cutAtSentence('一句话。' + '长'.repeat(40), 30).endsWith('…'), '② 句末切点太靠前(<60%)时硬切 + 省略号');
   ok(srv.cutAtSentence('短句。', 100) === '短句。', '② 不超长原样返回');
-  const s08 = src('08-agent-runs.js');
-  ok(/const AGENT_RESULT_DEFAULT_CHARS = 12000;/.test(s08) && /const AGENT_RESULT_MAX_CHARS = 40000;/.test(s08), '② agent_result 默认 12000、上限 40000');
+  const envelopeSource = src('../backend/agent-run-envelope.cjs');
+  ok(/const AGENT_RESULT_DEFAULT_CHARS = 12000;/.test(envelopeSource) && /const AGENT_RESULT_MAX_CHARS = 40000;/.test(envelopeSource), '② agent_result 默认 12000、上限 40000');
 }
 
 // ③ 后台解耦 + 一次投递
@@ -132,9 +132,9 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const compactRecords = src('../backend/compaction-records.cjs');
   ok(/function recordCompactUsage\(session, provider, sc, attribution\)/.test(compactRecords) && /attr && attr\.subagentId \? \{ subagentId/.test(compactRecords) && /attr && attr\.runId \? \{ runId/.test(compactRecords), '⑤ recordCompactUsage 带 subagentId/runId 归属');
   ok(/recordCompactUsage\(parentSession, r\.summaryProvider, r\.sc, \{ subagentId, runId \}\)/.test(s10), '⑤ 子代理自动压缩记账带归属');
-  ok(/recordCompactUsage\(parentSession, provider, forced\.sc, \{ subagentId, runId \}\)/.test(src('08-agent-runs.js')), '⑤ 子代理 forced_400 压缩记账带归属');
+  ok(/recordCompactUsage\(parentSession, provider, forced\.sc, \{ subagentId, runId \}\)/.test(src('../backend/subagent-runner.cjs')), '⑤ 子代理 forced_400 压缩记账带归属');
   ok(/rec\.runId = String\(entry\.runId\)\.slice\(0, 120\)/.test(src('../backend/usage-ledger.cjs')), '⑤ usage-ledger 保留 runId');
-  ok(/kind: 'subagent', agentKey, subagentId, runId,/.test(src('08-agent-runs.js')), '⑤ 子代理主行也带 runId');
+  ok(/kind: 'subagent', agentKey, subagentId, runId,/.test(src('../backend/subagent-runner.cjs')), '⑤ 子代理主行也带 runId');
 }
 
 // ⑥ 窗口一致

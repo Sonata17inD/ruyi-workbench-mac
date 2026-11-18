@@ -22,6 +22,7 @@ let failures = 0;
 function ok(cond, label) { if (cond) { console.log(`PASS ${label}`); } else { failures++; console.log(`FAIL ${label}`); } }
 
 const src = readServerSource();
+const subagentSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/subagent-runner.cjs'), 'utf8');
 
 // ---- ① Claude tier 白名单(抽出实际求值,不靠正则目测) ----
 {
@@ -48,8 +49,8 @@ const src = readServerSource();
 // ---- ③ OpenAI 子代理桥接分级(runSubAgentCore 源检查) ----
 // 回合引擎审计 t8:runSubAgentCore 成了只管「任何出口都停心跳」的外壳,子回合本体在 runSubAgentCoreBody —— 判据切本体。
 {
-  ok(/return await DesktopExecutionHooks\.runNode\(opts\.desktopNode, \(\) => runSubAgentCoreBody\(opts, lifecycle\)\)/.test(functionBlock(src, 'runSubAgentCore')), '③ runSubAgentCore 经桌面执行上下文委托本体 runSubAgentCoreBody');
-  const fnSlice = functionBlock(src, 'runSubAgentCoreBody');
+  ok(/return await DesktopExecutionHooks\.runNode\(opts\.desktopNode, \(\) => runSubAgentCoreBody\(opts, lifecycle\)\)/.test(functionBlock(subagentSource, 'runSubAgentCore')), '③ runSubAgentCore 经桌面执行上下文委托本体 runSubAgentCoreBody');
+  const fnSlice = functionBlock(subagentSource, 'runSubAgentCoreBody');
   ok(fnSlice.length > 0, '③ runSubAgentCore 存在');
   ok(!/if \(tier === 'exec'\) \{ try \{ bridged = await collectBridgedTools/.test(fnSlice), '③ 桥接收集不再被 tier===exec 一刀切门控');
   ok(/bridged = await collectBridgedTools\(config\)/.test(fnSlice), '③ 所有层级都收集桥接工具');
@@ -73,7 +74,7 @@ const src = readServerSource();
   // 137 集成重钉:spawn_agent 兼容口仍在 TOOL_HANDLERS(tool-dispatch L4 要求每个注册工具有 tier),所以它还在表里;
   // 本条守的是「委派子代理不落低档」—— 它在表里就必须与 orchestrate_agents 同为 exec(将来整个撤掉兼容口也照样绿)。
   ok(T.orchestrate_agents === 'exec' && (!('spawn_agent' in T) || T.spawn_agent === 'exec'), "⑤ orchestrate_agents 保持 exec 级;spawn_agent 兼容口若在表里也必须 exec(代理模式 v2)");
-  ok(/noAgentTools: true/.test(functionBlock(src, 'runSubAgentCoreBody')), '⑤ 子回合仍禁嵌套(noAgentTools:三个代理工具都不 offer)');
+  ok(/noAgentTools: true/.test(functionBlock(subagentSource, 'runSubAgentCoreBody')), '⑤ 子回合仍禁嵌套(noAgentTools:三个代理工具都不 offer)');
 }
 
 // ---- ⑥ bridgedToolTier 实跑(产物导出的那一个函数) ----

@@ -39,7 +39,9 @@ const backendSource = file => fs.readFileSync(path.join(WB, 'app/backend', file)
 const workflow = backendSource('agent-workflow.cjs');
 const scheduler = backendSource('workflow-scheduler.cjs');
 const catalog = backendSource('agent-workflow-catalog.cjs');
-const runSource = fs.readFileSync(path.join(WB, 'app/src/08-agent-runs.js'), 'utf8');
+const waitSource = backendSource('workflow-wait.cjs');
+const reportSource = backendSource('agent-workflow-report.cjs');
+const { createWorkflowWait } = require('../ruyi-workbench/app/backend/workflow-wait.cjs');
 const { normalizeWaitSpec } = require('../ruyi-workbench/app/backend/agent-workflow-catalog.cjs');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -56,10 +58,10 @@ ok(/spec\.timeoutMs = Math\.max\(spec\.timeoutMs, spec\.durationMs \+ spec\.poll
 ok(/if \(Date\.now\(\) - \(Number\(node\.lastWaitPollAt\) \|\| 0\) < \(Number\(w\.pollMs\)/.test(workflow), 'S 对抗轮 P3:per-node pollMs 节流');
 ok(/for \(const n of nodes\) if \(n\.status === 'waiting' && n\.waitStartedAt\) \{ const t = Date\.parse/.test(workflow), 'S 对抗轮 P2:暂停补偿 waitStartedAt');
 ok(/for \(const n of nodes\) if \(n\.status === 'waiting'\) n\.waitStartedAt = nowIso\(\);/.test(workflow), 'S 对抗轮 P3:resume 重置 waiting 等待窗');
-ok(/process\.kill\(w\.pid, 0\)/.test(runSource) && !/process\.kill\(w\.pid, ['"]?SIG/.test(runSource), 'S process 模式仅发信号 0(绝不真实信号)');
-ok(/guardWorkspacePath\(path\.resolve\(String\(ctx\.cwd \|\| ''\), String\(w\.path \|\| ''\)\), ctx\.session, ctx\.config\)/.test(runSource), 'S file 模式过 guardWorkspacePath(按 ctx.cwd 解析 + 工作区/敏感面护栏)');
-ok(/const chk = ssrfCheck\(String\(w\.url \|\| ''\)\)/.test(runSource) && /httpGetGuarded\(String\(w\.url/.test(runSource), 'S url 模式过 ssrfCheck + httpGetGuarded');
-ok(/waiting: '等待条件'/.test(runSource), 'S agentWorkflowStatusText 含 waiting:等待条件');
+ok(/process\.kill\(w\.pid, 0\)/.test(waitSource) && !/process\.kill\(w\.pid, ['"]?SIG/.test(waitSource), 'S process 模式仅发信号 0(绝不真实信号)');
+ok(/guardWorkspacePath\(path\.resolve\(String\(ctx\.cwd \|\| ''\), String\(w\.path \|\| ''\)\), ctx\.session, ctx\.config\)/.test(waitSource), 'S file 模式过 guardWorkspacePath(按 ctx.cwd 解析 + 工作区/敏感面护栏)');
+ok(/const chk = ssrfCheck\(String\(w\.url \|\| ''\)\)/.test(waitSource) && /httpGetGuarded\(String\(w\.url/.test(waitSource), 'S url 模式过 ssrfCheck + httpGetGuarded');
+ok(/waiting: '等待条件'/.test(reportSource), 'S agentWorkflowStatusText 含 waiting:等待条件');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [P] 纯逻辑:normalizeWaitSpec + evalWaitCondition
@@ -86,17 +88,12 @@ ok(normalizeWaitSpec({ mode: 'process', pid: 4242 }).state === 'alive', 'P proce
 ok(normalizeWaitSpec({ mode: 'url' }) === null && !!normalizeWaitSpec({ mode: 'url', url: 'http://x' }), 'P url 缺 url → null');
 
 console.log('\n── [P] evalWaitCondition(注入护栏桩) ──');
-const em = runSource.match(/async function evalWaitCondition\(node, ctx\) \{[\s\S]*?\n\}/);
-ok(!!em, 'P 源抽取 evalWaitCondition');
-// 注入:guardWorkspacePath(桩:含 SENS→拒,否则 ok)、fsp(真)、path(真)、process(真)、ssrfCheck/httpGetGuarded(桩)。
-const fsp = require('fs').promises;
 let guardCalls = 0, lastGuardPath = '';
 const guardWorkspacePath = async (p) => { guardCalls++; lastGuardPath = String(p); return /SENS/.test(String(p)) ? { ok: false, error: '敏感面拒绝' } : { ok: true, absPath: String(p) }; };
 let ssrfAllow = true, httpOk = true;
 const ssrfCheck = () => ({ allowed: ssrfAllow, reason: 'stub' });
 const httpGetGuarded = async () => (httpOk ? { ok: true, status: 200 } : { ok: false, failClass: 'connect' });
-const evalWaitCondition = new Function('guardWorkspacePath', 'fsp', 'path', 'process', 'ssrfCheck', 'httpGetGuarded',
-  em[0] + '\nreturn evalWaitCondition;')(guardWorkspacePath, fsp, path, process, ssrfCheck, httpGetGuarded);
+const { evalWaitCondition } = createWorkflowWait({ guardWorkspacePath, ssrfCheck, httpGetGuarded });
 
 (async () => {
   // timer:未到→not done;已到→done。
