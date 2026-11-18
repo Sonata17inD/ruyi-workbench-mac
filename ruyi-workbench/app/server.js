@@ -13,7 +13,6 @@ const { platformRuntimeEnvironment, platformOpenSpawn, platformShellEnvironment 
 // 产物字节级可复现(build --check 校验),运行时零依赖单文件,气隙可审。
 // ─────────────────────────────────────────────────────────────────────────────
 
-const http = require('http');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
@@ -236,7 +235,7 @@ const paths = {
 // v1 技能体系: 技能/目录名的安全字符集(供落盘 skills/<id>/、防路径穿越)。复用同 playbook id 的形状。
 const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
-const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
+const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
 const { markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, clearDeletedSession } = require('./backend/session-tombstones.cjs').createSessionTombstones();
@@ -14537,61 +14536,11 @@ const { handleCheckpointQueryApiRoutes, handleCheckpointApiRoutes } =
     storage: { normalizeStoragePolicy, storageSweep }, process,
   });
 
-// 118c: 启动体验。两件用户看得见的事,都通过 GET /api/status 的【一个】只读字段 startNotice 上线:
-//   ① 上一次启动【失败】过 -- 失败时把人话写进 <data>/last-start-error.json,下一次成功启动读出来、
-//      交给前端顶部条,读完立刻删文件(所以它天然是一次性的,不会反复骚扰)。
-//   ② 本次启动【改用了别的端口】 -- 原端口被非工作台进程占着,自动往后找到第一个能用的。
-// 选 /api/status 而不是新开一条路由:前端 boot 本来就必调 status,零新增路由、零新增鉴权判定点,
-// route-inventory 不动;两个字段都是进程内常量派生,不读盘、不做任何探测。
-const LAST_START_ERROR_FILE = 'last-start-error.json';
-// 端口自动改用的搜索宽度:原端口 +1 .. +9。够覆盖「本机同时开了几个自建服务」的现实场景,
-// 又不会在真的全被占满时无限试下去(九个都不行时报错并留下 last-start-error.json)。
-const PORT_FALLBACK_SPAN = 9;
-// 只认这三类:端口拿不到 / 数据目录写不进 / 其它启动异常。文件里出现别的 kind 一律当作损坏丢弃。
-const START_ERROR_KINDS = Object.freeze(['port-unavailable', 'data-dir-unwritable', 'startup-failed']);
-const START_NOTICE = { lastError: null, portFallback: null };
-
-// 「怎么办」一句话。刻意不给命令行、不给要用户自己去开的路径:能在如意里做的事就指向如意里的入口。
-function startErrorNextText(kind) {
-  if (kind === 'port-unavailable') return '先关掉占着这些端口的那个程序(常见是另一个本机服务),再启动一次如意。';
-  if (kind === 'data-dir-unwritable') return '磁盘可能满了,或者数据文件夹被安全软件锁住了。腾出一些空间后再启动一次如意。';
-  return '再启动一次通常就好。如果一直起不来,在「帮助 → 查看日志」里把最后几行发给支持人员。';
-}
-
-// 失败落盘。best-effort:数据目录本身写不进时这一步当然也会失败,那就只剩 console 输出 --
-// 这正是「数据目录不可写」这一类的诚实下限,绝不假装记下了。
-async function writeStartError(kind, message) {
-  const safeKind = START_ERROR_KINDS.includes(kind) ? kind : 'startup-failed';
-  try {
-    if (!DesktopExecutionHooks.canWriteStartupError()) return;
-    await fsp.mkdir(paths.data, { recursive: true });
-    if (!DesktopExecutionHooks.canWriteStartupError()) return;
-    await atomicWriteJson(path.join(paths.data, LAST_START_ERROR_FILE), {
-      at: nowIso(),
-      kind: safeKind,
-      message: String(message || '').slice(0, 800),
-      next: startErrorNextText(safeKind),
-    });
-  } catch { /* 记不下就算了:失败信息此刻已经在 console 上 */ }
-}
-
-// 读出并删除。返回归一化后的记录(或 null)。删除放在读之后、判定之前:即使内容坏了也要清掉,
-// 否则一份损坏的文件会永远赖在数据目录里。
-async function consumeStartError() {
-  const file = path.join(paths.data, LAST_START_ERROR_FILE);
-  let raw = null;
-  try { raw = safeJsonParse(await fsp.readFile(file, 'utf8'), null); } catch { raw = null; }
-  try { await fsp.unlink(file); } catch { /* 没有这份文件是最常见的情况 */ }
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const kind = String(raw.kind || '');
-  if (!START_ERROR_KINDS.includes(kind)) return null;
-  return {
-    at: String(raw.at || ''),
-    kind,
-    message: String(raw.message || '').slice(0, 800),
-    next: String(raw.next || '').slice(0, 800) || startErrorNextText(kind),
-  };
-}
+const { createServerStartNotices, START_ERROR_KINDS } = require('./backend/server-start-notices.cjs');
+const { START_NOTICE, writeStartError, consumeStartError, listenWithFallback } = createServerStartNotices({
+  paths, DesktopExecutionHooks, atomicWriteJson, nowIso, safeJsonParse,
+});
+const { createWorkbenchHttpServer } = require('./backend/workbench-http-server.cjs');
 
 const { handleSkillApiRoutes, setSessionSkillsCore } = require('./backend/skill-routes.cjs').createSkillRoutes({
   paths, SKILL_ID_RE, readConfig, loadSkillRegistry, fileAllowedRoots, logEvent,
@@ -15402,58 +15351,6 @@ async function handleApi(req, res, pathname) {
   return send(res, apiFailure('api.route_not_found', {}, 'Not found', 404));
 }
 
-// --- startup port fallback: if the port is held by a STALE workbench, free it and retry ---
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// One listen attempt on an explicit port. Extracted from listenWithFallback so the 118c fallback scan can
-// reuse it. A failed listen leaves the server unbound, so calling it again on another port is legal.
-function listenOnce(server, port, host) {
-  return new Promise((resolve, reject) => {
-    const onErr = e => { server.removeListener('listening', onOk); reject(e); };
-    const onOk = () => { server.removeListener('error', onErr); resolve(); };
-    server.once('error', onErr);
-    server.once('listening', onOk);
-    server.listen(port, host);
-  });
-}
-
-// 118c: 原端口拿不到时,顺序试 port+1 .. port+PORT_FALLBACK_SPAN,第一个能监听的就用它,并把
-// 「原端口 -> 实际端口」登记进 START_NOTICE 让前端顶部条说清楚(「已改用 8766(原 8765 被占用)」)。
-// 全部不可用才抛错,错误带上 ruyiStartErrorKind 供 startServer 写 last-start-error.json。
-// 返回值是【实际】端口:runtime.json、控制台 URL、--open 一律用它,不存在「文件写 8765 实际在 8766」的分裂。
-async function listenOnNextFreePort(server, port, host, why) {
-  for (let step = 1; step <= PORT_FALLBACK_SPAN; step++) {
-    const candidate = port + step;
-    if (candidate > 65535) break;
-    try {
-      await listenOnce(server, candidate, host);
-      START_NOTICE.portFallback = { requested: port, actual: candidate };
-      console.log(`[port] :${port} unavailable (${why}) -- listening on :${candidate} instead.`);
-      return candidate;
-    } catch (e) {
-      if (e.code !== 'EADDRINUSE' && e.code !== 'EACCES') throw e;
-    }
-  }
-  const error = new Error(`${why} 随后自动改用的 ${port + 1}-${port + PORT_FALLBACK_SPAN} 端口也全部不可用。`);
-  error.ruyiStartErrorKind = 'port-unavailable';
-  throw error;
-}
-
-// Listen; on EADDRINUSE, free a stale workbench (if allowed + safe) and retry a few times.
-// 118c: 每一条「拿不到原端口」的岔路都不再是死路 -- 统一交给 listenOnNextFreePort 往后找。
-// 自动接管被禁用时同样往后找:那个开关的语义是「不许杀别人的进程」,不是「必须占住这个端口不放」。
-async function listenWithFallback(server, port, host, config) {
-  const attempt = () => listenOnce(server, port, host);
-  try { await attempt(); return port; }
-  catch (e) {
-    if (e.code !== 'EADDRINUSE') throw e;
-    // 62: ownership is decided before recovery by the data-directory IPC gate.
-    // A listening process is never made "stale" by a runtime.json record; do not kill it.
-    return await listenOnNextFreePort(server, port, host,
-      `端口 ${port} 已被占用，没有结束占用它的进程。`);
-  }
-}
-
 // 118c: 启动失败必须在【应用里】看得见,而不是只打在一个用户根本没打开的终端上。
 // 这层薄包装把三类致命失败落成 <data>/last-start-error.json(人话 + 下一步),
 // 下一次成功启动由 startServerInner 读出来交给前端顶部条;console 输出与退出码一字未改。
@@ -15642,50 +15539,13 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   const requestedPort = Number(opts.port || process.env.PORT || DEFAULT_PORT);
   const host = bindHost;
   if (!isLoopbackBindHost(host)) console.log(`[warn] --allow-remote:正在监听非回环地址 ${host}。非本机对端拿不到页面 token(须自带头 token);请用防火墙限制来源,不要用同机反向代理转发(转发来的请求会被当成本机)。`);
-  const server = http.createServer(async (req, res) => {
-    const reqT0 = Date.now(); // 第40波:请求耗时插桩(res finish 时入账,/health 不计 —— 高频探针会淹没真分布)
-    res.on('finish', () => { try { const u0 = new URL(req.url, 'http://x'); if (u0.pathname !== '/health') recordRequestMetric(req.method, u0.pathname, Date.now() - reqT0); } catch { /* 观测不阻断 */ } });
-    // 防嵌入(点击劫持):任何响应都不许被别的页面放进 iframe。工作台页面从不被框:桌面壳 WebView2 是顶层导航,
-    // 文件预览里的 HTML 产物是 sandbox + srcdoc(about:srcdoc,不受这两个头约束)。两个头都发:X-Frame-Options 给老内核,
-    // frame-ancestors 给现代内核(与 index.html 里 meta 的 CSP 是叠加关系,互不替代 —— meta 里的 frame-ancestors 本来就不生效)。
-    // 先 setHeader 再让各路由的 writeHead 合并:路由自己写了同名头则以路由为准。
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
-    // 安全走查 S6:禁止浏览器按内容嗅探 MIME(把 text/plain 的回包当 HTML/脚本执行)。静态资源的 content-type 由
-    // contentTypeFor 给全(html/css/js/json/图片),/api 一律 application/json,SSE 是 text/event-stream,不会被它误伤。
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    try {
-      // 第33波:顶层 host 门(DNS-rebinding 防御覆盖全 GET 面 + 静态 /,治第29波 backlog #0)。hostAllowed 之前
-      // 只在 originOk(mutating 块)内调用,GET 与 serveStatic 跳过 -> index.html 的 token 可被 rebinding 页读走。
-      // 此处一律拦非 loopback Host;所有合法调用方(e2e/MCP 子/CLI/浏览器)连 127.0.0.1:PORT,Host 已是 loopback。
-      if (!hostAllowed(req)) return send(res, json({ ok: false, error: 'host not allowed' }, 403));
-      const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-      // Liveness + restart proof: version alone can't prove a restart, so echo the per-process overlay id.
-      if (u.pathname === '/health') {
-        return send(res, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'x-workbench-version': VERSION, 'x-overlay-id': OVERLAY_ID },
-          body: JSON.stringify({ ok: true, app: APP_NAME, version: VERSION, overlayId: OVERLAY_ID, launchMode: LAUNCH_MODE, uptimeSec: Math.round(process.uptime()) }) });
-      }
-      if (u.pathname.startsWith('/api/')) return await handleApi(req, res, u.pathname);
-      return send(res, await serveStatic(u.pathname, req));
-    } catch (err) {
-      // 128f-①(用户首启走查第二句「查看日志诊断似乎显示不出具体原因」):漏到这里的异常修前只回一个 500,日志里
-      // 一个字没有 ——「在如意里看日志」看不到它。现在记一条 http_unhandled:方法、路径(不带查询串)、状态、错误名、
-      // 消息(截断)、栈前 6 帧。SyntaxError 只留引号前那半句:Node 的 JSON.parse 会把请求体原文引进消息里,
-      // 那里面可能有密钥(比如一发写坏了的配置保存)。help-menu.e2e ⑤b 钉。
-      try {
-        const name = String((err && err.name) || 'Error');
-        let message = String((err && err.message) || err || '');
-        if (name === 'SyntaxError') message = message.split(/["']/)[0].replace(/[\s,]+$/, '') + ' (content not logged)';
-        logEvent({ kind: 'http_unhandled', method: req.method, path: String(req.url || '').split('?')[0].slice(0, 200),
-          status: (err && err.statusCode) || 500, name, message: message.slice(0, 500),
-          stack: String((err && err.stack) || '').split('\n').slice(1, 7).map(s => s.trim()) });
-      } catch { /* 日志是旁路,不许挡住回包 */ }
-      return sendError(res, err);
-    }
+  const server = createWorkbenchHttpServer({
+    APP_NAME, VERSION, OVERLAY_ID, getLaunchMode: () => LAUNCH_MODE,
+    recordRequestMetric, hostAllowed, handleApi, serveStatic, logEvent,
   });
   // 118c: 实际监听端口可能不是请求的那个(原端口被别的程序占着时自动往后找)。下面的 runtime.json、
   // 控制台 URL 与 --open 全部用【实际】端口,前端顶部条另有 START_NOTICE.portFallback 说明改用了谁。
-  const port = await listenWithFallback(server, requestedPort, host, config);
+  const port = await listenWithFallback(server, requestedPort, host);
   finishBootCliPathProbes(); // No await before the runtime token handshake below.
   const url = `http://${host}:${port}/`;
   // Port+token handshake file for the permission-bridge MCP child; also useful for tooling.

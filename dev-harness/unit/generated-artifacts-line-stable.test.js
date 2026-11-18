@@ -77,6 +77,7 @@ describe('generated architecture artifacts are line-number free', () => {
     temps.push(dir);
     const inserted = {};
     for (const file of moduleFiles(dir)) inserted[file] = shiftLines(path.join(dir, file));
+    assert.ok(shiftLines(path.join(dir, '../backend/workbench-http-server.cjs')) > 2, 'HTTP listener route anchors also shift');
     shiftLines(path.join(dir, '../backend/event-stream.cjs'));
     assert.ok(shiftLines(path.join(dir, '../backend/steward-routes.cjs')) > 2, '显式管家路由内也平移了 handler');
     for (const file of ['local-support-routes.cjs', 'diagnostic-routes.cjs', 'checkpoint-routes.cjs', 'agent-run-routes.cjs', 'session-routes.cjs', 'mission-routes.cjs', 'intervention-routes.cjs', 'migration-routes.cjs', 'mcp-routes.cjs', 'session-steering.cjs', 'audio-routes.cjs', 'skill-routes.cjs', 'memory-routes.cjs', 'session-execution-routes.cjs', 'playbook-routes.cjs', 'attachment-routes.cjs']) {

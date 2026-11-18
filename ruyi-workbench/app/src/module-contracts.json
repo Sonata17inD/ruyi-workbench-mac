@@ -120,7 +120,6 @@
         "fsp",
         "hashArgs",
         "historyStartsWithCompactionSummary",
-        "http",
         "httpGetGuarded",
         "isContextOverflowError",
         "isDirectServeInvocation",
@@ -180,7 +179,6 @@
         "sanitizeExternalMcpServer",
         "scanMcpSources",
         "send",
-        "sendError",
         "sensitiveDataRoots",
         "sensitiveFileIdentities",
         "sensitiveGlobsForRg",
@@ -11811,13 +11809,13 @@
       "file": "13-http-router.js",
       "layer": "transport",
       "provides": [
-        "LAST_START_ERROR_FILE",
-        "PORT_FALLBACK_SPAN",
         "START_ERROR_KINDS",
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
         "buildUsageSummary",
         "consumeStartError",
+        "createServerStartNotices",
+        "createWorkbenchHttpServer",
         "doctor",
         "doctorHealthSeverity",
         "doctorHumanLines",
@@ -11832,15 +11830,11 @@
         "handleSkillApiRoutes",
         "handleUsageApiRoutes",
         "installIntegration",
-        "listenOnNextFreePort",
-        "listenOnce",
         "listenWithFallback",
         "parseArgs",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
         "setSessionSkillsCore",
-        "sleep",
-        "startErrorNextText",
         "startMcp",
         "startServer",
         "startServerInner",
@@ -12002,13 +11996,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "http",
           "kinds": [
             "read"
           ]
@@ -12210,13 +12197,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "sendError",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
           "kinds": [
             "read"
@@ -12289,7 +12269,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12396,7 +12377,7 @@
           "provider": "01-config.js",
           "symbol": "hostAllowed",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12504,7 +12485,7 @@
           "provider": "01-config.js",
           "symbol": "serveStatic",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13424,7 +13405,7 @@
           "provider": "06v-operational-services.js",
           "symbol": "recordRequestMetric",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

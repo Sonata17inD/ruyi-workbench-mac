@@ -44,13 +44,15 @@ async function up() { // 117q:预算 50×120ms=6s 小于本机冷启动实测 4.
 (async () => {
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const router = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+  const routePolicy = fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
+  const staticAssets = fs.readFileSync(path.join(WB, 'app', 'backend', 'static-assets.cjs'), 'utf8');
   const net = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'net.js'), 'utf8');
   const app = fs.readFileSync(path.join(WB, 'app', 'public', 'app.js'), 'utf8');
   const html = fs.readFileSync(path.join(WB, 'app', 'public', 'index.html'), 'utf8');
-  ok(src.includes("pathname === '/api/bootstrap'") && /json\(\{ ok: true, token: RUNTIME\.token/.test(src), 'S1 /api/bootstrap handler 在(返 token)');
-  ok(src.includes("{ m: 'POST', p: '/api/bootstrap', auth: 'open' }"), 'S2 ROUTE_AUTH bootstrap open 条目在');
-  ok(/browserNav = Boolean\(h\['sec-fetch-dest'\]\)/.test(src) && /browserNav \? '' :/.test(src), 'S3 serveStatic 浏览器导航分支不下发明文 token');
+  ok(router.includes("pathname === '/api/bootstrap'") && /json\(\{ ok: true, token: RUNTIME\.token/.test(router), 'S1 /api/bootstrap handler 在(返 token)');
+  ok(routePolicy.includes("{ m: 'POST', p: '/api/bootstrap', auth: 'open' }"), 'S2 ROUTE_AUTH bootstrap open 条目在');
+  ok(/browserNav = Boolean\(h\['sec-fetch-dest'\]\)/.test(staticAssets) && /browserNav \? '' :/.test(staticAssets), 'S3 serveStatic 浏览器导航分支不下发明文 token');
   ok(net.includes('export async function initToken') && net.includes("fetch('/api/bootstrap'") && net.includes("sessionStorage.setItem('wcw.token'"), 'S4 net.js initToken 握手 + sessionStorage 存储');
   ok(net.includes('export async function initToken(force = false)')
     && net.includes("sessionStorage.removeItem('wcw.token')")

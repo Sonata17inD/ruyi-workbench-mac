@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 93,
-    "providedSymbols": 2710,
-    "requiredSymbols": 3262,
+    "providedSymbols": 2704,
+    "requiredSymbols": 3260,
     "edges": 632,
     "forwardEdges": 21,
     "duplicateProvides": 0,
@@ -134,7 +134,6 @@
         "fsp",
         "hashArgs",
         "historyStartsWithCompactionSummary",
-        "http",
         "httpGetGuarded",
         "isContextOverflowError",
         "isDirectServeInvocation",
@@ -194,7 +193,6 @@
         "sanitizeExternalMcpServer",
         "scanMcpSources",
         "send",
-        "sendError",
         "sensitiveDataRoots",
         "sensitiveFileIdentities",
         "sensitiveGlobsForRg",
@@ -11955,13 +11953,13 @@
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
-        "LAST_START_ERROR_FILE",
-        "PORT_FALLBACK_SPAN",
         "START_ERROR_KINDS",
         "START_NOTICE",
         "agentWorkflowLoopbackRoute",
         "buildUsageSummary",
         "consumeStartError",
+        "createServerStartNotices",
+        "createWorkbenchHttpServer",
         "doctor",
         "doctorHealthSeverity",
         "doctorHumanLines",
@@ -11976,15 +11974,11 @@
         "handleSkillApiRoutes",
         "handleUsageApiRoutes",
         "installIntegration",
-        "listenOnNextFreePort",
-        "listenOnce",
         "listenWithFallback",
         "parseArgs",
         "resetOrphanedMissionDrivers",
         "resolveBindHost",
         "setSessionSkillsCore",
-        "sleep",
-        "startErrorNextText",
         "startMcp",
         "startServer",
         "startServerInner",
@@ -12146,13 +12140,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "http",
           "kinds": [
             "read"
           ]
@@ -12354,13 +12341,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "sendError",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
           "kinds": [
             "read"
@@ -12433,7 +12413,8 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -12540,7 +12521,7 @@
           "provider": "01-config.js",
           "symbol": "hostAllowed",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -12648,7 +12629,7 @@
           "provider": "01-config.js",
           "symbol": "serveStatic",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13568,7 +13549,7 @@
           "provider": "06v-operational-services.js",
           "symbol": "recordRequestMetric",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -29916,7 +29897,6 @@
         "externalRoot",
         "fs",
         "fsp",
-        "http",
         "isDirectServeInvocation",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",
@@ -29942,7 +29922,6 @@
         "safeJsonParse",
         "samePathKey",
         "send",
-        "sendError",
         "spawnDetachedChecked",
         "text",
         "truncateToolResult",

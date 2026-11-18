@@ -116,7 +116,7 @@ function getJson(pathname, token, timeoutMs) {
     // 锚点必须落在 boot 段【自己】那一句上:`await invalidateSessionIndex();` 在全文里第一处出现于 02，
     // 拿它切片会把半个仓库都算进 "listen 之前"。这一句带注释的 readConfig 是 boot 段独有的。
     const bootStart = src.indexOf('let config = await readConfig(); // let: autoImportClaudeCodeMcp 写回后需重绑到最新引用');
-    const listenAt = src.indexOf('const port = await listenWithFallback(server, requestedPort, host, config);');
+    const listenAt = src.indexOf('const port = await listenWithFallback(server, requestedPort, host);');
     ok(bootStart > 0 && listenAt > bootStart, 's 定位到 boot 段与 listenWithFallback');
     const beforeListen = src.slice(bootStart, listenAt);
     const afterListen = src.slice(listenAt);

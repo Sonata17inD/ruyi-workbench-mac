@@ -2,6 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { fixture, clone } = require('../lib/privacy-test-fixture');
 const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
+const { createServerStartNotices, START_ERROR_KINDS } = require('../../ruyi-workbench/app/backend/server-start-notices.cjs');
 function setup() {
   const f = fixture(); let disk, journal, busy = false, fault = '', invalidations = 0; const notifications = [];
   const original = { credentialEncryptionV1: true, defaultWorkspace: 'KEEP-WORKSPACE', privacyModeV1: 'enhanced', providers: [{ id: 'same', apiKey: 'old-test-key', baseUrl: 'https://old.test' }, { id: 'keep', apiKey: 'kept-test-key', baseUrl: 'https://keep.test' }] };
@@ -177,21 +178,28 @@ test('CLI startup prints fresh-profile recovery guidance only for a locked crede
   }
 });
 
-test('startup diagnostic retains its schema, size limit and original error while exposing safe locked-vault guidance', async () => {
+test('startup diagnostic retains its schema, size limit and original error while exposing safe locked-vault guidance', async t => {
   const f = fixture(), { functionBlock } = require('../lib/source-slice');
   const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13-http-router.js'), 'utf8');
-  const functions = ['startServer', 'writeStartError', 'startErrorNextText'].map(name => { const code = functionBlock(source, name); assert.ok(code, name); return code; }).join('\n');
+  const startServer = functionBlock(source, 'startServer');
+  assert.ok(startServer);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-start-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const paths = { data: path.join(root, 'synthetic-data') };
   for (const code of ['credential_vault.unlock_failed', 'credential_vault.backup_authentication', 'EIO']) {
     const error = Object.assign(new Error(code === 'EIO' ? 'x'.repeat(1600) : 'synthetic failure'), { code }), records = [];
     let finished = 0;
-    const start = vm.runInNewContext(functions + '\nstartServer', {
+    const DesktopExecutionHooks = { initialize: async () => {}, canWriteStartupError: () => true };
+    const { writeStartError } = createServerStartNotices({
+      paths, DesktopExecutionHooks, atomicWriteJson: async (_file, value) => records.push(value),
+      nowIso: () => '2026-10-20T00:00:00.000Z',
+    });
+    const start = vm.runInNewContext(startServer + '\nstartServer', {
       PrivacyCore: { configHooks: { startupGuidance: f.CredentialRecovery.startupGuidance } },
-      paths: { data: 'synthetic-data' }, path, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
+      paths, path, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
       lstatOrNull: () => null, isDirectServeInvocation: () => false, ServerOwnership: { acquire: async () => ({ portable: false, releaseStartup: async () => {} }) },
       startServerInner: async () => { throw error; }, finishBootCliPathProbes: () => { finished++; },
-      DesktopExecutionHooks: { initialize: async () => {}, canWriteStartupError: () => true },
-      START_ERROR_KINDS: ['port-unavailable', 'data-dir-unwritable', 'startup-failed'], LAST_START_ERROR_FILE: 'last-start-error.json',
-      fsp: { mkdir: async () => {} }, atomicWriteJson: async (_file, value) => records.push(value), nowIso: () => '2026-10-20T00:00:00.000Z',
+      DesktopExecutionHooks, START_ERROR_KINDS, writeStartError,
     });
     await assert.rejects(() => start({}), caught => caught === error && caught.code === code);
     assert.equal(finished, 1); assert.equal(records.length, 1);
@@ -202,20 +210,20 @@ test('startup diagnostic retains its schema, size limit and original error while
   }
 });
 
-test('startup diagnostic checks actual authority before mkdir and again before writing', async () => {
-  const { functionBlock } = require('../lib/source-slice');
-  const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13-http-router.js'), 'utf8');
-  const code = functionBlock(source, 'writeStartError');
+test('startup diagnostic checks actual authority before mkdir and again before writing', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-start-authority-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   for (const loseAt of ['before', 'after-mkdir', 'never']) {
-    let allowed = loseAt !== 'before', mkdir = 0, writes = 0;
-    const write = vm.runInNewContext(code + '\nwriteStartError', {
-      DesktopExecutionHooks: { canWriteStartupError: () => allowed }, START_ERROR_KINDS: ['startup-failed'],
-      paths: { data: 'synthetic-data' }, path, LAST_START_ERROR_FILE: 'last-start-error.json', nowIso: () => 'test', startErrorNextText: () => 'test',
-      fsp: { mkdir: async () => { mkdir++; if (loseAt === 'after-mkdir') allowed = false; } },
-      atomicWriteJson: async () => { writes++; },
+    let writes = 0;
+    const data = path.join(root, loseAt);
+    const { writeStartError } = createServerStartNotices({
+      DesktopExecutionHooks: {
+        canWriteStartupError: () => loseAt !== 'before' && (loseAt !== 'after-mkdir' || !fs.existsSync(data)),
+      },
+      paths: { data }, nowIso: () => 'test', atomicWriteJson: async () => { writes++; },
     });
-    await write('startup-failed', 'synthetic');
-    assert.equal(mkdir, loseAt === 'before' ? 0 : 1, loseAt);
+    await writeStartError('startup-failed', 'synthetic');
+    assert.equal(fs.existsSync(data), loseAt !== 'before', loseAt);
     assert.equal(writes, loseAt === 'never' ? 1 : 0, loseAt);
   }
 });

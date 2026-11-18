@@ -44,7 +44,9 @@ ok(/prevSyncedModel/.test(claudeSync), 'S2: 上次同步值追踪(prevSyncedMode
 ok(!/else delete settings\.model;/.test(claudeSync), 'S2: 无条件 else delete settings.model 绝迹');
 ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(claudeSync), 'S2: 仅权属可证时才删除');
 
-ok(!server.includes('function freeStalePort(') && server.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
+const startNotices = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/server-start-notices.cjs'), 'utf8');
+ok(!server.includes('function freeStalePort(') && !startNotices.includes('function freeStalePort(')
+  && startNotices.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
 
 // ── S4: desktop_screenshot 输出路径写闸 ─────────────────────────────────────
 ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(server), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');

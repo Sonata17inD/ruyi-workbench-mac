@@ -1,11 +1,12 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-18T09:50:23.110Z",
+  "generatedAt": "2026-11-18T09:58:39.853Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
       "ruyi-workbench/app/src/13-http-router.js",
+      "ruyi-workbench/app/backend/workbench-http-server.cjs",
       "ruyi-workbench/app/src/13d-core-domain-routes.js",
       "ruyi-workbench/app/src/13e-pretender-index.js",
       "ruyi-workbench/app/backend/local-support-routes.cjs",
@@ -4769,6 +4770,20 @@
     },
     {
       "kind": "exact",
+      "path": "/health",
+      "file": "../backend/workbench-http-server.cjs",
+      "handler": "createWorkbenchHttpServer",
+      "methods": [
+        "*"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "core-inline",
+      "auth": "host-gate",
+      "coveredBy": []
+    },
+    {
+      "kind": "exact",
       "path": "/api/bootstrap",
       "file": "13-http-router.js",
       "handler": "handleApi",
@@ -5727,20 +5742,6 @@
         "dev-harness\\unit\\release-audit-w4-gates.test.js",
         "dev-harness\\workbench-self-status.e2e.js"
       ]
-    },
-    {
-      "kind": "exact",
-      "path": "/health",
-      "file": "13-http-router.js",
-      "handler": "startServerInner",
-      "methods": [
-        "*"
-      ],
-      "selfChecksToken": false,
-      "methodOverride": false,
-      "domain": "core-inline",
-      "auth": "host-gate",
-      "coveredBy": []
     },
     {
       "kind": "exact",

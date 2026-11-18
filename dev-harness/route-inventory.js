@@ -38,6 +38,7 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 // 路由判定点所在模块(顺序即 manifest 声明顺序;13e 只有索引助手、无判定点,扫出来是空,保留在口径里防漏)。
 const ROUTER_FILES = [
   '13-http-router.js',
+  '../backend/workbench-http-server.cjs',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
   '../backend/local-support-routes.cjs',
@@ -105,6 +106,7 @@ const DOMAIN_BY_HANDLER = [
 ];
 const DOMAIN_BY_FILE = {
   '13-http-router.js': 'core-inline',
+  '../backend/workbench-http-server.cjs': 'core-inline',
   '../backend/migration-routes.cjs': 'migration',
   '../backend/audio-routes.cjs': 'audio',
   '../backend/skill-routes.cjs': 'skills',
