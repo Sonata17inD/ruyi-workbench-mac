@@ -4,10 +4,10 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 93,
-    "providedSymbols": 2704,
-    "requiredSymbols": 3248,
-    "edges": 628,
-    "forwardEdges": 20,
+    "providedSymbols": 2705,
+    "requiredSymbols": 3255,
+    "edges": 625,
+    "forwardEdges": 17,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
   },
@@ -11957,8 +11957,8 @@
         "doctorHealthSeverity",
         "doctorHumanLines",
         "handleAgentWorkflowApiRoutes",
-        "handleApi",
         "handleAutonomyGrantApiRoutes",
+        "handleChatApiRoute",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
         "handleConfigurationApiRoutes",
@@ -11972,22 +11972,13 @@
         "handleSessionExecutionApiRoutes",
         "handleSkillApiRoutes",
         "handleStatusApiRoutes",
+        "handleToolApiRoutes",
         "handleUsageApiRoutes",
         "handleWorkspaceApiRoutes",
-        "installIntegration",
         "parseArgs",
-        "setSessionSkillsCore",
-        "startMcp",
-        "streamChat"
+        "setSessionSkillsCore"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "APP_NAME",
@@ -12048,7 +12039,6 @@
           "provider": "00-boot.js",
           "symbol": "ensureDirs",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12068,21 +12058,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "ExternalBotHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "externalRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
           "kinds": [
             "read"
           ]
@@ -12099,13 +12075,6 @@
           "symbol": "isSensitiveHardlinkAlias",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12173,13 +12142,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "OVERLAY_ID",
           "kinds": [
             "read"
@@ -12197,13 +12159,6 @@
           "symbol": "paths",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12236,28 +12191,7 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "samePathKey",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "truncateToolResult",
           "kinds": [
             "read"
           ]
@@ -12277,31 +12211,10 @@
           ]
         },
         {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "LEGACY_RUYI_MCP_SERVER_IDS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00b-ruyi-names.js",
-          "symbol": "RUYI_MCP_SERVER_ID",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "authorizeRoute",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -12357,7 +12270,6 @@
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12400,7 +12312,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12455,27 +12366,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "syncAgentRolesToClaude",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncClaudeCliSettings",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncMcpServersToClaude",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "tokenMatches",
           "kinds": [
             "read"
@@ -12503,13 +12393,6 @@
           ]
         },
         {
-          "provider": "01h-privacy-core.js",
-          "symbol": "PrivacyCore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01h-process-runtime.js",
           "symbol": "DesktopShell",
           "kinds": [
@@ -12520,7 +12403,6 @@
           "provider": "01h-process-runtime.js",
           "symbol": "existsExecutable",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12534,13 +12416,6 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
           "kinds": [
             "read"
           ]
@@ -12619,7 +12494,6 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -12807,13 +12681,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "killAllMcpClients",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
           "kinds": [
             "read"
@@ -12822,13 +12689,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-visual-pipeline.js",
-          "symbol": "VisualPipeline",
           "kinds": [
             "read"
           ]
@@ -13262,13 +13122,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "policyDesktopOverrideFor",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "probeProviderCompletion",
           "kinds": [
             "read"
@@ -13277,13 +13130,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "projectCwdDirectoryFailure",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "toolPackForName",
           "kinds": [
             "read"
           ]
@@ -13418,71 +13264,7 @@
           "provider": "12-tool-dispatch.js",
           "symbol": "toolCall",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "handleAttachmentApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "handleAudioApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "handleMcpApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13b-api-domain-routes.js",
-          "symbol": "handleSteerApiRoute",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "handleAgentRunApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "handleInterventionApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "handleMissionsApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "handleSessionApiRoutes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13s-scheduler.js",
-          "symbol": "handleSchedulerApiRoutes",
-          "kinds": [
-            "call"
           ]
         }
       ]
@@ -22038,8 +21820,11 @@
       "provides": [
         "createOwnedServerStartup",
         "createServerStartup",
+        "handleApi",
+        "installIntegration",
         "main",
         "resolveBindHost",
+        "startMcp",
         "startServer",
         "startServerInner",
         "stopAllActiveTurnsSync"
@@ -22264,7 +22049,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskProviders",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "maskSecrets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
           ]
@@ -22369,6 +22168,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "runtimeToolRequirementsMet",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -22384,6 +22190,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeUrlForDisplay",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "samePathKey",
           "kinds": [
             "read"
           ]
@@ -22446,6 +22259,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "truncateToolResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "unmaskProviders",
           "kinds": [
             "read"
@@ -22475,6 +22295,13 @@
         {
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "authorizeRoute",
           "kinds": [
             "read"
           ]
@@ -22861,6 +22688,13 @@
         },
         {
           "provider": "01c-runtime-flags.js",
+          "symbol": "observationRecallEnabled",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01c-runtime-flags.js",
           "symbol": "reseedReattachFilesEnabled",
           "kinds": [
             "read"
@@ -23043,6 +22877,20 @@
         },
         {
           "provider": "01h-process-runtime.js",
+          "symbol": "DesktopShell",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "existsExecutable",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
           "symbol": "killChildTree",
           "kinds": [
             "read"
@@ -23058,6 +22906,13 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "probeRgAsync",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01h-process-runtime.js",
+          "symbol": "ProcessRuntime",
           "kinds": [
             "read"
           ]
@@ -23672,6 +23527,13 @@
           ]
         },
         {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "04-permission-runtime.js",
           "symbol": "AgentLoopHooks",
           "kinds": [
@@ -23835,6 +23697,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-visual-pipeline.js",
+          "symbol": "VisualPipeline",
           "kinds": [
             "read"
           ]
@@ -25381,6 +25250,13 @@
         },
         {
           "provider": "07-autonomy.js",
+          "symbol": "policyDesktopOverrideFor",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
           "symbol": "requestNativePermission",
           "kinds": [
             "read"
@@ -26088,16 +25964,135 @@
         },
         {
           "provider": "13-http-router.js",
-          "symbol": "handleApi",
+          "symbol": "handleAgentWorkflowApiRoutes",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "13-http-router.js",
-          "symbol": "installIntegration",
+          "symbol": "handleAutonomyGrantApiRoutes",
           "kinds": [
-            "call"
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleChatApiRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleCheckpointApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleCheckpointQueryApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleConfigurationApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleDiagnosticsApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleLocalSupportApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleMemoryApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleMissionLedgerApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleModelsApiRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handlePlaybookApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleProviderTestApiRoute",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleSessionExecutionApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleSkillApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleStatusApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleToolApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleUsageApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleWorkspaceApiRoutes",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -26115,15 +26110,64 @@
           ]
         },
         {
-          "provider": "13-http-router.js",
-          "symbol": "startMcp",
+          "provider": "13b-api-domain-routes.js",
+          "symbol": "handleAttachmentApiRoutes",
           "kinds": [
-            "call"
+            "read"
+          ]
+        },
+        {
+          "provider": "13b-api-domain-routes.js",
+          "symbol": "handleAudioApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13b-api-domain-routes.js",
+          "symbol": "handleMcpApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13b-api-domain-routes.js",
+          "symbol": "handleSteerApiRoute",
+          "kinds": [
+            "read"
           ]
         },
         {
           "provider": "13d-core-domain-routes.js",
           "symbol": "buildMissionAggregateRows",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13d-core-domain-routes.js",
+          "symbol": "handleAgentRunApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13d-core-domain-routes.js",
+          "symbol": "handleInterventionApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13d-core-domain-routes.js",
+          "symbol": "handleMissionsApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13d-core-domain-routes.js",
+          "symbol": "handleSessionApiRoutes",
           "kinds": [
             "read"
           ]
@@ -29770,12 +29814,10 @@
         "CONFIG_SCHEMA",
         "DesktopExecutionHooks",
         "EventStreamHooks",
-        "ExternalBotHooks",
         "MCP_TOOLS",
         "OVERLAY_ID",
         "SKILL_ID_RE",
         "VERSION",
-        "apiFailure",
         "cachedContextLength",
         "contextWindowFromTable",
         "dataRootAliases",
@@ -29783,10 +29825,8 @@
         "ensureDirs",
         "exePath",
         "externalRoot",
-        "fsp",
         "isSensitiveDataPath",
         "isSensitiveHardlinkAlias",
-        "json",
         "logEvent",
         "makeId",
         "maskProviders",
@@ -29795,27 +29835,13 @@
         "nativeToolDisabledByPolicy",
         "normalizeStoragePolicy",
         "nowIso",
-        "os",
         "path",
         "paths",
-        "readJsonBody",
         "redact",
         "resolveContextWindow",
         "runtimeToolRequirementsMet",
         "safeJsonParse",
-        "samePathKey",
-        "send",
-        "truncateToolResult",
         "unmaskProviders"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "00b-ruyi-names.js",
-      "symbols": [
-        "LEGACY_RUYI_MCP_SERVER_IDS",
-        "RUYI_MCP_SERVER_ID"
       ],
       "direction": "backward"
     },
@@ -29826,7 +29852,6 @@
         "ConfigPatchHooks",
         "RUNTIME",
         "atomicWriteJson",
-        "authorizeRoute",
         "buildClaudeAgentDefinitions",
         "desktopMcpDetectionPending",
         "detectClaudePath",
@@ -29846,9 +29871,6 @@
         "safeSessionId",
         "saveProjectAgentRoles",
         "selectedAgentCli",
-        "syncAgentRolesToClaude",
-        "syncClaudeCliSettings",
-        "syncMcpServersToClaude",
         "tokenMatches",
         "tokenOk"
       ],
@@ -29872,18 +29894,9 @@
     },
     {
       "from": "13-http-router.js",
-      "to": "01h-privacy-core.js",
-      "symbols": [
-        "PrivacyCore"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13-http-router.js",
       "to": "01h-process-runtime.js",
       "symbols": [
         "DesktopShell",
-        "ProcessRuntime",
         "existsExecutable",
         "existsExecutableAsync",
         "probeRgAsync"
@@ -29967,16 +29980,7 @@
       "to": "04-permission-runtime.js",
       "symbols": [
         "ToolboxHooks",
-        "killAllMcpClients",
         "requestSessionExecutionStop"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "04-visual-pipeline.js",
-      "symbols": [
-        "VisualPipeline"
       ],
       "direction": "backward"
     },
@@ -30129,10 +30133,8 @@
       "to": "07-autonomy.js",
       "symbols": [
         "fetchOpenAiModels",
-        "policyDesktopOverrideFor",
         "probeProviderCompletion",
-        "projectCwdDirectoryFailure",
-        "toolPackForName"
+        "projectCwdDirectoryFailure"
       ],
       "direction": "backward"
     },
@@ -30189,36 +30191,6 @@
         "toolCall"
       ],
       "direction": "backward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "13b-api-domain-routes.js",
-      "symbols": [
-        "handleAttachmentApiRoutes",
-        "handleAudioApiRoutes",
-        "handleMcpApiRoutes",
-        "handleSteerApiRoute"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "13d-core-domain-routes.js",
-      "symbols": [
-        "handleAgentRunApiRoutes",
-        "handleInterventionApiRoutes",
-        "handleMissionsApiRoutes",
-        "handleSessionApiRoutes"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "13-http-router.js",
-      "to": "13s-scheduler.js",
-      "symbols": [
-        "handleSchedulerApiRoutes"
-      ],
-      "direction": "forward"
     },
     {
       "from": "13aa-steward-delivery.js",
@@ -33096,6 +33068,7 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "ExternalBotHooks",
+        "MCP_TOOLS",
         "NATIVE_TOOL_TIER",
         "OVERLAY_ID",
         "RUYI_EVENTS",
@@ -33121,6 +33094,7 @@
         "isDirectServeInvocation",
         "logEvent",
         "lstatOrNull",
+        "maskProviders",
         "maskSecrets",
         "maskedSecretConflicts",
         "migrateLegacyDataRoot",
@@ -33135,8 +33109,10 @@
         "providerLaunchVectorKey",
         "redact",
         "resolveContextWindow",
+        "runtimeToolRequirementsMet",
         "safeJsonParse",
         "safeUrlForDisplay",
+        "samePathKey",
         "sanitizeExternalMcpServer",
         "scanMcpSources",
         "setEstimateBucketsV1",
@@ -33144,6 +33120,7 @@
         "ssrfCheck",
         "toolDisabledByPolicy",
         "toolRequirementsMet",
+        "truncateToolResult",
         "unmaskProviders",
         "unmaskSecrets"
       ],
@@ -33165,6 +33142,7 @@
         "DurableJsonStore",
         "RUNTIME",
         "atomicWriteJson",
+        "authorizeRoute",
         "autoImportClaudeCodeMcp",
         "beginBootCliPathProbes",
         "buildClaudeAgentDefinitions",
@@ -33230,6 +33208,7 @@
         "execResultCacheEnabled",
         "execResultCacheMaxEntries",
         "historyReadDedupEnabled",
+        "observationRecallEnabled",
         "reseedReattachFilesEnabled",
         "reseedTailUnitsEnabled",
         "sessionNotesEnabled",
@@ -33291,6 +33270,9 @@
       "from": "14-main.js",
       "to": "01h-process-runtime.js",
       "symbols": [
+        "DesktopShell",
+        "ProcessRuntime",
+        "existsExecutable",
         "killChildTree",
         "peekRgProbe",
         "probeRgAsync"
@@ -33428,6 +33410,14 @@
     },
     {
       "from": "14-main.js",
+      "to": "03a-privacy-gateway.js",
+      "symbols": [
+        "PrivacyGateway"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "14-main.js",
       "to": "04-permission-runtime.js",
       "symbols": [
         "AgentLoopHooks",
@@ -33454,6 +33444,14 @@
         "resolveBridge",
         "safeMcpInventory",
         "stopSession"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "14-main.js",
+      "to": "04-visual-pipeline.js",
+      "symbols": [
+        "VisualPipeline"
       ],
       "direction": "backward"
     },
@@ -33793,6 +33791,7 @@
         "nativeToolGate",
         "nativeToolSchema",
         "openAiStreamOnce",
+        "policyDesktopOverrideFor",
         "requestNativePermission",
         "schedulerAskWaitSessions",
         "searchToolCatalog",
@@ -33951,10 +33950,37 @@
         "ServerStartNotices",
         "buildUsageSummary",
         "doctor",
-        "handleApi",
-        "installIntegration",
-        "parseArgs",
-        "startMcp"
+        "handleAgentWorkflowApiRoutes",
+        "handleAutonomyGrantApiRoutes",
+        "handleChatApiRoute",
+        "handleCheckpointApiRoutes",
+        "handleCheckpointQueryApiRoutes",
+        "handleConfigurationApiRoutes",
+        "handleDiagnosticsApiRoutes",
+        "handleLocalSupportApiRoutes",
+        "handleMemoryApiRoutes",
+        "handleMissionLedgerApiRoutes",
+        "handleModelsApiRoute",
+        "handlePlaybookApiRoutes",
+        "handleProviderTestApiRoute",
+        "handleSessionExecutionApiRoutes",
+        "handleSkillApiRoutes",
+        "handleStatusApiRoutes",
+        "handleToolApiRoutes",
+        "handleUsageApiRoutes",
+        "handleWorkspaceApiRoutes",
+        "parseArgs"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "14-main.js",
+      "to": "13b-api-domain-routes.js",
+      "symbols": [
+        "handleAttachmentApiRoutes",
+        "handleAudioApiRoutes",
+        "handleMcpApiRoutes",
+        "handleSteerApiRoute"
       ],
       "direction": "backward"
     },
@@ -33963,6 +33989,10 @@
       "to": "13d-core-domain-routes.js",
       "symbols": [
         "buildMissionAggregateRows",
+        "handleAgentRunApiRoutes",
+        "handleInterventionApiRoutes",
+        "handleMissionsApiRoutes",
+        "handleSessionApiRoutes",
         "missionAggregateStats"
       ],
       "direction": "backward"
@@ -34092,9 +34122,6 @@
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
-    "13-http-router.js->13b-api-domain-routes.js",
-    "13-http-router.js->13d-core-domain-routes.js",
-    "13-http-router.js->13s-scheduler.js",
     "13d-core-domain-routes.js->13e-pretender-index.js"
   ]
 }

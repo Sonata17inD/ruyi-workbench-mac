@@ -15,7 +15,7 @@ const read = file => fs.readFileSync(file, 'utf8');
 const frontend = readFrontendSrc();
 const html = read(path.join(PUBLIC, 'index.html'));
 const manifest = JSON.parse(read(path.join(SRC, 'manifest.json')));
-const httpRouter = read(path.join(SRC, '13-http-router.js'));
+const httpRouter = read(path.join(SRC, '../backend/workbench-api-router.cjs'));
 const coreDomainRoutes = read(path.join(SRC, '13d-core-domain-routes.js'));
 const agentRunRoutes = read(path.join(SRC, '../backend/agent-run-routes.cjs'));
 const sessionRoutes = read(path.join(SRC, '../backend/session-routes.cjs'));

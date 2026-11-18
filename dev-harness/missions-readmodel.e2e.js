@@ -217,7 +217,7 @@ function spawnFake(seq, extraEnv) {
     ok(nf.status === 404, '(f) 未知 sessionId → 404(实 ' + nf.status + ')');
 
     // ============ (e) 静态锁 ============
-    const srcRouter = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+    const srcRouter = fs.readFileSync(path.join(WB, 'app', 'backend', 'workbench-api-router.cjs'), 'utf8');
     // 110-2a: ROUTE_AUTH 已搬至 01b-route-auth.js,改为源+目标拼接读取(断言原样保留)。
     const srcConfig = fs.readFileSync(path.join(WB, 'app', 'src', '01-config.js'), 'utf8')
       + fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');

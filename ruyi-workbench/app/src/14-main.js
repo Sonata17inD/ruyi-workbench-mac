@@ -1,3 +1,22 @@
+const handleApi = require('./backend/workbench-api-router.cjs').createWorkbenchApiRouter({
+  authorizeRoute, privacyRoutes: PrivacyCore.configHooks, ExternalBotHooks, StewardHooks, EventStreamHooks,
+  handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
+  handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
+  handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
+  handleMissionLedgerApiRoutes, handleAutonomyGrantApiRoutes, handleAgentWorkflowApiRoutes,
+  handleUsageApiRoutes, handleAgentRunApiRoutes, handleCheckpointQueryApiRoutes, handleLocalSupportApiRoutes,
+  handleMcpApiRoutes, handleDiagnosticsApiRoutes, handleCheckpointApiRoutes, handleSteerApiRoute, handleAudioApiRoutes,
+  handleSchedulerApiRoutes, handleAttachmentApiRoutes, handleChatApiRoute, handleToolApiRoutes,
+});
+
+const { startMcp, installIntegration } = require('./backend/integration-commands.cjs').createIntegrationCommands({
+  paths, RUNTIME, process, APP_NAME, VERSION, ensureDirs, readConfig, generateMcpConfig,
+  existsExecutable, DesktopShell, syncClaudeCliSettings, syncAgentRolesToClaude, syncMcpServersToClaude,
+  mcpServices: { PrivacyGateway, ProcessRuntime, observationRecallEnabled, policyDesktopOverrideFor,
+    runtimeToolRequirementsMet, nativeToolDisabledByPolicy, isStewardToolName, toolPackForName, toolCall,
+    VisualPipeline, truncateToolResult, maskProviders, samePathKey, killAllMcpClients, safeJsonParse, MCP_TOOLS },
+});
+
 const { createOwnedServerStartup, createServerStartup } = require('./backend/server-startup.cjs');
 const { startServerInner, resolveBindHost, stopAllActiveTurnsSync } = createServerStartup({
   paths, RUNTIME, process, identity: { APP_NAME, VERSION, OVERLAY_ID, DEFAULT_PORT, externalServerJs },

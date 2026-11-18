@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:13:19.809Z。
+> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T10:22:58.804Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -66,6 +66,12 @@
 | POST | `/api/autonomy/grant` | exact | token self | ../backend/autonomy-grant-routes.cjs · `handleAutonomyGrantApiRoutes` | autonomy-grant.e2e.js |
 | POST | `/api/autonomy/revoke` | exact | token self | ../backend/autonomy-grant-routes.cjs · `handleAutonomyGrantApiRoutes` | autonomy-grant.e2e.js |
 
+## chat(1)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/chat/stream` | exact | token-browser | ../backend/http-chat-stream.cjs · `handleChatApiRoute` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
+
 ## checkpoint-storage(7)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -88,14 +94,6 @@
 | GET | `/api/agent-workflows` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
 | POST | `/api/agent-workflows` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
 | DELETE/POST | `/api/agent-workflows/` | prefix | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, store-walkthrough-w1.e2e.js |
-
-## core-inline(3)
-
-| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
-|---|---|---|---|---|---|
-| * | `/health` | exact | host-gate | ../backend/workbench-http-server.cjs · `createWorkbenchHttpServer` | — |
-| POST | `/api/chat/stream` | exact | token-browser | 13-http-router.js · `handleApi` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
-| POST | `/api/tools/` | prefix | token | 13-http-router.js · `handleApi` | audit-w23.e2e.js, autonomy-shell-sandbox.e2e.js, background-completion.e2e.js 等 25 件 |
 
 ## diagnostics(5)
 
@@ -143,6 +141,12 @@
 | POST | `/api/permission/decision` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | acc-capability-gates.e2e.js, autonomy-pause.e2e.js, claude-binary-live.e2e.js 等 17 件 |
 | POST | `/api/plan/decision` | exact | token | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | intervention-mission-gate.e2e.js, interventions-snapshot.e2e.js, plan-mode.e2e.js 等 7 件 |
 | POST | `/api/_test/intervention-cas` | exact | token self | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | interventions-cas.e2e.js, interventions-changeseq.e2e.js |
+
+## listener(1)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| * | `/health` | exact | host-gate | ../backend/workbench-http-server.cjs · `createWorkbenchHttpServer` | — |
 
 ## local-support(5)
 
@@ -312,6 +316,12 @@
 | POST | `/api/steward/relay` | exact | token self | ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` | foreign-turn-busy-guard.e2e.js, new-thread-engine-default.e2e.js, session-rewind-execution.e2e.js 等 13 件 |
 | POST | `/api/steward/message` | exact | token self | ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` | classic-window-live-steer.e2e.js, event-stream.e2e.js, external-bot-setup.e2e.js 等 23 件 |
 
+## tools(1)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| POST | `/api/tools/` | prefix | token | ../backend/tool-routes.cjs · `handleToolApiRoutes` | audit-w23.e2e.js, autonomy-shell-sandbox.e2e.js, background-completion.e2e.js 等 25 件 |
+
 ## workspace(4)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
@@ -326,29 +336,31 @@
 - ../backend/mcp-routes.cjs · `handleMcpApiRoutes` → `handleMigrationApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardApiRoutes` → `handleStewardRunnerApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` → `handleStewardDeliveryApiRoutes`
-- 13-http-router.js · `handleApi` → `handleStatusApiRoutes`
-- 13-http-router.js · `handleApi` → `handlePlaybookApiRoutes`
-- 13-http-router.js · `handleApi` → `handleWorkspaceApiRoutes`
-- 13-http-router.js · `handleApi` → `handleModelsApiRoute`
-- 13-http-router.js · `handleApi` → `handleConfigurationApiRoutes`
-- 13-http-router.js · `handleApi` → `handleProviderTestApiRoute`
-- 13-http-router.js · `handleApi` → `handleSessionApiRoutes`
-- 13-http-router.js · `handleApi` → `handleMissionsApiRoutes`
-- 13-http-router.js · `handleApi` → `handleSkillApiRoutes`
-- 13-http-router.js · `handleApi` → `handleMemoryApiRoutes`
-- 13-http-router.js · `handleApi` → `handleSessionExecutionApiRoutes`
-- 13-http-router.js · `handleApi` → `handleInterventionApiRoutes`
-- 13-http-router.js · `handleApi` → `handleMissionLedgerApiRoutes`
-- 13-http-router.js · `handleApi` → `handleAutonomyGrantApiRoutes`
-- 13-http-router.js · `handleApi` → `handleAgentWorkflowApiRoutes`
-- 13-http-router.js · `handleApi` → `handleUsageApiRoutes`
-- 13-http-router.js · `handleApi` → `handleAgentRunApiRoutes`
-- 13-http-router.js · `handleApi` → `handleCheckpointQueryApiRoutes`
-- 13-http-router.js · `handleApi` → `handleLocalSupportApiRoutes`
-- 13-http-router.js · `handleApi` → `handleMcpApiRoutes`
-- 13-http-router.js · `handleApi` → `handleDiagnosticsApiRoutes`
-- 13-http-router.js · `handleApi` → `handleCheckpointApiRoutes`
-- 13-http-router.js · `handleApi` → `handleSteerApiRoute`
-- 13-http-router.js · `handleApi` → `handleAudioApiRoutes`
-- 13-http-router.js · `handleApi` → `handleSchedulerApiRoutes`
-- 13-http-router.js · `handleApi` → `handleAttachmentApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleStatusApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handlePlaybookApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleWorkspaceApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleModelsApiRoute`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleConfigurationApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleProviderTestApiRoute`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleSessionApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleMissionsApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleSkillApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleMemoryApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleSessionExecutionApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleInterventionApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleMissionLedgerApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleAutonomyGrantApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleAgentWorkflowApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleUsageApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleAgentRunApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleCheckpointQueryApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleLocalSupportApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleMcpApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleDiagnosticsApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleCheckpointApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleSteerApiRoute`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleAudioApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleSchedulerApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleAttachmentApiRoutes`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleChatApiRoute`
+- ../backend/workbench-api-router.cjs · `handleApi` → `handleToolApiRoutes`

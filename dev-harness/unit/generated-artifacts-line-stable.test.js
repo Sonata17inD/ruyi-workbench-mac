@@ -39,7 +39,7 @@ function shiftLines(file) {
   let inserted = 0;
   lines.forEach((line, index) => {
     if (index === 0 && !line.startsWith('#!')) { out.push('// line-shift probe (top)'); inserted++; }
-    if (/^(async\s+)?function\s|^\s+(async\s+)?function\s+handle[A-Za-z]+ApiRoutes?\s*\(/.test(line)) {
+    if (/^(async\s+)?function\s|^\s+(async\s+)?function\s+(handleApi|handle[A-Za-z]+ApiRoutes?)\s*\(/.test(line)) {
       out.push('// line-shift probe', ''); inserted += 2;
     }
     out.push(line);
@@ -77,21 +77,18 @@ describe('generated architecture artifacts are line-number free', () => {
     temps.push(dir);
     const inserted = {};
     for (const file of moduleFiles(dir)) inserted[file] = shiftLines(path.join(dir, file));
-    assert.ok(shiftLines(path.join(dir, '../backend/workbench-http-server.cjs')) > 2, 'HTTP listener route anchors also shift');
-    for (const owner of ['status', 'workspace', 'provider', 'configuration', 'mission-ledger', 'autonomy-grant', 'agent-workflow']) {
-      const file = `${owner}-routes.cjs`;
-      assert.ok(shiftLines(path.join(dir, '../backend', file)) > 2, `${file} 内也平移了 handler`);
+    const routeSources = JSON.parse(baseline['route-inventory.json']).sources.routers;
+    for (const source of routeSources) {
+      const file = source.replace(/^ruyi-workbench\/app\//, '');
+      if (file.startsWith('backend/')) {
+        assert.ok(shiftLines(path.join(dir, '..', file)) > 2, `${file} 内也平移了 handler`);
+      } else {
+        assert.ok(inserted[path.basename(file)] > 0, `${file} 应被插入行`);
+      }
     }
-    shiftLines(path.join(dir, '../backend/event-stream.cjs'));
-    assert.ok(shiftLines(path.join(dir, '../backend/steward-routes.cjs')) > 2, '显式管家路由内也平移了 handler');
-    for (const file of ['local-support-routes.cjs', 'diagnostic-routes.cjs', 'checkpoint-routes.cjs', 'agent-run-routes.cjs', 'session-routes.cjs', 'mission-routes.cjs', 'intervention-routes.cjs', 'migration-routes.cjs', 'mcp-routes.cjs', 'session-steering.cjs', 'audio-routes.cjs', 'skill-routes.cjs', 'memory-routes.cjs', 'session-execution-routes.cjs', 'playbook-routes.cjs', 'attachment-routes.cjs']) {
-      assert.ok(shiftLines(path.join(dir, '../backend', file)) > 2, `${file} 内也平移了 handler`);
-    }
-    // 点名的三个文件与全部路由文件必须真被平移过(否则本件静默失效)。
-    for (const file of ['00-boot.js', '02-session-store.js', '13-http-router.js', '13d-core-domain-routes.js', '13g-steward.js', '01b-route-auth.js']) {
+    for (const file of ['00-boot.js', '02-session-store.js', '13-http-router.js', '01b-route-auth.js']) {
       assert.ok(inserted[file] > 0, `${file} 应被插入行(实得 ${inserted[file]})`);
     }
-    assert.ok(inserted['13-http-router.js'] > 2, '13-http-router.js 在顶层函数前也插了行(判定点之间的相对距离也变了)');
     const shifted = renderAll(dir);
     for (const name of Object.keys(baseline)) {
       assert.ok(baseline[name].length > 0, `${name} 非空`);
@@ -102,7 +99,9 @@ describe('generated architecture artifacts are line-number free', () => {
   it('control: a real new top-level function and route decision point DO change the artifacts', () => {
     const dir = copySrc('ruyi-line-shift-ctl-');
     temps.push(dir);
-    const router = path.join(dir, '13-http-router.js');
+    const composition = path.join(dir, '13-http-router.js');
+    fs.appendFileSync(composition, '\nfunction lineShiftProbeSymbol() {}\n');
+    const router = path.join(dir, '../backend/status-routes.cjs');
     const text = fs.readFileSync(router, 'utf8');
     const eol = text.includes('\r\n') ? '\r\n' : '\n';
     fs.writeFileSync(router, text + [

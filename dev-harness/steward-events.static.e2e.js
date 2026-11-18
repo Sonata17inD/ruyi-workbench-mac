@@ -169,12 +169,12 @@ function typeExpressionLiterals(text) {
 /* ═══════════════ D5 挂接纪律 / 开关门控 / 鉴权档位 ═══════════════ */
 
 {
-  const router = read('13-http-router.js');
+  const router = read('../backend/workbench-api-router.cjs');
   const startup = read('../backend/server-startup.cjs');
-  ok(router.includes('StewardHooks.handleApiRoutes'), 'D5 13-http-router 经 StewardHooks.handleApiRoutes 挂路由');
+  ok(router.includes('StewardHooks.handleApiRoutes'), 'D5 API 分派经 StewardHooks.handleApiRoutes 挂路由');
   ok(startup.includes('StewardHooks.stopInbox'), 'D5 关服收尾经 StewardHooks.stopInbox 停轮询');
-  ok(!router.includes('handleStewardApiRoutes'), 'D5 13-http-router 不含 handleStewardApiRoutes 字面量(直接引用 13g = 新前向边,红线)');
-  ok(!/\bstartStewardInbox\b/.test(router), 'D5 13-http-router 不直接引用 startStewardInbox');
+  ok(!router.includes('handleStewardApiRoutes'), 'D5 API 分派不含 handleStewardApiRoutes 字面量');
+  ok(!/\bstartStewardInbox\b/.test(router), 'D5 API 分派不直接启动管家收件箱');
 
   const steward = read('13g-steward.js');
   // 116-2e 重钉(只改读哪个文件,断言语义与文本不变):收件箱轮询与游标整体前移到 13i-steward-inbox.js,

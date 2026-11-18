@@ -37,8 +37,10 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 
 // 路由判定点所在模块(顺序即 manifest 声明顺序;13e 只有索引助手、无判定点,扫出来是空,保留在口径里防漏)。
 const ROUTER_FILES = [
-  '13-http-router.js',
   '../backend/workbench-http-server.cjs',
+  '../backend/workbench-api-router.cjs',
+  '../backend/http-chat-stream.cjs',
+  '../backend/tool-routes.cjs',
   '../backend/status-routes.cjs',
   '../backend/workspace-routes.cjs',
   '../backend/provider-routes.cjs',
@@ -112,8 +114,9 @@ const DOMAIN_BY_HANDLER = [
   ['handleSchedulerApiRoutes', 'scheduler'],
 ];
 const DOMAIN_BY_FILE = {
-  '13-http-router.js': 'core-inline',
-  '../backend/workbench-http-server.cjs': 'core-inline',
+  '../backend/workbench-http-server.cjs': 'listener',
+  '../backend/http-chat-stream.cjs': 'chat',
+  '../backend/tool-routes.cjs': 'tools',
   '../backend/status-routes.cjs': 'status',
   '../backend/workspace-routes.cjs': 'workspace',
   '../backend/provider-routes.cjs': 'provider',
@@ -208,7 +211,7 @@ function blockText(lines, startIdx) {
 function enclosingFunction(lines, idx) {
   for (let i = idx; i >= 0; i--) {
     const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/)
-      || lines[i].match(/^\s+(?:async\s+)?function\s+(handle[A-Za-z]+ApiRoutes?)\s*\(/)
+      || lines[i].match(/^\s+(?:async\s+)?function\s+(handleApi|handle[A-Za-z]+ApiRoutes?)\s*\(/)
       || lines[i].match(/^const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/);
     if (m) return m[1];
   }

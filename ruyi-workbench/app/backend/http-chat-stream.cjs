@@ -1,6 +1,6 @@
 'use strict';
 
-const { apiSessionIdInvalid, readJsonBody, send } = require('./http-protocol.cjs');
+const { apiFailure, apiSessionIdInvalid, readJsonBody, send } = require('./http-protocol.cjs');
 const { createHttpNdjsonResponse } = require('./http-ndjson-response.cjs');
 
 function createHttpChatStream({ runSessionTurn, PrivacyGateway, safeSessionId, nowIso }) {
@@ -78,4 +78,33 @@ function createHttpChatStream({ runSessionTurn, PrivacyGateway, safeSessionId, n
   return streamChat;
 }
 
-module.exports = { createHttpChatStream };
+function createChatApiRoute(options) {
+  const streamChat = createHttpChatStream(options);
+  async function handleChatApiRoute(req, res, pathname) {
+    if (req.method === 'POST' && pathname === '/api/chat/stream') {
+      // 116-3 A2:管家会话不接受普通聊天入口发起的回合(判据与抛点在 10 的 runSessionTurn 顶部;
+      // 那里抛得比 onStart 早,响应头还没发出,所以这里能给一条正经的 403 稳定信封)。
+      try {
+        await streamChat(req, res);
+        return true;
+      } catch (error) {
+        if (error && error.code === 'STEWARD_SESSION_FORBIDDEN') {
+          send(res, apiFailure('steward.forbidden', {}, String(error.message || 'forbidden'), 403));
+          return true;
+        }
+        // 117s-G:活回合是【别处】起的 —— 回「忙」,不杀。判据与抛点同在 10 的 runSessionTurn 顶部,
+        // 抛得比 onStart 早,所以这里响应头还没发出,能给一条正经的 409 稳定信封。
+        if (error && error.code === 'SESSION_TURN_BUSY_ELSEWHERE') {
+          send(res, apiFailure('session.turn_busy_elsewhere', { turnSource: String(error.turnSource || '') },
+            String(error.message || 'the session is running a turn started elsewhere'), 409));
+          return true;
+        }
+        throw error;
+      }
+    }
+    return false;
+  }
+  return handleChatApiRoute;
+}
+
+module.exports = { createHttpChatStream, createChatApiRoute };

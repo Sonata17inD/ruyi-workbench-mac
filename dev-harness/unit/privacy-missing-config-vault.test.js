@@ -43,11 +43,17 @@ function setup(t, seed = initial(true)) {
   function load() {
     const mod = new Module(SERVER, module); mod.filename = SERVER;
     mod.paths = Module._nodeModulePaths(path.dirname(SERVER));
-    mod._compile(fs.readFileSync(CANDIDATE, 'utf8') + '\n;module.exports.__review = { CredentialVault, PrivacyCore, PrivacyGateway, readConfig, mutateConfig, handleApi, __eval: code => eval(code) };', SERVER);
-    const app = mod.exports.__review;
-    app.__eval('detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";RUNTIME.token="synthetic-missing-config-token";'
+    const source = fs.readFileSync(CANDIDATE, 'utf8');
+    const probeStubs = 'detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";'
       + 'desktopMcpDetectionPending=()=>true;computeHealth=async()=>({health:{},manifest:{}});'
-      + 'probeRgAsync=async()=>null;');
+      + 'probeRgAsync=async()=>null;';
+    const statusComposition = "const handleStatusApiRoutes = require('./backend/status-routes.cjs')";
+    // The status factory captures its probe capabilities during composition.
+    const fixtureSource = source.replace(statusComposition, probeStubs + '\n' + statusComposition);
+    mod._compile(fixtureSource + '\n;module.exports.__review = { CredentialVault, PrivacyCore, PrivacyGateway, readConfig, mutateConfig, handleApi, __eval: code => eval(code) };', SERVER);
+    const app = mod.exports.__review;
+    if (fixtureSource === source) app.__eval(probeStubs);
+    app.__eval('RUNTIME.token="synthetic-missing-config-token";');
     let wraps = 0;
     const vault = app.CredentialVault.create({ core: app.PrivacyCore,
       size: async () => fs.existsSync(vaultFile) ? fs.statSync(vaultFile).size : 0,
@@ -65,7 +71,11 @@ function setup(t, seed = initial(true)) {
       const req = Readable.from(value === undefined ? [] : [Buffer.from(JSON.stringify(value))]);
       Object.assign(req, { method, url: route, headers: { host: '127.0.0.1', 'x-wcw-token': 'synthetic-missing-config-token' }, socket: { remoteAddress: '127.0.0.1' } });
       let status, body;
-      const res = { writeHead(code) { status = code; }, end(value) { body = JSON.parse(value); } };
+      const res = {
+        writableEnded: false,
+        writeHead(code) { assert.equal(this.writableEnded, false); status = code; },
+        end(value) { body = JSON.parse(value); this.writableEnded = true; },
+      };
       await app.handleApi(req, res, route);
       return { status, body };
     };

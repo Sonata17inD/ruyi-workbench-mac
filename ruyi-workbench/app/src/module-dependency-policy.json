@@ -19,10 +19,6 @@
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
-    "13-http-router.js->13b-api-domain-routes.js",
-    "13-http-router.js->13d-core-domain-routes.js",
-    "13-http-router.js->13e-pretender-index.js",
-    "13-http-router.js->13s-scheduler.js",
     "13d-core-domain-routes.js->13e-pretender-index.js"
   ]
 }
