@@ -49,62 +49,6 @@ async function makeAttachmentRecord(input) {
   };
 }
 
-// --- Secret redaction (unconditional, CLI-independent). Redacts DISPLAY copy only, never the
-// executed string. Purpose-built patterns, not the quoted-only code_review_scan regex. ---
-const REDACT_PATTERNS = [
-  // 107-S0(45 号文 §9.6 发现 5):sk- 之后允许 `_`／`-`。修前只认纯字母数字,`sk-proj-…`／`sk-ant-api03-…` 这类
-  // 带分段的真 key 在第一个 `-` 处就断到不足 16 字,整把漏掉(真机会话文件里就有一把这样漏的)。
-  /\b(sk-[A-Za-z0-9][A-Za-z0-9_-]{15,})/g,
-  /\b(gh[pousr]_[A-Za-z0-9]{20,})\b/g,
-  /\b(xox[baprs]-[A-Za-z0-9-]{10,})\b/g,
-  /\bBearer\s+([A-Za-z0-9._~+/-]{16,}=*)/gi,
-  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{6,}\b/g, // JWT
-  /\b((?:api[_-]?key|secret|token|password|passwd|pwd|access[_-]?key)\s*[:=]\s*)([^\s"']{6,})/gi,
-  /\b([A-Fa-f0-9]{40,})\b/g, // long hex blobs
-  // 127 波 2-quater B1 ③(45 号文 §2-quater.1 取证 7):管家的豁免命令摘录也走这张表(单一来源,不另立一份),
-  // 而命令行里的凭据长得和日志里的不一样 —— 下面六种修前全漏。都是「标签 + 值」两组或「整段」一组,沿用上面
-  // redact() 按组数决定留不留标签的既有口径;量词都有界或以分隔符收口,长文本上不回溯爆炸。
-  /\b([a-z][a-z0-9+.-]{0,20}:\/\/[^\s:@\/]{1,256}:)([^\s@\/]{1,256})(?=@)/gi, // URL 里的 userinfo:https://user:pass@host
-  /((?:^|\s)(?:-u|-U|--user|--proxy-user)\s*["']?[^\s:"'@]{2,256}:)([^\s"';&|]+)/g, // curl -u user:pass(用户名至少 2 字:`python -u C:\x.py` 的盘符不算)
-  /\b(authorization\s*[:=]\s*basic\s+)([A-Za-z0-9+/=._~-]{4,})/gi, // Authorization: Basic xxx
-  /((?:^|\s)--?(?:password|passwd|pwd|pass|token|secret|api[_-]?key)\s+["']?)([^\s"';&|]+)/gi, // --password xxx(空格分隔;值在命令分隔符处收口)
-  /((?<=[A-Za-z0-9_])(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key)\s*[:=]\s*)([^\s"'&;|]+)/gi, // 词中:PGPASSWORD= / DB_PASSWORD= / OPENAI_API_KEY=(上面那条的 \b 在词中失效)
-  /\b(AKIA[0-9A-Z]{16})\b/g, // AWS access key id
-  // 107-S0(45 号文 §9.6 发现 5:真机会话文件里 58 处真 key 值,旧表 redact 后仍剩 39 处):值带引号的「标签 + 值」。
-  // 上面那条标签式要求值紧跟在 `:`／`=` 后、且不以引号开头,于是 JSON `"apiKey": "…"`、JS `apiKey: '…'`、
-  // Python／TOML／.env／PowerShell `api_key = "…"` 全漏;模型 file_read 过 config.json 之后,会话文件里存的还是
-  // 转义过的 `\"apiKey\": \"…\"`(再嵌一层就是 `\\\"`)。
-  //   - 标签:以这几个词【结尾】的键(`accessToken`／`client_secret`／`x-api-key`／`OPENAI_API_KEY` 都算),词后面
-  //     紧跟(可选的反斜杠＋)引号或直接 `:`／`=` —— 所以 `"maxTokens"`／`"tokenCount"`／`"token_type"` 不算;
-  //   - 值:必须以引号开头(数字、null、对象、数组都不碰),`"Bearer ／Basic ／Token "` 前缀留在标签里;
-  //   - 值只收可打印 ASCII 且不含空格、引号、反斜杠 —— 遇到转义引号就收口;中文文案(locale 里 `"…ApiKey": "端点密钥…"`)不误伤。
-  // 量词全部有界,值之后没有任何需要回溯的成分,长文本线性。
-  /((?:api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|secret|token|password|passwd|authorization)\\{0,8}["']?\s{0,8}[:=]\s{0,8}\\{0,8}["'](?:(?:bearer|basic|token)\s{1,8})?)([!#-&(-\[\]-~]{6,4096})/gi,
-];
-function redact(input) {
-  let s = String(input == null ? '' : input);
-  for (const re of REDACT_PATTERNS) {
-    re.lastIndex = 0;
-    // replace passes (match, p1, …, pN, offset, string). For a label+value pattern (2 capture groups: the
-    // `apiKey=`-style label and the secret value) we keep the label and redact only the value. For a
-    // single-capture secret pattern (sk-…, ghp_…, JWT, hex blob) we replace the WHOLE match with the marker.
-    // (Bugfix: the old `(m,a,b)=> b===undefined?…:`${a}…`` treated the numeric offset as a 2nd group, so
-    // single-group secrets leaked as `secret«redacted»`. Detecting group count via arguments fixes it.)
-    s = s.replace(re, function () {
-      const args = Array.from(arguments);
-      // Trailing args are offset(number) then optionally the full string; strip them to get capture groups.
-      let end = args.length;
-      if (typeof args[end - 1] === 'string' && typeof args[end - 2] === 'number') end -= 2; // …, offset, string
-      else if (typeof args[end - 1] === 'number') end -= 1;                                  // …, offset
-      const groups = args.slice(1, end); // capture groups only (args[0] is the full match)
-      // Two capture groups → label + value: keep the label, redact the value.
-      if (groups.length >= 2 && groups[1] !== undefined) return `${groups[0]}«redacted»`;
-      return '«redacted»';
-    });
-  }
-  return s;
-}
-
 // --- Structured NDJSON logging: record lengths/metadata, never raw content. ---
 let logStream = null;
 let logStreamDay = '';
@@ -1506,51 +1450,6 @@ async function probeMcpConnector(entry, opts = {}) {
     const cls = classifyMcpError(e, entry);
     return { id: entry.id, status: 'failed', ...cls, latencyMs: Date.now() - startedAt, probedAt };
   }
-}
-
-// 107-S2(46 号文 §5 ⑦b L3):URL 查询串里的凭据。`?api_key=…`／`?token=…` 这类把密钥写进地址的端点
-// 到处都有(远程 MCP 清单、自建网关),而 GET /api/status 是 open 档 —— 本机任何进程一个 curl 就读到。
-// 口径与 providers[].extraHeaders 那一格相同【按名字挑】,不按值猜:URL 的查询名是一小撮公认的凭据名
-// (api_key／token／secret／password／auth／key／sig／signature／credential／access_token),把整个查询串
-// 都遮了会连 ?model=、?version= 这类识别端点必需的信息一起遮掉,而识别端点正是保留 scheme/host/path
-// 的理由。值走同一条 maskKey(••••<末4>),所以「回传的掩码 = 我们刚下发的那一串」可以逐字节比出来。
-const SENSITIVE_URL_PARAM_RE = /^(?:x-)?(?:api[-_]?key|key|access[-_]?token|token|secret|password|passwd|auth|authorization|credential|sig|signature|session)$/i;
-function isSensitiveUrlParamName(name) { return typeof name === 'string' && SENSITIVE_URL_PARAM_RE.test(name.trim()); }
-// 只在【真有要遮的东西】时才重写这个串:没有凭据参数就原样返回,一个字节都不动 —— 否则
-// `?a=1&b=2` 会被重新拼装,而这个返回值是要被原样回传、再逐字节比对的往返基准(见 05 的
-// restoreDisplayUrl),任何归一化都会把「用户没动过这个框」误判成「用户换了端点」。
-function maskUrlQueryCredentials(urlStr) {
-  const s = String(urlStr || '');
-  const hashAt = s.indexOf('#');
-  const head = hashAt >= 0 ? s.slice(0, hashAt) : s;
-  const tail = hashAt >= 0 ? s.slice(hashAt) : '';
-  const queryAt = head.indexOf('?');
-  if (queryAt < 0) return s;
-  const prefix = head.slice(0, queryAt + 1);
-  let changed = false;
-  const pairs = head.slice(queryAt + 1).split('&').map(pair => {
-    const eq = pair.indexOf('=');
-    if (eq <= 0) return pair;
-    const name = pair.slice(0, eq), value = pair.slice(eq + 1);
-    if (!value || !isSensitiveUrlParamName(name)) return pair;
-    changed = true;
-    return name + '=' + maskKey(value);   // 值仍是【原编码形态】的末四位:掩码可逐字节对回去
-  });
-  return changed ? prefix + pairs.join('&') + tail : s;
-}
-// 55a: 远程条目 URL 展示脱敏 -- 剥离 userinfo(http://user:pass@host -> http://host),防凭据经
-// token 保护的路由返回给前端(浏览器扩展/日志/共享机器可截获)。解析失败则原样返回(不阻断展示)。
-// 107-S2:同一条规则再加查询串里的凭据(上面的 maskUrlQueryCredentials),并成为全仓【唯一】的
-// 「URL 给人看之前怎么脱敏」判据 —— maskSecrets(providers 的 baseUrl／audioBaseUrl／extraBaseUrls、
-// searchBackend.baseUrl、modelsApiBase)、maskExternalMcpServerForDisplay(远程 url)、safeMcpInventory
-// (mcp_list)全部调它,不另写第二套。URL 能解析但没有 userinfo 时【不重建】(u.toString() 会给
-// `http://host` 补出尾斜杠,那会让「原样回传」看起来像改了端点)。
-function safeUrlForDisplay(urlStr) {
-  const raw = String(urlStr || '');
-  let stripped = raw;
-  try { const u = new URL(raw); if (u.username || u.password) { u.username = ''; u.password = ''; stripped = u.toString(); } }
-  catch { /* 非法/相对 URL:不重建,只做下面的查询串脱敏(与修前「解析失败原样返回」同一个不阻断口径) */ }
-  return maskUrlQueryCredentials(stripped);
 }
 
 // 合并 desktop/config/drop-in 三源为统一读模型。与 resolveExternalMcpServers 的关键差异:本函数

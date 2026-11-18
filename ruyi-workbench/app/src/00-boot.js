@@ -237,6 +237,15 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const { redact } = require('./backend/secret-redaction.cjs');
+const {
+  KEY_MASK_PREFIX, maskKey, safeUrlForDisplay,
+  configSecretValueOrCleared, configUrlOrCleared,
+  maskSecrets, unmaskSecrets, maskProviders, unmaskProviders,
+  maskedSecretConflicts, maskedSecretConflictMessage, providerLaunchVectorKey,
+  collectDisplayUrlRestores, maskExternalMcpServerForDisplay,
+  mcpArgsForDisplay, restoreExternalMcpServerSecrets, sanitizeExternalMcpServer,
+} = require('./backend/config-secrets.cjs');
 const {
   CONTEXT_WINDOW_FALLBACK, CONTEXT_OVERFLOW_PATTERNS,
   extractContextLength, cacheContextLength, cachedContextLength,

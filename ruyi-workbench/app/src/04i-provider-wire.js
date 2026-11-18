@@ -1,2 +1,10 @@
 // Provider protocol composition with explicit service dependencies.
 const { OPENAI_STREAM_ERROR_STATUS, PROVIDER_REASONING_EFFORTS, PROVIDER_WIRE_DEFAULT, PROVIDER_WIRE_PROTOCOLS, ProviderWireHooks, applyProviderReasoningEffort, buildResponsesInputItems, chatCompletionText, createChatStreamDecoder, createResponsesStreamDecoder, decodeChatCompletion, decodeResponsesCompletion, noRetryOn400, normalizeProviderApiStyle, providerReasoningEffort, providerServerSearchCard, providerWireContentFiltered, providerWireContextExceeded, providerWireDecoded, providerWireFailureDetail, providerWireIncomplete, providerWireModelsUrl, providerWireOutputLimited, providerWireProtocol, providerWireProtocolForBody, providerWireResponseIdOf, providerWireStreamErrorText, providerWireToolCallsFromSlots, reasoningContentField, responsesFailedText, responsesHistoryWithCompleteToolPairs, responsesIncompleteFinishReason, responsesInstructions, responsesOutputText, setTemperature, toResponsesContent, toResponsesTools } = require('./backend/provider-wire.cjs').createProviderWire({ providerApiBase, providerBaseWithV1, providerCompletionUrl, providerRequestHeaders, anthropicApiBase, anthropicMessagesUrl, anthropicModelsUrl, anthropicRequestHeaders, anthropicRetryBodyOn400, applyAnthropicEffort, applyAnthropicTemperature, applyAnthropicTools, createAnthropicStreamDecoder, decodeAnthropicCompletion, encodeAnthropicMessages, encodeAnthropicQuick, normalizeAnthropicUsage });
+
+const {
+  PROVIDER_PRESETS, resolveProvider, activeOpenAiProvider, stripUrlUserinfo, createProviderConfigNormalizer,
+} = require('./backend/provider-config.cjs');
+const sanitizeProvider = createProviderConfigNormalizer({
+  providerReasoningEffort, normalizeProviderApiStyle,
+  normalizeAnthropicAuth, normalizeAnthropicThinking, normalizeAnthropicFallbacks,
+});

@@ -57,8 +57,10 @@
     "app/backend/usage-summary.cjs",
     "app/backend/install-registry.cjs",
     "app/backend/provider-wire.cjs",
+    "app/backend/config-secrets.cjs",
     "app/backend/context-governance-rules.json",
     "app/backend/token-estimation.cjs",
+    "app/backend/provider-config.cjs",
     "app/backend/provider-context-policy.cjs",
     "app/backend/retrieval-index.cjs",
     "app/backend/scheduler-core.cjs",
@@ -322,6 +324,7 @@
     "app/backend/rg-probe.cjs",
     "app/backend/file-type-policy.cjs",
     "app/backend/http-download.cjs",
+    "app/backend/secret-redaction.cjs",
     "app/backend/sensitive-paths.cjs",
     "app/backend/keyed-chain.cjs"
   ],

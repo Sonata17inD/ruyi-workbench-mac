@@ -218,7 +218,7 @@ try {
     // ⑥ 机械锁：maskSecrets 里每多一处掩码，就必须在 maskedSecretConflicts 里给它声明一条启动向量，
     //    否则又是一个「掩码回传把密钥搬到新端点」的洞。这里把掩码点的数量钉住 —— 数量一变就红，
     //    改的人被迫回来读这条注释（手攒的名单必须配锁；本仓已经因为漏登记翻车过几次）。
-    const src = fs.readFileSync(path.join(WB, 'app', 'src', '05-claude-engine.js'), 'utf8');
+    const src = fs.readFileSync(path.join(WB, 'app', 'backend', 'config-secrets.cjs'), 'utf8');
     const body = src.slice(src.indexOf('function maskSecrets(config)'), src.indexOf('function unmaskSecrets('));
     const maskPoints = (body.match(/maskKey\(|maskExtraHeaders\(|maskExternalMcpServerForDisplay\b/g) || []).length;
     ok(maskPoints === 6, `E9 maskSecrets 的掩码点恰好 6 处（providers.apiKey / providers.extraHeaders / searchBackend.apiKey / modelsApiKey / externalMcpServers ×2 引用）——实得 ${maskPoints}；新增一处就要在 maskedSecretConflicts 里同时声明它的启动向量`);

@@ -1,7 +1,7 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离（见 lib 头注）
 'use strict';
 // 114a（45 号文 §2 ①）：语音识别（ASR）配置地基的静态锁。纯静态，不起服务、不跑浏览器。
-//   ① 两个 caps 取值域的隔离（45 号文 §1.2）：PROVIDER_MODEL_CAPS（05，模型能力标签 asr/embedding）
+//   ① 两个 caps 取值域的隔离（45 号文 §1.2）：PROVIDER_MODEL_CAPS（Provider 配置，模型能力标签 asr/embedding）
 //      与 PLAYBOOK_REQUIRES（06，运行环境能力矩阵 network/desktopMcp/vision）同名不同物，
 //      【不许互相引用】，06 里连 'asr' 字面量都不许出现。
 //   ② CONFIG_SCHEMA 故意【不】因 114a 而 bump（45 号文 §6.1 对 26 号文的显式改判：纯增量 +
@@ -20,6 +20,7 @@ const fs = require('fs');
 const path = require('path');
 
 const APP = path.join(__dirname, '..', 'ruyi-workbench', 'app');
+const providerConfigSource = fs.readFileSync(path.join(APP, 'backend', 'provider-config.cjs'), 'utf8');
 const src05 = fs.readFileSync(path.join(APP, 'src', '05-claude-engine.js'), 'utf8');
 const src06 = fs.readFileSync(path.join(APP, 'src', '06-provider-engine.js'), 'utf8');
 const src01 = fs.readFileSync(path.join(APP, 'src', '01-config.js'), 'utf8');
@@ -29,9 +30,9 @@ const indexHtml = fs.readFileSync(path.join(APP, 'public', 'index.html'), 'utf8'
 const zh = JSON.parse(fs.readFileSync(path.join(APP, 'public', 'locales', 'zh-CN.json'), 'utf8'));
 const en = JSON.parse(fs.readFileSync(path.join(APP, 'public', 'locales', 'en-US.json'), 'utf8'));
 
-// ① 域隔离（取值域不相交 + 互不引用；05 那行隔离注释是 45 号文 §1.2 点名要留的，允许它点名一次）
+// ① 域隔离（取值域不相交 + 互不引用；Provider 配置那行隔离注释是 45 号文 §1.2 点名要留的，允许它点名一次）
 // 130（51 号文）：白名单加 asr-stream（流式识别端点，只给麦克风用）；两个取值域仍不相交。
-assert.match(src05, /const PROVIDER_MODEL_CAPS = new Set\(\['asr', 'embedding', 'asr-stream'\]\)/, '05: PROVIDER_MODEL_CAPS 白名单（asr/embedding/asr-stream）');
+assert.match(providerConfigSource, /const PROVIDER_MODEL_CAPS = new Set\(\['asr', 'embedding', 'asr-stream'\]\)/, 'Provider 配置: PROVIDER_MODEL_CAPS 白名单（asr/embedding/asr-stream）');
 const { PLAYBOOK_REQUIRES } = require('../ruyi-workbench/app/backend/playbook-policy.cjs');
 assert.deepStrictEqual(Array.from(PLAYBOOK_REQUIRES), ['network', 'desktopMcp', 'vision', 'desktopAutomation', 'ocr', 'browserControl'],
   '06: runtime requirements retain the original capabilities and explicitly separate shared ACC from UI/OCR/browser control');
@@ -39,8 +40,8 @@ const capsModelDomain = ['asr', 'embedding', 'asr-stream'], capsRuntimeDomain = 
 assert.ok(!capsModelDomain.some(v => capsRuntimeDomain.includes(v)), '两个 caps 取值域必须不相交');
 assert.ok(!src06.includes('PROVIDER_MODEL_CAPS'), '06 不得引用模型能力标签域（PROVIDER_MODEL_CAPS）');
 assert.ok(!src06.includes("'asr'") && !src06.includes('"asr"'), "06 不得出现 'asr' 字面量（串域）");
-const mentions = src05.split('\n').filter(l => l.includes('PLAYBOOK_REQUIRES'));
-assert.ok(mentions.length === 1 && /^\s*\/\//.test(mentions[0].trimStart()) || (mentions.length === 1 && mentions[0].trim().startsWith('//')), '05 只允许 114a 隔离注释点名 PLAYBOOK_REQUIRES 一次（不许代码引用）：实得 ' + mentions.length + ' 处');
+const mentions = providerConfigSource.split('\n').filter(l => l.includes('PLAYBOOK_REQUIRES'));
+assert.ok(mentions.length === 1 && /^\s*\/\//.test(mentions[0].trimStart()) || (mentions.length === 1 && mentions[0].trim().startsWith('//')), 'Provider 配置只允许 114a 隔离注释点名 PLAYBOOK_REQUIRES 一次（不许代码引用）：实得 ' + mentions.length + ' 处');
 // ② schema:114a 自己不 bump（45 号文 §6.1），但常量是全仓共用的 —— 107-T1 为了把 126-111b/d/e
 //    三个开关的一次性迁移挂上阶梯，把它抬到了 12（46 号文 §5）。本条继续钉住【当前值】，好让
 //    「谁又动了它」还是红的；判据同时钉住「ASR 三个键没有任何迁移分支」，那才是 114a 真正要守的。
@@ -49,12 +50,12 @@ assert.match(src00, /const CONFIG_SCHEMA = 14;/, 'CONFIG_SCHEMA 当前为 14（1
 assert.ok(!/incomingConfigSchema[^\n]*asr/i.test(src01) && !/asr(ProviderId|Model)[^\n]*incomingConfigSchema/i.test(src01),
   '114a 的 asrProviderId/asrModel 仍然没有任何 schema 迁移分支（纯增量：读回空串即「未配置」）');
 // ③ 后端落点
-assert.match(src05, /function providerModelCaps\(rawCaps\)/, '05: providerModelCaps 白名单清洗函数');
-assert.match(src05, /const caps = providerModelCaps\(m\.caps\);/, '05: models 归一化走白名单');
+assert.match(providerConfigSource, /function providerModelCaps\(rawCaps\)/, 'Provider 配置: providerModelCaps 白名单清洗函数');
+assert.match(providerConfigSource, /const caps = providerModelCaps\(m\.caps\);/, 'Provider 配置: models 归一化走白名单');
 // 107-S2：baseUrl 与 audioBaseUrl 一起多了一道「掩码永不落盘」的末闸（configUrlOrCleared）。本条锚点钉的
 // 一直是「两者同待遇」，所以判据改成【两行同形】：谁单独改了包装，这一条就红。
-assert.match(src05, /const audioBaseUrl = configUrlOrCleared\(str\(raw\.audioBaseUrl, 400\)\.trim\(\)\);/, '05: audioBaseUrl 仍是 trim + 截 400（外加 107-S2 的掩码末闸）');
-assert.match(src05, /const mainBase = configUrlOrCleared\(str\(raw\.baseUrl, 400\)\.trim\(\)\);/, '05: audioBaseUrl 与 baseUrl 同待遇（同一个 400 截断 + 同一道 configUrlOrCleared 末闸）');
+assert.match(providerConfigSource, /const audioBaseUrl = configUrlOrCleared\(str\(raw\.audioBaseUrl, 400\)\.trim\(\)\);/, 'Provider 配置: audioBaseUrl 仍是 trim + 截 400（外加 107-S2 的掩码末闸）');
+assert.match(providerConfigSource, /const mainBase = configUrlOrCleared\(str\(raw\.baseUrl, 400\)\.trim\(\)\);/, 'Provider 配置: audioBaseUrl 与 baseUrl 同待遇（同一个 400 截断 + 同一道 configUrlOrCleared 末闸）');
 assert.match(src01, /asrProviderId: '',/, '01: asrProviderId 默认空（未配置）');
 assert.match(src01, /asrModel: '',/, '01: asrModel 默认空（未配置）');
 assert.match(src01, /for \(const key of \['asrProviderId', 'asrModel', 'asrStreamProviderId', 'asrStreamModel', 'asrFixProviderId', 'asrFixModel'\]\)/, '01: asr 形状清洗块（130 起连实时识别那一对、131b 起连改字端点那一对一起洗）');
@@ -85,8 +86,8 @@ assert.ok(providersJs.includes("if (saved && state.providersDraftSeeded === true
   assert.ok(src13.includes('if (Array.isArray(caps) && caps.length) o.caps = caps.slice();') && src13.includes('add(m.id, m.label, m.contextLength, m.caps);'),
     '13: GET /api/models 合并时把配置里那条的 caps 带出去');
   // 第四条（用户真机的直接原因）：清单上限 100，百炼一刷新就满；追加在末尾的语音模型被「前 100 条」当场截掉。
-  assert.ok(src05.includes('const marked = models.filter(m => m.caps);') && src05.includes('if (models.length > 100) {'),
-    '05: 模型清单超限时先留带能力标记的条目（不是前 100 条）');
+  assert.ok(providerConfigSource.includes('const marked = models.filter(m => m.caps);') && providerConfigSource.includes('if (models.length > 100) {'),
+    'Provider 配置: 模型清单超限时先留带能力标记的条目（不是前 100 条）');
   assert.ok(providersJs.includes('publishProviderModels(provider, fresh, state.providersDraft || [])'), '前端: 刷新清单折回 state.config 时保留 caps');
   assert.ok(providersJs.includes('p.models = keepModelCaps(models, p.models);'), '前端: 手动模型清单改动时保留 caps');
   // 2026-09-21（用户真机，第五条）：折回的是「名字清单」，手填的语音模型（百炼清单里没有的名字）不在里面 —— 修前 keepModelCaps
@@ -245,8 +246,8 @@ assert.equal(voiceBad, -1, 'composer-voice.js 含控制字符／CR @' + voiceBad
 //   ⑦e 设置页有选择器、缺省值 delete 不落字段、双语键齐全。
 // 反向：把 ⑦b 的分叉改成永远走 transcriptions → asr-transcribe.e2e.js H2 红；把 ⑦d 的转码摘掉 →
 //   composer-voice.browser.e2e.js ①c/c2 红（请求体退回 EBML 魔数）。
-assert.match(src05, /const asrProtocol = raw\.asrProtocol === 'chat-audio' \? 'chat-audio' : '';/, '05: asrProtocol 只落合法值（⑦a）');
-assert.match(src05, /\.\.\.\(asrProtocol \? \{ asrProtocol \} : \{\}\), \/\/ 107-A1/, '05: asrProtocol 空不落字段（⑦a 零漂移）');
+assert.match(providerConfigSource, /const asrProtocol = raw\.asrProtocol === 'chat-audio' \? 'chat-audio' : '';/, 'Provider 配置: asrProtocol 只落合法值（⑦a）');
+assert.match(providerConfigSource, /\.\.\.\(asrProtocol \? \{ asrProtocol \} : \{\}\), \/\/ 107-A1/, 'Provider 配置: asrProtocol 空不落字段（⑦a 零漂移）');
 assert.match(src05, /const chatAudio = provider\.asrProtocol === 'chat-audio';/, '05: 转写出站按协议分叉（⑦b）');
 assert.match(src05, /target = base \+ '\/chat\/completions';/, "05: chat-audio 打 /chat/completions（⑦b）");
 assert.match(src05, /type: 'input_audio', input_audio: \{ data: 'data:' \+ mime \+ ';base64,'/, '05: chat-audio 用 input_audio data URI（⑦b）');

@@ -29,6 +29,7 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "ExternalBotHooks",
+        "KEY_MASK_PREFIX",
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
         "MCP_TOOLS",
@@ -60,7 +61,10 @@
         "cachedInputTokensFromUsage",
         "classifyTextForEstimate",
         "claudeCostFields",
+        "collectDisplayUrlRestores",
         "computeProviderCost",
+        "configSecretValueOrCleared",
+        "configUrlOrCleared",
         "contentTypeFor",
         "contextWindowFromTable",
         "copyOrdinaryJsonData",
@@ -99,6 +103,13 @@
         "localTurnTimeParts",
         "lstatOrNull",
         "makeId",
+        "maskExternalMcpServerForDisplay",
+        "maskKey",
+        "maskProviders",
+        "maskSecrets",
+        "maskedSecretConflictMessage",
+        "maskedSecretConflicts",
+        "mcpArgsForDisplay",
         "migrateLegacyDataRoot",
         "neutralizeFenceTag",
         "normalizeApiErrorPayload",
@@ -109,18 +120,23 @@
         "pathToFileURL",
         "paths",
         "pidAlive",
+        "providerLaunchVectorKey",
         "readBody",
         "readJsonBody",
         "readline",
+        "redact",
         "resolveContextWindow",
         "resolveDataRootUncached",
+        "restoreExternalMcpServerSecrets",
         "runKeyedChain",
         "ruyiPackageInfo",
         "ruyiVendorBinDir",
         "safeDecodeURIComponent",
         "safeJsonParse",
+        "safeUrlForDisplay",
         "samePathEntry",
         "samePathKey",
+        "sanitizeExternalMcpServer",
         "send",
         "sendError",
         "setEstimateBucketsV1",
@@ -128,6 +144,8 @@
         "text",
         "tildePath",
         "tokensFromTextCounts",
+        "unmaskProviders",
+        "unmaskSecrets",
         "zlib"
       ],
       "requires": [
@@ -346,6 +364,325 @@
         "LocalSecretCryptoHooks"
       ],
       "requires": []
+    },
+    {
+      "file": "03a-privacy-gateway.js",
+      "layer": "foundation",
+      "provides": [
+        "PrivacyGateway"
+      ],
+      "requires": [
+        {
+          "provider": "01h-privacy-core.js",
+          "symbol": "PrivacyCore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01m-privacy-regex.js",
+          "symbol": "PrivacyRegex",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04h-provider-http.js",
+      "layer": "foundation",
+      "provides": [
+        "PROVIDER_LAN_HOST_SUFFIXES",
+        "ProviderHttpHooks",
+        "abortableDelay",
+        "providerApiBase",
+        "providerBaseIsLocalOrLan",
+        "providerBaseWithV1",
+        "providerCallIsTransient",
+        "providerCompletionUrl",
+        "providerPostJsonOnce",
+        "providerRequestHeaders",
+        "providerResponsesBase",
+        "providerRetryAfterMs",
+        "providerScrubSecrets",
+        "providerSseAsCompletion",
+        "providerThrownErrorText",
+        "withTransientRetry"
+      ],
+      "requires": [
+        {
+          "provider": "03a-privacy-gateway.js",
+          "symbol": "PrivacyGateway",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04i-provider-anthropic.js",
+      "layer": "foundation",
+      "provides": [
+        "ANTHROPIC_API_VERSION",
+        "ANTHROPIC_AUTH_MODES",
+        "ANTHROPIC_BETA_FALLBACK",
+        "ANTHROPIC_BETA_THINKING_BINDING",
+        "ANTHROPIC_COMPLETION_MAX_TOKENS",
+        "ANTHROPIC_EFFORTS",
+        "ANTHROPIC_EMPTY_TEXT",
+        "ANTHROPIC_FALLBACK_MODES",
+        "ANTHROPIC_STREAM_ERROR_STATUS",
+        "ANTHROPIC_STREAM_MAX_TOKENS",
+        "ANTHROPIC_STREAM_MAX_TOKENS_CLAUDE",
+        "ANTHROPIC_THINKING_BUDGET_MAX",
+        "ANTHROPIC_THINKING_BUDGET_MIN",
+        "ANTHROPIC_THINKING_EFFORT_BUDGET",
+        "ANTHROPIC_THINKING_MODES",
+        "anthropicApiBase",
+        "anthropicAssistantBlocks",
+        "anthropicBaseUrl",
+        "anthropicClassicThinking",
+        "anthropicFinishReason",
+        "anthropicImageBlock",
+        "anthropicLearnedCapKey",
+        "anthropicLearnedMaxTokens",
+        "anthropicMaxTokensCapFromError",
+        "anthropicMaxTokensFor",
+        "anthropicMergeUsage",
+        "anthropicMessagesFromHistory",
+        "anthropicMessagesUrl",
+        "anthropicModelTakesAdaptiveThinking",
+        "anthropicModelTraits",
+        "anthropicModelsUrl",
+        "anthropicNonEmpty",
+        "anthropicOfficialFeatures",
+        "anthropicOfficialHost",
+        "anthropicProviderBlocks",
+        "anthropicRefusalDetail",
+        "anthropicReplayBlock",
+        "anthropicReplayableBlocks",
+        "anthropicRequestHeaders",
+        "anthropicRetryBodyOn400",
+        "anthropicStreamErrorText",
+        "anthropicThinkingFor",
+        "anthropicToolId",
+        "anthropicToolInput",
+        "anthropicToolResultAsText",
+        "anthropicToolResultContent",
+        "anthropicTools",
+        "anthropicUserBlocks",
+        "applyAnthropicEffort",
+        "applyAnthropicTemperature",
+        "applyAnthropicTools",
+        "createAnthropicStreamDecoder",
+        "decodeAnthropicCompletion",
+        "encodeAnthropicMessages",
+        "encodeAnthropicQuick",
+        "normalizeAnthropicAuth",
+        "normalizeAnthropicFallbacks",
+        "normalizeAnthropicThinking",
+        "normalizeAnthropicUsage"
+      ],
+      "requires": [
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseWithV1",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04i-provider-wire.js",
+      "layer": "foundation",
+      "provides": [
+        "OPENAI_STREAM_ERROR_STATUS",
+        "PROVIDER_PRESETS",
+        "PROVIDER_REASONING_EFFORTS",
+        "PROVIDER_WIRE_DEFAULT",
+        "PROVIDER_WIRE_PROTOCOLS",
+        "ProviderWireHooks",
+        "activeOpenAiProvider",
+        "applyProviderReasoningEffort",
+        "buildResponsesInputItems",
+        "chatCompletionText",
+        "createChatStreamDecoder",
+        "createProviderConfigNormalizer",
+        "createResponsesStreamDecoder",
+        "decodeChatCompletion",
+        "decodeResponsesCompletion",
+        "noRetryOn400",
+        "normalizeProviderApiStyle",
+        "providerReasoningEffort",
+        "providerServerSearchCard",
+        "providerWireContentFiltered",
+        "providerWireContextExceeded",
+        "providerWireDecoded",
+        "providerWireFailureDetail",
+        "providerWireIncomplete",
+        "providerWireModelsUrl",
+        "providerWireOutputLimited",
+        "providerWireProtocol",
+        "providerWireProtocolForBody",
+        "providerWireResponseIdOf",
+        "providerWireStreamErrorText",
+        "providerWireToolCallsFromSlots",
+        "reasoningContentField",
+        "resolveProvider",
+        "responsesFailedText",
+        "responsesHistoryWithCompleteToolPairs",
+        "responsesIncompleteFinishReason",
+        "responsesInstructions",
+        "responsesOutputText",
+        "sanitizeProvider",
+        "setTemperature",
+        "stripUrlUserinfo",
+        "toResponsesContent",
+        "toResponsesTools"
+      ],
+      "requires": [
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerApiBase",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerBaseWithV1",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerCompletionUrl",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04h-provider-http.js",
+          "symbol": "providerRequestHeaders",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "anthropicApiBase",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "anthropicMessagesUrl",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "anthropicModelsUrl",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "anthropicRequestHeaders",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "anthropicRetryBodyOn400",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "applyAnthropicEffort",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "applyAnthropicTemperature",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "applyAnthropicTools",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "createAnthropicStreamDecoder",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "decodeAnthropicCompletion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "encodeAnthropicMessages",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "encodeAnthropicQuick",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "normalizeAnthropicAuth",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "normalizeAnthropicFallbacks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "normalizeAnthropicThinking",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-anthropic.js",
+          "symbol": "normalizeAnthropicUsage",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
     },
     {
       "file": "01-config.js",
@@ -570,6 +907,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "configSecretValueOrCleared",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "configUrlOrCleared",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "cp",
           "kinds": [
             "read"
@@ -687,6 +1038,13 @@
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sanitizeExternalMcpServer",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -872,28 +1230,7 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "configSecretValueOrCleared",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "configUrlOrCleared",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "sanitizeProvider",
           "kinds": [
             "call"
@@ -2278,33 +2615,10 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "03a-privacy-gateway.js",
-      "layer": "foundation",
-      "provides": [
-        "PrivacyGateway"
-      ],
-      "requires": [
-        {
-          "provider": "01h-privacy-core.js",
-          "symbol": "PrivacyCore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01m-privacy-regex.js",
-          "symbol": "PrivacyRegex",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -2348,8 +2662,6 @@
         "PROMPT_DEADLINE_HORIZON_MS",
         "PROMPT_WAIT_UNLIMITED_MS",
         "PermissionWaitHooks",
-        "REDACT_PATTERNS",
-        "SENSITIVE_URL_PARAM_RE",
         "ToolboxHooks",
         "ToolboxRegistry",
         "_dropInCache",
@@ -2403,7 +2715,6 @@
         "isClaudeResumeMissingError",
         "isEquivalentDesktopAccServer",
         "isNativeToolName",
-        "isSensitiveUrlParamName",
         "killAllMcpClients",
         "kimiModelList",
         "lastAssistantEngine",
@@ -2412,7 +2723,6 @@
         "logStream",
         "logStreamDay",
         "makeAttachmentRecord",
-        "maskUrlQueryCredentials",
         "mcpCallToolParams",
         "mcpChildExitResult",
         "mcpClientFailures",
@@ -2446,7 +2756,6 @@
         "promptWaitMs",
         "reconcileMcpEntryFingerprint",
         "recordSessionExecutionOwner",
-        "redact",
         "registerSessionExecutionChild",
         "registerUserQuestion",
         "requestSessionExecutionStop",
@@ -2455,7 +2764,6 @@
         "resolveExternalMcpServers",
         "runAutomaticInterventionDecision",
         "safeMcpInventory",
-        "safeUrlForDisplay",
         "sameClaudeResumeCwd",
         "sanitizeFsSegmentName",
         "sanitizeServerId",
@@ -2473,6 +2781,13 @@
         "validateBrowserTargetPatch"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "collectDisplayUrlRestores",
+          "kinds": [
+            "call"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "crypto",
@@ -2546,9 +2861,23 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "mcpArgsForDisplay",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -2581,10 +2910,38 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "restoreExternalMcpServerSecrets",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeUrlForDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sanitizeExternalMcpServer",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -2793,41 +3150,6 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "collectDisplayUrlRestores",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskKey",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "mcpArgsForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "restoreExternalMcpServerSecrets",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06d-memory-domain.js",
           "symbol": "legacyAccMemoryMigrationComplete",
           "kinds": [
@@ -2841,6 +3163,13 @@
       "layer": "foundation",
       "provides": [],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "read"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
@@ -2885,13 +3214,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "ToolboxHooks",
           "kinds": [
             "read"
@@ -2900,275 +3222,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "ToolboxRegistry",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "04h-provider-http.js",
-      "layer": "foundation",
-      "provides": [
-        "PROVIDER_LAN_HOST_SUFFIXES",
-        "ProviderHttpHooks",
-        "abortableDelay",
-        "providerApiBase",
-        "providerBaseIsLocalOrLan",
-        "providerBaseWithV1",
-        "providerCallIsTransient",
-        "providerCompletionUrl",
-        "providerPostJsonOnce",
-        "providerRequestHeaders",
-        "providerResponsesBase",
-        "providerRetryAfterMs",
-        "providerScrubSecrets",
-        "providerSseAsCompletion",
-        "providerThrownErrorText",
-        "withTransientRetry"
-      ],
-      "requires": [
-        {
-          "provider": "03a-privacy-gateway.js",
-          "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "04i-provider-anthropic.js",
-      "layer": "foundation",
-      "provides": [
-        "ANTHROPIC_API_VERSION",
-        "ANTHROPIC_AUTH_MODES",
-        "ANTHROPIC_BETA_FALLBACK",
-        "ANTHROPIC_BETA_THINKING_BINDING",
-        "ANTHROPIC_COMPLETION_MAX_TOKENS",
-        "ANTHROPIC_EFFORTS",
-        "ANTHROPIC_EMPTY_TEXT",
-        "ANTHROPIC_FALLBACK_MODES",
-        "ANTHROPIC_STREAM_ERROR_STATUS",
-        "ANTHROPIC_STREAM_MAX_TOKENS",
-        "ANTHROPIC_STREAM_MAX_TOKENS_CLAUDE",
-        "ANTHROPIC_THINKING_BUDGET_MAX",
-        "ANTHROPIC_THINKING_BUDGET_MIN",
-        "ANTHROPIC_THINKING_EFFORT_BUDGET",
-        "ANTHROPIC_THINKING_MODES",
-        "anthropicApiBase",
-        "anthropicAssistantBlocks",
-        "anthropicBaseUrl",
-        "anthropicClassicThinking",
-        "anthropicFinishReason",
-        "anthropicImageBlock",
-        "anthropicLearnedCapKey",
-        "anthropicLearnedMaxTokens",
-        "anthropicMaxTokensCapFromError",
-        "anthropicMaxTokensFor",
-        "anthropicMergeUsage",
-        "anthropicMessagesFromHistory",
-        "anthropicMessagesUrl",
-        "anthropicModelTakesAdaptiveThinking",
-        "anthropicModelTraits",
-        "anthropicModelsUrl",
-        "anthropicNonEmpty",
-        "anthropicOfficialFeatures",
-        "anthropicOfficialHost",
-        "anthropicProviderBlocks",
-        "anthropicRefusalDetail",
-        "anthropicReplayBlock",
-        "anthropicReplayableBlocks",
-        "anthropicRequestHeaders",
-        "anthropicRetryBodyOn400",
-        "anthropicStreamErrorText",
-        "anthropicThinkingFor",
-        "anthropicToolId",
-        "anthropicToolInput",
-        "anthropicToolResultAsText",
-        "anthropicToolResultContent",
-        "anthropicTools",
-        "anthropicUserBlocks",
-        "applyAnthropicEffort",
-        "applyAnthropicTemperature",
-        "applyAnthropicTools",
-        "createAnthropicStreamDecoder",
-        "decodeAnthropicCompletion",
-        "encodeAnthropicMessages",
-        "encodeAnthropicQuick",
-        "normalizeAnthropicAuth",
-        "normalizeAnthropicFallbacks",
-        "normalizeAnthropicThinking",
-        "normalizeAnthropicUsage"
-      ],
-      "requires": [
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseWithV1",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "04i-provider-wire.js",
-      "layer": "foundation",
-      "provides": [
-        "OPENAI_STREAM_ERROR_STATUS",
-        "PROVIDER_REASONING_EFFORTS",
-        "PROVIDER_WIRE_DEFAULT",
-        "PROVIDER_WIRE_PROTOCOLS",
-        "ProviderWireHooks",
-        "applyProviderReasoningEffort",
-        "buildResponsesInputItems",
-        "chatCompletionText",
-        "createChatStreamDecoder",
-        "createResponsesStreamDecoder",
-        "decodeChatCompletion",
-        "decodeResponsesCompletion",
-        "noRetryOn400",
-        "normalizeProviderApiStyle",
-        "providerReasoningEffort",
-        "providerServerSearchCard",
-        "providerWireContentFiltered",
-        "providerWireContextExceeded",
-        "providerWireDecoded",
-        "providerWireFailureDetail",
-        "providerWireIncomplete",
-        "providerWireModelsUrl",
-        "providerWireOutputLimited",
-        "providerWireProtocol",
-        "providerWireProtocolForBody",
-        "providerWireResponseIdOf",
-        "providerWireStreamErrorText",
-        "providerWireToolCallsFromSlots",
-        "reasoningContentField",
-        "responsesFailedText",
-        "responsesHistoryWithCompleteToolPairs",
-        "responsesIncompleteFinishReason",
-        "responsesInstructions",
-        "responsesOutputText",
-        "setTemperature",
-        "toResponsesContent",
-        "toResponsesTools"
-      ],
-      "requires": [
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerApiBase",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerBaseWithV1",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerCompletionUrl",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04h-provider-http.js",
-          "symbol": "providerRequestHeaders",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "anthropicApiBase",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "anthropicMessagesUrl",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "anthropicModelsUrl",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "anthropicRequestHeaders",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "anthropicRetryBodyOn400",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "applyAnthropicEffort",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "applyAnthropicTemperature",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "applyAnthropicTools",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "createAnthropicStreamDecoder",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "decodeAnthropicCompletion",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "encodeAnthropicMessages",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "encodeAnthropicQuick",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "normalizeAnthropicUsage",
           "kinds": [
             "read"
           ]
@@ -3212,12 +3265,6 @@
         "ASR_FIX_MODES",
         "ASR_FIX_SYSTEM_MERGE",
         "ASR_FIX_SYSTEM_TEXT",
-        "KEY_MASK_PREFIX",
-        "MCP_ARG_REDACTED_MARK",
-        "PROVIDER_MODEL_CAPS",
-        "PROVIDER_PRESETS",
-        "SENSITIVE_HEADER_RE",
-        "activeOpenAiProvider",
         "agentCliAdapter",
         "asrAudioFormat",
         "asrChatContentText",
@@ -3229,51 +3276,13 @@
         "asrFixModeOf",
         "asrFixSanity",
         "asrUsesDashscopeNative",
-        "collectDisplayUrlRestores",
-        "configSecretValueOrCleared",
-        "configUrlOrCleared",
         "effectiveSkillSelection",
-        "isSensitiveHeaderName",
-        "maskExternalMcpServerForDisplay",
-        "maskExtraHeaders",
-        "maskKey",
-        "maskMcpSecretValues",
-        "maskProviders",
-        "maskSecrets",
-        "maskedSecretConflictMessage",
-        "maskedSecretConflicts",
-        "mcpArgsForDisplay",
-        "mcpEntryArgStrings",
-        "mcpEntryIdKey",
-        "mcpEntryIsRemote",
-        "mcpEntryTrimmed",
-        "mcpSecretValueOrCleared",
         "providerFixCompletion",
-        "providerLaunchUrls",
-        "providerLaunchVectorKey",
-        "providerMaskedSecretFields",
-        "providerMaskedUrlFields",
-        "providerModelCaps",
-        "providerVectorNotWidened",
         "resolveAsrFixProvider",
         "resolveAsrProvider",
         "resolveAsrStreamProvider",
-        "resolveProvider",
-        "restoreDisplayUrl",
-        "restoreExternalMcpServerSecrets",
-        "restoreExternalMcpServersSecrets",
-        "restoreMcpArgs",
-        "restoreMcpSecretValues",
-        "restoreProviderDisplayUrls",
         "runClaudeTurn",
-        "sanitizeExternalMcpCommon",
-        "sanitizeExternalMcpServer",
-        "sanitizeProvider",
-        "stripUrlUserinfo",
         "transcribeAudioViaProvider",
-        "unmaskProviders",
-        "unmaskSecrets",
-        "urlStillMasked",
         "voiceLexiconAsrPromptFor",
         "voiceLexiconChains",
         "voiceLexiconRead",
@@ -3346,13 +3355,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "normalizePricing",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -3370,6 +3372,13 @@
           "symbol": "paths",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -3398,13 +3407,6 @@
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -3844,13 +3846,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
             "call"
@@ -3859,13 +3854,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "registerUserQuestion",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "safeUrlForDisplay",
           "kinds": [
             "call"
           ]
@@ -3906,36 +3894,8 @@
           ]
         },
         {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "normalizeAnthropicAuth",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "normalizeAnthropicFallbacks",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-anthropic.js",
-          "symbol": "normalizeAnthropicThinking",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "04i-provider-wire.js",
-          "symbol": "normalizeProviderApiStyle",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "providerReasoningEffort",
+          "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
           ]
@@ -3943,6 +3903,13 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
+          "symbol": "resolveProvider",
           "kinds": [
             "call"
           ]
@@ -4474,6 +4441,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -4822,13 +4796,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
             "call"
@@ -5151,6 +5118,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -5360,13 +5334,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveExternalMcpServers",
           "kinds": [
             "call"
@@ -5402,6 +5369,14 @@
         },
         {
           "provider": "04i-provider-wire.js",
+          "symbol": "activeOpenAiProvider",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
           "symbol": "applyProviderReasoningEffort",
           "kinds": [
             "call"
@@ -5412,14 +5387,6 @@
           "symbol": "providerWireProtocol",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -6075,7 +6042,7 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
@@ -6388,6 +6355,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskedSecretConflictMessage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskedSecretConflicts",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "os",
           "kinds": [
             "read"
@@ -6405,6 +6386,13 @@
           "symbol": "paths",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "unmaskSecrets",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -6496,27 +6484,6 @@
           "symbol": "ToolboxHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflictMessage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflicts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "unmaskSecrets",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -6810,6 +6777,14 @@
           "provider": "00-boot.js",
           "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -7119,14 +7094,6 @@
           "symbol": "promptWaitMs",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -7478,6 +7445,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -7790,13 +7764,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
             "call"
@@ -7866,7 +7833,7 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "resolveProvider",
           "kinds": [
             "call"
@@ -8403,6 +8370,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
           "kinds": [
             "call"
           ]
@@ -9006,13 +8980,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
             "call"
@@ -9070,6 +9037,13 @@
         },
         {
           "provider": "04i-provider-wire.js",
+          "symbol": "activeOpenAiProvider",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
           "symbol": "applyProviderReasoningEffort",
           "kinds": [
             "call"
@@ -9111,21 +9085,14 @@
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "resolveProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "stripUrlUserinfo",
           "kinds": [
             "call"
@@ -10579,6 +10546,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "resolveContextWindow",
           "kinds": [
             "call"
@@ -10999,13 +10973,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
           "kinds": [
             "call"
@@ -11041,6 +11008,13 @@
         },
         {
           "provider": "04i-provider-wire.js",
+          "symbol": "activeOpenAiProvider",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04i-provider-wire.js",
           "symbol": "normalizeProviderApiStyle",
           "kinds": [
             "call"
@@ -11049,13 +11023,6 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
           ]
@@ -11297,6 +11264,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -11445,13 +11419,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
           "kinds": [
             "read"
           ]
@@ -12274,14 +12241,14 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "providerWireProtocol",
+          "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "activeOpenAiProvider",
+          "provider": "04i-provider-wire.js",
+          "symbol": "providerWireProtocol",
           "kinds": [
             "call"
           ]
@@ -13118,6 +13085,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskedSecretConflictMessage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskedSecretConflicts",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskProviders",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
@@ -13168,6 +13157,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
           "kinds": [
             "call"
           ]
@@ -13227,6 +13223,13 @@
           "symbol": "text",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "unmaskProviders",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -13965,13 +13968,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
           "kinds": [
             "call"
@@ -14014,63 +14010,34 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "normalizeProviderApiStyle",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
           "symbol": "activeOpenAiProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "agentCliAdapter",
+          "provider": "04i-provider-wire.js",
+          "symbol": "normalizeProviderApiStyle",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflictMessage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflicts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskProviders",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "PROVIDER_PRESETS",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "resolveProvider",
           "kinds": [
             "call"
           ]
         },
         {
-          "provider": "05-claude-engine.js",
+          "provider": "04i-provider-wire.js",
           "symbol": "sanitizeProvider",
           "kinds": [
             "call"
@@ -14078,7 +14045,7 @@
         },
         {
           "provider": "05-claude-engine.js",
-          "symbol": "unmaskProviders",
+          "symbol": "agentCliAdapter",
           "kinds": [
             "call"
           ]
@@ -14979,6 +14946,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskExternalMcpServerForDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "MigrationHooks",
           "kinds": [
             "read"
@@ -15021,7 +14995,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sanitizeExternalMcpServer",
           "kinds": [
             "call"
           ]
@@ -15224,13 +15212,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
             "call"
@@ -15272,6 +15253,13 @@
           ]
         },
         {
+          "provider": "04i-provider-wire.js",
+          "symbol": "activeOpenAiProvider",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "04j-voice-learn.js",
           "symbol": "VoiceLearn",
           "kinds": [
@@ -15283,13 +15271,6 @@
           "symbol": "VoiceLexicon",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -15309,13 +15290,6 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "asrFixSanity",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskExternalMcpServerForDisplay",
           "kinds": [
             "call"
           ]
@@ -15344,13 +15318,6 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "resolveAsrStreamProvider",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "sanitizeExternalMcpServer",
           "kinds": [
             "call"
           ]
@@ -15560,6 +15527,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
           "kinds": [
             "call"
           ]
@@ -16107,13 +16081,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
           "kinds": [
             "call"
           ]
@@ -17808,6 +17775,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -18014,13 +17988,6 @@
           "symbol": "PermissionWaitHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -18703,7 +18670,35 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "KEY_MASK_PREFIX",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "makeId",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskedSecretConflictMessage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskedSecretConflicts",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskProviders",
           "kinds": [
             "call"
           ]
@@ -18720,6 +18715,13 @@
           "symbol": "path",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -18741,6 +18743,13 @@
           "symbol": "text",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "unmaskSecrets",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -18830,48 +18839,6 @@
         {
           "provider": "03-bridge-guard.js",
           "symbol": "realpathForContainment",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "KEY_MASK_PREFIX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflictMessage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflicts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskProviders",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "unmaskSecrets",
           "kinds": [
             "call"
           ]
@@ -20597,6 +20564,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "redact",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
@@ -20675,13 +20649,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "logEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "redact",
           "kinds": [
             "call"
           ]
@@ -23288,7 +23255,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "safeUrlForDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "samePathKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sanitizeExternalMcpServer",
           "kinds": [
             "call"
           ]
@@ -23415,20 +23396,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "parseMcpConfigFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "safeUrlForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "sanitizeExternalMcpServer",
           "kinds": [
             "call"
           ]
@@ -24188,7 +24155,35 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "maskedSecretConflicts",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "maskSecrets",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "providerLaunchVectorKey",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "redact",
           "kinds": [
             "read"
           ]
@@ -24209,6 +24204,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "safeUrlForDisplay",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sanitizeExternalMcpServer",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "setEstimateBucketsV1",
           "kinds": [
             "read"
@@ -24217,6 +24226,20 @@
         {
           "provider": "00-boot.js",
           "symbol": "spawnDetachedChecked",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "unmaskProviders",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "unmaskSecrets",
           "kinds": [
             "read"
           ]
@@ -25351,13 +25374,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "redact",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
             "read"
@@ -25373,13 +25389,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "safeMcpInventory",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "safeUrlForDisplay",
           "kinds": [
             "read"
           ]
@@ -25526,20 +25535,6 @@
         },
         {
           "provider": "05-claude-engine.js",
-          "symbol": "maskedSecretConflicts",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "maskSecrets",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
           "symbol": "providerFixCompletion",
           "kinds": [
             "read"
@@ -25547,35 +25542,7 @@
         },
         {
           "provider": "05-claude-engine.js",
-          "symbol": "providerLaunchVectorKey",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
           "symbol": "resolveAsrFixProvider",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "unmaskProviders",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05-claude-engine.js",
-          "symbol": "unmaskSecrets",
           "kinds": [
             "read"
           ]

@@ -469,12 +469,18 @@ function startLegacySseMcp(port, state) {
   ok(/mcp_connectors_list/.test(src) && /mcp_connector_probe/.test(src), 'S5 审计事件 kinds');
   ok(/category: 'auth'/.test(src) && /category: 'startup'/.test(src) && /category: 'protocol'/.test(src) && /category: 'timeout'/.test(src), 'S6 7 类归类字面量');
   ok(/mcpClientPending/.test(src) && /复用同一个 start Promise/.test(src), 'S7 getMcpClient 并发互斥在(防孤儿子进程)');
-  ok(/function safeUrlForDisplay/.test(src) && /u\.username = ''/.test(src), 'S8 URL userinfo 脱敏在');
+  const { safeUrlForDisplay } = require('../ruyi-workbench/app/backend/config-secrets.cjs');
+  ok(srv.safeUrlForDisplay === safeUrlForDisplay
+    && /url: safeUrlForDisplay\(entry\.url/.test(src)
+    && /: safeUrlForDisplay\(spec\.url\)/.test(src), 'S8 两个 MCP 清单使用统一的 URL 脱敏规则');
   // 55b: 启停/删除持久化
   ok(/'\/api\/mcp\/connectors\/toggle'/.test(src) && /mcp_connector_toggle/.test(src), 'S9 toggle 路由 + 审计事件在');
   ok(/req\.method === 'DELETE' && pathname === '\/api\/mcp\/connectors'/.test(src) && /mcp_connector_delete/.test(src), 'S10 DELETE 路由 + 审计事件在');
   ok(/function mcpConnectorMutateError/.test(src) && /ai-computer-control\).*(不可|启停)/.test(src), 'S11 源守卫(desktop/drop-in 拒绝)在');
-  ok(/\{ m: 'POST', p: '\/api\/mcp\/connectors\/toggle', auth: 'token' \}/.test(src) && /\{ m: 'DELETE', p: '\/api\/mcp\/connectors', auth: 'token' \}/.test(src), 'S12 ROUTE_AUTH 两条 token 级');
+  const { ROUTE_AUTH } = require('../ruyi-workbench/app/backend/http-route-policy.cjs');
+  const toggleAuth = ROUTE_AUTH.find(rule => rule.m === 'POST' && rule.p === '/api/mcp/connectors/toggle');
+  const deleteAuth = ROUTE_AUTH.find(rule => rule.m === 'DELETE' && rule.p === '/api/mcp/connectors');
+  ok(toggleAuth?.auth === 'token' && deleteAuth?.auth === 'token', 'S12 ROUTE_AUTH 两条 token 级');
   ok(/invalidateMcpRuntime\(id\)/.test(src), 'S13 启停/删除后 invalidateMcpRuntime(杀活客户端/清冷却)');
 
   await sleep(150);
