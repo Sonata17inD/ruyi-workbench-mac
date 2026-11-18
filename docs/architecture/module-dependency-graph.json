@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 84,
-    "providedSymbols": 2049,
-    "requiredSymbols": 3065,
+    "providedSymbols": 2048,
+    "requiredSymbols": 3064,
     "edges": 594,
     "forwardEdges": 14,
     "duplicateProvides": 0,
@@ -3071,7 +3071,6 @@
         "getAgentWorkflows",
         "normalizeAgentWorkflow",
         "normalizeWaitSpec",
-        "normalizeWorkflowCondition",
         "normalizeWorkflowLoop",
         "saveAgentWorkflow"
       ],
@@ -22237,13 +22236,6 @@
         },
         {
           "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "normalizeWorkflowCondition",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06c-agent-workflow-catalog.js",
           "symbol": "normalizeWorkflowLoop",
           "kinds": [
             "read"
@@ -31083,7 +31075,6 @@
         "deleteAgentWorkflow",
         "getAgentWorkflows",
         "normalizeAgentWorkflow",
-        "normalizeWorkflowCondition",
         "normalizeWorkflowLoop",
         "saveAgentWorkflow"
       ],

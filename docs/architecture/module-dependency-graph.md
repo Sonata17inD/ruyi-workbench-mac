@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 84 | 2049 | 3065 | 594 | 14 | 0 | 0 |
+| 84 | 2048 | 3064 | 594 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -51,7 +51,7 @@
 | 33 | `04g-session-deletion.js` | foundation | 3 | 37 | 7 |
 | 34 | `04f-toolbox-services.js` | foundation | 0 | 9 | 4 |
 | 35 | `06b-prompt-registry.js` | engine | 16 | 0 | 0 |
-| 36 | `06c-agent-workflow-catalog.js` | engine | 11 | 2 | 2 |
+| 36 | `06c-agent-workflow-catalog.js` | engine | 10 | 2 | 2 |
 | 37 | `04l-skill-registry.js` | foundation | 4 | 6 | 2 |
 | 38 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
 | 39 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
@@ -98,7 +98,7 @@
 | 80 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
 | 81 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
 | 82 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 16 | 8 |
-| 83 | `14-main.js` | entrypoint | 13 | 646 | 54 |
+| 83 | `14-main.js` | entrypoint | 13 | 645 | 54 |
 
 ## 模块边
 
@@ -671,7 +671,7 @@
 | `14-main.js` | `05b-kimi-bridge.js` | backward | `consumeKimiAcpApproval`, `isKimiAcpPlanFilePath`, `kimiAcpFreshActualForOperation`, `kimiAcpInferConcreteToolInput`, `kimiAcpModeOptionFromActivated`, `kimiAcpNativeBashWrapperCandidate`, `kimiAcpNativeBashWrapperTexts`, `kimiAcpNativeShellQuote`, `kimiAcpPermissionToolCall`, `kimiAcpSessionRestoreMethods`, `kimiAcpSuccessfulEnterPlanMode`, `kimiAcpUnknownSessionError`, `kimiSessionStatus`, `parseKimiWireAgentEvents`, `parseKimiWireCompaction`, `prepareKimiAcpSpawn`, `resolveKimiAcpPlanFilePath`, `runKimiCompact`, `watchKimiWire` |
 | `14-main.js` | `06-provider-engine.js` | backward | `ERROR_CLASSES`, `TOOL_ITERATION_BUDGETS`, `buildBrowserAutomationHint`, `buildCoreMemoryPromptSection`, `buildEngineEnvBrief`, `buildMemoryCheckPrompt`, `buildMemoryPromptSection`, `buildPlaybookIndexSection`, `buildProviderSystemPrompt`, `buildRuntimeIdentityFacts`, `buildStableSystemPrompt`, `buildToolCustomizationHint`, `buildVolatileParts`, `evalPlaybookAvailability`, `matchServiceEntry`, `maybeWriteThreadBrief`, `normalizePlaybook`, `parseThreadBrief`, `resolveEngineEnvBrief`, `resolveToolIterationBudget`, `shouldExtendToolIterationBudget` |
 | `14-main.js` | `06b-prompt-registry.js` | backward | `PROMPT_PACK_VERSION`, `appendResponseLanguagePolicy`, `appendTurnPolicies`, `buildAgentTeamHint`, `buildClaudeNativeAgentPolicy`, `buildPromptTaskContext`, `buildSoftwareEngineeringPolicy`, `clampAppendWithSkills`, `fenceSafeSlice`, `getPromptPack`, `shrinkFencedSection`, `softwareEngineeringTaskProfile` |
-| `14-main.js` | `06c-agent-workflow-catalog.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `deleteAgentWorkflow`, `getAgentWorkflows`, `normalizeAgentWorkflow`, `normalizeWorkflowCondition`, `normalizeWorkflowLoop`, `saveAgentWorkflow` |
+| `14-main.js` | `06c-agent-workflow-catalog.js` | backward | `BUILTIN_AGENT_WORKFLOWS`, `deleteAgentWorkflow`, `getAgentWorkflows`, `normalizeAgentWorkflow`, `normalizeWorkflowLoop`, `saveAgentWorkflow` |
 | `14-main.js` | `06d-memory-domain.js` | backward | `analyzeMemoryMaintenance`, `applyMemoryRelationProposal`, `buildMemoryConflictMap`, `confirmMemoryRelation`, `deleteMemoryRelation`, `extractMemoryRelationProposals`, `listMemoryRelations`, `listWorkbenchMemories`, `loadMemoryRegistry`, `memoryProposalIsDuplicate`, `memoryProposalPrefilter`, `memoryProposalSimilarity`, `migrateLegacyAccMemory`, `parseMemoryProposalDecision`, `proposeMemoryFromSession`, `proposeMemoryRelation`, `proposeMemoryRelationRevoke`, `proposeMemoryRelationTool`, `proposeMemoryRevision`, `proposeWorkbenchMemory`, `rankRelevantMemories`, `readWorkbenchMemory`, `resolveCoreMemoryState`, `resolveMemoryPreflight`, `saveMemory`, `syncAgentInstructionImports` |
 | `14-main.js` | `06e-mission-domain.js` | backward | `runMissionDriver` |
 | `14-main.js` | `06g-resource-leases.js` | backward | `acquireResourceLease`, `agentResourcesConflict`, `bridgedDesktopLeaseMode`, `inferToolResources`, `normalizeAgentResource`, `normalizeAgentResources`, `releaseResourceLease`, `remapAgentResources`, `resourceBlockers` |

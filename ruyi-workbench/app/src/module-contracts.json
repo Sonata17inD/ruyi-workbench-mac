@@ -2987,7 +2987,6 @@
         "getAgentWorkflows",
         "normalizeAgentWorkflow",
         "normalizeWaitSpec",
-        "normalizeWorkflowCondition",
         "normalizeWorkflowLoop",
         "saveAgentWorkflow"
       ],
@@ -22053,13 +22052,6 @@
         {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "normalizeAgentWorkflow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "normalizeWorkflowCondition",
           "kinds": [
             "read"
           ]

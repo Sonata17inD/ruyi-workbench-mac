@@ -634,7 +634,6 @@ const createWorkbenchApi = () => ({
   propagateAssignments,
   QUALITY_GATE_OUTPUT_SCHEMA,
   BUILTIN_AGENT_WORKFLOWS,
-  normalizeWorkflowCondition,
   normalizeWorkflowLoop,
   workflowProgressFingerprint,
   evaluateNodeToolEvidence,

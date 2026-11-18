@@ -1060,7 +1060,7 @@ const { appendResponseLanguagePolicy, appendTurnPolicies, buildAgentTeamHint, bu
 
 const {
   BUILTIN_AGENT_WORKFLOWS, agentWorkflowSaveProblem, buildOrchestrateHint, createAgentWorkflowCatalog,
-  normalizeAgentWorkflow, normalizeWaitSpec, normalizeWorkflowCondition, normalizeWorkflowLoop,
+  normalizeAgentWorkflow, normalizeWaitSpec, normalizeWorkflowLoop,
 } = require('./backend/agent-workflow-catalog.cjs');
 const { getAgentWorkflows, saveAgentWorkflow, deleteAgentWorkflow } = createAgentWorkflowCatalog({
   paths, atomicWriteJson,
@@ -4087,7 +4087,6 @@ const createWorkbenchApi = () => ({
   propagateAssignments,
   QUALITY_GATE_OUTPUT_SCHEMA,
   BUILTIN_AGENT_WORKFLOWS,
-  normalizeWorkflowCondition,
   normalizeWorkflowLoop,
   workflowProgressFingerprint,
   evaluateNodeToolEvidence,

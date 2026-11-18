@@ -18,7 +18,7 @@ process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
 
-const EXPORT_CEILING = 548;
+const EXPORT_CEILING = 547;
 
 // 刻意的公共接口:名字 → 理由。目前为空 —— 现有每个导出都有测试或工具在用。
 const PUBLIC_API = {};
