@@ -795,14 +795,14 @@ function createAgentWorkflow({
         const effectiveSchema = node.outputSchema || (node.gate && !deterministicGateModes.includes(node.gate.mode) ? QUALITY_GATE_OUTPUT_SCHEMA : null);
         const qualityInstruction = node.gate && !deterministicGateModes.includes(node.gate.mode)
           ? `\n\n你是质量门节点(${node.gate.mode})。必须逐项核验所有前序结果；只输出 JSON，字段 verdict 只能是 pass/fail/uncertain，confidence 为 0..1，summary 为结论，findings 为证据数组。每条 finding 如引用工具证据，必须把下方目录中的 eventId 原样写入 evidenceRefs 数组。
-  质量门必须覆盖到每个输入项，不能只看产物整体好坏。请额外输出 coverage 字段：total=输入项总数，handled=已核验项数，unhandled=未核验/未覆盖项清单（某个文件、数据行或子任务未处理时明确列出）。若存在未覆盖项，verdict 应为 fail（或按模板要求说明例外）。`
+质量门必须覆盖到每个输入项，不能只看产物整体好坏。请额外输出 coverage 字段：total=输入项总数，handled=已核验项数，unhandled=未核验/未覆盖项清单（某个文件、数据行或子任务未处理时明确列出）。若存在未覆盖项，verdict 应为 fail（或按模板要求说明例外）。`
           : '';
         const reliabilityInstruction = `\n\n【可靠性约束】可由工具核验的事实必须先实际调用工具再下结论。不得在未尝试工具时声称“工具不可用”或输出 TOOL-UNAVAILABLE；工具失败时应写明实际调用的工具和错误，不得猜测事实。`;
         const throttlingInstruction = `\n\n【上下文节流守则】本回合上下文有读取与 token 预算：
-  1. 读取大文件前先用搜索/Grep 定位关键行，禁止整文件线性通读；
-  2. 按需分段读取，单文件单次读取控制在 600 行以内；
-  3. 大工具返回先截断/摘要再引用，不把超长原文塞进上下文；
-  4. 聚焦本节点职责，不重复读取或执行前序已完成的结论与工作。`;
+1. 读取大文件前先用搜索/Grep 定位关键行，禁止整文件线性通读；
+2. 按需分段读取，单文件单次读取控制在 600 行以内；
+3. 大工具返回先截断/摘要再引用，不把超长原文塞进上下文；
+4. 聚焦本节点职责，不重复读取或执行前序已完成的结论与工作。`;
         const toolEvidenceInstruction = node.minSuccessfulToolCalls > 0
           ? `\n本节点要求至少 ${node.minSuccessfulToolCalls} 次成功工具调用作为执行证据；没有达到时，即使文字答案看似正确，系统也会判定节点失败。`
           : '';

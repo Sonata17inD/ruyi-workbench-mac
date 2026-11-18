@@ -188,9 +188,10 @@ const volatileNoSelfStatus = srv.buildVolatileParts(provider, [{ function: { nam
 ok(/workbench_self_status/.test(volatileSelfStatus), 'D18 108c volatile 含 workbench_self_status 时注入自查提示');
 ok(!/workbench_self_status/.test(volatileNoSelfStatus), 'D18b 108c 不含该工具时 volatile 无此提示');
 
-console.log('── E 段: 子代理任务漏斗上下文节流注入(2.2,唯一漏斗 09-workflow effectiveTask) ──');
-ok(/【上下文节流守则】/.test(src), 'E1 子代理任务漏斗含上下文节流守则(09 effectiveTask 注入,spawn/orchestrate 全路径)');
-ok(/reliabilityInstruction \+ throttlingInstruction \+ toolEvidenceInstruction/.test(src), 'E2 拼接顺序:可靠性约束 → 节流守则 → 工具证据(指令层级正确,节流紧随可靠性)');
+console.log('── E 段: 子代理任务的上下文节流 ──');
+const workflow = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/agent-workflow.cjs'), 'utf8');
+ok(/【上下文节流守则】/.test(workflow), 'E1 工作流通过 effectiveTask 注入上下文节流守则');
+ok(/reliabilityInstruction \+ throttlingInstruction \+ toolEvidenceInstruction/.test(workflow), 'E2 拼接顺序:可靠性约束 → 节流守则 → 工具证据(指令层级正确,节流紧随可靠性)');
 
 console.log('── S 段: 116f 管家包(只加) ──');
 // 116f: steward 段是【第二个包】,与普通包并存;它整段替换管家会话的提示词,绝不进普通会话。
