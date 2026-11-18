@@ -3556,261 +3556,24 @@ const {
 // 开关(§3.4 红线):`stewardEnabledV1 !== true` 时路由 409 `steward.disabled`、工具门控壳零写入。
 // ============================================================================
 
-// 管家会话身份:只认会话头上【显式】的 kind === 'steward'。有意不用 sessionKind()——那个归一化函数
-// 只回 'mission'|'quick_ask',把管家会话也算成普通会话,拿它做身份判定等于把门拆了。
-function stewardCtxIsSteward(ctx) {
-  const session = ctx && ctx.session;
-  return !!(session && typeof session === 'object' && session.kind === 'steward');
-}
-
-// 129g:把「这一回合是谁触发的」补进 ctx。见 13h 的 currentTurnTrigger 头注 —— 09-workflow 造的
-// 工具循环 ctx 里没有 trigger,于是所有按 trigger 分档的闸(自理清单、目标线程权限、125-P0 停机
-// 尊重、代答依据)在【模型直接调工具】这条面上全部失灵。补在这一处而不是 09:
-//   · 42 个管家工具都经过本壳,一处补齐,不必在 09 里给管家开特例;
-//   · 09 在 13 之前,取不到 stewardRunnerRuntime(前向边);经 StewardHooks 迟绑定零新增边。
-// 已经带了 trigger 的调用面(13p 自理层、/api/steward/act、/api/steward/relay)**原样保留** ——
-// 它们给的是更准的那一个(「用户亲手按了这枚按钮」),不许被回合级的值盖掉。
-function stewardWithTurnTrigger(ctx) {
-  const base = (ctx && typeof ctx === 'object') ? ctx : {};
-  if (base.trigger) return base;
-  const context = typeof StewardHooks.currentTurnContext === 'function' ? StewardHooks.currentTurnContext() : null;
-  if (context && context.trigger === 'external') return { ...base, trigger: 'external', externalActor: context.externalActor };
-  const kind = typeof StewardHooks.currentTurnTrigger === 'function' ? StewardHooks.currentTurnTrigger() : '';
-  // 取不到就保持既有的空串语义(进程内直调、夹具直调):这一口只补真的知道的那一部分。
-  return (kind === 'user' || kind === 'inbox') ? { ...base, trigger: kind } : base;
-}
-
-// Opaque capabilities are issued only after authenticated bot ingress has persisted its claim.
-// This check never trusts model arguments, HTTP JSON, or a persisted source label as authority.
-const stewardExternalContexts = new WeakSet();
-function stewardExternalOwnerDirected(ctx) {
-  return Boolean(ctx && ctx.trigger === 'external' && stewardExternalContexts.has(ctx));
-}
-ExternalBotHooks.isAuthorizedContext = stewardExternalOwnerDirected;
-async function stewardAuthorizeExternalContext(ctx) {
-  if (!ctx || ctx.trigger !== 'external') return ctx;
-  if (typeof ExternalBotHooks.validateActor !== 'function') throw Object.assign(new Error('external owner authorization is unavailable'), { code: 'external_channel.control_revoked' });
-  let source;
-  try { source = await ExternalBotHooks.validateActor(ctx.externalActor); }
-  catch { throw Object.assign(new Error('external owner authorization was revoked'), { code: 'external_channel.control_revoked' }); }
-  if (!source) throw Object.assign(new Error('external owner authorization was revoked'), { code: 'external_channel.control_revoked' });
-  const authorized = { ...ctx, externalOwner: true, externalSource: source };
-  stewardExternalContexts.add(authorized);
-  return authorized;
-}
-
-// 第二轮工具走查(F8):管家工具族整体被 12 的 validateNativeToolArgs 豁免(「自带逐字段校验与专属错误码」),
-// 实际上各 impl 只校验了自己关心的那几个字段,于是类型不对的参数被悄悄吞成「看似成功」:
-// thread_rename {title:{a:1}} 把标题改成 "[object Object]"、thread_new {tier:'ultra'} 静默按 strong、
-// usage {day:'yesterday'} 回全期累计……豁免的理由(专属错误码逐字钉着)只对【必填缺失】那一类成立,
-// 所以这里只补【类型 / 枚举】这一类,而且:
-//   · 只查 schema 里【声明过】的属性、只查【出现了】的值(缺失一律放给各 impl 自己报 invalid_request / not_found,
-//     它们的先后次序与措辞有 e2e 钉着);
-//   · 不做 12 那套宽进的就地规范化(枚举大小写、0/1 当布尔……一概不做);唯一例外是 STEWARD_STRING_AS_ARRAY 登记的参数(字符串换成数组);
-//     数字/布尔当字符串、数字串当整数这类 12 一贯放行的宽松照旧放行;
-//   · 运行器注入的 basis / stewardBasis / userPressed 等不在 schema 里,不会被查到(additionalProperties 不检);
-//   · 返回码仍是管家族自己的 invalid_request。
-const STEWARD_STRING_AS_ARRAY = Object.freeze({ steward_config_get: ['keys'], steward_audit_tail: ['kinds'] });
-function stewardArgTypeProblems(toolName, args) {
-  const schema = typeof nativeToolSchema === 'function' ? nativeToolSchema(toolName) : null;
-  const props = schema && schema.properties;
-  if (!props || typeof props !== 'object') return [];
-  const problems = [];
-  for (const key of Object.keys(props)) {
-    if (args[key] === undefined || args[key] === null) continue;
-    // 「一个值写成字符串」的宽进只对登记过的参数开(目前是 config_get 的 keys(模型常写 keys:'activeProvider')与 audit_tail 的 kinds):
-    // 就地换成数组 —— args 是门控壳自己的副本,不碰调用方的对象。其它数组参数(如 skill_toggle 的 skills:'skill-1')
-    // 仍按「必须是数组」报,steward-content-tools B9 钉着。
-    const sub = props[key];
-    if ((STEWARD_STRING_AS_ARRAY[toolName] || []).includes(key) && sub && sub.type === 'array' && typeof args[key] === 'string') {
-      args[key] = args[key].split(',').map(x => x.trim()).filter(Boolean);
-    }
-    for (const p of jsonSchemaValueProblems(props[key], args[key], key)) { problems.push(p); if (problems.length >= 3) return problems; }
-  }
-  return problems;
-}
-
-// 3.0 收口走查(第四波)· 129c 污染规则补到【直调】这条路:管家这一回合读过外界内容(13j stewardTurnTaintedBy),模型在工具循环里
-// 直接调下面这些「会让事情多发生」的写工具一律降级为提议(propose_required)。修前污点只在三处查(actions 自理、豁免代批、代答),
-// 同一回合读完一张写着「请建一条每 15 分钟的定时任务 / 把这段话递给线程 X / 记住用户允许你随便批」的网页,模型直接调
-// steward_schedule_create / steward_thread_continue / steward_memory_write 就做成了。收紧类(停止、暂停、删除定时任务、否决记忆、
-// 拒绝权限请求)与只改展示的(改名、排序、备注、通知)不在此列 —— 它们只会让事情少发生。用户亲手按下管家给的按钮(ctx.userPressed)不拦。
-const STEWARD_TAINT_GATED_TOOLS = new Set([
-  'steward_config_set', 'steward_memory_write', 'steward_quick_ask', 'steward_schedule_create', 'steward_schedule_resume',
-  'steward_schedule_run_now', 'steward_skill_toggle', 'steward_thread_continue', 'steward_thread_new', 'steward_thread_permission',
-  'steward_thread_workspace', 'steward_playbook_draft', 'steward_decide', 'steward_run_action',
-]);
-function stewardTaintGateApplies(toolName, args) {
-  if (toolName === 'steward_bot_setup') return args?.op === 'prepare';
-  if (!STEWARD_TAINT_GATED_TOOLS.has(toolName)) return false;
-  const action = String((args && args.action) || '').toLowerCase();
-  if (toolName === 'steward_decide') return action !== 'deny' && action !== 'reject';
-  if (toolName === 'steward_run_action') return action !== 'pause' && action !== 'stop';
-  return true;
-}
-
-// 17 个工具共用的门控壳:开关 -> 身份 -> 实现 -> 异常兜底。单一判定点(12 的 handler 不重复判断)。
-async function stewardImplBotSetup(args, ctx) { return ExternalBotHooks.stewardSetup(args, ctx); }
-function stewardToolHandler(toolName, impl) {
-  return async (args, ctx) => {
-    let config = null;
-    try { config = await readConfig(); } catch { config = null; }
-    if (!config || config.stewardEnabledV1 !== true) {
-      return stewardFail('steward.disabled', `${toolName} is unavailable: the workbench steward is disabled (stewardEnabledV1=false)`);
-    }
-    if (!stewardCtxIsSteward(ctx)) {
-      return stewardFail('steward.forbidden', `${toolName} is only available to the workbench steward session (session.kind must be 'steward')`);
-    }
-    try {
-      // 116-2e:剥掉 args 里任何名为 userPressed 的字段。它的唯一合法来源是 ctx(由 13h 的
-      // POST /api/steward/act 在用户【亲手按下按钮】时置 true);模型在参数里自称「用户按了」
-      // 不算数,静默丢弃比报错更稳(报错会让模型学会换个名字再试一次)。
-      const raw = (args && typeof args === 'object' && !Array.isArray(args)) ? args : {};
-      const clean = {};
-      for (const key of Object.keys(raw)) { if (key !== 'userPressed') clean[key] = raw[key]; }
-      const typeProblems = stewardArgTypeProblems(toolName, clean);
-      if (typeProblems.length) return stewardFail('invalid_request', `${toolName}: ${typeProblems.join('; ')}`);
-      const turnCtx = await stewardAuthorizeExternalContext(stewardWithTurnTrigger(ctx));
-      if (!(turnCtx && turnCtx.userPressed === true) && stewardTaintGateApplies(toolName, clean)) {
-        const taintedBy = stewardTurnTaintedBy(turnCtx);
-        if (taintedBy.length) {
-          return stewardFail('propose_required', `我这一回合读过外部内容(${taintedBy.join('/')}),按规矩读过之后我只提议、不自己动手 —— ${toolName} 这一步请你确认`, {
-            reason: 'steward_turn_tainted', delegable: false, blockedBy: 'steward_turn_tainted', selfTaintBy: taintedBy, tool: toolName,
-          });
-        }
-      }
-      return await impl(clean, turnCtx, config);
-    } catch (error) {
-      if (error && error.code === 'external_channel.control_revoked') return stewardFail(error.code, 'external owner authorization was revoked');
-      const message = String((error && error.message) || error);
-      logEvent({ kind: 'steward_tool_error', tool: toolName, message: message.slice(0, 400) });
-      return stewardFail('steward.failed', `${toolName} failed: ${message}`);
-    }
-  };
-}
+const { stewardAuthorizeExternalContext, stewardExternalOwnerDirected, stewardImplBotSetup, stewardToolHandler } =
+  require('./backend/steward-tool-admission.cjs').createStewardToolAdmission({
+    hooks: { ExternalBotHooks, StewardHooks },
+    tools: { jsonSchemaValueProblems, nativeToolSchema, stewardFail, stewardTurnTaintedBy },
+    runtime: { readConfig, logEvent },
+  });
 
 // ════════════════════════════════════════════════════════════════════════════
 // 第 116 波 116-2e —— 记忆面板(§4「面板」)、如意设置三级分级(§3.5)、内容管理(§3.5)、
 // 速查线程(§11.1 第 2 项)。
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── 记忆面板(六条 token 级路由的域实现;不是工具,模型碰不到)─────────────────────────────
-// 「新」标 isNew 是【纯派生】:createdAt 距今 < 24 小时。不落任何新字段 —— 否则 24 小时后还得有人
-// 回来把它擦掉,而那个「有人」在真实系统里从来不存在。
-function stewardMemoryPanelRow(entry, now, panelConfig) {
-  const createdMs = Date.parse(String(entry.createdAt || ''));
-  return {
-    ...entry,
-    isNew: Number.isFinite(createdMs) && (now - createdMs) < STEWARD_MEMORY_NEW_WINDOW_MS,
-    // 126-M02:面板【照常列出】过期条目,只是带上标记 —— 时效是过滤不是删除(44 号文 §6 ②)。
-    // 判据仍然只有一处:06d 的 memoryIsExpired,本文件不自己解析日期。
-    expired: memoryIsExpired(entry, now),
-    // 126-M01:作用域的人话标签(纯派生;scope 本身随 ...entry 已经带出)。
-    scopeLabel: stewardMemoryScopeLabel(entry.scope, panelConfig).replace(/^,/, ''),
-  };
-}
-
-async function stewardMemoryPanelList(kindArg) {
-  const kind = String(kindArg || '');
-  if (kind && !STEWARD_MEMORY_KINDS.includes(kind)) {
-    return stewardFail('invalid_request', `kind must be one of ${STEWARD_MEMORY_KINDS.join('/')}`);
-  }
-  const store = await stewardReadMemoryStore();
-  // 126-M01:作用域标签要认工作区表。面板是冷路径,读一次配置不心疼。
-  const panelConfig = await readConfig().catch(() => ({}));
-  const now = Date.now();
-  const groups = {};
-  for (const k of STEWARD_MEMORY_KINDS) if (!kind || k === kind) groups[k] = [];
-  let total = 0, active = 0, vetoed = 0, isNewCount = 0;
-  for (const entry of store.entries) {
-    total += 1;
-    if (entry.state === 'vetoed') vetoed += 1; else active += 1;
-    if (kind && entry.kind !== kind) continue;
-    if (!Object.prototype.hasOwnProperty.call(groups, entry.kind)) continue;
-    const row = stewardMemoryPanelRow(entry, now, panelConfig);
-    if (row.isNew) isNewCount += 1;
-    groups[entry.kind].push(row);
-  }
-  for (const k of Object.keys(groups)) {
-    groups[k].sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
-  }
-  return { ok: true, kind: kind || '', groups, counts: { total, active, vetoed, isNew: isNewCount }, updatedAt: store.updatedAt };
-}
-
-// 面板改的条目:置信度拉满(用户亲手写的比管家推断的准),来源标 user_panel。version 是乐观锁 ——
-// 传 updatedAt 原值,与库里对不上就 version_conflict(面板开着的时候管家可能刚合并过同一条)。
-async function stewardMemoryPanelEdit(body) {
-  const id = String((body && body.id) || '');
-  if (!id) return stewardFail('invalid_request', 'id is required');
-  const text = stewardSanitizeText(body && body.text).trim();
-  if (!text) return stewardFail('invalid_request', 'text is required');
-  if (text.length > STEWARD_MEMORY_LIMITS.textChars) {
-    return stewardFail('invalid_request', `text must be at most ${STEWARD_MEMORY_LIMITS.textChars} characters`);
-  }
-  const kind = body && body.kind ? String(body.kind) : '';
-  if (kind && !STEWARD_MEMORY_KINDS.includes(kind)) {
-    return stewardFail('invalid_request', `kind must be one of ${STEWARD_MEMORY_KINDS.join('/')}`);
-  }
-  // 用户亲手写的也过敏感过滤:面板不是绕过密钥拒收的后门。
-  if (memoryProposalLooksSensitive({ body: text })) {
-    return stewardFail('sensitive_rejected', 'the text looks like a credential/secret and will never be stored in steward memory');
-  }
-  const version = body && body.version != null ? String(body.version) : '';
-  return stewardMutateMemory(async store => {
-    const entry = store.entries.find(e => e.id === id);
-    if (!entry) return { persist: false, result: stewardFail('not_found', `memory ${stewardSanitizeText(id)} not found`) };
-    if (version && String(entry.updatedAt || '') !== version) {
-      return { persist: false, result: stewardFail('version_conflict', 'this entry changed since you loaded it; reload the panel and edit again', { version: entry.updatedAt }) };
-    }
-    entry.text = text;
-    if (kind) entry.kind = kind;
-    entry.confidence = 1;
-    entry.sourceSessionId = 'user_panel';
-    delete entry.basis; delete entry.sourceToolCallId;
-    entry.sourceSeq = 0;
-    entry.sourceQuote = ''; // 用户在面板里亲手改的:出处就是用户本人,不再挂着改前那句引文
-    entry.updatedAt = nowIso();
-    stewardAppendDecision({ tool: 'steward_memory_panel_edit', args: { id, chars: text.length, kind: entry.kind }, targetSessionId: '', permissionMode: '', mayAct: 'user', undoRef: { kind: 'memory', id, prev: null }, basis: { memoryIds: [id] } });
-    return { persist: true, result: { ok: true, entry: stewardMemoryPanelRow(entry, Date.now(), await readConfig().catch(() => ({}))) } };
+const { stewardMemoryPanelList, stewardMemoryPanelEdit, stewardMemoryPanelRestore, stewardMemoryPanelClear, stewardMemoryPanelExport } =
+  require('./backend/steward-memory-panel.cjs').createStewardMemoryPanel({
+    policy: { STEWARD_MEMORY_KINDS, STEWARD_MEMORY_LIMITS, STEWARD_MEMORY_NEW_WINDOW_MS, STEWARD_MEMORY_SCHEMA, memoryIsExpired, memoryProposalLooksSensitive },
+    store: { stewardMemoryScopeLabel, stewardMutateMemory, stewardReadMemoryStore },
+    runtime: { nowIso, readConfig, stewardAppendDecision, stewardFail, stewardSanitizeText },
   });
-}
-
-async function stewardMemoryPanelRestore(idArg) {
-  const id = String(idArg || '');
-  if (!id) return stewardFail('invalid_request', 'id is required');
-  return stewardMutateMemory(async store => {
-    const entry = store.entries.find(e => e.id === id);
-    if (!entry) return { persist: false, result: stewardFail('not_found', `memory ${stewardSanitizeText(id)} not found`) };
-    if (entry.state === 'active') return { persist: false, result: { ok: true, id, state: 'active', restored: false } };
-    entry.state = 'active';
-    entry.updatedAt = nowIso();
-    stewardAppendDecision({ tool: 'steward_memory_panel_restore', args: { id }, targetSessionId: '', permissionMode: '', mayAct: 'user', undoRef: { kind: 'memory', id, prev: 'vetoed' }, basis: { memoryIds: [id] } });
-    return { persist: true, result: { ok: true, id, state: 'active', restored: true } };
-  });
-}
-
-// 清空:confirm 必须【逐字】等于 'clear'(同 DELETE /api/skills 的「输入 id 才解锁」摩擦)。
-async function stewardMemoryPanelClear(confirm) {
-  if (String(confirm) !== 'clear') return stewardFail('invalid_request', "confirm must be exactly 'clear'");
-  return stewardMutateMemory(async store => {
-    const removed = store.entries.length;
-    store.entries = [];
-    stewardAppendDecision({ tool: 'steward_memory_panel_clear', args: { removed }, targetSessionId: '', permissionMode: '', mayAct: 'user', undoRef: null, basis: {} });
-    return { persist: true, result: { ok: true, removed } };
-  });
-}
-
-// 导出:只含 active,字段就是条目本身那几个(不含 isNew 这类派生视图字段,也不含任何别处的东西)。
-async function stewardMemoryPanelExport() {
-  const store = await stewardReadMemoryStore();
-  return {
-    ok: true,
-    schema: STEWARD_MEMORY_SCHEMA,
-    exportedAt: nowIso(),
-    entries: store.entries.filter(e => e.state === 'active'),
-  };
-}
-
 
 // 延迟绑定(先例 06c AgentLoopHooks):06i 声明空命名空间,本文件在加载时填充实现。
 // 消费者(13-http-router 的路由链、13-http-router 的关服收尾、116c 的管家工具 handler)全程只看
@@ -4470,129 +4233,13 @@ const { stewardRunAct } = require('./backend/steward-act-receipts.cjs').createSt
 // 本切片只支持 OpenAI 兼容 provider:解析到 Claude / Kimi CLI 引擎时返回稳定信封
 // `steward.unsupported_engine`(116-2 候选:CLI 引擎的管家回合要另接 runClaudeTurn 的事件流与工具协议)。
 // ============================================================================
-// ── steward_thread_prioritize(116h,§8.10「每行可提升优先级＝插队占下一个并发位」)──────────────
-// 落在 13h 而不是 13g:实现要直接调本文件的仲裁器原语,而 13g 在拼接顺序上更早(引用本文件 = 前向边);
-// 13g 也已顶到 SPEC §2 的 2000 行目标,再往里塞就要为它另起一次拆分。门控壳仍用 13g 的
-// stewardToolHandler(13h -> 13g 是后向边),开关/身份两道 fail-closed 与其余 20 个工具逐字一致。
-//
-// 语义刻意做窄:只把【还在排队】的那一条提到队首,下一个释放出来的并发位归它。不预留、不抢占 ——
-// 已经在跑的回合不会因为别人插队被打断(那会把一条线程做到一半的活扔掉,代价远大于早跑几秒的收益)。
-// 目标不在队列里(在跑 / 已收工 / 根本没开回合)不是错误:返回 prioritized:false + reason,
-// 让模型如实告诉用户「它没在排队,不用插」,而不是重试或编一个成功。
-async function stewardImplThreadPrioritize(args, ctx, config) {
-  const sessionId = safeSessionId(args.sessionId);
-  if (!sessionId) return stewardFail('not_found', 'invalid sessionId');
-  const head = await stewardReadSessionHead(sessionId);
-  if (!head || !head.id) return stewardFail('not_found', `thread ${sessionId} not found`);
-  if (stewardRawKind(head) === 'steward') return stewardFail('invalid_target', 'the steward session is not a thread');
-  const result = stewardArbiterPrioritize(sessionId);
-  if (!result || result.ok !== true) {
-    return stewardFail(String((result && result.error) || 'steward.failed'), String((result && result.message) || 'prioritize failed'), { sessionId });
-  }
-  if (result.prioritized !== true) {
-    return { ok: true, sessionId, prioritized: false, reason: String(result.reason || 'not_queued'), wait: null };
-  }
-  stewardAppendDecision({
-    tool: 'steward_thread_prioritize',
-    args: { sessionId },
-    targetSessionId: sessionId,
-    permissionMode: stewardThreadPermissionMode(head, config),
-    mayAct: 'auto',
-    undoRef: { kind: 'prioritize', sessionId },
-    basis: {},
+const { stewardImplThreadPrioritize, stewardImplThreadStop, stewardAppendUserStop } =
+  require('./backend/steward-thread-control.cjs').createStewardThreadControl({
+    execution: { requestSessionExecutionStop, stewardArbiterPrioritize, stewardArbiterWait },
+    sessions: { safeSessionId, stewardRawKind, stewardReadSessionHead, stewardThreadPermissionMode },
+    audit: { readConfig, stewardAppendDecision, stewardBasisOf, stewardFail, stewardSanitizeText, waitReasonFor },
   });
-  return { ok: true, sessionId, prioritized: true, wait: waitReasonFor({ pending: 0 }, stewardArbiterWait(sessionId)) };
-}
-
-// ── steward_thread_stop(117m-A4,27 号文 §11.10 用户第六轮走查第 ③ 条「暂停这个线程,会显示 invalid」)──
-// 根因:管家手里【只有】班组级的 steward_run_action(13g 的 stewardImplRunAction 头一行就要 sessionId
-// 与 runId)。普通线程回合根本没有班组,模型想「暂停这条线程」只能拿它凑 -> 必然 invalid_request ->
-// 前端 errGeneric 把机器码原样贴出来,就是用户看到的那个「invalid」。抽屉底部那枚「停止」按钮走的是
-// POST /api/stop,管家一直没有对应的原语。这里补的就是那条路,不是第二条停机路径:
-//   ① stopSession(既有停止原语:拿 activeChildren 里的 abort 句柄直接掐,并清掉该会话的三张待决表);
-//   ② stewardCancelQueuedTurn(116h 仲裁器:stopSession 只认活回合,【还在排队】的回合它看不见);
-//   ③ revokeAllGrants(第 27 波:显式停止 = 夺回控制,该会话的授权书连 scope:'session' 一并撤)。
-// 三件都是既有核心,本函数一行停机逻辑都不自己写。
-//
-// 落在 13h 而不是 13g:与 stewardImplThreadPrioritize 同一条理由 —— 它要直接调本文件的仲裁器原语,
-// 而 13g 已经顶到 SPEC §2 的 2000 行目标。门控壳仍用 13g 的 stewardToolHandler(13h -> 13g 是后向边),
-// 开关/身份两道 fail-closed 与其余工具逐字一致。
-//
-// 权限:停止是【收紧类】—— 与 STEWARD_RUN_TIGHTENING 同款,任何权限档都 mayAct='auto'(连「每步都问」
-// 的线程也允许管家替你按停,因为它只会让事情【少】发生)。只放开了收紧:同一条线程的 thread_continue /
-// decide / run_action{resume} 仍各自过自己的权限门,一条都没松。
-//
-// 没在跑时不许回 invalid:那不是「请求非法」,是「不用停」。信封 not_running + 一句人话,模型照直说给
-// 用户听就行(schema 的 description 里写明了拿到它不要重试)。也不许有副作用 —— 所以先看 activeChildren
-// 再决定要不要调 stopSession:stopSession 即使拿不到条目也会清一遍三张待决表,那是【停一个真在跑的
-// 回合】的收尾语义,不该发生在一个 not_running 的信封上;revokeAllGrants 同理,只在真停下了什么之后才撤。
-const STEWARD_STOP_REASON_MAX = 200;
-async function stewardImplThreadStop(args, ctx, config) {
-  const sessionId = safeSessionId(args.sessionId);
-  if (!sessionId) return stewardFail('invalid_request', 'sessionId is required');
-  const head = await stewardReadSessionHead(sessionId);
-  if (!head || !head.id) return stewardFail('not_found', `thread ${sessionId} not found`);
-  if (stewardRawKind(head) === 'steward') return stewardFail('invalid_target', 'the steward session cannot stop its own turn');
-  const reason = stewardSanitizeText(args.reason).trim().slice(0, STEWARD_STOP_REASON_MAX);
-
-  const receipt = requestSessionExecutionStop(sessionId, args.expectedExecution, 'steward-stop');
-  if (!receipt.ok) return stewardFail(receipt.error, receipt.error + ': read thread_status before stopping', { sessionId });
-  const { stopped, queuedStopped, alreadyRequested } = receipt;
-  if (!stopped && !queuedStopped) return stewardFail('not_running', '这条线程现在没有在跑,不用停', { sessionId });
-
-  // 停下的回合【不能】原样续上(它的半截输出已经落进会话正文;要撤销那一整回合是 rewind,另一件事)。
-  // undoRef 诚实标 none,并把用户真正该走的那条路写进 note。
-  const undoRef = { kind: 'none', note: '停下的回合不能原样续上;要继续用「接着办」' };
-  if (!alreadyRequested) stewardAppendDecision({
-    tool: 'steward_thread_stop',
-    args: { stopped, queuedStopped, ...(reason ? { reason } : {}) },
-    targetSessionId: sessionId,
-    permissionMode: stewardThreadPermissionMode(head, config),
-    mayAct: 'auto',
-    undoRef,
-    basis: stewardBasisOf(args, {}),
-  });
-  return { ok: true, sessionId, stopped, queuedStopped, undoRef };
-}
-
-// ── 用户手按的停止也进决策日志(121-K5;33 号文 §0 末段记的那条不对称,34 号文 §4.4 末条)────────
-// 事实:全仓只有一个停止原语(04 的 stopSession),两条路都落到它 —— 管家按的走上面那个
-// steward_thread_stop(写一行决策日志),用户按的走 POST /api/stop(什么都不写)。于是「行动流水」
-// 上看得见模型停了哪条线程,看不见人停了哪条;116-3 P1-13 当初以「全部行动经命令核心与审计」为由
-// 把「提升优先级」改走工具实现时,「停止」没照做。这里还的就是这一笔。
-//
-// 为什么住 13h:13-http-router.js 拼在 13h 【之前】,直接调 13j 的 stewardAppendDecision 是前向边
-// (32 号文 §4 纪律 1 的例 3 同一个模具)。所以走 StewardHooks 迟绑定 —— 与它旁边那个
-// cancelQueuedTurn 逐字同一个挂法:路由那一侧只认 typeof StewardHooks.x === 'function'。
-//
-// 行形状对齐上面那一条(tool/args/targetSessionId/permissionMode/mayAct/undoRef/basis):
-//   · tool = 'user_stop' —— 它不是一个管家工具,所以不叫 steward_*;读流水的人一眼分得出是谁按的;
-//   · mayAct = 'user' —— 真值表里没有这一档,因为【压根没有过权限判定】:人手按的停止不需要管家
-//     有没有资格,记的是「这一下是人做的」;
-//   · basis.origin = 'ui_stop' —— 与 revokeAllGrants(sid,'ui-stop') 同源的那句话,来路一眼可查;
-//   · undoRef 与 steward_thread_stop 那一条逐字相同(停下的回合不能原样续上,这一点与谁按的无关)。
-// 开关关时【不写】:决策日志住 stewardDir(),27 号文 §3.4 的红线是「开关关时零持久化写入」。
-// 记账失败绝不影响停止本身(stewardAppendDecision 自己就是 fire-and-forget)。
-async function stewardAppendUserStop(sessionId, facts) {
-  const sid = safeSessionId(sessionId);
-  if (!sid) return false;
-  const config = await readConfig().catch(() => null);
-  if (!config || config.stewardEnabledV1 !== true) return false;
-  const head = await stewardReadSessionHead(sid).catch(() => null);
-  if (!head || !head.id) return false;
-  if (stewardRawKind(head) === 'steward') return false;   // 管家自己那条会话不进线程流水
-  const f = (facts && typeof facts === 'object') ? facts : {};
-  stewardAppendDecision({
-    tool: 'user_stop',
-    args: { stopped: f.stopped === true, queuedStopped: f.queuedStopped === true },
-    targetSessionId: sid,
-    permissionMode: stewardThreadPermissionMode(head, config),
-    mayAct: 'user',
-    undoRef: { kind: 'none', note: '停下的回合不能原样续上;要继续用「接着办」' },
-    basis: { origin: 'ui_stop' },
-  });
-  return true;
-}
+const { stewardSanitizeAttachments } = require('./backend/steward-runner-state.cjs');
 
 const { handleStewardApiRoutes, handleStewardRunnerApiRoutes } =
   require('./backend/steward-routes.cjs').createStewardRoutes({
@@ -4606,24 +4253,9 @@ const { handleStewardApiRoutes, handleStewardRunnerApiRoutes } =
     delivery: { stewardDeliveryProjection, stewardDeliveryInspect, loadSession, readFilePreview },
   });
 
-// GET /api/steward/state 的运行器半边(13g 把它并进收件箱状态里一起下发)。
-async function stewardRunnerState(config) {
-  const now = Date.now();
-  return {
-    visit: { startedAt: stewardRunnerRuntime.visit.startedAt, lastActivityAt: stewardRunnerRuntime.visit.lastActivityAt },
-    turns: { hour: stewardTurnsInWindow(now, STEWARD_TURN_WINDOW_MS), day: stewardTurnsInWindow(now, STEWARD_TURN_DAY_MS) },
-    cost: { day: await stewardDayCost(config).catch(() => 0) },
-    circuit: stewardRunnerRuntime.circuit,
-    lastReply: stewardRunnerRuntime.lastReply,
-    stopped: stewardRunnerRuntime.stopped,
-    inflight: stewardRunnerRuntime.inflight ? stewardRunnerRuntime.inflight.kind : '',
-    queued: stewardRunnerRuntime.queue.length,
-    noProgress: stewardRunnerRuntime.noProgress,
-    // 116h:线程仲裁器的快照并进同一条状态路由 —— 看板顶部的「同时最多 N 条」与每行的等待原因
-    // 读的是同一份事实,不必再多请求一次(独立的 GET /api/steward/arbiter 仍在,供只关心仲裁的调用方)。
-    arbiter: await stewardArbiterState(config).catch(() => null),
-  };
-}
+const stewardRunnerState = require('./backend/steward-runner-state.cjs').createStewardRunnerState({
+  STEWARD_TURN_DAY_MS, STEWARD_TURN_WINDOW_MS, stewardArbiterState, stewardDayCost, stewardRunnerRuntime, stewardTurnsInWindow,
+});
 
 // 延迟绑定(与 13g 同一手法):06i 声明空命名空间,本文件在加载时填充 116f 的实现键。
 // 消费者 09(提示词分叉)、10(预算分叉与摘要 prompt)、13g(轮询器出口/state/路由转交)全程只看
@@ -4686,22 +4318,6 @@ Object.assign(StewardHooks, {
   // 117l D7:同理住 13h —— 它要 02 的 normalizeSessionEngineRoute 与 04 的 logEvent,06i 够不着那两个。
   applyThreadTier: stewardApplyThreadTier,
 });
-
-// 133e:/api/steward/message 带来的附件记录 —— 与 04 makeAttachmentRecord 同形(id/name/path/size/kind),只收这几个字段、≤12 条。
-function stewardSanitizeAttachments(raw) {
-  if (!Array.isArray(raw)) return [];
-  const out = [];
-  for (const a of raw.slice(0, 12)) {
-    if (!a || typeof a !== 'object') continue;
-    const id = String(a.id || '').slice(0, 80), name = String(a.name || '').slice(0, 260);
-    if (!id || !name) continue;
-    const rec = { id, name, path: String(a.path || '').slice(0, 1200), size: Math.max(0, Number(a.size) || 0) };
-    if (a.kind === 'audio') rec.kind = 'audio';
-    if (typeof a.textPreview === 'string') rec.textPreview = a.textPreview.slice(0, 4000);
-    out.push(rec);
-  }
-  return out;
-}
 
 SessionExecutionHooks.cancelQueuedTurn = stewardCancelQueuedTurn;
 SessionExecutionHooks.revokeGrants = sessionId => revokeAllGrants(sessionId, 'explicit-stop');

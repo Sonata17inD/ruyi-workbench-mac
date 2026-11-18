@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2065 | 3096 | 596 | 14 | 0 | 0 |
+| 87 | 2056 | 3095 | 596 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -89,12 +89,12 @@
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 43 | 123 | 18 |
 | 73 | `13l-steward-ops.js` | transport | 28 | 127 | 22 |
-| 74 | `13g-steward.js` | transport | 17 | 64 | 11 |
+| 74 | `13g-steward.js` | transport | 9 | 63 | 11 |
 | 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
 | 76 | `13o-steward-runner-prompt.js` | transport | 14 | 64 | 16 |
 | 77 | `13p-steward-runner-actions.js` | transport | 16 | 63 | 12 |
 | 78 | `13q-steward-runner-turn.js` | transport | 13 | 83 | 21 |
-| 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
+| 79 | `13h-steward-runner.js` | transport | 7 | 61 | 16 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
 | 82 | `13t-steward-schedule.js` | transport | 10 | 26 | 10 |
@@ -478,7 +478,7 @@
 | `13e-pretender-index.js` | `04-permission-runtime.js` | backward | `sessionExecutionSnapshot` |
 | `13e-pretender-index.js` | `06i-steward-core.js` | backward | `stewardAsksYouForThread`, `stewardThreadTurnQueued`, `stewardWatchedThread`, `threadOriginOf`, `threadVisible` |
 | `13e-pretender-index.js` | `08-agent-runs.js` | backward | `computeWaveSeq`, `nodeDeliveryEligibility` |
-| `13g-steward.js` | `00-boot.js` | backward | `ExternalBotHooks`, `logEvent`, `nowIso`, `text` |
+| `13g-steward.js` | `00-boot.js` | backward | `ExternalBotHooks`, `logEvent`, `nowIso` |
 | `13g-steward.js` | `01-config.js` | backward | `readConfig` |
 | `13g-steward.js` | `02-session-store.js` | backward | `loadSession` |
 | `13g-steward.js` | `06d-memory-domain.js` | backward | `memoryIsExpired`, `memoryProposalLooksSensitive` |

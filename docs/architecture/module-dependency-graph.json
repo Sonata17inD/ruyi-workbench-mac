@@ -4,8 +4,8 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 87,
-    "providedSymbols": 2065,
-    "requiredSymbols": 3096,
+    "providedSymbols": 2056,
+    "requiredSymbols": 3095,
     "edges": 596,
     "forwardEdges": 14,
     "duplicateProvides": 0,
@@ -16334,12 +16334,7 @@
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
-        "STEWARD_STRING_AS_ARRAY",
-        "STEWARD_TAINT_GATED_TOOLS",
-        "stewardArgTypeProblems",
         "stewardAuthorizeExternalContext",
-        "stewardCtxIsSteward",
-        "stewardExternalContexts",
         "stewardExternalOwnerDirected",
         "stewardImplBotSetup",
         "stewardMemoryPanelClear",
@@ -16347,10 +16342,7 @@
         "stewardMemoryPanelExport",
         "stewardMemoryPanelList",
         "stewardMemoryPanelRestore",
-        "stewardMemoryPanelRow",
-        "stewardTaintGateApplies",
-        "stewardToolHandler",
-        "stewardWithTurnTrigger"
+        "stewardToolHandler"
       ],
       "requires": [
         {
@@ -16364,19 +16356,12 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -16385,7 +16370,8 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -16399,14 +16385,14 @@
           "provider": "06d-memory-domain.js",
           "symbol": "memoryIsExpired",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "memoryProposalLooksSensitive",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16434,14 +16420,13 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "nativeToolSchema",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -16449,7 +16434,7 @@
           "provider": "12-tool-dispatch.js",
           "symbol": "jsonSchemaValueProblems",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16498,28 +16483,29 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardMemoryScopeLabel",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardMutateMemory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -16533,14 +16519,14 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadMemoryStore",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardTurnTaintedBy",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18625,7 +18611,6 @@
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
-        "STEWARD_STOP_REASON_MAX",
         "handleStewardApiRoutes",
         "handleStewardRunnerApiRoutes",
         "stewardAppendUserStop",
@@ -18660,7 +18645,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18668,7 +18652,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18697,7 +18680,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "requestSessionExecutionStop",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18732,14 +18715,14 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06i-steward-core.js",
           "symbol": "waitReasonFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18830,14 +18813,14 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardBasisOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18851,28 +18834,28 @@
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardFail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardRawKind",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardReadSessionHead",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardThreadPermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18914,7 +18897,7 @@
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardArbiterPrioritize",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -18928,7 +18911,6 @@
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardArbiterState",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18936,7 +18918,6 @@
           "provider": "13m-steward-runner-base.js",
           "symbol": "stewardArbiterWait",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -19000,14 +18981,14 @@
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardDayCost",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13p-steward-runner-actions.js",
           "symbol": "stewardTurnsInWindow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -28916,8 +28897,7 @@
       "symbols": [
         "ExternalBotHooks",
         "logEvent",
-        "nowIso",
-        "text"
+        "nowIso"
       ],
       "direction": "backward"
     },

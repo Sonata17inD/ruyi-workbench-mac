@@ -93,10 +93,12 @@ const runnerTurnServices = [
 ];
 const actionContract = '../backend/steward-action-contract.cjs';
 const systemPrompt = '../backend/steward-system-prompt.cjs';
+const stewardToolAdmission = read('../backend/steward-tool-admission.cjs');
+const stewardThreadControl = '../backend/steward-thread-control.cjs';
 const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
   '../backend/steward-prompt-memory.cjs', '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
   '../backend/steward-workspace-overview.cjs', systemPrompt, actionContract,
-  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, '13h-steward-runner.js'];
+  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, stewardThreadControl, '../backend/steward-runner-state.cjs', '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
 const src01b = read('../backend/http-route-policy.cjs');
 
@@ -215,8 +217,8 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 不补的话 09-workflow 造的 ctx 里没有这个字段,所有按 trigger 分档的闸在【模型直接调工具】
   // 这条面上整个失灵(129g 的头注记了全程)。13g -> 13h 是前向边,只能经 06i 迟绑定取。
   ok(hookKeys.length === 21, `② 13h 填充 21 个实现键(116f 8 + 116-pre 1 + 116h 5 + 117l 2 + 117m-A4 1 + 117s-G 1 + 121-K5 1 + 129g 1 + external context 1;got ${hookKeys.length}: ${hookKeys.join(',')})`);
-  ok(hookKeys.includes('threadStop') && /async function stewardImplThreadStop/.test(src13h) && !/async function stewardImplThreadStop/.test(src13g),
-    '② 117m-A4 companion:新增的键是 threadStop,且它的实现真的在 13h、不在 13g(13g 的 2000 行闸就是这么守住的)');
+  ok(hookKeys.includes('threadStop') && /async function stewardImplThreadStop/.test(read(stewardThreadControl)) && /threadStop: stewardToolHandler\('steward_thread_stop', stewardImplThreadStop\)/.test(src13h),
+    '② 停止钩子经管家工具门连接线程控制服务');
   ok(hookKeys.includes('relayDeliver') && hookKeys.includes('applyThreadTier'),
     '② 117l companion:117l 那两个键 relayDeliver 与 applyThreadTier 都还在');
   // 117s-G companion:通道判定上了命名空间,但【只能】这么用 —— 13d 经 StewardHooks.relayChannel 取,
@@ -228,7 +230,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');

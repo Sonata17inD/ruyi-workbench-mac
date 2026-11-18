@@ -124,6 +124,9 @@ const decisionTools = '../backend/steward-decision-tools.cjs';
 const actReceipts = '../backend/steward-act-receipts.cjs';
 const actionContract = '../backend/steward-action-contract.cjs';
 const promptMemory = '../backend/steward-prompt-memory.cjs';
+const memoryPanel = '../backend/steward-memory-panel.cjs';
+const toolAdmission = '../backend/steward-tool-admission.cjs';
+const threadControl = '../backend/steward-thread-control.cjs';
 const workspaceOverview = '../backend/steward-workspace-overview.cjs';
 const preroute = '../backend/steward-preroute.cjs';
 const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
@@ -132,7 +135,7 @@ const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
     threadEdits, threadAdmission, '../backend/steward-thread-delivery.cjs',
     '../backend/steward-inbox.cjs', '../backend/steward-status-tools.cjs', decisionTools,
     '../backend/steward-notification-tool.cjs', '../backend/steward-external-read-tools.cjs',
-    memoryTools, settingsTools, contentTools, actReceipts, actionContract, workspaceOverview, preroute).sort();
+    memoryTools, settingsTools, contentTools, actReceipts, actionContract, workspaceOverview, preroute, memoryPanel, toolAdmission, threadControl).sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('../backend/provider-tool-offer.cjs');
 const src11 = read('11-native-tools.js');
@@ -140,6 +143,7 @@ const statusRoutes = read('../backend/status-routes.cjs');
 const src13f = read('../backend/native-tool-schemas.cjs');
 const src13g = read('13g-steward.js');
 const src13h = read('13h-steward-runner.js');
+const admissionSource = read(toolAdmission);
 // 117 波 T2(32 号文 §5):13h 拆成六个文件(纯搬家)。①c/①d 要的那两张登记表(STEWARD_ACTION_HOOKS
 // 与 STEWARD_TOOL_LABELS)随共享常量块搬进 13m;⑦ 的 userPressed 三处分落 13m(注释)/13q(唯一置 true)
 // /13h(act 路由那段「不置」的注释)。故这两组判据改读确切的那个文件与整族,期望值一字未改。
@@ -343,8 +347,8 @@ ok(offeredPlain.length === 0, `⑤ 回环:普通会话 buildOpenAiTools 零 stew
 ok(offeredSteward.length === 43, `⑤ 回环:管家会话 buildOpenAiTools 拿到 43 个 steward_*(got ${offeredSteward.length})`);
 ok(JSON.stringify([...offeredSteward].sort()) === JSON.stringify(expected),
   `⑤b 回环:offer 出去的那一份与四张登记表【逐名】相同(缺: ${expected.filter(n => !offeredSteward.includes(n)).join(',') || '无'};多: ${offeredSteward.filter(n => !expected.includes(n)).join(',') || '无'})`);
-ok(/steward\.forbidden/.test(src13g) && /steward\.disabled/.test(src13g), '⑤ 13g 门控壳含 steward.forbidden / steward.disabled 两个稳定信封');
-ok(/session\.kind === 'steward'/.test(src13g), "⑤ 13g 身份判定读【显式】session.kind === 'steward'(不经 sessionKind 归一)");
+ok(/steward\.forbidden/.test(admissionSource) && /steward\.disabled/.test(admissionSource), '⑤ 管家工具门含 steward.forbidden / steward.disabled 两个稳定信封');
+ok(/session\.kind === 'steward'/.test(admissionSource), "⑤ 管家工具门核对显式身份 session.kind === 'steward'");
 
 /* ═════════════ ⑥ 五态判据与前端 mission-state.js 机械对账 ═════════════ */
 
@@ -400,7 +404,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // 别处(比如被 stewardMayAct 或永久豁免判定读到),「用户点了一下」就会变成「管家从此可以放宽权限」
 // —— 27 号文 §3.3 永久豁免第 2 条正是禁止这个。故这里把全仓每一处 userPressed 的出现点钉死:
 //   · 06i-steward-core.js —— 只在契约注释里(纯函数层不读它);
-//   · 13g-steward.js      —— 门控壳剥字段(117 波 T1 之后这里只剩剥字段那一处);
+//   · steward-tool-admission.cjs —— 门控壳剥除参数里的 userPressed;
 //   · steward-thread-edits.cjs —— 派活原语那段的注释,加 117z-E2 的一处读点
 //     (steward_thread_permission 的 capabilities.desktop === true 那一支,见下面的逐名对账);
 //   · 设置和内容管理服务 —— config_set / skill_toggle 两处「须确认」判定;
@@ -414,7 +418,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const NEWLINE_RE = /\r?\n/;
   const COMMENT_RE = /^\s*(\/\/|\*|\/\*)/;
   const STEWARD_TOOL_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
-    '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs', threadEdits, settingsTools, contentTools, decisionTools];
+    '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs', threadEdits, settingsTools, contentTools, decisionTools, toolAdmission];
   // 117 波 T2 重钉:白名单里的「13h」扩成 T2 拆出的运行器族六个文件(纯搬家)。三处出现点各自的
   // 落点:13m 是 ACTION_HOOKS 表头那两行注释、13q 是【唯一】置 true 的那一行(stewardRunAct)、
   // 13h 是 act 路由里「不置 userPressed」的那句注释。被钉的事实(唯一置 true 点在 act 路径、读点
@@ -461,9 +465,8 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
     ok(!/stewardMayTightenTo[\s\S]{0,400}ctx\.userPressed/.test(body),
       '⑦ 反向:档位轴的只降不升判定(stewardMayTightenTo)与 userPressed 之间没有任何耦合');
   }
-  // 伴随:门控壳剥字段那一处仍在 13g —— 它是「args 里的同名字段一概不作数」的唯一执行点。
-  ok(/for \(const key of Object\.keys\(raw\)\) \{ if \(key !== 'userPressed'\)/.test(src13g),
-    '⑦ 门控壳剥 args.userPressed 那一处仍在 13g(唯一执行点,拆分没把它挪走)');
+  ok(/for \(const key of Object\.keys\(raw\)\) \{ if \(key !== 'userPressed'\)/.test(admissionSource),
+    '⑦ 管家工具门剥除 args.userPressed');
   ok(!/userPressed/.test(read('07-autonomy.js')) && !/userPressed/.test(read('06f-autonomy-grants.js')),
     '⑦ 权限门(07 nativeToolGate)与授权书(06f)源码里零 userPressed —— 按钮不等于扩权');
   const src06i2 = read('06i-steward-core.js');
@@ -619,7 +622,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
 // `Date.parse(e.expiresAt) < Date.now()`,两处判据就开始各说各话(与 125 波「判据唯一」同一个模具)。
 {
   const stewardFiles = fs.readdirSync(SRC).filter(n => /^(06i|13[fgjklmo])-/.test(n) && n.endsWith('.js'))
-    .concat(memoryTools, threadAdmission, promptMemory, preroute);
+    .concat(memoryTools, threadAdmission, promptMemory, preroute, memoryPanel);
   const offenders = [];
   let callers = 0;
   for (const name of stewardFiles) {
@@ -652,15 +655,15 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   // key = `<文件>:<顶层函数名>`;value = 这个读取口【为什么不滤过期】。加一条就要写一条理由 ——
   // 光秃秃的名单下一个人读不出「这是拍过板的」还是「这是又漏了一个」。
   const EXPIRY_FILTER_EXEMPT = {
-    '13g-steward.js:stewardMemoryPanelList':
+    [`${memoryPanel}:stewardMemoryPanelList`]:
       '面板照常列出过期条目,只多打一枚「已过期」标(44 号文 §6 ②:时效是过滤不是删除)。逐条的 expired 由 stewardMemoryPanelRow 现算 —— 在这里滤掉等于用户再也看不见它过期了',
-    '13g-steward.js:stewardMemoryPanelExport':
+    [`${memoryPanel}:stewardMemoryPanelExport`]:
       '导出只滤 state !== active。含过期条目是有意的:导出再导入不该静默丢数据,expiresAt 本身也在导出字段集里',
     '../backend/steward-memory-store.cjs:stewardMutateMemory':
       '写事务必须看到全库(含过期与已否决)。滤掉的话同义写入会把过期条目当成不存在、再落一条重复的 —— 44 号文 §1.2 记的「合并时那个陷阱」正是这个',
   };
   const memoryStore = '../backend/steward-memory-store.cjs';
-  const factoryFiles = [memoryStore, threadAdmission, memoryTools, preroute];
+  const factoryFiles = [memoryStore, threadAdmission, memoryTools, preroute, memoryPanel];
   const srcAllFiles = [...fs.readdirSync(SRC).filter(n => n.endsWith('.js')), ...factoryFiles];
   const READ_STORE_RE = /\bstewardReadMemoryStore\s*\(/;
   const isCommentLine = line => /^\s*(\/\/|\*|\/\*)/.test(line);
