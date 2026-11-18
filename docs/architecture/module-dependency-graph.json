@@ -3,11 +3,11 @@
   "generatedFrom": "ruyi-workbench/app/src/manifest.json + module source",
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
-    "modules": 87,
-    "providedSymbols": 3310,
-    "requiredSymbols": 3454,
-    "edges": 626,
-    "forwardEdges": 49,
+    "modules": 86,
+    "providedSymbols": 3287,
+    "requiredSymbols": 3450,
+    "edges": 618,
+    "forwardEdges": 45,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 1
   },
@@ -35,6 +35,8 @@
         "BUNDLED_PYTHON_RUNTIME",
         "CLAUDE_ENDPOINT_PRESETS",
         "CONFIG_SCHEMA",
+        "CONTEXT_OVERFLOW_PATTERNS",
+        "CONTEXT_WINDOW_FALLBACK",
         "DATA_ROOT_MIGRATION",
         "DEFAULT_PORT",
         "DeliveryHooks",
@@ -67,11 +69,16 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
+        "cacheContextLength",
+        "cachedContextLength",
         "cachedInputTokensFromUsage",
+        "classifyTextForEstimate",
         "claudeCostFields",
         "computeProviderCost",
         "contentTypeFor",
+        "contextWindowFromTable",
         "copyOrdinaryJsonData",
+        "countCjkCodeUnits",
         "cp",
         "createCappedDiagnosticText",
         "createConsoleLineDecoder",
@@ -84,16 +91,23 @@
         "decodeTextFileBytes",
         "defaultDataRoots",
         "ensureDirs",
+        "estimateContentTokens",
+        "estimateHistoryTokens",
+        "estimateTextTokens",
+        "estimateToolSchemaTokens",
         "exePath",
         "executionArgumentsDigest",
         "exposeBundledPythonRuntime",
         "exposeVendorBinOnPath",
         "externalRoot",
+        "extractContextLength",
         "findRuyiPackageRootFor",
+        "fmtTokensServer",
         "fs",
         "fsp",
         "hashArgs",
         "http",
+        "isContextOverflowError",
         "isDirectServeInvocation",
         "json",
         "localTurnTimeParts",
@@ -112,6 +126,7 @@
         "readBody",
         "readJsonBody",
         "readline",
+        "resolveContextWindow",
         "resolveDataRootUncached",
         "runKeyedChain",
         "ruyiPackageInfo",
@@ -122,9 +137,11 @@
         "samePathKey",
         "send",
         "sendError",
+        "setEstimateBucketsV1",
         "spawnDetachedChecked",
         "text",
         "tildePath",
+        "tokensFromTextCounts",
         "zlib"
       ],
       "requires": [
@@ -6714,7 +6731,6 @@
         "desktopToolsDisabledReason",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
-        "estimateToolSchemaTokens",
         "failoverConnectReason",
         "failoverStickyBase",
         "fetchOpenAiModels",
@@ -6794,9 +6810,23 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "cacheContextLength",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "claudeCostFields",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "CONTEXT_OVERFLOW_PATTERNS",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -6829,9 +6859,23 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "extractContextLength",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isContextOverflowError",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7332,41 +7376,6 @@
           "kinds": [
             "call"
           ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateTextTokensMemo",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "cacheContextLength",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "CONTEXT_OVERFLOW_PATTERNS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "extractContextLength",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "isContextOverflowError",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
@@ -7515,6 +7524,20 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "estimateContentTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateHistoryTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
           "kinds": [
             "read"
@@ -7525,6 +7548,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isContextOverflowError",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -7574,6 +7604,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "samePathKey",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "setEstimateBucketsV1",
           "kinds": [
             "call"
           ]
@@ -8192,27 +8229,6 @@
           ]
         },
         {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateContentTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateHistoryTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "setEstimateBucketsV1",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "10-context-governance.js",
           "symbol": "boundToolResultForDisplay",
           "kinds": [
@@ -8243,13 +8259,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "estimateFactor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "isContextOverflowError",
           "kinds": [
             "call"
           ]
@@ -8373,57 +8382,8 @@
       ]
     },
     {
-      "file": "09d-token-estimation.js",
-      "order": 51,
-      "layer": "orchestration",
-      "note": "110-4b: token 估算与分桶簇(自 09-workflow.js 纯搬家)",
-      "provides": [
-        "CJK_RE",
-        "CONTEXT_WINDOW_FALLBACK",
-        "ESTIMATE_CHAR_CLASS",
-        "ESTIMATE_KEYWORD_RE",
-        "EVAPORATED_PREFIX",
-        "TOKEN_ESTIMATE_MEMO_HASHED_CHARS",
-        "TOKEN_ESTIMATE_MEMO_MAX_CHARS",
-        "TOKEN_ESTIMATE_MEMO_MAX_ENTRIES",
-        "TOKEN_ESTIMATE_MEMO_MIN_CHARS",
-        "classifyTextForEstimate",
-        "countCjkCodeUnits",
-        "countEstimateKeywords",
-        "estimateBucketsV1On",
-        "estimateContentTokens",
-        "estimateContentTokensBy",
-        "estimateHistoryTokens",
-        "estimateTextTokens",
-        "estimateTextTokensMemo",
-        "fmtTokensServer",
-        "isRegexSpaceCodeUnit",
-        "setEstimateBucketsV1",
-        "tokenEstimateMemo",
-        "tokenEstimateMemoEntry",
-        "tokenEstimateMemoKey",
-        "tokensFromTextCounts"
-      ],
-      "requires": [
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "estimateToolSchemaTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "ESTIMATION_RULES",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
       "file": "09-workflow.js",
-      "order": 52,
+      "order": 51,
       "layer": "orchestration",
       "note": "调度器/launchPersistedAgentRun/runOpenAiTurn",
       "provides": [
@@ -8493,6 +8453,27 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "estimateContentTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateHistoryTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateToolSchemaTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
           "kinds": [
             "read"
@@ -8503,6 +8484,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isContextOverflowError",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -8543,6 +8531,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "setEstimateBucketsV1",
           "kinds": [
             "call"
           ]
@@ -9617,13 +9612,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "estimateToolSchemaTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "failoverStickyBase",
           "kinds": [
             "read"
@@ -10187,27 +10175,6 @@
           ]
         },
         {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateContentTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateHistoryTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "setEstimateBucketsV1",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "10-context-governance.js",
           "symbol": "agentNodeContextWindow",
           "kinds": [
@@ -10273,13 +10240,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "estimateFactor",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "isContextOverflowError",
           "kinds": [
             "call"
           ]
@@ -10386,7 +10346,7 @@
     },
     {
       "file": "10-context-governance.js",
-      "order": 53,
+      "order": 52,
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
@@ -10411,15 +10371,9 @@
         "COMPACT_RESEED_TAIL_MAX_TOKENS",
         "CONTEXT_CALIBRATION_MAX",
         "CONTEXT_GOVERNANCE_RULES",
-        "CONTEXT_OVERFLOW_PATTERNS",
-        "CONTEXT_OVERFLOW_STATUSES",
-        "CONTEXT_OVERFLOW_STATUS_ONLY",
-        "CTX_LENGTH_KEYS",
-        "CTX_PROBE_CACHE",
-        "CTX_PROBE_TTL_MS",
         "CompactionPlan",
         "ECON_AUX_FLAG_CACHE",
-        "ESTIMATION_RULES",
+        "EVAPORATED_PREFIX",
         "EXCLUSIVE_TURN_SOURCES",
         "FILE_READ_HEAD",
         "FILE_READ_TAIL",
@@ -10430,7 +10384,6 @@
         "MANUAL_COMPACT_MIN_FRESH_TOKENS",
         "MANUAL_COMPACT_MIN_L1_SAVED_RATIO",
         "MANUAL_COMPACT_MIN_L1_SAVED_TOKENS",
-        "MODEL_CONTEXT_TABLE",
         "OBSERVATION_ARRAY_SAMPLE",
         "OBSERVATION_CRITICAL_KEYS",
         "OBSERVATION_OBJECT_KEYS",
@@ -10491,8 +10444,6 @@
         "buildSessionScratchpadInjectPrompt",
         "buildSummaryFactTableMessages",
         "buildSummaryRefineMessages",
-        "cacheContextLength",
-        "cachedContextLength",
         "calibratedEstimate",
         "checkSummaryEntities",
         "chunkHistoryByBudget",
@@ -10508,17 +10459,14 @@
         "compactionToolArgsDigest",
         "configuredConversationWindow",
         "contextCalibrationStore",
-        "contextWindowFromTable",
         "contextWindowOverrideKey",
         "cowToolResultParent",
         "createCompactionRefetchGuard",
-        "ctxProbeKey",
         "dedupeRepeatedReads",
         "economicsShadowEnabledCached",
         "estimateFactor",
         "evaporateBudgetBoundary",
         "evaporateHistory",
-        "extractContextLength",
         "extractSessionNotes",
         "extractSummaryEntities",
         "extractSummaryTaskEvidence",
@@ -10528,7 +10476,6 @@
         "historyHasFullToolResult",
         "historyStartsWithCompactionSummary",
         "historyUnitStarts",
-        "isContextOverflowError",
         "isContinuableReadResult",
         "isReducedObservationView",
         "lastAssistantTextOf",
@@ -10567,7 +10514,6 @@
         "rehydrateObservation",
         "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
-        "resolveContextWindow",
         "resolveSummaryCallPolicy",
         "runAgentExternalCompact",
         "runAgentWake",
@@ -10644,6 +10590,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "countCjkCodeUnits",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "crypto",
           "kinds": [
             "read"
@@ -10658,6 +10611,27 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "estimateContentTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateHistoryTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateTextTokens",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
           "kinds": [
             "read"
@@ -10665,9 +10639,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fs",
+          "symbol": "fmtTokensServer",
           "kinds": [
-            "read"
+            "call"
           ]
         },
         {
@@ -10675,6 +10649,13 @@
           "symbol": "fsp",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isContextOverflowError",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -10714,6 +10695,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "resolveContextWindow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "send",
           "kinds": [
             "call"
@@ -10731,6 +10719,13 @@
           "symbol": "text",
           "kinds": [
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "tokensFromTextCounts",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -11306,68 +11301,12 @@
           "kinds": [
             "call"
           ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "CONTEXT_WINDOW_FALLBACK",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "countCjkCodeUnits",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateContentTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateHistoryTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateTextTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "EVAPORATED_PREFIX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "fmtTokensServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "tokensFromTextCounts",
-          "kinds": [
-            "call"
-          ]
         }
       ]
     },
     {
       "file": "11-native-tools.js",
-      "order": 54,
+      "order": 53,
       "layer": "tools",
       "note": "shell 会话/git 族/web_search/归档族/桌面桥",
       "provides": [
@@ -11716,7 +11655,7 @@
     },
     {
       "file": "11b-file-text-io.js",
-      "order": 55,
+      "order": 54,
       "layer": "tools",
       "note": "单文件工具的文本 I/O 内核:编码嗅探/GB18030 编码、有界流式读、原子写、file_edit 未命中诊断;零出边(冻结对象 FileTextIo),不进依赖环",
       "provides": [
@@ -11726,7 +11665,7 @@
     },
     {
       "file": "11c-file-visual-io.js",
-      "order": 56,
+      "order": 55,
       "layer": "tools",
       "note": "",
       "provides": [
@@ -11744,7 +11683,7 @@
     },
     {
       "file": "11d-media-inspection.js",
-      "order": 57,
+      "order": 56,
       "layer": "tools",
       "note": "Local dependency discovery, bounded audio measurement and parse-only syntax validation; built-ins only",
       "provides": [
@@ -11762,7 +11701,7 @@
     },
     {
       "file": "12-tool-dispatch.js",
-      "order": 58,
+      "order": 57,
       "layer": "tools",
       "note": "invokeAdaptiveMcpTool/TOOL_DISPATCH 注册表/toolCall",
       "provides": [
@@ -13069,7 +13008,7 @@
     },
     {
       "file": "13-http-router.js",
-      "order": 59,
+      "order": 58,
       "layer": "transport",
       "note": "handleApi 全路由(49f 起 MCP/checkpoint/steer 三组域路由抽出至 13b)",
       "provides": [
@@ -13143,6 +13082,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "cachedContextLength",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "CLAUDE_ENDPOINT_PRESETS",
           "kinds": [
             "read"
@@ -13158,6 +13104,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "contentTypeFor",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "contextWindowFromTable",
           "kinds": [
             "call"
           ]
@@ -13343,6 +13296,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "readJsonBody",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "resolveContextWindow",
           "kinds": [
             "call"
           ]
@@ -14844,13 +14804,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "cachedContextLength",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "configuredConversationWindow",
           "kinds": [
             "call"
@@ -14858,21 +14811,7 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "contextWindowFromTable",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "learnedWindowCap",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "resolveContextWindow",
           "kinds": [
             "call"
           ]
@@ -15072,7 +15011,7 @@
     },
     {
       "file": "13b-api-domain-routes.js",
-      "order": 60,
+      "order": 59,
       "layer": "transport",
       "note": "第49波49f(A1): handleApi 域分组拆分第一批 — MCP/checkpoint·storage/steer 三组域路由",
       "provides": [
@@ -15599,7 +15538,7 @@
     },
     {
       "file": "13d-core-domain-routes.js",
-      "order": 61,
+      "order": 60,
       "layer": "transport",
       "note": "第65波 EC-D 收口:session CRUD、question/permission/plan 干预、Agent Run 查询/事件/控制三组后端域路由",
       "provides": [
@@ -16711,7 +16650,7 @@
     },
     {
       "file": "13e-pretender-index.js",
-      "order": 62,
+      "order": 61,
       "layer": "transport",
       "note": "第75c波 Pretender Mission/Intervention 可重建物化索引、revision cursor、ETag 与规模门",
       "provides": [
@@ -17089,7 +17028,7 @@
     },
     {
       "file": "13i-steward-inbox.js",
-      "order": 63,
+      "order": 62,
       "layer": "transport",
       "note": "第116波116b(116-2e 拆分):管家收件箱轮询器/三源增量归一化/游标(零行为搬家自 13g 前半)",
       "provides": [
@@ -17392,7 +17331,7 @@
     },
     {
       "file": "13j-steward-tool-base.js",
-      "order": 64,
+      "order": 63,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家工具面共享底座 —— 共享常量/稳定信封/会话头读取/决策日志/记忆存储/读预算/派活原语(零行为搬家自 13g)",
       "provides": [
@@ -17643,7 +17582,7 @@
     },
     {
       "file": "13aa-steward-delivery.js",
-      "order": 65,
+      "order": 64,
       "layer": "unclassified",
       "note": "Bounded per-turn delivery evidence, file freshness and revision source projection via StewardHooks",
       "provides": [
@@ -17880,7 +17819,7 @@
     },
     {
       "file": "13k-steward-threads.js",
-      "order": 66,
+      "order": 65,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
@@ -18839,7 +18778,7 @@
     },
     {
       "file": "13l-steward-ops.js",
-      "order": 67,
+      "order": 66,
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家观察/决策/记忆/设置/内容管理族工具(零行为搬家自 13g)",
       "provides": [
@@ -19834,7 +19773,7 @@
     },
     {
       "file": "13g-steward.js",
-      "order": 68,
+      "order": 67,
       "layer": "transport",
       "note": "第116波116c(117波 T1 拆分):/api/steward/* 域路由、记忆面板、工具门控壳与 StewardHooks 注册表(工具实现已前移至 13j/13k/13l)",
       "provides": [
@@ -20396,7 +20335,7 @@
     },
     {
       "file": "13m-steward-runner-base.js",
-      "order": 69,
+      "order": 68,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家回合运行器共享底座 —— 落盘面与回合层常量/写工具白名单/运行时内存态/停机唤醒/管家会话单例(零行为搬家自 13h)",
       "provides": [
@@ -20567,7 +20506,7 @@
     },
     {
       "file": "13n-steward-arbiter.js",
-      "order": 70,
+      "order": 69,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):116h 线程间仲裁 —— 并发位/同 cwd 写锁/预算/可解释排队/饥饿提升(零行为搬家自 13h)",
       "provides": [
@@ -20766,7 +20705,7 @@
     },
     {
       "file": "13o-steward-runner-prompt.js",
-      "order": 71,
+      "order": 70,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):管家提示词装配(记忆块/线程摘要/递话预判/总览/两个分叉入口)与输出契约解析(零行为搬家自 13h)",
       "provides": [
@@ -21267,7 +21206,7 @@
     },
     {
       "file": "13p-steward-runner-actions.js",
-      "order": 72,
+      "order": 71,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):actions 执行与降级/116-2b 自理动作/id 人话化/熔断/收件箱消息装配(零行为搬家自 13h)",
       "provides": [
@@ -21753,7 +21692,7 @@
     },
     {
       "file": "13q-steward-runner-turn.js",
-      "order": 73,
+      "order": 72,
       "layer": "transport",
       "note": "第117波 T2(32 号文 §5 拆分):回合入口 runStewardTurn/收件箱去抖驱动/到访与归档/117l D2 递话通道/acts 落定(零行为搬家自 13h)",
       "provides": [
@@ -22411,7 +22350,7 @@
     },
     {
       "file": "13h-steward-runner.js",
-      "order": 74,
+      "order": 73,
       "layer": "transport",
       "note": "第116波116f(117波 T2 拆分):管家回合运行器族的 StewardHooks 注册表、/api/steward/{visit,message,act,arbiter} 路由、运行器状态与 thread_prioritize/thread_stop 两个工具实现(其余实现已前移至 13m/13n/13o/13p/13q)",
       "provides": [
@@ -22772,7 +22711,7 @@
     },
     {
       "file": "13r-event-stream.js",
-      "order": 75,
+      "order": 74,
       "layer": "transport",
       "note": "第121波 K2a(34 号文 §6.1):GET /api/events/stream 事件流 —— 进程内总线订阅、SSE 扇出、内存环断线补发、在场快照(零落盘;经 00-boot 的 EventStreamHooks 延迟绑定挂路由)",
       "provides": [
@@ -22911,7 +22850,7 @@
     },
     {
       "file": "13s-scheduler.js",
-      "order": 76,
+      "order": 75,
       "layer": "transport",
       "note": "第123波 M1(37 号文 §3.2/§3.3/§3.4;设计权威 29 号文 §4):定时任务调度器 —— tick 与四段触发、启动恢复(错过补一次/崩溃记 unknown)、上限与熔断、六条 /api/scheduler/tasks 路由、假时钟与崩溃钩子四个测试旗",
       "provides": [
@@ -23130,7 +23069,7 @@
     },
     {
       "file": "13t-steward-schedule.js",
-      "order": 77,
+      "order": 76,
       "layer": "transport",
       "note": "第123波 M2(37 号文 §3.5;设计权威 29 号文 §5/§8/§10):定时任务的管家面 —— 六个 steward_schedule_* 工具(沿 13g 门控壳)、reminder 出箱的 SchedulerHooks 两个回调、回来摘要的承诺三项读口。零入边(消费者只看 StewardHooks/SchedulerHooks),故不进任何环",
       "provides": [
@@ -23353,7 +23292,7 @@
     },
     {
       "file": "13u-migration-center.js",
-      "order": 78,
+      "order": 77,
       "layer": "transport",
       "note": "W2 迁移中心(56 号文 §3):从 Claude Code / Codex / Kimi 导入(指令文件→核心记忆、MCP、技能)与老版本如意→当前包(登记表+各处配置里的绝对路径认老包、备份后改写、按日志撤销、只移进回收站)。零入边(13b 路由经 00-boot 的 MigrationHooks 迟绑定),故不进任何环",
       "provides": [
@@ -23678,7 +23617,7 @@
     },
     {
       "file": "13v-external-channel-protocols.js",
-      "order": 79,
+      "order": 78,
       "layer": "transport",
       "note": "External QQ/Feishu signed protocol normalization; pure built-in crypto helpers",
       "provides": [
@@ -23710,7 +23649,7 @@
     },
     {
       "file": "13x-external-channel-delivery.js",
-      "order": 80,
+      "order": 79,
       "layer": "transport",
       "note": "Single bounded official QQ/Feishu reply delivery, explicit sent/failed/unknown outcomes",
       "provides": [
@@ -23735,7 +23674,7 @@
     },
     {
       "file": "13y-external-bot-credentials.js",
-      "order": 81,
+      "order": 80,
       "layer": "transport",
       "note": "Platform-protected bot credential vault with explicit env precedence and credential revision CAS",
       "provides": [
@@ -23774,7 +23713,7 @@
     },
     {
       "file": "13z-external-bot-discovery.js",
-      "order": 82,
+      "order": 81,
       "layer": "transport",
       "note": "Owner-initiated fixed official-host Feishu identity probe, bounded and never persisted",
       "provides": [
@@ -23784,7 +23723,7 @@
     },
     {
       "file": "13ab-privacy-api.js",
-      "order": 83,
+      "order": 82,
       "layer": "unclassified",
       "note": "81-P2: token-authenticated security settings and recovery API",
       "provides": [
@@ -23928,7 +23867,7 @@
     },
     {
       "file": "13w-external-bots.js",
-      "order": 84,
+      "order": 83,
       "layer": "transport",
       "note": "Opt-in owner remote control with durable inbox, execution and reply delivery worker",
       "provides": [
@@ -24166,7 +24105,7 @@
     },
     {
       "file": "13ac-desktop-execution-runtime.js",
-      "order": 85,
+      "order": 84,
       "layer": "unclassified",
       "note": "P5 actual root ownership/admissions and default-off provider direct/proxy receipts plus strict history delivery; CLI/subagent/retention/image batching remain open",
       "provides": [
@@ -24331,7 +24270,7 @@
     },
     {
       "file": "14-main.js",
-      "order": 86,
+      "order": 85,
       "layer": "entrypoint",
       "note": "main()/module.exports",
       "provides": [
@@ -24347,7 +24286,28 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "classifyTextForEstimate",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "CONTEXT_WINDOW_FALLBACK",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "contextWindowFromTable",
           "kinds": [
             "read"
           ]
@@ -24361,7 +24321,35 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "estimateHistoryTokens",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "estimateTextTokens",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "extractContextLength",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "fmtTokensServer",
           "kinds": [
             "read"
           ]
@@ -24375,6 +24363,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "isContextOverflowError",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "neutralizeFenceTag",
           "kinds": [
             "read"
@@ -24382,7 +24377,21 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "resolveContextWindow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "setEstimateBucketsV1",
           "kinds": [
             "read"
           ]
@@ -27525,48 +27534,6 @@
           ]
         },
         {
-          "provider": "09d-token-estimation.js",
-          "symbol": "classifyTextForEstimate",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "CONTEXT_WINDOW_FALLBACK",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateHistoryTokens",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "estimateTextTokens",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "fmtTokensServer",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "09d-token-estimation.js",
-          "symbol": "setEstimateBucketsV1",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "10-context-governance.js",
           "symbol": "agentConversationContextMeta",
           "kinds": [
@@ -27666,13 +27633,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "contextWindowFromTable",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "contextWindowOverrideKey",
           "kinds": [
             "read"
@@ -27702,13 +27662,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "evaporateHistory",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "extractContextLength",
           "kinds": [
             "read"
           ]
@@ -27751,13 +27704,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "historyUnitStarts",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "isContextOverflowError",
           "kinds": [
             "read"
           ]
@@ -27884,13 +27830,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "resolveCompactionProvider",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "resolveContextWindow",
           "kinds": [
             "read"
           ]
@@ -30174,6 +30113,7 @@
       "from": "07-autonomy.js",
       "to": "00-boot.js",
       "symbols": [
+        "CONTEXT_OVERFLOW_PATTERNS",
         "DesktopExecutionHooks",
         "MCP_TOOLS",
         "PROVIDER_SESSION_TOOL_SCHEMAS",
@@ -30181,11 +30121,14 @@
         "URL",
         "adaptiveMetaToolSchemas",
         "apiFailure",
+        "cacheContextLength",
         "claudeCostFields",
         "cp",
         "createNdjsonLineFeeder",
         "crypto",
+        "extractContextLength",
         "fsp",
+        "isContextOverflowError",
         "makeId",
         "nowIso",
         "path",
@@ -30376,25 +30319,6 @@
       "direction": "forward"
     },
     {
-      "from": "07-autonomy.js",
-      "to": "09d-token-estimation.js",
-      "symbols": [
-        "estimateTextTokensMemo"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "07-autonomy.js",
-      "to": "10-context-governance.js",
-      "symbols": [
-        "CONTEXT_OVERFLOW_PATTERNS",
-        "cacheContextLength",
-        "extractContextLength",
-        "isContextOverflowError"
-      ],
-      "direction": "forward"
-    },
-    {
       "from": "08-agent-runs.js",
       "to": "00-boot.js",
       "symbols": [
@@ -30406,13 +30330,17 @@
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
+        "estimateContentTokens",
+        "estimateHistoryTokens",
         "fsp",
+        "isContextOverflowError",
         "makeId",
         "nowIso",
         "path",
         "paths",
         "safeJsonParse",
         "samePathKey",
+        "setEstimateBucketsV1",
         "text"
       ],
       "direction": "backward"
@@ -30629,16 +30557,6 @@
     },
     {
       "from": "08-agent-runs.js",
-      "to": "09d-token-estimation.js",
-      "symbols": [
-        "estimateContentTokens",
-        "estimateHistoryTokens",
-        "setEstimateBucketsV1"
-      ],
-      "direction": "forward"
-    },
-    {
-      "from": "08-agent-runs.js",
       "to": "10-context-governance.js",
       "symbols": [
         "boundToolResultForDisplay",
@@ -30646,7 +30564,6 @@
         "compactionRefetchWarning",
         "createCompactionRefetchGuard",
         "estimateFactor",
-        "isContextOverflowError",
         "maybeCompactSubHistory",
         "noteWindowOvershoot",
         "recordCompactUsage",
@@ -30687,12 +30604,17 @@
         "cachedInputTokensFromUsage",
         "computeProviderCost",
         "crypto",
+        "estimateContentTokens",
+        "estimateHistoryTokens",
+        "estimateToolSchemaTokens",
         "fsp",
+        "isContextOverflowError",
         "localTurnTimeParts",
         "makeId",
         "neutralizeFenceTag",
         "nowIso",
         "safeJsonParse",
+        "setEstimateBucketsV1",
         "text"
       ],
       "direction": "backward"
@@ -30998,7 +30920,6 @@
         "createToolLoadingState",
         "drainSteerQueue",
         "dropPolicyDisabledBridgedTools",
-        "estimateToolSchemaTokens",
         "failoverStickyBase",
         "finalizeAgentWorktree",
         "getAgentRoleLibrary",
@@ -31090,16 +31011,6 @@
     },
     {
       "from": "09-workflow.js",
-      "to": "09d-token-estimation.js",
-      "symbols": [
-        "estimateContentTokens",
-        "estimateHistoryTokens",
-        "setEstimateBucketsV1"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "09-workflow.js",
       "to": "10-context-governance.js",
       "symbols": [
         "agentNodeContextWindow",
@@ -31112,7 +31023,6 @@
         "compactionRefetchWarning",
         "createCompactionRefetchGuard",
         "estimateFactor",
-        "isContextOverflowError",
         "maybeAutoCompact",
         "maybeWriteSessionNotes",
         "noteEstimateSample",
@@ -31149,22 +31059,6 @@
       "direction": "backward"
     },
     {
-      "from": "09d-token-estimation.js",
-      "to": "07-autonomy.js",
-      "symbols": [
-        "estimateToolSchemaTokens"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "09d-token-estimation.js",
-      "to": "10-context-governance.js",
-      "symbols": [
-        "ESTIMATION_RULES"
-      ],
-      "direction": "forward"
-    },
-    {
       "from": "10-context-governance.js",
       "to": "00-boot.js",
       "symbols": [
@@ -31175,16 +31069,23 @@
         "apiSessionIdInvalid",
         "cachedInputTokensFromUsage",
         "computeProviderCost",
+        "countCjkCodeUnits",
         "crypto",
-        "fs",
+        "estimateContentTokens",
+        "estimateHistoryTokens",
+        "estimateTextTokens",
+        "fmtTokensServer",
         "fsp",
+        "isContextOverflowError",
         "makeId",
         "nowIso",
         "path",
         "paths",
         "readJsonBody",
+        "resolveContextWindow",
         "send",
         "text",
+        "tokensFromTextCounts",
         "zlib"
       ],
       "direction": "backward"
@@ -31399,21 +31300,6 @@
       "to": "09-workflow.js",
       "symbols": [
         "runOpenAiTurn"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "10-context-governance.js",
-      "to": "09d-token-estimation.js",
-      "symbols": [
-        "CONTEXT_WINDOW_FALLBACK",
-        "EVAPORATED_PREFIX",
-        "countCjkCodeUnits",
-        "estimateContentTokens",
-        "estimateHistoryTokens",
-        "estimateTextTokens",
-        "fmtTokensServer",
-        "tokensFromTextCounts"
       ],
       "direction": "backward"
     },
@@ -31906,7 +31792,9 @@
         "apiFailure",
         "apiSessionIdInvalid",
         "apiSessionNotFound",
+        "cachedContextLength",
         "contentTypeFor",
+        "contextWindowFromTable",
         "crypto",
         "dataRootAliases",
         "defaultDataRoots",
@@ -31926,6 +31814,7 @@
         "path",
         "paths",
         "readJsonBody",
+        "resolveContextWindow",
         "safeJsonParse",
         "samePathKey",
         "send",
@@ -32331,11 +32220,8 @@
       "to": "10-context-governance.js",
       "symbols": [
         "agentConversationContextMeta",
-        "cachedContextLength",
         "configuredConversationWindow",
-        "contextWindowFromTable",
         "learnedWindowCap",
-        "resolveContextWindow",
         "runAgentExternalCompact",
         "runProviderCompactTracked",
         "scheduleAgentWakesAtBoot",
@@ -35405,12 +35291,22 @@
       "to": "00-boot.js",
       "symbols": [
         "CONFIG_SCHEMA",
+        "CONTEXT_WINDOW_FALLBACK",
         "EventStreamHooks",
         "RUYI_EVENTS",
         "adaptiveMetaToolSchemas",
+        "classifyTextForEstimate",
+        "contextWindowFromTable",
         "createNdjsonLineFeeder",
+        "estimateHistoryTokens",
+        "estimateTextTokens",
+        "extractContextLength",
+        "fmtTokensServer",
         "hashArgs",
+        "isContextOverflowError",
         "neutralizeFenceTag",
+        "resolveContextWindow",
+        "setEstimateBucketsV1",
         "spawnDetachedChecked"
       ],
       "direction": "backward"
@@ -36060,19 +35956,6 @@
     },
     {
       "from": "14-main.js",
-      "to": "09d-token-estimation.js",
-      "symbols": [
-        "CONTEXT_WINDOW_FALLBACK",
-        "classifyTextForEstimate",
-        "estimateHistoryTokens",
-        "estimateTextTokens",
-        "fmtTokensServer",
-        "setEstimateBucketsV1"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "14-main.js",
       "to": "10-context-governance.js",
       "symbols": [
         "COMPACT_MARKER_MIN_SAVED_TOKENS",
@@ -36089,20 +35972,17 @@
         "checkSummaryEntities",
         "chunkHistoryByBudget",
         "configuredConversationWindow",
-        "contextWindowFromTable",
         "contextWindowOverrideKey",
         "dedupeRepeatedReads",
         "estimateFactor",
         "evaporateBudgetBoundary",
         "evaporateHistory",
-        "extractContextLength",
         "extractSessionNotes",
         "extractSummaryEntities",
         "fileReadDedupKey",
         "fitHistoryForSummary",
         "historyStartsWithCompactionSummary",
         "historyUnitStarts",
-        "isContextOverflowError",
         "learnedWindowCap",
         "mapSummaryWithLimit",
         "maybeWriteSessionNotes",
@@ -36121,7 +36001,6 @@
         "rehydrateObservation",
         "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
-        "resolveContextWindow",
         "resolveSummaryCallPolicy",
         "runSessionTurn",
         "summaryMaxConcurrent",
@@ -36314,7 +36193,6 @@
       "07-autonomy.js",
       "08-agent-runs.js",
       "09-workflow.js",
-      "09d-token-estimation.js",
       "10-context-governance.js",
       "11-native-tools.js",
       "12-tool-dispatch.js"
@@ -36389,8 +36267,6 @@
     "07-autonomy.js->04-permission-runtime.js",
     "07-autonomy.js->06-provider-engine.js",
     "07-autonomy.js->08-agent-runs.js",
-    "07-autonomy.js->09d-token-estimation.js",
-    "07-autonomy.js->10-context-governance.js",
     "08-agent-runs.js->01-config.js",
     "08-agent-runs.js->02-session-store.js",
     "08-agent-runs.js->03-bridge-guard.js",
@@ -36400,7 +36276,6 @@
     "08-agent-runs.js->06g-resource-leases.js",
     "08-agent-runs.js->07-autonomy.js",
     "08-agent-runs.js->09-workflow.js",
-    "08-agent-runs.js->09d-token-estimation.js",
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->11-native-tools.js",
     "08-agent-runs.js->12-tool-dispatch.js",
@@ -36415,11 +36290,8 @@
     "09-workflow.js->06g-resource-leases.js",
     "09-workflow.js->07-autonomy.js",
     "09-workflow.js->08-agent-runs.js",
-    "09-workflow.js->09d-token-estimation.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
-    "09d-token-estimation.js->07-autonomy.js",
-    "09d-token-estimation.js->10-context-governance.js",
     "10-context-governance.js->01-config.js",
     "10-context-governance.js->02-session-store.js",
     "10-context-governance.js->04-permission-runtime.js",
@@ -36429,7 +36301,6 @@
     "10-context-governance.js->06f-autonomy-grants.js",
     "10-context-governance.js->07-autonomy.js",
     "10-context-governance.js->09-workflow.js",
-    "10-context-governance.js->09d-token-estimation.js",
     "11-native-tools.js->01-config.js",
     "11-native-tools.js->03-bridge-guard.js",
     "11-native-tools.js->04-permission-runtime.js",
@@ -36482,16 +36353,12 @@
     "06-provider-engine.js->11-native-tools.js",
     "06f-autonomy-grants.js->07-autonomy.js",
     "07-autonomy.js->08-agent-runs.js",
-    "07-autonomy.js->09d-token-estimation.js",
-    "07-autonomy.js->10-context-governance.js",
     "08-agent-runs.js->09-workflow.js",
-    "08-agent-runs.js->09d-token-estimation.js",
     "08-agent-runs.js->10-context-governance.js",
     "08-agent-runs.js->11-native-tools.js",
     "08-agent-runs.js->12-tool-dispatch.js",
     "09-workflow.js->10-context-governance.js",
     "09-workflow.js->12-tool-dispatch.js",
-    "09d-token-estimation.js->10-context-governance.js",
     "13-http-router.js->13b-api-domain-routes.js",
     "13-http-router.js->13d-core-domain-routes.js",
     "13-http-router.js->13e-pretender-index.js",

@@ -12,7 +12,7 @@ const { sliceBlock, constBlock, functionBlock } = require('../lib/source-slice')
 
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const gov = fs.readFileSync(path.join(SRC, '10-context-governance.js'), 'utf8');
-const est = fs.readFileSync(path.join(SRC, '09d-token-estimation.js'), 'utf8');
+const est = fs.readFileSync(path.join(SRC, '../backend/token-estimation.cjs'), 'utf8');
 
 const region = sliceBlock(gov, '// <<TOOL-RESULT-SHRINK BEGIN', '// >>TOOL-RESULT-SHRINK END');
 // 区间不存在(修前的源码)时退回抽 4 个常量,让 truncateToolResult 至少能跑 —— 这样红的是行为断言,不是加载。

@@ -339,7 +339,7 @@ console.log('── (D) J12 压缩回注 ──');
   const en = srv.summaryPromptWithGuidance({ runtimeSummaryPromptI18nV1: true, locale: 'en-US' });
   ok(/Preferences and decisions: keep only the LAST version/.test(en) && /must not appear under Decisions/.test(en),
     'D2 英文那份有对应的一句(111d 翻默认开之后英文界面走的是它)');
-  // 内置 fallback 与 JSON 的逐项相同由 unit/context-governance-fallback.test.js 钉,这里不重复。
+  // unit/context-governance-release.test.js 验证发行白名单内的中英文提示词。
 }
 
 /* ═════════ (E) 为什么没有「中间相似度带」:三类样本的实测 ═════════ */

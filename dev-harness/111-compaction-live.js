@@ -157,7 +157,7 @@ for (const [label, value] of [['WIN_CLAUDE_WORKBENCH_HOME', SIM_HOME], ['USERPRO
 
 const APP = path.resolve(__dirname, '..', 'ruyi-workbench', 'app');
 const srv = require(path.join(APP, 'server.js'));
-const RULES = require(path.join(APP, 'src', 'context-governance-rules.json'));
+const RULES = require(path.join(APP, 'backend', 'context-governance-rules.json'));
 
 // ── 花费账 ─────────────────────────────────────────────────────────────────────────────
 const PRICING = { inputPerM: 1, cachedInputPerM: 0.02, outputPerM: 2 }; // 05-claude-engine.js:1055 预设

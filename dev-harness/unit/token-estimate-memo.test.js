@@ -15,11 +15,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const vm = require('vm');
-const { readServerSource } = require('../src-reader');
-const { sliceBlock, functionBlock } = require('../lib/source-slice');
+const { sliceBlock } = require('../lib/source-slice');
 
 const REPO = path.resolve(__dirname, '..', '..');
-const RULES = JSON.parse(fs.readFileSync(path.join(REPO, 'ruyi-workbench', 'app', 'src', 'context-governance-rules.json'), 'utf8')).estimation;
+const RULES = JSON.parse(fs.readFileSync(path.join(REPO, 'ruyi-workbench', 'app', 'backend', 'context-governance-rules.json'), 'utf8')).estimation;
 
 // ── 修前实现逐字抄本(1dcb8029 的 09d / 07),只把 ESTIMATION_RULES 与开关改成参数 ─────────────────────
 function oracleClassify(str, R = RULES) {
@@ -95,13 +94,12 @@ function oracleHistory(history, systemPrompt, tools, on) {
   return Math.round(t);
 }
 
-// ── 真源码:09d 估算簇整段 + 07 的工具表估算,装进 vm(函数声明是上下文全局属性,可换成计数包装) ──────────
-const source = readServerSource();
-const cluster = sliceBlock(source, 'let estimateBucketsV1On', '// v0.8-S5 — Context management');
-const toolSchema = functionBlock(source, 'estimateToolSchemaTokens');
+// Instrument the production estimator in a VM to count cache work without exposing internal state.
+const source = fs.readFileSync(path.join(REPO, 'ruyi-workbench', 'app', 'backend', 'token-estimation.cjs'), 'utf8');
+const cluster = sliceBlock(source, 'let estimateBucketsV1On', 'return Object.freeze({');
 function loadCluster() {
   const ctx = vm.createContext({ ESTIMATION_RULES: RULES });
-  vm.runInContext(cluster + '\n' + toolSchema + '\n'
+  vm.runInContext(cluster + '\n'
     + 'globalThis.__memo = () => (typeof tokenEstimateMemo === "undefined" ? null : tokenEstimateMemo);'
     + 'globalThis.__memoHas = s => (typeof tokenEstimateMemoKey === "function" ? tokenEstimateMemo.map.get(tokenEstimateMemoKey(s))?.str === s : tokenEstimateMemo.map.has(s));', ctx);
   const calls = { classify: [], cjk: [] };
@@ -151,7 +149,7 @@ function randomText(r, maxLen) {
 // 真实文件切片:本仓源码、中文文档、JSON 数据
 const REAL = [
   path.join(REPO, 'ruyi-workbench', 'app', 'src', '10-context-governance.js'),
-  path.join(REPO, 'ruyi-workbench', 'app', 'src', 'context-governance-rules.json'),
+  path.join(REPO, 'ruyi-workbench', 'app', 'backend', 'context-governance-rules.json'),
   path.join(REPO, 'CONTRIBUTING.md'),
   path.join(REPO, 'ruyi-workbench', 'app', 'public', 'app.js'),
 ].filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f, 'utf8'));
@@ -183,8 +181,8 @@ const clone = h => JSON.parse(JSON.stringify(h)); // loadSession 形状:新对�
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 test('[M0] 切到了真源码,记忆表常量与本测试对齐', () => {
-  assert.ok(cluster.length > 2000 && /function estimateHistoryTokens\(/.test(cluster), '09d 估算簇切片非空');
-  assert.ok(toolSchema.includes('function estimateToolSchemaTokens'), '07 estimateToolSchemaTokens 切到');
+  assert.match(cluster, /function estimateHistoryTokens\(/);
+  assert.match(cluster, /function estimateToolSchemaTokens\(/);
   assert.match(cluster, /const TOKEN_ESTIMATE_MEMO_MIN_CHARS = 64;/);
 });
 

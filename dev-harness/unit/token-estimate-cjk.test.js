@@ -4,14 +4,9 @@
 //   [T2] 随机串(混 ASCII / 汉字 / 韩文 / 全角 / emoji 代理对)比对计数与 estimateTextTokens 结果
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const vm = require('vm');
-const { readServerSource } = require('../src-reader');
-const { functionBlock, constBlock } = require('../lib/source-slice');
-const source = readServerSource();
-const ctx = vm.createContext({});
-vm.runInContext([constBlock(source, 'CJK_RE'), functionBlock(source, 'countCjkCodeUnits'),
-  'globalThis.api = { CJK_RE, countCjkCodeUnits };'].join('\n'), ctx);
-const { CJK_RE, countCjkCodeUnits } = ctx.api;
+const { createTokenEstimation } = require('../../ruyi-workbench/app/backend/token-estimation.cjs');
+const { countCjkCodeUnits } = createTokenEstimation();
+const CJK_RE = /[\u2E80-\u9FFF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF]/g;
 const byRegex = s => (s.match(CJK_RE) || []).length;
 
 test('[T1] 每个码元单独比对', () => {

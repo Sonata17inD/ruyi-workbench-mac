@@ -131,7 +131,7 @@ function autoCompactHarness(estimates, { overhead = 3000, failures = new Map() }
     evaporateBudgetBoundaryEnabled: srv.evaporateBudgetBoundaryEnabled,
     historyReadDedupEnabled: srv.historyReadDedupEnabled, // 126-111e:同上,注真函数
     // L1「够了」的低水位(compactionPlan.l1SufficientRatio)同样注真规则(规则 JSON 是唯一可审计输入)。
-    CONTEXT_GOVERNANCE_RULES: require('../../ruyi-workbench/app/src/context-governance-rules.json'),
+    CONTEXT_GOVERNANCE_RULES: require('../../ruyi-workbench/app/backend/context-governance-rules.json'),
     sessionObjectIsStale: srv.sessionObjectIsStale, // 128b:历史快照前判「是不是撤回之前的对象」—— 同上,注真函数(沙箱里缺了它照样红成「没压缩」)
     writeHistorySnapshot: async (...a) => { snapshots.push(a); return 'raw'; },
     evaporateHistory: history => {
@@ -183,7 +183,7 @@ test('滞回水位:压完后小幅回升直接跳过,显著越过水位才再武
 
 test('L1 够不够按低水位判(预算 × l1SufficientRatio):压到线下只做 L1;只压到预算与低水位之间就当场升 L2', async () => {
   const budget = 0.8 * 131072;
-  const ratio = require('../../ruyi-workbench/app/src/context-governance-rules.json').compactionPlan.l1SufficientRatio;
+  const ratio = require('../../ruyi-workbench/app/backend/context-governance-rules.json').compactionPlan.l1SufficientRatio;
   assert.equal(ratio, 0.75);
   const overhead = 3000; // harness 里「只有系统提示」那一问的固定回答
   const low = Math.max(Math.floor(budget * ratio), Math.floor(overhead + (budget - overhead) * ratio)); // 低水位按可压部分算

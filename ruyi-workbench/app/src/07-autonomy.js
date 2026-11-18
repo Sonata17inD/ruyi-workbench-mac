@@ -1481,12 +1481,6 @@ function createToolLoadingState(config, message, attachments, tools, bridgedRout
   return { catalog, activePacks, current, list, search, shadowSearch, load, frozenNames, fullCount: catalog.length };
 }
 
-function estimateToolSchemaTokens(tools) {
-  if (!Array.isArray(tools) || !tools.length) return 0;
-  // 每个 API 迭代前随整段历史估一遍,工具表多数回合一字不变 —— 走 09d 的按内容记忆(与直算逐位同值)。
-  return Math.round(estimateTextTokensMemo(JSON.stringify(tools)));
-}
-
 // Decide gate for a tool call given the permission mode. Returns 'allow' | 'ask' | 'block'.
 // 117m-A1(用户第六轮走查②「我已经默认线程全自动了,还是会有很多要求权限」):`auto` 档的 exec 分支
 // 从「一律 ask」改成「高风险才 ask」。修前 `auto` 只放行 edit 档,exec 落到末尾的 `return 'ask'` ——

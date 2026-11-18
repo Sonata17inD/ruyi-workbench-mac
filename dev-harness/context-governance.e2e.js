@@ -5,8 +5,9 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 技术同 scheduler-reducer/audit-w23:源抽取 + new Function 实跑纯逻辑 + 正则静态锁接线。
 'use strict';
 const { readServerSource } = require('./src-reader');
-const fs = require('fs'), path = require('path');
-const SERVER = path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js');
+const { constBlock, functionBlock } = require('./lib/source-slice');
+const { isDeepStrictEqual } = require('node:util');
+const { MCP_TOOLS } = require('../ruyi-workbench/app/backend/native-tool-schemas.cjs');
 const src = readServerSource();
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
@@ -34,17 +35,24 @@ ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(src) &&
 ok((src.match(/\['accept', 'retry', 'request_review', 'fail'\]/g) || []).length >= 3, 'S §28d degradedPolicy 枚举 ≥3 处(模板/新建/resume/schema)');
 ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(src), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
 ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(src), 'S §28d 翻译接缝(仅降级成功节点)');
-ok(/degradedPolicy: \{ type: 'string', enum: \['accept', 'retry', 'request_review', 'fail'\]/.test(src), 'S §28d orchestrate 工具 schema 含 degradedPolicy');
+const orchestrate = MCP_TOOLS.find(tool => tool.name === 'orchestrate_agents');
+const degradedPolicy = orchestrate?.inputSchema.properties.nodes.items.properties.degradedPolicy;
+ok(degradedPolicy?.type === 'string' && isDeepStrictEqual(degradedPolicy.enum, ['accept', 'retry', 'request_review', 'fail']), 'S §28d orchestrate 工具 schema 含 degradedPolicy');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [P] 纯逻辑源抽取:§28c buildUpstreamContext + §28b deriveNodeOutputs
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] §28b/§28c 纯逻辑 ──');
-const blk = src.match(/const NODE_SUMMARY_MAX = 2000;[\s\S]*?\nfunction buildUpstreamContext\(depNodes, budgetTokens\) \{[\s\S]*?\n\}/);
-ok(!!blk, 'P 源抽取 28b/28c 块');
+const upstreamContextBlocks = [
+  constBlock(src, 'NODE_SUMMARY_MAX'),
+  constBlock(src, 'NODE_WRITE_FAMILY'),
+  functionBlock(src, 'deriveNodeOutputs'),
+  functionBlock(src, 'buildUpstreamContext'),
+];
+ok(upstreamContextBlocks.every(Boolean), 'P 源抽取 28b/28c 块');
 // estimateContentTokens 注入桩:~1 token / 4 字符(测预算/分级逻辑,非精确 token)。
 const estimateContentTokens = s => Math.ceil(String(s || '').length / 4);
-const g = new Function('estimateContentTokens', blk[0] + '\nreturn { deriveNodeOutputs, buildUpstreamContext, NODE_WRITE_FAMILY };')(estimateContentTokens);
+const g = new Function('estimateContentTokens', upstreamContextBlocks.join('\n') + '\nreturn { deriveNodeOutputs, buildUpstreamContext };')(estimateContentTokens);
 
 // deriveNodeOutputs:结构化 summary/verdict 优先;findings→evidence;续点写族步骤→artifacts。
 {
@@ -125,19 +133,21 @@ let recordCalls = 0; const recordCompactUsage = () => { recordCalls++; };
 // 第45波:maybeCompactSubHistory 预算判定改走 calibratedEstimate(45d 校准入口)—— 桩镜像「无样本=因子1」。
 const calibratedEstimate = (p, m, h) => estimateHistoryTokens(h);
 const resolveCompactionProvider = (config, provider) => ({ provider, model: provider && provider.model });
-const CompactionPlan = require(SERVER).CompactionPlan;
+const {
+  CompactionPlan,
+  evaporateBudgetBoundaryEnabled,
+  historyReadDedupEnabled,
+  reseedTailUnitsEnabled,
+  repairProviderHistoryPairing,
+} = require('../ruyi-workbench/app/server.js');
 // 126-111a:maybeCompactSubHistory 现在会问一声「L1 边界要不要按 token 预算算」。注**真函数**,
 // 不在这儿另写一份假的(判据只有一处,沙箱里也得成立)。开关默认关,所以本文件的判据逐字节不变;
 // 缺了它会 ReferenceError 被 maybeCompactSubHistory 的 try/catch 吞成「没压缩」,A 组十条全红。
-const evaporateBudgetBoundaryEnabled = require(SERVER).evaporateBudgetBoundaryEnabled;
-const historyReadDedupEnabled = require(SERVER).historyReadDedupEnabled; // 126-111e:同上
 // 126-111b:maybeCompactSubHistory 的 reseed 出口现在会问一声「要不要按单元退化」并过一遍配对安全网。
 // **第三次**了:往这个函数里加任何跨模块调用,都要回来补这处沙箱,否则 ReferenceError 被它自己的
 // try/catch 吞成「没压缩」,A 组一片红而真因在别处。
-const reseedTailUnitsEnabled = require(SERVER).reseedTailUnitsEnabled;
-const repairProviderHistoryPairing = require(SERVER).repairProviderHistoryPairing;
 // 第四次:runAutoCompaction 读 compactionPlan.l1SufficientRatio(L1「够了」的低水位)—— 注真规则(规则 JSON 是唯一可审计输入)。
-const CONTEXT_GOVERNANCE_RULES = require('../ruyi-workbench/app/src/context-governance-rules.json');
+const CONTEXT_GOVERNANCE_RULES = require('../ruyi-workbench/app/backend/context-governance-rules.json');
 // 第五次:L2 重播种之后附「已执行工具调用」机器索引(10 buildCompactionToolIndex)。本组只验压缩内核的判据与装回,
 // 索引本身另有单测(unit/compaction-tool-index.test.js 经 CompactionPlan/buildObservationRecallPrompt 验)—— 这里注空串桩。
 const buildCompactionToolIndex = () => '';
@@ -147,21 +157,17 @@ const maybeCompactSubHistory = new Function(
 )(providerContextWindow, estimateHistoryTokens, calibratedEstimate, evaporateHistory, providerSummaryCall, recentTurnsBoundary, recordCompactUsage, resolveCompactionProvider, 16000, CompactionPlan, evaporateBudgetBoundaryEnabled, historyReadDedupEnabled, reseedTailUnitsEnabled, repairProviderHistoryPairing, () => {}, CONTEXT_GOVERNANCE_RULES, new Map(), 10 * 60 * 1000, buildCompactionToolIndex);
 
 // ============ A2: truncateToolResult 的 base64 图片字段专用处理(防 60KB 平切切坏图) ============
-// 抽真 truncateToolResult + IMG_B64_TRIM_RE(保真);TOOL_RESULT_CAP / FILE_READ_* 注入常量。
-const trm = src.match(/const IMG_B64_TRIM_RE = ([^\n]+);/);
-const tm = src.match(/function truncateToolResult\(name, jsonStr\) \{\n[\s\S]*?\n\}/);
-ok(!!trm && !!tm, 'A2 源抽取 truncateToolResult + IMG_B64_TRIM_RE');
-const IMG_B64_TRIM_RE = trm ? eval('(' + trm[1] + ')') : null;
-// N2:truncateToolResult 改为结构感知后依赖 10 里 TOOL-RESULT-SHRINK 区间(纯函数+常量)与 09d 的 CJK 计数/估算公式 ——
-// 区间整段随函数一起抽出并跑(区间自带 4 个常量,故不再注入 TOOL_RESULT_CAP 等)。
+// 使用实际裁剪策略与 token 估算公式验证图片保真。
+const truncateToolResultBlock = functionBlock(src, 'truncateToolResult');
+ok(!!truncateToolResultBlock, 'A2 源抽取 truncateToolResult');
 const shrinkRegion = src.slice(src.indexOf('// <<TOOL-RESULT-SHRINK BEGIN'), src.indexOf('// >>TOOL-RESULT-SHRINK END'));
 ok(shrinkRegion.length > 500, 'A2 源抽取 TOOL-RESULT-SHRINK 区间');
-const cjkFn = src.match(/function countCjkCodeUnits\(str\) \{\n[\s\S]*?\n\}/);
-const tokFn = src.match(/function tokensFromTextCounts\(ascii, cjk, bucket\) \{\n[\s\S]*?\n\}/);
+const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
+const { countCjkCodeUnits, tokensFromTextCounts } = createTokenEstimation();
 const truncateToolResult = new Function(
-  'ESTIMATION_RULES',
-  cjkFn[0] + '\n' + tokFn[0] + '\n' + shrinkRegion + '\n' + tm[0] + '\nreturn truncateToolResult;'
-)({ factors: { json: 3.6, code: 3.6 } });
+  'countCjkCodeUnits', 'tokensFromTextCounts',
+  shrinkRegion + '\n' + truncateToolResultBlock + '\nreturn truncateToolResult;'
+)(countCjkCodeUnits, tokensFromTextCounts);
 
 const cfg = { autoCompactThreshold: 0.8 }; // budget = 0.8 × 1000 = 800 token
 const prov = { id: '__context_governance_fixture__', model: 'm', contextWindow: 1000 };

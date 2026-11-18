@@ -20,7 +20,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-reattach-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
-const rules = require(path.join(app, 'src', 'context-governance-rules.json')).compactionPlan;
+const rules = require(path.join(app, 'backend', 'context-governance-rules.json')).compactionPlan;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 const lines = (tag, n) => Array.from({ length: n }, (_, i) => `${tag} line ${i}`).join('\n');

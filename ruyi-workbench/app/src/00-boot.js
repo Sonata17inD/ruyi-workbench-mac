@@ -237,6 +237,17 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const {
+  CONTEXT_WINDOW_FALLBACK, CONTEXT_OVERFLOW_PATTERNS,
+  extractContextLength, cacheContextLength, cachedContextLength,
+  contextWindowFromTable, resolveContextWindow, isContextOverflowError,
+} = require('./backend/provider-context-policy.cjs').createProviderContextPolicy();
+const {
+  fmtTokensServer, countCjkCodeUnits, tokensFromTextCounts, setEstimateBucketsV1,
+  classifyTextForEstimate, estimateContentTokens, estimateHistoryTokens, estimateTextTokens,
+  estimateToolSchemaTokens,
+} = require('./backend/token-estimation.cjs').createTokenEstimation();
+
 const { adaptiveMetaToolSchemas, MCP_TOOLS, PROVIDER_SESSION_TOOL_SCHEMAS } = require('./backend/native-tool-schemas.cjs');
 
 // 分离式外部启动(打开文件/网址/编辑器/资源管理器)的共用入口。病根:cp.spawn 找不到程序、没权限、被策略拦

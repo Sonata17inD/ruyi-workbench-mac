@@ -6,7 +6,7 @@ const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const SERVER = path.join(ROOT, 'ruyi-workbench', 'app', 'server.js');
-const RULES = path.join(ROOT, 'ruyi-workbench', 'app', 'src', 'context-governance-rules.json');
+const RULES = path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'context-governance-rules.json');
 const ROUTES = path.join(ROOT, 'docs', 'architecture', 'route-inventory.json');
 const OUT = path.join(ROOT, 'docs', 'architecture', 'architecture-contract-snapshots.json');
 const MARKDOWN = path.join(ROOT, 'docs', 'architecture', 'architecture-contract-snapshots.md');

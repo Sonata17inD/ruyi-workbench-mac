@@ -27,5 +27,5 @@ ok(context.includes('const CompactionPlan = (() => {'), 'context cluster owns sh
 ok(/async function runForcedOverflowCompaction\(ctx\)/.test(context) && context.includes("trigger: 'forced_400'"), 'shared forced-400 kernel uses CompactionPlan');
 ok(/runForcedOverflowCompaction\(\{\s*history: subHistory, privacyHistoryOwner, scope: 'subagent'/.test(read('ruyi-workbench/app/src/08-agent-runs.js')), 'subagent forced-400 uses the shared kernel and its own privacy history owner');
 ok(/runForcedOverflowCompaction\(\{\s*history: session\.providerHistory, privacyHistoryOwner: session, scope: 'main'/.test(read('ruyi-workbench/app/src/09-workflow.js')), 'main forced-400 uses the shared kernel and the session privacy history owner');
-ok(context.includes("require(path.join(__dirname, 'src', 'context-governance-rules.json'))"), 'versioned context rules are runtime-authoritative');
+ok(context.includes("require('./backend/context-governance-rules.json')"), 'versioned context rules are runtime-authoritative');
 process.exitCode = failures ? 1 : 0;

@@ -22,6 +22,7 @@ for (const name of files) {
     const resolved = path.resolve(base, specifier);
     assert.equal(path.dirname(resolved), base, name + ' must not depend on legacy host or source layout');
     assert.ok(fs.existsSync(resolved), 'unresolved module ' + specifier);
+    assert.ok(shipped.has('app/backend/' + path.basename(resolved)), name + ' imports an unshipped runtime dependency: ' + specifier);
     dependencies.push(path.basename(resolved));
   }
   graph.set(name, dependencies);
