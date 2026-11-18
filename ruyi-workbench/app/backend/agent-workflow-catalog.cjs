@@ -236,11 +236,11 @@ function agentWorkflowSaveProblem(wf, roleIds) {
   return null;
 }
 
-function createAgentWorkflowCatalog({ agentWorkflowsDirectory, atomicWriteJson }) {
+function createAgentWorkflowCatalog({ paths, atomicWriteJson }) {
   function projectAgentWorkflowsFile(cwd) { return path.join(path.resolve(cwd), '.ruyi', 'workflows.json'); }
   async function readPersonalAgentWorkflows() {
-    let files = []; try { files = await fsp.readdir(agentWorkflowsDirectory); } catch { return []; }
-    const out = []; for (const file of files.filter(x => x.endsWith('.json'))) { try { const wf = normalizeAgentWorkflow(safeJsonParse(await fsp.readFile(path.join(agentWorkflowsDirectory, file), 'utf8')), { source: 'personal' }); if (wf) out.push(wf); } catch {} } return out;
+    let files = []; try { files = await fsp.readdir(paths.agentWorkflows); } catch { return []; }
+    const out = []; for (const file of files.filter(x => x.endsWith('.json'))) { try { const wf = normalizeAgentWorkflow(safeJsonParse(await fsp.readFile(path.join(paths.agentWorkflows, file), 'utf8')), { source: 'personal' }); if (wf) out.push(wf); } catch {} } return out;
   }
   async function readProjectAgentWorkflows(cwd) {
     try { const raw = safeJsonParse(await fsp.readFile(projectAgentWorkflowsFile(cwd), 'utf8'), {}); return (Array.isArray(raw.workflows) ? raw.workflows : []).map(x => normalizeAgentWorkflow(x, { source: 'project' })).filter(Boolean); } catch { return []; }
@@ -259,13 +259,13 @@ function createAgentWorkflowCatalog({ agentWorkflowsDirectory, atomicWriteJson }
     // 个人模板,属数据丢失,故明确不做。编辑器切换保存范围本质是"新增一层覆盖",不是移动。
     if (scope === 'project') {
       const dest = projectAgentWorkflowsFile(cwd); await fsp.mkdir(path.dirname(dest), { recursive: true }); const list = await readProjectAgentWorkflows(cwd); const next = list.filter(x => x.id !== wf.id); next.push(wf); await atomicWriteJson(dest, { schemaVersion: 1, workflows: next });   // 25.1 收编
-    } else { await fsp.mkdir(agentWorkflowsDirectory, { recursive: true }); await atomicWriteJson(path.join(agentWorkflowsDirectory, wf.id + '.json'), wf); }   // 25.1 收编
+    } else { await fsp.mkdir(paths.agentWorkflows, { recursive: true }); await atomicWriteJson(path.join(paths.agentWorkflows, wf.id + '.json'), wf); }   // 25.1 收编
     return wf;
   }
   async function deleteAgentWorkflow(scope, cwd, id) {
     if (!/^[a-z0-9_-]{1,64}$/.test(id)) return false;
     if (scope === 'project') { const dest = projectAgentWorkflowsFile(cwd); const list = (await readProjectAgentWorkflows(cwd)).filter(x => x.id !== id); await fsp.mkdir(path.dirname(dest), { recursive: true }); await atomicWriteJson(dest, { schemaVersion: 1, workflows: list }); return true; }   // 25.1 收编
-    try { await fsp.unlink(path.join(agentWorkflowsDirectory, id + '.json')); return true; } catch { return false; }
+    try { await fsp.unlink(path.join(paths.agentWorkflows, id + '.json')); return true; } catch { return false; }
   }
 
   return { getAgentWorkflows, saveAgentWorkflow, deleteAgentWorkflow };

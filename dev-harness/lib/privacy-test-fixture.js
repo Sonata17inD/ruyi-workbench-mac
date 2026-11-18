@@ -15,7 +15,7 @@ function gateway(root, f) {
   const service = require('../../ruyi-workbench/app/backend/privacy-gateway.cjs').createPrivacyGateway({
     PrivacyRegex: f.PrivacyRegex, core: { ...f.PrivacyCore, configHooks: { sealLocal: f.vault.sealLocal, openLocal: f.vault.openLocal } },
   });
-  service.setHost({ data: root, makeStore: file => ({ read: async () => JSON.parse(await fs.promises.readFile(file, 'utf8')), write: async value => fs.promises.writeFile(file, JSON.stringify(value)) }) });
+  service.setHost({ paths: { data: root }, makeStore: file => ({ read: async () => JSON.parse(await fs.promises.readFile(file, 'utf8')), write: async value => fs.promises.writeFile(file, JSON.stringify(value)) }) });
   return service;
 }
 

@@ -41,7 +41,7 @@ const memoryProposalStateChains = new Map(); // 模型工具写槽与批量卡�
 
 // frontmatter 单行值消毒:去换行(parseFrontmatter 按行 key: value 解析,值里的换行会破坏结构)。
 const MemoryStore = require('./backend/memory-store.cjs').createMemoryStore({
-  memoryRoot: paths.memory, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
+  paths, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
   limits: { MEMORY_TYPES, MEMORY_METADATA_READ_CAP, CORE_MEMORY_SUMMARY_CAP, MEMORY_USAGE_TOUCH_MS, MEMORY_RULE_TOUCH_MS },
 });
 function fmVal(...args) { return MemoryStore.fmVal(...args); }

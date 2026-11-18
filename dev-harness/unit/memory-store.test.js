@@ -5,7 +5,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), os = requir
 const { createMemoryStore } = require('../../ruyi-workbench/app/backend/memory-store.cjs');
 async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ruyi-memory-store-')); t.after(() => fs.rm(root, { recursive: true, force: true }));
-  const store = createMemoryStore({ memoryRoot: root,
+  const store = createMemoryStore({ paths: { memory: root },
     atomicWriteJson: (file, value) => fs.writeFile(file, typeof value === 'string' ? value : JSON.stringify(value)),
     safeJsonParse: (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } },
     SKILL_ID_RE: /^[a-z0-9_-]+$/i, makeId: () => 'new', nowIso: () => new Date().toISOString(),

@@ -115,7 +115,7 @@ function pidAlive(pid) {
   if (!Number.isInteger(n) || n <= 0 || n === process.pid) return false;
   try { process.kill(n, 0); return true; } catch (e) { return Boolean(e && e.code === 'EPERM'); }
 }
-// 一次性迁移:~/.win-claude-workbench → ~/.ruyi-workbench,原处留目录联接(Windows 普通用户就能建;其它平台是目录符号链接)
+// 一次性迁移:~/.win-claude-workbench → ~/.ruyi-workbench,原处留目录符号链接
 // 指回新目录 —— 用户全局 Claude 配置里登记的 MCP 路径、计划任务、快捷方式里写死的旧路径照样能用。
 // 只在:直接运行、缺省命令 serve、没有任何数据根环境变量、新目录不存在、旧目录是真目录、旧目录里没有别的活实例
 // (runtime.json 的 pid 还活着就不动)时做。搬不动(被占用、跨卷、权限)就原样继续用旧目录,下次启动再试。
@@ -133,7 +133,7 @@ function migrateLegacyDataRoot() {
   try { fs.renameSync(legacy, next); } catch (e) { return { moved: false, reason: 'rename-failed', error: String(e && e.code || e) }; }
   _dataRootMemo = null; // 数据根从旧目录换成了新目录
   let junction = true;
-  try { fs.symlinkSync(next, legacy, 'junction'); } catch { junction = false; }
+  try { fs.symlinkSync(next, legacy, 'dir'); } catch { junction = false; }
   return { moved: true, from: legacy, to: next, junction };
 }
 // 缺省命令就是 serve(`Ruyi.exe`、`server.js`、`server.js serve --port N`、`server.js --port N`);mcp / install / doctor /
@@ -421,7 +421,7 @@ const {
   ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
   isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,
 } = require('./backend/sensitive-paths.cjs').createSensitivePaths({ dataRoot, dataRootAliases });
-const logEvent = require('./backend/audit-log.cjs').createAuditLog({ logsDirectory: paths.logs, nowIso });
+const logEvent = require('./backend/audit-log.cjs').createAuditLog({ paths, nowIso });
 
 async function ensureDirs() {
   await Promise.all([

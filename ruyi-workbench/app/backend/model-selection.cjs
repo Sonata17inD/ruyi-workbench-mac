@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-function createModelSelection({ dataDirectory, atomicWriteJson, effectiveAnthropicEnv }) {
+function createModelSelection({ paths, atomicWriteJson, effectiveAnthropicEnv }) {
   // 第44波(模型列表 API 化,44e 修订):显示预设只剩「默认(CLI 配置)」——版本化型号(如 claude-opus-4-8)与 CLI
   // 内建别名(opus/sonnet/haiku)都【不进列表】;真实清单 = 代理 /v1/models 发现缓存(getProxyModelsCache)
   // + 用户自定义(extraModels/knownModels)。别名集合仍保留作引擎归属判定(CLAUDE_ALIAS_IDS,见下)。
@@ -13,7 +13,7 @@ function createModelSelection({ dataDirectory, atomicWriteJson, effectiveAnthrop
   // 第44波: 代理模型列表 sidecar 缓存(<dataRoot>/proxy-models-cache.json)。发现成功即落盘,供离线启动时的列表
   // 兜底 + buildModelHint 的 Claude 组。【不】写进 config.json:GET /api/models 是读路径,把缓存合并进 config 再
   // writeConfig 会让陈旧全量快照与用户的 POST /api/config 竞态互踩(25.1 对抗轮教训);sidecar 独占写点、零竞态。
-  const PROXY_MODELS_CACHE_PATH = () => path.join(dataDirectory, 'proxy-models-cache.json');
+  const PROXY_MODELS_CACHE_PATH = () => path.join(paths.data, 'proxy-models-cache.json');
   let proxyModelsCacheMemo = null; // null=未读盘;读后为 {at, models:[{id,label}]}(可为空数组)
   function getProxyModelsCache() {
     if (proxyModelsCacheMemo === null) {

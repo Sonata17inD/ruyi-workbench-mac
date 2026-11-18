@@ -3,20 +3,21 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-function createAuditLog({ logsDirectory, nowIso }) {
+function createAuditLog({ paths, nowIso }) {
   // --- Structured NDJSON logging: record lengths/metadata, never raw content. ---
   let logStream = null;
-  let logStreamDay = '';
+  let logStreamPath = '';
   function logEvent(record) {
     try {
       const day = nowIso().slice(0, 10);
-      if (day !== logStreamDay && logStream) {
+      const file = path.join(paths.logs, `workbench-${day}.ndjson`);
+      if (file !== logStreamPath && logStream) {
         logStream.end();
         logStream = null;
       }
       if (!logStream) {
-        logStreamDay = day;
-        logStream = fs.createWriteStream(path.join(logsDirectory, `workbench-${day}.ndjson`), { flags: 'a' });
+        logStreamPath = file;
+        logStream = fs.createWriteStream(file, { flags: 'a' });
         const stream = logStream;
         stream.on('error', () => { if (logStream === stream) logStream = null; });
       }

@@ -39,8 +39,9 @@ async function waitToken() {
   for (let i = 0; i < 300; i++) { const t = (readJson(path.join(HOME, 'runtime.json')) || {}).token || ''; if (t) return t; await sleep(150); }
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
-const modelSource = fs.readFileSync(path.join(WB, 'app/backend/model-selection.cjs'), 'utf8');
-const src = readServerSource() + '\n' + modelSource;
+const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name), 'utf8');
+const src = [readServerSource(), ...['model-selection.cjs', 'config-defaults.cjs', 'config-schema.cjs',
+  'agent-workflow.cjs', 'provider-turn.cjs'].map(backend)].join('\n');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
@@ -74,7 +75,7 @@ ok(/Omit by default so the runtime can validate and use the configured sub-agent
 // ── 第44波(模型列表 API 化):版本化型号不再硬编码;代理 /v1/models 发现写 sidecar 缓存;Claude 组=别名∪缓存 ──
 ok(!/id: 'claude-opus-4-8'/.test(src) && !/id: 'claude-fable-5'/.test(src) && !/id: 'claude-sonnet-5'/.test(src), 'S 版本化型号不再硬编码(列表=API 返回+自定义)');
 ok(!/\{ id: 'opus',/.test(src) && !/\{ id: 'sonnet',/.test(src) && !/\{ id: 'haiku',/.test(src), 'S 44e:别名也出显示列表(MODEL_PRESETS 只剩 默认)');
-ok(/const PROXY_MODELS_CACHE_PATH = \(\) => path\.join\(dataDirectory, 'proxy-models-cache\.json'\);/.test(src), 'S 代理缓存 sidecar(dataRoot 独立文件,不入 config 防竞态)');
+ok(/const PROXY_MODELS_CACHE_PATH = \(\) => path\.join\(paths\.data, 'proxy-models-cache\.json'\);/.test(src), 'S 代理缓存独立落在当前数据根');
 ok(/function getProxyModelsCache\(\)/.test(src) && /function setProxyModelsCache\(models\)/.test(src), 'S 缓存读写函数存在');
 ok(/for \(const m of getProxyModelsCache\(\)\.models\) add\(m\.id, m\.label\);/.test(src), 'S offlineModelList 合并代理缓存');
 ok(/if \(proxy\.length\) setProxyModelsCache\(proxy\);/.test(src), 'S discoverModels 发现成功即写缓存');
@@ -86,7 +87,7 @@ ok(/CLAUDE_ALIAS_IDS\.has\(m\.id\) \|\| claudeCacheIds\.has\(m\.id\)/.test(src),
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] 纯逻辑 ──');
 const cacheFixture = [{ id: 'claude-cache-strong', label: 'Claude Cache Strong【强】' }, { id: 'claude-cache-fast', label: 'Claude Cache Fast【快】' }];
-const M = require('../ruyi-workbench/app/backend/model-selection.cjs').createModelSelection({ dataDirectory: HOME, atomicWriteJson: async () => {}, effectiveAnthropicEnv: () => ({}) });
+const M = require('../ruyi-workbench/app/backend/model-selection.cjs').createModelSelection({ paths: { data: HOME }, atomicWriteJson: async () => {}, effectiveAnthropicEnv: () => ({}) });
 M.setProxyModelsCache(cacheFixture);
 
 // 能力档位分类。

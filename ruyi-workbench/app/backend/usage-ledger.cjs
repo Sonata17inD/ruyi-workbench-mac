@@ -5,7 +5,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 
-function createUsageLedger({ directory, onAppend }) {
+function createUsageLedger({ paths, onAppend }) {
   // ===== v1.4-OSS 用量/成本账本 (append-only monthly ledger) ================================================
   // Each finished turn (both engines) appends ONE JSON line to usage/YYYY-MM.jsonl (month = the row's UTC ts).
   // Design: APPEND-ONLY, never read-modify-write, so concurrent 多会话 turns cannot corrupt a shared index the
@@ -65,7 +65,7 @@ function createUsageLedger({ directory, onAppend }) {
       // v1.4-OSS 用量看板(补): optional note tags an aux row's sub-kind (e.g. 'compact' / 'playbook-draft'), ≤40 chars.
       if (entry.note != null && String(entry.note)) rec.note = String(entry.note).slice(0, 40);
       const line = JSON.stringify(rec) + '\n';
-      const file = path.join(directory, ts.slice(0, 7) + '.jsonl');
+      const file = path.join(paths.usage, ts.slice(0, 7) + '.jsonl');
       // 128f-⑥:排队的这一行先登记进 usageLedgerPending(状态 queued)—— 退出路径(SIGINT／SIGTERM／未捕获异常都走
       // process.exit)上链还没轮到它,flushUsageLedgerSync 用同步 I/O 把 queued 的补写掉;正在写的那一行(writing)
       // 不补:它落没落盘不知道,补了可能记两遍(费用翻倍比少一行更糟)。
@@ -76,7 +76,7 @@ function createUsageLedger({ directory, onAppend }) {
         try {
           if (pending.state === 'queued') {
             pending.state = 'writing';
-            await fsp.mkdir(directory, { recursive: true });
+            await fsp.mkdir(path.dirname(file), { recursive: true });
             await fsp.appendFile(file, line, 'utf8');
             pending.state = 'done';
           }
@@ -123,13 +123,13 @@ function createUsageLedger({ directory, onAppend }) {
   async function readUsageRows(lowerMs) {
     const rows = [];
     let files = [];
-    try { files = (await fsp.readdir(directory)).sort(); } catch { return rows; }   // 性能批 P1:按月份名排序 —— 修前是 readdir 次序(Linux 上是散列序),浮点累加次序随平台漂
+    try { files = (await fsp.readdir(paths.usage)).sort(); } catch { return rows; }   // 性能批 P1:按月份名排序 —— 修前是 readdir 次序(Linux 上是散列序),浮点累加次序随平台漂
     const lowerKey = lowerMs > 0 ? new Date(lowerMs).toISOString().slice(0, 7) : '';
     for (const f of files) {
       if (!/^\d{4}-\d{2}\.jsonl$/.test(f)) continue;
       if (lowerKey && f.slice(0, 7) < lowerKey) continue; // whole month precedes the lower bound
       let raw = '';
-      try { raw = await fsp.readFile(path.join(directory, f), 'utf8'); } catch { continue; }
+      try { raw = await fsp.readFile(path.join(paths.usage, f), 'utf8'); } catch { continue; }
       for (const line of raw.split(/\r?\n/)) {
         if (!line.trim()) continue;
         const rec = safeJsonParse(line, null);
@@ -353,7 +353,7 @@ function createUsageLedger({ directory, onAppend }) {
   async function refreshUsageLedgerCacheNow() {
     usageLedgerCache.stats.refreshes += 1;
     let files = [];
-    try { files = await fsp.readdir(directory); } catch {
+    try { files = await fsp.readdir(paths.usage); } catch {
       if (usageLedgerCache.months.size) usageNoteChange(true);
       usageLedgerCache.months.clear();
       return [];
@@ -362,7 +362,7 @@ function createUsageLedger({ directory, onAppend }) {
     const present = new Set(order);
     for (const name of [...usageLedgerCache.months.keys()]) if (!present.has(name)) { usageLedgerCache.months.delete(name); usageNoteChange(true); }
     for (const name of order) {
-      const file = path.join(directory, name);
+      const file = path.join(paths.usage, name);
       try {
         const st = await fsp.stat(file);
         const entry = usageLedgerCache.months.get(name);

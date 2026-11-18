@@ -54,7 +54,7 @@ async function atomicWriteJson(finalPath, value, opts = {}) {
 }
 
 const { readInstallRegistry, writeInstallRegistry, recordInstallLaunch } = require('./backend/install-registry.cjs').createInstallRegistry({
-  dataDirectory: paths.data, externalRoot, samePathKey, nowIso, version: VERSION, atomicWriteJson,
+  paths, externalRoot, samePathKey, nowIso, version: VERSION, atomicWriteJson,
 });
 
 // 117q-B6(30 号文 P2-10):「读文件末尾 N 字节」原语【统一入口】。此前四处独立手写同一套动作
@@ -98,7 +98,7 @@ async function readFileTail(file, maxBytes) {
 const DurableJsonStore = require('./backend/durable-json-store.cjs').createDurableJsonStore({ fs, fsp, path, atomicWriteJson });
 
 const { ACC_MEMORY_IMPORT_SCHEMA, accMemoryImportStore, legacyAccMemoryMigrationComplete } = require('./backend/acc-memory-import-marker.cjs').createAccMemoryImportMarker({
-  DurableJsonStore, memoryDirectory: paths.memory,
+  DurableJsonStore, paths,
 });
 
 const ToolboxRegistry = require('./backend/toolbox-registry.cjs').createToolboxRegistry({ logEvent, safeJsonParse });
@@ -183,7 +183,7 @@ const { decodeClaudeCliText } = require('./backend/text-codecs.cjs');
 const { buildClaudeCliEnv, effectiveAnthropicEnv } = require('./backend/claude-cli-env.cjs');
 
 const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
-  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
+  paths, atomicWriteJson, effectiveAnthropicEnv,
 });
 
 const {

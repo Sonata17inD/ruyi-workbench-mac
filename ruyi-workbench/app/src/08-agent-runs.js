@@ -1,5 +1,5 @@
 const { gitExec, createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry } = require('./backend/agent-worktrees.cjs').createAgentWorktrees({
-  worktreesDirectory: paths.agentWorktrees, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
+  paths, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
 });
 
 // 子代理回合的外壳:两路心跳(初始化心跳 initBeat、工具心跳 toolBeat)在【任何】出口都停掉 —— 正常返回、提前返回、

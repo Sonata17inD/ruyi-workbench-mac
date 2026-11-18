@@ -9,7 +9,7 @@ function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-ledger-unit-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const session = { id: 'sess-test', messages: [], providerHistory: [] }, events = [], wakes = [], errors = [];
-  const options = { sessionsDir: root, safeSessionId: id => /^sess-[a-z]+$/.test(id) ? id : null,
+  const options = { paths: { sessions: root }, safeSessionId: id => /^sess-[a-z]+$/.test(id) ? id : null,
     sessionPath: id => path.join(root, id + '.json'), getActiveSession: () => session, getActiveRun: () => null,
     emitCompleted: e => events.push(e), onAgentEnvelopePersisted: j => wakes.push(j), logEvent: e => errors.push(e),
     neutralizeInjectedPrefixes: s => s, MAIL_TEXT_MAX: 1000, nowIso: () => '2026-11-16T00:00:00.000Z' };

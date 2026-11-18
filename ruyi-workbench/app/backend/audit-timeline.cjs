@@ -5,7 +5,7 @@ const path = require('node:path');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 const { redact } = require('./secret-redaction.cjs');
 
-function createAuditTimeline({ logsDirectory, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId, getMcpClient }) {
+function createAuditTimeline({ paths, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId, getMcpClient }) {
   // ============================================================================
   // v0.9-S8 — 审计中心 (§0.9-S8 / §4 B4). Read-only aggregation of two audit sources into ONE timeline:
   //   (1) workbench: the structured NDJSON logs logEvent() writes to dataRoot/logs/workbench-<day>.ndjson;
@@ -69,7 +69,7 @@ function createAuditTimeline({ logsDirectory, collectBridgedTools, resolveExtern
     const excludeKinds = opts && opts.excludeKinds instanceof Set && opts.excludeKinds.size ? opts.excludeKinds : null;
     const maxFiles = Math.max(1, Math.min(7, Number(opts && opts.maxFiles) || 1));
     let files;
-    try { files = await fsp.readdir(logsDirectory); } catch { return out; }
+    try { files = await fsp.readdir(paths.logs); } catch { return out; }
     const logs = files.filter(f => /^workbench-.*\.ndjson$/.test(f)).sort();
     if (!logs.length) return out;
     // Most recent file only (spec: 取最近文件, 尾部 limit 条). Read, split, tail.
@@ -78,7 +78,7 @@ function createAuditTimeline({ logsDirectory, collectBridgedTools, resolveExtern
     const picked = [];
     for (let fi = logs.length - 1; fi >= 0 && fi >= logs.length - maxFiles && picked.length < limit; fi -= 1) {
       let raw;
-      try { raw = await fsp.readFile(path.join(logsDirectory, logs[fi]), 'utf8'); } catch { continue; }
+      try { raw = await fsp.readFile(path.join(paths.logs, logs[fi]), 'utf8'); } catch { continue; }
       const lines = raw.split('\n').filter(l => l.trim());
       const recs = [];
       // 没有 kind 过滤时先取尾再解析(与修前同一个代价:大日志不必整份 JSON.parse)。
@@ -111,11 +111,11 @@ function createAuditTimeline({ logsDirectory, collectBridgedTools, resolveExtern
   async function buildOpsMetrics(days) {
     const nDays = Math.max(1, Math.min(30, Number(days) || 7));
     const out = { ok: true, days: nDays, interventions: { total: 0, bySource: {} }, missions: { started: 0, budgetExhausted: 0, budgetOverrunRate: 0 } };
-    let files; try { files = await fsp.readdir(logsDirectory); } catch { return out; }
+    let files; try { files = await fsp.readdir(paths.logs); } catch { return out; }
     const cutoff = new Date(Date.now() - nDays * 86400000).toISOString().slice(0, 10);
     const logs = files.filter(f => /^workbench-\d{4}-\d{2}-\d{2}\.ndjson$/.test(f) && f.slice(10, 20) >= cutoff).sort();
     for (const f of logs) {
-      let raw; try { raw = await fsp.readFile(path.join(logsDirectory, f), 'utf8'); } catch { continue; }
+      let raw; try { raw = await fsp.readFile(path.join(paths.logs, f), 'utf8'); } catch { continue; }
       for (const line of raw.split('\n')) {
         const t = line.trim(); if (!t) continue;
         const rec = safeJsonParse(t, null);

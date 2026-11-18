@@ -12,7 +12,7 @@ async function fixture(t, overrides = {}) {
   const run = { id: 'run', sessionId: 'session', status: 'interrupted', permissionModeAtLaunch: 'ask', nodes: [{ id: 'read', toolTier: 'read' }] };
   const calls = []; let live = false;
   const service = createAgentRecovery({
-    agentRunsRoot: root, safeSessionId: id => id === 'session', nowIso: () => 'now', isWriteTool: name => name === 'file_write',
+    paths: { agentRuns: root }, safeSessionId: id => id === 'session', nowIso: () => 'now', isWriteTool: name => name === 'file_write',
     sessions: { readSessionHeadResilient: async () => ({}), applySessionPermissionModeOverride: x => x, resolvePermissionMode: () => 'ask' },
     runs: { listAgentRuns: async () => [run], syncRunEventSeq: async () => {}, appendAgentRunEvent: (r, e) => calls.push(e.type), saveAgentRun: async r => calls.push(['save', r.autoResumeCount]), ...overrides.runs },
     execution: { hasLiveRun: () => live, launchPersistedAgentRun: async () => calls.push('launch'), ...overrides.execution },

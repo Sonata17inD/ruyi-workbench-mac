@@ -3,8 +3,8 @@
 const path = require('node:path');
 const ACC_MEMORY_IMPORT_SCHEMA = 1;
 
-function createAccMemoryImportMarker({ DurableJsonStore, memoryDirectory }) {
-  const accMemoryImportMarker = () => path.join(memoryDirectory, '.acc-memory-import-v1.json');
+function createAccMemoryImportMarker({ DurableJsonStore, paths }) {
+  const accMemoryImportMarker = () => path.join(paths.memory, '.acc-memory-import-v1.json');
   // 架构还债批 2 B3:完成标记走 DurableJsonStore(01),盘上字节与恢复口径与手写版逐字节相同:
   //   · 缺失 / 读不动 / 不是 JSON / 根不是对象 / schema 不是 1(含缺 schema)= 「还没做完」,幂等导入下次重跑;
   //     坏文件原样留着、不复制成 .corrupt(quarantine:false),不记事件 —— 与手写版一样安静;

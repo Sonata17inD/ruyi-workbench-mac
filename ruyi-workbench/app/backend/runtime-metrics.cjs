@@ -5,7 +5,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 
-function createRuntimeMetrics({ dataDirectory, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso }) {
+function createRuntimeMetrics({ paths, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso }) {
   // Request timings are bounded in memory. RSS samples cover the workbench and its known
   // children. The persisted storage trend is shared by the summary and metrics endpoints.
   const REQ_METRICS = {
@@ -30,7 +30,7 @@ function createRuntimeMetrics({ dataDirectory, activeChildren, mcpClients, colle
   // 存储趋势:storage-trend.json,点 = { ts, totalBytes, stores:{key:bytes}, engineBytes }。读失败 = 空史(不硬失败)。
   const STORAGE_TREND_MAX = 240;
   const STORAGE_TREND_MIN_GAP_MS = 3600 * 1000;
-  function storageTrendPath() { return path.join(dataDirectory, 'storage-trend.json'); }
+  function storageTrendPath() { return path.join(paths.data, 'storage-trend.json'); }
   async function readStorageTrend() {
     try { const v = safeJsonParse(await fsp.readFile(storageTrendPath(), 'utf8'), []); return Array.isArray(v) ? v : []; }
     catch { return []; }

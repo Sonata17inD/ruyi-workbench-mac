@@ -4,11 +4,11 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 
 // One synchronous owner serializes ledger read/modify/write across completion callbacks.
-function createBackgroundJobs({ sessionsDir, safeSessionId, sessionPath, getActiveSession,
+function createBackgroundJobs({ paths, safeSessionId, sessionPath, getActiveSession,
   getActiveRun, emitCompleted, onAgentEnvelopePersisted, logEvent,
   neutralizeInjectedPrefixes, MAIL_TEXT_MAX, nowIso }) {
 function backgroundJobFile(sessionId) {
-  return safeSessionId(sessionId) ? path.join(sessionsDir, 'background-jobs', sessionId + '.json') : null;
+  return safeSessionId(sessionId) ? path.join(paths.sessions, 'background-jobs', sessionId + '.json') : null;
 }
 function readBackgroundJobs(sessionId) {
   const file = backgroundJobFile(sessionId);
@@ -190,7 +190,7 @@ const pendingAgentWakeJobs = session => {
 //   · 只读 mtime 够新的,异步读,同时最多 BACKGROUND_LEDGER_SCAN_CONCURRENCY 个,让出事件循环。
 const BACKGROUND_LEDGER_SCAN_CONCURRENCY = 8;
 const recentBackgroundAgentJobSessions = async sinceMs => {
-  const dir = path.join(sessionsDir, 'background-jobs');
+  const dir = path.join(paths.sessions, 'background-jobs');
   let files = [];
   try { files = await fsp.readdir(dir); } catch { return []; }
   const candidates = files.filter(file => file.endsWith('.json') && safeSessionId(file.slice(0, -'.json'.length)));

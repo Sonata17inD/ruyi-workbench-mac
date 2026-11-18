@@ -21,7 +21,7 @@ process.env.RUYI_HOME = path.join(root, 'data');
       const ports = S.agentWorkflowPorts;
       let worktree, executions = 0, finalizations = 0;
       const worktrees = createAgentWorktrees({
-        worktreesDirectory: path.join(root, 'worktrees'), agentRunFile: S.agentRunFile,
+        paths: { agentWorktrees: path.join(root, 'worktrees') }, agentRunFile: S.agentRunFile,
         nowIso: ports.nowIso, safeSessionId: ports.safeSessionId, saveAgentRun: ports.runs.saveAgentRun,
         async runGit(args, cwd) {
           const [command, subcommand] = args;

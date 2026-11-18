@@ -784,7 +784,7 @@
       "id": "personal-workflows",
       "pattern": "<data>/agent-workflows/<id>.json",
       "owner": "../backend/agent-workflow-catalog.cjs",
-      "anchor": "agentWorkflowsDirectory",
+      "anchor": "paths.agentWorkflows",
       "schema": "object / normalized",
       "writePrimitive": "atomicWriteJson",
       "corruption": "invalid workflow skipped",

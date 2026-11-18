@@ -85,7 +85,7 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
       entry.promise = (async () => {
         const detector = makeDetector(config);
         const scope = core.createScope({ scopeId, detector, ttlMs: 365 * 86400000 });
-        const file = pathApi.join(host.data, 'privacy-scopes', key + '.json');
+        const file = pathApi.join(host.paths.data, 'privacy-scopes', key + '.json');
         const store = host.makeStore(file, key);
         let persistedRevision = -1;
         if (previous) scope.importState((await previous.promise).scope.exportState());
@@ -845,7 +845,7 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
     if (typeof scopeId !== 'string' || !scopeId || scopeId.length > 160) return '';
     const key = keyOf(scopeId);
     if (loaded.has(key)) return 'private';
-    try { await fileApi.lstat(pathApi.join(host.data, 'privacy-scopes', key + '.json')); return 'private'; }
+    try { await fileApi.lstat(pathApi.join(host.paths.data, 'privacy-scopes', key + '.json')); return 'private'; }
     catch (error) { return error.code === 'ENOENT' ? '' : 'private'; }
   }
 
@@ -864,7 +864,7 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
       const key = keyOf(id), cached = loaded.get(key);
       if (cached) { try { return (await cached.promise).scope; } catch { return null; } }
       try {
-        const file = pathApi.join(host.data, 'privacy-scopes', key + '.json');
+        const file = pathApi.join(host.paths.data, 'privacy-scopes', key + '.json');
         const stat = await fileApi.lstat(file);
         if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 2 * 1024 * 1024) return null;
         const encrypted = await host.makeStore(file, key).read();
@@ -1097,7 +1097,7 @@ function createPrivacyGateway({ core, PrivacyRegex }) {
     let scope, temporary = false;
     if (cached) scope = (await cached.promise).scope;
     else {
-      const file = pathApi.join(host.data, 'privacy-scopes', key + '.json');
+      const file = pathApi.join(host.paths.data, 'privacy-scopes', key + '.json');
       try {
         const stat = await fileApi.lstat(file);
         if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 2 * 1024 * 1024) fail('mapping_invalid');

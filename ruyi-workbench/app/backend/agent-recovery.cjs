@@ -2,7 +2,7 @@
 const fsp = require('node:fs/promises');
 
 function createAgentRecovery({
-  agentRunsRoot, isWriteTool, safeSessionId, nowIso,
+  paths, isWriteTool, safeSessionId, nowIso,
   sessions: { readSessionHeadResilient, applySessionPermissionModeOverride, resolvePermissionMode },
   runs: { listAgentRuns, syncRunEventSeq, appendAgentRunEvent, saveAgentRun },
   execution: { hasLiveRun, launchPersistedAgentRun },
@@ -102,7 +102,7 @@ const AUTO_RESUME_MAX = 2;
 async function autoResumeInterruptedRuns() {
   let config; try { config = await readConfig(); } catch { return; }
   if (config.autonomyAutoResume !== true) return;
-  let sessionDirs = []; try { sessionDirs = await fsp.readdir(agentRunsRoot, { withFileTypes: true }); } catch { return; }
+  let sessionDirs = []; try { sessionDirs = await fsp.readdir(paths.agentRuns, { withFileTypes: true }); } catch { return; }
   // 第40波:先并发收集全部 (sessionId, interruptedRun) 工作项,再池化处理 —— 旧顺序 for 的每 run 成本
   // (事件文件读 + 快照写)叠加成分钟级尾延迟。launchPersistedAgentRun 是 void 派发(不等 run 完成),
   // 并发不会串起引擎进程尖峰(顺序循环的启动本来也就是背靠背)。
@@ -141,7 +141,7 @@ async function autoResumeInterruptedRuns() {
 }
 async function markInterruptedAgentRuns() {
   let bootConfig = null; try { bootConfig = await readConfig(); } catch { /* 分级戳降级为跳过,标死不受影响 */ }
-  let sessionDirs = []; try { sessionDirs = await fsp.readdir(agentRunsRoot, { withFileTypes: true }); } catch { return; }
+  let sessionDirs = []; try { sessionDirs = await fsp.readdir(paths.agentRuns, { withFileTypes: true }); } catch { return; }
   // 第40波:与 autoResumeInterruptedRuns 同款并发化 —— 先并发收集 (sessionId, run) 工作项再池化处理。
   const workItems = [];
   await mapPool(sessionDirs.filter(d => d.isDirectory() && safeSessionId(d.name)), 4, async dirent => {

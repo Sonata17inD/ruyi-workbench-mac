@@ -5,7 +5,7 @@ const fsp = require('node:fs/promises');
 const { normalizeCwd, pathWithinRoot } = require('./path-containment.cjs');
 const { runKeyedChain } = require('./keyed-chain.cjs');
 
-function createAgentWorktrees({ worktreesDirectory, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun }) {
+function createAgentWorktrees({ paths, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun }) {
   async function gitExec(cwd, args, timeout = 30000) {
     const result = await runGit(args, cwd, timeout, { maxBuffer: 16 * 1024 * 1024, owner: { kind: 'agent-worktree' } });
     if (result.ok) return String(result.stdout || '').trim();
@@ -20,8 +20,8 @@ function createAgentWorktrees({ worktreesDirectory, runGit, safeSessionId, nowIs
     if (dirty) throw new Error('原工作区有未提交改动，无法从一致快照创建隔离节点；请先提交或移走这些改动');
     const baseCommit = await gitExec(repoRoot, ['rev-parse', 'HEAD']);
     const folder = `${safeSessionId(runId)}-${safeSessionId(nodeId)}-a${Math.max(1, Number(attempt) || 1)}`;
-    const worktreePath = path.resolve(worktreesDirectory, folder);
-    if (!pathWithinRoot(worktreePath, path.resolve(worktreesDirectory))) throw new Error('invalid agent worktree path');
+    const worktreePath = path.resolve(paths.agentWorktrees, folder);
+    if (!pathWithinRoot(worktreePath, path.resolve(paths.agentWorktrees))) throw new Error('invalid agent worktree path');
     await fsp.mkdir(path.dirname(worktreePath), { recursive: true });
     const isolation = { mode: 'worktree', status: 'running', path: worktreePath, repoRoot: path.resolve(repoRoot), baseCommit, createdAt: nowIso() };
     try { await gitExec(repoRoot, ['worktree', 'add', '--detach', worktreePath, baseCommit], 60000); }
@@ -48,7 +48,7 @@ function createAgentWorktrees({ worktreesDirectory, runGit, safeSessionId, nowIs
     //   user.name / user.email 照旧用 -c 注入(用户没配身份时也提得成)。
     await gitExec(isolation.path, [
       '-c', 'user.name=Ruyi Agent', '-c', 'user.email=agent@ruyi.local', '-c', 'commit.gpgsign=false',
-      '-c', 'core.hooksPath=' + path.join(worktreesDirectory, '.no-hooks'),
+      '-c', 'core.hooksPath=' + path.join(paths.agentWorktrees, '.no-hooks'),
       'commit', '--no-verify', '-m', `agent(${nodeId}): isolated result for ${runId}`,
     ], 60000);
     isolation.commit = await gitExec(isolation.path, ['rev-parse', 'HEAD']);
@@ -131,7 +131,7 @@ function createAgentWorktrees({ worktreesDirectory, runGit, safeSessionId, nowIs
   // 只按词法比会认成「外面的目录」,于是 worktree 永远不清。
   async function agentWorktreePathOwned(p) {
     const target = path.resolve(String(p || ''));
-    const root = path.resolve(worktreesDirectory);
+    const root = path.resolve(paths.agentWorktrees);
     if (pathWithinRoot(target, root)) return true;
     try { return pathWithinRoot(await fsp.realpath(target), await fsp.realpath(root)); } catch { return false; }
   }

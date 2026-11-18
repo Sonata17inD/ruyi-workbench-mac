@@ -9,7 +9,7 @@ const { redact } = require('./secret-redaction.cjs');
 const { VoiceLexicon } = require('./voice-lexicon.cjs');
 
 function createVoiceService({
-  dataDirectory, DurableJsonStore, appendUsageLedger, readConfig, logEvent, PrivacyGateway, ToolboxHooks,
+  paths, DurableJsonStore, appendUsageLedger, readConfig, logEvent, PrivacyGateway, ToolboxHooks,
   providerBaseWithV1, providerPostJsonOnce, providerWireProtocol,
 }) {
   // 127-114c②/④/⑤:ASR 服务商解析与出站转写【一份事实源】—— ② 的转写路由(13b)、④ 的附件管线(13b)、
@@ -134,7 +134,7 @@ function createVoiceService({
   // 容量:词条 500(04j 学词时自己先腾位置,手加的不挤);还没攒够证据的候选 300(从最久没见的裁起)。
   const voiceLexiconStore = DurableJsonStore.create({
     id: 'voice-lexicon',
-    file: () => path.join(dataDirectory, 'voice-lexicon.json'),
+    file: () => path.join(paths.data, 'voice-lexicon.json'),
     schemaVersion: VoiceLexicon.SCHEMA,
     defaultValue: () => VoiceLexicon.defaultState(),
     sanitize: VoiceLexicon.sanitizeState,

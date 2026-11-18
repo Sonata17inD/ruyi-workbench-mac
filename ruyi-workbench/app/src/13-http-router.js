@@ -1436,8 +1436,8 @@ async function startServer(opts) {
     if (isDirectServeInvocation()) {
       DATA_ROOT_MIGRATION = migrateLegacyDataRoot();
       if (DATA_ROOT_MIGRATION.moved) {
-        // All module-level DurableJsonStore files use callbacks; no store has read yet.
-        // Keep the same paths object for every consumer, even if the legacy junction failed.
+        // Rebase shared paths before recovering stores and starting runtime writers.
+        // Keep the same object for every consumer even if the legacy link cannot be created.
         const from = paths.data;
         const to = DATA_ROOT_MIGRATION.to;
         for (const key of Object.keys(paths)) paths[key] = path.join(to, path.relative(from, paths[key]));
@@ -1544,7 +1544,7 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   if (START_NOTICE.lastError) console.log(`[start] previous launch failed (${START_NOTICE.lastError.kind}): ${START_NOTICE.lastError.message}`);
   // 3.0 数据目录改名(00-boot migrateLegacyDataRoot):搬了、或该搬没搬成,都在启动行与日志里留一笔。
   if (DATA_ROOT_MIGRATION && (DATA_ROOT_MIGRATION.moved || !['next-exists', 'no-legacy', 'env'].includes(DATA_ROOT_MIGRATION.reason))) {
-    console.log(`[start] data dir ${DATA_ROOT_MIGRATION.moved ? `migrated ${DATA_ROOT_MIGRATION.from} -> ${DATA_ROOT_MIGRATION.to}${DATA_ROOT_MIGRATION.junction ? ' (old path kept as a junction)' : ''}` : `migration skipped (${DATA_ROOT_MIGRATION.reason}); still using ${paths.data}`}`);
+    console.log(`[start] data dir ${DATA_ROOT_MIGRATION.moved ? `migrated ${DATA_ROOT_MIGRATION.from} -> ${DATA_ROOT_MIGRATION.to}${DATA_ROOT_MIGRATION.junction ? ' (old path kept as a symbolic link)' : ''}` : `migration skipped (${DATA_ROOT_MIGRATION.reason}); still using ${paths.data}`}`);
     try { logEvent({ kind: 'data_root_migration', ...DATA_ROOT_MIGRATION }); } catch { /* 日志绝不阻断启动 */ }
   }
   await markInterruptedAgentRuns();

@@ -702,7 +702,7 @@ const {
   appendUsageLedger, flushUsageLedgerSync, forEachUsageRow, readUsageRows, usageLedgerCacheStats,
   usageLedgerChangesSince, usageDayKey, usageDayKeyMemo, usageRangeLowerMs,
 } = require('./backend/usage-ledger.cjs').createUsageLedger({
-  directory: paths.usage,
+  paths,
   onAppend(rec) {
     RUYI_EVENTS.emit('projection.invalidated', { sessionId: rec.sessionId, reason: 'usage' });
     if (rec.kind === 'turn') bumpMissionChangeSeq(rec.sessionId, {

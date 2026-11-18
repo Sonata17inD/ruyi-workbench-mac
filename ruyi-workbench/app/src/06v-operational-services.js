@@ -16,7 +16,7 @@ RUYI_EVENTS.subscribe((name, payload) => {
 });
 
 const { collectAudit, buildOpsMetrics, desktopAuditEntriesFromResult } = require('./backend/audit-timeline.cjs').createAuditTimeline({
-  logsDirectory: paths.logs, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId,
+  paths, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId,
   getMcpClient: id => mcpClients.get(id),
 });
 const { collectStorageStats, storageSweep } = require('./backend/storage-steward.cjs').createStorageSteward({
@@ -24,5 +24,5 @@ const { collectStorageStats, storageSweep } = require('./backend/storage-steward
 });
 const { recordRequestMetric, normalizeMetricsPath, readStorageTrend, maybeRecordStorageTrend, buildMetricsPayload } =
   require('./backend/runtime-metrics.cjs').createRuntimeMetrics({
-    dataDirectory: paths.data, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso,
+    paths, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso,
   });

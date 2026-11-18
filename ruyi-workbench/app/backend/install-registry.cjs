@@ -5,20 +5,20 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { safeJsonParse } = require('./ordinary-json.cjs');
 
-function createInstallRegistry({ dataDirectory, externalRoot, samePathKey, nowIso, version, atomicWriteJson }) {
+function createInstallRegistry({ paths, externalRoot, samePathKey, nowIso, version, atomicWriteJson }) {
   // 安装登记表 <data>/install-registry.json:每个启动过的包一行
   //   { packageRoot, version, launchMode, firstSeenAt, lastLaunchedAt, pid }
   // 所有包共用同一个数据根(dataRoot()),所以「本机都有哪些包启动过」只能记在这里。只记账、不做决定。
   const INSTALL_REGISTRY_SCHEMA = 1;
   const INSTALL_REGISTRY_MAX = 64;
-  const registryPath = path.join(dataDirectory, 'install-registry.json');
+  const registryPath = () => path.join(paths.data, 'install-registry.json');
 
   function writeInstallRegistry(packages, updatedAt = nowIso()) {
-    return atomicWriteJson(registryPath, { schema: INSTALL_REGISTRY_SCHEMA, updatedAt, packages });
+    return atomicWriteJson(registryPath(), { schema: INSTALL_REGISTRY_SCHEMA, updatedAt, packages });
   }
   function readInstallRegistry() {
     try {
-      const raw = safeJsonParse(fs.readFileSync(registryPath, 'utf8'), null);
+      const raw = safeJsonParse(fs.readFileSync(registryPath(), 'utf8'), null);
       const rows = raw && Array.isArray(raw.packages) ? raw.packages : [];
       const packages = [];
       const seen = new Set();
@@ -57,7 +57,7 @@ function createInstallRegistry({ dataDirectory, externalRoot, samePathKey, nowIs
         .filter(r => samePathKey(r.packageRoot) === key || fs.existsSync(r.packageRoot))
         .sort((a, b) => String(b.lastLaunchedAt || '').localeCompare(String(a.lastLaunchedAt || '')))
         .slice(0, INSTALL_REGISTRY_MAX);
-      await fsp.mkdir(dataDirectory, { recursive: true });
+      await fsp.mkdir(paths.data, { recursive: true });
       await writeInstallRegistry(packages, now);
       return { ok: true, packageRoot: root };
     } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }

@@ -10,13 +10,13 @@ const { boundedReadPage } = require('./text-pages.cjs');
 const { extractMainText, parseBingHtml, parseBaiduHtml, SEARCH_CJK_RE, searchPageBlocked, mergeSearchResults } = require('./html-content.cjs');
 const nowIso = () => new Date().toISOString();
 const { safeJsonParse } = require('./ordinary-json.cjs');
-function createWebTools({ cacheDirectory, atomicWriteJson, network }) {
+function createWebTools({ paths, atomicWriteJson, network }) {
 // Web cache: dataRoot/webcache/<sha256(url)>.json holding {url,title,text,ts}. Written after a successful
 // fetch; read as an OFFLINE fallback (no TTL — an old copy is still useful when there is no network — but the
 // stored ts is returned so the model can judge freshness). Exported for direct e2e read/write testing.
 function webCachePath(url) {
   const h = crypto.createHash('sha256').update(String(url)).digest('hex');
-  return path.join(cacheDirectory, `${h}.json`);
+  return path.join(paths.webcache, `${h}.json`);
 }
 async function readWebCache(url) {
   try {
@@ -28,7 +28,7 @@ async function readWebCache(url) {
 }
 async function writeWebCache(entry) {
   try {
-    await fsp.mkdir(cacheDirectory, { recursive: true });
+    await fsp.mkdir(paths.webcache, { recursive: true });
     await atomicWriteJson(webCachePath(entry.url), JSON.stringify(entry));   // 25.1 收编
     await evictWebCacheOverCap();
   } catch { /* best-effort cache write; never fail the fetch on a cache error */ }
@@ -39,16 +39,16 @@ const WEB_CACHE_HARD_MAX_ENTRIES = 2000;
 async function evictWebCacheOverCap() {
   const max = Math.max(1, Math.floor(Number(process.env.WCW_WEBCACHE_HARD_MAX)) || WEB_CACHE_HARD_MAX_ENTRIES);
   let files = [];
-  try { files = (await fsp.readdir(cacheDirectory)).filter(f => f.endsWith('.json')); } catch { return 0; }
+  try { files = (await fsp.readdir(paths.webcache)).filter(f => f.endsWith('.json')); } catch { return 0; }
   if (files.length <= max) return 0;
   const rows = [];
   for (const f of files) {
-    const st = await fsp.stat(path.join(cacheDirectory, f)).catch(() => null);
+    const st = await fsp.stat(path.join(paths.webcache, f)).catch(() => null);
     if (st) rows.push({ f, mtime: st.mtimeMs });
   }
   rows.sort((a, b) => a.mtime - b.mtime || (a.f < b.f ? -1 : 1));
   let n = 0;
-  for (const v of rows.slice(0, Math.max(0, rows.length - max))) { await fsp.unlink(path.join(cacheDirectory, v.f)).catch(() => {}); n += 1; }
+  for (const v of rows.slice(0, Math.max(0, rows.length - max))) { await fsp.unlink(path.join(paths.webcache, v.f)).catch(() => {}); n += 1; }
   return n;
 }
 

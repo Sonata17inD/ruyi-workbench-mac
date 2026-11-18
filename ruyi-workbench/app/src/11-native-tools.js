@@ -2,7 +2,7 @@ const { levenshtein } = require('./backend/path-patterns.cjs');
 const { httpRequest, webFetchFailMessage } = require('./backend/http-request.cjs');
 const { boundedReadPage } = require('./backend/text-pages.cjs');
 const BackgroundJobs = require('./backend/background-jobs.cjs').createBackgroundJobs({
-  sessionsDir: paths.sessions, safeSessionId, sessionPath,
+  paths, safeSessionId, sessionPath,
   getActiveSession: id => activeChildren.get(id)?.session,
   getActiveRun: id => activeAgentRuns.get(id),
   emitCompleted: metadata => RUYI_EVENTS.emit('background.completed', metadata),
@@ -78,7 +78,7 @@ const { dataProfile } = require('./backend/data-profiler.cjs').createDataProfile
 
 // Compose web tools with storage and connectivity ports; URL policy lives in network-policy.
 const { webFetch, webSearch, webCachePath, readWebCache, writeWebCache } = require('./backend/web-tools.cjs').createWebTools({
-  cacheDirectory: paths.webcache,
+  paths,
   atomicWriteJson,
   network: { markOnline: markNetworkOnline, probe: async timeoutMs => probeAny(networkAnchors(await readConfig().catch(() => ({}))), timeoutMs) },
 });

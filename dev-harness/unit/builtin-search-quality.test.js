@@ -137,7 +137,7 @@ test('[Q5] 人机验证页:如实说明,不说「没有结果」', async () => {
 
 test('内置搜索取消后不启动请求、分页或备用引擎', async () => {
   const { createWebTools } = require('../../ruyi-workbench/app/backend/web-tools.cjs');
-  const web = createWebTools({ cacheDirectory: root, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
+  const web = createWebTools({ paths: { webcache: root }, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
   for (const preAborted of [true, false]) {
     const controller = new AbortController();
     let requests = 0;
@@ -164,7 +164,7 @@ test('内置搜索取消后不启动请求、分页或备用引擎', async () =>
 
 test('搜索后端失败后，内置回退沿用取消信号且不再问备用引擎', async () => {
   const { createWebTools } = require('../../ruyi-workbench/app/backend/web-tools.cjs');
-  const web = createWebTools({ cacheDirectory: root, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
+  const web = createWebTools({ paths: { webcache: root }, atomicWriteJson: async () => {}, network: { markOnline() {}, probe: async () => false } });
   const controller = new AbortController();
   const seen = [];
   const server = http.createServer((req, res) => {

@@ -119,7 +119,7 @@ function pidAlive(pid) {
   if (!Number.isInteger(n) || n <= 0 || n === process.pid) return false;
   try { process.kill(n, 0); return true; } catch (e) { return Boolean(e && e.code === 'EPERM'); }
 }
-// 一次性迁移:~/.win-claude-workbench → ~/.ruyi-workbench,原处留目录联接(Windows 普通用户就能建;其它平台是目录符号链接)
+// 一次性迁移:~/.win-claude-workbench → ~/.ruyi-workbench,原处留目录符号链接
 // 指回新目录 —— 用户全局 Claude 配置里登记的 MCP 路径、计划任务、快捷方式里写死的旧路径照样能用。
 // 只在:直接运行、缺省命令 serve、没有任何数据根环境变量、新目录不存在、旧目录是真目录、旧目录里没有别的活实例
 // (runtime.json 的 pid 还活着就不动)时做。搬不动(被占用、跨卷、权限)就原样继续用旧目录,下次启动再试。
@@ -137,7 +137,7 @@ function migrateLegacyDataRoot() {
   try { fs.renameSync(legacy, next); } catch (e) { return { moved: false, reason: 'rename-failed', error: String(e && e.code || e) }; }
   _dataRootMemo = null; // 数据根从旧目录换成了新目录
   let junction = true;
-  try { fs.symlinkSync(next, legacy, 'junction'); } catch { junction = false; }
+  try { fs.symlinkSync(next, legacy, 'dir'); } catch { junction = false; }
   return { moved: true, from: legacy, to: next, junction };
 }
 // 缺省命令就是 serve(`Ruyi.exe`、`server.js`、`server.js serve --port N`、`server.js --port N`);mcp / install / doctor /
@@ -425,7 +425,7 @@ const {
   ensureDataRootReal, sensitiveDataRoots, isSensitiveDataPath, sensitiveFileIdentities,
   isSensitiveHardlinkStat, isSensitiveHardlinkAlias, sensitiveGlobsForRg,
 } = require('./backend/sensitive-paths.cjs').createSensitivePaths({ dataRoot, dataRootAliases });
-const logEvent = require('./backend/audit-log.cjs').createAuditLog({ logsDirectory: paths.logs, nowIso });
+const logEvent = require('./backend/audit-log.cjs').createAuditLog({ paths, nowIso });
 
 async function ensureDirs() {
   await Promise.all([
@@ -735,7 +735,7 @@ async function atomicWriteJson(finalPath, value, opts = {}) {
 }
 
 const { readInstallRegistry, writeInstallRegistry, recordInstallLaunch } = require('./backend/install-registry.cjs').createInstallRegistry({
-  dataDirectory: paths.data, externalRoot, samePathKey, nowIso, version: VERSION, atomicWriteJson,
+  paths, externalRoot, samePathKey, nowIso, version: VERSION, atomicWriteJson,
 });
 
 // 117q-B6(30 号文 P2-10):「读文件末尾 N 字节」原语【统一入口】。此前四处独立手写同一套动作
@@ -779,7 +779,7 @@ async function readFileTail(file, maxBytes) {
 const DurableJsonStore = require('./backend/durable-json-store.cjs').createDurableJsonStore({ fs, fsp, path, atomicWriteJson });
 
 const { ACC_MEMORY_IMPORT_SCHEMA, accMemoryImportStore, legacyAccMemoryMigrationComplete } = require('./backend/acc-memory-import-marker.cjs').createAccMemoryImportMarker({
-  DurableJsonStore, memoryDirectory: paths.memory,
+  DurableJsonStore, paths,
 });
 
 const ToolboxRegistry = require('./backend/toolbox-registry.cjs').createToolboxRegistry({ logEvent, safeJsonParse });
@@ -864,7 +864,7 @@ const { decodeClaudeCliText } = require('./backend/text-codecs.cjs');
 const { buildClaudeCliEnv, effectiveAnthropicEnv } = require('./backend/claude-cli-env.cjs');
 
 const { getProxyModelsCache, setProxyModelsCache, offlineModelList, modelCapabilityTier, buildModelHint, tierModelForNode, resolveNodeModel, fetchProxyModels, discoverModels } = require('./backend/model-selection.cjs').createModelSelection({
-  dataDirectory: paths.data, atomicWriteJson, effectiveAnthropicEnv,
+  paths, atomicWriteJson, effectiveAnthropicEnv,
 });
 
 const {
@@ -2334,7 +2334,7 @@ const {
   appendUsageLedger, flushUsageLedgerSync, forEachUsageRow, readUsageRows, usageLedgerCacheStats,
   usageLedgerChangesSince, usageDayKey, usageDayKeyMemo, usageRangeLowerMs,
 } = require('./backend/usage-ledger.cjs').createUsageLedger({
-  directory: paths.usage,
+  paths,
   onAppend(rec) {
     RUYI_EVENTS.emit('projection.invalidated', { sessionId: rec.sessionId, reason: 'usage' });
     if (rec.kind === 'turn') bumpMissionChangeSeq(rec.sessionId, {
@@ -4994,7 +4994,7 @@ const {
   normalizeAgentWorkflow, normalizeWaitSpec, normalizeWorkflowCondition, normalizeWorkflowLoop,
 } = require('./backend/agent-workflow-catalog.cjs');
 const { getAgentWorkflows, saveAgentWorkflow, deleteAgentWorkflow } = createAgentWorkflowCatalog({
-  agentWorkflowsDirectory: paths.agentWorkflows, atomicWriteJson,
+  paths, atomicWriteJson,
 });
 
 // Both turn assembly and tool dispatch consume the same skill registry.
@@ -5008,7 +5008,7 @@ const {
   resolveAsrFixProvider, resolveAsrProvider, resolveAsrStreamProvider, transcribeAudioViaProvider,
   voiceLexiconAsrPromptFor, voiceLexiconRead, voiceLexiconUpdate,
 } = require('./backend/voice-service.cjs').createVoiceService({
-  dataDirectory: paths.data, DurableJsonStore, appendUsageLedger, readConfig, logEvent, PrivacyGateway, ToolboxHooks,
+  paths, DurableJsonStore, appendUsageLedger, readConfig, logEvent, PrivacyGateway, ToolboxHooks,
   providerBaseWithV1, providerPostJsonOnce, providerWireProtocol,
 });
 
@@ -5030,7 +5030,7 @@ RUYI_EVENTS.subscribe((name, payload) => {
 });
 
 const { collectAudit, buildOpsMetrics, desktopAuditEntriesFromResult } = require('./backend/audit-timeline.cjs').createAuditTimeline({
-  logsDirectory: paths.logs, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId,
+  paths, collectBridgedTools, resolveExternalMcpServers, sanitizeServerId,
   getMcpClient: id => mcpClients.get(id),
 });
 const { collectStorageStats, storageSweep } = require('./backend/storage-steward.cjs').createStorageSteward({
@@ -5038,7 +5038,7 @@ const { collectStorageStats, storageSweep } = require('./backend/storage-steward
 });
 const { recordRequestMetric, normalizeMetricsPath, readStorageTrend, maybeRecordStorageTrend, buildMetricsPayload } =
   require('./backend/runtime-metrics.cjs').createRuntimeMetrics({
-    dataDirectory: paths.data, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso,
+    paths, activeChildren, mcpClients, collectStorageStats, atomicWriteJson, nowIso,
   });
 
 // Both discovery and execution use one cached capability matrix.
@@ -6644,7 +6644,7 @@ const memoryProposalStateChains = new Map(); // 模型工具写槽与批量卡�
 
 // frontmatter 单行值消毒:去换行(parseFrontmatter 按行 key: value 解析,值里的换行会破坏结构)。
 const MemoryStore = require('./backend/memory-store.cjs').createMemoryStore({
-  memoryRoot: paths.memory, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
+  paths, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
   limits: { MEMORY_TYPES, MEMORY_METADATA_READ_CAP, CORE_MEMORY_SUMMARY_CAP, MEMORY_USAGE_TOUCH_MS, MEMORY_RULE_TOUCH_MS },
 });
 function fmVal(...args) { return MemoryStore.fmVal(...args); }
@@ -10966,7 +10966,7 @@ async function runClaudeSubAgentOnce({ config, parentSession, task, displayTask,
 }
 
 const { gitExec, createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry } = require('./backend/agent-worktrees.cjs').createAgentWorktrees({
-  worktreesDirectory: paths.agentWorktrees, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
+  paths, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
 });
 
 // 子代理回合的外壳:两路心跳(初始化心跳 initBeat、工具心跳 toolBeat)在【任何】出口都停掉 —— 正常返回、提前返回、
@@ -12762,7 +12762,7 @@ const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn(
 
 // Boot recovery restarts runs through the actual workflow launcher.
 const AgentRecovery = require('./backend/agent-recovery.cjs').createAgentRecovery({
-  agentRunsRoot: paths.agentRuns, isWriteTool: name => NODE_WRITE_FAMILY.has(name), safeSessionId, nowIso,
+  paths, isWriteTool: name => NODE_WRITE_FAMILY.has(name), safeSessionId, nowIso,
   sessions: { readSessionHeadResilient, applySessionPermissionModeOverride, resolvePermissionMode },
   runs: { listAgentRuns, syncRunEventSeq, appendAgentRunEvent, saveAgentRun },
   execution: { hasLiveRun: id => activeAgentRuns.has(id), launchPersistedAgentRun },
@@ -12843,7 +12843,7 @@ const { levenshtein } = require('./backend/path-patterns.cjs');
 const { httpRequest, webFetchFailMessage } = require('./backend/http-request.cjs');
 const { boundedReadPage } = require('./backend/text-pages.cjs');
 const BackgroundJobs = require('./backend/background-jobs.cjs').createBackgroundJobs({
-  sessionsDir: paths.sessions, safeSessionId, sessionPath,
+  paths, safeSessionId, sessionPath,
   getActiveSession: id => activeChildren.get(id)?.session,
   getActiveRun: id => activeAgentRuns.get(id),
   emitCompleted: metadata => RUYI_EVENTS.emit('background.completed', metadata),
@@ -12919,7 +12919,7 @@ const { dataProfile } = require('./backend/data-profiler.cjs').createDataProfile
 
 // Compose web tools with storage and connectivity ports; URL policy lives in network-policy.
 const { webFetch, webSearch, webCachePath, readWebCache, writeWebCache } = require('./backend/web-tools.cjs').createWebTools({
-  cacheDirectory: paths.webcache,
+  paths,
   atomicWriteJson,
   network: { markOnline: markNetworkOnline, probe: async timeoutMs => probeAny(networkAnchors(await readConfig().catch(() => ({}))), timeoutMs) },
 });
@@ -15986,8 +15986,8 @@ async function startServer(opts) {
     if (isDirectServeInvocation()) {
       DATA_ROOT_MIGRATION = migrateLegacyDataRoot();
       if (DATA_ROOT_MIGRATION.moved) {
-        // All module-level DurableJsonStore files use callbacks; no store has read yet.
-        // Keep the same paths object for every consumer, even if the legacy junction failed.
+        // Rebase shared paths before recovering stores and starting runtime writers.
+        // Keep the same object for every consumer even if the legacy link cannot be created.
         const from = paths.data;
         const to = DATA_ROOT_MIGRATION.to;
         for (const key of Object.keys(paths)) paths[key] = path.join(to, path.relative(from, paths[key]));
@@ -16094,7 +16094,7 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   if (START_NOTICE.lastError) console.log(`[start] previous launch failed (${START_NOTICE.lastError.kind}): ${START_NOTICE.lastError.message}`);
   // 3.0 数据目录改名(00-boot migrateLegacyDataRoot):搬了、或该搬没搬成,都在启动行与日志里留一笔。
   if (DATA_ROOT_MIGRATION && (DATA_ROOT_MIGRATION.moved || !['next-exists', 'no-legacy', 'env'].includes(DATA_ROOT_MIGRATION.reason))) {
-    console.log(`[start] data dir ${DATA_ROOT_MIGRATION.moved ? `migrated ${DATA_ROOT_MIGRATION.from} -> ${DATA_ROOT_MIGRATION.to}${DATA_ROOT_MIGRATION.junction ? ' (old path kept as a junction)' : ''}` : `migration skipped (${DATA_ROOT_MIGRATION.reason}); still using ${paths.data}`}`);
+    console.log(`[start] data dir ${DATA_ROOT_MIGRATION.moved ? `migrated ${DATA_ROOT_MIGRATION.from} -> ${DATA_ROOT_MIGRATION.to}${DATA_ROOT_MIGRATION.junction ? ' (old path kept as a symbolic link)' : ''}` : `migration skipped (${DATA_ROOT_MIGRATION.reason}); still using ${paths.data}`}`);
     try { logEvent({ kind: 'data_root_migration', ...DATA_ROOT_MIGRATION }); } catch { /* 日志绝不阻断启动 */ }
   }
   await markInterruptedAgentRuns();
@@ -28031,7 +28031,7 @@ const ExternalBotDiscovery = (() => {
 })();
 
 // 81: This administration surface requires the workbench token, including loopback clients.
-PrivacyGateway.setHost({ data: paths.data, isRegisteredTool: name => Object.prototype.hasOwnProperty.call(TOOL_HANDLERS, name) || Boolean(nativeToolSchema(name)), normalizeToolInvokeArgs: args => normalizeToolInvokeArgs(args), makeStore: (file, key) => DurableJsonStore.create({
+PrivacyGateway.setHost({ paths, isRegisteredTool: name => Object.prototype.hasOwnProperty.call(TOOL_HANDLERS, name) || Boolean(nativeToolSchema(name)), normalizeToolInvokeArgs: args => normalizeToolInvokeArgs(args), makeStore: (file, key) => DurableJsonStore.create({
   id: 'privacy-mapping-' + key, file, schemaKey: 'version', schemaVersion: 1, cache: false, strictRead: true, quarantine: false,
   defaultValue: () => ({}), validate: value => value.version === 1 && typeof value.instanceId === 'string' && !!value.envelope,
 }) });

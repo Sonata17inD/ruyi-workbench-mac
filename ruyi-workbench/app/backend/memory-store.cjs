@@ -3,20 +3,20 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
 const { parseFrontmatter, firstParaDesc } = require('./document-metadata.cjs');
-function createMemoryStore({ memoryRoot, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
+function createMemoryStore({ paths, atomicWriteJson, safeJsonParse, SKILL_ID_RE, makeId, nowIso,
   limits: { MEMORY_TYPES, MEMORY_METADATA_READ_CAP, CORE_MEMORY_SUMMARY_CAP, MEMORY_USAGE_TOUCH_MS, MEMORY_RULE_TOUCH_MS },
 }) {
 function fmVal(s) { return String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').trim(); }
 
-function memoryGlobalDir() { return path.join(memoryRoot, 'global'); }
+function memoryGlobalDir() { return path.join(paths.memory, 'global'); }
 // Project identity preserves Mac path spelling and case; existing keys remain unchanged.
 function projectKeyForCwd(cwd) {
   let p = path.resolve(String(cwd || ''));
 
   return crypto.createHash('sha256').update(p, 'utf8').digest('hex').slice(0, 16);
 }
-function memoryProjectDir(cwd) { return path.join(memoryRoot, 'project', projectKeyForCwd(cwd)); }
-function memoryUsageFile() { return path.join(memoryRoot, '_usage-v1.json'); }
+function memoryProjectDir(cwd) { return path.join(paths.memory, 'project', projectKeyForCwd(cwd)); }
+function memoryUsageFile() { return path.join(paths.memory, '_usage-v1.json'); }
 function memoryUsageKey(entry, cwd) {
   return entry.scope === 'global' ? 'global:' + entry.id : 'project:' + projectKeyForCwd(cwd) + ':' + entry.id;
 }
@@ -74,7 +74,7 @@ async function touchMemoryUsage(entries, cwd, reason = 'relevant') {
       changed = true;
     }
     if (!changed) return;
-    await fsp.mkdir(memoryRoot, { recursive: true });
+    await fsp.mkdir(paths.memory, { recursive: true });
     await atomicWriteJson(memoryUsageFile(), { schema: 1, updatedAt: now, entries: state.entries });
   }).catch(() => {});
   memoryUsageWriteChain = job;
@@ -84,7 +84,7 @@ async function mutateMemoryUsageState(mutator) {
   const job = memoryUsageWriteChain.then(async () => {
     const state = await readMemoryUsageState();
     if (mutator(state.entries) === false) return;
-    await fsp.mkdir(memoryRoot, { recursive: true });
+    await fsp.mkdir(paths.memory, { recursive: true });
     await atomicWriteJson(memoryUsageFile(), { schema: 1, updatedAt: nowIso(), entries: state.entries });
   }).catch(() => {});
   memoryUsageWriteChain = job;
@@ -189,7 +189,7 @@ async function loadMemoryRegistry(cwd) {
 
 // 扫描 project/ 下各组(除当前组)的 meta.json + 记忆条目,供面板「迁移到当前项目」列出旧项目组(C1)。
 async function listMemoryProjectGroups(excludeKey) {
-  const base = path.join(memoryRoot, 'project');
+  const base = path.join(paths.memory, 'project');
   const out = [];
   let dirs = [];
   try { dirs = await fsp.readdir(base, { withFileTypes: true }); } catch { return out; }

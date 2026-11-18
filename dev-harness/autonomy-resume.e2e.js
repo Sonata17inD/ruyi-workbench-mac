@@ -33,9 +33,10 @@ function req(method, p, body, headers = {}) {
 async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.6-6.3s 且余量过窄,是「FAIL workbench up」假红的根(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { try { const r = await req('GET', '/health'); if (r.status === 200) return true; } catch {} await sleep(150); } return false; }
 const readBackend = file => fs.readFileSync(path.join(WB, 'app/backend', file), 'utf8');
-const src = readServerSource() + '\n' + readBackend('agent-recovery.cjs');
+const src = [readServerSource(), ...['agent-recovery.cjs', 'config-defaults.cjs', 'config-schema.cjs'].map(readBackend)].join('\n');
 const launchedRun = readBackend('persisted-agent-launch.cjs');
 const workflow = readBackend('agent-workflow.cjs');
+const control = readBackend('agent-run-control.cjs');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
@@ -50,7 +51,7 @@ ok(/const AUTO_RESUME_MAX = 2;/.test(src), 'S 崩溃环上限 AUTO_RESUME_MAX=2'
 // continue 变 return(回调内早退 == 旧循环 continue 语义);fail-closed 语义不变:护栏没落盘就不启动。
 ok(/try \{ await saveAgentRun\(run\); \} catch \{ guardPersisted = false; \}/.test(src) && /if \(!guardPersisted\) return;/.test(src), 'S 崩溃环护栏先落盘,写不进就不启动(fail-closed)');
 ok((src.match(/await saveAgentRun\(run\)\.catch\(\(\) => \{\}\); \/\/ 29b 顺手修/g) || []).length >= 1 && /if \(dirty\) await saveAgentRun\(run\)\.catch\(\(\) => \{\}\);/.test(src), 'S boot 标死写盘防炸(磁盘故障不再放倒 startServer)');
-ok(/if \(interventionKind\) bumpRunIntervention\(run, interventionKind\);/.test(launchedRun) && /interventionKind: 'resume'/.test(src) && /interventionKind: 'retry_node'/.test(src), 'S 冷 resume/retry 计干预;boot 自动续跑不传(不计)');
+ok(/if \(interventionKind\) bumpRunIntervention\(run, interventionKind\);/.test(launchedRun) && /interventionKind: 'resume'/.test(control) && /interventionKind: 'retry_node'/.test(control), 'S 冷 resume/retry 计干预;boot 自动续跑不传(不计)');
 ok(/delete run\.resumeTier; delete run\.resumeTierReasons;/.test(workflow) && /delete run\.pendingReview;/.test(workflow), 'S resume 清分级戳 + 顺手清 28d pendingReview(此前只设不清)');
 // 2026-10:比对用线程的生效档(agentRunPermissionMode:会话级 > 全局),与续跑、自动续跑决策同一个解析。
 ok(/if \(bootConfig\) \{ const cls = classifyRunResumeTier\(run, await agentRunPermissionMode\(run\.sessionId, bootConfig\)\);/.test(src), 'S 中断标记时盖分级戳(展示用;决策时重算)');

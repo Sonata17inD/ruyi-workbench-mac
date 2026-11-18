@@ -141,7 +141,7 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
   console.log('── S3: 双引擎 tier 等价 ──');
   const { createModelSelection } = require('../ruyi-workbench/app/backend/model-selection.cjs');
   fs.writeFileSync(path.join(HOME, 'proxy-models-cache.json'), JSON.stringify({ models: [{ id: 'kimi-k2' }] }));
-  const tier = createModelSelection({ dataDirectory: HOME });
+  const tier = createModelSelection({ paths: { data: HOME } });
   const prov = { id: 'p1', model: 'qwen-max', models: [{ id: 'qwen-max' }, { id: 'qwen-turbo' }, { id: 'glm-4' }] };
   const cfgT = { agentAutoModelTiering: true, extraModels: [], knownModels: [] };
   for (const t of ['read', 'edit', 'exec']) {
