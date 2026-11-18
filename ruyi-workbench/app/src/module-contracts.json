@@ -70,6 +70,7 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
+        "appendPromptToLastUserMessage",
         "boundToolResultForDisplay",
         "bridgedToolDisabledByPolicy",
         "bridgedWriteRelativePathArg",
@@ -85,6 +86,7 @@
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
         "collectDisplayUrlRestores",
+        "compactionSummaryPairEnd",
         "computeProviderCost",
         "configSecretValueOrCleared",
         "configUrlOrCleared",
@@ -120,6 +122,7 @@
         "fs",
         "fsp",
         "hashArgs",
+        "historyStartsWithCompactionSummary",
         "http",
         "httpGetGuarded",
         "isContextOverflowError",
@@ -1813,7 +1816,6 @@
         "SESSION_HEAD_READ_RETRIES",
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
-        "SESSION_NOTES_MAX_CHARS",
         "SESSION_SCRATCHPAD_LIMITS",
         "SESSION_SCRATCHPAD_SCHEMA",
         "SESSION_STORAGE_VERSION",
@@ -1841,6 +1843,7 @@
         "boundedChangeText",
         "buildMissionAcceptanceProjection",
         "buildMissionResult",
+        "buildSessionNotesInjectPrompt",
         "buildTurnSummary",
         "bumpMissionChangeSeq",
         "bumpRunIntervention",
@@ -1851,12 +1854,14 @@
         "compactInterventionJournal",
         "createMissionContainer",
         "createSession",
+        "createSessionNotes",
         "danglingTurnState",
         "detectDanglingTurn",
         "dropInterventionSessionState",
         "dropSessionBodyState",
         "dropSessionTitleOverride",
         "evaluateMissionCheck",
+        "extractSessionNotes",
         "fileToolWorkspaceDir",
         "finalizeMissionAfterTurn",
         "flushAgentRunEvents",
@@ -1903,7 +1908,9 @@
         "markInterruptedInterventions",
         "materializeCheckpointEditorDiff",
         "maybeFinalizeMission",
+        "maybeWriteSessionNotes",
         "mergeMissionBeforeSave",
+        "mergeSessionNotes",
         "missionAttachThread",
         "missionChangeFilePath",
         "missionContainerAcceptanceStamp",
@@ -1926,6 +1933,7 @@
         "normalizeTodoItems",
         "overlayUnflushedSessionIndex",
         "parseEventWindow",
+        "parseSessionNotesMarkdown",
         "patchMissionContainer",
         "planSessionBodyAppend",
         "preflightWriteBoundary",
@@ -1954,6 +1962,8 @@
         "registerIntervention",
         "rehydrateObservation",
         "rememberLastUsedEngineRoute",
+        "removeSessionNotes",
+        "renderSessionNotesMarkdown",
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
         "repairProviderHistoryToolArgs",
@@ -1988,7 +1998,6 @@
         "sessionMetaIsSteward",
         "sessionMissionId",
         "sessionNotesPath",
-        "sessionNotesWriteChains",
         "sessionObjectIsStale",
         "sessionOmittedProviderHistory",
         "sessionProviderHistoryLength",
@@ -3412,6 +3421,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "removeSessionNotes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "scheduleSessionIndexUpdate",
           "kinds": [
             "call"
@@ -3434,13 +3450,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMissionId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionNotesPath",
           "kinds": [
             "read"
           ]
@@ -5579,6 +5588,7 @@
         "buildPlaybookIndexSection",
         "buildProviderSystemPrompt",
         "buildRuntimeIdentityFacts",
+        "buildSessionScratchpadInjectPrompt",
         "buildSkillsPromptSection",
         "buildStableSystemPrompt",
         "buildToolCustomizationHint",
@@ -8486,6 +8496,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "appendPromptToLastUserMessage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "boundToolResultForDisplay",
           "kinds": [
             "call"
@@ -8909,6 +8926,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "buildSessionNotesInjectPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
             "call"
@@ -9001,6 +9025,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "maybeWriteSessionNotes",
           "kinds": [
             "call"
           ]
@@ -9436,6 +9467,13 @@
         {
           "provider": "04l-skill-registry.js",
           "symbol": "resolveEnabledSkillEntries",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildSessionScratchpadInjectPrompt",
           "kinds": [
             "call"
           ]
@@ -10279,28 +10317,7 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "appendPromptToLastUserMessage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "buildObservationRecallPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "buildSessionNotesInjectPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "buildSessionScratchpadInjectPrompt",
           "kinds": [
             "call"
           ]
@@ -10336,13 +10353,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "maybeAutoCompact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "maybeWriteSessionNotes",
           "kinds": [
             "call"
           ]
@@ -10593,10 +10603,6 @@
         "OBSERVATION_TEXT_HEAD",
         "OBSERVATION_TEXT_TAIL",
         "READ_DEDUP_PREFIX",
-        "SESSION_NOTES_INJECT_MAX_CHARS",
-        "SESSION_NOTES_SECTION_INDEXES",
-        "SESSION_NOTES_TITLES",
-        "SESSION_SCRATCHPAD_INJECT_MAX_CHARS",
         "SUMMARY_CALL_CAP_CACHE",
         "SUMMARY_CALL_POLICY_RULE",
         "SUMMARY_EFFORT_ORDER",
@@ -10618,13 +10624,10 @@
         "agentNodeContextWindow",
         "aggregateSummaryCalls",
         "anySummarySignal",
-        "appendPromptToLastUserMessage",
         "applySummaryCallPolicy",
         "applySummaryEntityCheck",
         "buildCompactionToolIndex",
         "buildObservationRecallPrompt",
-        "buildSessionNotesInjectPrompt",
-        "buildSessionScratchpadInjectPrompt",
         "buildSummaryFactTableMessages",
         "buildSummaryRefineMessages",
         "calibratedEstimate",
@@ -10636,7 +10639,6 @@
         "compactionRefetchRefusal",
         "compactionRefetchWarning",
         "compactionSummaryFailures",
-        "compactionSummaryPairEnd",
         "compactionTaskText",
         "compactionToolArgsDigest",
         "configuredConversationWindow",
@@ -10648,13 +10650,11 @@
         "estimateFactor",
         "evaporateBudgetBoundary",
         "evaporateHistory",
-        "extractSessionNotes",
         "extractSummaryEntities",
         "extractSummaryTaskEvidence",
         "fileReadDedupKey",
         "fitHistoryForSummary",
         "historyHasFullToolResult",
-        "historyStartsWithCompactionSummary",
         "historyUnitStarts",
         "isReducedObservationView",
         "lastSessionContextTokens",
@@ -10665,16 +10665,12 @@
         "markSummaryCallPolicyUnsupported",
         "maybeAutoCompact",
         "maybeCompactSubHistory",
-        "maybeWriteSessionNotes",
         "measureObservationReductionShadow",
-        "mergeSessionNotes",
-        "mergeSessionNotesLines",
         "mergeSummaryTaskEvidence",
         "noteEstimateSample",
         "noteWindowOvershoot",
         "observationToolNames",
         "openCompactMarker",
-        "parseSessionNotesMarkdown",
         "persistContextCalibration",
         "pickSummaryFailure",
         "privacySummarySliceEnd",
@@ -10687,14 +10683,12 @@
         "recentTurnsBoundary",
         "recordCompactUsage",
         "reduceObservationContent",
-        "renderSessionNotesMarkdown",
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
         "runAgentExternalCompact",
         "runAutoCompaction",
         "runForcedOverflowCompaction",
         "runProviderCompact",
-        "sessionNotesBodyEmpty",
         "singleSummaryCall",
         "stripSummaryTaskEvidence",
         "summaryCallPolicyKey",
@@ -10729,6 +10723,13 @@
           "kinds": [
             "call",
             "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "compactionSummaryPairEnd",
+          "kinds": [
+            "call"
           ]
         },
         {
@@ -10776,6 +10777,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "fmtTokensServer",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "historyStartsWithCompactionSummary",
           "kinds": [
             "call"
           ]
@@ -10901,27 +10909,6 @@
         },
         {
           "provider": "01c-runtime-flags.js",
-          "symbol": "sessionNotesEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "sessionNotesInjectEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "sessionNotesMergeEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
           "symbol": "summaryEntityCheckEnabled",
           "kinds": [
             "call"
@@ -10937,13 +10924,6 @@
         {
           "provider": "01c-runtime-flags.js",
           "symbol": "summaryFactTableEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "summaryPromptI18nEnabled",
           "kinds": [
             "call"
           ]
@@ -10985,14 +10965,14 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "mutateSession",
+          "symbol": "maybeWriteSessionNotes",
           "kinds": [
             "call"
           ]
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "readSessionNotes",
+          "symbol": "mutateSession",
           "kinds": [
             "call"
           ]
@@ -11021,13 +11001,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "writeHistorySnapshot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "writeSessionNotes",
           "kinds": [
             "call"
           ]
@@ -24419,6 +24392,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "appendPromptToLastUserMessage",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "AUTOEXEC_DENYLIST",
           "kinds": [
             "read"
@@ -24518,6 +24498,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "hashArgs",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "historyStartsWithCompactionSummary",
           "kinds": [
             "read"
           ]
@@ -25218,6 +25205,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "buildSessionNotesInjectPrompt",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "buildTurnSummary",
           "kinds": [
             "read"
@@ -25261,6 +25255,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "extractSessionNotes",
           "kinds": [
             "read"
           ]
@@ -25372,6 +25373,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "maybeWriteSessionNotes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "mergeSessionNotes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "MISSION_CONTAINER_MAX_FILES",
           "kinds": [
             "read"
@@ -25408,6 +25423,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "normalizeSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "parseSessionNotesMarkdown",
           "kinds": [
             "read"
           ]
@@ -25478,6 +25500,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "rehydrateObservation",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "renderSessionNotesMarkdown",
           "kinds": [
             "read"
           ]
@@ -27703,21 +27732,7 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "appendPromptToLastUserMessage",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "buildObservationRecallPrompt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "buildSessionNotesInjectPrompt",
           "kinds": [
             "read"
           ]
@@ -27822,13 +27837,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "extractSessionNotes",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "extractSummaryEntities",
           "kinds": [
             "read"
@@ -27844,13 +27852,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "fitHistoryForSummary",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "historyStartsWithCompactionSummary",
           "kinds": [
             "read"
           ]
@@ -27878,21 +27879,7 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "maybeWriteSessionNotes",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "measureObservationReductionShadow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "mergeSessionNotes",
           "kinds": [
             "read"
           ]
@@ -27914,13 +27901,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "openCompactMarker",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "parseSessionNotesMarkdown",
           "kinds": [
             "read"
           ]
@@ -27963,13 +27943,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "reduceObservationContent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "renderSessionNotesMarkdown",
           "kinds": [
             "read"
           ]

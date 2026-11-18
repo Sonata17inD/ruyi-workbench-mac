@@ -15,7 +15,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-notes-refresh-'));
 for (const key of ['RUYI_HOME', 'WIN_CLAUDE_WORKBENCH_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
 const s = loadServerInternals([
   'createSession', 'saveSession', 'runSessionTurn', 'readSessionNotes', 'sessionNotesPath',
-  'sessionNotesWriteChains', 'flushSessionIndex', 'runAutoCompaction',
+  'maybeWriteSessionNotes', 'deleteSession', 'flushSessionIndex', 'runAutoCompaction',
 ], { withEval: true });
 const originalAutoCompaction = s.runAutoCompaction;
 const stateKey = '__ruyiNotesRefreshScenario';
@@ -73,7 +73,6 @@ after(async () => {
   s.__eval(`runAutoCompaction = globalThis.${stateKey}`);
   delete globalThis[stateKey];
   if (fake) await fake.close();
-  await Promise.all([...s.sessionNotesWriteChains.values()].map(chain => chain.catch(() => {})));
   await s.flushSessionIndex();
   fs.rmSync(root, { recursive: true, force: true });
 });
@@ -82,8 +81,6 @@ test('同回合两次 L2:第二次摘要省略旧教学时,下一发请求回注
   armScenario([summary(SUMMARY_TOKEN + ':先保留源表,再按账号匹配写目标列,最后核对总数'), summary('沿用最新配表决定')], 2);
   const { session, finished } = await runTurn('two compactions');
   await finished;
-  // 修前旁车是 fire-and-forget,先排空它再确认教学并没有在磁盘上丢失。
-  await Promise.all([...s.sessionNotesWriteChains.values()].map(chain => chain.catch(() => {})));
   assert.equal(scenario.requests.length, 3, '工具循环确实走了三次模型调用');
   assert.match(await s.readSessionNotes(session.id), new RegExp(SUMMARY_TOKEN), '旧教学仍在合并笔记里');
   assert.ok(JSON.stringify(scenario.requests[1].messages).includes(SUMMARY_TOKEN), '第一次摘要已经带着刚学到的流程');
@@ -128,7 +125,6 @@ test('L2 笔记写入尚在飞时,下一发请求等写完再继续', async () =
     const first = await Promise.race([requested.then(() => 'requested'), delay(1000).then(() => 'waiting')]);
     releaseWrite();
     await finished;
-    await Promise.all([...s.sessionNotesWriteChains.values()].map(chain => chain.catch(() => {})));
     assert.equal(first, 'waiting', '旁车写还没完成时不发下一次模型请求');
     assert.equal(requestedBeforeNotesCommitted, false, '请求没有越过在飞的笔记写入');
     assert.match(await s.readSessionNotes(session.id), new RegExp(SUMMARY_TOKEN));
@@ -137,4 +133,47 @@ test('L2 笔记写入尚在飞时,下一发请求等写完再继续', async () =
     if (finished) await finished.catch(() => {});
     fsp.writeFile = originalWriteFile;
   }
+});
+
+test('concurrent sidecar merges retain both summaries and deletion drains an in-flight write', async t => {
+  const session = await s.createSession({ title: 'serialized notes', cwd: root });
+  await s.saveSession(session);
+  const config = { runtimeSessionNotesV1: true, runtimeSessionNotesMergeV1: true };
+  const write = note => s.maybeWriteSessionNotes(session, summary(note), config);
+  await Promise.all([write('first decision'), write('second decision')]);
+  assert.match(await s.readSessionNotes(session.id), /second decision\nfirst decision/);
+
+  const filename = s.sessionNotesPath(session.id);
+  const started = Promise.withResolvers();
+  const release = Promise.withResolvers();
+  const headRemoved = Promise.withResolvers();
+  const writeFile = fsp.writeFile;
+  const unlink = fsp.unlink;
+  t.mock.method(fsp, 'unlink', async filename => {
+    const result = await unlink(filename);
+    if (String(filename) === path.join(root, 'sessions', session.id + '.json')) headRemoved.resolve();
+    return result;
+  });
+  t.mock.method(fsp, 'writeFile', async (file, ...args) => {
+    if (String(file).startsWith(filename + '.') && String(file).endsWith('.tmp')) {
+      started.resolve();
+      await release.promise;
+    }
+    return writeFile(file, ...args);
+  });
+  const pending = write('in flight');
+  let deletion;
+  try {
+    await started.promise;
+    deletion = s.deleteSession(session.id);
+    await headRemoved.promise;
+    const result = await Promise.race([deletion.then(() => 'deleted'), delay(100).then(() => 'waiting')]);
+    assert.equal(result, 'waiting', 'deletion waits for sidecar writes already in flight');
+  } finally {
+    release.resolve();
+    await pending;
+    await deletion;
+  }
+  await write('after deletion');
+  assert.equal(await s.readSessionNotes(session.id), null);
 });

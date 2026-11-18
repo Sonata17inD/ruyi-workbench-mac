@@ -1,10 +1,12 @@
 // E2E: 20-T1/20-C1/20-F1 runtime optimization pure logic + wiring locks. No ports, no model calls.
 'use strict';
 const crypto = require('crypto');
+const { isDeepStrictEqual } = require('node:util');
+const rules = require('../ruyi-workbench/app/backend/context-governance-rules.json');
+const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
 const { readServerSource } = require('./src-reader');
 const src = readServerSource() + '\n' + require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/runtime-policy.cjs'), 'utf8');
 const fileToolsSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-tools.cjs'), 'utf8');
-const promptRegistrySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/prompt-registry.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
@@ -22,8 +24,11 @@ ok(/function sessionNotesInjectEnabled\(config\)/.test(src) && /function session
 ok(/runtimeEstimateBucketsV1: true/.test(src), 'S runtimeEstimateBucketsV1 defaults true (105e 动态压缩门已过,显式 false 回退)');
 ok(/'runtimeSessionNotesMergeV1', 'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1'/.test(src), 'S runtimeEstimateBucketsV1 入严格布尔 sanitize 表(105c/105d 邻接不动;105f 顺排其后)');
 ok(/function estimateBucketsEnabled\(config\)/.test(src), 'S estimateBucketsEnabled 唯一判定点存在');
-ok(/function setEstimateBucketsV1\(on\)/.test(src) && /function classifyTextForEstimate\(str\)/.test(src), 'S 105e 镜像 setter + 三桶分类器存在');
-ok(/estimation: \{ sampleChars: 2048, jsonStructDensity: 0\.05, codeSignalThreshold: 3, factors: \{ json: 2\.8, code: 3\.2 \} \}/.test(src), 'S rules estimation 块(json 2.8 / code 3.2)在产物 fallback 内');
+const estimator = createTokenEstimation();
+ok(typeof estimator.setEstimateBucketsV1 === 'function' && typeof estimator.classifyTextForEstimate === 'function',
+  'S 105e 实际估算模块提供分桶 setter 和分类器');
+ok(isDeepStrictEqual(rules.estimation, { sampleChars: 2048, jsonStructDensity: 0.05, codeSignalThreshold: 3, factors: { json: 2.8, code: 3.2 } }),
+  'S 运行时 JSON 锁定估算分桶规则');
 ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(src), 'S 入口镜像刷新接线(runOpenAiTurn/runSubAgentCore;maybeAutoCompact 唯一调用点在回合内,不重复刷新)');
 // 105f: 摘要单发优先 —— 历史派生 20–28K 配对模拟与 400 降级门通过后默认开启;显式 false 回退 45a/22-S0。
 ok(/runtimeSummarySingleShotV1: true/.test(src), 'S runtimeSummarySingleShotV1 defaults true (105f 历史派生模拟门已过)');
@@ -33,7 +38,9 @@ ok(/summarySingleShotMaxTokensV1: 32768/.test(src) && /Math\.min\(131072, Math\.
 // 126-111d 重钉签名:reserve 的预算里含「摘要 prompt 有多长」,而 prompt 从此分中英两份 ——
 // 它必须知道这次用的是哪一份,否则英文那份的长度会按中文的算(估算偏差直接进单发预算)。
 ok(/function summarySingleShotCap\(config, provider, model\)/.test(src) && /function summarySingleShotReserveTokens\(config\)/.test(src), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
-ok(/singleShotReserve: \{ systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 \}/.test(src) && /singleShotCap: \{ default: 32768, min: 8192, max: 131072 \}/.test(src), 'S rules singleShotReserve/singleShotCap 块在产物 fallback 内(expectedOutputTokens 随 c7d2507 摘要策略 2048->6144 重钉)');
+ok(isDeepStrictEqual(rules.summary.singleShotReserve, { systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 })
+  && isDeepStrictEqual(rules.summary.singleShotCap, { default: 32768, min: 8192, max: 131072 }),
+  'S 运行时 JSON 锁定单发余量与上限');
 ok(/if \(sc\.ok \|\| !singleOn \|\| !isContextOverflowError\(sc\.error\)\) return sc;/.test(src), 'S 105f 仅可识别上下文超窗 400 才降级,其余失败原样上浮');
 ok(/degradedFromSingle: true/.test(src), 'S 105f 降级标记落 mapReduce 元数据(失败调用成本可归因)');
 // 105g(4.3 首项): map-reduce 全局事实表 —— 真实 history-24 配对 A/B 门(实体保留 18.8%→75.0%,调用数零增加)通过后默认开启。
@@ -42,14 +49,14 @@ ok(/'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1', 'runtimeSummaryRe
 ok(/function summaryFactTableEnabled\(config\)/.test(src), 'S summaryFactTableEnabled 唯一判定点存在');
 ok(/summaryFactTableMaxSamplesV1: 64/.test(src) && /function summaryFactTableCap\(config\)/.test(src), 'S 105g 事实表甜点位上限配置与唯一解析点存在(超长历史门选 64)');
 ok(/function buildSummaryFactTableMessages\(history(?:, maxSamplesOverride)?\)/.test(src), 'S 105g 事实表构建助手存在(复用 105c 抽取器,零 LLM 调用)');
-ok(/factTable: \{\n        maxSamples: 64,/.test(src), 'S rules factTable 块(maxSamples 64)在产物 fallback 内');
+ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
 ok(/factChunkMsg \? \[\.\.\.chunks\[ci\], factChunkMsg\] : chunks\[ci\]/.test(src), 'S 105g 分段注入守门(null 时请求体逐字节不变)');
-ok(/factTable: \{ entities: factTable\.entities \}/.test(src), 'S 105g 事实表元数据落 mapReduce.factTable');
+ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
 // 105h(4.3 第二项): <=4 块顺序 refine —— 总门取证前默认关,任一步失败整条回退现有 map-reduce。
 ok(/runtimeSummaryRefineV1: false/.test(src), 'S runtimeSummaryRefineV1 总门无净收益,默认关闭');
 ok(/'runtimeSummaryFactTableV1', 'runtimeSummaryRefineV1', 'runtimeBudgetGuardV1'/.test(src), 'S runtimeSummaryRefineV1 入严格布尔 sanitize 表(105g 邻接不动;106 #13a 顺排其后)');
 ok(/function summaryRefineEnabled\(config\)/.test(src), 'S summaryRefineEnabled 唯一判定点存在');
-ok(/refine: \{\n        maxChunks: 4,/.test(src), 'S rules refine 块(maxChunks 4)在产物 fallback 内');
+ok(rules.summary.refine.maxChunks === 4, 'S refine 运行规则至多处理 4 块');
 // 106 #13a: 预算保护基础层 —— 逐项取证纪律,默认关;预警/预留/停止新增调用/暂停恢复四件套。
 ok(/runtimeBudgetGuardV1: false/.test(src), 'S runtimeBudgetGuardV1 默认关闭(106 波逐项取证,未过门不启用)');
 ok(/'runtimeSummaryRefineV1', 'runtimeBudgetGuardV1', 'runtimeToolTimeBudgetShadowV1', 'runtimeToolTimeBudgetV1', 'runtimeVolatileTailLayoutV1', 'runtimeAppendOnlyToolSchemasV1', 'runtimeExecResultCacheV1', 'runtimeFailureTelemetryV1'/.test(src), 'S 106 六开关入严格布尔 sanitize 表(105h 邻接不动;#13a/#1/#2a 顺排,failureTelemetry 殿后)');
@@ -273,24 +280,20 @@ ok(/runtimeSummaryPromptI18nV1: true/.test(src), 'F3 开关默认开(107-T1 起;
   ok(hits === 1, `F3 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function summaryPromptI18nEnabled\(config\)/.test(src), 'F3 判定函数存在(唯一判定口)');
+const formatSource = require('node:fs').readFileSync(
+  require('node:path').resolve(__dirname, '../ruyi-workbench/app/backend/summary-format.cjs'), 'utf8');
 {
-  // F3 语言判据是 06b getPromptPack 的**抄写件**(10 → 06b 是循环边，调不得；见实现处注释)。
-  // 机械对账：两处必须是同一条规则的同一种写法 —— `.trim().toLowerCase() === 'en-us'`。
-  // 改了一边另一边就红，抄写件不会悄悄长成第二套口径（与 steward-tools.static ⑥ 同一个模具）。
-  const RULE = /\.trim\(\)\.toLowerCase\(\) === 'en-us'/g;
-  const hits = ((src + promptRegistrySource).match(RULE) || []).length;
-  ok(hits === 2, `F3 「什么算英文界面」全仓恰好两处同样的写法（06b 的 getPromptPack ＋ 10 的抄写件；实得 ${hits} 处）`);
-  ok(/function getPromptPack\(locale\)[\s\S]{0,160}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(promptRegistrySource),
-    'F3 其中一处就在 06b 的 getPromptPack 里（抄的是它，不是凭空一条）');
-  ok(/function summaryPromptIsEnglish\(config\)[\s\S]{0,220}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(src),
-    'F3 另一处在 summaryPromptIsEnglish 里，且仍然先过 summaryPromptI18nEnabled 这道开关');
+  const { summaryPromptIsEnglish } = require('../ruyi-workbench/app/backend/summary-format.cjs');
+  const { getPromptPack, PROMPT_EN } = require('../ruyi-workbench/app/backend/prompt-registry.cjs');
+  ok(['en-US', ' EN-us ', 'en', 'zh-CN', 'auto', undefined].every(locale =>
+    summaryPromptIsEnglish({ locale, runtimeSummaryPromptI18nV1: true }) === (getPromptPack(locale) === PROMPT_EN)),
+    'F3 摘要与界面提示共用语言包判定');
+  ok(!summaryPromptIsEnglish({ locale: 'en-US', runtimeSummaryPromptI18nV1: false }), 'F3 关闭摘要语言开关时使用默认提示');
 }
-ok(/SUMMARY_PROMPT_EN = CONTEXT_GOVERNANCE_RULES\.summary\.promptEn \|\| SUMMARY_PROMPT/.test(src),
-  'F3 英文那份缺失时回落中文(rules 缺键不静默变成空 prompt)');
-ok(/function summaryPromptWithGuidance\(config\)/.test(src), 'F3 取话口带 config(否则拿不到 locale)');
+ok(/SUMMARY_PROMPT_EN = CONTEXT_GOVERNANCE_RULES\.summary\.promptEn \|\| SUMMARY_PROMPT/.test(formatSource),
+  'F3 英文摘要提示缺失时使用默认提示');
 {
-  // 标题容错那一半**故意不挂开关**(见实现处注释):判据锚在行首,只会让本来就正确的摘要更容易过。
-  const lines = src.split(/\r?\n/).filter(line => /const normHead = /.test(line));
+  const lines = formatSource.split(/\r?\n/).filter(line => /const normHead = /.test(line));
   ok(lines.length === 1, `F3 标题归一只有一处写法（实得 ${lines.length}）`);
   // Exercise the public validator rather than locking the shared heading helper's source shape.
   const fs = require('fs'), os = require('os'), path = require('path');

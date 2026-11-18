@@ -93,7 +93,7 @@ ok(/throwIfStale:\s*true/.test(mutate) && /expectGen/.test(mutate) && /session\.
   '③ mutateSession 存盘带 throwIfStale、expectGen 不一致即抛 session.rewound_during_write');
 
 // ④ 旁车与驱动器过撤回闸。
-ok(/sessionObjectIsStale\(session\)/.test(fnBody('10-context-governance.js', 'function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
+ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/session-notes.cjs', 'async function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
 ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('10-context-governance.js')), '④ 历史快照:陈旧对象不写');
 ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/mission-driver.cjs', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
 

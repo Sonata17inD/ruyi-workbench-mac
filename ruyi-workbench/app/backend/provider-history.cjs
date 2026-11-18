@@ -179,4 +179,47 @@ function syncProviderHistoryFromDisplay(session) {
 
 return { repairProviderHistoryPairing, isProviderToolArgsObject, providerHistoryToolCalls, repairProviderHistoryToolArgs, appendDisplayMessagesToProviderHistory, syncProviderHistoryFromDisplay };
 }
-module.exports = { createProviderHistory, lastAssistantEngine };
+// Detect the summary at the first user message (string or parts). Notes injection uses it to
+// suppress duplicates while retaining details contributed by earlier merged summaries.
+function readCompactionSummaryText(history) {
+  const firstUser = Array.isArray(history) ? history.find(entry => entry && entry.role === 'user') : null;
+  const text = !firstUser ? ''
+    : typeof firstUser.content === 'string' ? firstUser.content
+    : Array.isArray(firstUser.content) ? firstUser.content.map(part => part && typeof part.text === 'string' ? part.text : '').join('\n') : '';
+  if (text.includes('【压缩摘要】') || text.includes('【压缩摘要｜因上下文超限重播种】') || text.includes('(以下是此前对话的压缩摘要)')) return text;
+  return null;
+}
+
+function historyStartsWithCompactionSummary(history) {
+  return readCompactionSummaryText(history) !== null;
+}
+
+// 历史以压缩摘要开头时(手动 L2 塌成的 [摘要, 收到],或自动 L2 重播种的 [摘要, 收到, …尾巴]),返回摘要那一对之后的下标;
+// 不以摘要开头返回 0。手动压缩拿它量「上次压缩之后新增了多少」。
+function compactionSummaryPairEnd(history) {
+  if (!Array.isArray(history) || !history.length || !historyStartsWithCompactionSummary(history)) return 0;
+  const firstUser = history.findIndex(entry => entry && entry.role === 'user');
+  if (firstUser < 0) return 0;
+  const next = history[firstUser + 1];
+  return firstUser + (next && next.role === 'assistant' ? 2 : 1);
+}
+
+// 105d-A: 把非持久运行时提示贴到【最后一条】 user 消息(注入形态仿 105a recall prompt,
+// content 兼容 string/parts 数组)。只改传入的 msgs 请求副本;无 user 消息或形态不识 → false。
+function appendPromptToLastUserMessage(msgs, text) {
+  if (!text || !Array.isArray(msgs)) return false;
+  const lastUserIndex = msgs.findLastIndex(entry => entry && entry.role === 'user');
+  if (lastUserIndex < 0) return false;
+  const lastUser = msgs[lastUserIndex];
+  if (typeof lastUser.content === 'string') {
+    msgs[lastUserIndex] = { ...lastUser, content: lastUser.content + '\n\n' + text };
+    return true;
+  }
+  if (Array.isArray(lastUser.content)) {
+    msgs[lastUserIndex] = { ...lastUser, content: [...lastUser.content, { type: 'text', text }] };
+    return true;
+  }
+  return false;
+}
+
+module.exports = { createProviderHistory, lastAssistantEngine, readCompactionSummaryText, historyStartsWithCompactionSummary, compactionSummaryPairEnd, appendPromptToLastUserMessage };

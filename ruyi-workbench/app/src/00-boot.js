@@ -241,7 +241,8 @@ const { markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTomb
 const { truncateToolResult, createToolResultDisplay } = require('./backend/tool-result-view.cjs');
 const boundToolResultForDisplay = createToolResultDisplay({ paths });
 const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./backend/attachment-prompt.cjs');
-const { lastAssistantEngine } = require('./backend/provider-history.cjs');
+const { lastAssistantEngine, historyStartsWithCompactionSummary, compactionSummaryPairEnd, appendPromptToLastUserMessage } =
+  require('./backend/provider-history.cjs');
 const { PREVIEW_TEXT_EXTS, readFilePreview } = require('./backend/file-preview.cjs');
 const { normalizeStoragePolicy } = require('./backend/storage-policy.cjs');
 const { NATIVE_COMMAND_TOOL_NAMES, NATIVE_DESKTOP_TOOL_NAMES, DESKTOP_MCP_SERVER_ID, ACC_POLICY_TOOL_FAMILIES, nativeToolDisabledByPolicy, bridgedToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, TOOL_PACK_DESCRIPTIONS } = require('./backend/tool-access-policy.cjs');

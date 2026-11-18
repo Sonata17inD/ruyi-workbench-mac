@@ -25,33 +25,10 @@ function sessionBodyPaths(id) {
   };
 }
 
-// ── 105b: session-notes.md 状态外置(旁车副本)─────────────────────────────────
-// L2 摘要成功后,把结构化摘要中的【已确认的决定】/【未完成事项】/【关键文件与上下文】三节确定性
-// 切出整写到本文件。默认每次 L2 成功整体重写(摘要本身即最新权威状态);105d 的
-// runtimeSessionNotesMergeV1(默认关)开启时改为 read→merge→write 增量合并,合并逻辑在
-// 10-context-governance.js 的 mergeSessionNotes,本层只负责原子写与尾部截断兜底。
-// 纪律:与 interventions/changes 旁车同层同规 —— 独立 per-session 写链 + 原子写;notes 是易失副本,
-// 读失败/缺文件一律 null,绝不阻断回合。105b 真实历史门通过后默认开启；显式关时零文件读写。
-const SESSION_NOTES_MAX_CHARS = 64000;
-const sessionNotesWriteChains = new Map();
-function sessionNotesPath(id) {
-  return path.join(paths.sessions, `${String(id)}.session-notes.md`);
-}
-async function writeSessionNotes(id, markdown) {
-  const file = sessionNotesPath(id);
-  let body = String(markdown == null ? '' : markdown);
-  if (body.length > SESSION_NOTES_MAX_CHARS) {
-    body = body.slice(0, SESSION_NOTES_MAX_CHARS) + `\n\n<!-- truncated: exceeded ${SESSION_NOTES_MAX_CHARS} chars -->\n`;
-  }
-  return runKeyedChain(sessionNotesWriteChains, file, async () => {
-    await fsp.mkdir(paths.sessions, { recursive: true }); // 旁车写不依赖 server 启动期建目录
-    await atomicWriteJson(file, body);                    // 字符串直写,同 25.1 md 先例
-  });
-}
-async function readSessionNotes(id) {
-  try { return await fsp.readFile(sessionNotesPath(id), 'utf8'); }
-  catch { return null; } // ENOENT 与其他读错同处理:notes 是旁车副本,缺文件不是错误
-}
+const { createSessionNotes, extractSessionNotes, renderSessionNotesMarkdown, parseSessionNotesMarkdown,
+  mergeSessionNotes, buildSessionNotesInjectPrompt } = require('./backend/session-notes.cjs');
+const { sessionNotesPath, readSessionNotes, writeSessionNotes, removeSessionNotes, maybeWriteSessionNotes } =
+  createSessionNotes({ paths, assertSessionIdForPath, atomicWriteJson, sessionObjectIsStale, sessionSaveIsTombstoned, logEvent });
 
 // ── C2(61 号文):会话草稿本 sessions/<id>.scratchpad.json ──────────────────────────────────────
 // 模型自己「写即生效、不进长期库」的短笔记:按 key 写/覆盖,text 为空即删。只发给模型服务商引擎普通会话的主回合

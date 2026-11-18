@@ -6,7 +6,7 @@ const { toolImageSessionTag } = require('./image-content.cjs');
 function createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent,
   files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
-    sessionNotesPath, sessionScratchpadPath, journalDir, agentRunDir },
+    removeSessionNotes, sessionScratchpadPath, journalDir, agentRunDir },
   pendingWrites: { sessionWriteChains, sessionScratchpadChains },
   execution, membership, index, invalidateSessionState, events, markSessionDeleted,
 }) {
@@ -79,7 +79,7 @@ async function deleteSession(id, { purgeAssociated = false } = {}) {
     fsp.unlink(interventionFilePath(id)).catch(() => {}),
     fsp.unlink(missionChangeFilePath(id)).catch(() => {}),
     // hunt2-P9:会话笔记旁车与每会话 MCP 配置(内含 loopback token 与外部 MCP 的 env)同属这条会话的数据载体。
-    fsp.unlink(sessionNotesPath(id)).catch(() => {}),
+    removeSessionNotes(id),
     fsp.unlink(sessionScratchpadPath(id)).catch(() => {}),   // C2:会话草稿本旁车
     proposalSessionId ? fsp.unlink(path.join(paths.generated, `workbench.mcp.${proposalSessionId}.json`)).catch(() => {}) : Promise.resolve(),
     proposalSessionId ? fsp.unlink(path.join(paths.memory, 'proposals', proposalSessionId + '.json')).catch(() => {}) : Promise.resolve(),

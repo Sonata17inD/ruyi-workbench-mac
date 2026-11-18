@@ -2,7 +2,7 @@
 const { deleteSession, bulkDeleteUnpinnedSessions, removeSessionToolImages } = require('./backend/session-deletion.cjs').createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent, markSessionDeleted,
   files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
-    sessionNotesPath, sessionScratchpadPath, journalDir, agentRunDir },
+    removeSessionNotes, sessionScratchpadPath, journalDir, agentRunDir },
   pendingWrites: { sessionWriteChains, sessionScratchpadChains },
   execution: {
     stop: stopSession, activeRuns: () => activeAgentRuns.values(), stopRuns: stopMissionAgentRuns,

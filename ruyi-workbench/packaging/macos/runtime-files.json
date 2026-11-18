@@ -370,7 +370,9 @@
     "app/backend/prompt-context.cjs",
     "app/backend/engine-env-brief.cjs",
     "app/backend/provider-prompt.cjs",
-    "app/backend/tool-result-view.cjs"
+    "app/backend/tool-result-view.cjs",
+    "app/backend/session-notes.cjs",
+    "app/backend/summary-format.cjs"
   ],
   "acc": [
     "LICENSE",

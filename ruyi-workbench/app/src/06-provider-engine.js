@@ -3,7 +3,7 @@ const { ERROR_CLASSES } = require('./backend/turn-error-classes.cjs');
 const { TOOL_ITERATION_BUDGETS, resolveToolIterationBudget, shouldExtendToolIterationBudget } = require('./backend/tool-iteration-budget.cjs');
 const {
   buildBrowserAutomationHint, buildToolCustomizationHint, readProjectMemory, buildSkillsPromptSection,
-  buildPlaybookIndexSection, neutralizeAuthoredText,
+  buildPlaybookIndexSection, neutralizeAuthoredText, buildSessionScratchpadInjectPrompt,
 } = require('./backend/prompt-context.cjs');
 
 const { evalPlaybookAvailability, matchServiceEntry } = require('./backend/playbook-policy.cjs');
