@@ -29,8 +29,10 @@
         "ExternalBotHooks",
         "LEGACY_DATA_DIR_NAME",
         "MAX_BODY_BYTES",
+        "MCP_TOOLS",
         "MigrationHooks",
         "OVERLAY_ID",
+        "PROVIDER_SESSION_TOOL_SCHEMAS",
         "RUYI_DATA_DIR_NAME",
         "RUYI_EVENTS",
         "RUYI_EVENT_SUBSCRIBERS",
@@ -45,6 +47,7 @@
         "URL",
         "VERSION",
         "_dataRootMemo",
+        "adaptiveMetaToolSchemas",
         "agentCliHomes",
         "apiFailure",
         "apiSessionIdInvalid",
@@ -2505,6 +2508,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "MCP_TOOLS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -2755,13 +2765,6 @@
           "symbol": "decideIntervention",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "13f-native-tool-schemas.js",
-          "symbol": "MCP_TOOLS",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -6772,7 +6775,6 @@
         "_nativeToolSchemaByName",
         "accPolicyHiddenToolNames",
         "actionTargetMeta",
-        "adaptiveMetaToolSchemas",
         "agentRunDir",
         "agentRunFile",
         "agentWorktreeApplyChains",
@@ -6869,6 +6871,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "adaptiveMetaToolSchemas",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "apiFailure",
           "kinds": [
             "call"
@@ -6926,6 +6935,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "MCP_TOOLS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -6941,6 +6957,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
           "kinds": [
             "read"
           ]
@@ -7434,20 +7457,6 @@
           "symbol": "isContextOverflowError",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "13f-native-tool-schemas.js",
-          "symbol": "MCP_TOOLS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13f-native-tool-schemas.js",
-          "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
-          "kinds": [
-            "read"
           ]
         }
       ]
@@ -11525,6 +11534,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "MCP_TOOLS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -11771,13 +11787,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "neutralizeInjectedPrefixes",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13f-native-tool-schemas.js",
-          "symbol": "MCP_TOOLS",
           "kinds": [
             "read"
           ]
@@ -13130,23 +13139,6 @@
       ]
     },
     {
-      "file": "13f-native-tool-schemas.js",
-      "layer": "transport",
-      "provides": [
-        "MCP_TOOLS",
-        "PROVIDER_SESSION_TOOL_SCHEMAS"
-      ],
-      "requires": [
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "adaptiveMetaToolSchemas",
-          "kinds": [
-            "call"
-          ]
-        }
-      ]
-    },
-    {
       "file": "13-http-router.js",
       "layer": "transport",
       "provides": [
@@ -13366,6 +13358,13 @@
           "symbol": "makeId",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "MCP_TOOLS",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -15115,13 +15114,6 @@
           "symbol": "warmPretenderProjectionIndex",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "13f-native-tool-schemas.js",
-          "symbol": "MCP_TOOLS",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -24324,6 +24316,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "adaptiveMetaToolSchemas",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "CONFIG_SCHEMA",
           "kinds": [
             "read"
@@ -27000,13 +26999,6 @@
         {
           "provider": "07-autonomy.js",
           "symbol": "accPolicyHiddenToolNames",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "adaptiveMetaToolSchemas",
           "kinds": [
             "read"
           ]

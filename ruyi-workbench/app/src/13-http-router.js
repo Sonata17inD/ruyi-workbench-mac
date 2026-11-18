@@ -2083,8 +2083,6 @@ async function startServerInner(opts, bindHost = resolveBindHost(opts)) {
   }
 }
 
-// 110-1: MCP_TOOLS 原生工具 schema 数组抽至 13f-native-tool-schemas.js。
-
 async function startMcp() {
   await ensureDirs();
   // Stateful shell sessions belong to the serving process, not this MCP child.

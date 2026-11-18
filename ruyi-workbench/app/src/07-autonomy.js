@@ -101,35 +101,6 @@ const AGENT_TOOL_NAMES = new Set(['orchestrate_agents', 'wait_agents', 'agent_re
 // 写了就占掉主模型的槽(同回合先到者胜,主模型反而得到 alreadyPending),卡片上还看不出是谁提的。list / read 是只读,留着。
 // offer 面(buildOpenAiTools 的 opts.noMemoryWriteTools)与分发面(08 子代理循环的拒绝分支)共用这一张表。
 const MEMORY_WRITE_TOOL_NAMES = new Set(['workbench_memory_propose', 'workbench_memory_revise', 'workbench_memory_relation_propose', 'workbench_memory_relation_revoke']);
-function adaptiveMetaToolSchemas(includeInvoke = false) {
-  const tools = [
-    {
-      name: 'list_tools',
-      description: 'List the compact Ruyi tool directory when you are unsure what capability or tool name to search for. Returns names grouped by pack, without descriptions or schemas; use tool_search next for details and risk tier.',
-      inputSchema: { type: 'object', properties: { pack: { type: 'string', description: 'Optional exact pack id to list.' }, cursor: { type: 'number', description: 'Optional zero-based cursor from a previous response.' }, limit: { type: 'number', description: 'Maximum names, 1..200. Defaults to 200 (normally the complete catalog).' } } },
-    },
-    {
-      name: 'tool_search',
-      description: 'Search the compact Ruyi tool catalog when the currently loaded tools do not cover the task. Returns names, packs, risk tiers and argument outlines.',
-      inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Capability or operation to find, e.g. Excel chart, screenshot, git commit.' }, limit: { type: 'number', description: 'Maximum matches, 1..20.' }, view: { type: 'string', enum: ['list', 'matrix'], description: 'matrix adds modality and engine availability' } }, required: ['query'] },
-    },
-    {
-      name: 'tool_load',
-      description: 'Load one or more tool packs or exact tool names into the next model call. Use tool_search first when unsure; after this succeeds, call the newly available concrete tool.',
-      inputSchema: { type: 'object', properties: { packs: { type: 'array', items: { type: 'string' }, description: 'Pack ids returned by tool_search.' }, tools: { type: 'array', items: { type: 'string' }, description: 'Exact tool names returned by tool_search.' } } },
-    },
-  ];
-  if (includeInvoke) {
-    for (const tier of ['read', 'edit', 'exec']) tools.push({
-      name: `tool_invoke_${tier}`,
-      // 2026-10:写明两层各放什么(真机失败几乎全是把目标名塞进 arguments / 把整次调用当参数),档位口径改成「不高于本档」。比修前短 13 字符。
-      description: `Invoke one discovered Ruyi tool: name = its exact name, arguments = its own parameters. Targets above ${tier} tier are rejected.`,
-      inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Exact tool name from tool_search.' }, arguments: { type: 'object', description: 'Arguments matching that tool schema.' } }, required: ['name'] },
-    });
-  }
-  return tools;
-}
-
 // 审计 N4:allowCommandTools / allowDesktopTools 不只是「不 offer」—— 分发点也按同一判据拒绝(bypass/auto 下 gate 恒 allow,
 // 光藏 schema 拦不住模型直接吐出的 script_run)。offer 面(buildOpenAiTools)与分发面(09 主循环 / 08 子代理 / 12 toolCall)共用本函数。
 // 返回空串 = 放行;否则是给模型看的中文原因。desktopOverride 语义同 buildOpenAiTools(null = 跟随全局)。

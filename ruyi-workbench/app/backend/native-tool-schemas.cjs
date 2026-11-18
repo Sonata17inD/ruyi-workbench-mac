@@ -1,6 +1,34 @@
 'use strict';
-// Static tool descriptions; adaptive proxy tools are supplied by the tool policy layer.
-const MCP_TOOLS = [
+function adaptiveMetaToolSchemas(includeInvoke = false) {
+  const tools = [
+    {
+      name: 'list_tools',
+      description: 'List the compact Ruyi tool directory when you are unsure what capability or tool name to search for. Returns names grouped by pack, without descriptions or schemas; use tool_search next for details and risk tier.',
+      inputSchema: { type: 'object', properties: { pack: { type: 'string', description: 'Optional exact pack id to list.' }, cursor: { type: 'number', description: 'Optional zero-based cursor from a previous response.' }, limit: { type: 'number', description: 'Maximum names, 1..200. Defaults to 200 (normally the complete catalog).' } } },
+    },
+    {
+      name: 'tool_search',
+      description: 'Search the compact Ruyi tool catalog when the currently loaded tools do not cover the task. Returns names, packs, risk tiers and argument outlines.',
+      inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Capability or operation to find, e.g. Excel chart, screenshot, git commit.' }, limit: { type: 'number', description: 'Maximum matches, 1..20.' }, view: { type: 'string', enum: ['list', 'matrix'], description: 'matrix adds modality and engine availability' } }, required: ['query'] },
+    },
+    {
+      name: 'tool_load',
+      description: 'Load one or more tool packs or exact tool names into the next model call. Use tool_search first when unsure; after this succeeds, call the newly available concrete tool.',
+      inputSchema: { type: 'object', properties: { packs: { type: 'array', items: { type: 'string' }, description: 'Pack ids returned by tool_search.' }, tools: { type: 'array', items: { type: 'string' }, description: 'Exact tool names returned by tool_search.' } } },
+    },
+  ];
+  if (includeInvoke) {
+    for (const tier of ['read', 'edit', 'exec']) tools.push({
+      name: `tool_invoke_${tier}`,
+      // 2026-10:写明两层各放什么(真机失败几乎全是把目标名塞进 arguments / 把整次调用当参数),档位口径改成「不高于本档」。比修前短 13 字符。
+      description: `Invoke one discovered Ruyi tool: name = its exact name, arguments = its own parameters. Targets above ${tier} tier are rejected.`,
+      inputSchema: { type: 'object', properties: { name: { type: 'string', description: 'Exact tool name from tool_search.' }, arguments: { type: 'object', description: 'Arguments matching that tool schema.' } }, required: ['name'] },
+    });
+  }
+  return tools;
+}
+
+const NATIVE_TOOL_SCHEMAS = [
   {
     name: 'media_probe',
     description: 'Discover local ffmpeg, ffprobe, Chrome/Edge, Python and Node executables/versions, with actionable missing-dependency hints. Detects imageio-ffmpeg wheels too. No installs or browser launch.',
@@ -1587,7 +1615,6 @@ const PROVIDER_SESSION_TOOL_SCHEMAS = [
   },
 ];
 
-function createNativeToolSchemas(adaptiveSchemas) {
-  return { MCP_TOOLS: [...adaptiveSchemas, ...MCP_TOOLS], PROVIDER_SESSION_TOOL_SCHEMAS };
-}
-module.exports = { createNativeToolSchemas, MCP_TOOLS, PROVIDER_SESSION_TOOL_SCHEMAS };
+const MCP_TOOLS = [...adaptiveMetaToolSchemas(true), ...NATIVE_TOOL_SCHEMAS];
+
+module.exports = { adaptiveMetaToolSchemas, MCP_TOOLS, PROVIDER_SESSION_TOOL_SCHEMAS };
