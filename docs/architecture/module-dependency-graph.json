@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 3050,
-    "requiredSymbols": 3496,
-    "edges": 646,
+    "providedSymbols": 3040,
+    "requiredSymbols": 3491,
+    "edges": 645,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -10700,28 +10700,18 @@
       "layer": "orchestration",
       "note": "上下文窗口三级/摘要内核/L1 蒸发/L2 重播种",
       "provides": [
-        "COMPACTION_HISTORY_PREFIX",
-        "COMPACTION_PATH_ARG_KEYS",
-        "COMPACTION_RAWREF_PATTERN",
         "COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS",
-        "COMPACTION_TASK_PREFIX",
         "COMPACTION_TOOL_INDEX_HEADER",
-        "COMPACTION_TOOL_INDEX_MAX_CHARS",
-        "COMPACTION_TOOL_INDEX_MAX_ENTRIES",
-        "COMPACTION_TOOL_INDEX_ONESHOT",
-        "COMPACTION_TOOL_INDEX_SKIP",
         "COMPACT_MARKER_MIN_SAVED_TOKENS",
         "COMPACT_RESEED_TAIL_MAX_TOKENS",
         "CONTEXT_GOVERNANCE_RULES",
         "CompactionPlan",
-        "EVAPORATED_PREFIX",
         "MANUAL_COMPACTION_SUMMARY_HEADER",
         "MANUAL_COMPACT_MAX_FRESH_TOKENS",
         "MANUAL_COMPACT_MIN_FRESH_RATIO",
         "MANUAL_COMPACT_MIN_FRESH_TOKENS",
         "MANUAL_COMPACT_MIN_L1_SAVED_RATIO",
         "MANUAL_COMPACT_MIN_L1_SAVED_TOKENS",
-        "READ_DEDUP_PREFIX",
         "SUMMARY_PROMPT",
         "SUMMARY_PROMPT_EN",
         "agentConversationContextMeta",
@@ -10734,15 +10724,16 @@
         "checkSummaryEntities",
         "chunkHistoryByBudget",
         "compactHistoryFromSession",
-        "compactionIndexText",
         "compactionRefetchRefusal",
         "compactionRefetchWarning",
         "compactionSummaryFailures",
         "compactionTaskText",
-        "compactionToolArgsDigest",
         "configuredConversationWindow",
         "contextWindowOverrideKey",
+        "createCompactionPlan",
+        "createCompactionRecords",
         "createCompactionRefetchGuard",
+        "createCompactionRouting",
         "createProviderSummary",
         "dedupeRepeatedReads",
         "estimateFactor",
@@ -10783,36 +10774,14 @@
         "summarySingleShotReserveTokens",
         "summaryTaskSourceHistory",
         "upsertCompactMarker",
-        "userBlockStarts",
         "validateStructuredSummary"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "cachedInputTokensFromUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "compactionSummaryPairEnd",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -10826,7 +10795,8 @@
           "provider": "00-boot.js",
           "symbol": "estimateContentTokens",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -10841,7 +10811,6 @@
           "provider": "00-boot.js",
           "symbol": "estimateTextTokens",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10849,7 +10818,7 @@
           "provider": "00-boot.js",
           "symbol": "fmtTokensServer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10886,7 +10855,6 @@
           "provider": "00-boot.js",
           "symbol": "resolveContextWindow",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10935,21 +10903,7 @@
         },
         {
           "provider": "01c-runtime-flags.js",
-          "symbol": "reseedReattachFilesEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
           "symbol": "reseedTailUnitsEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01f-agent-cli-types.js",
-          "symbol": "normalizeAgentCliType",
           "kinds": [
             "call"
           ]
@@ -10958,7 +10912,7 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -31310,10 +31264,7 @@
       "to": "00-boot.js",
       "symbols": [
         "DesktopExecutionHooks",
-        "cachedInputTokensFromUsage",
         "compactionSummaryPairEnd",
-        "computeProviderCost",
-        "crypto",
         "estimateContentTokens",
         "estimateHistoryTokens",
         "estimateTextTokens",
@@ -31343,16 +31294,7 @@
         "evaporateBudgetBoundaryEnabled",
         "historyReadDedupEnabled",
         "observationRecallEnabled",
-        "reseedReattachFilesEnabled",
         "reseedTailUnitsEnabled"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "10-context-governance.js",
-      "to": "01f-agent-cli-types.js",
-      "symbols": [
-        "normalizeAgentCliType"
       ],
       "direction": "backward"
     },

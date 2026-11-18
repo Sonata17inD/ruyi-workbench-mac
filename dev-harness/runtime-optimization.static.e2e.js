@@ -135,6 +135,8 @@ ok(shadowCandidate.retrievalVersion === 'deterministic-v1' && comparison.queryHa
 console.log('\n── [C1] deterministic observation reduction ──');
 const reductionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/observation-reduction.cjs'), 'utf8');
 const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
+const historySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-history.cjs'), 'utf8');
+const planSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-plan.cjs'), 'utf8');
 const { READ_DEDUP_PREFIX } = require('../ruyi-workbench/app/backend/provider-history.cjs');
 const c1 = createObservationReduction(estimator);
 const large = JSON.stringify({ ok: true, query: 'needle', matches: Array.from({ length: 80 }, (_, i) => ({ path: `src/f${i}.js`, line: i, text: 'X'.repeat(180) })) });
@@ -235,7 +237,7 @@ console.log('\n── [F1] 126-111a · L1 蒸发边界改 token 预算 ──');
 ok(/runtimeEvaporateBudgetBoundaryV1: false/.test(src), 'F1 开关默认关');
 ok(!/runtimeEvaporateBudgetBoundaryV1: true/.test(src), 'F1 没有在别处被默认翻开');
 ok(/function evaporateBudgetBoundaryEnabled\(config\)/.test(src), 'F1 判定函数存在(唯一判定口)');
-ok(/function historyUnitStarts\(history\)/.test(reductionSource) && /role !== 'tool'/.test(reductionSource), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
+ok(/function historyUnitStarts\(history\)/.test(historySource) && /role !== 'tool'/.test(historySource), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
 ok(/l1ProtectRatio/.test(reductionSource) && /l1ProtectMinTokens/.test(reductionSource) && /l1ProtectMaxTokens/.test(reductionSource), 'F1 保护区三个数来自规则文件(值域唯一,代码里不写死)');
 {
   // **机械锁**:`boundaryBudget` 是「已经过开关把门的」预算 —— evaporateHistory 自己不读开关
@@ -324,14 +326,14 @@ ok(/runtimeReseedTailUnitsV1: true/.test(src), 'F4 开关默认开(107-T1 起;�
   ok(hits === 1, `F4 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function reseedTailUnitsEnabled\(config\)/.test(src), 'F4 判定函数存在(唯一判定口)');
-ok(/function recentTurnsBoundary\(history, maxTailTokens, byUnits\)/.test(src), 'F4 边界函数带 byUnits(已过门的布尔,函数体不读开关)');
-ok(/if \(byUnits === true && boundary === history\.length && history\.length\)/.test(src),
+ok(/function recentTurnsBoundary\(history, maxTailTokens, byUnits\)/.test(planSource), 'F4 边界函数带 byUnits(已过门的布尔,函数体不读开关)');
+ok(/if \(byUnits === true && boundary === history\.length && history\.length\)/.test(planSource),
   'F4 **只在「一个 user 回合都装不下」时才退化** —— 装得下时逐字节走老路');
-ok(/historyUnitStarts\(history\)/.test(src), 'F4 退化时用的是 111a 那个单元起点原语(切口永远不落在 tool 上)');
-ok(/以下为摘要之后保留的最近工具往来/.test(src), 'F4 桥接文案在场');
+ok(/historyUnitStarts\(history\)/.test(planSource), 'F4 退化时用的是 111a 那个单元起点原语(切口永远不落在 tool 上)');
+ok(/以下为摘要之后保留的最近工具往来/.test(planSource), 'F4 桥接文案在场');
 {
   // 与 F1／F2 同一把机械锁:byUnits 只能由判定函数把门。
-  const lines = src.split(/\r?\n/).filter(line => /recentTurnsBoundary\(history, tailBudget/.test(line));
+  const lines = planSource.split(/\r?\n/).filter(line => /recentTurnsBoundary\(history, tailBudget/.test(line));
   ok(lines.length === 1, `F4 扫得到 CompactionPlan 里那唯一的边界调用（实得 ${lines.length} 处）`);
   ok(lines.every(line => /reseedTailUnitsEnabled\s*\(/.test(line)),
     `F4 那一处由 reseedTailUnitsEnabled 把门${lines.length ? '；实得：' + lines.map(s => s.trim()).join(' ⏐ ') : ''}`);
@@ -344,10 +346,10 @@ console.log('\n── [F5] 126-111c · 重播种后重附最近读过的文件 �
 ok(/runtimeReseedReattachFilesV1: false/.test(src), 'F5 开关默认关');
 ok(!/runtimeReseedReattachFilesV1: true/.test(src), 'F5 没有在别处被默认翻开');
 ok(/function reseedReattachFilesEnabled\(config\)/.test(src), 'F5 判定函数存在(唯一判定口)');
-ok(/reattachRatio/.test(src) && /reattachMaxTokens/.test(src) && /reattachHeadLines/.test(src) && /reattachMaxFiles/.test(src),
+ok(/reattachRatio/.test(planSource) && /reattachMaxTokens/.test(planSource) && /reattachHeadLines/.test(planSource) && /reattachMaxFiles/.test(planSource),
   'F5 四个界都来自规则文件(值域唯一,代码里不写死)');
 {
-  const lines = src.split(/\r?\n/).filter(line => /\brecentFiles\s*:/.test(line));
+  const lines = planSource.split(/\r?\n/).filter(line => /\brecentFiles\s*:/.test(line));
   ok(lines.length === 1, `F5 扫得到 recentFiles 的那唯一赋值点（实得 ${lines.length} 处）`);
   ok(lines.every(line => /reseedReattachFilesEnabled\s*\(/.test(line)),
     `F5 它由 reseedReattachFilesEnabled 把门${lines.length ? '；实得：' + lines.map(s => s.trim()).join(' ⏐ ') : ''}`);
@@ -356,12 +358,12 @@ ok(/reattachRatio/.test(src) && /reattachMaxTokens/.test(src) && /reattachHeadLi
   // **重附不许碰盘**：内容只能来自手里这份历史。压缩是热路径，而且 rehydrate 那条路要解压快照、
   // 校两道哈希 —— 为了「把已经在手里的东西再读一遍」付这个代价没有道理。这条只有机械判据钉得住：
   // 扫 recentFileReads 的函数体，出现任何文件系统调用即红。
-  const body = (src.match(/function recentFileReads\(history, budgetTokens\) \{[\s\S]*?\n\}/) || [''])[0];
+  const body = (planSource.match(/function recentFileReads\(history, budgetTokens\) \{[\s\S]*?\n  \}/) || [''])[0];
   ok(body.length > 200, `F5 扫得到 recentFileReads 的函数体（实得 ${body.length} 字；扫不到 = 本条静默失效）`);
   const io = body.split(/\r?\n/).filter(line => /\bfsp\.|\bfs\.|readFile|rehydrateObservation|zlib|gunzip/.test(line));
   ok(io.length === 0, `F5 **重附零磁盘读取** —— 内容只取自手里这份历史${io.length ? '；实得：' + io.map(s => s.trim()).join(' ⏐ ') : ''}`);
 }
-ok(/byPath\.delete\(filePath\);/.test(src),
+ok(/byPath\.delete\(filePath\);/.test(planSource),
   'F5 同一个文件再读一遍要先 delete 再 set —— 否则「最近优先」是假的(Map.set 不挪已存在的键)');
 
 console.log('');

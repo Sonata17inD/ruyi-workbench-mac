@@ -113,15 +113,12 @@ const mm = src.match(/async function maybeCompactSubHistory\(opts\) \{[\s\S]*?\n
 const km = src.match(/async function runAutoCompaction\(ctx\) \{[\s\S]*?\n\}/);
 ok(!!mm && !!km, 'A 源抽取 maybeCompactSubHistory + 共用内核 runAutoCompaction');
 const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
-const rm = src.match(/function recentTurnsBoundary\(history, maxTailTokens(?:, byUnits)?\) \{[\s\S]*?\n\}/);
 // 桩:窗口 1000 token;估算 = 各消息 content 长度/4 + 40/条;摘要内核可控 ok/summary。
 const providerContextWindow = () => 1000;
 const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((t, m) => t + 40 + Math.ceil(String((m && m.content) || '').length / 4), 0);
-const { userBlockStarts } = require('../ruyi-workbench/app/backend/provider-summary.cjs');
-const { evaporateHistory, historyUnitStarts } = createObservationReduction({ estimateHistoryTokens });
-const recentTurnsBoundary = new Function('estimateHistoryTokens', 'userBlockStarts', 'COMPACT_RESEED_TAIL_MAX_TOKENS', 'historyUnitStarts', rm[0] + '\nreturn recentTurnsBoundary;')(
-  estimateHistoryTokens, userBlockStarts, 16000, historyUnitStarts
-);
+const { evaporateHistory } = createObservationReduction({ estimateHistoryTokens });
+const { createCompactionPlan } = require('../ruyi-workbench/app/backend/compaction-plan.cjs');
+const { recentTurnsBoundary } = createCompactionPlan({ estimateHistoryTokens });
 let summaryOk = true;
 const providerSummaryCall = async () => (summaryOk ? { ok: true, summary: 'SUMMARY', usage: null } : { ok: false, error: 'boom' });
 let recordCalls = 0; const recordCompactUsage = () => { recordCalls++; };

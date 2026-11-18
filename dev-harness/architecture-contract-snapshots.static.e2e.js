@@ -22,7 +22,9 @@ const autonomy = read('ruyi-workbench/app/src/07-autonomy.js');
 ok(!permission.includes('function buildUserContentParts(') && !permission.includes('function pruneOldImages('), 'permission runtime no longer owns visual pipeline');
 ok(!context.includes('function runProcess(') && !context.includes('function pickFolder(') && !context.includes('function runMissionDriver('), 'context owner no longer contains desktop shell or mission driver');
 ok(!autonomy.includes('function saveMemory(') && !autonomy.includes('function consumeGrant(') && !autonomy.includes('function acquireResourceLease('), 'autonomy core no longer owns memory, grants, or leases');
-ok(context.includes('const CompactionPlan = (() => {'), 'context cluster owns shared CompactionPlan');
+const plan = read('ruyi-workbench/app/backend/compaction-plan.cjs');
+ok(context.includes('createCompactionPlan({') && plan.includes('CompactionPlan: Object.freeze({ create, reseed, snapshot })'),
+  'context composes the shared immutable CompactionPlan from its production module');
 // forced-400 的快照/蒸发/摘要重播种由 10 的共用内核 runForcedOverflowCompaction 做(用 CompactionPlan 的 forced_400 计划),主回合与子代理都调它。
 ok(/async function runForcedOverflowCompaction\(ctx\)/.test(context) && context.includes("trigger: 'forced_400'"), 'shared forced-400 kernel uses CompactionPlan');
 ok(/runForcedOverflowCompaction\(\{\s*history: subHistory, privacyHistoryOwner, scope: 'subagent'/.test(read('ruyi-workbench/app/src/08-agent-runs.js')), 'subagent forced-400 uses the shared kernel and its own privacy history owner');

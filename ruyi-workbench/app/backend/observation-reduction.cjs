@@ -2,7 +2,7 @@
 
 const crypto = require('node:crypto');
 const CONTEXT_GOVERNANCE_RULES = require('./context-governance-rules.json');
-const { EVAPORATED_PREFIX, READ_DEDUP_PREFIX, COMPACTION_TOOL_INDEX_HEADER } = require('./provider-history.cjs');
+const { EVAPORATED_PREFIX, READ_DEDUP_PREFIX, COMPACTION_TOOL_INDEX_HEADER, historyUnitStarts } = require('./provider-history.cjs');
 const { observationRecallEnabled } = require('./runtime-policy.cjs');
 
 // 缩减视图的两种形状(见下面 reduceObservationContent):文本结果是 `[Ruyi observation reduced …]` 头,JSON 结果是带
@@ -158,12 +158,6 @@ function createObservationReduction({ estimateHistoryTokens }) {
   // 在发起它的那条 assistant 之后,所以「不是 tool 的那一条」就是单元头。这样切出来的边界天然
   // 既落在 user 起点上,也落在「assistant(tool_calls)＋其全部 tool 回复」的起点上 —— 永远不会
   // 把一条 assistant 与它的 tool 回复劈开(劈开 = 下一次请求 400)。111b 的 L2 尾部单元边界复用它。
-  function historyUnitStarts(history) {
-    const idx = [];
-    for (let i = 0; i < history.length; i++) if (history[i] && history[i].role !== 'tool') idx.push(i);
-    return idx;
-  }
-
   // 126-111a: 按 token 预算算 L1 边界。老边界数的是「倒数第 2 条 assistant」—— 一个与上下文窗口
   // 完全无关的常数:窗口 32K 和 1M 的模型护住的观测一样多,而一条 assistant 回合可能带 1 个工具
   // 结果也可能带 60 个。改成:护住区 = clamp(l1ProtectMinTokens, l1ProtectRatio×budget,
@@ -361,7 +355,7 @@ function createObservationReduction({ estimateHistoryTokens }) {
 
   return {
     protectedObservation, reduceObservationContent, buildObservationRecallPrompt,
-    historyUnitStarts, evaporateBudgetBoundary, fileReadDedupKey, dedupeRepeatedReads, evaporateHistory,
+    evaporateBudgetBoundary, fileReadDedupKey, dedupeRepeatedReads, evaporateHistory,
     measureObservationReductionShadow,
   };
 }

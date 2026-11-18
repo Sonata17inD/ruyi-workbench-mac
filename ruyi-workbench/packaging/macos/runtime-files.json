@@ -378,7 +378,10 @@
     "app/backend/summary-evidence.cjs",
     "app/backend/observation-reduction.cjs",
     "app/backend/context-calibration.cjs",
-    "app/backend/compaction-refetch.cjs"
+    "app/backend/compaction-refetch.cjs",
+    "app/backend/compaction-plan.cjs",
+    "app/backend/compaction-records.cjs",
+    "app/backend/compaction-routing.cjs"
   ],
   "acc": [
     "LICENSE",

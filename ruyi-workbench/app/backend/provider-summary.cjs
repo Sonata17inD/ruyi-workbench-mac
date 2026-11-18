@@ -3,6 +3,7 @@
 const CONTEXT_GOVERNANCE_RULES = require('./context-governance-rules.json');
 const { renderProviderStablePrompt } = require('./provider-stable-prompt.cjs');
 const { SUMMARY_PROMPT, summaryPromptWithGuidance, validateStructuredSummary } = require('./summary-format.cjs');
+const { userBlockStarts } = require('./provider-history.cjs');
 const { createSummaryRequest, aggregateSummaryCalls } = require('./summary-request.cjs');
 const {
   SUMMARY_ENTITY_RULES, extractSummaryEntities, checkSummaryEntities, summarySourceText,
@@ -12,12 +13,6 @@ const {
 } = require('./summary-evidence.cjs');
 const { summaryEntityCheckEnabled, summarySingleShotEnabled, summaryFactTableEnabled, summaryFactTableCap, summaryRefineEnabled } =
   require('./runtime-policy.cjs');
-
-function userBlockStarts(history) {
-  const idx = [];
-  for (let i = 0; i < history.length; i++) if (history[i] && history[i].role === 'user') idx.push(i);
-  return idx;
-}
 
 // 并行 map-reduce 的并发上限解析(105i:36 块无上限并发会把 provider 打进排队/限流)——
 // 读 config.summaryMaxConcurrentV1,过 [min,max] 钳位,坏值落回全局默认 8。该上限对所有模型一致，
@@ -505,4 +500,4 @@ function createProviderSummary({
   };
 }
 
-module.exports = { createProviderSummary, pickSummaryFailure, userBlockStarts, buildSummaryRefineMessages, summaryMaxConcurrent, mapSummaryWithLimit };
+module.exports = { createProviderSummary, pickSummaryFailure, buildSummaryRefineMessages, summaryMaxConcurrent, mapSummaryWithLimit };

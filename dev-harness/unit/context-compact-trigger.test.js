@@ -10,6 +10,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-trigger-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
+const { lastSessionContextTokens } = require(path.join(app, 'backend', 'compaction-routing.cjs'));
 const { readServerSource } = require('../src-reader');
 const source = readServerSource();
 after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -42,6 +43,7 @@ function agentTrigger(extra = {}) {
   const calls = [], events = [];
   const context = {
     agentConversationContextMeta: srv.agentConversationContextMeta,
+    lastSessionContextTokens,
     resolveContextWindow: srv.resolveContextWindow,
     runAgentExternalCompact: async (...args) => { calls.push(args); return { ok: true, beforeTokens: 800000, afterTokens: 3000 }; },
     loadSession: async () => ({ id: 'test', claudeSessionId: '', messages: [] }),
@@ -52,7 +54,7 @@ function agentTrigger(extra = {}) {
     ...extra,
   };
   const helpers = ['agentAutoCompactTrigger', 'agentAutoCompactBackingOff', 'noteAgentAutoCompactFailure'].map(extract).join('\n');
-  const run = vm.runInNewContext(`${extract('lastSessionContextTokens')}\n${extract('replaceSessionObject')}\n${helpers}\n${extract('maybeAutoCompactAgentSession')}\nmaybeAutoCompactAgentSession`, context);
+  const run = vm.runInNewContext(`${extract('replaceSessionObject')}\n${helpers}\n${extract('maybeAutoCompactAgentSession')}\nmaybeAutoCompactAgentSession`, context);
   // 架构还债批 4:第三个参数是该 CLI 的适配器(05 AGENT_CLI_ADAPTERS)。用真适配器,只把「原生状态/原生压缩」两项能力
   // 换成走本沙箱里的桩(与修前直接桩 kimiSessionStatus / applyKimiStatusToSession 的口径相同)。
   const adapterFor = type => {

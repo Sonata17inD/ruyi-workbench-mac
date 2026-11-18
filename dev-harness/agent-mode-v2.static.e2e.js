@@ -129,7 +129,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 // ⑤ 账本归属
 {
   const s10 = src('10-context-governance.js');
-  ok(/function recordCompactUsage\(session, provider, sc, attribution\)/.test(s10) && /attr && attr\.subagentId \? \{ subagentId/.test(s10) && /attr && attr\.runId \? \{ runId/.test(s10), '⑤ recordCompactUsage 带 subagentId/runId 归属');
+  const compactRecords = src('../backend/compaction-records.cjs');
+  ok(/function recordCompactUsage\(session, provider, sc, attribution\)/.test(compactRecords) && /attr && attr\.subagentId \? \{ subagentId/.test(compactRecords) && /attr && attr\.runId \? \{ runId/.test(compactRecords), '⑤ recordCompactUsage 带 subagentId/runId 归属');
   ok(/recordCompactUsage\(parentSession, r\.summaryProvider, r\.sc, \{ subagentId, runId \}\)/.test(s10), '⑤ 子代理自动压缩记账带归属');
   ok(/recordCompactUsage\(parentSession, provider, forced\.sc, \{ subagentId, runId \}\)/.test(src('08-agent-runs.js')), '⑤ 子代理 forced_400 压缩记账带归属');
   ok(/rec\.runId = String\(entry\.runId\)\.slice\(0, 120\)/.test(src('../backend/usage-ledger.cjs')), '⑤ usage-ledger 保留 runId');

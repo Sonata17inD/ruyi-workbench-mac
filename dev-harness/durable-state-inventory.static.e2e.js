@@ -15,7 +15,7 @@ try {
   ok(data.entries.every(entry => entry.lifecycle === 'shared-lifecycle' || entry.exemptionReason), 'every private lifecycle is migrated or has an auditable exemption');
   const context = data.entries.find(entry => entry.id === 'context-calibration');
   ok(context && /DurableJsonStore/.test(context.writePrimitive) && context.lifecycle === 'shared-lifecycle', 'context calibration is the representative full-lifecycle migration');
-  const source = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '10-context-governance.js'), 'utf8');
+  const source = fs.readFileSync(path.resolve(ROOT, 'ruyi-workbench', 'app', 'src', context.owner), 'utf8');
   ok(/DurableJsonStore\.create/.test(source) && !/const tmp = file \+ '\.tmp'/.test(source), 'context calibration no longer carries a private tmp/quarantine/write chain');
   // 架构还债批 2 B3:06d 的两个「坏了就当空」小存储迁到 DurableJsonStore(quarantine:false + cache:false),
   // 不再各自手写 read/parse/schema/mkdir/atomicWriteJson;清册里记的写原语跟着改。
