@@ -1,6 +1,7 @@
 'use strict';
 
 const { renderProviderStablePrompt } = require('./provider-stable-prompt.cjs');
+const { cachedInputTokensFromUsage, computeProviderCost } = require('./provider-pricing.cjs');
 const { redact } = require('./secret-redaction.cjs');
 
 // One non-streaming completion for auxiliary features. Transport retains the privacy boundary.
@@ -39,4 +40,44 @@ function createProviderRawCompletion({ providerWireProtocol, applyProviderReason
   return providerRawCompletion;
 }
 
-module.exports = { createProviderRawCompletion };
+// Keep auxiliary features off the main turn ledger and charge only reported usage.
+function recordAuxiliaryUsage(appendUsageLedger, provider, completion, context) {
+  try {
+    const usage = completion?.usage;
+    if (!usage || !context.sessionId) return;
+    const inTok = Number(usage.prompt_tokens ?? usage.input_tokens) || 0;
+    const outTok = Number(usage.completion_tokens ?? usage.output_tokens) || 0;
+    if (!(inTok > 0 || outTok > 0)) return;
+    const cachedInTok = cachedInputTokensFromUsage(usage);
+    const model = completion.model || provider.model || '';
+    const { cost, currency } = computeProviderCost(provider, inTok, outTok, cachedInTok, model);
+    appendUsageLedger({
+      ...context, engine: 'openai', provider: provider.id, model, inTok, outTok, cachedInTok,
+      cost, currency, estimated: false, kind: 'aux',
+    });
+  } catch { /* Usage recording is best effort. */ }
+}
+
+// A judge node may request one repair when the local parser cannot recover its JSON.
+function createNodeJsonRepair({ providerRawCompletion, appendUsageLedger }) {
+  async function repairNodeJsonViaProvider(provider, session, node, schema, rawOutput, parseError) {
+    try {
+      const sys = '你是 JSON 修复器，只输出修正后的单个 JSON 对象，无任何其它文字（不要 Markdown、不要标题、不要代码围栏、不要解释）。字符串值内部的双引号必须转义为 \\"，去掉尾逗号，补齐缺失的括号与引号。';
+      const schemaHint = schema ? ('\n\n目标 JSON Schema（要点）：\n' + JSON.stringify(schema).slice(0, 1500)) : '';
+      // 对抗轮 P2: 裁判类输出是"长分析在前、JSON 收尾"(候选提取从后往前的同一设计前提),截取必须保尾——
+      // 原 slice(0,12000) 在超长输出下发给修复模型的是不含真实 JSON 的分析文字,诱导其凭空编造 verdict。
+      const rawStr = String(rawOutput || '');
+      const rawSlice = rawStr.length <= 12000 ? rawStr : (rawStr.slice(0, 2000) + '\n…(中段省略)…\n' + rawStr.slice(-10000));
+      const user = '下面的文本本应是一个 JSON 对象，但解析失败了。请只输出修正后的 JSON 对象。\n\n解析错误：' + String(parseError || '').slice(0, 300) + schemaHint + '\n\n原始输出：\n' + rawSlice;
+      const sc = await providerRawCompletion(provider, [{ role: 'system', content: sys }, { role: 'user', content: user }], session?.id);
+      recordAuxiliaryUsage(appendUsageLedger, provider, sc, {
+        sessionId: session?.id, turnSeq: session?.turnSeq, note: 'json-repair', agentKey: node && node.id,
+      });
+      if (sc && sc.ok && sc.content) return sc.content;
+    } catch { /* repair must never break node execution */ }
+    return null;
+  }
+  return repairNodeJsonViaProvider;
+}
+
+module.exports = { createProviderRawCompletion, createNodeJsonRepair, recordAuxiliaryUsage };

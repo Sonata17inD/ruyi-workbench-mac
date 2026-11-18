@@ -363,7 +363,8 @@
     "app/backend/runtime-metrics.cjs",
     "app/backend/storage-steward.cjs",
     "app/backend/capability-service.cjs",
-    "app/backend/desktop-capability-probe.cjs"
+    "app/backend/desktop-capability-probe.cjs",
+    "app/backend/thread-brief.cjs"
   ],
   "acc": [
     "LICENSE",

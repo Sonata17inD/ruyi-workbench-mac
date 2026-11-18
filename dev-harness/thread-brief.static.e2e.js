@@ -12,7 +12,7 @@
 //   ② 消费面各自读的是【服务端算好的结果】,不是自己拼:六个装配点必须都在。
 //   ③ public/ 下算这条判据的只有一处(经典壳的 session-experience.js,因为「未命名 → 本地化占位」
 //      那条规则依赖 t(),服务端不认识它);管家壳那一侧只读 displayTitle,不许再出现第二份判据。
-//   ④ 红线:摘要不改写 session.title。06-provider-engine 的摘要块只经 updateSessionMeta 写
+//   ④ 红线:摘要不改写 session.title。thread-brief.cjs 只经 updateSessionMeta 写
 //      threadBrief,绝不给 title 赋值。
 //   ⑤ 设置开关三件套齐(HTML 控件 + 填充 + 接线 + 中英两条文案),且默认开(判 `!== false` 而不是
 //      `=== true`),不随 stewardEnabledV1。
@@ -40,7 +40,7 @@ function ok(condition, label) {
 const store = readSrc('../backend/session-metadata.cjs');
 const backendSources = fs.readdirSync(path.join(SRC, '../backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f);
 const serverSources = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat(backendSources);
-const provider = readSrc('06-provider-engine.js');
+const brief = readSrc('../backend/thread-brief.cjs');
 const core = readSrc('../backend/steward-core.cjs');
 const config = readSrc('01-config.js');
 const domain = readSrc('13d-core-domain-routes.js');
@@ -154,11 +154,10 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 
 /* ── ④ 红线:摘要不改写 session.title ───────────────────────────────────────── */
 {
-  const block = provider.slice(provider.indexOf('function threadBriefEnabled'), provider.indexOf('function threadBriefOnce') + 4000);
-  ok(block.length > 1000, '④ 定位到了 06-provider-engine 的摘要块(锚点没漂)');
-  ok(!/\.title\s*=\s*/.test(block),
+  ok(brief.includes('async function threadBriefOnce('), '④ 定位到了标题生成服务');
+  ok(!/\.title\s*=\s*/.test(brief),
     '④ 红线:摘要块里没有任何给 title 赋值的语句(原话是权威,brief 只是【多】给的一个名字)');
-  ok(/updateSessionMeta\(sid, \{ threadBrief: brief \}\)/.test(block),
+  ok(/updateSessionMeta\(sid, \{ threadBrief: brief \}\)/.test(brief),
     '④ 落盘只经 updateSessionMeta 的白名单,写的只有 threadBrief');
 }
 

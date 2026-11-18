@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 3169 | 3532 | 650 | 21 | 0 | 0 |
+| 94 | 3156 | 3528 | 650 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -61,7 +61,7 @@
 | 43 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
 | 44 | `05-claude-engine.js` | engine | 3 | 121 | 24 |
 | 45 | `05b-kimi-bridge.js` | engine | 130 | 76 | 12 |
-| 46 | `06-provider-engine.js` | engine | 54 | 47 | 14 |
+| 46 | `06-provider-engine.js` | engine | 41 | 43 | 14 |
 | 47 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 48 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
 | 49 | `06d-memory-domain.js` | engine | 157 | 36 | 6 |
@@ -221,13 +221,13 @@
 | `05b-kimi-bridge.js` | `07-autonomy.js` | forward | `requestNativePermission` |
 | `05b-kimi-bridge.js` | `10-context-governance.js` | forward | `agentConversationContextMeta`, `lastSessionContextTokens`, `runAgentExternalCompact`, `upsertCompactMarker` |
 | `05b-kimi-bridge.js` | `12-tool-dispatch.js` | forward | `toolCall` |
-| `06-provider-engine.js` | `00-boot.js` | backward | `APP_NAME`, `DEFAULT_PORT`, `OVERLAY_ID`, `RUYI_EVENTS`, `TOOL_REQUIRES`, `VERSION`, `cachedInputTokensFromUsage`, `computeProviderCost`, `crypto`, `dataRoot`, `externalRoot`, `fsp`, `logEvent`, `neutralizeFenceTag`, `nowIso`, `path`, `paths`, `safeJsonParse`, `text`, `toolRequirementsMet` |
+| `06-provider-engine.js` | `00-boot.js` | backward | `APP_NAME`, `DEFAULT_PORT`, `OVERLAY_ID`, `RUYI_EVENTS`, `TOOL_REQUIRES`, `VERSION`, `crypto`, `dataRoot`, `externalRoot`, `fsp`, `logEvent`, `neutralizeFenceTag`, `nowIso`, `path`, `paths`, `safeJsonParse`, `text`, `toolRequirementsMet` |
 | `06-provider-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
 | `06-provider-engine.js` | `01-config.js` | backward | `RUNTIME`, `atomicWriteJson`, `readConfig`, `safeSessionId` |
 | `06-provider-engine.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
 | `06-provider-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_DEFAULT_TYPE`, `AGENT_CLI_TYPES`, `isAgentCliType` |
 | `06-provider-engine.js` | `01h-process-runtime.js` | backward | `probeRgAsync` |
-| `06-provider-engine.js` | `02-session-store.js` | backward | `SESSION_BRIEF_GIST_CHARS`, `SESSION_BRIEF_TITLE_CHARS`, `appendUsageLedger`, `getSessionTitleOverride`, `loadSession`, `setSessionTitleOverride`, `updateSessionMeta` |
+| `06-provider-engine.js` | `02-session-store.js` | backward | `appendUsageLedger`, `getSessionTitleOverride`, `loadSession`, `setSessionTitleOverride`, `updateSessionMeta` |
 | `06-provider-engine.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `06-provider-engine.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider`, `providerRawCompletion` |
 | `06-provider-engine.js` | `06b-prompt-registry.js` | backward | `PROMPT_EN`, `getPromptPack` |

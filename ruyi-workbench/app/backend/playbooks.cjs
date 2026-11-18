@@ -2,9 +2,10 @@
 const path = require('node:path');
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
+const { recordAuxiliaryUsage } = require('./provider-raw-completion.cjs');
 const { PLAYBOOK_INPUT_TYPES, PLAYBOOK_REQUIRES, PLAYBOOK_SERVICES, evalPlaybookAvailability } = require('./playbook-policy.cjs');
 
-function createPlaybooks({ safeSessionId, externalRoot, paths, safeJsonParse, getCapabilities, atomicWriteJson, loadSession, readConfig, activeOpenAiProvider, providerRawCompletion, cachedInputTokensFromUsage, computeProviderCost, appendUsageLedger }) {
+function createPlaybooks({ safeSessionId, externalRoot, paths, safeJsonParse, getCapabilities, atomicWriteJson, loadSession, readConfig, activeOpenAiProvider, providerRawCompletion, appendUsageLedger }) {
 const PLAYBOOK_REUSE_OPEN = '\n\n<playbook-reuse-checks>';
 function normalizePlaybookReuse(raw) {
   if (!raw || raw.schema !== 1 || !raw.source || !safeSessionId(raw.source.sessionId) || !/^[a-f0-9]{64}$/.test(raw.source.resultRef || '')) return null;
@@ -217,22 +218,9 @@ async function draftPlaybookFromSession(sessionId, options = {}) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const userMsg = attempt === 0 ? promptText : (promptText + '\n\n上一次输出不是合法 JSON。请只输出一个合法的 JSON 对象,不要任何多余字符。');
     const sc = await providerRawCompletion(provider, [{ role: 'user', content: userMsg }]);
-    // v1.4-OSS 用量看板(补): 每次实际发出的起草补全各记一行 aux(note:'playbook-draft')。usage 缺失直接跳过
-    // 不估算(量级小,宁缺毋滥)。防御式 —— 记账绝不可影响起草流程。
-    try {
-      const u = sc && sc.usage;
-      const inTok = u ? (Number(u.prompt_tokens != null ? u.prompt_tokens : u.input_tokens) || 0) : 0;
-      const outTok = u ? (Number(u.completion_tokens != null ? u.completion_tokens : u.output_tokens) || 0) : 0;
-      const cachedInTok = cachedInputTokensFromUsage(u);
-      if (inTok > 0 || outTok > 0) {
-        const ledgerModel = sc.model || provider.model || '';
-        const { cost, currency } = computeProviderCost(provider, inTok, outTok, cachedInTok, ledgerModel);
-        appendUsageLedger({
-          sessionId: session.id, engine: 'openai', provider: provider.id, model: ledgerModel,
-          inTok, outTok, cachedInTok, cost, currency, estimated: false, turnSeq: session.turnSeq, kind: 'aux', note: 'playbook-draft',
-        });
-      }
-    } catch { /* accounting must never break drafting */ }
+    recordAuxiliaryUsage(appendUsageLedger, provider, sc, {
+      sessionId: session.id, turnSeq: session.turnSeq, note: 'playbook-draft',
+    });
     if (!sc.ok) { if (attempt === 1) return { ok: false, error: sc.error }; continue; }
     const draft = parsePlaybookDraft(sc.content);
     if (draft) {

@@ -953,7 +953,7 @@ async function runAgentWorkflow({ parentSession, provider, config, nodes: rawNod
             // 工具修复补全再走同一管线。Claude 引擎节点不做(单发 -p 进程成本高，且解析加固通常已足够)。修复成功
             // → 节点照常过门；仍失败 → 维持现有失败路径。修复调用/记账全程防御式，异常不影响主流程。
             if (!parsed.ok && (node.engine || 'openai') === 'openai' && provider) {
-              const fixed = await repairNodeJsonViaProvider(provider, config, parentSession, node, effectiveSchema, node.result, parsed.error);
+              const fixed = await repairNodeJsonViaProvider(provider, parentSession, node, effectiveSchema, node.result, parsed.error);
               if (fixed) { const p2 = parseStructuredAgentOutput(fixed); if (p2.ok) { parsed = p2; node.jsonRepaired = true; } }
             }
             if (!parsed.ok) { node.status = 'failed'; node.error = parsed.error; node.errorClass = 'schema_failed'; node.schemaErrors = [parsed.error]; }

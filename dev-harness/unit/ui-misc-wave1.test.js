@@ -190,7 +190,7 @@ describe('[F5] 英文单复数', () => {
 });
 
 describe('[F6] 审计行摘要本地化', () => {
-  const serverSrc = fs.readFileSync(path.join(APP, 'src', '06-provider-engine.js'), 'utf8');
+  const serverSrc = fs.readFileSync(path.join(APP, 'backend', 'audit-timeline.cjs'), 'utf8');
   const mapBlock = constBlock(serverSrc, 'AUDIT_SUMMARY_MAP');
   const mapEntries = [...mapBlock.matchAll(/^\s*([a-z_]+):\s*'([^']*)'/gm)].map(m => [m[1], m[2]]);
 

@@ -1,5 +1,9 @@
 'use strict';
 const { PROMPT_PACK_VERSION } = require('./prompt-registry.cjs');
+// Clamp title and gist at write time so persisted previews share the same limits.
+const SESSION_BRIEF_TITLE_CHARS = 24;
+const SESSION_BRIEF_GIST_CHARS = 80;
+
 // Title overlays are private, generation-bound metadata for live sessions.
 function createSessionMetadata({ safeSessionId, sessionPermissionModeOf, resolvePermissionMode, isLive, rewindGeneration }) {
 function isUntitledSessionTitle(title) {
@@ -27,11 +31,6 @@ function sessionMissionId(o) {
   return (typeof id === 'string' && id) ? id : '';
 }
 
-// ── 116-5a(27 号文 §11.8「线程自动摘要」)────────────────────────────────────────────────
-// 名字与概括的字数上限。在【落盘时】就夹死(见 applySessionMetaPatch),不是显示时才截:
-// 上限一旦调整,存量数据仍是按当时上限存的,显示层再截一次只会掩盖这件事。
-const SESSION_BRIEF_TITLE_CHARS = 24;
-const SESSION_BRIEF_GIST_CHARS = 80;
 // 117l-A1-fix (2)(27 号文 §11.9;用户真机天天看见):占位标题不是名字,它是「还没有名字」。
 // 未命名线程在第一回合结束、摘要(threadBrief)生成之前,raw 逐字就是后端占位符 'New session'
 // (createSession 写的),于是收件箱事件行写成「线程「New session」(sess_x)」、routeHint 块与
@@ -167,4 +166,4 @@ function setSessionTitleOverride(id, value) { sessionTitleOverrides.set(id, valu
 function dropSessionTitleOverride(id) { sessionTitleOverrides.delete(id); }
 return { sessionRecentUserRequest, sessionKind, sessionMissionId, SESSION_BRIEF_TITLE_CHARS, SESSION_BRIEF_GIST_CHARS, applySessionTitleOverride, sessionDisplayTitle, sessionMeta, sessionBriefOf, sessionMetaIsSteward, sortSessionMetas, isUntitledSessionTitle, getSessionTitleOverride, setSessionTitleOverride, dropSessionTitleOverride };
 }
-module.exports = { createSessionMetadata };
+module.exports = { createSessionMetadata, SESSION_BRIEF_TITLE_CHARS, SESSION_BRIEF_GIST_CHARS };

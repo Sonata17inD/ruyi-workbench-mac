@@ -5577,11 +5577,6 @@
         "ERROR_CLASSES",
         "PROJECT_MEMORY_CAP",
         "RUYI_MCP_TOOL_PREFIX",
-        "THREAD_BRIEF_FIRST_TURN_TRIES",
-        "THREAD_BRIEF_INPUT_CHARS",
-        "THREAD_BRIEF_PER_MINUTE",
-        "THREAD_BRIEF_REPLY_CHARS",
-        "THREAD_BRIEF_RETRY_BACKOFF_MS",
         "TOOL_ITERATION_BUDGETS",
         "_engineBriefMemo",
         "buildBrowserAutomationHint",
@@ -5591,9 +5586,9 @@
         "buildRuntimeIdentityFacts",
         "buildSkillsPromptSection",
         "buildStableSystemPrompt",
-        "buildThreadBriefMessages",
         "buildToolCustomizationHint",
         "buildVolatileParts",
+        "createThreadBriefService",
         "deleteUserPlaybook",
         "draftPlaybookFromSession",
         "engineBriefFacts",
@@ -5609,7 +5604,6 @@
         "playbookReuseSources",
         "providerEnvLines",
         "readProjectMemory",
-        "reassertThreadBrief",
         "renderCliEnvBrief",
         "renderProviderStablePrompt",
         "repairNodeJsonViaProvider",
@@ -5618,13 +5612,6 @@
         "saveUserPlaybook",
         "settleThreadBrief",
         "shouldExtendToolIterationBudget",
-        "threadBriefCalls",
-        "threadBriefDone",
-        "threadBriefEnabled",
-        "threadBriefInflight",
-        "threadBriefOnce",
-        "threadBriefProvider",
-        "threadBriefRateLimited",
         "updateAutomaticThreadTitle"
       ],
       "requires": [
@@ -5632,22 +5619,6 @@
           "provider": "00-boot.js",
           "symbol": "APP_NAME",
           "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cachedInputTokensFromUsage",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
-          "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5691,7 +5662,7 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5705,7 +5676,7 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5803,7 +5774,6 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5846,7 +5816,6 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5854,27 +5823,12 @@
           "provider": "02-session-store.js",
           "symbol": "getSessionTitleOverride",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "SESSION_BRIEF_GIST_CHARS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "SESSION_BRIEF_TITLE_CHARS",
           "kinds": [
             "read"
           ]
@@ -5883,14 +5837,14 @@
           "provider": "02-session-store.js",
           "symbol": "setSessionTitleOverride",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5911,7 +5865,6 @@
           "provider": "04i-provider-wire.js",
           "symbol": "providerRawCompletion",
           "kinds": [
-            "call",
             "read"
           ]
         },
