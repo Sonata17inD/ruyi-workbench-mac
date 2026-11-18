@@ -149,8 +149,10 @@ async function main() {
     // Capture the real node history at the existing compaction boundary. Small histories need not run L2.
     process.env.RUYI_HOME = home;
     process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
-    const internals = loadServerInternals(['runSubAgentCore', 'summaryTaskSourceRole', 'defaultConfig'], { withEval: true });
-    internals.__eval('maybeCompactSubHistory = async opts => { module.exports.__mailHistory = opts.subHistory; return false; }');
+    const internals = loadServerInternals(['runSubAgentCore', 'SessionCompaction', 'defaultConfig']);
+    const { summaryTaskSourceRole } = require('../ruyi-workbench/app/backend/summary-evidence.cjs');
+    let mailHistory;
+    internals.SessionCompaction.maybeCompactSubHistory = async opts => { mailHistory = opts.subHistory; return false; };
     let mailAvailable = true;
     await internals.runSubAgentCore({ parentSession: { id: parent, cwd: home, turnSeq: 1 },
       provider: { id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model' },
@@ -158,8 +160,8 @@ async function main() {
       task: 'DIRECT_NODE_MAIL', agentKey: 'direct', runId, toolTier: 'read', maxIters: 2, onEvent: () => {}, ctrl: new AbortController(),
       getMail: () => mailAvailable ? (mailAvailable = false, [{ sender: 'parent', text: 'DIRECT_PEER_FACT', entry: { id: 'direct-mail' } }]) : [],
     });
-    const nodePeer = internals.__eval('module.exports.__mailHistory').find(m => m.meta && m.meta.origin === 'agent_message');
-    ok(nodePeer && internals.summaryTaskSourceRole(nodePeer) === 'peer' && nodePeer.meta.sourceSessionId === parent && nodePeer.meta.runId === runId && nodePeer.meta.nodeId === 'parent' && nodePeer.meta.messageId === 'direct-mail', 'actual node compaction input binds mail source and production parser classifies it as peer');
+    const nodePeer = mailHistory?.find(m => m.meta && m.meta.origin === 'agent_message');
+    ok(nodePeer && summaryTaskSourceRole(nodePeer) === 'peer' && nodePeer.meta.sourceSessionId === parent && nodePeer.meta.runId === runId && nodePeer.meta.nodeId === 'parent' && nodePeer.meta.messageId === 'direct-mail', 'actual node compaction input binds mail source and production parser classifies it as peer');
     const dead = await chat(parent, 'DEAD_RUN');
     ok(dead.some(e => e.type === 'tool_result' && e.id === 'dead_send' && e.content.ok === false), 'completed run cannot be revived by sending a message');
     const automatic = (await post('/api/sessions', { cwd: home })).session.id;

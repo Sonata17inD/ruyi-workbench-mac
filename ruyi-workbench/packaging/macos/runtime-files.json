@@ -381,7 +381,9 @@
     "app/backend/compaction-refetch.cjs",
     "app/backend/compaction-plan.cjs",
     "app/backend/compaction-records.cjs",
-    "app/backend/compaction-routing.cjs"
+    "app/backend/compaction-routing.cjs",
+    "app/backend/compaction-kernel.cjs",
+    "app/backend/session-compaction.cjs"
   ],
   "acc": [
     "LICENSE",

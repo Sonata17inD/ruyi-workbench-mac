@@ -7,13 +7,12 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const vm = require('vm');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-marker-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
-const { readServerSource } = require('../src-reader');
-const source = readServerSource();
+const { createCompactionKernel } = require(path.join(app, 'backend', 'compaction-kernel.cjs'));
+const { createSessionCompaction } = require(path.join(app, 'backend', 'session-compaction.cjs'));
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 const { fmtTokensServer: f, upsertCompactMarker, openCompactMarker, COMPACT_MARKER_MIN_SAVED_TOKENS } = srv;
@@ -107,31 +106,17 @@ test('openCompactMarker 只认尾部未闭环行', () => {
 });
 
 // ── 滞回水位:贴线抖动时的每迭代空转必须被水位挡住 ────────────────────────────────
-function extract(name) {
-  const match = source.match(new RegExp(`^(?:async )?function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?^\\}`, 'm'));
-  assert.ok(match, `extract ${name}`);
-  return match[0];
-}
 const summaryCalls = { n: 0 };
 function autoCompactHarness(estimates, { overhead = 3000, failures = new Map() } = {}) {
   const events = [], saves = [], snapshots = [];
   const ctx = {
-    providerConversationContextWindow: () => 131072,
     CompactionPlan: {
       create: ({ config }) => ({ window: 131072, budget: (Number(config && config.autoCompactThreshold) || 0.8) * 131072 }),
       reseed: () => [],
     },
     // 只有系统提示那一条(runAutoCompaction 算固定开销、预估重播种下限时各问一次)→ 固定 3000,不占用下面排好的估算序列
     calibratedEstimate: (p, m, h) => (Array.isArray(h) && h.length <= 1 ? overhead : (estimates.shift() ?? estimates.at(-1))),
-    compactionSummaryFailures: failures, COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS: 10 * 60 * 1000, // 低水位升级的摘要失败冷却(缺省每个 harness 一张新表)
-    // 126-111a:maybeAutoCompact 现在会问一声「L1 边界要不要按 token 预算算」。注进来的是
-    // **真函数**(srv 导出的那一个),不是这里另写一份假的 —— 判据只有一处,这条纪律在沙箱里
-    // 也得成立。沙箱里缺了它会 ReferenceError,被 maybeAutoCompact 自己的 try/catch 吞成
-    // 「没压缩」,于是本文件两条断言红成「该触发却没触发」(实测就是这么红的)。
-    evaporateBudgetBoundaryEnabled: srv.evaporateBudgetBoundaryEnabled,
-    historyReadDedupEnabled: srv.historyReadDedupEnabled, // 126-111e:同上,注真函数
-    // L1「够了」的低水位(compactionPlan.l1SufficientRatio)同样注真规则(规则 JSON 是唯一可审计输入)。
-    CONTEXT_GOVERNANCE_RULES: require('../../ruyi-workbench/app/backend/context-governance-rules.json'),
+    summaryFailures: failures,
     sessionObjectIsStale: srv.sessionObjectIsStale, // 128b:历史快照前判「是不是撤回之前的对象」—— 同上,注真函数(沙箱里缺了它照样红成「没压缩」)
     writeHistorySnapshot: async (...a) => { snapshots.push(a); return 'raw'; },
     evaporateHistory: history => {
@@ -141,17 +126,14 @@ function autoCompactHarness(estimates, { overhead = 3000, failures = new Map() }
       return n;
     },
     providerSummaryCall: async () => { summaryCalls.n++; return { ok: false, error: 'summary offline' }; }, // L2 恒败:L1 保持 + 不中断
-    resolveCompactionProvider: () => ({ provider: null, model: '', isDefault: true }),
     recordCompactUsage: () => {},
-    recentTurnsBoundary: () => 0,
     estimateHistoryTokens: () => 12345,
     saveSession: async s => saves.push(s),
     logEvent: () => {},
-    fmtTokensServer: f,
-    upsertCompactMarker, openCompactMarker, COMPACT_MARKER_MIN_SAVED_TOKENS,
-    nowIso: () => new Date().toISOString(),
+    upsertCompactMarker,
   };
-  const run = vm.runInNewContext(`${extract('runAutoCompaction')}\n${extract('maybeAutoCompact')}\nmaybeAutoCompact`, ctx);
+  const kernel = createCompactionKernel(ctx);
+  const { maybeAutoCompact: run } = createSessionCompaction({ ...ctx, kernel });
   const provider = { id: 'p', model: 'm' };
   const config = { autoCompactThreshold: 0.8 };
   const turn = (session, sys = 'sys') => run(session, provider, sys, config, e => events.push(e), 'm', []);

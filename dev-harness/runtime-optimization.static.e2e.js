@@ -8,6 +8,8 @@ const { readServerSource } = require('./src-reader');
 const src = readServerSource() + '\n' + require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/runtime-policy.cjs'), 'utf8');
 const fileToolsSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-tools.cjs'), 'utf8');
 const summarySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-summary.cjs'), 'utf8');
+const kernelSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-kernel.cjs'), 'utf8');
+const compactionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
 const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -244,7 +246,7 @@ ok(/l1ProtectRatio/.test(reductionSource) && /l1ProtectMinTokens/.test(reduction
   // (它要能被上面 [C1] 那段 new Function 原样切出来跑)。这条推导一旦有人绕过去写个裸预算,
   // 开关就形同虚设。判据:src 里每一处 `boundaryBudget:` 的**赋值**都必须和判定函数同一行。
   // 与 125 波那三把锁同一个模具:判据唯一/表唯一/值域唯一。
-  const lines = src.split(/\r?\n/).filter(line => /\bboundaryBudget\s*:/.test(line));
+  const lines = (kernelSource + "\n" + compactionSource).split(/\r?\n/).filter(line => /\bboundaryBudget\s*:/.test(line));
   const ungated = lines.filter(line => !/evaporateBudgetBoundaryEnabled\s*\(/.test(line));
   // 主回合与子代理的自动压缩共用 10 runAutoCompaction 以后,赋值点只剩那一处(修前两份各一处)。
   ok(lines.length >= 1, `F1 扫得到 boundaryBudget 赋值点（实得 ${lines.length} 处；扫不到 = 本条静默失效）`);
@@ -269,7 +271,7 @@ ok(READ_DEDUP_PREFIX === '[重复读取:' && /startsWith\(READ_DEDUP_PREFIX\)/.t
 ok(/rawRef=\$\{rawRefPrefix\}/.test(reductionSource), 'F2 指针带 rawRef —— 换掉的是重复不是信息,原件一直回查得到');
 {
   // 与 F1 同一把机械锁：`dedupeReads` 也是「已经过开关把门的」布尔，evaporateHistory 自己不读开关。
-  const lines = src.split(/\r?\n/).filter(line => /\bdedupeReads\s*:/.test(line));
+  const lines = (kernelSource + "\n" + compactionSource).split(/\r?\n/).filter(line => /\bdedupeReads\s*:/.test(line));
   const ungated = lines.filter(line => !/historyReadDedupEnabled\s*\(/.test(line));
   ok(lines.length >= 1, `F2 扫得到 dedupeReads 赋值点（实得 ${lines.length} 处；扫不到 = 本条静默失效）`);
   ok(ungated.length === 0, `F2 每一处 dedupeReads 都由 historyReadDedupEnabled 把门${ungated.length ? '；实得没把门的：' + ungated.map(s => s.trim()).join(' ⏐ ') : ''}`);
@@ -337,7 +339,7 @@ ok(/以下为摘要之后保留的最近工具往来/.test(planSource), 'F4 桥�
   ok(lines.length === 1, `F4 扫得到 CompactionPlan 里那唯一的边界调用（实得 ${lines.length} 处）`);
   ok(lines.every(line => /reseedTailUnitsEnabled\s*\(/.test(line)),
     `F4 那一处由 reseedTailUnitsEnabled 把门${lines.length ? '；实得：' + lines.map(s => s.trim()).join(' ⏐ ') : ''}`);
-  const nets = src.split(/\r?\n/).filter(line => /repairProviderHistoryPairing\(/.test(line) && /reseedTailUnitsEnabled\s*\(/.test(line));
+  const nets = kernelSource.split(/\r?\n/).filter(line => /repairProviderHistoryPairing\(/.test(line) && /reseedTailUnitsEnabled\s*\(/.test(line));
   // 自动压缩的 L2 重播种出口只剩共用内核那一处(主回合与子代理同走 runAutoCompaction;修前两份各一处)。
   ok(nets.length === 1, `F4 自动压缩唯一的 reseed 出口挂了配对安全网且由开关把门（实得 ${nets.length} 处）`);
 }

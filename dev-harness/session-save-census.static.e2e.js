@@ -8,6 +8,7 @@
 // 另外逐个点名 128b 改过的那十一处,钉住「它们真的走 mutateSession」,免得普查数碰巧对上而改法被撤回。
 const fs = require('fs');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 const SRC = path.join(__dirname, '..', 'ruyi-workbench', 'app', 'src');
 let fail = 0;
 const ok = (c, label) => { if (c) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -27,7 +28,7 @@ const CENSUS = {
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
   '07-autonomy.js': 1,           // steer 排空(回合自存)
   '09-workflow.js': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
-  '10-context-governance.js': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
+  '../backend/session-compaction.cjs': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
   // 13-http-router.js 0:Kimi 状态那个 GET 回写用量读数(2026-10 走查 W1 #4)已改走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。
   '13b-api-domain-routes.js': 1, // 插话路由往活回合那份对象里追加(回合自存)
   '13ac-desktop-execution-runtime.js': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
@@ -51,11 +52,8 @@ ok(diffs.length === 0, `① saveSession 普查与表逐项相等${diffs.length ?
 
 // ② 128b 改过的十一处真的走 mutateSession(慢活带 expectGen)。
 function fnBody(file, header) {
-  const text = read(file);
-  const at = text.indexOf(header);
-  if (at < 0) return '';
-  const end = text.indexOf('\n}\n', at);
-  return text.slice(at, end < 0 ? undefined : end);
+  const name = /\bfunction (\w+)\(/.exec(header)?.[1];
+  return name ? functionBlock(read(file), name) : '';
 }
 function routeBlock(file, marker, lines = 70) {
   const text = read(file);
@@ -71,8 +69,8 @@ const sites = [
   ['13-http-router.js todo 回写路由', routeBlock('13-http-router.js', routeMarker('todo'), 25), false],
   ['13-http-router.js Kimi 状态读数回写路由', routeBlock('13-http-router.js', routeMarker('kimi/status'), 30), false],
   ['13-http-router.js 任务账本路由(check／start／update)', routeBlock('13-http-router.js', routeMarker('mission'), 110), true],
-  ['10-context-governance.js runProviderCompact', fnBody('10-context-governance.js', 'async function runProviderCompact('), true],
-  ['10-context-governance.js runAgentExternalCompact', fnBody('10-context-governance.js', 'async function runAgentExternalCompact('), true],
+  ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
+  ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
   ['05b-kimi-bridge.js runKimiCompact', fnBody('05b-kimi-bridge.js', 'async function runKimiCompact('), false],
   ['08-agent-runs.js appendAgentWorkflowSummaryToSession', fnBody('08-agent-runs.js', 'async function appendAgentWorkflowSummaryToSession('), false],
   ['13p-steward-runner-actions.js stewardStampReply', fnBody('13p-steward-runner-actions.js', 'async function stewardStampReply('), false],
@@ -94,7 +92,7 @@ ok(/throwIfStale:\s*true/.test(mutate) && /expectGen/.test(mutate) && /session\.
 
 // ④ 旁车与驱动器过撤回闸。
 ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/session-notes.cjs', 'async function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
-ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('10-context-governance.js')), '④ 历史快照:陈旧对象不写');
+ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('../backend/session-compaction.cjs')), '④ 历史快照:陈旧对象不写');
 ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/mission-driver.cjs', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
 
 // ⑤ 撤回相关的码有稳定码与人话(Brief §4.2 第 18 条)。

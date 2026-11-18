@@ -128,7 +128,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ⑤ 账本归属
 {
-  const s10 = src('10-context-governance.js');
+  const s10 = src('../backend/session-compaction.cjs');
   const compactRecords = src('../backend/compaction-records.cjs');
   ok(/function recordCompactUsage\(session, provider, sc, attribution\)/.test(compactRecords) && /attr && attr\.subagentId \? \{ subagentId/.test(compactRecords) && /attr && attr\.runId \? \{ runId/.test(compactRecords), '⑤ recordCompactUsage 带 subagentId/runId 归属');
   ok(/recordCompactUsage\(parentSession, r\.summaryProvider, r\.sc, \{ subagentId, runId \}\)/.test(s10), '⑤ 子代理自动压缩记账带归属');

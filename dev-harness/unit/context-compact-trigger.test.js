@@ -190,15 +190,18 @@ test('provider trigger consumes main-model override, not the summarizer window',
   assert.equal(srv.providerConversationContextWindow(config, provider, provider.model), 1000000);
   assert.equal(srv.providerContextWindow(summary.provider, summary.model), 131072);
   assert.equal(provider.contextWindow, 65536, 'does not mutate provider or summary budgets');
-  const events = [];
-  const run = vm.runInNewContext(`${extract('runAutoCompaction')}\n${extract('maybeAutoCompact')}\nmaybeAutoCompact`, {
-    providerConversationContextWindow: srv.providerConversationContextWindow,
-    providerContextWindow: srv.providerContextWindow,
-    calibratedEstimate: () => 241000,
-    writeHistorySnapshot: () => assert.fail('under-budget turns must not start compaction'),
+  const events = [], attempts = [];
+  const { createCompactionKernel } = require(path.join(app, 'backend', 'compaction-kernel.cjs'));
+  const { createSessionCompaction } = require(path.join(app, 'backend', 'session-compaction.cjs'));
+  const kernel = createCompactionKernel({ calibratedEstimate: () => 241000 });
+  const { maybeAutoCompact: run } = createSessionCompaction({
+    CompactionPlan: srv.CompactionPlan, kernel,
+    writeHistorySnapshot: () => { attempts.push('snapshot'); return ''; },
+    logEvent: event => attempts.push(event),
   });
   assert.equal(await run({ providerHistory: [{ role: 'user', content: 'history' }] }, provider, '', config, e => events.push(e), provider.model), false);
   assert.deepEqual(events, []);
+  assert.deepEqual(attempts, []);
 });
 
 test('provider learned safety caps remain authoritative over manual conversation limits', () => {

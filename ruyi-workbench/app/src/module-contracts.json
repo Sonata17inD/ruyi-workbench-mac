@@ -8375,13 +8375,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "maybeCompactSubHistory",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "noteWindowOvershoot",
           "kinds": [
             "call"
@@ -8399,6 +8392,13 @@
           "symbol": "runForcedOverflowCompaction",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "10-context-governance.js",
+          "symbol": "SessionCompaction",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -10570,20 +10570,15 @@
       "file": "10-context-governance.js",
       "layer": "orchestration",
       "provides": [
-        "COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS",
         "COMPACTION_TOOL_INDEX_HEADER",
         "COMPACT_MARKER_MIN_SAVED_TOKENS",
         "COMPACT_RESEED_TAIL_MAX_TOKENS",
         "CONTEXT_GOVERNANCE_RULES",
+        "CompactionKernel",
         "CompactionPlan",
-        "MANUAL_COMPACTION_SUMMARY_HEADER",
-        "MANUAL_COMPACT_MAX_FRESH_TOKENS",
-        "MANUAL_COMPACT_MIN_FRESH_RATIO",
-        "MANUAL_COMPACT_MIN_FRESH_TOKENS",
-        "MANUAL_COMPACT_MIN_L1_SAVED_RATIO",
-        "MANUAL_COMPACT_MIN_L1_SAVED_TOKENS",
         "SUMMARY_PROMPT",
         "SUMMARY_PROMPT_EN",
+        "SessionCompaction",
         "agentConversationContextMeta",
         "agentNodeContextWindow",
         "buildCompactionToolIndex",
@@ -10596,7 +10591,6 @@
         "compactHistoryFromSession",
         "compactionRefetchRefusal",
         "compactionRefetchWarning",
-        "compactionSummaryFailures",
         "compactionTaskText",
         "configuredConversationWindow",
         "contextWindowOverrideKey",
@@ -10616,10 +10610,8 @@
         "historyUnitStarts",
         "lastSessionContextTokens",
         "learnedWindowCap",
-        "manualCompactPromptShape",
         "mapSummaryWithLimit",
         "maybeAutoCompact",
-        "maybeCompactSubHistory",
         "measureObservationReductionShadow",
         "noteEstimateSample",
         "noteWindowOvershoot",
@@ -10634,7 +10626,6 @@
         "resolveCompactionProvider",
         "resolveSummaryCallPolicy",
         "runAgentExternalCompact",
-        "runAutoCompaction",
         "runForcedOverflowCompaction",
         "runProviderCompact",
         "summaryMaxConcurrent",
@@ -10649,13 +10640,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "compactionSummaryPairEnd",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
           "kinds": [
             "read"
@@ -10665,7 +10649,6 @@
           "provider": "00-boot.js",
           "symbol": "estimateContentTokens",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10673,7 +10656,6 @@
           "provider": "00-boot.js",
           "symbol": "estimateHistoryTokens",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10702,7 +10684,6 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10710,7 +10691,6 @@
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10729,13 +10709,6 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "text",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "DurableJsonStore",
           "kinds": [
@@ -10746,36 +10719,7 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "evaporateBudgetBoundaryEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "historyReadDedupEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "observationRecallEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "reseedTailUnitsEnabled",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -10789,63 +10733,63 @@
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "maybeWriteSessionNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "repairProviderHistoryPairing",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionObjectIsStale",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "writeHistorySnapshot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02e-session-engine-route.js",
           "symbol": "configForSessionEngineRoute",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10871,13 +10815,6 @@
         },
         {
           "provider": "04i-provider-wire.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
           "symbol": "normalizeProviderApiStyle",
           "kinds": [
             "read"
@@ -10894,7 +10831,7 @@
           "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10908,7 +10845,7 @@
           "provider": "07-autonomy.js",
           "symbol": "buildOpenAiTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

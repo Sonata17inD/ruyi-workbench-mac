@@ -26,8 +26,10 @@ ok(!/\.join\('\\n\\n'\)\.slice\(0, 32000\)/.test(src), 'S §28c 旧 join.slice(0
 ok(/deriveNodeOutputs\(node\);/.test(src), 'S §28b runNode 完成调 deriveNodeOutputs');
 ok(/function deriveNodeOutputs\(node\)/.test(src) && /node\.summary =/.test(src) && /node\.evidence =/.test(src) && /node\.artifacts =/.test(src), 'S §28b deriveNodeOutputs 产 summary/evidence/artifacts');
 // §28a:子代理循环边界压缩;Claude 引擎不引入。
-ok(/await maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(src), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
-ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(src) && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(src), 'S §28a L2 重播种(自动 / 强压两条路)都用【原地 splice】(const 闭包安全)');
+ok(/await SessionCompaction\.maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(src), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
+const sessionCompactionSource = fs.readFileSync(path.resolve(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
+ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(sessionCompactionSource)
+  && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(src), 'S §28a 自动和强制重播种都原地更新子代理历史');
 {
   const claudeOnce = (src.match(/async function runClaudeSubAgentOnce\([\s\S]*?\nasync function runSubAgentCore\(/) || [''])[0];
   // 排除注释里对这些词的提及,只查真实代码模式(声明/调用)。
@@ -108,45 +110,23 @@ const g = new Function('estimateContentTokens', upstreamContextBlocks.join('\n')
 // [A] 源抽取实跑:§28a maybeCompactSubHistory(L1/L2 + 原地 splice + 钉 task[0])
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [A] §28a maybeCompactSubHistory ──');
-const mm = src.match(/async function maybeCompactSubHistory\(opts\) \{[\s\S]*?\n\}/);
-// 子代理与主回合共用的两级压缩内核(10 runAutoCompaction)—— 一起抽出来跑,判据只有一处。
-const km = src.match(/async function runAutoCompaction\(ctx\) \{[\s\S]*?\n\}/);
-ok(!!mm && !!km, 'A 源抽取 maybeCompactSubHistory + 共用内核 runAutoCompaction');
 const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
-// 桩:窗口 1000 token;估算 = 各消息 content 长度/4 + 40/条;摘要内核可控 ok/summary。
-const providerContextWindow = () => 1000;
-const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((t, m) => t + 40 + Math.ceil(String((m && m.content) || '').length / 4), 0);
-const { evaporateHistory } = createObservationReduction({ estimateHistoryTokens });
 const { createCompactionPlan } = require('../ruyi-workbench/app/backend/compaction-plan.cjs');
-const { recentTurnsBoundary } = createCompactionPlan({ estimateHistoryTokens });
+const { createCompactionKernel } = require('../ruyi-workbench/app/backend/compaction-kernel.cjs');
+const { createSessionCompaction } = require('../ruyi-workbench/app/backend/session-compaction.cjs');
+const providerContextWindow = () => 1000;
+const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((total, m) => total + 40 + Math.ceil(String(m?.content || '').length / 4), 0);
+const reduction = createObservationReduction({ estimateHistoryTokens });
+const { CompactionPlan } = createCompactionPlan({ estimateHistoryTokens, providerContextWindow });
 let summaryOk = true;
 const providerSummaryCall = async () => (summaryOk ? { ok: true, summary: 'SUMMARY', usage: null } : { ok: false, error: 'boom' });
 let recordCalls = 0; const recordCompactUsage = () => { recordCalls++; };
 // 第45波:maybeCompactSubHistory 预算判定改走 calibratedEstimate(45d 校准入口)—— 桩镜像「无样本=因子1」。
 const calibratedEstimate = (p, m, h) => estimateHistoryTokens(h);
-const resolveCompactionProvider = (config, provider) => ({ provider, model: provider && provider.model });
-const {
-  CompactionPlan,
-  evaporateBudgetBoundaryEnabled,
-  historyReadDedupEnabled,
-  reseedTailUnitsEnabled,
-  repairProviderHistoryPairing,
-} = require('../ruyi-workbench/app/server.js');
-// 126-111a:maybeCompactSubHistory 现在会问一声「L1 边界要不要按 token 预算算」。注**真函数**,
-// 不在这儿另写一份假的(判据只有一处,沙箱里也得成立)。开关默认关,所以本文件的判据逐字节不变;
-// 缺了它会 ReferenceError 被 maybeCompactSubHistory 的 try/catch 吞成「没压缩」,A 组十条全红。
-// 126-111b:maybeCompactSubHistory 的 reseed 出口现在会问一声「要不要按单元退化」并过一遍配对安全网。
-// **第三次**了:往这个函数里加任何跨模块调用,都要回来补这处沙箱,否则 ReferenceError 被它自己的
-// try/catch 吞成「没压缩」,A 组一片红而真因在别处。
-// 第四次:runAutoCompaction 读 compactionPlan.l1SufficientRatio(L1「够了」的低水位)—— 注真规则(规则 JSON 是唯一可审计输入)。
-const CONTEXT_GOVERNANCE_RULES = require('../ruyi-workbench/app/backend/context-governance-rules.json');
-// 第五次:L2 重播种之后附「已执行工具调用」机器索引(10 buildCompactionToolIndex)。本组只验压缩内核的判据与装回,
-// 索引本身另有单测(unit/compaction-tool-index.test.js 经 CompactionPlan/buildObservationRecallPrompt 验)—— 这里注空串桩。
-const buildCompactionToolIndex = () => '';
-const maybeCompactSubHistory = new Function(
-  'providerContextWindow', 'estimateHistoryTokens', 'calibratedEstimate', 'evaporateHistory', 'providerSummaryCall', 'recentTurnsBoundary', 'recordCompactUsage', 'resolveCompactionProvider', 'COMPACT_RESEED_TAIL_MAX_TOKENS', 'CompactionPlan', 'evaporateBudgetBoundaryEnabled', 'historyReadDedupEnabled', 'reseedTailUnitsEnabled', 'repairProviderHistoryPairing', 'logEvent', 'CONTEXT_GOVERNANCE_RULES', 'compactionSummaryFailures', 'COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS', 'buildCompactionToolIndex',
-  km[0] + '\n' + mm[0] + '\nreturn maybeCompactSubHistory;'
-)(providerContextWindow, estimateHistoryTokens, calibratedEstimate, evaporateHistory, providerSummaryCall, recentTurnsBoundary, recordCompactUsage, resolveCompactionProvider, 16000, CompactionPlan, evaporateBudgetBoundaryEnabled, historyReadDedupEnabled, reseedTailUnitsEnabled, repairProviderHistoryPairing, () => {}, CONTEXT_GOVERNANCE_RULES, new Map(), 10 * 60 * 1000, buildCompactionToolIndex);
+const { repairProviderHistoryPairing } = require('../ruyi-workbench/app/server.js');
+const kernel = createCompactionKernel({ CompactionPlan, estimateHistoryTokens, calibratedEstimate, providerSummaryCall,
+  repairProviderHistoryPairing, logEvent() {}, ...reduction });
+const { maybeCompactSubHistory } = createSessionCompaction({ kernel, CompactionPlan, recordCompactUsage });
 
 const { truncateToolResult } = require('../ruyi-workbench/app/backend/tool-result-view.cjs');
 

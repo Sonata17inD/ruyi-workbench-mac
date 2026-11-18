@@ -15,10 +15,9 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-notes-refresh-'));
 for (const key of ['RUYI_HOME', 'WIN_CLAUDE_WORKBENCH_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
 const s = loadServerInternals([
   'createSession', 'saveSession', 'runSessionTurn', 'readSessionNotes', 'sessionNotesPath',
-  'maybeWriteSessionNotes', 'deleteSession', 'flushSessionIndex', 'runAutoCompaction',
-], { withEval: true });
-const originalAutoCompaction = s.runAutoCompaction;
-const stateKey = '__ruyiNotesRefreshScenario';
+  'maybeWriteSessionNotes', 'deleteSession', 'flushSessionIndex', 'CompactionKernel',
+]);
+const originalAutoCompaction = s.CompactionKernel.runAutoCompaction;
 let scenario = null;
 let fake;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -30,7 +29,6 @@ function summary(decisions) {
 }
 function armScenario(summaries, toolRounds) {
   scenario = { summaries, toolRounds, compactCalls: 0, requests: [], nextRequest: null };
-  globalThis[stateKey] = scenario;
 }
 async function runTurn(title) {
   const session = await s.createSession({ title, cwd: root });
@@ -54,24 +52,21 @@ before(async () => {
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model' }],
     activeProvider: 'fake',
   }), 'utf8');
-  s.__eval(`runAutoCompaction = async function(ctx) {
-    const state = globalThis.${stateKey};
-    const index = state.compactCalls++;
-    if (index === 0 || index > state.summaries.length) return { compacted: false };
-    const value = state.summaries[index - 1];
+  s.CompactionKernel.runAutoCompaction = async ctx => {
+    const index = scenario.compactCalls++;
+    if (index === 0 || index > scenario.summaries.length) return { compacted: false };
+    const value = scenario.summaries[index - 1];
     const user = ctx.history.findLast(message => message && message.role === 'user');
     return {
       level: 2, compacted: true, sc: { ok: true, summary: value }, summaryProvider: ctx.provider,
-      reseeded: [{ role: 'user', content: '【压缩摘要】\\n' + value }, { role: 'assistant', content: '收到，继续。' }, user],
+      reseeded: [{ role: 'user', content: '【压缩摘要】\n' + value }, { role: 'assistant', content: '收到，继续。' }, user],
       before2: 400, after2: 120, watermark: 120,
     };
-  }`);
+  };
 });
 
 after(async () => {
-  globalThis[stateKey] = originalAutoCompaction;
-  s.__eval(`runAutoCompaction = globalThis.${stateKey}`);
-  delete globalThis[stateKey];
+  s.CompactionKernel.runAutoCompaction = originalAutoCompaction;
   if (fake) await fake.close();
   await s.flushSessionIndex();
   fs.rmSync(root, { recursive: true, force: true });
