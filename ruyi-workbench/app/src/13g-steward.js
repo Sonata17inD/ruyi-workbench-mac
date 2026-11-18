@@ -1,6 +1,6 @@
 // ============================================================================
-// 第 116 波 116c(27 号文 §3.5「管家工具面设计」/ §4「管家记忆层」):管家(Steward)域路由、
-// 记忆面板、管家工具的门控壳与 StewardHooks 注册表。
+// 第 116 波 116c(27 号文 §3.5「管家工具面设计」/ §4「管家记忆层」):管家(Steward)
+// 记忆面板服务、管家工具的门控壳与 StewardHooks 注册表。
 //
 // 落点(transport 层,manifest 中位于 13l-steward-ops.js 之后、13h-steward-runner.js 之前)。
 // 116-2e 拆分:收件箱轮询与游标(原本是本文件的前半)整体前移到 `13i-steward-inbox.js`,零行为搬家;
@@ -12,167 +12,14 @@
 //   `13k-steward-threads.js`(线程族:派活原语与 thread_* / quick_ask / threads_search)、
 //   `13l-steward-ops.js`(观察族 / 决策族 / 记忆族 / 设置族 / 内容管理族)。
 //   三者都排在本文件【之前】:注册表要引用它们的 stewardImpl*,排在后面才是后向边。
-//   本文件留下的是:管家域路由 + 记忆面板六条 + 工具门控壳 + StewardHooks 注册表。
+//   本文件装配管家工具与记忆面板服务，HTTP 路由由 steward-routes.cjs 实现。
 //
 // 依赖纪律(§11.3「不得新增前向边」):
 //   · 13g 只引用拼接顺序在它之前的模块符号(00/01/01b/02/06d/06i/13i/13j/13k/13l …),全部后向边;
-//   · 13-http-router.js 【不得】直接引用本文件的任何符号 —— 那会是前向边。挂接走延迟绑定:
-//     本文件在加载时 `Object.assign(StewardHooks, { handleApiRoutes, stopInbox, inboxRead, ... })`,
-//     13 只写 `StewardHooks.handleApiRoutes`(13 → 06i 是后向边);
 //   · 12-tool-dispatch.js 的管家工具 handler 同理,只写 `StewardHooks.<键>(args, ctx)`。
 //
 // 开关(§3.4 红线):`stewardEnabledV1 !== true` 时路由 409 `steward.disabled`、工具门控壳零写入。
 // ============================================================================
-
-// ────────────────────────────────────────────────────────────────────────────
-// 路由(全部 token 级,ROUTE_AUTH 在 01b-route-auth.js 登记;handler 内另做 tokenOk 纵深自查)。
-// 13-http-router.js 只经 StewardHooks.handleApiRoutes 调用本函数,不直接引用它(禁止前向边)。
-// ────────────────────────────────────────────────────────────────────────────
-// 形态与 handleOverlayApiRoutes 一致:命中即 send(调用方以 res.writableEnded 为命中信号),
-// 不命中就自然返回让路由链继续(不写前缀早退守卫 —— 那会在路由清册里多出一个无鉴权首配的裸前缀判定点)。
-// 116-2e 记忆面板六条路由共用的两道闸:token 级鉴权 + 管家总开关。命中返回要 send 的响应对象,
-// 放行返回 null。抽出来是为了让每条路由只多一行 —— 而不是为了少写一个前缀守卫就把闸也省了。
-async function stewardPanelGate(req) {
-  if (!tokenOk(req)) return apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403);
-  const config = await readConfig();
-  if (config.stewardEnabledV1 !== true) return apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409);
-  return null;
-}
-// 域层稳定信封 -> 路由层 apiFailure(不转的话会被 normalizeApiErrorPayload 归一成 api.request_failed)。
-function stewardPanelFailure(result) {
-  const code = String((result && result.error) || 'invalid_request');
-  const status = code === 'version_conflict' ? 409 : (code === 'not_found' ? 404 : 400);
-  return apiFailure(code, {}, String((result && result.message) || code), status);
-}
-
-async function handleStewardApiRoutes(req, res, pathname) {
-  if (req.method === 'POST' && pathname === '/api/steward/start') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const started = await startStewardInbox(config);
-    return send(res, json({ ok: true, running: Boolean(started && started.running) }));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/stop') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    stopStewardInbox();
-    return send(res, json({ ok: true, running: false }));
-  }
-
-  if (req.method === 'GET' && pathname === '/api/steward/state') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    // 116f: 收件箱状态之上并进回合运行器状态(visit/turns/cost/circuit/lastReply)。运行器故障时
-    // 这条只读路由仍然返回收件箱那一半 —— 状态面不该因为旁路组件出错而整条不可用。
-    let runner = {};
-    if (typeof StewardHooks.runnerState === 'function') {
-      try { runner = (await StewardHooks.runnerState(config)) || {}; } catch { runner = {}; }
-    }
-    if (runner.lastReply && typeof runner.lastReply === 'object') {
-      let reply = runner.lastReply;
-      for (const key of ['say', 'why']) if (typeof reply[key] === 'string') {
-        const text = await PrivacyGateway.displayText(STEWARD_SESSION_ID, reply[key]);
-        if (text !== reply[key]) reply = { ...reply, [key]: text };
-      }
-      if (reply !== runner.lastReply) runner = { ...runner, lastReply: reply };
-    }
-    return send(res, json({ ok: true, ...await stewardInboxState(config), ...runner }));
-  }
-
-  if (req.method === 'GET' && pathname === '/api/steward/inbox') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const query = new URL(req.url, 'http://x').searchParams;
-    const result = await stewardInboxRead({ since: query.get('since'), limit: query.get('limit') });
-    return send(res, json({ ok: true, ...result }));
-  }
-
-  // 116-pre(27号文§8.12/§11.1第3项/§11.3):递话预判——只读、零模型、不写盘。装配(读投影+会话头+
-  // 记忆存储、缓存)在 13h-steward-runner.js(拼接顺序在本文件之后),故经 StewardHooks 转交(同
-  // handleRunnerApiRoutes 一手法);q 长度在这里再夹一遍(纯函数自己也夹,双重防线)。tookMs 只计
-  // StewardHooks.preroute 这一段(排除 token 校验与 HTTP 层开销),与「p50 ≤50ms」的度量口径对齐。
-  if (req.method === 'GET' && pathname === '/api/steward/preroute') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const query = new URL(req.url, 'http://x').searchParams;
-    const q = String(query.get('q') || '').slice(0, STEWARD_PREROUTE_QUERY_MAX);
-    const focus = String(query.get('focus') || '').slice(0, 80);   // 128h-J03:可缺;合法性由钩子那一侧(13o)的 safeSessionId 判,不合法当没给
-    const startedAt = Date.now();
-    const result = typeof StewardHooks.preroute === 'function'
-      ? await StewardHooks.preroute(q, config, { focus })
-      : { kind: 'new', hits: [] }; // 理论上不可能(13h 恒填充);兜底而不是抛异常
-    const tookMs = Date.now() - startedAt;
-    return send(res, json({ ok: true, kind: result.kind, hits: result.hits, tookMs }));
-  }
-
-  // ── 116-2e 记忆面板(27 号文 §4「面板」:按 kind 分组、可编辑、可否决、可清空、导出 JSON)──────
-  // 六条 exact 路由,与其余 /api/steward/* 同一鉴权等级(token 级,ROUTE_AUTH 逐条登记)。刻意【不写】
-  // `pathname.startsWith('/api/steward/memory')` 的前缀守卫 —— 那会在路由清册里多出一个裸前缀判定点
-  // (116b 的原注释已经写明这条纪律);共用的「token + 开关」两道闸抽成 stewardPanelGate 一行调用。
-  // 稳定信封必须在【路由层】转成 apiFailure —— 域层的 {ok:false,error} 送进 json() 会被
-  // normalizeApiErrorPayload 归一成 api.request_failed(116g 交付记录里的硬教训)。
-  if (req.method === 'GET' && pathname === '/api/steward/memory') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const result = await stewardMemoryPanelList(new URL(req.url, 'http://x').searchParams.get('kind') || '');
-    return send(res, result.ok === false ? stewardPanelFailure(result) : json(result));
-  }
-
-  if (req.method === 'GET' && pathname === '/api/steward/memory/export') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    return send(res, json(await stewardMemoryPanelExport()));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/memory/edit') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const result = await stewardMemoryPanelEdit(await readJsonBody(req).catch(() => ({})));
-    return send(res, result.ok === false ? stewardPanelFailure(result) : json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/memory/veto') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const body = await readJsonBody(req).catch(() => ({}));
-    const result = await stewardImplMemoryVeto({ id: (body && body.id) || '' });
-    return send(res, result.ok === false ? stewardPanelFailure(result) : json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/memory/restore') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const body = await readJsonBody(req).catch(() => ({}));
-    const result = await stewardMemoryPanelRestore((body && body.id) || '');
-    return send(res, result.ok === false ? stewardPanelFailure(result) : json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/memory/clear') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const body = await readJsonBody(req).catch(() => ({}));
-    const result = await stewardMemoryPanelClear((body && body.confirm) || '');
-    return send(res, result.ok === false ? stewardPanelFailure(result) : json(result));
-  }
-
-  // ── 117e 第 0 步:行动流水的只读面(§8.6 末条)────────────────────────────────────────
-  // 与记忆面板同族(exact 路由、token 级、共用 stewardPanelGate 的两道闸)。纯只读:不建目录、
-  // 不写盘、不启轮询。每行的 args 与 basis 过一遍 116-2e 的密钥判据再出门。
-  if (req.method === 'GET' && pathname === '/api/steward/decisions') {
-    const gate = await stewardPanelGate(req); if (gate) return send(res, gate);
-    const query = new URL(req.url, 'http://x').searchParams;
-    return send(res, json(await stewardDecisionsRead({
-      limit: query.get('limit'), sessionId: query.get('sessionId'), since: query.get('since'),
-    })));
-  }
-
-  // 116f: /api/steward/{visit,message,act} 住 13h-steward-runner.js(拼接顺序在本文件【之后】)。
-  // 与 13 挂 13g 同一手法:直接写函数名会是前向边,故经 06i 的延迟绑定命名空间转交;未填充时本行
-  // 是无操作,路由链继续往下走(最终 404)。命中与否仍以 res.writableEnded 为准。
-  if (typeof StewardHooks.handleRunnerApiRoutes === 'function') {
-    await StewardHooks.handleRunnerApiRoutes(req, res, pathname);
-  }
-}
-
 
 // 管家会话身份:只认会话头上【显式】的 kind === 'steward'。有意不用 sessionKind()——那个归一化函数
 // 只回 'mission'|'quick_ask',把管家会话也算成普通会话,拿它做身份判定等于把门拆了。
@@ -442,7 +289,6 @@ Object.assign(StewardHooks, {
     if (!session) return stewardFail('invalid_request', 'thread_read requires a calling session');
     return stewardImplThreadRead(args, { ...ctx, session }, await readConfig());
   },
-  handleApiRoutes: handleStewardApiRoutes,
   stopInbox: stopStewardInbox,
   inboxRead: stewardInboxRead,
   inboxState: stewardInboxState,

@@ -183,178 +183,17 @@ async function stewardAppendUserStop(sessionId, facts) {
   return true;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 路由(token 级,ROUTE_AUTH 在 01b 登记)。经 13g 的 handleStewardApiRoutes 末尾转交(见那里的注释)。
-// ────────────────────────────────────────────────────────────────────────────
-const { createHttpNdjsonResponse } = require('./backend/http-ndjson-response.cjs');
-
-async function handleStewardRunnerApiRoutes(req, res, pathname) {
-  if (req.method === 'GET' && pathname === '/api/steward/delivery') {
-    await StewardHooks.handleDeliveryApiRoutes(req, res, pathname);
-    if (res.writableEnded) return;
-  }
-  // 116h(27 号文 §3.1 116h 行 / §8.10 多线程看板):线程间仲裁的只读状态与插队。
-  // 状态是纯内存读模型(running/queue/hour/day),不写盘;prioritize 只动队列顺序,不打断在跑的回合。
-  if (req.method === 'GET' && pathname === '/api/steward/arbiter') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    return send(res, json({ ok: true, ...await stewardArbiterState(config) }));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/arbiter/prioritize') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const body = await readJsonBody(req).catch(() => ({}));
-    // 116-3 P1-13:改调 steward_thread_prioritize 的实现,不再直接碰仲裁器裸原语。
-    // 修前这条路由(= 看板每行的「提升优先级」按钮)绕开了工具路径的两样东西:目标存在性/非管家会话
-    // 校验,以及 decisions-v1.ndjson 的审计落盘 —— 于是【每一次经看板做的插队在行动流水里都没有记录】,
-    // 与 §3.4 红线「全部行动经命令核心与审计」相悖;编造的 sessionId 也只是静默 not_queued。
-    // 非法 sessionId 的稳定码仍由路由层给(invalid_session):它是「请求本身不合法」,不是「目标没找到」。
-    if (!safeSessionId(body && body.sessionId)) {
-      return send(res, apiFailure('invalid_session', {}, 'invalid sessionId', 400));
-    }
-    const result = await stewardImplThreadPrioritize({ sessionId: body.sessionId }, { config }, config);
-    // 116g 硬教训:域层的 {ok:false,error} 直接送进 json() 会被 normalizeApiErrorPayload 归一成
-    // api.request_failed,稳定信封必须在【路由层】转成 apiFailure。
-    if (result && result.ok === false) return send(res, apiFailure(result.error, {}, result.message || result.error, 400));
-    return send(res, json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/reset') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const result = await stewardResetConversation();
-    if (!result.ok) return send(res, apiFailure(result.error, {}, result.message || result.error, 409));
-    return send(res, json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/visit') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const body = await readJsonBody(req).catch(() => ({}));
-    const result = await stewardVisit({ force: body && body.force === true });
-    if (result && result.ok === false) return send(res, apiFailure(result.error, {}, result.message || result.error, 409));
-    return send(res, json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/act') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const body = await readJsonBody(req).catch(() => ({}));
-    // 62 号第三轮 P1：同一次递话重试带同一个 attemptId；checkAttempt 只读回执，不触发执行。
-    const result = await stewardRunAct(body && body.act, config, { attemptId: body && body.attemptId, check: Boolean(body && body.checkAttempt === true), window: body && body.attemptWindow });
-    if (result && result.ok === false) return send(res, apiFailure(result.error, {}, result.message || result.error, 400));
-    return send(res, json(result));
-  }
-
-  // 117l D2(§11.9):递话通道的 HTTP 面。抽屉「直接对这条线程说」与问答卡的自由回答都走它,
-  // 不再自己在 /api/steer 与 /api/chat/stream 之间猜 —— “猜错了就把一个等回答的回合杀掉”正是用户第四轮
-  // 走查第 1/6 条的根因。实现就是工具面那一个(同一条门控、同一本决策日志、同一个 undoRef),
-  // trigger:'user' —— 用户就坐在抽屉前面敲这句话,无人值守的那两道闸不适用(与 /api/steward/act 同理)。
-  // 不置 userPressed:那个字段只给 config_set / skill_toggle 的「须确认」判定用(06i 契约)。
-  if (req.method === 'POST' && pathname === '/api/steward/relay') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const body = await readJsonBody(req).catch(() => ({}));
-    if (!safeSessionId(body && body.sessionId)) {
-      return send(res, apiFailure('invalid_session', {}, 'invalid sessionId', 400));
-    }
-    const ensured = await ensureStewardSession(config);
-    if (!ensured.ok) return send(res, apiFailure(ensured.error, {}, ensured.message || 'steward engine is unsupported', 409));
-    const result = await StewardHooks.threadContinue(
-      { sessionId: body.sessionId, message: body.message },
-      { session: ensured.session, sessionId: ensured.session.id, config, trigger: 'user' },
-    );
-    // 116g 硬教训(同 /api/steward/arbiter/prioritize):域层的 {ok:false,error} 直接送进 json() 会被
-    // normalizeApiErrorPayload 归一成 api.request_failed,稳定信封必须在【路由层】转成 apiFailure。
-    if (result && result.ok === false) {
-      const code = String(result.error || 'relay_failed');
-      const status = (code === 'not_found' || code === 'invalid_request' || code === 'invalid_target') ? 400 : 409;
-      return send(res, apiFailure(code, {
-        ...(result.channel ? { channel: result.channel } : {}),
-        ...(result.reason ? { reason: result.reason } : {}),
-        // 117l-A1-fix (1):queued 的等待原因也带上(与工具面同一份结构化 wait)—— 抽屉据此能显示
-        // 「它在等锁 / 等预算 / 等并发位」,而不必去解析上面那句人话。别的通道没有这个键。
-        ...(result.wait ? { wait: result.wait } : {}),
-      }, result.message || code, status));
-    }
-    return send(res, json(result));
-  }
-
-  if (req.method === 'POST' && pathname === '/api/steward/message') {
-    if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-    const config = await readConfig();
-    if (config.stewardEnabledV1 !== true) {
-      return send(res, apiFailure('steward.disabled', {}, 'steward is disabled (stewardEnabledV1=false)', 409));
-    }
-    const body = await readJsonBody(req).catch(() => ({}));
-    const message = String((body && body.message) || '');
-    if (!message.trim()) return send(res, apiFailure('invalid_request', {}, 'message is required', 400));
-    // 133e:随这句话来的附件(/api/upload 的记录)。只收记录形状里那几个字段、≤12 条;交给回合的方式与 /api/chat/stream 同一条
-    // (runSessionTurn 的 attachments —— 上传目录内的文件由那边按 id 核对,这里不信 path 字段能指到哪里)。
-    const attachments = stewardSanitizeAttachments(body && body.attachments);
-    const { start, writeEvent, flushDeltas } = createHttpNdjsonResponse(req, res, nowIso);
-    const display = PrivacyGateway.createDisplayStream(STEWARD_SESSION_ID, writeEvent);
-    let displayPending = Promise.resolve();
-    const writeDisplayEvent = evt => {
-      // write() snapshots the host event synchronously and already serializes display I/O.
-      displayPending = display.write(evt);
-      displayPending.catch(() => {});
-    };
-    start();
-    try {
-      // 117l D1:routeHint 随请求进来,但它只是【提示】—— 服务端只信 sessionId(见 stewardNormalizeRouteHint)。
-      const result = await runStewardTurn({ trigger: 'user', message, routeHint: body && body.routeHint, attachments, onEvent: writeDisplayEvent });
-      // 流的最后一帧 = 这次请求的响应载荷(见文件头「steward_reply 的投放口径」)。失败态也发这一帧:
-      // 响应头早已发出,不能再改回 4xx 信封,故把稳定信封的 error/message 放进同一帧里,前端一处分支即可。
-      const reply = (result && typeof result === 'object') ? result : {};
-      writeDisplayEvent({
-        type: 'steward_reply',
-        trigger: 'user',
-        say: String(reply.say || ''),
-        why: String(reply.why || ''),
-        acts: Array.isArray(reply.acts) ? reply.acts : [],
-        actions: Array.isArray(reply.actions) ? reply.actions : [],
-        parsed: reply.parsed === true,
-        // 123-P1 ①(38 号文):这一帧是【白名单】,不是整份 reply 的展开 —— 13q 往回执里加的字段
-        // 不写进这里就到不了前端。契约不完整那句灰字回执在 live 那条路(finishReply)靠的就是它。
-        // 缺省不写,与落盘章同一口径。
-        ...(reply.contractIncomplete === true ? { contractIncomplete: true } : {}),
-        // 123-P1 收尾（38 号文 §4；P1 登记项①，主会话补）：`createdAt` 也漏在白名单外面。
-        // 123-N1 ① 给 13q 的回执加了它（落盘那条助手消息的 createdAt），前端 finishReply 拿它
-        // 推 `lastRenderedAt` 水位；可这一帧没带，前端读到的恒空，**主路径从未生效**，一直靠
-        // `alignWatermark()` 那条兜底活着（每回合多发一次 `?since=`）。AB 段测得绿是因为它 stub
-        // 了 fetch、直接喂带 createdAt 的回执，够不着这一帧。缺省不写，与上面两个同口径。
-        ...(reply.createdAt ? { createdAt: String(reply.createdAt) } : {}),
-        circuit: reply.circuit || null,
-        ...(reply.ok === false && reply.error ? { error: reply.error, message: reply.message || '' } : {}),
-      });
-    } finally {
-      try {
-        try { await displayPending; }
-        finally { await display.flush(); flushDeltas(); }
-      } finally {
-        display.close();
-        try { res.end(); } catch { /* client gone */ }
-      }
-    }
-    return;
-  }
-}
+const { handleStewardApiRoutes, handleStewardRunnerApiRoutes } =
+  require('./backend/steward-routes.cjs').createStewardRoutes({
+    tokenOk: req => tokenOk(req), readConfig, safeSessionId, nowIso, StewardHooks, PrivacyGateway,
+    STEWARD_SESSION_ID, STEWARD_PREROUTE_QUERY_MAX,
+    inbox: { startStewardInbox, stopStewardInbox, stewardInboxRead, stewardInboxState: config => stewardInboxState(config) },
+    memory: { stewardMemoryPanelList, stewardMemoryPanelExport, stewardMemoryPanelEdit, stewardImplMemoryVeto,
+      stewardMemoryPanelRestore, stewardMemoryPanelClear, stewardDecisionsRead },
+    runner: { stewardArbiterState, stewardImplThreadPrioritize, stewardResetConversation, stewardVisit, stewardRunAct,
+      ensureStewardSession, stewardSanitizeAttachments, runStewardTurn: opts => runStewardTurn(opts) },
+    delivery: { stewardDeliveryProjection, stewardDeliveryInspect, loadSession, readFilePreview },
+  });
 
 // GET /api/steward/state 的运行器半边(13g 把它并进收件箱状态里一起下发)。
 async function stewardRunnerState(config) {
@@ -384,7 +223,7 @@ Object.assign(StewardHooks, {
   visitNotesPrompt: stewardVisitNotesPrompt,
   onInboxBatch: stewardOnInboxBatch,
   runnerState: stewardRunnerState,
-  handleRunnerApiRoutes: handleStewardRunnerApiRoutes,
+  handleApiRoutes: handleStewardApiRoutes,
   stopRunner: stewardStopRunner,
   resumeRunner: stewardResumeRunner,
   // 116-pre(§11.3):117 壳层与其它旁路消费者经这个键调,不必知道 13h 的存在。

@@ -16407,7 +16407,6 @@
       "layer": "unclassified",
       "provides": [
         "STEWARD_DELIVERY_LIMITS",
-        "handleStewardDeliveryApiRoutes",
         "stewardCaptureDelivery",
         "stewardDeliveryFiles",
         "stewardDeliveryInspect",
@@ -16418,20 +16417,6 @@
         "stewardValidateDeliveryReference"
       ],
       "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiSessionNotFound",
-          "kinds": [
-            "call"
-          ]
-        },
         {
           "provider": "00-boot.js",
           "symbol": "crypto",
@@ -16476,13 +16461,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "call"
@@ -16504,49 +16482,14 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readFilePreview",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "tokenOk",
           "kinds": [
             "call"
           ]
@@ -18593,7 +18536,6 @@
       "provides": [
         "STEWARD_STRING_AS_ARRAY",
         "STEWARD_TAINT_GATED_TOOLS",
-        "handleStewardApiRoutes",
         "stewardArgTypeProblems",
         "stewardAuthorizeExternalContext",
         "stewardCtxIsSteward",
@@ -18606,8 +18548,6 @@
         "stewardMemoryPanelList",
         "stewardMemoryPanelRestore",
         "stewardMemoryPanelRow",
-        "stewardPanelFailure",
-        "stewardPanelGate",
         "stewardTaintGateApplies",
         "stewardToolHandler",
         "stewardWithTurnTrigger"
@@ -18615,23 +18555,9 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "ExternalBotHooks",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -18650,30 +18576,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readJsonBody",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -18684,24 +18589,10 @@
           ]
         },
         {
-          "provider": "01-config.js",
-          "symbol": "tokenOk",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "03a-privacy-gateway.js",
-          "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -18728,20 +18619,6 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "STEWARD_MEMORY_LIMITS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "STEWARD_PREROUTE_QUERY_MAX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "STEWARD_SESSION_ID",
           "kinds": [
             "read"
           ]
@@ -18777,16 +18654,8 @@
         },
         {
           "provider": "13i-steward-inbox.js",
-          "symbol": "startStewardInbox",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13i-steward-inbox.js",
           "symbol": "stewardInboxRead",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18794,7 +18663,6 @@
           "provider": "13i-steward-inbox.js",
           "symbol": "stewardInboxState",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18802,7 +18670,6 @@
           "provider": "13i-steward-inbox.js",
           "symbol": "stopStewardInbox",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -18823,13 +18690,6 @@
         {
           "provider": "13j-steward-tool-base.js",
           "symbol": "stewardAppendDecision",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "13j-steward-tool-base.js",
-          "symbol": "stewardDecisionsRead",
           "kinds": [
             "call"
           ]
@@ -19036,7 +18896,6 @@
           "provider": "13l-steward-ops.js",
           "symbol": "stewardImplMemoryVeto",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -21157,7 +21016,7 @@
       "layer": "transport",
       "provides": [
         "STEWARD_STOP_REASON_MAX",
-        "createHttpNdjsonResponse",
+        "handleStewardApiRoutes",
         "handleStewardRunnerApiRoutes",
         "stewardAppendUserStop",
         "stewardImplThreadPrioritize",
@@ -21168,20 +21027,6 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "json",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
             "read"
@@ -21189,16 +21034,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "readJsonBody",
+          "symbol": "readFilePreview",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "send",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21212,14 +21050,16 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -21227,6 +21067,13 @@
           "symbol": "tokenOk",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "loadSession",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -21248,6 +21095,13 @@
           "symbol": "revokeAllGrants",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "STEWARD_PREROUTE_QUERY_MAX",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -21279,10 +21133,87 @@
           ]
         },
         {
+          "provider": "13aa-steward-delivery.js",
+          "symbol": "stewardDeliveryInspect",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13aa-steward-delivery.js",
+          "symbol": "stewardDeliveryProjection",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13g-steward.js",
+          "symbol": "stewardMemoryPanelClear",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13g-steward.js",
+          "symbol": "stewardMemoryPanelEdit",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13g-steward.js",
+          "symbol": "stewardMemoryPanelExport",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13g-steward.js",
+          "symbol": "stewardMemoryPanelList",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13g-steward.js",
+          "symbol": "stewardMemoryPanelRestore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "13g-steward.js",
           "symbol": "stewardToolHandler",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "13i-steward-inbox.js",
+          "symbol": "startStewardInbox",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13i-steward-inbox.js",
+          "symbol": "stewardInboxRead",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13i-steward-inbox.js",
+          "symbol": "stewardInboxState",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "13i-steward-inbox.js",
+          "symbol": "stopStewardInbox",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -21297,6 +21228,13 @@
           "symbol": "stewardBasisOf",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "13j-steward-tool-base.js",
+          "symbol": "stewardDecisionsRead",
+          "kinds": [
+            "read"
           ]
         },
         {
@@ -21328,10 +21266,17 @@
           ]
         },
         {
+          "provider": "13l-steward-ops.js",
+          "symbol": "stewardImplMemoryVeto",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "13m-steward-runner-base.js",
           "symbol": "ensureStewardSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -21394,7 +21339,8 @@
           "provider": "13n-steward-arbiter.js",
           "symbol": "stewardArbiterState",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -21493,21 +21439,21 @@
           "provider": "13q-steward-runner-turn.js",
           "symbol": "stewardResetConversation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "stewardRunAct",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13q-steward-runner-turn.js",
           "symbol": "stewardVisit",
           "kinds": [
-            "call"
+            "read"
           ]
         }
       ]

@@ -115,7 +115,8 @@ const HOOK_KEY = {
 };
 
 const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
-const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat('../backend/scheduler-steward.cjs').sort();   // 116-2e ⑦ 全仓扫描用
+const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+  .concat('../backend/scheduler-steward.cjs', '../backend/steward-routes.cjs').sort();
 const src06i = read('../backend/steward-core.cjs');
 const src07 = read('07-autonomy.js');
 const src11 = read('11-native-tools.js');
@@ -400,7 +401,7 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   // 落点:13m 是 ACTION_HOOKS 表头那两行注释、13q 是【唯一】置 true 的那一行(stewardRunAct)、
   // 13h 是 act 路由里「不置 userPressed」的那句注释。被钉的事实(唯一置 true 点在 act 路径、读点
   // 恰好两处且都在 13l、权限门与授权书零 userPressed)一个字没变。
-  const ALLOWED = new Set(['06i-steward-core.js', ...STEWARD_TOOL_FAMILY, ...STEWARD_RUNNER_FAMILY]);
+  const ALLOWED = new Set(['06i-steward-core.js', '../backend/steward-routes.cjs', ...STEWARD_TOOL_FAMILY, ...STEWARD_RUNNER_FAMILY]);
   const hits = [];
   for (const file of srcFiles) {
     const text = read(file);
@@ -412,7 +413,8 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const src13h2 = STEWARD_RUNNER_FAMILY.map(read).join('\n');
   const setters = (src13h2.match(/userPressed: true/g) || []).length;
   ok(setters === 1, `⑦ 全仓只有一处把 userPressed 置 true(13h 族的 act 执行路径;got ${setters})`);
-  ok(/pathname === '\/api\/steward\/act'/.test(src13h2), "⑦ 那一处所在的路由就是 POST /api/steward/act");
+  ok(/pathname === '\/api\/steward\/act'[\s\S]*?await stewardRunAct\(/.test(read('../backend/steward-routes.cjs')),
+    '⑦ POST /api/steward/act 委托 stewardRunAct');
   // 读它的地方只有 config_set 与 skill_toggle 的「须确认」判定(加上门控壳剥字段那一处)。
   // 只数【代码行】:注释里指路的那一句不算读。
   // 117z-E2(27 号文 §11.21.3)重钉:读点从两处扩到三处,期望值逐条列名而不是只数个数 ——

@@ -2,7 +2,7 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
 const {functionBlock,constBlock,sliceBlock}=require('../lib/source-slice');
 const read=file=>fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src',file),'utf8');
-const G=read('13g-steward.js'),Q=read('13q-steward-runner-turn.js'),P=read('13p-steward-runner-actions.js'),K=read('13k-steward-threads.js'),H=read('13h-steward-runner.js');
+const G=read('13g-steward.js'),Q=read('13q-steward-runner-turn.js'),P=read('13p-steward-runner-actions.js'),K=read('13k-steward-threads.js');
 const deferred=()=>{let resolve;const promise=new Promise(a=>resolve=a);return{promise,resolve};};const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture(){const actor=Object.freeze({}),source=Object.freeze({connectionId:'bot',itemId:'item',senderId:'owner',conversationId:'chat',conversationType:'group',controlRevision:4});let valid=true;let taint=[];let called=0;const runtime={conversationGeneration:0,inflight:null,queue:[],visit:{},turns:[]};const context={AbortController,setTimeout,Date,ExternalBotHooks:{validateActor:async value=>{if(value!==actor||!valid)throw Object.assign(new Error('revoked'),{code:'external_channel.control_revoked'});return source;}},StewardHooks:{currentTurnContext:()=>runtime.inflight?.kind==='external'?{trigger:'external',externalActor:runtime.inflight.externalActor}:null},readConfig:async()=>({stewardEnabledV1:true,stewardAutoActions:{relay:false}}),stewardFail:(error,message,extra)=>({ok:false,error,message,...extra}),stewardRunnerRuntime:runtime,stewardCircuitCheck:async()=>null,stewardNormalizeRouteHint:async()=>null,nowIso:()=>new Date().toISOString(),logEvent(){},STEWARD_USER_QUEUE_WAIT_MS:10000,stewardAbortInflight(){},stewardCtxIsSteward:()=>true,stewardArgTypeProblems:()=>[],stewardTaintGateApplies:()=>true,stewardTurnTaintedBy:()=>taint,stewardRunClaimedTurn:async()=>{called++;return{ok:true};},STEWARD_ACTION_HOOKS:{steward_thread_continue:'threadContinue'},STEWARD_SELF_SERVE_PER_TURN_MAX:3,stewardActLabel:()=>'',safeSessionId:value=>value};
 vm.createContext(context);const namesG=['stewardWithTurnTrigger','stewardExternalOwnerDirected','stewardAuthorizeExternalContext','stewardToolHandler'];const namesK=['stewardTriggerOf','stewardUserDirected'];vm.runInContext([constBlock(G,'stewardExternalContexts'),'const stewardUserWaiters=[];',...namesG.map(n=>functionBlock(G,n)),sliceBlock(G,'ExternalBotHooks.isAuthorizedContext =',';',{inclusive:true}),...namesK.map(n=>functionBlock(K,n)),functionBlock(P,'stewardSelfServeAllows'),functionBlock(P,'stewardExecuteActions'),functionBlock(Q,'runStewardTurn')].join('\n'),context);return{actor,source,context,runtime,revoke(){valid=false;},taint(){taint=['web'];},get called(){return called;}};}
@@ -15,23 +15,23 @@ test('authorization IO before claiming cannot overlap a local turn admitted duri
 test('model turn persists canonical external source, never capability, and keeps trigger external',async()=>{const f=fixture();let captured;Object.assign(f.context,{ensureStewardSession:async()=>({ok:true,session:{id:'steward',cwd:'fixture'},route:{}}),runSessionTurn:async opts=>{captured=opts;return{ok:false,error:'fixture failure'};},stewardDelegationToolCalls:async()=>[],stewardMergeDelegationReceipts:()=>[]});vm.runInContext(functionBlock(Q,'stewardRunClaimedTurn'),f.context);const r=await f.context.stewardRunClaimedTurn('external',{message:'owner instruction'},{},{externalActor:f.actor,externalSource:f.source,cancelled:''},null,()=>{},[]);assert.equal(r.error,'steward.turn_failed');assert.equal(captured.messageMeta.origin,'external-owner');assert.equal(captured.messageMeta.externalSource.itemId,'item');assert.equal(captured.requestMeta.trigger,'external');assert.equal(captured.requestMeta.external.senderId,'owner');assert.ok(!JSON.stringify(captured).includes('externalActor'));assert.equal(captured.attachments.length,0);});
 test('HTTP message JSON cannot supply external actor or claim a remote trigger',async()=>{
  const f=fixture();let opts,flushed=false,closed=false;const writes=[];
- Object.assign(f.context,{
-  clearTimeout,STEWARD_SESSION_ID:'steward',tokenOk:()=>true,
-  createHttpNdjsonResponse:require('../../ruyi-workbench/app/backend/http-ndjson-response.cjs').createHttpNdjsonResponse,
-  readJsonBody:async()=>({message:'hello',trigger:'external',externalActor:f.actor,externalOwner:true}),
-  stewardSanitizeAttachments:()=>[],
-  // This authorization fixture isolates the display transport. Its identity sink
-  // keeps the real HTTP route and its owner/trigger admission assertions active.
+ const {createStewardRoutes}=require('../../ruyi-workbench/app/backend/steward-routes.cjs');
+ const {handleStewardApiRoutes}=createStewardRoutes({
+  STEWARD_SESSION_ID:'steward',tokenOk:()=>true,readConfig:f.context.readConfig,nowIso:f.context.nowIso,
+  inbox:{},memory:{},delivery:{},
   PrivacyGateway:{createDisplayStream(scopeId,emit){
    assert.equal(scopeId,'steward');
    return{write:async event=>emit(event),flush:async()=>{flushed=true;},close(){assert.equal(flushed,true);closed=true;}};
   }},
-  runStewardTurn:async value=>{opts=value;value.onEvent({type:'assistant_delta',text:'Synthetic local reply'});return{ok:true,say:'Synthetic local reply'};},
+  runner:{stewardSanitizeAttachments:()=>[],
+   runStewardTurn:async value=>{opts=value;value.onEvent({type:'assistant_delta',text:'Synthetic local reply'});return{ok:true,say:'Synthetic local reply'};},
+  },
  });
- const handle=vm.runInContext(functionBlock(H,'handleStewardRunnerApiRoutes')+';handleStewardRunnerApiRoutes',f.context);
- const req={method:'POST',socket:{setNoDelay(){}}};
+ const {Readable}=require('node:stream');
+ const requestBody=Buffer.from(JSON.stringify({message:'hello',trigger:'external',externalActor:f.actor,externalOwner:true}));
+ const req=Object.assign(Readable.from([requestBody]),{method:'POST',headers:{},socket:{setNoDelay(){}}});
  const res={writeHead(){},on(){},write(value){writes.push(JSON.parse(value));},end(){assert.equal(closed,true);this.writableEnded=true;}};
- await handle(req,res,'/api/steward/message');
+ await handleStewardApiRoutes(req,res,'/api/steward/message');
  assert.equal(opts.trigger,'user');assert.equal(opts.externalActor,undefined);assert.equal(opts.externalOwner,undefined);
  assert.equal(opts.message,'hello');assert.equal(res.writableEnded,true);
  assert.equal(writes.find(event=>event.type==='assistant_delta').text,'Synthetic local reply');

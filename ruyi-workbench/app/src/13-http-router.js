@@ -1594,10 +1594,7 @@ async function handleApi(req, res, pathname) {
   await handleSteerApiRoute(req, res, pathname); if (res.writableEnded) return;
   // 127-114b: audio 域路由(/api/audio/transcribe)同住 13b-api-domain-routes.js —— 13→13b 既有边,零新边。
   await handleAudioApiRoutes(req, res, pathname); if (res.writableEnded) return;
-  // 第53波 EC-B(53b): overlay 离线更新域路由抽至 13c-overlay-routes.js(precheck/apply/rollback/status,编排 Manage-Overlay.ps1)。
-  // 第116波116b(27号文§11.3): 管家 /api/steward/* 域路由住 13g-steward.js(拼接顺序在本文件【之后】)。
-  // 直接写函数名会成为新的前向边,故经 06i 的延迟绑定命名空间挂接(13 → 06i 是后向边);13g 加载时
-  // Object.assign(StewardHooks, {...}) 填充实现,未填充(理论上不可能)时本行是无操作。
+  // 管家域在依赖装配完毕后注册路由。
   if (typeof StewardHooks.handleApiRoutes === 'function') { await StewardHooks.handleApiRoutes(req, res, pathname); if (res.writableEnded) return; }
   // 第121波 K2a(34 号文 §6.1): GET /api/events/stream 住 13r-event-stream.js(拼接顺序在本文件【之后】)。
   // 同 StewardHooks 纪律 —— 直接写函数名会是新前向边,故经 00-boot 的延迟绑定命名空间挂接。

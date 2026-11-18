@@ -107,6 +107,7 @@
     "app/backend/scheduler-core.cjs",
     "app/backend/server-ownership.cjs",
     "app/backend/steward-core.cjs",
+    "app/backend/steward-routes.cjs",
     "app/backend/session-bodies.cjs",
     "app/backend/session-executions.cjs",
     "app/backend/session-index.cjs",

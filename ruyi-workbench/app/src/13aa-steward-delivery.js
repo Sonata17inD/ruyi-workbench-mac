@@ -136,28 +136,6 @@ async function stewardValidateDeliveryReference(sessionId, reference, config) {
   return { ok: true, reference: { sessionId, turnSeq: reference.turnSeq, sourceStamp: reference.sourceStamp,
     latestTurnSeq: reference.latestTurnSeq, fileStamp: reference.fileStamp, files: current.files.map(file => file.path) } };
 }
-async function handleStewardDeliveryApiRoutes(req, res, pathname) {
-  if (req.method !== 'GET' || pathname !== '/api/steward/delivery') return;
-  if (!tokenOk(req)) return send(res, apiFailure('auth.token_invalid', {}, 'missing or invalid workbench token', 403));
-  res.setHeader('cache-control', 'no-store');
-  const q = new URL(req.url, 'http://x').searchParams;
-  const sid = safeSessionId(q.get('sessionId')), seq = Number(q.get('turnSeq'));
-  if (!sid || !Number.isSafeInteger(seq) || seq <= 0) return send(res, apiFailure('delivery.invalid_source', {}, '需要明确任务与回合', 400));
-  const config = await readConfig();
-  const delivery = await stewardDeliveryProjection(sid, seq, config);
-  if (!delivery.ok) return send(res, apiFailure(delivery.error, {}, delivery.message, 404));
-  if (!q.has('file')) return send(res, json(delivery));
-  const index = Number(q.get('file'));
-  const file = Number.isSafeInteger(index) && index >= 0 ? delivery.files[index] : null;
-  if (!file || !file.fingerprint || q.get('fingerprint') !== file.fingerprint || q.get('sourceStamp') !== delivery.sourceStamp) return send(res, apiFailure('delivery.file_changed', {}, '文件或来源已变化,请重新检查交付卡', 409));
-  // 使用既有预览器；路径仅取本回合真实记录,客户端不能指定另一个同名文件。
-  const session = await loadSession(sid, { omitProviderHistory: true });
-  if (!session) return send(res, apiSessionNotFound());
-  const snapshot = await stewardDeliveryInspect(file, session, config, { bytes: 0 }, true);
-  if (!snapshot.bytes || snapshot.fingerprint !== q.get('fingerprint')) return send(res, apiFailure('delivery.file_changed', {}, '文件已变化,请刷新文件状态', 409));
-  return send(res, json(await readFilePreview(file.path, snapshot.bytes)));
-}
 DeliveryHooks.capture = stewardCaptureDelivery;
 StewardHooks.deliveryProjection = stewardDeliveryProjection;
 StewardHooks.validateDeliveryReference = stewardValidateDeliveryReference;
-StewardHooks.handleDeliveryApiRoutes = handleStewardDeliveryApiRoutes;

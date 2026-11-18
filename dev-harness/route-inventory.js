@@ -41,10 +41,7 @@ const ROUTER_FILES = [
   '13b-api-domain-routes.js',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
-  // 第 116 波 116b:管家 /api/steward/* 域路由(13g 拼接顺序在 13 之后,经 StewardHooks 延迟绑定挂接)。
-  '13g-steward.js',
-  // 第 116 波 116f：管家回合与到访路由（13h 拼接顺序在 13g 之后，经 13g 的处理器末尾转交）。
-  '13h-steward-runner.js',
+  '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
   '../backend/event-stream.cjs',
@@ -96,8 +93,7 @@ const DOMAIN_BY_FILE = {
   '13b-api-domain-routes.js': 'mcp/checkpoint-storage/steer',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
-  '13g-steward.js': 'steward',
-  '13h-steward-runner.js': 'steward',
+  '../backend/steward-routes.cjs': 'steward',
   '../backend/event-stream.cjs': 'event-stream',
   '../backend/scheduler-routes.cjs': 'scheduler',
 };
@@ -171,7 +167,9 @@ function blockText(lines, startIdx) {
 
 function enclosingFunction(lines, idx) {
   for (let i = idx; i >= 0; i--) {
-    const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/) || lines[i].match(/^const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/);
+    const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/)
+      || lines[i].match(/^\s+(?:async\s+)?function\s+(handle[A-Za-z]+ApiRoutes?)\s*\(/)
+      || lines[i].match(/^const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/);
     if (m) return m[1];
   }
   return '(top-level)';

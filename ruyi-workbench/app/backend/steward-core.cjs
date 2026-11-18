@@ -2319,7 +2319,6 @@ function prerouteText(q, index, memory, opts) {
 //           visitNotesPrompt(config) -> string(到访内 L2 压缩用的摘要 prompt)
 //           onInboxBatch(rows)(116b 每轮写完箱子后调,13h 去抖后起一个收件箱回合)
 //           runnerState(config) -> object(并进 GET /api/steward/state 的响应)
-//           handleRunnerApiRoutes(req,res,pathname)(/api/steward/{visit,message,act})
 //           stopRunner()/resumeRunner()(一键停机同时停回合队列;start 恢复)
 //   116h 线程间仲裁(由 13h-steward-runner.js 填充;消费者是 10 的回合入口、13 的 /api/stop、
 //   13d 的事项聚合行与 13g 的 thread_status/路由 —— 同样只看 StewardHooks,不认识 13h):

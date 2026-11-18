@@ -39,7 +39,9 @@ function shiftLines(file) {
   let inserted = 0;
   lines.forEach((line, index) => {
     if (index === 0 && !line.startsWith('#!')) { out.push('// line-shift probe (top)'); inserted++; }
-    if (/^(async\s+)?function\s/.test(line)) { out.push('// line-shift probe', ''); inserted += 2; }
+    if (/^(async\s+)?function\s|^\s+(async\s+)?function\s+handle[A-Za-z]+ApiRoutes?\s*\(/.test(line)) {
+      out.push('// line-shift probe', ''); inserted += 2;
+    }
     out.push(line);
     if (index === 0 && line.startsWith('#!')) { out.push('// line-shift probe (top)'); inserted++; }
   });
@@ -76,6 +78,7 @@ describe('generated architecture artifacts are line-number free', () => {
     const inserted = {};
     for (const file of moduleFiles(dir)) inserted[file] = shiftLines(path.join(dir, file));
     shiftLines(path.join(dir, '../backend/event-stream.cjs'));
+    assert.ok(shiftLines(path.join(dir, '../backend/steward-routes.cjs')) > 2, '显式管家路由内也平移了 handler');
     // 点名的三个文件与全部路由文件必须真被平移过(否则本件静默失效)。
     for (const file of ['00-boot.js', '02-session-store.js', '13-http-router.js', '13d-core-domain-routes.js', '13g-steward.js', '01b-route-auth.js']) {
       assert.ok(inserted[file] > 0, `${file} 应被插入行(实得 ${inserted[file]})`);

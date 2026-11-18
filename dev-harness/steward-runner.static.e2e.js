@@ -49,6 +49,7 @@ const src13l = read('13l-steward-ops.js');
 // 116-2e:收件箱轮询与游标前移到 13i-steward-inbox.js(零行为搬家),⑤ 的收件箱断言随之改读 13i。
 const src13i = read('13i-steward-inbox.js');
 const src13h = read('13h-steward-runner.js');
+const stewardRoutes = read('../backend/steward-routes.cjs');
 // 117 波 T2(32 号文 §5):13h 已 2522 行(比 T1 拆之前的 13g 还长),按「谁被谁引用」拆成六个文件
 // (纯搬家,拼接顺序即依赖方向)。这六个合起来才是原来那个「13h」,故下面凡是钉【运行器里有这件事】
 // 的判据一律改读整族 —— 事实一个字没变,只是它现在住在族里的哪个文件由拆分决定;钉【落点】的那几条
@@ -181,7 +182,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -440,7 +441,7 @@ const srv = require(path.join(APP, 'server.js'));
   const inventory = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'architecture', 'durable-state-inventory.json'), 'utf8'));
   const rows = Array.isArray(inventory) ? inventory : (inventory.surfaces || inventory.entries || []);
   ok(rows.some(r => (r.id || r.name) === 'steward-visits'), '⑤ 到访归档面已登记进 durable-state-inventory');
-  ok(/stewardEnabledV1 !== true/.test(src13h), '⑤ 13h 有开关 fail-closed 判据(开关关时三条路由 409、零写入)');
+  ok(/stewardEnabledV1 !== true/.test(stewardRoutes), '⑤ 管家路由在开关关闭时返回 409，且不写入');
   ok(/STEWARD_SESSION_ID = 'steward'/.test(src06i), '⑤ 管家会话固定 id 定在 06i(13g 与 13h 共用同一常量)');
   ok(/if \(sid === STEWARD_SESSION_ID\) continue;/.test(src13i), '⑤ 收件箱轮询排除管家会话自己(防回合自激励成环)');
   // 123-N1 ①(34 号文;用户 2026-09-13 真机走查「同一段对话出现两遍」):回执带落盘时刻。
@@ -462,7 +463,7 @@ const srv = require(path.join(APP, 'server.js'));
   // 白名单就到不了前端。123-N1 ① 的 createdAt 就是这么断的：13q 塞了、白名单没带、前端读到恒空，
   // 主路径从未生效（AB 段 stub 了 fetch 直接喂回执，够不着这一帧）。钉的是「13q 塞进 reply 的
   // 每一个可选键，白名单里都有」这件事本身，不是某一行的写法 —— 将来再加字段照样挡得住。
-  const replyFrame = (src13h.match(/type: 'steward_reply',[\s\S]*?\n      \}\);/) || [''])[0];
+  const replyFrame = (stewardRoutes.match(/type: 'steward_reply',[\s\S]*?\n\s*\}\);/) || [''])[0];
   ok(replyFrame.length > 100, '⑤ 123-P1 steward_reply 那一帧可定位');
   for (const key of ['say', 'why', 'acts', 'actions', 'parsed', 'contractIncomplete', 'createdAt']) {
     ok(replyFrame.includes(key + ':'), `⑤ 123-P1 steward_reply 白名单带 ${key}（13q 塞了就必须能到前端）`);
