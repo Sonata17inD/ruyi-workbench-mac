@@ -4398,6 +4398,20 @@
         },
         {
           "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryCheckPrompt",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryPromptSection",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
           "symbol": "buildPlaybookIndexSection",
           "kinds": [
             "call"
@@ -4496,21 +4510,7 @@
         },
         {
           "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryCheckPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryConflictMap",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryPromptSection",
           "kinds": [
             "call"
           ]
@@ -5046,10 +5046,16 @@
       "file": "06-provider-engine.js",
       "layer": "engine",
       "provides": [
+        "CORE_MEMORY_SUMMARY_CAP",
         "ERROR_CLASSES",
+        "MemoryPrompts",
         "TOOL_ITERATION_BUDGETS",
         "buildBrowserAutomationHint",
+        "buildCoreMemoryPromptSection",
         "buildEngineEnvBrief",
+        "buildMemoryCheckPrompt",
+        "buildMemoryPromptSection",
+        "buildMemoryTurnSection",
         "buildPlaybookIndexSection",
         "buildProviderSystemPrompt",
         "buildRuntimeIdentityFacts",
@@ -5112,6 +5118,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "neutralizeFenceTag",
           "kinds": [
             "read"
           ]
@@ -5245,20 +5258,6 @@
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerRawCompletion",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryCheckPrompt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryPromptSection",
           "kinds": [
             "read"
           ]
@@ -5477,40 +5476,21 @@
       "layer": "engine",
       "provides": [
         "AgentInstructionImports",
-        "CORE_MEMORY_SUMMARY_CAP",
         "MEMORY_EXCLUSION_MAX",
-        "MEMORY_GLOBAL_PROGRAMMING_RE",
-        "MEMORY_GLOBAL_SCOPE_RE",
         "MEMORY_METADATA_READ_CAP",
-        "MEMORY_PERSONAL_PREFERENCE_RE",
-        "MEMORY_PROJECT_ONLY_RE",
-        "MEMORY_PROPOSAL_BATCH_MAX",
-        "MEMORY_PROPOSAL_HISTORY_MAX",
-        "MEMORY_PROPOSAL_MIN_JUDGE_GAP",
-        "MEMORY_PROPOSAL_MIN_TURN_GAP",
-        "MEMORY_PROPOSAL_STATE_MAX_BYTES",
-        "MEMORY_RELEVANCE_MAX",
         "MEMORY_RULE_TOUCH_MS",
         "MEMORY_TYPES",
         "MEMORY_USAGE_TOUCH_MS",
-        "MemoryPrompts",
+        "MemoryMigrations",
+        "MemoryProposals",
         "MemoryRecall",
         "MemoryRelations",
         "MemorySelection",
         "MemoryStore",
         "analyzeMemoryMaintenance",
-        "applyMemoryBatchProposal",
         "applyMemoryRelationProposal",
-        "buildCoreMemoryPromptSection",
-        "buildMemoryCheckPrompt",
         "buildMemoryConflictMap",
-        "buildMemoryPromptSection",
-        "buildMemoryTurnSection",
         "cleanMemoryDate",
-        "clipRecentMemoryDraftContext",
-        "commitSingleMemoryProposal",
-        "commitToolMemoryProposal",
-        "commitToolMemoryProposalUnlocked",
         "confirmMemoryRelation",
         "createAgentInstructionImports",
         "createMemorySelection",
@@ -5518,92 +5498,45 @@
         "deleteMemory",
         "deleteMemoryRelation",
         "draftMemoryFromSession",
-        "eligibleMemoryEntries",
         "extractMemoryRelationProposals",
         "filterMemoryForNativeCli",
-        "findMemoryProposalDuplicate",
-        "fmBool",
         "fmVal",
-        "isMemoryRelationType",
-        "legacyAccMemoryCandidates",
         "listMemoryProjectGroups",
         "listMemoryRelations",
         "listWorkbenchMemories",
         "loadMemoryRegistry",
-        "memoryAutoGlobalAllowed",
-        "memoryDraftFromObject",
         "memoryExclusionSet",
         "memoryGlobalDir",
-        "memoryGlobalScopeAllowed",
         "memoryIsExpired",
         "memoryProjectDir",
-        "memoryProposalBatchInput",
-        "memoryProposalDuplicateFailure",
-        "memoryProposalHistoryRows",
-        "memoryProposalInFlight",
         "memoryProposalIsDuplicate",
         "memoryProposalLooksSensitive",
         "memoryProposalPrefilter",
-        "memoryProposalSemanticKey",
         "memoryProposalSimilarity",
-        "memoryProposalStateChains",
-        "memoryProposalStateFile",
-        "memoryProposeAlreadyPendingResult",
-        "memoryRecentUserTexts",
-        "memoryRelationsFile",
-        "memoryRetrievalKey",
-        "memoryReviewDue",
-        "memorySearchTerms",
         "memorySelectionSignature",
-        "memoryToolLibraryCurrent",
-        "memoryToolLibraryVersion",
-        "memoryToolSupersededStatus",
-        "memoryUsageFile",
-        "memoryUsageKey",
-        "memoryValidSupersededBy",
         "migrateLegacyAccMemory",
         "migrateMemory",
         "moveMemoryScope",
-        "mutateMemoryUsageState",
-        "normalizeMemoryProposalCandidate",
-        "parseMemoryDraft",
         "parseMemoryProposalDecision",
         "projectKeyForCwd",
         "proposeMemoryFromSession",
-        "proposeMemoryFromSessionUnlocked",
         "proposeMemoryRelation",
         "proposeMemoryRelationRevoke",
         "proposeMemoryRelationTool",
         "proposeMemoryRevision",
         "proposeWorkbenchMemory",
-        "rankMemoriesForRecall",
-        "rankMemoriesForRecallDetailed",
-        "rankMemoriesFused",
-        "rankMemoriesFusedDetailed",
         "rankRelevantMemories",
-        "rankRelevantMemoriesDetailed",
-        "rankRelevantMemoriesScored",
         "readConfirmedSupersedeEdges",
-        "readMemoryDir",
         "readMemoryItem",
-        "readMemoryProposalState",
-        "readMemoryRelations",
-        "readMemoryUsageState",
         "readWorkbenchMemory",
-        "recordMemoryProposalUsage",
         "removeMemoryRelationsFor",
         "replayPendingMemoryProposal",
         "resolveCoreMemoryState",
         "resolveMemoryPreflight",
-        "resolveWorkbenchMemoryReadContext",
         "resolveWorkbenchMemoryToolContext",
         "saveMemory",
         "syncAgentInstructionImports",
-        "toolMemoryProposalAlreadyPending",
-        "touchMemoryUsage",
-        "validateMemoryProposalSave",
-        "writeMemoryMeta",
-        "writeMemoryProposalState"
+        "validateMemoryProposalSave"
       ],
       "requires": [
         {
@@ -5615,37 +5548,8 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "cachedInputTokensFromUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5653,42 +5557,12 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "neutralizeFenceTag",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
           "kinds": [
             "read"
           ]
@@ -5702,29 +5576,14 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "SKILL_ID_RE",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "text",
           "kinds": [
             "read"
           ]
@@ -5754,7 +5613,6 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5769,14 +5627,13 @@
           "provider": "01-config.js",
           "symbol": "legacyAccMemoryMigrationComplete",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -5784,7 +5641,7 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -5798,28 +5655,35 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "activeOpenAiProvider",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerRawCompletion",
           "kinds": [
-            "call"
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "CORE_MEMORY_SUMMARY_CAP",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "MemoryPrompts",
+          "kinds": [
+            "read"
           ]
         }
       ]
@@ -8406,6 +8270,27 @@
         },
         {
           "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryCheckPrompt",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryPromptSection",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryTurnSection",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
             "read"
@@ -8441,30 +8326,9 @@
         },
         {
           "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryCheckPrompt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryConflictMap",
           "kinds": [
             "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryPromptSection",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryTurnSection",
-          "kinds": [
             "read"
           ]
         },
@@ -23207,7 +23071,28 @@
         },
         {
           "provider": "06-provider-engine.js",
+          "symbol": "buildCoreMemoryPromptSection",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
           "symbol": "buildEngineEnvBrief",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryCheckPrompt",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06-provider-engine.js",
+          "symbol": "buildMemoryPromptSection",
           "kinds": [
             "read"
           ]
@@ -23473,28 +23358,7 @@
         },
         {
           "provider": "06d-memory-domain.js",
-          "symbol": "buildCoreMemoryPromptSection",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryCheckPrompt",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryConflictMap",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06d-memory-domain.js",
-          "symbol": "buildMemoryPromptSection",
           "kinds": [
             "read"
           ]

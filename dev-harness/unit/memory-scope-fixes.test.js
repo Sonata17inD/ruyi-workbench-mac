@@ -40,10 +40,11 @@ const WANT = ['memoryGlobalScopeAllowed', 'memoryRecentUserTexts', 'normalizeMem
   'proposeMemoryRelation', 'confirmMemoryRelation', 'readMemoryRelations', 'loadMemoryRegistry', 'resolveCoreMemoryState', 'buildCoreMemoryPromptSection',
   'AgentInstructionImports', 'MemorySelection', 'planAgentInstructionEntries', 'syncAgentInstructionImports', 'agentInstructionSources', 'readAgentInstructionSource', 'splitAgentInstructionText',
   'renderAgentInstructionMemory', 'agentInstructionMemoryId', 'agentInstructionImportFile', 'sha256Hex', 'clipRecentMemoryDraftContext',
-  'memoryAutoGlobalAllowed', 'memoryProposalPrefilter'];
+  'memoryAutoGlobalAllowed', 'memoryProposalPrefilter', 'MemoryProposals', 'MemoryStore', 'MemoryRelations', 'MemoryPrompts', 'MemoryMigrations'];
 const present = WANT.filter(n => new RegExp('(?:function|const|let)\\s+' + n + '\\b').test(SERVER_SRC));
 const I = loadServerInternals(present);
-Object.assign(I, I.AgentInstructionImports, I.MemorySelection);
+Object.assign(I, I.AgentInstructionImports, I.MemorySelection, I.MemoryProposals);
+Object.assign(I, I.MemoryStore, I.MemoryRelations, I.MemoryPrompts, I.MemoryMigrations);
 const need = name => { assert.equal(typeof I[name], 'function', `${name} 不存在(修前代码没有这个功能)`); return I[name]; };
 
 const memFile = (scope, id) => path.join(scope === 'global' ? path.join(root, 'memory', 'global') : I.memoryProjectDir(PROJ), id + '.md');

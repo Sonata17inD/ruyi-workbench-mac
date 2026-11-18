@@ -24,7 +24,7 @@ try {
     ok(entry && /DurableJsonStore/.test(entry.writePrimitive) && entry.lifecycle === 'shared-lifecycle', `${id} is recorded on the DurableJsonStore lifecycle`);
     const owner = fs.readFileSync(path.resolve(ROOT, 'ruyi-workbench', 'app', 'src', entry.owner), 'utf8');
     const importer = id === 'agent-instructions-import' ? owner
-      : fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '06d-memory-domain.js'), 'utf8');
+      : fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'memory-migrations.cjs'), 'utf8');
     ok(new RegExp('const ' + storeName + ' = DurableJsonStore\\.create\\(').test(owner)
       && new RegExp(storeName + '\\.write\\(').test(importer)
       && !new RegExp('atomicWriteJson\\(' + fileFn + '\\(').test(owner + importer),

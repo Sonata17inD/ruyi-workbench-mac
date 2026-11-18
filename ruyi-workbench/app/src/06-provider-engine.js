@@ -37,6 +37,10 @@ function buildRuntimeIdentityFacts() {
 const { buildEngineEnvBrief, resolveEngineEnvBrief } = require('./backend/engine-env-brief.cjs').createEngineEnvBrief({
   appName: APP_NAME, buildRuntimeIdentityFacts, probeRgAsync,
 });
+const CORE_MEMORY_SUMMARY_CAP = 520;
+const MemoryPrompts = require('./backend/memory-prompts.cjs').createMemoryPrompts({ neutralizeFenceTag, summaryCap: CORE_MEMORY_SUMMARY_CAP });
+const { buildMemoryPromptSection, buildMemoryTurnSection, buildCoreMemoryPromptSection, buildMemoryCheckPrompt } = MemoryPrompts;
+
 const { buildStableSystemPrompt, buildVolatileParts, buildProviderSystemPrompt } = require('./backend/provider-prompt.cjs').createProviderPrompt({
   buildRuntimeIdentityFacts, buildEngineEnvBrief,
   buildMemoryCheckPrompt, buildMemoryPromptSection,
