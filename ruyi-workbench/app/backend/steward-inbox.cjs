@@ -2,7 +2,7 @@
 const nodeFs = require('node:fs');
 const nodeFsp = require('node:fs/promises');
 const path = require('node:path');
-const { STEWARD_MERGE_WINDOW_MS } = require('./steward-inbox-events.cjs');
+const { STEWARD_MERGE_WINDOW_MS, stewardPendingKeyOf } = require('./steward-inbox-events.cjs');
 
 // ── 落盘常量 ────────────────────────────────────────────────────────────────
 const STEWARD_DIR_NAME = 'steward';
@@ -212,10 +212,6 @@ function createStewardInbox({
       for (const sid of (row && Array.isArray(row.viewing) ? row.viewing : [])) if (sid) out.add(String(sid));
     }
     return out;
-  }
-  function stewardPendingKeyOf(evt) {
-    const iv = evt && evt.payload && evt.payload.interventionId;
-    return iv ? String(evt.sessionId || '') + '\u0000' + String(iv) : '';
   }
   // 这条待决此刻还挂着吗(读本文件游标上那份全局待决集合;13q 放行被扣住的事件前问它)。
   function stewardPendingStillOpen(evt) {

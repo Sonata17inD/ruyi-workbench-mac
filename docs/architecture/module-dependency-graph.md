@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2358 | 3180 | 601 | 15 | 0 | 0 |
+| 87 | 2354 | 3178 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -84,16 +84,16 @@
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
-| 69 | `13i-steward-inbox.js` | transport | 22 | 25 | 7 |
+| 69 | `13i-steward-inbox.js` | transport | 23 | 25 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 60 | 20 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
-| 72 | `13k-steward-threads.js` | transport | 48 | 126 | 18 |
+| 72 | `13k-steward-threads.js` | transport | 43 | 123 | 18 |
 | 73 | `13l-steward-ops.js` | transport | 54 | 133 | 22 |
 | 74 | `13g-steward.js` | transport | 17 | 64 | 11 |
 | 75 | `13m-steward-runner-base.js` | transport | 55 | 29 | 8 |
 | 76 | `13o-steward-runner-prompt.js` | transport | 22 | 67 | 16 |
 | 77 | `13p-steward-runner-actions.js` | transport | 35 | 63 | 12 |
-| 78 | `13q-steward-runner-turn.js` | transport | 45 | 85 | 21 |
+| 78 | `13q-steward-runner-turn.js` | transport | 45 | 86 | 21 |
 | 79 | `13h-steward-runner.js` | transport | 8 | 61 | 16 |
 | 80 | `13r-event-stream.js` | transport | 3 | 18 | 7 |
 | 81 | `13s-scheduler.js` | transport | 6 | 29 | 9 |
@@ -526,7 +526,7 @@
 | `13j-steward-tool-base.js` | `06d-memory-domain.js` | backward | `cleanMemoryDate`, `projectKeyForCwd` |
 | `13j-steward-tool-base.js` | `06i-steward-core.js` | backward | `STEWARD_CONFIG_SECRET_PATTERN`, `STEWARD_EXEMPT_DELEGATION_WINDOW_MS`, `STEWARD_MEMORY_KINDS`, `STEWARD_MEMORY_LIMITS`, `STEWARD_NOTIFY_WINDOW_MS`, `stewardSanitizeText` |
 | `13j-steward-tool-base.js` | `13i-steward-inbox.js` | backward | `stewardDir` |
-| `13k-steward-threads.js` | `00-boot.js` | backward | `EventStreamHooks`, `ExternalBotHooks`, `dataRoot`, `dataRootAliases`, `decodeTextFileBytes`, `fsp`, `logEvent`, `nowIso`, `path`, `pathWithinRoot`, `paths`, `redact`, `text` |
+| `13k-steward-threads.js` | `00-boot.js` | backward | `EventStreamHooks`, `ExternalBotHooks`, `dataRoot`, `dataRootAliases`, `decodeTextFileBytes`, `logEvent`, `nowIso`, `pathWithinRoot`, `paths`, `redact` |
 | `13k-steward-threads.js` | `01-config.js` | backward | `mutateConfig`, `normalizeWorkspacePathString`, `safeSessionId` |
 | `13k-steward-threads.js` | `01c-runtime-flags.js` | backward | `sessionSearchIndexEnabled` |
 | `13k-steward-threads.js` | `01e-permission-modes.js` | backward | `PERMISSION_MODES` |
@@ -616,7 +616,7 @@
 | `13q-steward-runner-turn.js` | `13d-core-domain-routes.js` | backward | `decideIntervention` |
 | `13q-steward-runner-turn.js` | `13e-pretender-index.js` | backward | `getPretenderProjectionIndex` |
 | `13q-steward-runner-turn.js` | `13g-steward.js` | backward | `stewardAuthorizeExternalContext` |
-| `13q-steward-runner-turn.js` | `13i-steward-inbox.js` | backward | `stewardDir`, `stewardInboxRead`, `stewardPendingStillOpen`, `stewardPresenceRows`, `stewardViewingSessionIds` |
+| `13q-steward-runner-turn.js` | `13i-steward-inbox.js` | backward | `stewardDir`, `stewardInboxRead`, `stewardPendingKeyOf`, `stewardPendingStillOpen`, `stewardPresenceRows`, `stewardViewingSessionIds` |
 | `13q-steward-runner-turn.js` | `13j-steward-tool-base.js` | backward | `clearStewardReadBudget`, `stewardFail`, `stewardReadSessionHead` |
 | `13q-steward-runner-turn.js` | `13k-steward-threads.js` | backward | `stewardErrorDetail`, `stewardLaunchPending`, `stewardMediatesPermissions` |
 | `13q-steward-runner-turn.js` | `13l-steward-ops.js` | backward | `stewardDecideAttempted` |

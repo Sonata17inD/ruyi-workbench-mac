@@ -391,13 +391,15 @@ try {
   /* ═════════ 静态锁 ═════════ */
   const src = readServerSource();
   const inbox = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox.cjs'), 'utf8');
+  const admission = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-thread-admission.cjs'), 'utf8');
   ok(/function stewardApplyPresenceGate\(events\)/.test(inbox) && !/function stewardApplyPresenceGate\(/.test(src),
     'S3 收件箱服务持有唯一的在场门');
-  ok(/function stewardSeatedByUser\(sessionId\)/.test(src), 'S4 工具门的在场判据单点在编译产物里(13k)');
+  ok(/function stewardSeatedByUser\(sessionId\)/.test(admission) && !/function stewardSeatedByUser\(/.test(src),
+    'S4 线程准入服务持有唯一的工具在场判据');
   ok(/EventStreamHooks\.presenceSnapshot/.test(src) && !/13r[^\n]*stewardPresenceSnapshot\(\)[^\n]*13i/.test(src),
     'S5 三个消费面都经 EventStreamHooks 延迟绑定取在场(不直引 13r 的符号 = 零前向边)');
-  ok(/typeof EventStreamHooks\.presenceSnapshot === 'function'/.test(inbox)
-    && (src.match(/typeof EventStreamHooks\.presenceSnapshot === 'function'/g) || []).length >= 3,
+  const presenceGuards = source => (source.match(/typeof EventStreamHooks\.presenceSnapshot === 'function'/g) || []).length;
+  ok(presenceGuards(inbox) === 1 && presenceGuards(admission) === 1 && presenceGuards(src) === 2,
     'S6 四个消费面各自带 typeof 守卫(钩子未填充时 fail-open,不反噬)');
 } finally {
   try { if (seat) seat.close(); } catch { /* ignore */ }
@@ -420,7 +422,7 @@ process.exitCode = fail ? 1 : 0;
 //      (坐在别的线程上就把所有事件都吞了 = 把「安静」做成了「静默」)。
 //   4. P3e:把 ③ 那一支(stewardPresent)删掉 -> P3e 必须 FAIL(管家视角下也打了 quiet)。
 //   5. S1/S2:把 13e overlayMissionCard 里的 seatedBy 改成恒 null -> S1 必须 FAIL。
-//   6. T1/T2/T3:分别把 13k 两处与 13l 一处的 `if (stewardSeatedByUser(...)) return ...` 删掉
+//   6. T1/T2/T3:分别把线程编辑服务两处与 13l 一处的 `if (stewardSeatedByUser(...)) return ...` 删掉
 //      -> 对应那条必须 FAIL。T5 是它们的天然反向面(人一走就不该再拒),不用改源码。
 //   7. T4:给 steward_thread_read 也加上同一道门 -> T4 必须 FAIL(§4.5 明说读不过门)。
 // 每改一次都要 `node ruyi-workbench/app/build.js` 再单跑本件;跑完照原样改回来。

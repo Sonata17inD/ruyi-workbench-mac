@@ -1,4 +1,4 @@
-const { createStewardInboxEvents } = require('./backend/steward-inbox-events.cjs');
+const { createStewardInboxEvents, stewardPendingKeyOf } = require('./backend/steward-inbox-events.cjs');
 const StewardInboxEvents = createStewardInboxEvents({ STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn });
 const {
   STEWARD_SOURCE_EVENT_MAP, stewardClipSummary, stewardIsoAt, stewardEventDedupeKey,

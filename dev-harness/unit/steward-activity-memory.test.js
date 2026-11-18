@@ -3,6 +3,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
 const { functionBlock } = require('../lib/source-slice');
+const { createStewardThreadAdmission } = require('../../ruyi-workbench/app/backend/steward-thread-admission.cjs');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-activity-memory-'));
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, includeWorkbenchMcp: false, defaultWorkspace: home }));
@@ -73,12 +74,11 @@ test('新行动可验证经验,同一证据重试不增信;用户确认后行为
 });
 
 test('推断不能作为代替用户回答的依据;双语提示给出主动学习和当前来源', async () => {
-  const sourceCode = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13k-steward-threads.js'), 'utf8');
-  const fn = vm.runInNewContext(functionBlock(sourceCode, 'stewardResolveAnswerBasis') + '\nstewardResolveAnswerBasis', {
+  const { stewardResolveAnswerBasis } = createStewardThreadAdmission({
     stewardReadMemoryStore: async () => ({ entries: [{ id: 'inferred', state: 'active', basis: 'activity' }] }),
-    memoryIsExpired: () => false, stewardBriefTextOf: () => '',
+    memoryIsExpired: () => false,
   });
-  assert.equal((await fn({ memoryIds: ['inferred'], briefQuote: '' }, {})).ok, false);
+  assert.equal((await stewardResolveAnswerBasis({ memoryIds: ['inferred'], briefQuote: '' }, {})).ok, false);
   for (const locale of ['zh-CN', 'en-US']) {
     const pack = srv.getPromptPack(locale).steward;
     const prompt = pack.memoryCapture({ sessionId: 'steward', turnSeq: 12 });

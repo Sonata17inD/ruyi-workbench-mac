@@ -9,6 +9,11 @@ const STEWARD_MERGE_WINDOW_MS = 30000;
 const STEWARD_SUMMARY_CHARS = 200;         // payload 摘要硬顶(与 STEWARD_DIGEST_LIMITS.lastSayChars 同数)
 const STEWARD_MERGED_SEQS_MAX = 20;        // 合并行里回填的源 seq 上限(供重启重建去重集合)
 
+function stewardPendingKeyOf(evt) {
+  const iv = evt && evt.payload && evt.payload.interventionId;
+  return iv ? String(evt.sessionId || '') + '\u0000' + String(iv) : '';
+}
+
 function createStewardInboxEvents({ STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn }) {
   // ────────────────────────────────────────────────────────────────────────────
   // 源事件 → 五类白名单的【唯一】映射表。
@@ -487,4 +492,4 @@ function createStewardInboxEvents({ STEWARD_EVENT_KINDS, stewardSanitizeText, st
   };
 }
 
-module.exports = { createStewardInboxEvents, STEWARD_MERGE_WINDOW_MS };
+module.exports = { createStewardInboxEvents, STEWARD_MERGE_WINDOW_MS, stewardPendingKeyOf };

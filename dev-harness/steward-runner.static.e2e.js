@@ -52,6 +52,16 @@ const src13k = read('13k-steward-threads.js');
 const threadQueries = read('../backend/steward-thread-queries.cjs');
 const threadCreation = read('../backend/steward-thread-create.cjs');
 const threadLauncher = read('../backend/steward-thread-launch.cjs');
+const threadEdits = read('../backend/steward-thread-edits.cjs');
+const threadServices = [
+  ['steward-thread-queries.cjs', threadQueries],
+  ['steward-thread-create.cjs', threadCreation],
+  ['steward-thread-launch.cjs', threadLauncher],
+  ['steward-thread-edits.cjs', threadEdits],
+  ['steward-thread-admission.cjs', read('../backend/steward-thread-admission.cjs')],
+  ['steward-thread-delivery.cjs', read('../backend/steward-thread-delivery.cjs')],
+];
+const threadServiceSource = threadServices.map(([, source]) => source).join('\n');
 const src13l = read('13l-steward-ops.js');
 const inboxComposition = read('13i-steward-inbox.js');
 const inboxSource = read('../backend/steward-inbox.cjs');
@@ -96,14 +106,14 @@ const src01b = read('../backend/http-route-policy.cjs');
   // T2 已经把那笔债还了(13h 拆成六个文件,纯搬家)。故那条豁免删掉,运行器族六个文件与工具族三个
   // 一起进这道闸:以后再往管家回合层加东西,超线的是哪个文件当场就看得见。
   for (const [name, text] of [['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k],
-    ['13l-steward-ops.js', src13l], ['steward-thread-queries.cjs', threadQueries], ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
+    ['13l-steward-ops.js', src13l], ...threadServices, ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
     const n = text.split('\n').length;
     ok(n < 2000, `① ${name} 也在 SPEC 目标 2000 行以内(got ${n};拆分不许把债换个文件放)`);
   }
   // 117l companion:这条预算不是靠少写注释守住的,而是靠「新判定不往 13g 堆」。本波三个新判据
   // 一个都不在 13g 里 —— 递话通道的判定与执行在 13h,id 人话化 / 模型分档 / 「它在问你」在 06i。
   // 117 波 T1:判据面从 13g 一个文件扩到整个 13g 族 —— 否则拆完之后把新判定塞进 13k/13l 就绕过去了。
-  const famText = src13g + src13j + src13k + src13l + threadQueries;
+  const famText = src13g + src13j + src13k + src13l + threadServiceSource;
   for (const symbol of ['stewardRelayChannelFor', 'stewardHumanizeIds', 'stewardThreadEngineRoute', 'stewardAsksYou']) {
     ok(!new RegExp('function ' + symbol + '\\s*\\(').test(famText), `① 117l companion: ${symbol} 的实现不在 13g 族(新判定往 13h/06i 放)`);
   }
@@ -127,8 +137,7 @@ const src01b = read('../backend/http-route-policy.cjs');
     ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
     ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
-    ['steward-thread-queries.cjs', threadQueries], ['steward-thread-create.cjs', threadCreation],
-    ['steward-thread-launch.cjs', threadLauncher],
+    ...threadServices,
     ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['06k-config-patch.js', src06k]];
   const leaks = [];
   for (const [name, text] of consumers) {
@@ -194,7 +203,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadQueries + threadCreation + threadLauncher + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + apiRouter + src13d + src13g + src13j + src13k + src13l + threadServiceSource + inboxComposition + inboxSource + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -546,30 +555,29 @@ const srv = require(path.join(APP, 'server.js'));
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
   const src13p = read('13p-steward-runner-actions.js');
-  const famStop = [['06i-steward-core.js', src06i], ['13k-steward-threads.js', src13k],
+  const stopConsumers = [['steward-thread-edits.cjs', threadEdits],
     ['13l-steward-ops.js', src13l], ['13p-steward-runner-actions.js', src13p]];
 
   // (a) 判据唯一:函数体只有一处,且在 06i。
   ok((src06i.match(/function stewardStoppedTarget\(/g) || []).length === 1,
     '⑦a 判据 stewardStoppedTarget 的函数体恰一处,且在 06i(现算的判据不许有第二份)');
-  for (const [name, text] of famStop) {
-    if (name === '06i-steward-core.js') continue;
+  for (const [name, text] of [['13k-steward-threads.js', src13k], ...threadServices, ...stopConsumers.slice(1)]) {
     ok(!/function stewardStoppedTarget\(/.test(text), `⑦a2 ${name} 没有自己那一份判据(只调,不抄)`);
   }
   // (b) 三处调用点都在,且都只调不抄。
-  for (const [name, text] of famStop.slice(1)) {
+  for (const [name, text] of stopConsumers) {
     ok(codeOnly(text).includes('stewardStoppedTarget('), `⑦b ${name} 真的调了那个判据(掉了 = 那条路上的停被无视)`);
   }
   // (c) 表唯一:两句话只有 06i 那一份,调用点一律走 stewardStoppedRefusal()。
   ok((src06i.match(/const STEWARD_STOPPED_SAY = Object\.freeze\(\{/g) || []).length === 1
     && /run: '/.test(src06i) && /thread: '/.test(src06i),
     '⑦c 拒绝话术表恰一处(班组一句、线程一句)');
-  for (const [name, text] of famStop.slice(1)) {
+  for (const [name, text] of stopConsumers) {
     ok(!text.includes('管家不会自动'), `⑦c2 ${name} 不自己抄那句话(表唯一;要改文案只改 06i)`);
     ok(codeOnly(text).includes('stewardStoppedRefusal('), `⑦c3 ${name} 经 stewardStoppedRefusal() 取话`);
   }
   // (d) 一个 reason 码:三处拒绝都写 'target_stopped',前端与夹具按码认,不按中文认。
-  for (const [name, text] of famStop.slice(1)) {
+  for (const [name, text] of stopConsumers) {
     if (name === '13p-steward-runner-actions.js') continue;   // 预闸回的是 {allowed:false,reason:<人话>},码由工具那两处发
     ok(text.includes("reason: 'target_stopped'"), `⑦d ${name} 用同一个稳定码 target_stopped`);
   }
