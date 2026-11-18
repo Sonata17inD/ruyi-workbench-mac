@@ -23,6 +23,7 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(require se
 // 判定行:`ENGINE ENV BRIEF STATIC E2E: ALL PASS`。
 const fs = require('fs');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const SERVER = path.join(ROOT, 'ruyi-workbench', 'app', 'server.js');
@@ -144,10 +145,8 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   ok(/You are Kimi Code/.test(enKimi) && /native AskUserQuestion/.test(enKimi) && /Desktop control: disabled/.test(enKimi) && /no usable ripgrep/.test(enKimi), 'E2 英文 Kimi 版(原生提问/桌面关/无 rg)');
 
   /* ═══════════ F 接线(源码) ═══════════ */
-  const src = fs.readFileSync(SERVER, 'utf8');
-  const claudeStart = src.indexOf('async function runClaudeTurn(');
-  const claudeEnd = src.indexOf('async function runOpenAiTurn(');
-  const region = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
+  const claude = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/src/05-claude-engine.js'), 'utf8');
+  const region = functionBlock(claude, 'runClaudeTurn');
   const codeOnly = region.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   const iUser = codeOnly.indexOf("appendSys = String(config.appendSystemPrompt || '');");
   const iBrief = codeOnly.indexOf('if (envBrief && envBrief.text) appendSys +=');
@@ -180,7 +179,7 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   ok(caps2 && caps2.binaries && typeof caps2.binaries.rg === 'boolean' && (caps2.binaries.rg ? typeof caps2.binaries.rgSource === 'string' : caps2.binaries.rgSource === null)
     && typeof caps2.binaries.rgShell === 'string', 'G4 能力矩阵 binaries 加法字段 rgSource/rgShell (' + JSON.stringify(caps2 && caps2.binaries) + ')');
   const boot = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '00-boot.js'), 'utf8');
-  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(boot) && !/USE_BUILTIN_RIPGREP\s*=/.test(src),
+  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(boot) && !/USE_BUILTIN_RIPGREP\s*=/.test(fs.readFileSync(SERVER, 'utf8')),
     'G5 只前置锚定的真目录(联接/符号链接不算),且不改 USE_BUILTIN_RIPGREP(Claude Code 自带 rg 行为不动)');
 
   console.log('');

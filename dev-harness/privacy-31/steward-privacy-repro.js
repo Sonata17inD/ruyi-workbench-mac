@@ -5,25 +5,27 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const temp = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(temp, 'ruyi-steward-privacy-'));
 const data = path.join(root, 'data'), work = path.join(root, 'work'); fs.mkdirSync(data); fs.mkdirSync(work);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runStewardTurn', 'loadSession', 'readConfig', 'mutateConfig', 'StewardHooks', 'toolCall', 'stewardDecisionChain'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyCore', 'PrivacyGateway', 'runStewardTurn', 'loadSession', 'readConfig', 'mutateConfig', 'StewardHooks', 'TOOL_HANDLERS', 'stewardDecisionChain'], { withEval: true });
 const f = require('../lib/privacy-test-fixture').fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
 const state = app.__eval(`(() => {
   const state = { steps: [], wire: [], calls: [] };
-  detectClaudePath = () => ''; detectKimiPath = () => ''; maybeWriteThreadBrief = async () => {};
+  detectClaudePath = () => ''; detectKimiPath = () => '';
   openAiStreamOnce = async function(options) {
     state.wire.push(structuredClone(await PrivacyGateway.beforeRequest(options.body)));
     PrivacyGateway.assertPolicyAvailable();
     const step = state.steps.shift(); if (!step) throw Error('synthetic_steward_steps_exhausted');
     return typeof step === 'function' ? step(options) : step;
   };
-  const execute = toolCall;
-  toolCall = async function(name, args, context) {
-    const result = await execute(name, args, context);
-    state.calls.push({ name, result: structuredClone(result), beforeMode: (await readConfig()).privacyModeV1 }); return result;
-  };
   return state;
 })()`);
+const configTool = app.TOOL_HANDLERS.steward_config_set;
+const setConfig = configTool.handler;
+configTool.handler = async (args, context) => {
+  const result = await setConfig(args, context);
+  state.calls.push({ result: structuredClone(result), beforeMode: (await app.readConfig()).privacyModeV1 });
+  return result;
+};
 const text = say => ({ text: JSON.stringify({ say, why: '', acts: [], actions: [] }), reasoning: '', toolCalls: [], finishReason: 'stop' });
 const tool = (id, name, args) => ({ text: '', reasoning: '', finishReason: 'tool_calls', toolCalls: [{ id, name, rawArgs: JSON.stringify(args) }] });
 const rule = { id: 'synthetic-company-id', kind: 'regex', value: '\\bEMP-\\d{5}\\b', category: 'INTERNAL' };

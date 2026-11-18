@@ -225,7 +225,7 @@ const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'),
   windowsHide: true,
 });
 fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
 wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
 wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 try {
@@ -343,7 +343,7 @@ try {
     windowsHide: true,
   });
   fake2.stdout.on('data', d => String(d).trim() && console.log('[fake2] ' + String(d).trim()));
-  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME2 }, windowsHide: true });
+  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2 }, windowsHide: true });
   wb2.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2] ' + l.trim())));
   wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
   let h2 = null; for (let i = 0; i < 40 && !h2; i++) { await sleep(150); h2 = await health(WB_PORT2); }

@@ -16,7 +16,7 @@ process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.WIN_CLAUDE_WORKBENCH_HOME ||
 process.env.RUYI_HOME = process.env.RUYI_HOME || home;
 const { createTurnSegmentBuilder } = require(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'turn-segments.cjs'));
 const claude = read('ruyi-workbench/app/src/05-claude-engine.js');
-const provider = read('ruyi-workbench/app/src/09-workflow.js');
+const provider = read('ruyi-workbench/app/backend/provider-turn.cjs');
 const app = [
   read('ruyi-workbench/app/public/app.js'),
   read('ruyi-workbench/app/public/js/chat-render-primitives.js'),

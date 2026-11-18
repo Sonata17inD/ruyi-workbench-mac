@@ -8469,11 +8469,8 @@
         "WAIT_AGENTS_MAX_MS",
         "agentWorkflowPorts",
         "canonicalToolInvokeCall",
-        "commonPrefixChars",
         "deliverAgentRunEnvelope",
-        "emptyReplyNotice",
         "launchPersistedAgentRun",
-        "layoutShadowPrevBySessionMap",
         "legacySpawnToOrchestrateArgs",
         "planDiscoveryToolBatchAllowed",
         "planParallelReadIsland",
@@ -8482,7 +8479,6 @@
         "runAgentWorkflow",
         "runOpenAiTurn",
         "settleWaitEnvelopes",
-        "toolSchemaNamesSentBySession",
         "unwrapProxiedControlCall",
         "waitAgentsMaxMs",
         "waitForAgentRunResults"
@@ -8490,56 +8486,7 @@
       "requires": [
         {
           "provider": "00-boot.js",
-          "symbol": "appendPromptToLastUserMessage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "boundToolResultForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "bridgedWriteRelativePathArg",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "buildAttachmentPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "buildDeliveryRevisionPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "cachedInputTokensFromUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
           "kinds": [
             "read"
           ]
@@ -8562,21 +8509,21 @@
           "provider": "00-boot.js",
           "symbol": "estimateContentTokens",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "estimateHistoryTokens",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "estimateToolSchemaTokens",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8590,21 +8537,20 @@
           "provider": "00-boot.js",
           "symbol": "isContextOverflowError",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "localTurnTimeParts",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -8612,7 +8558,6 @@
           "provider": "00-boot.js",
           "symbol": "makeId",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -8620,37 +8565,14 @@
           "provider": "00-boot.js",
           "symbol": "nativeToolTier",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "neutralizeFenceTag",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "normalizeCwd",
-          "kinds": [
-            "call"
           ]
         },
         {
           "provider": "00-boot.js",
           "symbol": "nowIso",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "redact",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -8678,19 +8600,12 @@
           "provider": "00-boot.js",
           "symbol": "setEstimateBucketsV1",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "SubAgentMemoryHooks",
-          "kinds": [
             "read"
           ]
         },
         {
           "provider": "00-boot.js",
-          "symbol": "text",
+          "symbol": "SubAgentMemoryHooks",
           "kinds": [
             "read"
           ]
@@ -8703,31 +8618,16 @@
           ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "toolDisabledByPolicy",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "truncateToolResult",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "01-config.js",
           "symbol": "buildModelHint",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "getAgentRoleLibrary",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -8735,7 +8635,6 @@
           "provider": "01-config.js",
           "symbol": "readConfig",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -8750,92 +8649,7 @@
           "provider": "01-config.js",
           "symbol": "safeSessionId",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "budgetGuardDecision",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "budgetGuardEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "budgetGuardTurnTokens",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "budgetGuardWarnRatio",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "estimateBucketsEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "sessionNotesInjectEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "toolByteBudgetShadowBytes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "toolTimeBudgetEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "toolTimeBudgetHardMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "toolTimeBudgetShadowEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "toolTimeBudgetWarnMs",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "volatileTailLayoutEnabled",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -8870,63 +8684,49 @@
           "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "applyMissionUpdate",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "buildSessionNotesInjectPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "buildTurnSummary",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "finalizeMissionAfterTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "isProviderToolArgsObject",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "isUntitledSessionTitle",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8940,28 +8740,27 @@
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalRevertNoticesAck",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "journalRevertNoticesPeek",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -8969,14 +8768,14 @@
           "provider": "02-session-store.js",
           "symbol": "maybeWriteSessionNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "mergeMissionBeforeSave",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -8990,70 +8789,63 @@
           "provider": "02-session-store.js",
           "symbol": "normalizeMetaToolArgs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "normalizeTodoItems",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "preflightWriteBoundary",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "projectBridgedIrreversible",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "providerHistoryToolCalls",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionScratchpad",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "reconcileWorkspaceTurnBaseline",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionBudgetTrippedChange",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionStalledChange",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9067,35 +8859,35 @@
           "provider": "02-session-store.js",
           "symbol": "repairProviderHistoryPairing",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "repairProviderHistoryToolArgs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveAgentRun",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "saveTurnFinalSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9109,56 +8901,49 @@
           "provider": "02-session-store.js",
           "symbol": "syncProviderHistoryFromDisplay",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "writeHistorySnapshot",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02c-turn-segments.js",
-          "symbol": "createTurnSegmentBuilder",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "liveSessionPermissionMode",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedOfficeScriptGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "bridgedReadPathGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "03-bridge-guard.js",
           "symbol": "cwdWarning",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9179,42 +8964,42 @@
           "provider": "04-permission-runtime.js",
           "symbol": "appendLiveTail",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "assertSessionExecutionOwner",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "bridgedServerUnavailableMessage",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingPermissions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingPlans",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "clearPendingQuestions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9235,49 +9020,48 @@
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingPermissionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "hasPendingQuestionForSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "installActiveChildEventFanout",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "permissionWaitMs",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "registerSessionExecutionChild",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "requestUserQuestion",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "resolveBridge",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -9285,7 +9069,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9299,126 +9083,91 @@
           "provider": "04h-provider-http.js",
           "symbol": "providerCallIsTransient",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "providerThrownErrorText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04h-provider-http.js",
           "symbol": "withTransientRetry",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "applyProviderReasoningEffort",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerServerSearchCard",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireContentFiltered",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireContextExceeded",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireOutputLimited",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04i-provider-wire.js",
           "symbol": "providerWireProtocol",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04i-provider-wire.js",
-          "symbol": "stripUrlUserinfo",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04l-skill-registry.js",
           "symbol": "resolveEnabledSkillEntries",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "buildSessionScratchpadInjectPrompt",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "buildStableSystemPrompt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "buildVolatileParts",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "evalPlaybookAvailability",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06-provider-engine.js",
           "symbol": "loadAllPlaybooks",
           "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "neutralizeAuthoredText",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "readProjectMemory",
-          "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9429,80 +9178,10 @@
           ]
         },
         {
-          "provider": "06-provider-engine.js",
-          "symbol": "resolveToolIterationBudget",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06-provider-engine.js",
-          "symbol": "shouldExtendToolIterationBudget",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "appendTurnPolicies",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "buildPromptTaskContext",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "getPromptPack",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "PROMPT_EN",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "PROMPT_PACK_VERSION",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "revertNoticeTurns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06b-prompt-registry.js",
-          "symbol": "softwareEngineeringTaskProfile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06c-agent-workflow-catalog.js",
-          "symbol": "buildOrchestrateHint",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
           "provider": "06c-agent-workflow-catalog.js",
           "symbol": "getAgentWorkflows",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9531,7 +9210,7 @@
           "provider": "06d-memory-domain.js",
           "symbol": "buildMemoryTurnSection",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9552,21 +9231,21 @@
           "provider": "06d-memory-domain.js",
           "symbol": "memoryExclusionSet",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "memoryIsExpired",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06d-memory-domain.js",
           "symbol": "memorySelectionSignature",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9587,7 +9266,7 @@
           "provider": "06d-memory-domain.js",
           "symbol": "readConfirmedSupersedeEdges",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9602,21 +9281,21 @@
           "provider": "06f-autonomy-grants.js",
           "symbol": "consumeGrant",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "acquireResourceLease",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "06g-resource-leases.js",
           "symbol": "inferToolResources",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9630,7 +9309,7 @@
           "provider": "06g-resource-leases.js",
           "symbol": "releaseResourceLease",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9644,7 +9323,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "isStewardToolName",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9658,7 +9337,7 @@
           "provider": "06w-capability-service.js",
           "symbol": "getCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9679,14 +9358,13 @@
           "provider": "07-autonomy.js",
           "symbol": "actionTargetMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -9694,42 +9372,42 @@
           "provider": "07-autonomy.js",
           "symbol": "buildOpenAiTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "classifyRuntimeToolFailure",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "compareToolRetrievalShadow",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "createToolLoadingState",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "drainSteerQueue",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "dropPolicyDisabledBridgedTools",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9743,14 +9421,14 @@
           "provider": "07-autonomy.js",
           "symbol": "hasInterruptingSteer",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "looksLikePlan",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9764,14 +9442,14 @@
           "provider": "07-autonomy.js",
           "symbol": "loopAbortExempt",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "loopWarnOnly",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9799,7 +9477,7 @@
           "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -9813,56 +9491,55 @@
           "provider": "07-autonomy.js",
           "symbol": "projectActionModelView",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "requestNativePermission",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "requestPlanApproval",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "toolDisabledResult",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "webPayloadReason",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "agentRunCapabilities",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "agentRunResultSlice",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "agentRunRoster",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -9870,7 +9547,6 @@
           "provider": "08-agent-runs.js",
           "symbol": "buildAgentRunEnvelope",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -9969,21 +9645,20 @@
           "provider": "08-agent-runs.js",
           "symbol": "orchestrateArgsProblem",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "orchestrateModelNotes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "ownAgentMessageReceipt",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10005,7 +9680,6 @@
           "provider": "08-agent-runs.js",
           "symbol": "readAgentRunRecord",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -10027,14 +9701,14 @@
           "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateFollowup",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateNodes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -10096,27 +9770,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "buildObservationRecallPrompt",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "compactionRefetchRefusal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "compactionRefetchWarning",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "createCompactionRefetchGuard",
           "kinds": [
             "call"
           ]

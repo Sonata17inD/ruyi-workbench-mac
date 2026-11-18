@@ -49,7 +49,8 @@ const app = [
   read('app/public/app.js'),
   read('app/public/js/chat-stream-runtime.js'),
 ].join('\n');
-const source = read('app/server.js');
+const claudeTurn = read('app/src/05-claude-engine.js');
+const providerTurn = read('app/backend/provider-turn.cjs');
 assert.ok(html.includes('id="agentTeamBtn"'));
 assert.ok(css.includes('.agent-team-btn[aria-pressed="true"]'));
 assert.ok(app.includes('let agentTeamTurnEnabled = false'));
@@ -57,10 +58,10 @@ assert.ok(app.includes('const composerDraft = overrideText == null ?'), 'ordinar
 assert.ok(app.includes('const agentTeam = composerDraft != null && agentTeamTurnEnabled && agentTeamAvailable()'), 'only ordinary composer sends consume the team preference, including steer fallback');
 assert.ok(app.includes('agentTeamTurnEnabled = false;'), 'sending consumes one-shot preference');
 assert.match(app, /attachments:\s*sentAttachments,\s*agentTeam,/);
-assert.ok(source.includes('appendTurnPolicies(appendSys, config, agentTeam, appendLimit, true, promptTaskContext)'), 'Claude CLI receives Agent team + native lifecycle + task-routed policy (cmd8191: limit 由整行预算动态给出, ≤8000)');
-assert.ok(source.includes('appendTurnPolicies(volatileExtras, config, agentTeam, 0, false, promptTaskContext)'), 'OpenAI-compatible engine places Agent team and task-routed policy in the volatile user prefix');
-assert.strictEqual((source.match(/reg\.onEvent = evt => \{ reg\.lastEventAt = Date\.now\(\); onEvent\(evt\); \};/g) || []).length, 2, 'Claude and OpenAI active-turn registries both count external workflow events as activity');
-assert.ok(source.includes("type: 'tool_budget', state: 'extended'"));
+assert.ok(claudeTurn.includes('appendTurnPolicies(appendSys, config, agentTeam, appendLimit, true, promptTaskContext)'), 'Claude CLI receives Agent team + native lifecycle + task-routed policy (cmd8191: limit 由整行预算动态给出, ≤8000)');
+assert.ok(providerTurn.includes('appendTurnPolicies(volatileExtras, config, agentTeam, 0, false, promptTaskContext)'), 'OpenAI-compatible engine places Agent team and task-routed policy in the volatile user prefix');
+assert.strictEqual(((claudeTurn + providerTurn).match(/reg\.onEvent = evt => \{ reg\.lastEventAt = Date\.now\(\); onEvent\(evt\); \};/g) || []).length, 2, 'Claude and OpenAI active-turn registries both count external workflow events as activity');
+assert.ok(providerTurn.includes("type: 'tool_budget', state: 'extended'"));
 
 const cfg = server.normalizeConfig({ ...server.defaultConfig(), openaiMaxToolIterations: 999 }).config;
 assert.strictEqual(cfg.openaiMaxToolIterations, 200);

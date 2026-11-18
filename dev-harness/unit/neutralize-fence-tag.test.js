@@ -104,7 +104,7 @@ ok(typeof neutralizeFenceTag === 'function', '① server.js 导出了 neutralize
     { file: '../backend/mission-driver.cjs', needle: "neutralizeFenceTag(t == null ? '' : t, 'mission-ledger')" },
     { file: '../backend/prompt-context.cjs', needle: "neutralizeFenceTag(text, 'project-memory')" },
     { file: '../backend/prompt-context.cjs', needle: "neutralizeFenceTag(t, 'skill-index')" },
-    { file: '09-workflow.js', needle: "neutralizeFenceTag(note, 'workbench-plan-approved')" },
+    { file: '../backend/provider-turn.cjs', needle: "neutralizeFenceTag(note, 'workbench-plan-approved')" },
   ];
   for (const s of sites) {
     const src = fs.readFileSync(path.join(app, 'src', s.file), 'utf8');

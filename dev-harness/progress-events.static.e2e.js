@@ -52,7 +52,9 @@ const EXEMPT = Object.freeze({
 });
 
 // ── 服务端侧 ────────────────────────────────────────────────────────────────────────────────
-const serverEvents = scanSourceEventTypes(SRC);
+const serverFiles = [SRC, path.join(SRC, '../backend')].flatMap(directory =>
+  fs.readdirSync(directory).filter(file => /\.c?js$/.test(file)).sort().map(file => path.join(directory, file)));
+const serverEvents = scanSourceEventTypes(serverFiles);
 const serverTypes = [...serverEvents.keys()].sort();
 ok(serverTypes.length >= 50, `D0 服务端事件扫描到 ${serverTypes.length} 种(下界 50,防扫描器悄悄失灵)`);
 ok(serverTypes.includes('tool_progress') && serverTypes.includes('agent_resource') && serverTypes.includes('budget_guard'),

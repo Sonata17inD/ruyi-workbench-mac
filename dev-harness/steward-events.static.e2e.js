@@ -62,7 +62,7 @@ const { STEWARD_SOURCE_EVENT_MAP, STEWARD_EVENT_KINDS } = require(path.join(ROOT
 
 // 三元/比较里出现、但不是事件 type 的字面量。加一条必须写明理由(豁免是登记,不是免罪符)。
 const NON_TYPE_LITERALS = Object.freeze({
-  queued: "09-workflow.js `node.status === 'queued' ? 'node_requeued' : 'node_settled'` 里的 node.status 比较值,不是事件 type。",
+  queued: "agent-workflow.cjs `node.status === 'queued' ? 'node_requeued' : 'node_settled'` 里的 node.status 比较值,不是事件 type。",
 });
 
 // 从 appendAgentRunEvent( 起,取 `type:` 后面到同层逗号/右花括号为止的表达式,收集其中全部字符串字面量。

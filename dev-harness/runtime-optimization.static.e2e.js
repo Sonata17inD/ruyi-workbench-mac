@@ -10,6 +10,7 @@ const fileToolsSource = require('node:fs').readFileSync(require('node:path').joi
 const summarySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-summary.cjs'), 'utf8');
 const kernelSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-kernel.cjs'), 'utf8');
 const compactionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
+const providerTurn = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
 const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -33,7 +34,7 @@ ok(typeof estimator.setEstimateBucketsV1 === 'function' && typeof estimator.clas
   'S 105e 实际估算模块提供分桶 setter 和分类器');
 ok(isDeepStrictEqual(rules.estimation, { sampleChars: 2048, jsonStructDensity: 0.05, codeSignalThreshold: 3, factors: { json: 2.8, code: 3.2 } }),
   'S 运行时 JSON 锁定估算分桶规则');
-ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(src), 'S 入口镜像刷新接线(runOpenAiTurn/runSubAgentCore;maybeAutoCompact 唯一调用点在回合内,不重复刷新)');
+ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(src) && /setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(providerTurn), 'S 入口镜像刷新接线(runOpenAiTurn/runSubAgentCore;maybeAutoCompact 唯一调用点在回合内,不重复刷新)');
 // 105f: 摘要单发优先 —— 历史派生 20–28K 配对模拟与 400 降级门通过后默认开启;显式 false 回退 45a/22-S0。
 ok(/runtimeSummarySingleShotV1: true/.test(src), 'S runtimeSummarySingleShotV1 defaults true (105f 历史派生模拟门已过)');
 ok(/'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1'/.test(src), 'S runtimeSummarySingleShotV1 入严格布尔 sanitize 表(105e 邻接不动;105g 顺排其后)');
@@ -66,24 +67,24 @@ ok(/runtimeBudgetGuardV1: false/.test(src), 'S runtimeBudgetGuardV1 默认关闭
 ok(/'runtimeSummaryRefineV1', 'runtimeBudgetGuardV1', 'runtimeToolTimeBudgetShadowV1', 'runtimeToolTimeBudgetV1', 'runtimeVolatileTailLayoutV1', 'runtimeAppendOnlyToolSchemasV1', 'runtimeExecResultCacheV1', 'runtimeFailureTelemetryV1'/.test(src), 'S 106 六开关入严格布尔 sanitize 表(105h 邻接不动;#13a/#1/#2a 顺排,failureTelemetry 殿后)');
 ok(/budgetGuardTurnTokensV1: 0/.test(src) && /budgetGuardWarnRatioV1: 0\.8/.test(src), 'S #13a 预算默认 0(不设)且预警比例缺省 0.8');
 ok(/function budgetGuardEnabled\(config\)/.test(src) && /function budgetGuardTurnTokens\(config\)/.test(src) && /function budgetGuardWarnRatio\(config\)/.test(src), 'S #13a 唯一判定点与阈值解析存在');
-ok(/function budgetGuardDecision\(spent, reserveEstimate, budget, warnRatio\)/.test(src) && /budgetGuardDecision\(bgSpent, estBeforeCall, budgetGuardBudget, budgetGuardWarn\)/.test(src), 'S #13a 决策纯函数(预警/预留/触顶)存在且接入迭代边界');
-ok(/state: 'budget_guard_paused'/.test(src) && /m\.autoMode = 'supervised'/.test(src), 'S #13a 触顶暂停 until-done(复用 Mission 控制面,降 supervised 非报错)');
+ok(/function budgetGuardDecision\(spent, reserveEstimate, budget, warnRatio\)/.test(src) && /budgetGuardDecision\(bgSpent, estBeforeCall, budgetGuardBudget, budgetGuardWarn\)/.test(providerTurn), 'S #13a 决策纯函数(预警/预留/触顶)存在且接入迭代边界');
+ok(/state: 'budget_guard_paused'/.test(providerTurn) && /m\.autoMode = 'supervised'/.test(providerTurn), 'S #13a 触顶暂停 until-done(复用 Mission 控制面,降 supervised 非报错)');
 // 106 #13a-t: 长命令时间预算 —— shadow/主动双开关默认关;硬终态沿既有 toolAbort 杀树路径。
 ok(/runtimeToolTimeBudgetShadowV1: false/.test(src) && /runtimeToolTimeBudgetV1: false/.test(src), 'S 13a-t shadow/主动双开关默认关闭');
 ok(/function toolTimeBudgetEnabled\(config\)/.test(src) && /function toolTimeBudgetShadowEnabled\(config\)/.test(src), 'S 13a-t 双开关唯一判定点存在');
-ok(/toolAbort\.abort\('tool_time_budget'\)/.test(src), 'S 13a-t 硬终态复用 toolAbort 杀树路径(不造第二套控制器)');
+ok(/toolAbort\.abort\('tool_time_budget'\)/.test(providerTurn), 'S 13a-t 硬终态复用 toolAbort 杀树路径(不造第二套控制器)');
 const shellSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/desktop-shell.cjs'), 'utf8');
 ok(/signal\.reason === 'tool_time_budget'/.test(shellSource) && /budgetKilled: true/.test(shellSource), 'S 13a-t 04 中断原因感知(仅新原因走专用文案,旧原因逐字节不变)');
-ok(/kind: 'tool_byte_budget_shadow'/.test(src), 'S 13a-t 字节轴只计数不改写(20-C1 High 未解除)');
+ok(/kind: 'tool_byte_budget_shadow'/.test(providerTurn), 'S 13a-t 字节轴只计数不改写(20-C1 High 未解除)');
 // 106 #1 G1/G2: 前缀缓存布局修复 —— G1 保持默认关,G2 经真实 DeepSeek A/B 门后默认开。
 ok(/runtimeVolatileTailLayoutV1: false/.test(src) && /runtimeAppendOnlyToolSchemasV1: true/.test(src), 'S #1 G1 默认关闭、G2 真实 provider 门后默认开启');
 ok(/function volatileTailLayoutEnabled\(config\)/.test(src) && /function appendOnlyToolSchemasEnabled\(config\)/.test(src), 'S #1 两开关唯一判定点存在');
-ok(/if \(turnVolatile && volatileTail\) appendPromptToLastUserMessage\(msgs, turnVolatile\)/.test(src), 'S G1 尾部布局复用 appendPromptToLastUserMessage(与 recall/notes 同位)');
-ok(/const buildBodyWithLayout = \(withTools, layoutOverride\) =>/.test(src) && /buildBodyWithLayout\(useTools, altLayout\)/.test(src), 'S G1 shadow 双布局构建(candidate 只计量不发送)');
-ok(/econLog\('layout_shadow',/.test(src) && /stablePrefixCharsSent/.test(src) && /stablePrefixCharsAlt/.test(src), 'S G1 layout_shadow 事件含双布局 stablePrefixChars(E4 §7.3)');
+ok(/if \(turnVolatile && volatileTail\) appendPromptToLastUserMessage\(msgs, turnVolatile\)/.test(providerTurn), 'S G1 尾部布局复用 appendPromptToLastUserMessage(与 recall/notes 同位)');
+ok(/const buildBodyWithLayout = \(withTools, layoutOverride\) =>/.test(providerTurn) && /buildBodyWithLayout\(useTools, altLayout\)/.test(providerTurn), 'S G1 shadow 双布局构建(candidate 只计量不发送)');
+ok(/econLog\('layout_shadow',/.test(providerTurn) && /stablePrefixCharsSent/.test(providerTurn) && /stablePrefixCharsAlt/.test(providerTurn), 'S G1 layout_shadow 事件含双布局 stablePrefixChars(E4 §7.3)');
 ok(/function toolSchemaFreezeFor\(freezeKey\)/.test(src) && /kind: 'tool_schema_freeze'/.test(src), 'S G2 会话级冻结表与冻结事件存在(init/append/cache_break)');
 // 2026-10:调用点多了第 7 个参数 { restoredNames: session.toolSchemaNames }(会话工具表跨重启恢复);判据仍是 freezeKey=session.id。
-ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRoute, session\.id[,)]/.test(src), 'S G2 freezeKey=session.id 接入主循环唯一调用点');
+ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRoute, session\.id[,)]/.test(providerTurn), 'S G2 freezeKey=session.id 接入主循环唯一调用点');
 // 106 #2a: 受限执行结果缓存 —— 22 §6.1 白名单(首批仅 file_read)+ 版本验证失效 + 命中仍验权,
 // 默认关,逐项取证。命中带 cacheHit 诚实标记;错误/中断/竞态不缓存。
 ok(/runtimeExecResultCacheV1: true/.test(src) && /execResultCacheMaxEntriesV1: 200/.test(src), 'S #2a 大文件真实门后默认开启、条数上限缺省 200(显式 false 回退)');
@@ -104,8 +105,8 @@ for (const flag of ['runtimeObservationReducerV1', 'runtimeObservationRecallV1']
 }
 ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(src), 'S OpenAI catalog uses shared T1 ranker');
 ok(/searchToolCatalog\(catalog, args, config/.test(src), 'S Claude\/MCP catalog uses shared T1 ranker');
-ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(src) && /kind: 'runtime_failure_classified'/.test(src), 'S F1 classification runs under the master shadow switch');
-ok(!/function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(src), 'S F1 shadow slice contains no recovery executor');
+ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(providerTurn) && /kind: 'runtime_failure_classified'/.test(providerTurn), 'S F1 classification runs under the master shadow switch');
+ok(![src, providerTurn].some(code => /function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(code)), 'S F1 shadow slice contains no recovery executor');
 
 console.log('\n── [T1] deterministic hybrid retrieval ──');
 const t1Start = src.indexOf('const TOOL_RETRIEVAL_HINTS = Object.freeze({');
@@ -196,43 +197,43 @@ ok(['edit', 'exec'].every(tier => v3Samples.every(r => t1.classifyRuntimeToolFai
 
 console.log('\n── [E0] three-layer call ledger shadow (21) ──');
 ok(/toolEconomicsShadowV1: true/.test(src), 'E0 economics shadow defaults true (sampled)');
-ok(/econLog\('model_call_started'/.test(src) && /econLog\('model_call_completed'/.test(src), 'E0 model_call started/completed events wired');
-ok(/econLog\('assistant_tool_batch'/.test(src), 'E0 assistant_tool_batch event wired');
-ok(/econLog\('tool_call_completed'/.test(src) && /econLog\('tool_phase_completed'/.test(src), 'E0 tool_call/tool_phase completed events wired');
-ok(/ECON_EVENT_CAP = 400/.test(src) && /econSampledIter = iter => iter < ECON_SAMPLE_FULL_ITERS/.test(src), 'E0 sampling + per-turn event cap present');
+ok(/econLog\('model_call_started'/.test(providerTurn) && /econLog\('model_call_completed'/.test(providerTurn), 'E0 model_call started/completed events wired');
+ok(/econLog\('assistant_tool_batch'/.test(providerTurn), 'E0 assistant_tool_batch event wired');
+ok(/econLog\('tool_call_completed'/.test(providerTurn) && /econLog\('tool_phase_completed'/.test(providerTurn), 'E0 tool_call/tool_phase completed events wired');
+ok(/ECON_EVENT_CAP = 400/.test(providerTurn) && /econSampledIter = iter => iter < ECON_SAMPLE_FULL_ITERS/.test(providerTurn), 'E0 sampling + per-turn event cap present');
 ok(/providerResponseId/.test(src), 'E0 provider response id surfaced from stream layer');
-ok(/usageSource: usageCalls > usageSnapshot\.calls \? 'provider' : 'estimated'/.test(src), 'E0 usage source distinguishes provider-reported vs estimated');
-ok(/assistantBatchId: activeProviderBatchId, toolCallId: tc\.id/.test(src), 'E0 tool_call_completed carries the three-layer link');
+ok(/usageSource: usageCalls > usageSnapshot\.calls \? 'provider' : 'estimated'/.test(providerTurn), 'E0 usage source distinguishes provider-reported vs estimated');
+ok(/assistantBatchId: activeProviderBatchId, toolCallId: tc\.id/.test(providerTurn), 'E0 tool_call_completed carries the three-layer link');
 ok(!/toolEconomicsShadowV1: false/.test(src), 'E0 economics shadow is not an opt-in-only flag');
 
 console.log('\n── [E2] bounded read scheduler wiring (21) ──');
 ok(/boundedReadSchedulerV1: false/.test(src), 'E2 active scheduler defaults false');
 ok(/boundedReadConcurrencyV1: 4/.test(src), 'E2 default concurrency 4');
-ok(/config\.boundedReadSchedulerV1 === true/.test(src), 'E2 strict boolean gate in the tool loop');
+ok(/config\.boundedReadSchedulerV1 === true/.test(providerTurn), 'E2 strict boolean gate in the tool loop');
 // N9:宽度从「整批」改为「只读岛」(整批全是只读时岛 = 整批,公式不变),变量名随之是 islandCalls。
-ok(/Math\.min\(8, Math\.max\(4, (?:localToolCalls|islandCalls)\.length\)\)/.test(src), 'E2 concurrency formula = min(8, max(4, width)) (decision B)');
-ok(/strategy: poolStrategy/.test(src) && /'pool_read'/.test(src), 'E2 phase event exposes pool_read strategy');
-ok(/queueWaitMs/.test(src), 'E2 resource-queue wait measured');
+ok(/Math\.min\(8, Math\.max\(4, (?:localToolCalls|islandCalls)\.length\)\)/.test(providerTurn), 'E2 concurrency formula = min(8, max(4, width)) (decision B)');
+ok(/strategy: poolStrategy/.test(providerTurn) && /'pool_read'/.test(providerTurn), 'E2 phase event exposes pool_read strategy');
+ok(/queueWaitMs/.test(providerTurn), 'E2 resource-queue wait measured');
 ok(!/boundedReadSchedulerV1: true/.test(src), 'E2 active flag is not defaulted on');
 
 console.log('\n── [E5] meta-tool convergence wiring (21) ──');
 ok(/metaToolHintsV1: false/.test(src), 'E5 meta hints default false');
 ok(/function buildCallHint/.test(src) && /callHint/.test(src) && /requiredArgs/.test(src) && /'blocked'/.test(src), 'E5 search hint builder present (requiredArgs/callHint/state/blockedReason)');
 ok(/config\.metaToolHintsV1 === true/.test(src), 'E5 hints gated on strict boolean');
-ok(/discoveryState = \{ seq: 0, openedAt: 0, awaitingOutcome: false \}/.test(src), 'E5 discoverySeq chain state present');
-ok(/searchSeq: discoveryState\.seq/.test(src) && /discoverySeq: discoveryState\.seq/.test(src), 'E5 searchSeq/discoverySeq emitted into the ledger');
-ok(/unchanged: true, note: '任务清单与当前状态一致/.test(src), 'E5 todo dedupe returns unchanged on identical content');
-ok(/deduped: true/.test(src), 'E5 deduped flag lands in tool_call_completed');
+ok(/discoveryState = \{ seq: 0, openedAt: 0, awaitingOutcome: false \}/.test(providerTurn), 'E5 discoverySeq chain state present');
+ok(/searchSeq: discoveryState\.seq/.test(providerTurn) && /discoverySeq: discoveryState\.seq/.test(providerTurn), 'E5 searchSeq/discoverySeq emitted into the ledger');
+ok(/unchanged: true, note: '任务清单与当前状态一致/.test(providerTurn), 'E5 todo dedupe returns unchanged on identical content');
+ok(/deduped: true/.test(providerTurn), 'E5 deduped flag lands in tool_call_completed');
 ok(!/metaToolHintsV1: true/.test(src), 'E5 meta hints are not defaulted on');
 
 console.log('\n── [E3] action-argument model view wiring (21) ──');
 ok(/actionArgumentModelViewV1: false/.test(src), 'E3 action model view defaults false');
 ok(/function projectActionModelView/.test(src) && /ACTION_VIEW_TOOLS = new Set\(/.test(src) && /ACTION_VIEW_MIN_CHARS = 512/.test(src), 'E3 projection block present (whitelist + threshold)');
-ok(/const privacyHistory = typeof PrivacyGateway !== 'undefined' \? PrivacyGateway\.projectHostHistory\(session, session\.providerHistory\) : session\.providerHistory;/.test(src)
-  && /const viewHistory = actionAuditMap\.size \? projectActionModelView\(privacyHistory, actionAuditMap\)\.history : privacyHistory;/.test(src), 'E3 buildBody consumes the privacy history projection followed by the action view');
+ok(/const privacyHistory = typeof PrivacyGateway !== 'undefined' \? PrivacyGateway\.projectHostHistory\(session, session\.providerHistory\) : session\.providerHistory;/.test(providerTurn)
+  && /const viewHistory = actionAuditMap\.size \? projectActionModelView\(privacyHistory, actionAuditMap\)\.history : privacyHistory;/.test(providerTurn), 'E3 buildBody consumes the privacy history projection followed by the action view');
 ok(/crypto\.createHash\('sha256'\)\.update\(rawArgs\)\.digest\('hex'\) !== entry\.sha256/.test(src), 'E3 sha256 tamper gate on projection');
-ok(/session\.actionAudit\.length > 200/.test(src), 'E3 audit capped (no unbounded growth)');
-ok(/status: isErr \? 'failed' : 'completed'/.test(src), 'E3 failed actions never projected');
+ok(/session\.actionAudit\.length > 200/.test(providerTurn), 'E3 audit capped (no unbounded growth)');
+ok(/status: isErr \? 'failed' : 'completed'/.test(providerTurn), 'E3 failed actions never projected');
 ok(!/actionArgumentModelViewV1: true/.test(src), 'E3 action model view is not defaulted on');
 
 console.log('\n── [F1] 126-111a · L1 蒸发边界改 token 预算 ──');

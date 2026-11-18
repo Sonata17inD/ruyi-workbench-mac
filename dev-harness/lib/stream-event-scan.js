@@ -7,7 +7,7 @@
 // 逐项对账:服务端有、前端两壳都没有、且没有登记豁免理由 => 红。
 //
 // 判定口径:
-//   · 服务端侧 = src/*.js 里传给 onEvent / downstreamEvent / emit 的对象字面量的 type 值。
+//   · 服务端侧 = src/*.js 与 backend/*.cjs 里传给 onEvent / downstreamEvent / emit 的对象字面量的 type 值。
 //     这三个名字是本仓库仅有的下行事件入口(downstreamEvent 是 onEvent 的直发别名,
 //     emit 是 10-context-governance 里流式封装的本地名)。
 //   · 剥注释复用 port-audit 的手写状态机(注释里提到的事件名不算发出)。
@@ -46,11 +46,10 @@ function captureArgs(body, from) {
   return { text: body.slice(from, Math.max(from, i - 1)), end: i };
 }
 
-function scanSourceEventTypes(srcDir) {
+function scanSourceEventTypes(files) {
   const found = new Map(); // type -> [ 'file:line', ... ]
-  const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.js')).sort();
   for (const file of files) {
-    const body = stripJsComments(fs.readFileSync(path.join(srcDir, file), 'utf8'));
+    const body = stripJsComments(fs.readFileSync(file, 'utf8'));
     const re = new RegExp('\\b(' + EMITTERS.join('|') + ')\\s*\\(', 'g');
     let m;
     while ((m = re.exec(body))) {
@@ -59,7 +58,7 @@ function scanSourceEventTypes(srcDir) {
       if (!hit) continue;
       const line = body.slice(0, m.index).split('\n').length;
       if (!found.has(hit[1])) found.set(hit[1], []);
-      found.get(hit[1]).push(`${file}:${line}`);
+      found.get(hit[1]).push(`${path.basename(file)}:${line}`);
     }
   }
   return found;

@@ -83,13 +83,13 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 // ③ 后台解耦 + 一次投递
 {
-  const s09 = src('09-workflow.js') + src('../backend/agent-results.cjs');
+  const s09 = src('../backend/provider-turn.cjs') + src('../backend/agent-results.cjs');
   ok(/onEvent: detachedOnEvent, ctrl: null, onComplete: run => deliverAgentRunEnvelope\(session\.id, run\)/.test(s09), '③ 09 后台分支:不传 ctrl(回合结束不杀)、完成走信封投递');
   ok(/onEvent = evt => baseOnEvent\(evt && typeof evt === 'object' && !evt\.background \? \{ \.\.\.evt, background: true \} : evt\);/.test(workflowRunner), '③ runAgentWorkflow 后台 run 的事件打 background:true');
   ok(/background: isBackgroundRun,/.test(workflowRunner), '③ run 记录 background 字段');
   ok(/const AGENT_RUN_TERMINAL = new Set\(\['succeeded', 'failed', 'partial', 'stopped', 'interrupted', 'cancelled'\]\);/.test(s09), '③ 09 终态集');
   ok(/if \(subagentTurnCap > 0 && subagentTotal \+ nodeCount > subagentTurnCap\)/.test(s09), '③ 09 subagentMaxPerTurn 语义平移:本回合累计节点数上限');
-  ok(!/spawnDispatches|subagentFanoutMax|reservedSubagentKeys/.test(s09), '③ 09 旧 spawn 批处理旁路已删');
+  ok(![s09, workflowRunner].some(code => /spawnDispatches|subagentFanoutMax|reservedSubagentKeys/.test(code)), '③ 旧 spawn 批处理旁路已删');
   const s02c = src('../backend/turn-segments.cjs');
   ok(/if \(seg\.background === true && \(seg\.type === 'subagent' \|\| seg\.type === 'workflow'\)\) \{\s*if \(seg\.status === 'running' \|\| seg\.status === 'paused'\) seg\.status = 'background';\s*continue;/.test(s02c), '③ 02c finalizeAll:后台段标 background 不标 cancelled');
   const s11 = src('11-native-tools.js');
@@ -161,7 +161,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   const s06b = src('../backend/prompt-registry.cjs');
   ok(!/spawn_agent/.test(s06b), '⑧ 06b 不再提 spawn_agent');
   ok(/orchestrate_agents\(\{task, background:true\}\)/.test(s06b) && /agent_result\(\{runId, nodeId\?\}\)/.test(s06b), '⑧ 06b asyncWork 讲 background:true 与 agent_result');
-  const s09 = src('09-workflow.js') + src('../backend/agent-results.cjs');
+  const s09 = src('../backend/provider-turn.cjs') + src('../backend/agent-results.cjs');
   ok(/代理并行规则：当主线还有不依赖代理结果的工作可做时，orchestrate_agents 设置 background:true/.test(s09), '⑧ 09 volatile 后台规则');
   const providerPrompt = src('../backend/provider-prompt.cjs');
   ok(providerPrompt.includes("offeredNames.has('orchestrate_agents')") && !/offeredNames\.has\('spawn_agent'\)/.test(providerPrompt),

@@ -32,7 +32,7 @@ const routes = read(path.join(SRC, '13d-core-domain-routes.js'));
 const experience = read(path.join(PUBLIC, 'js', 'session-experience.js'));
 const chatLive = read(path.join(PUBLIC, 'css', 'states', 'chat-live.css'));
 const turnSegments = read(path.join(SRC, '../backend/turn-segments.cjs'));
-const workflow = read(path.join(SRC, '09-workflow.js'));
+const workflow = read(path.join(SRC, '../backend/provider-turn.cjs'));
 const claudeEngine = read(path.join(SRC, '05-claude-engine.js'));
 const primitives = read(path.join(PUBLIC, 'js', 'chat-render-primitives.js'));
 

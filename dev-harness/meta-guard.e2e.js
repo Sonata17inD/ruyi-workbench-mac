@@ -4,13 +4,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 这里把「门面数字」与「敏感路由必分类」转成 CI 可跑的断言,复发即红,不再靠人工记得同步。
 'use strict';
 const { readServerSource } = require('./src-reader');
+const { functionBlock } = require('./lib/source-slice');
 const fs = require('fs');
 const path = require('path');
 
 const HERE = __dirname;
 const ROOT = path.resolve(HERE, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
 const README = path.join(ROOT, 'README.md');
 const README_EN = path.join(ROOT, 'README_EN.md');   // 2026-09 起英文版是一份独立的完整 README
 
@@ -21,6 +21,8 @@ const pkg = require(path.join(WB, 'package.json'));
 const readme = fs.readFileSync(README, 'utf8');
 const readmeEn = fs.readFileSync(README_EN, 'utf8');
 const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-driver.cjs'), 'utf8');
+const claudeRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/src/05-claude-engine.js'), 'utf8'), 'runClaudeTurn');
+const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/provider-turn.cjs'), 'utf8'), 'runOpenAiTurn');
 
 // Mac product identity and generated engineering facts are the documentation authority.
 {
@@ -93,14 +95,10 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   // 调用点对称:Provider(runOpenAiTurn)与 Claude(runClaudeTurn)都要调 buildOrchestrateHint。
   // 第35波 P2: Claude 侧编排提示从 --append-system-prompt 改走 stdin 索引注入(indexSecs → <workbench-context>),
   // 信道变了但「受 subagentMaxPerTurn 门控 + 与 Provider 同源」的对称契约不变。
-  const calls = (src.match(/buildOrchestrateHint\(/g) || []).length;
+  const calls = ((claudeRegion + openaiRegion).match(/buildOrchestrateHint\(/g) || []).length;
   ok(calls >= 2, 'E buildOrchestrateHint 两引擎各一次调用(≥2 处,实 ' + calls + ')');
-  const claudeStart = src.indexOf('async function runClaudeTurn(');
-  const claudeEnd = src.indexOf('async function runOpenAiTurn(');
-  const claudeRegion = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
   ok(/buildOrchestrateHint\(/.test(claudeRegion), 'E Claude 引擎(runClaudeTurn)注入模板提示 ← 修两引擎不对称的关键');
   ok(/indexSecs\.push\(oh\)/.test(claudeRegion) && /subagentMaxPerTurn/.test(claudeRegion), 'E Claude 侧编排提示走 stdin 索引注入(indexSecs,第35波 P2)且受 subagentMaxPerTurn 开关门控');
-  const openaiRegion = claudeEnd >= 0 ? src.slice(claudeEnd, claudeEnd + 40000) : '';
   ok(/buildOrchestrateHint\(/.test(openaiRegion), 'E Provider 引擎(runOpenAiTurn)也注入模板提示(对称)');
 }
 
@@ -114,16 +112,13 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
     ok(/不得覆盖/.test(fnM[0]) || (/const prompts = getPromptPack\([^;]+\)\.mission;/.test(fnM[0]) && /prompts\.header/.test(fnM[0])), 'F digest 声明「不得覆盖守则」(不可信参考带纪律;51c-b/52a 外置后文本在 registry mission.header,函数体引用即合规)');
     ok(/fits-or-drop|整段丢/.test(fnM[0]) && /return ''/.test(fnM[0]), 'F digest fits-or-drop(超预算整段丢,不中截毁围栏)');
   }
-  const calls = (src.match(/buildMissionPromptSection\(/g) || []).length;
+  const prompt = fs.readFileSync(path.join(WB, 'app/backend/provider-prompt.cjs'), 'utf8');
+  const calls = ((src + prompt).match(/buildMissionPromptSection\(/g) || []).length;
   ok(calls >= 3, 'F buildMissionPromptSection 被定义 + 两引擎各一次调用(≥3 处,实 ' + calls + ')');
   // 51c-b(04 Phase B):mission header 文本外置到 PROMPT_ZH.mission.header(06b-registry),全局检查文本仍含「不得覆盖」
   ok(require(path.join(WB, 'app/backend/prompt-registry.cjs')).getPromptPack('zh-CN').mission.header.includes('不得覆盖'), 'F digest 文本全局含「不得覆盖」(51c-b 外置后文本在 PROMPT_ZH.mission.header,仍须存在)');
-  const claudeStart = src.indexOf('async function runClaudeTurn(');
-  const claudeEnd = src.indexOf('async function runOpenAiTurn(');
-  const claudeRegion = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
   ok(/buildMissionPromptSection\(session\.mission/.test(claudeRegion), 'F Claude 引擎(runClaudeTurn)注入账本 digest');
   ok(/append-system-prompt/.test(claudeRegion) && /appendMemorySection\(appendSys, misSec/.test(claudeRegion), 'F Claude 侧走 --append-system-prompt 且 fits-or-drop 合并(同记忆契约)');
-  const openaiRegion = claudeEnd >= 0 ? src.slice(claudeEnd, claudeEnd + 60000) : '';
   ok(/(buildProviderSystemPrompt|buildVolatileParts)\([^)]*session\.mission/.test(openaiRegion), 'F Provider 引擎(runOpenAiTurn)也传 session.mission 注入(对称;51d C1b 后走 buildVolatileParts)');
 }
 
@@ -143,12 +138,7 @@ const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '..
   const definitions = (promptOwners.match(/^\s{2}answerShape:/gm) || []).length;
   ok(definitions === 2, 'G answerShape 在提示词包里恰好两份定义(中文包 + 英文包;实 ' + definitions + ')');
   // ② Claude/Kimi CLI 那一路(runClaudeTurn)注入它,且是拼进 --append-system-prompt 的那一段。
-  //    区间必须收到 appendSys 装配块【本身】:runClaudeTurn -> runOpenAiTurn 之间横跨 05..09 五个模块
-  //    (06b 的两份包定义、06 的 provider 注入都落在里面),拿整段去 test(/answerShape/) 永远假绿 ——
-  //    上面 E/F 两组能用整段是因为它们钉的符号本来就只出现在 05 与 09。
-  const claudeStart = src.indexOf('async function runClaudeTurn(');
-  const claudeEnd = src.indexOf('async function runOpenAiTurn(');
-  const claudeRegion = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
+  //    检查 runClaudeTurn 的 appendSys 装配块，确保匹配的是实际注入。
   const apStart = claudeRegion.indexOf("let appendSys = '';");
   // 架构还债批 3 A:装配块的收尾一行改为问 CLI 适配器(adapter.appendSystemPromptFlag = '--append-system-prompt'),锚跟着换。
   const apEnd = claudeRegion.indexOf('if (appendSys && adapter.appendSystemPromptFlag)');

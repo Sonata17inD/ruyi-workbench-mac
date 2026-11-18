@@ -90,7 +90,7 @@ ok(srv.planDiscoveryToolBatchAllowed([{ name: 'unknown_future_tool' }], {}, {}) 
 const claudeSrc = fs.readFileSync(path.join(SRC, '05-claude-engine.js'), 'utf8');
 const autonomySrc = fs.readFileSync(path.join(SRC, '07-autonomy.js'), 'utf8');
 const agentSrc = fs.readFileSync(path.join(SRC, '08-agent-runs.js'), 'utf8');
-const workflowSrc = fs.readFileSync(path.join(SRC, '09-workflow.js'), 'utf8');
+const workflowSrc = fs.readFileSync(path.join(SRC, '../backend/provider-turn.cjs'), 'utf8');
 const registrySrc = fs.readFileSync(path.join(SRC, '../backend/prompt-registry.cjs'), 'utf8');
 ok(/appendTurnPolicies\('', config, agentTeam, appendLimit, true, promptTaskContext\)/.test(claudeSrc), 'Claude parent turn routes the current task into engineering policy selection');
 ok(/promptPack: PROMPT_PACK_VERSION/.test(claudeSrc) && /promptPolicies: \{ softwareEngineering: softwareEngineeringTaskProfile\(promptTaskContext\) \}/.test(claudeSrc), 'Claude turn trace records prompt-pack version and engineering routing decision');

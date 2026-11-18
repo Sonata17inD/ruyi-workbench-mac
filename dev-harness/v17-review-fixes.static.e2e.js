@@ -57,7 +57,8 @@ ok(/type: 'array', minItems: 1, maxItems: 64,/.test(toolSchemas), 'S6: orchestra
 ok(!/maxItems: 32/.test(toolSchemas), 'S6: schema maxItems:32 绝迹');
 
 // ── S7: D6 目录可用口径 ─────────────────────────────────────────────────────
-ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(server), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');
+const providerPrompt = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/provider-prompt.cjs'), 'utf8');
+ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(providerPrompt), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');
 
 // ── S8: ACC 侧修复(静态)─────────────────────────────────────────────────────
 const accAudit = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'audit.py'), 'utf8');

@@ -86,7 +86,7 @@ function writeConfig(home, fakePort) {
       ok(invalidRejected, 'hooks: unknown lifecycle phase is rejected');
       const resultSummary = hookApi.summarizeAgentLoopToolResult({ ok: false, error: 'boom', content: 'large payload' });
       ok(resultSummary.ok === false && resultSummary.bytes > 0 && !Object.prototype.hasOwnProperty.call(resultSummary, 'content'), 'hooks: post-tool context uses bounded result metadata');
-      const providerLoopSrc = fs.readFileSync(path.join(WB, 'app', 'src', '09-workflow.js'), 'utf8');
+      const providerLoopSrc = fs.readFileSync(path.join(WB, 'app', 'backend', 'provider-turn.cjs'), 'utf8');
       const claudeLoopSrc = fs.readFileSync(path.join(WB, 'app', 'src', '05-claude-engine.js'), 'utf8');
       ok(expectedPhases.every(phase => providerLoopSrc.includes(`dispatchAgentLoopHooks('${phase}'`)), 'hooks: Provider native loop wires all six lifecycle phases');
       ok(['onTurnStart', 'beforeModelCall', 'onTurnEnd', 'onError'].every(phase => claudeLoopSrc.includes(`dispatchAgentLoopHooks('${phase}'`))

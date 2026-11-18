@@ -97,9 +97,10 @@ ok(unguarded.length === 0, `② 每个 CDP 客户端的 send() 在 socket.send �
   ok(srcFiles.length >= 50 && prodOffenders.length === 0,
     `④ 产品 src/ 里零 taskkill /T 调用(扫了 ${srcFiles.length} 个模块;命中 ${prodOffenders.length}${prodOffenders.length ? ':' + prodOffenders.join(' ') : ''})`);
   const pr = fs.readFileSync(path.join(SRC, '04-permission-runtime.js'), 'utf8');
-  ok(pr.includes('ProcessRuntime.stopChild(ownedChild)'), 'managed children use their supervisor');
-  ok(pr.includes('process-handle-required') && pr.includes('--terminate-child-tree'), 'fallback cleanup requires a ChildProcess handle and native helper');
-  ok(!pr.includes('powershell.exe') && !pr.includes('ownTreeKillCommand'), 'Windows termination runtime is absent');
+  const cleanup = fs.readFileSync(path.join(SRC, '../backend/mac-child-cleanup.cjs'), 'utf8');
+  ok(cleanup.includes('ProcessRuntime.stopChild(ownedChild)'), 'managed children use their supervisor');
+  ok(cleanup.includes('process-handle-required') && cleanup.includes('--terminate-child-tree'), 'fallback cleanup requires a ChildProcess handle and native helper');
+  ok(![pr, cleanup].some(code => code.includes('powershell.exe') || code.includes('ownTreeKillCommand')), 'Windows termination runtime is absent');
   const router = fs.readFileSync(path.join(SRC, '13-http-router.js'), 'utf8');
   ok(!router.includes('function freeStalePort('), 'port takeover dead code is absent');
 }

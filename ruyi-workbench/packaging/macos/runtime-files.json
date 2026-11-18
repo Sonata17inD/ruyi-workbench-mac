@@ -76,6 +76,7 @@
     "app/backend/usage-summary.cjs",
     "app/backend/install-registry.cjs",
     "app/backend/provider-wire.cjs",
+    "app/backend/provider-turn.cjs",
     "app/backend/config-secrets.cjs",
     "app/backend/context-governance-rules.json",
     "app/backend/token-estimation.cjs",
