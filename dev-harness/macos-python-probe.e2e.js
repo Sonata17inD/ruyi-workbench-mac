@@ -30,7 +30,11 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     t.ok(full === 'full' && await stopped(), 'Full import probe preserves argv/env/cwd and confirms descendant cleanup');
     t.ok(children.some(child => { const h = S.ProcessRuntime.handle(child); return h && S.ProcessRuntime.owner(h).kind === 'desktop-python-probe' && S.ProcessRuntime.owner(h).sessionId === 'python-owner'; }), 'Python import probe inherits caller identity');
     write('process.stderr.write("__RUYI_ACC_FULL__");');
-    t.ok(await probe() === 'core', 'zero exit without stdout marker remains Core');
+    t.ok(await probe() === '', 'zero exit without a stdout capability marker remains unavailable');
+    write('process.stdout.write("diagnostic: __RUYI_ACC_FULL__");');
+    t.ok(await probe() === '', 'a marker embedded in diagnostic output does not advertise Full');
+    write('console.log("__RUYI_ACC_CORE__")');
+    t.ok(await probe() === 'core', 'explicit Core marker is recognized');
     write('process.stdout.write("__RUYI_ACC_FULL__");process.exit(7)');
     t.ok(await probe() === '', 'nonzero exit cannot advertise Full even with marker output');
     t.ok(await S.probeDesktopPythonAsync({ command: path.join(root, 'missing'), args: [] }, root, {}) === '', 'missing Python remains unavailable after confirmed startup failure');
@@ -41,7 +45,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     const second = path.join(root, 'second-python');
     fs.writeFileSync(second, '#!' + process.execPath + '\nconsole.log("__RUYI_ACC_FULL__")', { mode: 0o700 });
-    write('process.exit(0)');
+    write('console.log("__RUYI_ACC_CORE__")');
     const selected = await S.pickPythonAsync(root, {}, { noCache: true, candidates: [candidate, { command: second, args: [], source: 'second' }] });
     t.ok(selected.command === second && selected.capability === 'full', 'picker preserves Full preference over an earlier Core candidate');
     const helperPath = S.ProcessRuntimeHooks.helperPath;
@@ -61,7 +65,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       try { await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete && children.filter(c => S.ProcessRuntime.handle(c)).length === before + 1 && !S.desktopPythonCache.has(root + '\n'), 'picker stops before next candidate and cache write when cleanup is unconfirmed');
       const completeFrames = frames.map(event => event.event === 'cleanup' ? { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 } : event);
-      fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}const core=process.argv[3]===${JSON.stringify(python)};const events=core?${JSON.stringify(completeFrames)}:${JSON.stringify(frames)};require('fs').writeSync(3,events.map(e=>JSON.stringify(e)+'\\n').join(''));if(!core)process.stdout.write('__RUYI_ACC_FULL__');`, { mode: 0o700 });
+      fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}const core=process.argv[3]===${JSON.stringify(python)};const events=core?${JSON.stringify(completeFrames)}:${JSON.stringify(frames)};require('fs').writeSync(3,events.map(e=>JSON.stringify(e)+'\\n').join(''));process.stdout.write(core?'__RUYI_ACC_CORE__':'__RUYI_ACC_FULL__');`, { mode: 0o700 });
       error = null;
       try { await S.pickPythonAsync(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete && !S.desktopPythonCache.has(root + '\n'), 'later incomplete Full probe cannot fall back to an earlier Core or write cache');

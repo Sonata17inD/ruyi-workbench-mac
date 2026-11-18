@@ -3493,22 +3493,10 @@ function commandForSelfMcp() {
 }
 
 // Verify the offline ACC interpreter and its imports before offering desktop tools.
-const DESKTOP_PYTHON_PROBE_TIMEOUT_MS = 5000;
 const DESKTOP_PYTHON_OK_CACHE_MS = 5 * 60 * 1000;
 const DESKTOP_PYTHON_MISS_CACHE_MS = 15000;
-const DESKTOP_PYTHON_IMPORT_PROBE = [
-  'from mcp.server.fastmcp import FastMCP',
-  'import ai_computer_control.server',
-  'full = True',
-  'try:',
-  ' import winsdk.windows.media.ocr',
-  ' import winsdk.windows.graphics.imaging',
-  ' import winsdk.windows.storage.streams',
-  ' import winsdk.windows.globalization',
-  'except Exception:',
-  ' full = False',
-  "print('__RUYI_ACC_FULL__' if full else '__RUYI_ACC_CORE__')",
-].join('\n');
+const { createDesktopPythonProbe, DESKTOP_PYTHON_IMPORT_PROBE } = require('./backend/desktop-python-probe.cjs');
+const { probeDesktopPython, probeDesktopPythonAsync } = createDesktopPythonProbe(ProcessRuntime);
 const desktopPythonCache = new Map(); // repo/root -> { at, value:{command,args,source}|null }
 // 128f-③:pickPython 的「只读缓存」模式(深度计数,可嵌套)与「这一轮遇到过未命中」位 —— 见 desktopMcpDetectionPending。
 let desktopMcpCacheOnlyDepth = 0;
@@ -3603,78 +3591,6 @@ function desktopPythonCandidates(root) {
   return candidates.filter(candidate => {
     if (seen.has(candidate.command)) return false;
     seen.add(candidate.command); return true;
-  });
-}
-
-function probeDesktopPython(candidate, cwd, desktopEnv) {
-  try {
-    const result = spawnProbeSync(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
-      cwd: cwd || undefined,
-      env: { ...process.env, ...(desktopEnv || {}) },
-      timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024,
-    });
-    if (!result || result.error || result.status !== 0) return '';
-    return String(result.stdout || '').includes('__RUYI_ACC_FULL__') ? 'full' : 'core';
-  } catch (error) { if (error.cleanupIncomplete) throw error; return ''; }
-}
-
-// 39 号文:同步探针的异步孪生 —— 同一发 python、同一套超时/解析口径,只是不占住事件循环。
-// 用 execFile 而不是 spawn:它与上面那发 spawnSync 一样【不过 shell】(Windows 上对 PATH 里的 .cmd
-// 同样 ENOENT,两条路的答案不会分家),而且原生支持 timeout/maxBuffer/encoding,三个口径逐字对齐。
-async function probeDesktopPythonAsync(candidate, cwd, desktopEnv) {
-  if (process.platform === 'darwin') {
-    let capture;
-    try {
-      capture = await ProcessRuntime.capture(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
-        cwd: cwd || undefined, env: { ...process.env, ...(desktopEnv || {}) },
-        encoding: 'utf8', maxBuffer: 64 * 1024,
-      }, { ...ProcessRuntime.currentOwner(), kind: 'desktop-python-probe' });
-    } catch { return ''; }
-    const { child } = capture;
-    let timer, timedOut = false;
-    const deadline = new Promise(resolve => {
-      timer = setTimeout(async () => {
-        timedOut = true;
-        let cleanup = { scope: 'unknown', incomplete: true };
-        try { ProcessRuntime.stopChild(child); cleanup = await ProcessRuntime.waitForCleanup(child, 1500); }
-        catch { /* preserve uncertainty */ }
-        finally {
-          child.stdout.destroy(); child.stderr.destroy();
-          resolve({ cleanup });
-        }
-      }, DESKTOP_PYTHON_PROBE_TIMEOUT_MS);
-    });
-    try {
-      const result = await Promise.race([capture.output.then(async output => ({ ...output,
-        cleanup: await ProcessRuntime.waitForCleanup(child, 1500) })), deadline]);
-      if (result.cleanup?.incomplete || result.error?.code === 'ERR_PROCESS_OUTPUT_INCOMPLETE') {
-        throw Object.assign(new Error('Python probe cleanup or output has not been confirmed'), {
-          code: result.cleanup?.incomplete ? 'process_cleanup_incomplete' : 'process_output_incomplete',
-          cleanupIncomplete: result.cleanup?.incomplete === true, cleanupScope: result.cleanup?.scope,
-          cleanupEscapeCoverage: result.cleanup?.escapeCoverage, cleanupUnconfirmed: result.cleanup?.unconfirmed,
-        });
-      }
-      if (timedOut || result.error) return '';
-      return String(result.stdout || '').includes('__RUYI_ACC_FULL__') ? 'full' : 'core';
-    } finally { clearTimeout(timer); }
-  }
-  return new Promise(resolve => {
-    let settled = false;
-    const finish = probed => { if (!settled) { settled = true; resolve(probed); } };
-    try {
-      cp.execFile(candidate.command, [...(candidate.args || []), '-X', 'utf8', '-c', DESKTOP_PYTHON_IMPORT_PROBE], {
-        cwd: cwd || undefined,
-        env: { ...process.env, ...(desktopEnv || {}) },
-        timeout: DESKTOP_PYTHON_PROBE_TIMEOUT_MS,
-        encoding: 'utf8',
-        maxBuffer: 64 * 1024,
-      }, (err, stdout) => {
-        if (err) return finish('');            // 非 0 退出/超时/ENOENT —— 与 spawnSync 那支同判
-        finish(String(stdout || '').includes('__RUYI_ACC_FULL__') ? 'full' : 'core');
-      });
-    } catch { finish(''); }
   });
 }
 
@@ -3805,8 +3721,7 @@ async function desktopMcpFromRepoAsync(repoRoot) {
   return desktopMcpEntryFor(await pickPythonAsync(repoRoot, desktopEnv), repoRoot, desktopEnv);
 }
 
-// The bundled ACC installer writes this layout to %LOCALAPPDATA%\ai-computer-control. It contains an
-// installed package rather than a checkout with src/, so it needs its own recognizer.
+// An installed Mac runtime contains its own Python and dependencies rather than a src checkout.
 function desktopMcpInstalledEnv(root) {
   const desktopEnv = { PYTHONUTF8: '1' };
   if (process.platform === 'darwin') {

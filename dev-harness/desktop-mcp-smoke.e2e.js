@@ -13,17 +13,17 @@ const { McpStdioClient, detectDesktopMcp, desktopMcpFromInstalledRoot, desktopPy
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
-  // A present embedded python.exe is not necessarily usable (older offline overlays omitted mcp). The
+  // A present bundled Python is not necessarily usable (a partial installation can omit mcp). The
   // deterministic probe seam proves we skip it and retain the working fallback + launcher arguments.
   const selected = pickPython(REPO, { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' }, {
     noCache: true,
     candidates: [
       { command: 'broken-embedded-python', args: [], source: 'bundled-runtime', requireExisting: false },
-      { command: 'usable-system-python', args: ['-3'], source: 'python-launcher', requireExisting: false },
+      { command: 'usable-system-python', args: ['-u'], source: 'system-path', requireExisting: false },
     ],
     probe: candidate => candidate.command === 'usable-system-python',
   });
-  ok(selected && selected.command === 'usable-system-python' && selected.args[0] === '-3', 'pickPython skips a broken embedded runtime and keeps the usable fallback launcher');
+  ok(selected && selected.command === 'usable-system-python' && selected.args[0] === '-u', 'pickPython skips a broken embedded runtime and keeps the usable fallback launcher');
   const none = pickPython(REPO, { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' }, {
     noCache: true,
     candidates: [{ command: 'no-python', args: [], source: 'none', requireExisting: false }],
@@ -34,38 +34,26 @@ const { McpStdioClient, detectDesktopMcp, desktopMcpFromInstalledRoot, desktopPy
     noCache: true,
     candidates: [
       { command: 'core-only-python', args: [], source: 'repo-venv', requireExisting: false },
-      { command: 'full-ocr-python', args: [], source: 'installed-full-runtime', requireExisting: false },
+      { command: 'optional-deps-python', args: [], source: 'installed-full-runtime', requireExisting: false },
     ],
     probe: candidate => candidate.command === 'core-only-python' ? 'core' : 'full',
   });
-  ok(fullPreferred && fullPreferred.command === 'full-ocr-python' && fullPreferred.capability === 'full',
-    'pickPython prefers a later Full WinSDK runtime over an earlier core-only Python');
-  const bundledSource = process.platform === 'win32' ? 'offline-embedded-runtime' : 'bundled-runtime';
-  const offlineCandidate = desktopPythonCandidates(REPO).find(candidate => candidate.source === bundledSource);
-  const bundledRelative = process.platform === 'win32' ? ['python_embed', 'python.exe'] : ['runtime', 'python', 'bin', 'python3'];
-  ok(offlineCandidate && offlineCandidate.command === path.join(REPO, ...bundledRelative), 'repo detection includes the platform bundled Python runtime');
-  const distributionCandidates = desktopPythonCandidates('C:\\portable-full\\mcp\\ai-computer-control');
-  const bundledIndex = distributionCandidates.findIndex(candidate => candidate.source === bundledSource);
-  const machineIndex = distributionCandidates.findIndex(candidate => candidate.source === 'installed-full-runtime');
-  ok(bundledIndex >= 0 && (machineIndex < 0 || bundledIndex < machineIndex),
-    'portable Full package Python is ordered before machine-local installed runtimes');
-  const bundledPreferred = pickPython('C:\\portable-full\\mcp\\ai-computer-control', { PYTHONUTF8: '1' }, {
-    noCache: true,
-    candidates: [
-      { command: 'portable-python-embed', args: [], source: 'offline-embedded-runtime', requireExisting: false },
-      { command: 'machine-installed-python', args: [], source: 'installed-full-runtime', requireExisting: false },
-      { command: 'system-python', args: [], source: 'system-path', requireExisting: false },
-    ],
+  ok(fullPreferred && fullPreferred.command === 'optional-deps-python' && fullPreferred.capability === 'full',
+    'pickPython prefers a later Mac Python with the Full optional dependencies over an earlier core-only Python');
+  const distributionRoot = path.join(REPO, 'fake bundled ACC');
+  const distributionCandidates = desktopPythonCandidates(distributionRoot);
+  const offlineCandidate = distributionCandidates[0];
+  ok(offlineCandidate && offlineCandidate.source === 'bundled-runtime'
+    && offlineCandidate.command === path.join(distributionRoot, 'runtime', 'python', 'bin', 'python3'),
+  'repo detection prioritizes the portable Mac Python runtime');
+  const bundledPreferred = pickPython(distributionRoot, { PYTHONUTF8: '1' }, {
+    candidates: distributionCandidates.map(candidate => ({ ...candidate, requireExisting: false })),
     probe: () => 'full',
   });
-  ok(bundledPreferred && bundledPreferred.command === 'portable-python-embed',
-    'portable Full package Python wins when bundled, installed, and system runtimes are all usable');
-  if (process.platform === 'win32' && process.env.LOCALAPPDATA) {
-    ok(desktopPythonCandidates(REPO).some(candidate => candidate.source === 'installed-full-runtime'),
-      'source detection considers the installed Full runtime before system Python fallbacks');
-  }
+  ok(bundledPreferred && bundledPreferred.command === offlineCandidate.command,
+    'portable Full package Python wins when bundled and system runtimes are both usable');
 
-  const installedRuntime = desktopMcpFromInstalledRoot('C:\\fake-acc-install', {
+  const installedRuntime = desktopMcpFromInstalledRoot(path.join(REPO, 'fake installed ACC'), {
     noCache: true,
     candidates: [
       { command: 'installed-runtime-python', args: [], source: 'installed-runtime', requireExisting: false },
@@ -96,52 +84,36 @@ const { McpStdioClient, detectDesktopMcp, desktopMcpFromInstalledRoot, desktopPy
   // Prefer the detected launch; fall back to an explicit python -X utf8 -m against the known repo.
   const launch = det && det.via === 'python-module'
     ? { id: 'ai-computer-control', command: det.command, args: det.args, cwd: det.cwd, env: det.env }
-    : { id: 'ai-computer-control', command: process.platform === 'win32' ? 'python' : 'python3', args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO, env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' } };
+    : { id: 'ai-computer-control', command: 'python3', args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO, env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' } };
   const client = new McpStdioClient(launch);
-  let started = false, toolCount = -1, needsTargetVerify = false;
+  let started = false, toolCount = -1;
   try { await client.start(); started = true; toolCount = client.listTools().length; }
-  catch (e) { console.log('SKIP real desktop MCP smoke — could not start (needs target machine / python deps): ' + (e && e.message || e)); needsTargetVerify = true; }
+  catch (e) { console.log('SKIP real desktop MCP smoke — could not start (needs target machine / python deps): ' + (e && e.message || e)); }
   if (started) {
-    // My client's job: handshake + tools/list round-trip WITHOUT crashing. That is what proves the
-    // bridge is correct on this box. (Verified separately: the same server returns 0 tools to the
-    // OFFICIAL mcp python client too, so an empty list here is a server/SDK-build issue, not a bridge bug.)
-    ok(toolCount >= 0, 'McpStdioClient handshake + tools/list round-trip succeeded (no crash), tools=' + toolCount);
-    if (toolCount >= 80) {
-      ok(true, 'real desktop MCP exposes >=80 tools (got ' + toolCount + ')');
-      ok(client.listTools().some(t => t && t.name === 'diagnostics'), 'real desktop MCP includes the `diagnostics` tool');
+    const names = new Set(client.listTools().map(tool => tool.name));
+    ok(toolCount >= 80, 'real desktop MCP exposes the Mac/shared tool catalog (got ' + toolCount + ')');
+    for (const name of ['diagnostics', 'run_command', 'hotkey', 'ocr_find_text']) {
+      ok(names.has(name), 'real desktop MCP exposes ' + name);
+    }
+    if (names.has('run_command')) {
       const commandProbe = await client.callTool('run_command', { command: 'echo ACC_RUN_COMMAND_OK', timeout: 10 });
       ok(/ACC_RUN_COMMAND_OK/.test(JSON.stringify(commandProbe)) && !/timed out|timeout/i.test(String(commandProbe.error || '')),
         'ACC run_command executes a safe shell command through the real MCP transport');
-      // Safe production-path calls: the invalid key is rejected before any keyboard action, while
-      // OCR only observes the screen (click=false). These catch schema binding and nested-loop bugs
-      // that tools/list alone cannot detect.
-      const badHotkey = await client.callTool('hotkey', process.platform === 'darwin'
-        ? { keys: [], target: {} } : { keys: 'ctrl+definitely_not_a_key' });
-      ok(!/unexpected keyword argument/.test(String(badHotkey.error || '')) && (process.platform === 'darwin'
-        ? badHotkey.ok === false && badHotkey.code === 'invalid_args' && /key list/i.test(String(badHotkey.error || ''))
-        : /unknown key/.test(String(badHotkey.error || ''))),
-         'hotkey accepts the MCP `keys` keyword and validates its value');
-      const ocrProbe = await client.callTool('ocr_find_text', {
-        text: '__ruyi_mcp_async_probe_that_cannot_exist__', click: false,
-      });
-      ok(!/asyncio\.run\(\) cannot be called from a running event loop/.test(String(ocrProbe.error || '')),
-         'ocr_find_text executes without a nested asyncio event-loop failure');
-      if (det && det.pythonCapability === 'full') {
-        ok(!/winsdk not installed|No module named ['"]winsdk/i.test(JSON.stringify(ocrProbe)),
-           'autodetected Full desktop MCP executes OCR through its WinSDK-capable runtime');
-      } else {
-        needsTargetVerify = true;
-        console.log('  NOTE: source-only core runtime has no Full WinSDK contract; target-package OCR verification remains required.');
-      }
-    } else {
-      // Environment gap, not a code defect — flag for target-machine verification, do NOT fail.
-      needsTargetVerify = true;
-      console.log('  NOTE: real MCP served ' + toolCount + ' tools over stdio (in-process it has 99) — mcp SDK stdio build issue on this machine; NEEDS TARGET-MACHINE VERIFICATION.');
+    }
+    if (names.has('hotkey')) {
+      const badHotkey = await client.callTool('hotkey', { keys: [], target: {} });
+      ok(badHotkey.ok === false && badHotkey.code === 'invalid_args' && /key list/i.test(String(badHotkey.error || '')),
+        'Mac hotkey rejects an empty key list before posting events');
+    }
+    if (names.has('ocr_find_text')) {
+      const badOcr = await client.callTool('ocr_find_text', { text: '', click: false });
+      ok(badOcr.ok === false && badOcr.code === 'invalid_args' && /search text/i.test(String(badOcr.error || '')),
+        'Mac OCR validates its arguments through the real async MCP transport before accessing the screen');
     }
     client.kill();
   }
 
-  console.log('\nDESKTOP-MCP-SMOKE E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS') + (needsTargetVerify ? '  [#5 real-tool-count NEEDS TARGET-MACHINE VERIFICATION]' : ''));
+  console.log('\nDESKTOP-MCP-SMOKE E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS') + (started ? '' : ' [real runtime SKIP]'));
   // Give the killed child a moment, then exit.
   setTimeout(() => process.exit(fail ? 1 : 0), 400);
 })();

@@ -23,6 +23,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { readServerSource } = require('./src-reader');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -135,8 +136,9 @@ function getJson(pathname, token, timeoutMs) {
     // ── 39 号文的三把形状锁 ──
     ok(/async function detectDesktopMcpAsync\(\)/.test(src) && /async function pickPythonAsync\(/.test(src),
       's 异步孪生 detectDesktopMcpAsync／pickPythonAsync 都在');
-    ok(/function probeDesktopPythonAsync\(/.test(src) && /cp\.execFile\(candidate\.command/.test(src),
-      's 异步探针走 cp.execFile（不过 shell，与 spawnSync 那支同口径）');
+    const probeSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'desktop-python-probe.cjs'), 'utf8');
+    ok(/ProcessRuntime\.capture\(candidate\.command, probeArgs\(candidate\)/.test(functionBlock(probeSource, 'probeDesktopPythonAsync')),
+      's 异步 Python 探针由原生监督器执行同一组探测参数');
     const warmAt = afterListen.indexOf('void ensureDesktopMcpWarm(config).then(() => {');
     ok(warmAt > 0 && warmAt < afterListen.indexOf('syncMcpServersToClaude(config)'),
       's boot 段先 ensureDesktopMcpWarm()，三处 fire-and-forget 排在它的 .then 里（预热之后它们的同步前缀全部吃缓存）');
