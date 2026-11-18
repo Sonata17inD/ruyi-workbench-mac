@@ -14453,18 +14453,15 @@
         "STEWARD_INBOX_MAINTENANCE_MS",
         "STEWARD_INBOX_RETENTION_MS",
         "STEWARD_INBOX_TAIL_BYTES",
-        "STEWARD_KIND_RESOLVERS",
-        "STEWARD_MERGED_SEQS_MAX",
-        "STEWARD_MERGE_ACCUMULATE_KEYS",
         "STEWARD_MERGE_WINDOW_MS",
         "STEWARD_RUN_EVENT_PAGE",
         "STEWARD_RUN_TERMINAL",
         "STEWARD_SEEN_MAX_KEYS",
         "STEWARD_SOURCE_EVENT_MAP",
-        "STEWARD_SUMMARY_CHARS",
         "STEWARD_TICK_MAX_EVENTS",
         "STEWARD_WAKE_DELAYS_MS",
         "STEWARD_WAKE_EVENTS",
+        "createStewardInboxEvents",
         "startStewardInbox",
         "stewardAppendChain",
         "stewardAppendInboxRows",
@@ -14486,10 +14483,8 @@
         "stewardInboxRowDedupeKeys",
         "stewardInboxState",
         "stewardIsoAt",
-        "stewardKindFor",
         "stewardLoadState",
         "stewardMaintainInbox",
-        "stewardMergeAccumulate",
         "stewardMergeInboxEvents",
         "stewardNormalizeBudgetExhausted",
         "stewardNormalizeMissionChange",
@@ -14506,10 +14501,6 @@
         "stewardReadInboxText",
         "stewardReadTurnHead",
         "stewardResetRuntimeState",
-        "stewardResolveMissionResultKind",
-        "stewardResolveNodeSettledKind",
-        "stewardResolveRunEndKind",
-        "stewardResolveSessionTurnKind",
         "stewardRunTick",
         "stewardRuntime",
         "stewardSaveCursor",
@@ -14693,7 +14684,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardCoveringLastTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14707,7 +14698,7 @@
           "provider": "06i-steward-core.js",
           "symbol": "stewardSanitizeText",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {

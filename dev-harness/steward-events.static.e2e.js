@@ -240,9 +240,10 @@ function typeExpressionLiterals(text) {
   ok(Object.prototype.hasOwnProperty.call(st, 'turn_settled') && st.turn_settled === '@sessionTurn',
     "D7 sessionTurn.turn_settled 登记为 '@sessionTurn'(语义由会话头上的 stewardLastTurn 决定)");
   const src13i = read('13i-steward-inbox.js');
-  ok(src13i.includes('function stewardResolveSessionTurnKind('), 'D7 解析器 stewardResolveSessionTurnKind 在 13i');
-  ok(src13i.includes("'@sessionTurn': stewardResolveSessionTurnKind"), 'D7 解析器登记进 STEWARD_KIND_RESOLVERS');
-  ok(src13i.includes("return (last.ok === false && last.aborted !== true) ? 'failed' : 'done';"),
+  const eventSource = read('../backend/steward-inbox-events.cjs');
+  ok(eventSource.includes('function stewardResolveSessionTurnKind('), 'D7 收件箱事件模块持有回合解析器');
+  ok(eventSource.includes("'@sessionTurn': stewardResolveSessionTurnKind"), 'D7 解析器登记进 STEWARD_KIND_RESOLVERS');
+  ok(eventSource.includes("return (last.ok === false && last.aborted !== true) ? 'failed' : 'done';"),
     "D7 判据:账上 ok:false 且不是用户主动停 -> failed;其余(含账缺席)-> done");
   const Q = String.fromCharCode(39);   // 单引号:内联在断言字符串里会把本文件的引号配对搞乱
   // 117r-D1 重钉(唯一一条被本刀合法改动打掉的既有断言,提交说明里逐对交代):判据的【定义】从 13i

@@ -619,12 +619,12 @@ ok(mod.stewardInboxTurnSeq('- [2] done · 会话「A」(sess_a) · 会话第 3 �
   && mod.stewardInboxTurnSeq('会话「A」(sess_a) 收工了') === 0,
   'P3b 新词「会话第 N 回合跑完了/失败」同样取到回合号');
 // P3c 【成对改的反向验证】——不钉行号、不钉整句，只钉「服务端现在写的就是解析器认得的那个形状」：
-// 直接拿 src/13i 的摘要生产处来对（生产端改了措辞而这三支正则没跟，或反过来，这条立刻红）。
-const inboxSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '13i-steward-inbox.js'), 'utf8');
+// 对照事件模块生成的摘要。生产端措辞和前端解析必须匹配。
+const inboxSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'steward-inbox-events.cjs'), 'utf8');
 ok(/`会话第 \$\{seq\} 回合失败/.test(inboxSrc) && /`会话第 \$\{seq\} 回合跑完了/.test(inboxSrc)
   && /`会话停住了\(/.test(inboxSrc)
   && mod.stewardInboxTurnSeq('会话第 7 回合跑完了') === 7,
-  'P3c 服务端 13i 现在写的是「会话第 N 回合…／会话停住了」(与上面的解析器同刀改才同时成立)');
+  'P3c 收件箱事件模块现在写的是「会话第 N 回合…／会话停住了」(与上面的解析器同刀改才同时成立)');
 const deliverSession = { messages: [
   { role: 'user', turnSeq: 1, content: '问' },
   { role: 'assistant', turnSeq: 1, content: '第一回合的答' },

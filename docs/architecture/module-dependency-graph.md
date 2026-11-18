@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2459 | 3191 | 601 | 15 | 0 | 0 |
+| 87 | 2450 | 3191 | 601 | 15 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -84,7 +84,7 @@
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
 | 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
-| 69 | `13i-steward-inbox.js` | transport | 90 | 29 | 7 |
+| 69 | `13i-steward-inbox.js` | transport | 81 | 29 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 80 | 23 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
 | 72 | `13k-steward-threads.js` | transport | 61 | 126 | 18 |

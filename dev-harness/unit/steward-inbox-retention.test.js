@@ -9,6 +9,9 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { functionBlock } = require('../lib/source-slice');
+const { createRequire } = require('node:module');
+const { createStewardCore } = require('../../ruyi-workbench/app/backend/steward-core.cjs');
+const { STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn } = createStewardCore({});
 const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const projectionSource = functionBlock(fs.readFileSync(path.join(src, '../backend/steward-core.cjs'), 'utf8'), 'stewardForeignProjection');
 const inboxSource = fs.readFileSync(path.join(src, '13i-steward-inbox.js'), 'utf8');
@@ -34,9 +37,9 @@ function harness(t, rows = []) {
   const file = path.join(home, 'steward', 'inbox-v1.ndjson');
   fs.mkdirSync(path.dirname(file));
   fs.writeFileSync(file, rows.map(value => JSON.stringify(value)).join('\n') + (rows.length ? '\n' : ''));
-  const context = vm.createContext({ require, fs, fsp: { ...fsp }, path, crypto, Buffer, Date, process, setTimeout, clearTimeout,
+  const context = vm.createContext({ require: createRequire(path.join(src, '../server.js')), fs, fsp: { ...fsp }, path, crypto, Buffer, Date, process, setTimeout, clearTimeout,
     paths: { data: home }, RUYI_EVENTS: { subscribe() {}, emit() {} }, STEWARD_SESSION_ID: 'steward',
-    STEWARD_EVENT_KINDS: ['needs_you', 'failed', 'done', 'stalled', 'budget', 'adopted', 'reminder'],
+    STEWARD_EVENT_KINDS, stewardSanitizeText, stewardCoveringLastTurn,
     safeJsonParse: (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } },
     repairMissionChangeTornTail: async () => {}, safeSessionId: value => value, nowIso: () => new Date().toISOString(),
     getPretenderProjectionIndex: async () => ({ sessions: [{ sessionId: 'sess_test', interventions: [] }] }),

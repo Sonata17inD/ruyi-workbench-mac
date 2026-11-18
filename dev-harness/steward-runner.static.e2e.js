@@ -599,18 +599,18 @@ const srv = require(path.join(APP, 'server.js'));
 // 那样 2.0 的错误卡与管家的说法迟早各说各话。本组把「一张表、一个口」钉死。
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13i = read('13i-steward-inbox.js');
+  const eventSource = read('../backend/steward-inbox-events.cjs');
   const src13m = read('13m-steward-runner-base.js');
   const src13p = read('13p-steward-runner-actions.js');
 
   ok((src13m.match(/function stewardFailureExplain\(/g) || []).length === 1,
     '⑧a 取话口 stewardFailureExplain 的函数体恰一处,且在 13m(它读 06 是干净的后向边;放 06i 会造循环边)');
-  for (const [name, text] of [['13i-steward-inbox.js', src13i], ['13p-steward-runner-actions.js', src13p]]) {
+  for (const [name, text] of [['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', src13i], ['13p-steward-runner-actions.js', src13p]]) {
     ok(!/function stewardFailureExplain\(/.test(text), `⑧a2 ${name} 没有自己那一份取话口`);
     ok(!/ERROR_CLASSES/.test(codeOnly(text)), `⑧b ${name} 不直接翻那张表(只能经取话口;直接翻 = 迟早长出第二套口径)`);
   }
   ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 13m 确实引用了 06 的既有表(而不是自己抄一张)');
-  ok(!/zh: '/.test(codeOnly(src13i)) && !/zh: '/.test(codeOnly(src13p)) ,
+  ok([eventSource, src13i, src13p].every(text => !/zh: '/.test(codeOnly(text))),
     '⑧c 管家侧零第二张「机器类 → 人话」表');
 
   // 事件行只有一处调用:两处调用就意味着两种拼法,用户会在不同地方看到不同措辞。
@@ -623,9 +623,9 @@ const srv = require(path.join(APP, 'server.js'));
     `⑧d2 取话就长在事件行那个函数体里(切不到 = 本条静默失效;实得 ${lineBody.length})`);
 
   // 三处摘要不再把机器词拼进括号 —— 机器词留在 payload 上(去重/取证/前端要它),不进模型的那一行。
-  ok(!codeOnly(src13i).includes("payload.errorClass ? '(' + payload.errorClass"),
-    '⑧e 13i 的三处 failed 摘要都不再把 errorClass 拼进括号');
-  ok((src13i.match(/payload\.errorClass = /g) || []).length >= 2,
+  ok(!codeOnly(eventSource).includes("payload.errorClass ? '(' + payload.errorClass"),
+    '⑧e 收件箱事件的三处 failed 摘要不把 errorClass 拼进括号');
+  ok((eventSource.match(/payload\.errorClass = /g) || []).length >= 2,
     '⑧e2 但 payload.errorClass 本身仍然照写(锁的是「给模型看的那一行」,不是把事实删掉)');
 
   // 「不知道就说不知道」:未知类别那句话也只有一处。
