@@ -237,6 +237,8 @@ const SKILL_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionIdInvalid, apiSessionNotFound, text, readBody, readJsonBody, send, sendError, contentTypeFor } = require('./backend/http-protocol.cjs');
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
+const { markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, clearDeletedSession } = require('./backend/session-tombstones.cjs').createSessionTombstones();
+const { toolImageSessionTag } = require('./backend/session-deletion.cjs');
 const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./backend/attachment-prompt.cjs');
 const { lastAssistantEngine } = require('./backend/provider-history.cjs');
 const { PREVIEW_TEXT_EXTS, readFilePreview } = require('./backend/file-preview.cjs');

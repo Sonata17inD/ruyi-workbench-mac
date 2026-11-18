@@ -3,33 +3,15 @@ const crypto = require('node:crypto');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
 function toolImageSessionTag(sessionId) { return crypto.createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10); }
-// Owns deletion tombstones and teardown ordering. No agent, transport or model imports.
+// Tears down execution and storage in order after recording the shared tombstone.
 function createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent,
   files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
     sessionNotesPath, sessionScratchpadPath, journalDir, agentRunDir },
   pendingWrites: { sessionWriteChains, sessionScratchpadChains },
-  execution, membership, index, invalidateSessionState, events,
+  execution, membership, index, invalidateSessionState, events, markSessionDeleted,
 }) {
-const SESSION_DELETE_TOMBSTONE_MAX = 5000;
-const SESSION_DELETE_SETTLE_TIMEOUT_MS = 8000;   // 与 rewindSession 等垂死回合 settle 的窗口同值
-const sessionDeleteTombstones = new Map();
-function markSessionDeleted(id, purgeAssociated = false) {
-  const previous = sessionDeleteTombstones.get(id);
-  sessionDeleteTombstones.delete(id);
-  sessionDeleteTombstones.set(id, { at: Date.now(), purgeAssociated: Boolean(purgeAssociated || (previous && previous.purgeAssociated)) });
-  while (sessionDeleteTombstones.size > SESSION_DELETE_TOMBSTONE_MAX) sessionDeleteTombstones.delete(sessionDeleteTombstones.keys().next().value);
-}
-function sessionSaveIsTombstoned(session) {
-  const deleted = sessionDeleteTombstones.get(session && session.id);
-  if (!deleted) return false;
-  const createdMs = Date.parse(String((session && session.createdAt) || ''));
-  return !Number.isFinite(createdMs) || createdMs <= deleted.at;
-}
-function sessionAssociatedSaveIsTombstoned(id) {
-  const deleted = sessionDeleteTombstones.get(id);
-  return !!(deleted && deleted.purgeAssociated);
-}
+const SESSION_DELETE_SETTLE_TIMEOUT_MS = 8000;
 // Delete the persisted chat itself. `purgeAssociated` is deliberately opt-in: a normal single-chat
 // delete keeps its previous, conservative behavior, while the batch-cleanup flow can also reclaim
 // the per-chat recovery and workflow records that otherwise have their own GC lifecycle.
@@ -141,6 +123,6 @@ async function bulkDeleteUnpinnedSessions({ preserveSessionId, purgeAssociated =
   return { ok: true, deleted, deletedCount: deleted.length, skipped, purgedAssociated: Boolean(purgeAssociated) };
 }
 
-return { deleteSession, bulkDeleteUnpinnedSessions, markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, toolImageSessionTag, removeSessionToolImages, clearDeletedSession: id => sessionDeleteTombstones.delete(id) };
+return { deleteSession, bulkDeleteUnpinnedSessions, removeSessionToolImages };
 }
 module.exports = { createSessionDeletion, toolImageSessionTag };

@@ -1,32 +1,6 @@
-const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunStore({
-  files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
-  lifecycle: { sessionAssociatedSaveIsTombstoned, hasLiveRun: id => activeAgentRuns.has(id), getLiveRun: id => activeAgentRuns.get(id) },
-  signals: { missionSignalThrottleAllow, MISSION_STALL_SIGNAL_WINDOW_MS, emit: (...args) => RUYI_EVENTS.emit(...args), logEvent },
-  safeSessionId, safeJsonParse, nowIso,
-});
-EventStreamHooks.flushSessionAgentRuns = AgentRunStore.flushSessionAgentRuns;
-function agentRunEventsFile(...args) { return AgentRunStore.agentRunEventsFile(...args); }
-function syncRunEventSeq(...args) { return AgentRunStore.syncRunEventSeq(...args); }
-function appendAgentRunEvent(...args) { return AgentRunStore.appendAgentRunEvent(...args); }
-function flushAgentRunEvents(...args) { return AgentRunStore.flushAgentRunEvents(...args); }
-function recordRunStalledEvent(...args) { return AgentRunStore.recordRunStalledEvent(...args); }
-function recordRunBudgetTrippedEvent(...args) { return AgentRunStore.recordRunBudgetTrippedEvent(...args); }
-function parseEventWindow(...args) { return AgentRunStore.parseEventWindow(...args); }
-function readAgentRunEvents(...args) { return AgentRunStore.readAgentRunEvents(...args); }
-function bumpRunIntervention(...args) { return AgentRunStore.bumpRunIntervention(...args); }
-function classifyNodeErrorText(...args) { return AgentRunStore.classifyNodeErrorText(...args); }
-function accumulateRunUsage(...args) { return AgentRunStore.accumulateRunUsage(...args); }
-function agentRunHealth(...args) { return AgentRunStore.agentRunHealth(...args); }
-function agentRunHealthChanged(...args) { return AgentRunStore.agentRunHealthChanged(...args); }
-function saveAgentRun(...args) { return AgentRunStore.saveAgentRun(...args); }
-function listAgentRuns(...args) { return AgentRunStore.listAgentRuns(...args); }
 const { gitExec, createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry } = require('./backend/agent-worktrees.cjs').createAgentWorktrees({
   worktreesDirectory: paths.agentWorktrees, runGit, safeSessionId, nowIso, agentRunFile, saveAgentRun,
 });
-function agentRunDigestShadow(...args) { return AgentRunStore.agentRunDigestShadow(...args); }
-function listAgentRunDigests(...args) { return AgentRunStore.listAgentRunDigests(...args); }
-function agentRunDigestRow(...args) { return AgentRunStore.agentRunDigestRow(...args); }
-
 const AgentRecovery = require('./backend/agent-recovery.cjs').createAgentRecovery({
   agentRunsRoot: paths.agentRuns, isWriteTool: name => NODE_WRITE_FAMILY.has(name), safeSessionId, nowIso,
   sessions: { readSessionHeadResilient, applySessionPermissionModeOverride, resolvePermissionMode },

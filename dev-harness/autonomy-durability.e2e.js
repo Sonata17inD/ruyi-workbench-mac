@@ -121,13 +121,15 @@ function capturesContaining(dir, needle) {
     const runtimeSource = src + fs.readdirSync(backendDir).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backendDir, name), 'utf8')).join('\n');
     const tmpSites = (runtimeSource.match(/\+ '\.tmp'/g) || []).length;
     ok(tmpSites === 6, 'B 手写 tmp 写点=6(白名单豁免;实 ' + tmpSites + ')');
-    ok(!/dest \+ '\.' \+ process\.pid \+ '\.tmp'/.test(src), 'B saveAgentRun 旧 pid-only tmp 模式已清零');
-    ok(/AGENT_RUN_PERSIST_DEGRADED_AFTER = 3/.test(src) && /AGENT_RUN_PERSIST_PAUSE_AFTER = 8/.test(src), 'B 持久化退化阈值常量在(3/8)');
+    const agentRunStoreSource = fs.readFileSync(path.join(backendDir, 'agent-run-store.cjs'), 'utf8');
+    const turnSummarySource = fs.readFileSync(path.join(backendDir, 'turn-summary.cjs'), 'utf8');
+    ok(!/dest \+ '\.' \+ process\.pid \+ '\.tmp'/.test(agentRunStoreSource), 'B saveAgentRun 旧 pid-only tmp 模式已清零');
+    ok(/AGENT_RUN_PERSIST_DEGRADED_AFTER = 3/.test(agentRunStoreSource) && /AGENT_RUN_PERSIST_PAUSE_AFTER = 8/.test(agentRunStoreSource), 'B 持久化退化阈值常量在(3/8)');
     // hunt2-http:digest 视图(只读标量、不外发)浅展开,完整视图照旧深拷贝。
     ok(/runs\[i\]\s*=\s*\{\s*\.\.\.\(digestView \? live\.run : JSON\.parse\(JSON\.stringify\(live\.run\)\)\),\s*live:\s*true/.test(src),
       'B GET /api/agent-runs 以完整 live 快照叠加进度与 persistenceDegraded');
-    ok(/function appendAgentRunEvent\(run, evt\)/.test(src) && (src.match(/appendAgentRunEvent\(/g) || []).length >= 10, 'B 事件日志助手 + ≥10 发射点');
-    ok(/op === 'skip'\) continue/.test(src), 'B 幂等跳过不进本轮变更清单');
+    ok(/function appendAgentRunEvent\(run, evt\)/.test(agentRunStoreSource) && (src.match(/appendAgentRunEvent\(/g) || []).length >= 10, 'B 事件日志助手 + ≥10 发射点');
+    ok(/op === 'skip'\) continue/.test(turnSummarySource), 'B 幂等跳过不进本轮变更清单');
     const fe = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆域后横幅在 js/agent-workflows.js)
     const zh = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
     const { runFaults, appendRunFaults } = await import(require('url').pathToFileURL(path.join(WB, 'app', 'public', 'js', 'run-health.js')).href);

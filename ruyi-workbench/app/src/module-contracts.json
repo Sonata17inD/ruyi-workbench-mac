@@ -78,6 +78,7 @@
         "cachedInputTokensFromUsage",
         "classifyTextForEstimate",
         "claudeCostFields",
+        "clearDeletedSession",
         "cliBridgeToolTier",
         "collectBridgedWriteTarget",
         "collectBridgedWriteTargets",
@@ -131,6 +132,7 @@
         "lstatOrNull",
         "macPathAnchor",
         "makeId",
+        "markSessionDeleted",
         "maskExternalMcpServerForDisplay",
         "maskKey",
         "maskProviders",
@@ -180,6 +182,8 @@
         "sensitiveDataRoots",
         "sensitiveFileIdentities",
         "sensitiveGlobsForRg",
+        "sessionAssociatedSaveIsTombstoned",
+        "sessionSaveIsTombstoned",
         "setEstimateBucketsV1",
         "spawnDetachedChecked",
         "ssrfCheck",
@@ -187,6 +191,7 @@
         "tildePath",
         "tokensFromTextCounts",
         "toolDisabledByPolicy",
+        "toolImageSessionTag",
         "unmaskProviders",
         "unmaskSecrets",
         "zlib"
@@ -1712,9 +1717,59 @@
       ]
     },
     {
+      "file": "06f-autonomy-grants.js",
+      "layer": "engine",
+      "provides": [
+        "activeDriverRunOf",
+        "bindDriverRun",
+        "consumeGrant",
+        "dryRunGrantFiles",
+        "endDriverRun",
+        "grantIssueTierInfo",
+        "installGrant",
+        "listGrantsView",
+        "normalizeGrant",
+        "resolveToolPermissionContext",
+        "revokeAllGrants",
+        "revokeGrant",
+        "revokeGrantsForRun"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "hashArgs",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "isSensitiveDataPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "makeId",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "02-session-store.js",
       "layer": "foundation",
       "provides": [
+        "AgentRunStore",
         "IMPORTED_MESSAGE_ROLE_MAX",
         "INTERVENTION_TERMINAL",
         "JOURNAL_KEEP_TURNS",
@@ -1727,7 +1782,6 @@
         "MISSION_STALL_LIMIT",
         "MISSION_STALL_SIGNAL_WINDOW_MS",
         "MissionChanges",
-        "MissionControl",
         "MissionStore",
         "ProviderHistory",
         "SESSION_BODY_READ_TRANSIENT",
@@ -1745,6 +1799,15 @@
         "SessionMetaUpdates",
         "SessionPersistence",
         "SessionRewind",
+        "accumulateRunUsage",
+        "agentRunDigestRow",
+        "agentRunDigestShadow",
+        "agentRunDir",
+        "agentRunEventsFile",
+        "agentRunFile",
+        "agentRunHealth",
+        "agentRunHealthChanged",
+        "appendAgentRunEvent",
         "appendDisplayMessagesToProviderHistory",
         "appendIntervention",
         "appendMissionChangeRecord",
@@ -1756,17 +1819,16 @@
         "buildMissionAcceptanceProjection",
         "buildMissionResult",
         "buildTurnSummary",
-        "bulkDeleteUnpinnedSessions",
         "bumpMissionChangeSeq",
+        "bumpRunIntervention",
         "cancelModelRunsOfDiscardedTurns",
         "captureWorkspaceTurnBaseline",
         "checkpointRollbackContext",
-        "clearDeletedSession",
+        "classifyNodeErrorText",
         "compactInterventionJournal",
         "createMissionContainer",
         "createSession",
         "danglingTurnState",
-        "deleteSession",
         "detectDanglingTurn",
         "dropInterventionSessionState",
         "dropSessionBodyState",
@@ -1774,6 +1836,7 @@
         "evaluateMissionCheck",
         "fileToolWorkspaceDir",
         "finalizeMissionAfterTurn",
+        "flushAgentRunEvents",
         "flushSessionIndex",
         "flushSessionIndexSync",
         "flushUsageLedgerSync",
@@ -1809,27 +1872,23 @@
         "journalSessionCtx",
         "kindForPath",
         "lastUsedEngineRouteUsable",
+        "listAgentRunDigests",
+        "listAgentRuns",
         "listMissionContainers",
         "listSessions",
         "loadSession",
         "markInterruptedInterventions",
-        "markSessionDeleted",
         "materializeCheckpointEditorDiff",
         "maybeFinalizeMission",
         "mergeMissionBeforeSave",
         "missionAttachThread",
-        "missionBudgetRemaining",
         "missionChangeFilePath",
         "missionContainerAcceptanceStamp",
-        "missionControlCommand",
-        "missionControlFailure",
-        "missionControlView",
         "missionDetachThread",
         "missionIndexAdd",
         "missionIndexRemove",
         "missionMergeInto",
         "missionProgressDigest",
-        "missionRollbackTarget",
         "missionSignalThrottleAllow",
         "missionSplitThreads",
         "mutateSession",
@@ -1843,11 +1902,13 @@
         "normalizeSession",
         "normalizeTodoItems",
         "overlayUnflushedSessionIndex",
+        "parseEventWindow",
         "patchMissionContainer",
         "planSessionBodyAppend",
         "preflightWriteBoundary",
         "projectBridgedIrreversible",
         "providerHistoryToolCalls",
+        "readAgentRunEvents",
         "readInterventions",
         "readInterventionsWithMeta",
         "readMissionChangesWithMeta",
@@ -1865,9 +1926,10 @@
         "recordMissionBudgetTrippedChange",
         "recordMissionCheckResult",
         "recordMissionStalledChange",
+        "recordRunBudgetTrippedEvent",
+        "recordRunStalledEvent",
         "registerIntervention",
         "rememberLastUsedEngineRoute",
-        "removeSessionToolImages",
         "repairMissionChangeTornTail",
         "repairProviderHistoryPairing",
         "repairProviderHistoryToolArgs",
@@ -1877,12 +1939,12 @@
         "safeMissionId",
         "sanitizeImportedSessionMessages",
         "sanitizeSessionScratchpad",
+        "saveAgentRun",
         "saveSession",
         "saveTurnFinalSession",
         "scheduleSessionIndexUpdate",
         "scratchpadTotalChars",
         "serializeSessionBody",
-        "sessionAssociatedSaveIsTombstoned",
         "sessionBodiesMatchCommit",
         "sessionBodyCommitValid",
         "sessionBodyDanglingFromLines",
@@ -1908,7 +1970,6 @@
         "sessionProviderHistoryLength",
         "sessionRecentUserRequest",
         "sessionRewindGenHighWater",
-        "sessionSaveIsTombstoned",
         "sessionScratchpadChains",
         "sessionScratchpadPath",
         "sessionScratchpadStore",
@@ -1920,7 +1981,7 @@
         "sortSessionMetas",
         "stopMissionAgentRuns",
         "syncProviderHistoryFromDisplay",
-        "toolImageSessionTag",
+        "syncRunEventSeq",
         "transitionInterventionState",
         "updateSessionMeta",
         "updateSessionScratchpad",
@@ -1929,7 +1990,6 @@
         "usageLedgerCacheStats",
         "usageLedgerChangesSince",
         "usageRangeLowerMs",
-        "waitMissionTurnSettled",
         "withJournalWriteLock",
         "withMissionContainerLock",
         "withSessionMutateLock",
@@ -1939,6 +1999,13 @@
         "writeSessionNotes"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "clearDeletedSession",
+          "kinds": [
+            "call"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "DesktopExecutionHooks",
@@ -2057,8 +2124,23 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "sessionAssociatedSaveIsTombstoned",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "SessionExecutionHooks",
           "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "sessionSaveIsTombstoned",
+          "kinds": [
+            "call",
             "read"
           ]
         },
@@ -2341,57 +2423,6 @@
           "symbol": "realpathForContainment",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "stopSession",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "06f-autonomy-grants.js",
-          "symbol": "revokeAllGrants",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "agentRunDir",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "appendAgentRunEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "bumpRunIntervention",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
-          "kinds": [
-            "call"
           ]
         }
       ]
@@ -3183,6 +3214,276 @@
         {
           "provider": "02-session-store.js",
           "symbol": "transitionInterventionState",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "04g-session-deletion.js",
+      "layer": "foundation",
+      "provides": [
+        "bulkDeleteUnpinnedSessions",
+        "deleteSession",
+        "removeSessionToolImages"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "markSessionDeleted",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "assertSessionIdForPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "sessionPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "sessionWriteChains",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "AgentRunStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "dropInterventionSessionState",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "dropSessionBodyState",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "dropSessionTitleOverride",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "interventionFilePath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "journalDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listSessions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "missionChangeFilePath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "missionIndexRemove",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readMissionSessionHead",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "scheduleSessionIndexUpdate",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "SESSION_TOMBSTONE",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionBodyPaths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionMissionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionNotesPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "SessionPersistence",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionScratchpadChains",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionScratchpadPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "stopMissionAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "sessionDesktopToolsOverrides",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "sessionEngineRouteOverrides",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "sessionEngineRouteScopeOverrides",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02d-session-overrides.js",
+          "symbol": "sessionPermissionModeOverrides",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "stopSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06f-autonomy-grants.js",
+          "symbol": "revokeAllGrants",
           "kinds": [
             "read"
           ]
@@ -6117,12 +6418,25 @@
       "provides": [
         "MISSION_DIGEST_CAP",
         "buildMissionPromptSection",
-        "runMissionDriver"
+        "missionBudgetRemaining",
+        "missionControlCommand",
+        "missionControlFailure",
+        "missionControlView",
+        "missionRollbackTarget",
+        "runMissionDriver",
+        "waitMissionTurnSettled"
       ],
       "requires": [
         {
           "provider": "00-boot.js",
           "symbol": "logEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "makeId",
           "kinds": [
             "read"
           ]
@@ -6149,6 +6463,48 @@
           ]
         },
         {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "turnSettlers",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "archiveMissionResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "buildMissionResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "bumpMissionChangeSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "02-session-store.js",
           "symbol": "evaluateMissionCheck",
           "kinds": [
@@ -6157,7 +6513,49 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "followupAcceptanceCriterion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "journalReadIndex",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "loadSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "maybeFinalizeMission",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "MISSION_DEFAULT_MAX_TURNS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "MISSION_MAX_MILESTONES",
           "kinds": [
             "read"
           ]
@@ -6185,7 +6583,35 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "mutateSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "normalizeMission",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "normalizeMissionCheck",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "recordMissionCheckResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "rewindSession",
           "kinds": [
             "read"
           ]
@@ -6205,57 +6631,29 @@
           ]
         },
         {
+          "provider": "02-session-store.js",
+          "symbol": "stopMissionAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "stopSession",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06b-prompt-registry.js",
           "symbol": "getPromptPack",
           "kinds": [
             "read"
           ]
-        }
-      ]
-    },
-    {
-      "file": "06f-autonomy-grants.js",
-      "layer": "engine",
-      "provides": [
-        "activeDriverRunOf",
-        "bindDriverRun",
-        "consumeGrant",
-        "dryRunGrantFiles",
-        "endDriverRun",
-        "grantIssueTierInfo",
-        "installGrant",
-        "listGrantsView",
-        "normalizeGrant",
-        "resolveToolPermissionContext",
-        "revokeAllGrants",
-        "revokeGrant",
-        "revokeGrantsForRun"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "hashArgs",
-          "kinds": [
-            "read"
-          ]
         },
         {
-          "provider": "00-boot.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
+          "provider": "06f-autonomy-grants.js",
+          "symbol": "revokeAllGrants",
           "kinds": [
             "read"
           ]
@@ -6554,8 +6952,6 @@
         "WEB_PAYLOAD_URL_TOOLS",
         "_nativeToolSchemaByName",
         "actionTargetMeta",
-        "agentRunDir",
-        "agentRunFile",
         "bridgedCallTierFloor",
         "bridgedShadowNative",
         "bridgedToolAliases",
@@ -6775,13 +7171,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "PROVIDER_SESSION_TOOL_SCHEMAS",
           "kinds": [
             "read"
@@ -6868,13 +7257,6 @@
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "safeSessionId",
           "kinds": [
             "call"
           ]
@@ -7180,7 +7562,6 @@
         "AGENT_RESULT_DEFAULT_CHARS",
         "AGENT_RESULT_MAX_CHARS",
         "AgentRecovery",
-        "AgentRunStore",
         "BUILTIN_AGENT_WORKFLOWS",
         "C3_HIGH_RISK_GATE",
         "EVIDENCE_REFS_MAX_ITEMS",
@@ -7188,16 +7569,10 @@
         "NODE_WRITE_FAMILY",
         "ORCHESTRATE_TOOL_TIERS",
         "QUALITY_GATE_OUTPUT_SCHEMA",
-        "accumulateRunUsage",
         "agentEnvelopeArtifacts",
         "agentMessageReceipt",
         "agentPoolExpansionEligibility",
         "agentRunCapabilities",
-        "agentRunDigestRow",
-        "agentRunDigestShadow",
-        "agentRunEventsFile",
-        "agentRunHealth",
-        "agentRunHealthChanged",
         "agentRunPermissionMode",
         "agentRunResultSlice",
         "agentRunRoster",
@@ -7205,7 +7580,6 @@
         "agentWorkflowStatusText",
         "aggregateAgentVote",
         "aggregateCoverage",
-        "appendAgentRunEvent",
         "appendAgentWorkflowSummaryToSession",
         "applyAgentWorktree",
         "autoResumeInterruptedRuns",
@@ -7214,9 +7588,7 @@
         "buildNodeEvidenceCatalog",
         "buildOrchestrateHint",
         "buildUpstreamContext",
-        "bumpRunIntervention",
         "canonicalWorkflowValue",
-        "classifyNodeErrorText",
         "cleanupAgentWorktree",
         "cleanupAgentWorktreeForRetry",
         "computeSchedulerStep",
@@ -7231,13 +7603,10 @@
         "evaluateWorkflowCondition",
         "finalizeAgentWorktree",
         "findingHandledItems",
-        "flushAgentRunEvents",
         "formatNodeEvidencePrompt",
         "getAgentWorkflows",
         "gitExec",
         "indexNodeEvidence",
-        "listAgentRunDigests",
-        "listAgentRuns",
         "markInterruptedAgentRuns",
         "materializePoolItem",
         "nodeDeliveryEligibility",
@@ -7249,19 +7618,15 @@
         "orchestrateArgsProblem",
         "orchestrateModelNotes",
         "ownAgentMessageReceipt",
-        "parseEventWindow",
         "parseStructuredAgentOutput",
         "poolChainDepth",
         "projectAgentWorkflowsFile",
         "propagateAssignments",
         "purgeNodeEvidence",
-        "readAgentRunEvents",
         "readAgentRunRecord",
         "readPersonalAgentWorkflows",
         "readProjectAgentWorkflows",
         "recordAgentNodeProgress",
-        "recordRunBudgetTrippedEvent",
-        "recordRunStalledEvent",
         "repairJson",
         "requestDelegationPermission",
         "resolveAgentTeamRoute",
@@ -7272,13 +7637,11 @@
         "runSubAgentCoreBody",
         "runWorkspaceHash",
         "sanitizeAgentOutputSchema",
-        "saveAgentRun",
         "saveAgentWorkflow",
         "singleAgentShorthandNode",
         "structuredJsonCandidates",
         "structuredOfNode",
         "summarizeAgentWorkflowRun",
-        "syncRunEventSeq",
         "validateAgentJsonSchema",
         "verdictPasses",
         "verifyNodeClaims",
@@ -7368,8 +7731,7 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -7424,17 +7786,9 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "RUYI_EVENTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
@@ -7490,20 +7844,12 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call",
-            "read"
+            "call"
           ]
         },
         {
           "provider": "01-config.js",
           "symbol": "readConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readFileTail",
           "kinds": [
             "read"
           ]
@@ -7567,6 +7913,22 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "agentRunFile",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendAgentRunEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
             "call"
@@ -7588,14 +7950,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "MISSION_STALL_SIGNAL_WINDOW_MS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "missionSignalThrottleAllow",
+          "symbol": "listAgentRuns",
           "kinds": [
             "read"
           ]
@@ -7644,7 +7999,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "sessionAssociatedSaveIsTombstoned",
+          "symbol": "saveAgentRun",
           "kinds": [
             "read"
           ]
@@ -7652,6 +8007,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "settleIntervention",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "syncRunEventSeq",
           "kinds": [
             "read"
           ]
@@ -7892,21 +8254,6 @@
           "symbol": "stewardAutoAskReason",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "agentRunDir",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "agentRunFile",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -8384,6 +8731,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "sessionSaveIsTombstoned",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "setEstimateBucketsV1",
           "kinds": [
             "call"
@@ -8574,6 +8928,34 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "accumulateRunUsage",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunFile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "AgentRunStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendAgentRunEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
             "call"
@@ -8602,6 +8984,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "bumpRunIntervention",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "captureWorkspaceTurnBaseline",
           "kinds": [
             "call"
@@ -8609,7 +8998,21 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "classifyNodeErrorText",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "finalizeMissionAfterTurn",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "flushAgentRunEvents",
           "kinds": [
             "call"
           ]
@@ -8749,6 +9152,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "recordRunBudgetTrippedEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "recordRunStalledEvent",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "registerIntervention",
           "kinds": [
             "call"
@@ -8770,6 +9187,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "saveAgentRun",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
             "call"
@@ -8784,13 +9208,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "sessionSaveIsTombstoned",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "settleIntervention",
           "kinds": [
             "call"
@@ -8799,6 +9216,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "syncProviderHistoryFromDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "syncRunEventSeq",
           "kinds": [
             "call"
           ]
@@ -9352,13 +9776,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "agentRunFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "bridgedToolTier",
           "kinds": [
             "call",
@@ -9556,13 +9973,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "accumulateRunUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "agentRunCapabilities",
           "kinds": [
             "call"
@@ -9584,13 +9994,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "AgentRunStore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "aggregateAgentVote",
           "kinds": [
             "call"
@@ -9599,13 +10002,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "aggregateCoverage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "appendAgentRunEvent",
           "kinds": [
             "call"
           ]
@@ -9628,20 +10024,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "buildUpstreamContext",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "bumpRunIntervention",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "classifyNodeErrorText",
           "kinds": [
             "call"
           ]
@@ -9713,13 +10095,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "finalizeAgentWorktree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "flushAgentRunEvents",
           "kinds": [
             "call"
           ]
@@ -9853,20 +10228,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "recordRunBudgetTrippedEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "recordRunStalledEvent",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "resolveAgentTeamRoute",
           "kinds": [
             "call"
@@ -9902,21 +10263,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "summarizeAgentWorkflowRun",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "syncRunEventSeq",
           "kinds": [
             "call"
           ]
@@ -10545,6 +10892,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "toolImageSessionTag",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "URL",
           "kinds": [
             "call"
@@ -10819,13 +11173,6 @@
         {
           "provider": "02-session-store.js",
           "symbol": "sessionTodosSignature",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "toolImageSessionTag",
           "kinds": [
             "call"
           ]
@@ -13812,13 +14159,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "missionControlCommand",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
             "call"
@@ -13862,6 +14202,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "recordMissionCheckResult",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "saveAgentRun",
           "kinds": [
             "call"
           ]
@@ -14373,6 +14720,13 @@
           ]
         },
         {
+          "provider": "06e-mission-domain.js",
+          "symbol": "missionControlCommand",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06f-autonomy-grants.js",
           "symbol": "activeDriverRunOf",
           "kinds": [
@@ -14530,13 +14884,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "resolveOrchestrateNodes",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
           "kinds": [
             "call"
           ]
@@ -15707,14 +16054,44 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "buildMissionAcceptanceProjection",
+          "symbol": "agentRunDigestRow",
           "kinds": [
             "call"
           ]
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "bulkDeleteUnpinnedSessions",
+          "symbol": "agentRunEventsFile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunFile",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "AgentRunStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendAgentRunEvent",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "buildMissionAcceptanceProjection",
           "kinds": [
             "call"
           ]
@@ -15724,6 +16101,14 @@
           "symbol": "bumpMissionChangeSeq",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "bumpRunIntervention",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -15749,13 +16134,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "deleteSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
           "kinds": [
             "call"
@@ -15771,6 +16149,20 @@
         {
           "provider": "02-session-store.js",
           "symbol": "journalReadIndex",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRunDigests",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
           "kinds": [
             "call"
           ]
@@ -15812,20 +16204,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "missionControlCommand",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "missionControlView",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "missionDetachThread",
           "kinds": [
             "call"
@@ -15848,6 +16226,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "patchMissionContainer",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readAgentRunEvents",
           "kinds": [
             "call"
           ]
@@ -15885,6 +16270,14 @@
           "symbol": "registerIntervention",
           "kinds": [
             "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "saveAgentRun",
+          "kinds": [
+            "call",
+            "read"
           ]
         },
         {
@@ -16091,6 +16484,34 @@
           ]
         },
         {
+          "provider": "04g-session-deletion.js",
+          "symbol": "bulkDeleteUnpinnedSessions",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "04g-session-deletion.js",
+          "symbol": "deleteSession",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06e-mission-domain.js",
+          "symbol": "missionControlCommand",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06e-mission-domain.js",
+          "symbol": "missionControlView",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "06f-autonomy-grants.js",
           "symbol": "consumeGrant",
           "kinds": [
@@ -16197,14 +16618,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "agentRunFile",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "nativeToolGate",
           "kinds": [
             "call"
@@ -16233,35 +16646,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "agentRunDigestRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "agentRunEventsFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "AgentRunStore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "appendAgentRunEvent",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "applyAgentWorktree",
           "kinds": [
             "call"
@@ -16269,29 +16653,7 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "bumpRunIntervention",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "cleanupAgentWorktree",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRunDigests",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRuns",
           "kinds": [
             "call"
           ]
@@ -16308,21 +16670,6 @@
           "symbol": "nodeDeliveryEligibility",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "readAgentRunEvents",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
-          "kinds": [
-            "call",
-            "read"
           ]
         },
         {
@@ -16649,6 +16996,21 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "agentRunDir",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunHealth",
+          "kinds": [
+            "call",
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "compactInterventionJournal",
           "kinds": [
             "call"
@@ -16671,6 +17033,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "interventionJournalWorthCompacting",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
           "kinds": [
             "call"
           ]
@@ -16771,32 +17140,10 @@
           ]
         },
         {
-          "provider": "07-autonomy.js",
-          "symbol": "agentRunDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "agentRunHealth",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
           "provider": "08-agent-runs.js",
           "symbol": "computeWaveSeq",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -17025,6 +17372,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readAgentRunEvents",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "readMissionChangesWithMeta",
           "kinds": [
             "call"
@@ -17082,20 +17443,6 @@
         {
           "provider": "06i-steward-core.js",
           "symbol": "stewardWatchedThread",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "readAgentRunEvents",
           "kinds": [
             "call"
           ]
@@ -18752,7 +19099,21 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "agentRunFile",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "forEachUsageRow",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
           "kinds": [
             "call"
           ]
@@ -19095,13 +19456,6 @@
         },
         {
           "provider": "07-autonomy.js",
-          "symbol": "agentRunFile",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
           "symbol": "httpRequestInternalTargetReason",
           "kinds": [
             "call"
@@ -19119,13 +19473,6 @@
           "symbol": "AgentRecovery",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -21631,13 +21978,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "waitMissionTurnSettled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "writeSessionNotes",
           "kinds": [
             "call"
@@ -21667,6 +22007,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "06e-mission-domain.js",
+          "symbol": "waitMissionTurnSettled",
           "kinds": [
             "call"
           ]
@@ -23905,6 +24252,13 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "sessionSaveIsTombstoned",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "isEquivalentDesktopAccServer",
           "kinds": [
@@ -23958,13 +24312,6 @@
           "symbol": "sessionRewindGenHighWater",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionSaveIsTombstoned",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -24798,6 +25145,20 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "AgentRunStore",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "appendAgentRunEvent",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "appendUsageLedger",
           "kinds": [
             "read"
@@ -24847,14 +25208,14 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "deleteSession",
+          "symbol": "detectDanglingTurn",
           "kinds": [
             "read"
           ]
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "detectDanglingTurn",
+          "symbol": "flushAgentRunEvents",
           "kinds": [
             "read"
           ]
@@ -24931,6 +25292,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "listAgentRunDigests",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "listMissionContainers",
           "kinds": [
             "read"
@@ -24995,6 +25363,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "patchMissionContainer",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readAgentRunEvents",
           "kinds": [
             "read"
           ]
@@ -25078,6 +25453,13 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "saveAgentRun",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "saveSession",
           "kinds": [
             "read"
@@ -25135,6 +25517,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "setSessionIndexRebuildScanHookForTest",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "syncRunEventSeq",
           "kinds": [
             "read"
           ]
@@ -25443,6 +25832,13 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "safeMcpInventory",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04g-session-deletion.js",
+          "symbol": "deleteSession",
           "kinds": [
             "read"
           ]
@@ -26975,13 +27371,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "AgentRunStore",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "aggregateAgentVote",
           "kinds": [
             "read"
@@ -26990,13 +27379,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "aggregateCoverage",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "appendAgentRunEvent",
           "kinds": [
             "read"
           ]
@@ -27087,13 +27469,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "flushAgentRunEvents",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "formatNodeEvidencePrompt",
           "kinds": [
             "read"
@@ -27109,13 +27484,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "indexNodeEvidence",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "listAgentRunDigests",
           "kinds": [
             "read"
           ]
@@ -27185,13 +27553,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "readAgentRunEvents",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "repairJson",
           "kinds": [
             "read"
@@ -27220,13 +27581,6 @@
         },
         {
           "provider": "08-agent-runs.js",
-          "symbol": "saveAgentRun",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
           "symbol": "saveAgentWorkflow",
           "kinds": [
             "read"
@@ -27235,13 +27589,6 @@
         {
           "provider": "08-agent-runs.js",
           "symbol": "singleAgentShorthandNode",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "syncRunEventSeq",
           "kinds": [
             "read"
           ]

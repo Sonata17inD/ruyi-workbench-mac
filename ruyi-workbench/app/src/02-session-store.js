@@ -170,6 +170,22 @@ const MissionChanges = require('./backend/mission-changes.cjs').createMissionCha
   invalidateReads: id => SessionPersistence.invalidateReads(id), events: RUYI_EVENTS,
 });
 const { missionChangeFilePath, boundedChangeText, normalizeMissionChangePayload, repairMissionChangeTornTail, appendMissionChangeRecord, foldMissionChangeJournalText, readMissionChangesWithMeta, bumpMissionChangeSeq, missionSignalThrottleAllow, recordMissionStalledChange, recordMissionBudgetTrippedChange, MISSION_CHANGE_TYPES, MISSION_STALL_SIGNAL_WINDOW_MS } = MissionChanges;
+function agentRunDir(sessionId) { return path.join(paths.agentRuns, safeSessionId(sessionId)); }
+function agentRunFile(sessionId, runId) { return path.join(agentRunDir(sessionId), `${safeSessionId(runId)}.json`); }
+
+const AgentRunStore = require('./backend/agent-run-store.cjs').createAgentRunStore({
+  files: { agentRunDir, agentRunFile, atomicWriteJson, readFileTail },
+  lifecycle: { sessionAssociatedSaveIsTombstoned, hasLiveRun: id => activeAgentRuns.has(id), getLiveRun: id => activeAgentRuns.get(id) },
+  signals: { missionSignalThrottleAllow, MISSION_STALL_SIGNAL_WINDOW_MS, emit: (...args) => RUYI_EVENTS.emit(...args), logEvent },
+  safeSessionId, safeJsonParse, nowIso,
+});
+const {
+  agentRunEventsFile, syncRunEventSeq, appendAgentRunEvent, flushAgentRunEvents,
+  recordRunStalledEvent, recordRunBudgetTrippedEvent, parseEventWindow, readAgentRunEvents,
+  bumpRunIntervention, classifyNodeErrorText, accumulateRunUsage, agentRunHealth, agentRunHealthChanged,
+  saveAgentRun, listAgentRuns, agentRunDigestShadow, listAgentRunDigests, agentRunDigestRow,
+} = AgentRunStore;
+
 const { interventionFilePath, dropInterventionSessionState, appendIntervention, registerIntervention, settleIntervention, foldInterventionJournalText, readInterventionsWithMeta, readInterventions, interventionJournalWorthCompacting, compactInterventionJournal, markInterruptedInterventions, transitionInterventionState, INTERVENTION_TERMINAL } = require('./backend/intervention-journal.cjs').createInterventionJournal({
   paths, nowIso, atomicWriteJson, events: RUYI_EVENTS, listAgentRuns,
   repairTornTail: repairMissionChangeTornTail, recordChange: bumpMissionChangeSeq, logEvent,
@@ -223,33 +239,6 @@ const SessionMetaUpdates = require('./backend/session-meta-updates.cjs').createS
   lifecycle: { activeChildren, turnSettlers },
 });
 const { sessionTodosSignature, updateSessionMeta } = SessionMetaUpdates;
-
-// hunt2-P2:删除墓碑。id → { at, purgeAssociated }。stopSession 只是 abort,被停回合的收尾 saveSession(以及任何
-// 手里还攥着旧会话对象的旁路写者)会在 unlink 之后把头与正文整份写回 —— 会话「复活」,列表里又出现、GET 200。
-// saveSession 在【写链内】查墓碑:createdAt 不晚于删除时刻的对象 = 删除之前就存在的那条会话的副本,整次写丢弃。
-// 用 createdAt 而不是「有墓碑就拒」:固定 id 的会话(管家 STEWARD_SESSION_ID)删掉后会以同一个 id 重建,
-// 新对象的 createdAt 晚于删除时刻,照常落盘;createSession 另外显式清墓碑。条目只活在本进程(重启后没有
-// 在飞的旧对象),有上限防长驻进程无界增长。
-const { deleteSession, bulkDeleteUnpinnedSessions, markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, toolImageSessionTag, removeSessionToolImages, clearDeletedSession } = require('./backend/session-deletion.cjs').createSessionDeletion({
-  paths, assertSessionIdForPath, safeSessionId, logEvent,
-  files: { sessionPath, sessionBodyPaths, interventionFilePath, missionChangeFilePath,
-    sessionNotesPath, sessionScratchpadPath, journalDir: id => journalDir(id), agentRunDir },
-  pendingWrites: { sessionWriteChains, sessionScratchpadChains },
-  execution: {
-    stop: stopSession, activeRuns: () => activeAgentRuns.values(), stopRuns: stopMissionAgentRuns,
-    settler: id => turnSettlers.get(id), isActive: id => activeChildren.has(id),
-    revokeGrants: (...args) => revokeAllGrants(...args),
-    flushRuns: (...args) => EventStreamHooks.flushSessionAgentRuns?.(...args),
-  },
-  membership: { readHead: readMissionSessionHead, ownerOf: sessionMissionId, remove: (...args) => missionIndexRemove(...args) },
-  index: { list: listSessions, remove: id => scheduleSessionIndexUpdate(id, SESSION_TOMBSTONE) },
-  invalidateSessionState: id => {
-    dropSessionBodyState(id); SessionPersistence.invalidateReads(id);
-    dropSessionTitleOverride(id); sessionEngineRouteOverrides.delete(id); sessionEngineRouteScopeOverrides.delete(id);
-    sessionPermissionModeOverrides.delete(id); sessionDesktopToolsOverrides.delete(id); dropInterventionSessionState(id);
-  },
-  events: RUYI_EVENTS,
-});
 
 // 架构还债批 3·B: 会话引擎路由的纯函数(normalizeSessionEngineRoute/sessionEngineRouteFromConfig/inferSessionEngineRoute/configForSessionEngineRoute)抽至 02e-session-engine-route.js。
 
@@ -336,54 +325,13 @@ function newSessionEngineRoute(config, explicitRoute, initialMessages, sessionId
 // no downstream code has to defend against missing/typo'd properties.
 const { normalizeSession, normalizeMetaToolArgs, normalizeTodoItems, normalizeMissionCheck, recordMissionCheckResult, normalizeMission, applyMissionUpdate, missionProgressDigest, missionContainerAcceptanceStamp, buildMissionAcceptanceProjection, foldTurnSummaries, followupAcceptanceCriterion, MISSION_MAX_MILESTONES, MISSION_MAX_TEXT, MISSION_DEFAULT_MAX_TURNS, MISSION_STALL_LIMIT } = require('./backend/session-model.cjs').createSessionModel({ SESSION_SCHEMA, SKILL_ID_RE, MEMORY_FIXED_SELECTION_HARD_MAX, inferSessionEngineRoute, nowIso });
 
-const MissionControl = require('./backend/mission-control.cjs').createMissionControl({
-  storage: {
-    loadSession: (...args) => loadSession(...args),
-    saveSession: (...args) => saveSession(...args),
-    mutateSession: (...args) => mutateSession(...args),
-  },
-  checkpoints: {
-    journalReadIndex: (...args) => journalReadIndex(...args),
-    rewindSession: (...args) => rewindSession(...args),
-  },
-  execution: {
-    hasActiveTurn: id => activeChildren.has(id),
-    getActiveTurn: id => activeChildren.get(id),
-    hasActiveRun: id => activeAgentRuns.has(id),
-    getTurnSettler: id => turnSettlers.get(id),
-    stopSession: (...args) => stopSession(...args),
-    stopMissionAgentRuns: (...args) => stopMissionAgentRuns(...args),
-    listAgentRuns: (...args) => listAgentRuns(...args),
-  },
-  model: {
-    foldTurnSummaries: (...args) => foldTurnSummaries(...args),
-    applyMissionUpdate: (...args) => applyMissionUpdate(...args),
-    normalizeMission: (...args) => normalizeMission(...args),
-    normalizeMissionCheck: (...args) => normalizeMissionCheck(...args),
-    followupAcceptanceCriterion: (...args) => followupAcceptanceCriterion(...args),
-  },
-  events: {
-    bumpMissionChangeSeq: (...args) => bumpMissionChangeSeq(...args),
-    logEvent: (...args) => logEvent(...args),
-  },
-  authorization: {
-    revokeAllGrants: (...args) => revokeAllGrants(...args),
-  },
-  MISSION_DEFAULT_MAX_TURNS, MISSION_MAX_MILESTONES, MISSION_MAX_TEXT, nowIso, makeId,
-  runProcess: (...args) => DesktopShell.runProcess(...args),
+const {
+  buildMissionResult, archiveMissionResult, maybeFinalizeMission,
+  finalizeMissionAfterTurn, mergeMissionBeforeSave, evaluateMissionCheck,
+} = require('./backend/mission-lifecycle.cjs').createMissionLifecycle({
+  journalReadIndex: (...args) => journalReadIndex(...args), foldTurnSummaries, applyMissionUpdate, nowIso,
+  runProcess: DesktopShell.runProcess,
 });
-function buildMissionResult(...args) { return MissionControl.buildMissionResult(...args); }
-function archiveMissionResult(...args) { return MissionControl.archiveMissionResult(...args); }
-function maybeFinalizeMission(...args) { return MissionControl.maybeFinalizeMission(...args); }
-function finalizeMissionAfterTurn(...args) { return MissionControl.finalizeMissionAfterTurn(...args); }
-function mergeMissionBeforeSave(...args) { return MissionControl.mergeMissionBeforeSave(...args); }
-function missionRollbackTarget(...args) { return MissionControl.missionRollbackTarget(...args); }
-function missionBudgetRemaining(...args) { return MissionControl.missionBudgetRemaining(...args); }
-function missionControlView(...args) { return MissionControl.missionControlView(...args); }
-function waitMissionTurnSettled(...args) { return MissionControl.waitMissionTurnSettled(...args); }
-function missionControlFailure(...args) { return MissionControl.missionControlFailure(...args); }
-function missionControlCommand(...args) { return MissionControl.missionControlCommand(...args); }
-function evaluateMissionCheck(...args) { return MissionControl.evaluateMissionCheck(...args); }
 
 async function stopMissionAgentRuns(sessionId) {
   let count = 0;

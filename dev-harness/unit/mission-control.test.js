@@ -2,10 +2,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createMissionControl } = require('../../ruyi-workbench/app/backend/mission-control.cjs');
+const { createMissionLifecycle } = require('../../ruyi-workbench/app/backend/mission-lifecycle.cjs');
 function fixture(execution = {}) {
   return createMissionControl({
     storage: {}, checkpoints: {}, execution: { hasActiveTurn: () => false, hasActiveRun: () => false, ...execution },
-    model: {}, events: {}, authorization: {},
+    model: {}, events: {}, authorization: {}, lifecycle: {},
     MISSION_DEFAULT_MAX_TURNS: 5, MISSION_MAX_MILESTONES: 20, MISSION_MAX_TEXT: 2000,
   });
 }
@@ -34,8 +35,9 @@ test('control actions observe explicit execution ports, including live backgroun
   assert.equal(control.missionControlView(session).actions.next_turn.enabled, true);
 });
 test('result archive preserves deliverable text and bounds historical rounds', () => {
-  const control = fixture(); const mission = { resultHistory: [] };
-  for (let round = 0; round < 12; round++) { mission.result = { round, deliverableText: 'a'.repeat(4000) }; control.archiveMissionResult(mission); }
+  const { archiveMissionResult } = createMissionLifecycle({});
+  const mission = { resultHistory: [] };
+  for (let round = 0; round < 12; round++) { mission.result = { round, deliverableText: 'a'.repeat(4000) }; archiveMissionResult(mission); }
   assert.equal(mission.resultHistory.length, 10); assert.equal(mission.resultHistory[0].round, 2);
   assert.equal(mission.resultHistory[0].deliverableText.length, 4000);
 });
