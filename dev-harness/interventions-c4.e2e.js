@@ -11,7 +11,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -84,7 +83,7 @@ function streamWithQuestion(body, token, onAsk) {
 }
 
 (async () => {
-  const src = readServerSource();
+  const src = fs.readFileSync(path.join(WB, 'app', 'backend', 'mission-ledger-routes.cjs'), 'utf8');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     // 116-5a:本件隔离回合/工具/台账,不测线程自动摘要(它有自己的 thread-brief.e2e.js)
@@ -132,7 +131,7 @@ function streamWithQuestion(body, token, onAsk) {
     console.log('\n── [c] 静态锁 ──');
     ok(/action === 'update' && reg\.session\.mission/.test(src), 'c 13d C4 同步:update 分支 merge 到活动回合 session.mission');
     ok(/reg\.session\.mission = applyMissionUpdate\(reg\.session\.mission/.test(src), 'c 13d C4 同步:applyMissionUpdate(合并,保留 in-process mission_update)');
-    ok(/provider round-tail[\s\S]*saveSession \(09:1924\)/.test(src), 'c 13d C4 注释引用 09:1924 回合收尾');
+    ok(/reg\.session\.mission\.resultHistory = Array\.isArray\(session\.mission/.test(src), 'c 路由同步磁盘上的结果归档');
 
   } finally {
     kill(wb); await new Promise(r => provider.close(r)); await sleep(200); fs.rmSync(HOME, { recursive: true, force: true });

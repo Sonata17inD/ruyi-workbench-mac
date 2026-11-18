@@ -993,7 +993,7 @@
     {
       "id": "pretender-index",
       "pattern": "<data>/sessions/.pretender/projection-index.json",
-      "owner": "13e-pretender-index.js",
+      "owner": "../backend/pretender-index.cjs",
       "anchor": "PRETENDER_INDEX_FILE",
       "schema": "object / schemaVersion 8",
       "writePrimitive": "atomicWriteJson",

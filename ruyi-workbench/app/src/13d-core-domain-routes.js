@@ -32,7 +32,7 @@ const { buildMissionAggregateRows, overlayMissionAggregateFields, missionAggrega
     readMissionSessionHead, sessionDisplayTitle, sessionBriefOf, StewardHooks,
     stewardRuyiOwnedPath, stewardThreadStateFromCard, stewardThreadStateFromHead, deriveStewardThreadState,
     stewardSanitizeText, waitReasonFor, stewardThreadStateRank, aggregateMissionState,
-    getPretenderProjectionIndex, overlayMissionCard, missionPendingCounts: (...args) => missionPendingCounts(...args), pretenderHash,
+    getPretenderProjectionIndex, overlayMissionCard, missionPendingCounts, pretenderHash,
   });
 
 const handleMissionsApiRoutes = require('./backend/mission-routes.cjs').createMissionRoutes({
@@ -46,8 +46,8 @@ const handleMissionsApiRoutes = require('./backend/mission-routes.cjs').createMi
   },
   projection: {
     getPretenderProjectionIndex, overlayMissionCard, paginatePretenderProjection, pretenderEtag, pretenderLiveOverlayRevision,
-    pretenderNotModified, pretenderIndexMeta, emptyMissionUsage, missionPendingCounts: (...args) => missionPendingCounts(...args),
-    missionCardStatus: (...args) => missionCardStatus(...args), missionRunDigest: (...args) => missionRunDigest(...args),
+    pretenderNotModified, pretenderIndexMeta, emptyMissionUsage, missionPendingCounts,
+    missionCardStatus, missionRunDigest,
   },
 });
 
@@ -72,7 +72,7 @@ const handleInterventionApiRoutes = require('./backend/intervention-routes.cjs')
     loadSession, saveSession, settleIntervention, transitionInterventionState, decideIntervention,
   },
   projection: {
-    getPretenderIndexRuntime: () => pretenderIndexRuntime, pretenderIndexMeta, getPretenderProjectionIndex, paginatePretenderProjection,
+    invalidatePretenderIndex, pretenderIndexMeta, getPretenderProjectionIndex, paginatePretenderProjection,
     pretenderEtag, pretenderLiveOverlayRevision, pretenderNotModified, pretenderHash,
   },
 });

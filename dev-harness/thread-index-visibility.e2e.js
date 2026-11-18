@@ -380,7 +380,8 @@ try {
   ok(/function threadVisible\(head, input\)/.test(core) && !/function threadVisible\(/.test(src), 'S1 steward-core 持有唯一的 threadVisible');
   ok(/function threadOriginOf\(head\)/.test(core) && !/function threadOriginOf\(/.test(src), 'S2 steward-core 持有唯一的 threadOriginOf');
   // 性能批 P3 又升到 7(切片排序换成码位序);这里钉的是「K3 那次升号还在」—— 至少 6,不许回退。
-  const schema = Number((/const PRETENDER_INDEX_SCHEMA = (\d+);/.exec(src) || [])[1]);
+  const index = fs.readFileSync(path.join(WB, 'app', 'backend', 'pretender-index.cjs'), 'utf8');
+  const schema = Number((/const PRETENDER_INDEX_SCHEMA = (\d+);/.exec(index) || [])[1]);
   ok(schema >= 6, `S3 投影索引 schema 至少是 6(卡片形状与产生条件都变了,必须强制重建;实 ${schema})`);
   const watched = functionBlock(core, 'stewardWatchedThread');
   const watchOn = watched.indexOf('if (head.stewardWatch === true) return true;');
@@ -389,8 +390,9 @@ try {
   ok(watchOn >= 0 && watchOff >= 0 && Math.max(watchOn, watchOff) < quick,
     'S4 stewardWatchedThread 的两条显式开关分支排在原三条判据之前');
   // 摘要的三个键取的是 04 那份 reg.liveTail(同一个累加器、同一份预算),不另攒一套。
-  ok(/tool: String\(liveTailReg\.tool \|\| ''\),/.test(src)
-    && /iterations: Math\.max\(0, Number\(liveTailReg\.iterations\) \|\| 0\),/.test(src),
+  const overlay = fs.readFileSync(path.join(WB, 'app', 'backend', 'pretender-live-overlay.cjs'), 'utf8');
+  ok(/tool: String\(liveTailReg\.tool \|\| ''\),/.test(overlay)
+    && /iterations: Math\.max\(0, Number\(liveTailReg\.iterations\) \|\| 0\),/.test(overlay),
     'S5 liveTail 摘要的 tool/iterations 直接取自活回合登记项的累加器(不另攒一套)');
 } finally {
   killTree(server);

@@ -12665,6 +12665,292 @@
       ]
     },
     {
+      "file": "13e-pretender-index.js",
+      "layer": "transport",
+      "provides": [
+        "buildMissionCard",
+        "emptyMissionUsage",
+        "getIndexedPretenderSessionIds",
+        "getPretenderProjectionIndex",
+        "invalidatePretenderIndex",
+        "markPretenderIndexDirty",
+        "missionCardStatus",
+        "missionHealthRuns",
+        "missionPendingCounts",
+        "missionRunDigest",
+        "overlayMissionCard",
+        "paginatePretenderProjection",
+        "pretenderEtag",
+        "pretenderHash",
+        "pretenderIndexMeta",
+        "pretenderIndexTestHooks",
+        "pretenderLiveOverlayRevision",
+        "pretenderNotModified",
+        "warmPretenderProjectionIndex"
+      ],
+      "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "EventStreamHooks",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "nowIso",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "paths",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "RUYI_EVENTS",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "safeJsonParse",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "readConfig",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "safeSessionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "sessionPath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "sessionsDirOwnWriteSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "THREAD_INDEX_RECENT_DEFAULT",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "THREAD_INDEX_RECENT_MAX",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "THREAD_INDEX_RECENT_MIN",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01o-execution-state.js",
+          "symbol": "activeChildren",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunDir",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "agentRunHealth",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "compactInterventionJournal",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "forEachUsageRow",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "interventionFilePath",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "interventionJournalWorthCompacting",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "listAgentRuns",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readInterventions",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "readInterventionsWithMeta",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionBriefOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionDisplayTitle",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionKind",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "sessionMissionId",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "usageLedgerChangesSince",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
+          "symbol": "sessionExecutionSnapshot",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "stewardAsksYouForThread",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "stewardThreadTurnQueued",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "stewardWatchedThread",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "threadOriginOf",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "06i-steward-core.js",
+          "symbol": "threadVisible",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "computeWaveSeq",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "08-agent-runs.js",
+          "symbol": "nodeDeliveryEligibility",
+          "kinds": [
+            "read"
+          ]
+        }
+      ]
+    },
+    {
       "file": "13d-core-domain-routes.js",
       "layer": "transport",
       "provides": [
@@ -13452,23 +13738,30 @@
         },
         {
           "provider": "13e-pretender-index.js",
+          "symbol": "invalidatePretenderIndex",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13e-pretender-index.js",
           "symbol": "missionCardStatus",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "missionPendingCounts",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "missionRunDigest",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -13508,13 +13801,6 @@
         },
         {
           "provider": "13e-pretender-index.js",
-          "symbol": "pretenderIndexRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13e-pretender-index.js",
           "symbol": "pretenderLiveOverlayRevision",
           "kinds": [
             "read"
@@ -13523,382 +13809,6 @@
         {
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderNotModified",
-          "kinds": [
-            "read"
-          ]
-        }
-      ]
-    },
-    {
-      "file": "13e-pretender-index.js",
-      "layer": "transport",
-      "provides": [
-        "PRETENDER_DIR_SETTLE_MS",
-        "PRETENDER_INDEX_DIR",
-        "PRETENDER_INDEX_FILE",
-        "PRETENDER_INDEX_SCHEMA",
-        "PRETENDER_PAGE_DEFAULT",
-        "PRETENDER_PAGE_MAX",
-        "PRETENDER_PERSIST_DEBOUNCE_MS",
-        "PRETENDER_VERIFY_MS",
-        "addMissionUsageRow",
-        "buildMissionCard",
-        "buildMissionUsageMap",
-        "buildOrLoadPretenderIndex",
-        "buildPretenderSessionSlice",
-        "decodePretenderCursor",
-        "emptyMissionUsage",
-        "encodePretenderCursor",
-        "finalizePretenderIndex",
-        "finishMissionUsage",
-        "flushPretenderPersist",
-        "getPretenderProjectionIndex",
-        "getPretenderProjectionIndexShared",
-        "markPretenderIndexDirty",
-        "missionCardStatus",
-        "missionHealthRuns",
-        "missionPendingCounts",
-        "missionRunDigest",
-        "overlayMissionCard",
-        "paginatePretenderProjection",
-        "persistPretenderIndex",
-        "pretenderChangedSourceIds",
-        "pretenderCompareCodeUnits",
-        "pretenderEtag",
-        "pretenderFileStamp",
-        "pretenderHash",
-        "pretenderIndexMeta",
-        "pretenderIndexPath",
-        "pretenderIndexRuntime",
-        "pretenderIndexTestHooks",
-        "pretenderListSourceIds",
-        "pretenderLiveOverlayRevision",
-        "pretenderNotModified",
-        "pretenderNoteSourcesScan",
-        "pretenderOwnWriteSeq",
-        "pretenderRecentSessionIds",
-        "pretenderRunVerify",
-        "pretenderScheduleVerify",
-        "pretenderSessionSourceStamp",
-        "pretenderSessionsDirStamp",
-        "pretenderSliceBytes",
-        "pretenderSourcesTrusted",
-        "pretenderUsageSourceStamp",
-        "readPretenderIndexDisk",
-        "rebuildPretenderIndexFull",
-        "refreshPretenderIndexSlices",
-        "refreshPretenderUsageFacts",
-        "sameSourceMap",
-        "scanPretenderSessionSources",
-        "schedulePretenderPersist",
-        "validatePretenderIndex",
-        "warmPretenderProjectionIndex",
-        "writePretenderIndexFile",
-        "writePretenderIndexFileNow"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "apiFailure",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "EventStreamHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "path",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "RUYI_EVENTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "safeJsonParse",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "URL",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "atomicWriteJson",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "safeSessionId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sessionPath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "sessionsDirOwnWriteSeq",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "THREAD_INDEX_RECENT_DEFAULT",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "THREAD_INDEX_RECENT_MAX",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "THREAD_INDEX_RECENT_MIN",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "activeAgentRuns",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "agentRunDir",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "agentRunHealth",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "compactInterventionJournal",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "forEachUsageRow",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "interventionFilePath",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "interventionJournalWorthCompacting",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "listAgentRuns",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readInterventions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "readInterventionsWithMeta",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionBriefOf",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionDisplayTitle",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionKind",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "sessionMissionId",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "usageLedgerChangesSince",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "sessionExecutionSnapshot",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "stewardAsksYouForThread",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "stewardThreadTurnQueued",
-          "kinds": [
-            "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "stewardWatchedThread",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "threadOriginOf",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
-          "symbol": "threadVisible",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "computeWaveSeq",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "08-agent-runs.js",
-          "symbol": "nodeDeliveryEligibility",
           "kinds": [
             "read"
           ]

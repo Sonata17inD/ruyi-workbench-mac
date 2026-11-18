@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 87 | 2128 | 3120 | 597 | 15 | 0 | 0 |
+| 87 | 2085 | 3114 | 597 | 14 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -82,8 +82,8 @@
 | 64 | `12-tool-dispatch.js` | tools | 54 | 164 | 26 |
 | 65 | `13-http-router.js` | transport | 26 | 183 | 28 |
 | 66 | `13b-api-domain-routes.js` | transport | 10 | 60 | 13 |
-| 67 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
-| 68 | `13e-pretender-index.js` | transport | 62 | 43 | 7 |
+| 67 | `13e-pretender-index.js` | transport | 19 | 37 | 7 |
+| 68 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
 | 69 | `13i-steward-inbox.js` | transport | 23 | 26 | 7 |
 | 70 | `13j-steward-tool-base.js` | transport | 60 | 20 | 9 |
 | 71 | `13aa-steward-delivery.js` | unclassified | 9 | 23 | 7 |
@@ -471,8 +471,8 @@
 | `13d-core-domain-routes.js` | `07-autonomy.js` | backward | `STEER_QUEUE_MAX`, `nativeToolGate`, `toolDisabledResult`, `toolIsRevertible` |
 | `13d-core-domain-routes.js` | `08-agent-runs.js` | backward | `applyAgentWorktree`, `cleanupAgentWorktree`, `materializePoolItem`, `nodeDeliveryEligibility` |
 | `13d-core-domain-routes.js` | `09-workflow.js` | backward | `applyReplanPatch`, `launchPersistedAgentRun` |
-| `13d-core-domain-routes.js` | `13e-pretender-index.js` | forward | `emptyMissionUsage`, `getPretenderProjectionIndex`, `missionCardStatus`, `missionPendingCounts`, `missionRunDigest`, `overlayMissionCard`, `paginatePretenderProjection`, `pretenderEtag`, `pretenderHash`, `pretenderIndexMeta`, `pretenderIndexRuntime`, `pretenderLiveOverlayRevision`, `pretenderNotModified` |
-| `13e-pretender-index.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `URL`, `apiFailure`, `crypto`, `fs`, `fsp`, `nowIso`, `path`, `paths`, `safeJsonParse` |
+| `13d-core-domain-routes.js` | `13e-pretender-index.js` | backward | `emptyMissionUsage`, `getPretenderProjectionIndex`, `invalidatePretenderIndex`, `missionCardStatus`, `missionPendingCounts`, `missionRunDigest`, `overlayMissionCard`, `paginatePretenderProjection`, `pretenderEtag`, `pretenderHash`, `pretenderIndexMeta`, `pretenderLiveOverlayRevision`, `pretenderNotModified` |
+| `13e-pretender-index.js` | `00-boot.js` | backward | `EventStreamHooks`, `RUYI_EVENTS`, `nowIso`, `paths`, `safeJsonParse` |
 | `13e-pretender-index.js` | `01-config.js` | backward | `THREAD_INDEX_RECENT_DEFAULT`, `THREAD_INDEX_RECENT_MAX`, `THREAD_INDEX_RECENT_MIN`, `atomicWriteJson`, `readConfig`, `safeSessionId`, `sessionPath`, `sessionsDirOwnWriteSeq` |
 | `13e-pretender-index.js` | `01o-execution-state.js` | backward | `activeAgentRuns`, `activeChildren` |
 | `13e-pretender-index.js` | `02-session-store.js` | backward | `agentRunDir`, `agentRunHealth`, `compactInterventionJournal`, `forEachUsageRow`, `interventionFilePath`, `interventionJournalWorthCompacting`, `listAgentRuns`, `readInterventions`, `readInterventionsWithMeta`, `sessionBriefOf`, `sessionDisplayTitle`, `sessionKind`, `sessionMissionId`, `usageLedgerChangesSince` |

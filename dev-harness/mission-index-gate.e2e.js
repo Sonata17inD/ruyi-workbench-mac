@@ -16,7 +16,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -87,7 +86,6 @@ function spawnWb() {
 }
 
 (async () => {
-  const src = readServerSource();
   const MissionState = require(path.join(WB, 'app', 'public', 'js', 'mission-state.js'));
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
@@ -245,9 +243,18 @@ function spawnWb() {
 
     // ── (d) 静态锁 ──
     console.log('\n── [d] 静态锁 ──');
-    ok(/\{ m: 'GET', p: '\/api\/interventions', auth: 'token-browser' \}/.test(src), "d 01-config ROUTE_AUTH 裸路径 '/api/interventions' token-browser");
-    ok(/if \(req\.method === 'GET' && pathname === '\/api\/interventions'\)/.test(src), 'd 13d 全局聚合 handler 分支');
-    ok(/activeTurn: activeChildren\.has\(sessionId\)/.test(src) && /activeTurn: opts\.persistent \? false : activeChildren\.has\(head\.id\)/.test(src) && /function overlayMissionCard\(slice(?:, overlayAt)?\)/.test(src), 'd 75c activeTurn 分层(快照 live + 卡片持久事实后叠 overlay)');
+    const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name + '.cjs'), 'utf8');
+    const policy = backend('http-route-policy');
+    const interventionRoutes = backend('intervention-routes');
+    const missions = backend('mission-routes');
+    const cardsSource = backend('mission-card-projection');
+    const overlay = backend('pretender-live-overlay');
+    ok(/\{ m: 'GET', p: '\/api\/interventions', auth: 'token-browser' \}/.test(policy), "d '/api/interventions' 使用 token-browser 鉴权");
+    ok(/if \(req\.method === 'GET' && pathname === '\/api\/interventions'\)/.test(interventionRoutes), 'd 干预路由持有全局聚合入口');
+    ok(/activeTurn: activeChildren\.has\(sessionId\)/.test(missions)
+      && /activeTurn: opts\.persistent \? false : activeChildren\.has\(head\.id\)/.test(cardsSource)
+      && /function overlayMissionCard\(slice, overlayAt\)/.test(overlay),
+    'd activeTurn 由实时快照和叠加层提供，持久卡片省略活回合信号');
     const ms = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'mission-state.js'), 'utf8');
     ok(/module\.exports = api/.test(ms) && /typeof window !== 'undefined'/.test(ms), 'd mission-state.js 双导出(node + window)');
     ok(/'dispatching', 'running', 'needs_you', 'done', 'stopped', 'quick_ask'/.test(ms), 'd 五态 + 速问 状态集完整');

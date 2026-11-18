@@ -26,7 +26,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -180,8 +179,8 @@ try {
   }
 
   /* ═════════════ 静态锁 ═════════════ */
-  const src = readServerSource();
-  ok(/sources_dir_changed/.test(src), 'S1 自愈分支的 buildReason 字面量在编译产物里(可从 index.buildReason 事后对账)');
+  const src = fs.readFileSync(require.resolve('../ruyi-workbench/app/backend/pretender-index.cjs'), 'utf8');
+  ok(/sources_dir_changed/.test(src), 'S1 自愈分支的 buildReason 在生产索引模块中(可从 index.buildReason 事后对账)');
   ok(/PRETENDER_DIR_SETTLE_MS/.test(src), 'S2 「目录刚变过就不信任这次扫描」的沉降窗口是具名常量,不是裸字面量');
 } finally {
   kill(serverA); kill(serverB);

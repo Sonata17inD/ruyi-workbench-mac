@@ -13,7 +13,7 @@
 //   D2 agent run:全 src 扫 appendAgentRunEvent(...) 的 type 表达式里的字面量 ↔ 表 agentRun 子表,双向等集。
 //      (三元表达式里的比较值不是事件 type,必须在 NON_TYPE_LITERALS 里写明理由 —— 想放行就得留一行字。)
 //   D3 intervention:全 src 扫 registerIntervention(sid, '<type>', ...) ↔ 表 intervention 子表,双向等集。
-//   D4 模块落点:manifest 里 13g-steward.js 紧跟 13e-pretender-index.js 之后、14-main.js 之前。
+//   D4 模块顺序:投影索引先于核心路由和管家族装配。
 //   D7 第四源 sessionTurns(116-4):登记在表里、走 @sessionTurn 解析器、收集器与它的三条判据
 //      (速查线程 / launchedBy:'steward' / 别人事项里的线程)都在 13i,且 13g 真的在会话头上写这两个标。
 //   D5 挂接纪律:13-http-router.js 只经 StewardHooks 挂路由与关服收尾 —— 源码含
@@ -150,7 +150,9 @@ function typeExpressionLiterals(text) {
   ok(famAt > 0 && STEWARD_FAMILY.every((f, k) => files[famAt + k] === f),
     'D4 管家拼接片段连续且按依赖方向排列(' + STEWARD_FAMILY.join(' -> ') + ';实得 '
     + JSON.stringify(files.slice(famAt, famAt + STEWARD_FAMILY.length)) + ')');
-  ok(files[famAt - 1] === '13e-pretender-index.js', 'D4 管家族紧跟 13e-pretender-index.js 之后');
+  const indexAt = files.indexOf('13e-pretender-index.js');
+  const routesAt = files.indexOf('13d-core-domain-routes.js');
+  ok(indexAt >= 0 && indexAt < routesAt && routesAt < famAt, 'D4 先装配投影索引，再装配核心路由与管家族');
   ok(files[i - 1] === '13l-steward-ops.js', 'D4 13g 紧跟 13l-steward-ops.js 之后(117 波 T1 重钉)');
   ok(STEWARD_FAMILY.every(f => fs.existsSync(path.join(SRC, f))), `D4 管家族 ${STEWARD_FAMILY.length} 个文件都在 src/ 里`);
   // 116f 重钉:13g 与 14-main 之间插入了 13h-steward-runner.js(管家回合运行器,同为 transport 层;
@@ -268,9 +270,9 @@ function typeExpressionLiterals(text) {
     'D7 收件箱服务复用 stewardWatchedThread 的唯一实现');
   // 121-K3(§4.2):13e 的卡片产生条件从「只看 watched」换成 threadVisible 的四条并集,但 watched
   // 仍然是其中一条,而且仍然是【同一份实现】—— 13e 自己不许再判一遍「管家关不关心」。
-  ok(read('13e-pretender-index.js').includes('stewardWatchedThread(head, sid, missionId)'),
+  ok(read('../backend/pretender-session-projection.cjs').includes('stewardWatchedThread(head, sid, missionId)'),
     'D7 13e 仍然消费同一份 watched 判据(117r-D1:看板与收件箱同一条线)');
-  ok(read('13e-pretender-index.js').includes('threadVisible(head, {'),
+  ok(read('../backend/pretender-session-projection.cjs').includes('threadVisible(head, {'),
     'D7 121-K3:13e 的卡片产生条件用 06i 的 threadVisible(可见与关心是两个判据,不是一个)');
   // 位置纪律:第四源必须排在「不活跃就 continue」之前 —— 速查线程没有 mission 卡片,
   // recent 恒 false,放在后面等于它只在会话首见那一轮生效。

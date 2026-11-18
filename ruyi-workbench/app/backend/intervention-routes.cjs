@@ -18,7 +18,7 @@ function createInterventionRoutes({
     loadSession, saveSession, settleIntervention, transitionInterventionState, decideIntervention,
   },
   projection: {
-    getPretenderIndexRuntime, pretenderIndexMeta, getPretenderProjectionIndex, paginatePretenderProjection,
+    invalidatePretenderIndex, pretenderIndexMeta, getPretenderProjectionIndex, paginatePretenderProjection,
     pretenderEtag, pretenderLiveOverlayRevision, pretenderNotModified, pretenderHash,
   },
 }) {
@@ -89,7 +89,7 @@ function createInterventionRoutes({
         return send(res, json(await compactInterventionJournal(sessionId, { force: true })));
       }
       if (body.action === 'rebuild') {
-        getPretenderIndexRuntime().fullDirty = true;
+        invalidatePretenderIndex();
         return send(res, json({ ok: true, index: pretenderIndexMeta(await getPretenderProjectionIndex()) }));
       }
       return send(res, json({ ok: false, error: 'invalid maintenance action' }, 400));

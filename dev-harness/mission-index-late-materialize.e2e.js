@@ -22,7 +22,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -126,8 +125,8 @@ try {
   const gotIds = new Set((missions && missions.body && missions.body.missions || []).map(m => m.missionId));
   ok(gotIds.has(sessionId(0)) && gotIds.has(sessionId(1)), '两条 mission 的 id 都在(不是碰巧凑出 total=2)');
 
-  const src = readServerSource();
-  ok(/getPretenderProjectionIndex\(\)/.test(src) && /empty_sessions_dir/.test(src), '(静态锁)空目录守卫的判据字面量在编译产物里');
+  const src = fs.readFileSync(require.resolve('../ruyi-workbench/app/backend/pretender-index.cjs'), 'utf8');
+  ok(/getPretenderProjectionIndex\(\)/.test(src) && /empty_sessions_dir/.test(src), '(静态锁)空目录守卫的判据在生产索引模块中');
 } finally {
   kill(wb); await sleep(250); fs.rmSync(HOME, { recursive: true, force: true });
 }

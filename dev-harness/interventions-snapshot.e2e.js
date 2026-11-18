@@ -279,10 +279,10 @@ try {
     "(S2) 116c 未新增任何管家决策路由(管家决定只经 decideIntervention 命令核心)");
   ok(/source === 'steward' \? 'steward_decision'/.test(decisions),
     "(S2) 干预决策审计标签 有 source==='steward' -> 'steward_decision' 分支(管家代答一眼可辨)");
-  ok(/decidedBy: 'steward'/.test(src) && /source: 'steward'/.test(src) && /contractRequest: true/.test(src),
-    "(S2) 管家决策以 {source:'steward', decidedBy:'steward', contractRequest:true} 进核心(与 UI 同一条契约路径)");
-  // 127 波 2-bis ③:13l 改为一次问 stewardExemptReason(布尔判据由它派生,仍是 06i 同一个单点),两种写法都认。
-  ok(/stewardToolPermanentlyExempt\(toolName\)|stewardExemptReason\(toolName, exemptInput\)/.test(src) && /reason: 'permanently_exempt'/.test(src),
+  const stewardDecisions = backend('steward-decision-tools.cjs');
+  ok(/decidedBy: 'steward'/.test(stewardDecisions) && /source: 'steward'/.test(stewardDecisions) && /contractRequest: true/.test(stewardDecisions),
+    "(S2) 管家决策标记进入共同命令核心");
+  ok(/stewardExemptReason\(toolName, exemptInput\)/.test(stewardDecisions) && /reason: 'permanently_exempt'/.test(stewardDecisions),
     '(S2) 永久豁免清单在真正下决定【之前】拦截,任何权限档都降级为提议');
 
   console.log(fail ? `\nINTERVENTIONS SNAPSHOT E2E: FAIL (${fail})` : '\nINTERVENTIONS SNAPSHOT E2E: ALL PASS');
