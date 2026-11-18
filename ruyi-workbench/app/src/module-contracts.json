@@ -70,6 +70,7 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "appRoot",
+        "boundToolResultForDisplay",
         "bridgedToolDisabledByPolicy",
         "bridgedWriteRelativePathArg",
         "buildAttachmentPrompt",
@@ -90,11 +91,11 @@
         "contentTypeFor",
         "contextWindowFromTable",
         "copyOrdinaryJsonData",
-        "countCjkCodeUnits",
         "cp",
         "createCappedDiagnosticText",
         "createConsoleLineDecoder",
         "createNdjsonLineFeeder",
+        "createToolResultDisplay",
         "crypto",
         "dataRoot",
         "dataRootAliases",
@@ -191,10 +192,9 @@
         "ssrfCheck",
         "text",
         "tildePath",
-        "tokensFromTextCounts",
         "toolDisabledByPolicy",
-        "toolImageSessionTag",
         "toolRequirementsMet",
+        "truncateToolResult",
         "unmaskProviders",
         "unmaskSecrets",
         "zlib"
@@ -7648,6 +7648,13 @@
       "requires": [
         {
           "provider": "00-boot.js",
+          "symbol": "boundToolResultForDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "bridgedWriteRelativePathArg",
           "kinds": [
             "call"
@@ -7832,6 +7839,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "truncateToolResult",
           "kinds": [
             "call"
           ]
@@ -8323,13 +8337,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "boundToolResultForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "compactionRefetchRefusal",
           "kinds": [
             "call"
@@ -8380,13 +8387,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "runForcedOverflowCompaction",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "truncateToolResult",
           "kinds": [
             "call"
           ]
@@ -8484,6 +8484,13 @@
         "waitForAgentRunResults"
       ],
       "requires": [
+        {
+          "provider": "00-boot.js",
+          "symbol": "boundToolResultForDisplay",
+          "kinds": [
+            "call"
+          ]
+        },
         {
           "provider": "00-boot.js",
           "symbol": "bridgedWriteRelativePathArg",
@@ -8692,6 +8699,13 @@
         {
           "provider": "00-boot.js",
           "symbol": "toolDisabledByPolicy",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
+          "symbol": "truncateToolResult",
           "kinds": [
             "call"
           ]
@@ -10272,13 +10286,6 @@
         },
         {
           "provider": "10-context-governance.js",
-          "symbol": "boundToolResultForDisplay",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
           "symbol": "buildObservationRecallPrompt",
           "kinds": [
             "call"
@@ -10371,13 +10378,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "runForcedOverflowCompaction",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "truncateToolResult",
           "kinds": [
             "call"
           ]
@@ -10580,9 +10580,6 @@
         "CompactionPlan",
         "ECON_AUX_FLAG_CACHE",
         "EVAPORATED_PREFIX",
-        "FILE_READ_HEAD",
-        "FILE_READ_TAIL",
-        "IMG_B64_TRIM_RE",
         "MANUAL_COMPACTION_SUMMARY_HEADER",
         "MANUAL_COMPACT_MAX_FRESH_TOKENS",
         "MANUAL_COMPACT_MIN_FRESH_RATIO",
@@ -10595,7 +10592,6 @@
         "OBSERVATION_REDUCE_MIN",
         "OBSERVATION_TEXT_HEAD",
         "OBSERVATION_TEXT_TAIL",
-        "PAGED_READING_TOOL_NAMES",
         "READ_DEDUP_PREFIX",
         "SESSION_NOTES_INJECT_MAX_CHARS",
         "SESSION_NOTES_SECTION_INDEXES",
@@ -10617,16 +10613,6 @@
         "SUMMARY_SINGLE_SHOT_MAX_EST",
         "SUMMARY_SINGLE_SHOT_RESERVE",
         "SUMMARY_TASK_EVIDENCE_RULES",
-        "TOOL_EXEC_CLASS_RE",
-        "TOOL_IMAGE_B64_BODY_RE",
-        "TOOL_IMAGE_B64_MIN",
-        "TOOL_IMAGE_KEY_RE",
-        "TOOL_OUTPUT_KEY_RE",
-        "TOOL_RESULT_CAP",
-        "TOOL_RESULT_DISPLAY_CAP",
-        "TOOL_RESULT_FIELD_FLOOR",
-        "TOOL_RESULT_MARKER_RESERVE",
-        "TOOL_RESULT_MIN_CAP",
         "_calibKey",
         "agentConversationContextMeta",
         "agentNodeContextWindow",
@@ -10635,7 +10621,6 @@
         "appendPromptToLastUserMessage",
         "applySummaryCallPolicy",
         "applySummaryEntityCheck",
-        "boundToolResultForDisplay",
         "buildCompactionToolIndex",
         "buildObservationRecallPrompt",
         "buildSessionNotesInjectPrompt",
@@ -10645,7 +10630,6 @@
         "calibratedEstimate",
         "checkSummaryEntities",
         "chunkHistoryByBudget",
-        "collectToolResultLeaves",
         "compactHistoryFromSession",
         "compactObservationValue",
         "compactionIndexText",
@@ -10658,7 +10642,6 @@
         "configuredConversationWindow",
         "contextCalibrationStore",
         "contextWindowOverrideKey",
-        "cowToolResultParent",
         "createCompactionRefetchGuard",
         "dedupeRepeatedReads",
         "economicsShadowEnabledCached",
@@ -10669,12 +10652,10 @@
         "extractSummaryEntities",
         "extractSummaryTaskEvidence",
         "fileReadDedupKey",
-        "findToolImageFields",
         "fitHistoryForSummary",
         "historyHasFullToolResult",
         "historyStartsWithCompactionSummary",
         "historyUnitStarts",
-        "isContinuableReadResult",
         "isReducedObservationView",
         "lastSessionContextTokens",
         "learnedWindowCap",
@@ -10714,11 +10695,6 @@
         "runForcedOverflowCompaction",
         "runProviderCompact",
         "sessionNotesBodyEmpty",
-        "shrinkSerializedToolResult",
-        "shrinkToolResultArray",
-        "shrinkToolResultForDisplay",
-        "shrinkToolResultValue",
-        "shrinkToolText",
         "singleSummaryCall",
         "stripSummaryTaskEvidence",
         "summaryCallPolicyKey",
@@ -10741,13 +10717,7 @@
         "summaryTaskSourceHistory",
         "summaryTaskSourceRole",
         "summaryUnsupportedParameterFields",
-        "toolImageMime",
-        "toolResultCharCap",
-        "toolResultHeadRatio",
         "toolResultIsFull",
-        "toolResultPathText",
-        "toolResultRecoveryHint",
-        "truncateToolResult",
         "upsertCompactMarker",
         "userBlockStarts",
         "validateStructuredSummary"
@@ -10764,13 +10734,6 @@
         {
           "provider": "00-boot.js",
           "symbol": "computeProviderCost",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "countCjkCodeUnits",
           "kinds": [
             "call"
           ]
@@ -10815,13 +10778,6 @@
           "symbol": "fmtTokensServer",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -10885,20 +10841,6 @@
           "symbol": "text",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "tokensFromTextCounts",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "toolImageSessionTag",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -13697,6 +13639,13 @@
         },
         {
           "provider": "00-boot.js",
+          "symbol": "truncateToolResult",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "00-boot.js",
           "symbol": "unmaskProviders",
           "kinds": [
             "call"
@@ -15059,13 +15008,6 @@
           "symbol": "runAgentExternalCompact",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "truncateToolResult",
-          "kinds": [
-            "read"
           ]
         },
         {

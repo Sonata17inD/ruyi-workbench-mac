@@ -1,8 +1,7 @@
 'use strict';
-const crypto = require('node:crypto');
 const path = require('node:path');
 const fsp = require('node:fs/promises');
-function toolImageSessionTag(sessionId) { return crypto.createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10); }
+const { toolImageSessionTag } = require('./image-content.cjs');
 // Tears down execution and storage in order after recording the shared tombstone.
 function createSessionDeletion({
   paths, assertSessionIdForPath, safeSessionId, logEvent,
@@ -15,7 +14,7 @@ const SESSION_DELETE_SETTLE_TIMEOUT_MS = 8000;
 // Delete the persisted chat itself. `purgeAssociated` is deliberately opt-in: a normal single-chat
 // delete keeps its previous, conservative behavior, while the batch-cleanup flow can also reclaim
 // the per-chat recovery and workflow records that otherwise have their own GC lifecycle.
-// 工具截图附件(10 boundToolResultForDisplay)落在 uploads/toolimg_<tag>_<hash>/,tag 由会话 id 派生;删会话时按前缀整批清,
+// 工具截图附件(tool-result-view.cjs)落在 uploads/toolimg_<tag>_<hash>/,tag 由会话 id 派生;删会话时按前缀整批清,
 // 否则长时间的桌面操控会话会在 uploads/ 里留下成百上千个永不回收的文件。
 async function removeSessionToolImages(sessionId) {
   const prefix = `toolimg_${toolImageSessionTag(sessionId)}_`;
@@ -125,4 +124,4 @@ async function bulkDeleteUnpinnedSessions({ preserveSessionId, purgeAssociated =
 
 return { deleteSession, bulkDeleteUnpinnedSessions, removeSessionToolImages };
 }
-module.exports = { createSessionDeletion, toolImageSessionTag };
+module.exports = { createSessionDeletion };

@@ -27,4 +27,9 @@ function createImageContentStore({ maxBytes = 8 * 1024 * 1024, maxEntries = 32 }
   return Object.freeze({ intern, clear() { entries.clear(); bytes = 0; },
     stats: () => ({ entries: entries.size, bytes, maxBytes }) });
 }
-module.exports = { createImageContentStore };
+// Use the same session prefix for writing tool images and removing a session's images.
+function toolImageSessionTag(sessionId) {
+  return createHash('sha1').update(String(sessionId)).digest('hex').slice(0, 10);
+}
+
+module.exports = { createImageContentStore, toolImageSessionTag };

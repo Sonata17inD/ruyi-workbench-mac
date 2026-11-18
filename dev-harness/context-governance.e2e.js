@@ -5,6 +5,8 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 技术同 scheduler-reducer/audit-w23:源抽取 + new Function 实跑纯逻辑 + 正则静态锁接线。
 'use strict';
 const { readServerSource } = require('./src-reader');
+const fs = require('node:fs');
+const path = require('node:path');
 const { constBlock, functionBlock } = require('./lib/source-slice');
 const { isDeepStrictEqual } = require('node:util');
 const { MCP_TOOLS } = require('../ruyi-workbench/app/backend/native-tool-schemas.cjs');
@@ -32,7 +34,11 @@ ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(src) &&
   ok(claudeOnce.length > 500 && !/const subHistory|maybeCompactSubHistory\(/.test(claudeOnce), 'S §28a Claude 引擎【不】引入 subHistory 压缩(有意不对称)');
 }
 // §28d:degradedPolicy 归一(模板/新建/resume/工具 schema)+ 翻译接缝。
-ok((src.match(/\['accept', 'retry', 'request_review', 'fail'\]/g) || []).length >= 3, 'S §28d degradedPolicy 枚举 ≥3 处(模板/新建/resume/schema)');
+const catalog = fs.readFileSync(path.resolve(__dirname, '../ruyi-workbench/app/backend/agent-workflow-catalog.cjs'), 'utf8');
+ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(item\.degradedPolicy\)/.test(catalog),
+  'S §28d 工作流模板目录归一 degradedPolicy');
+ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(raw\.degradedPolicy\)/.test(src),
+  'S §28d 工作流新建时归一 degradedPolicy');
 ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(src), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
 ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(src), 'S §28d 翻译接缝(仅降级成功节点)');
 const orchestrate = MCP_TOOLS.find(tool => tool.name === 'orchestrate_agents');
@@ -156,18 +162,7 @@ const maybeCompactSubHistory = new Function(
   km[0] + '\n' + mm[0] + '\nreturn maybeCompactSubHistory;'
 )(providerContextWindow, estimateHistoryTokens, calibratedEstimate, evaporateHistory, providerSummaryCall, recentTurnsBoundary, recordCompactUsage, resolveCompactionProvider, 16000, CompactionPlan, evaporateBudgetBoundaryEnabled, historyReadDedupEnabled, reseedTailUnitsEnabled, repairProviderHistoryPairing, () => {}, CONTEXT_GOVERNANCE_RULES, new Map(), 10 * 60 * 1000, buildCompactionToolIndex);
 
-// ============ A2: truncateToolResult 的 base64 图片字段专用处理(防 60KB 平切切坏图) ============
-// 使用实际裁剪策略与 token 估算公式验证图片保真。
-const truncateToolResultBlock = functionBlock(src, 'truncateToolResult');
-ok(!!truncateToolResultBlock, 'A2 源抽取 truncateToolResult');
-const shrinkRegion = src.slice(src.indexOf('// <<TOOL-RESULT-SHRINK BEGIN'), src.indexOf('// >>TOOL-RESULT-SHRINK END'));
-ok(shrinkRegion.length > 500, 'A2 源抽取 TOOL-RESULT-SHRINK 区间');
-const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
-const { countCjkCodeUnits, tokensFromTextCounts } = createTokenEstimation();
-const truncateToolResult = new Function(
-  'countCjkCodeUnits', 'tokensFromTextCounts',
-  shrinkRegion + '\n' + truncateToolResultBlock + '\nreturn truncateToolResult;'
-)(countCjkCodeUnits, tokensFromTextCounts);
+const { truncateToolResult } = require('../ruyi-workbench/app/backend/tool-result-view.cjs');
 
 const cfg = { autoCompactThreshold: 0.8 }; // budget = 0.8 × 1000 = 800 token
 const prov = { id: '__context_governance_fixture__', model: 'm', contextWindow: 1000 };

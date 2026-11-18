@@ -238,7 +238,8 @@ const { MAX_BODY_BYTES, normalizeApiErrorPayload, json, apiFailure, apiSessionId
 
 const { runKeyedChain } = require('./backend/keyed-chain.cjs');
 const { markSessionDeleted, sessionSaveIsTombstoned, sessionAssociatedSaveIsTombstoned, clearDeletedSession } = require('./backend/session-tombstones.cjs').createSessionTombstones();
-const { toolImageSessionTag } = require('./backend/session-deletion.cjs');
+const { truncateToolResult, createToolResultDisplay } = require('./backend/tool-result-view.cjs');
+const boundToolResultForDisplay = createToolResultDisplay({ paths });
 const { buildAttachmentPrompt, buildDeliveryRevisionPrompt } = require('./backend/attachment-prompt.cjs');
 const { lastAssistantEngine } = require('./backend/provider-history.cjs');
 const { PREVIEW_TEXT_EXTS, readFilePreview } = require('./backend/file-preview.cjs');
@@ -265,7 +266,7 @@ const {
   contextWindowFromTable, resolveContextWindow, isContextOverflowError,
 } = require('./backend/provider-context-policy.cjs').createProviderContextPolicy();
 const {
-  fmtTokensServer, countCjkCodeUnits, tokensFromTextCounts, setEstimateBucketsV1,
+  fmtTokensServer, setEstimateBucketsV1,
   classifyTextForEstimate, estimateContentTokens, estimateHistoryTokens, estimateTextTokens,
   estimateToolSchemaTokens,
 } = require('./backend/token-estimation.cjs').createTokenEstimation();

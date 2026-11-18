@@ -2,6 +2,27 @@
 
 const { estimation: ESTIMATION_RULES } = require('./context-governance-rules.json');
 
+// 性能批 C2:CJK_RE 命中数的等价计数。修前 str.match(CJK_RE) 给每个汉字分配一个字符串,每回合至少估两次整段历史,
+// 400 万汉字要 230 ms。CJK_RE 不带 u 标志、按 UTF-16 码元匹配,几个区间都不含代理区(D800–DFFF),所以逐码元比区间
+// 与之逐个相同(unit/token-estimate-cjk 在全部 65536 个码元与随机串上比对)。
+function countCjkCodeUnits(str) {
+  let n = 0;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    if (c < 0x2E80) continue;
+    if (c <= 0x9FFF || (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFE30 && c <= 0xFE4F) || (c >= 0xFF00 && c <= 0xFFEF)) n++;
+  }
+  return n;
+}
+
+// 估算公式的唯一一处:bucket 为 null = 两桶(开关关);否则按桶套因子。直算与记忆表两条路都从这里出数,
+// 原料(ascii、cjk、bucket)相同则结果逐位相同 —— 记忆表只存原料,不存乘过因子/校准系数的结果。
+function tokensFromTextCounts(ascii, cjk, bucket) {
+  if (bucket === null) return ascii / 3.6 + cjk / 1.5;
+  const divisor = bucket === 'json' ? ESTIMATION_RULES.factors.json : bucket === 'code' ? ESTIMATION_RULES.factors.code : 3.6;
+  return ascii / divisor + cjk / 1.5; // CJK 字符在所有桶中保持 ÷1.5
+}
+
 function createTokenEstimation() {
   // Compact-ratio token formatter (server-side twin of the UI's fmtTokens; no decimals needed here —
   // it only labels an estimate in the system message the compact endpoint writes).
@@ -34,30 +55,11 @@ function createTokenEstimation() {
   // 镜像无多配置歧义;默认 false = 两桶逐字节不变。
   let estimateBucketsV1On = false;
   function setEstimateBucketsV1(on) { estimateBucketsV1On = on === true; }
-  // 性能批 C2:CJK_RE 命中数的等价计数。修前 str.match(CJK_RE) 给每个汉字分配一个字符串,每回合至少估两次整段历史,
-  // 400 万汉字要 230 ms。CJK_RE 不带 u 标志、按 UTF-16 码元匹配,几个区间都不含代理区(D800–DFFF),所以逐码元比区间
-  // 与之逐个相同(unit/token-estimate-cjk 在全部 65536 个码元与随机串上比对)。
-  function countCjkCodeUnits(str) {
-    let n = 0;
-    for (let i = 0; i < str.length; i++) {
-      const c = str.charCodeAt(i);
-      if (c < 0x2E80) continue;
-      if (c <= 0x9FFF || (c >= 0xAC00 && c <= 0xD7A3) || (c >= 0xF900 && c <= 0xFAFF) || (c >= 0xFE30 && c <= 0xFE4F) || (c >= 0xFF00 && c <= 0xFFEF)) n++;
-    }
-    return n;
-  }
   function estimateTextTokens(str) {
     if (typeof str !== 'string' || !str) return 0;
     const cjk = countCjkCodeUnits(str);
     // 105e: 开关关 = 现状两桶,同样的输入同样的输出(逐字节一致);开时先分类再套桶因子。
     return tokensFromTextCounts(str.length - cjk, cjk, estimateBucketsV1On ? classifyTextForEstimate(str) : null);
-  }
-  // 估算公式的唯一一处:bucket 为 null = 两桶(开关关);否则按桶套因子。直算与记忆表两条路都从这里出数,
-  // 原料(ascii、cjk、bucket)相同则结果逐位相同 —— 记忆表只存原料,不存乘过因子/校准系数的结果。
-  function tokensFromTextCounts(ascii, cjk, bucket) {
-    if (bucket === null) return ascii / 3.6 + cjk / 1.5;
-    const divisor = bucket === 'json' ? ESTIMATION_RULES.factors.json : bucket === 'code' ? ESTIMATION_RULES.factors.code : 3.6;
-    return ascii / divisor + cjk / 1.5; // CJK 字符在所有桶中保持 ÷1.5
   }
   // 性能批(回合起点估算):按内容记忆每段文本的估算原料。
   // 每个 API 迭代前都要估两遍整段历史(maybeAutoCompact 的 calibratedEstimate + lastEstBeforeCall),回合末再一遍;
@@ -269,4 +271,4 @@ function createTokenEstimation() {
   });
 }
 
-module.exports = { createTokenEstimation };
+module.exports = { createTokenEstimation, countCjkCodeUnits, tokensFromTextCounts };

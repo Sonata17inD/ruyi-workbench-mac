@@ -15,7 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const vm = require('vm');
-const { sliceBlock } = require('../lib/source-slice');
+const { sliceBlock, functionBlock } = require('../lib/source-slice');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const RULES = JSON.parse(fs.readFileSync(path.join(REPO, 'ruyi-workbench', 'app', 'backend', 'context-governance-rules.json'), 'utf8')).estimation;
@@ -96,7 +96,8 @@ function oracleHistory(history, systemPrompt, tools, on) {
 
 // Instrument the production estimator in a VM to count cache work without exposing internal state.
 const source = fs.readFileSync(path.join(REPO, 'ruyi-workbench', 'app', 'backend', 'token-estimation.cjs'), 'utf8');
-const cluster = sliceBlock(source, 'let estimateBucketsV1On', 'return Object.freeze({');
+const cluster = [functionBlock(source, 'countCjkCodeUnits'), functionBlock(source, 'tokensFromTextCounts'),
+  sliceBlock(source, 'let estimateBucketsV1On', 'return Object.freeze({')].join('\n');
 function loadCluster() {
   const ctx = vm.createContext({ ESTIMATION_RULES: RULES });
   vm.runInContext(cluster + '\n'

@@ -369,7 +369,8 @@
     "app/backend/tool-iteration-budget.cjs",
     "app/backend/prompt-context.cjs",
     "app/backend/engine-env-brief.cjs",
-    "app/backend/provider-prompt.cjs"
+    "app/backend/provider-prompt.cjs",
+    "app/backend/tool-result-view.cjs"
   ],
   "acc": [
     "LICENSE",
