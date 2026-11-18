@@ -38,6 +38,8 @@ const turnRuntime = read('../backend/session-turn-runtime.cjs');
 const src12 = read('12-tool-dispatch.js');
 const src13 = read('13-http-router.js');
 const src13d = read('13d-core-domain-routes.js');
+const sessionEnvelope = read('../backend/session-envelope.cjs');
+const sessionRoutes = read('../backend/session-routes.cjs');
 const src13s = read('../backend/scheduler-runtime.cjs'); // scheduler timeout still consumes the internal queue-cancellation hook
 const src13g = read('13g-steward.js');
 // 117 波 T1(32 号文 §2.1):13g 的工具实现与共享原语拆到了三个新文件(纯搬家)。它们与 13g 同属
@@ -116,6 +118,7 @@ const src01b = read('../backend/http-route-policy.cjs');
   const consumers = [['06-provider-engine.js', src06], ...providerServices, ['10-context-governance.js', src10],
     ['session-compaction.cjs', sessionCompaction], ['compaction-kernel.cjs', read('../backend/compaction-kernel.cjs')], ['session-turn-runtime.cjs', turnRuntime],
     ['12-tool-dispatch.js', src12], ['13-http-router.js', src13], ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
+    ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
     ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];
   const leaks = [];
@@ -176,13 +179,13 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117s-G companion:通道判定上了命名空间,但【只能】这么用 —— 13d 经 StewardHooks.relayChannel 取,
   // 源码里不许出现 13h 的符号(上面那条零前向边的机械判据已经在看着,这里再把「真的有这个消费者」
   // 正面钉一遍:哪天有人把它改回直接引用 13h,两条一起红)。
-  ok(hookKeys.includes('relayChannel') && /StewardHooks\.relayChannel/.test(src13d) && /relayChannel: stewardRelayChannelFor/.test(src13h),
-    '② 117s-G companion:relayChannel 上了命名空间,且 13d 只经 StewardHooks.relayChannel 消费它');
+  ok(hookKeys.includes('relayChannel') && /StewardHooks\.relayChannel/.test(sessionEnvelope) && /relayChannel: stewardRelayChannelFor/.test(src13h),
+    '② 会话信封经 StewardHooks.relayChannel 读取递话通道');
   // 116-2e:onInboxBatch / stopRunner / resumeRunner 的消费者在收件箱侧,随拆分搬进了 13i。
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s + stewardRoutes + sessionEnvelope + sessionRoutes;
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -457,7 +460,7 @@ const srv = require(path.join(APP, 'server.js'));
   ok(/const stampedAt = await stewardLastAssistantCreatedAt\(\);/.test(src13q)
     && /\.\.\.\(stampedAt \? \{ createdAt: stampedAt \} : \{\}\)/.test(src13q),
     '⑤ 123-N1 ① 回执带 createdAt,且读不到时【不下发这个键】(老回执逐字节不变)');
-  ok(/return Number\.isFinite\(at\) && at > sinceMs;/.test(src13d),
+  ok(/return Number\.isFinite\(at\) && at > sinceMs;/.test(sessionRoutes),
     '⑤ 123-N1 ① 服务端 ?since= 是【严格大于】—— 水位停在本回合末尾正好把这一回合两条消息一起盖住');
   // 123-P1 收尾（38 号文 §4）：`steward_reply` 那一帧是【白名单】，13q 往回执里加的键不写进
   // 白名单就到不了前端。123-N1 ① 的 createdAt 就是这么断的：13q 塞了、白名单没带、前端读到恒空，

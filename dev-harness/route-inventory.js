@@ -45,6 +45,7 @@ const ROUTER_FILES = [
   '../backend/diagnostic-routes.cjs',
   '../backend/checkpoint-routes.cjs',
   '../backend/agent-run-routes.cjs',
+  '../backend/session-routes.cjs',
   '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。

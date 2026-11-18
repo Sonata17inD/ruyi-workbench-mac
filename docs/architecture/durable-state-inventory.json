@@ -405,13 +405,13 @@
     {
       "id": "session-search-index",
       "pattern": "<data>/sessions/_search-index-v1.json",
-      "owner": "13d-core-domain-routes.js",
+      "owner": "../backend/session-search.cjs",
       "anchor": "SESSION_SEARCH_INDEX_FILE",
-      "schema": "object / version 1",
+      "schema": "object / version 2",
       "writePrimitive": "atomicWriteJson",
       "corruption": "missing or wrong version rebuilds from scratch",
-      "capacity": "one 4KB unit per session",
-      "cache": "entries kept in memory for the current request only",
+      "capacity": "one 8192-character unit per session",
+      "cache": "index cached by mtime and size; corpus and normalized text cached in process",
       "recovery": "rebuild by re-extracting units from session bodies",
       "lifecycle": "regenerable-exemption",
       "exemptionReason": "fully derived search cache: every byte is recomputable from session NDJSON bodies"

@@ -17,6 +17,8 @@
 // 全部后向边;它自己的符号只被 13g 的注册表引用,同样是后向边。
 // ============================================================================
 
+const { SESSION_SEARCH_MIN_QUERY } = require('./backend/session-search.cjs');
+
 // ── 117w-W1 提交①(27 号文 §11.19.4):cwd 校验先行 ──────────────────────────────────────
 // 病灶:thread_new / quick_ask 原先把 args.cwd 【原样透传】给 createSession(零校验),而 createSession
 // 的回落链是 `cwd || config.defaultWorkspace || os.homedir()`。校验先行:表外一律拒,不静默回落。

@@ -6,9 +6,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const { EventEmitter } = require('node:events');
 const { createHttpChatStream } = require('../../ruyi-workbench/app/backend/http-chat-stream.cjs');
+const { createSessionRoutes } = require('../../ruyi-workbench/app/backend/session-routes.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-display-http-'));
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), path.join(root, 'data')));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'readConfig', 'paths', 'safeSessionId', 'nowIso', 'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'handleSessionApiRoutes', 'sessionMessagesStamp'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals([
+  'PrivacyGateway', 'PrivacyCore', 'readConfig', 'paths', 'safeSessionId', 'safeDecodeURIComponent', 'nowIso',
+  'handleStewardRunnerApiRoutes', 'handleStewardApiRoutes', 'STEWARD_SESSION_ID', 'pretenderNotModified',
+  'sessionEnvelopeEtag', 'sessionMessagesStamp', 'sessionMessagesDelta', 'sessionDisplayTitle',
+  'SESSION_LOAD_OMIT_PROVIDER', 'sessionOmittedProviderHistory', 'sessionProviderHistoryLength', 'detectDanglingTurn',
+], { withEval: true });
 const fixture = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return fixture.vault.sealLocal(...args); };
@@ -19,8 +25,6 @@ const state = app.__eval(`(() => {
   runStewardTurn = opts => state.steward(opts);
   loadSession = async id => state.session && state.session.id === id ? state.session : null;
   readSessionHeadResilient = async () => state.session;
-  sessionEnvelopeStamp = async () => 'synthetic-disk-stamp';
-  sessionEnvelopeLiveParts = () => state.live;
   StewardHooks.runnerState = async () => state.runner;
   stewardInboxState = async () => ({ enabled: true });
   return state;
@@ -28,6 +32,26 @@ const state = app.__eval(`(() => {
 const streamChat = createHttpChatStream({
   runSessionTurn: input => state.run(input), PrivacyGateway: app.PrivacyGateway,
   safeSessionId: app.safeSessionId, nowIso: app.nowIso,
+});
+const handleSessionApiRoutes = createSessionRoutes({
+  tokenOk: () => true, safeSessionId: app.safeSessionId, safeDecodeURIComponent: app.safeDecodeURIComponent,
+  PrivacyGateway: app.PrivacyGateway, STEWARD_SESSION_ID: app.STEWARD_SESSION_ID,
+  pretenderNotModified: app.pretenderNotModified, execution: {},
+  envelope: {
+    sessionEnvelopeStamp: async () => 'synthetic-disk-stamp',
+    sessionEnvelopeLiveParts: () => state.live,
+    sessionEnvelopeEtag: app.sessionEnvelopeEtag,
+  },
+  sessions: {
+    readSessionHeadResilient: async () => state.session,
+    loadSession: async id => state.session?.id === id ? state.session : null,
+    SESSION_LOAD_OMIT_PROVIDER: app.SESSION_LOAD_OMIT_PROVIDER,
+    sessionOmittedProviderHistory: app.sessionOmittedProviderHistory,
+    sessionMessagesDelta: app.sessionMessagesDelta,
+    sessionProviderHistoryLength: app.sessionProviderHistoryLength,
+    detectDanglingTurn: app.detectDanglingTurn,
+    sessionDisplayTitle: app.sessionDisplayTitle,
+  },
 });
 function setPolicy(mode, overrides = {}) {
   fs.mkdirSync(app.paths.data, { recursive: true });
@@ -94,7 +118,7 @@ test('actual history and streaming HTTP routes translate complete diagnostics wh
   const marker = '[Local privacy validation refused an unavailable reference in an earlier model message. No value was recovered; inspect the original local transcript and tool error before retrying.]';
   const id = 'sess_display_http_diagnostic', session = canonical(id, marker), before = JSON.stringify(session);
   state.session = session; state.live = { live: false };
-  const loaded = response(); await app.handleSessionApiRoutes(request('GET', '/api/sessions/' + id), loaded, '/api/sessions/' + id);
+  const loaded = response(); await handleSessionApiRoutes(request('GET', '/api/sessions/' + id), loaded, '/api/sessions/' + id);
   const expected = envelope(loaded).session.messages.at(-1).content; assert.match(expected, /本机隐私保护/); assert.ok(!expected.includes(marker));
   state.run = async opts => {
     opts.onStart(); opts.onEvent({ type: 'session', session });
@@ -172,7 +196,7 @@ test('full, delta, since and live history use display copies and private mapping
   for (const mode of ['enhanced', 'off']) for (const suffix of ['', '?fromIndex=1&prefixStamp=' + encodeURIComponent(stamp), '?since=2026-10-20T01:30:00Z', '?view=live']) {
     await setPolicy(mode);
     const req = request('GET', '/api/sessions/steward' + suffix); req.headers['if-none-match'] = '*';
-    const res = response(); await app.handleSessionApiRoutes(req, res, '/api/sessions/steward'); const shown = envelope(res);
+    const res = response(); await handleSessionApiRoutes(req, res, '/api/sessions/steward'); const shown = envelope(res);
     assert.equal(res.statusCode, 200); assert.equal(res.headers.etag, undefined); assert.equal(res.headers['cache-control'], 'no-store');
     assert.equal(shown.messagesFrom, undefined); assert.equal(shown.liveTail.text, synthetic); assert.equal(shown.liveTail.full, synthetic);
     assert.equal(shown.liveTurn.segments[0].text, synthetic);
@@ -199,11 +223,11 @@ test('fresh off history preserves ETag/delta paths without initializing mappings
   await setPolicy('off');
   state.session = canonical('sess_display_http_off', 'Public text'); state.live = { live: false };
   const oldSeals = seals, oldOpens = opens, req = request('GET', '/api/sessions/sess_display_http_off'), first = response();
-  await app.handleSessionApiRoutes(req, first, '/api/sessions/sess_display_http_off'); assert.ok(first.headers.etag);
+  await handleSessionApiRoutes(req, first, '/api/sessions/sess_display_http_off'); assert.ok(first.headers.etag);
   const again = response(), conditional = request('GET', req.url); conditional.headers['if-none-match'] = first.headers.etag;
-  await app.handleSessionApiRoutes(conditional, again, '/api/sessions/sess_display_http_off'); assert.equal(again.statusCode, 304);
+  await handleSessionApiRoutes(conditional, again, '/api/sessions/sess_display_http_off'); assert.equal(again.statusCode, 304);
   const stamp = app.sessionMessagesStamp(state.session.messages.slice(0, 1)), delta = response();
-  await app.handleSessionApiRoutes(request('GET', req.url + '?fromIndex=1&prefixStamp=' + stamp), delta, '/api/sessions/sess_display_http_off');
+  await handleSessionApiRoutes(request('GET', req.url + '?fromIndex=1&prefixStamp=' + stamp), delta, '/api/sessions/sess_display_http_off');
   assert.equal(envelope(delta).messagesFrom, 1); assert.equal(envelope(delta).session.messages.length, 1);
   assert.equal(seals, oldSeals); assert.equal(opens, oldOpens);
 });

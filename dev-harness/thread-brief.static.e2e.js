@@ -43,7 +43,8 @@ const serverSources = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat(
 const brief = readSrc('../backend/thread-brief.cjs');
 const core = readSrc('../backend/steward-core.cjs');
 const config = readSrc('../backend/config-schema.cjs');
-const domain = readSrc('13d-core-domain-routes.js');
+const search = readSrc('../backend/session-search.cjs');
+const sessionRoutes = readSrc('../backend/session-routes.cjs');
 // 117 波 T1(32 号文 §2.1):13g 拆成 13j/13k/13l/13g 四个文件(纯搬家),steward_threads_search
 // 现在住 13k-steward-threads.js。这里要钉的事实是「threads_search 的结果带 brief」,与它住哪个
 // 文件无关,故改读整个 13g 族 —— 拆分再动一次也不会假红。
@@ -87,25 +88,25 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 {
   ok(/displayTitle: sessionDisplayTitle\(head\),/.test(readSrc('../backend/mission-card-projection.cjs')),
     '② 事项投影卡片带 displayTitle —— 看板/抽屉/「现在这一件」读它');
-  ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(domain),
+  ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(search),
     '② 113b 会话搜索结果带 briefTitle/briefGist');
   // 【117l 重钉】旧断言把 `displayTitle: sessionDisplayTitle(session) }));` 整段(含收尾的 `}));`)
   // 钉成了字面量 —— 它实际钉住的是「这个键在信封里,而且它正好是最后一个键」。后半句不是契约:
   // 117l D4 在同一个信封上追加了 liveTail(活回合的尾巴,只在真有活回合时出现)。改成只钉这个键本身,
   // 并补一条 companion 钉住新契约的另一半:liveTail 必须是【条件展开】,不能无条件出现在信封里
   // (无条件 = 空回合也下发一个空对象,抽屉就会把「它正在说」一直挂在那儿)。
-  ok(/displayTitle: sessionDisplayTitle\(session\)/.test(domain),
+  ok(/displayTitle: sessionDisplayTitle\(session\)/.test(sessionRoutes),
     '② GET /api/sessions/:id 的信封带 displayTitle(抽屉标题读它)');
-  ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(domain),
+  ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(sessionRoutes),
     '② 117l companion:liveTail 在同一个信封上【条件】展开(没有活回合时这个键不存在)');
   // 117l-A1-fix2:抽屉 isLive() 第一判据是 resumable.live === true,而【活回合】分支修前没有这个
   // 键,判据从没走通过。钉住活回合分支带 live:true,且悬挂检测(detectDanglingTurn)那一支原样不动
   // —— 只加了这一个键,没有顺手改别的。
   // (会话正文 perf:historyLength 改由 02 sessionProviderHistoryLength(session) 给出 —— 增量取的装载视图不读 provider
   //  正文,条数从它的记录来;完整会话上它就是 providerHistory.length。两种写法都认,live:true 这一条判据不变。)
-  ok(/\{ dangling: false, kind: null, turnSeq: Math\.max\(0, Number\(session\.turnSeq\) \|\| 0\), historyLength: (?:Array\.isArray\(session\.providerHistory\) \? session\.providerHistory\.length : 0|sessionProviderHistoryLength\(session\)), live: true \}/.test(domain),
+  ok(/\{ dangling: false, kind: null, turnSeq: Math\.max\(0, Number\(session\.turnSeq\) \|\| 0\), historyLength: (?:Array\.isArray\(session\.providerHistory\) \? session\.providerHistory\.length : 0|sessionProviderHistoryLength\(session\)), live: true \}/.test(sessionRoutes),
     '② 117l-A1-fix2:GET /api/sessions/:id 活回合分支的 resumable 带 live:true(抽屉 isLive() 靠它)');
-  ok(/: detectDanglingTurn\(session\);/.test(domain),
+  ok(/: detectDanglingTurn\(session\);/.test(sessionRoutes),
     '② 117l-A1-fix2 companion:非活回合分支仍是 detectDanglingTurn(session) 原样,没被顺手改动');
   ok(/\{ brief: sessionBriefOf\(head\) \|\| sessionBriefOf\(meta\) \}/.test(steward),
     '② steward_threads_search 结果带 brief');

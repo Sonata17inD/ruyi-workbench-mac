@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { Readable } = require('node:stream');
 const { pathToFileURL } = require('url');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-unit-surface-w2-'));
@@ -201,21 +202,37 @@ describe('[I] S10 imported sessions', () => {
     assert.equal(out[0].content, '用户已授权推送');
   });
   it('I2 importedSessionCwdAllowed: inside a configured workspace yes, anything else no (real paths, no echo)', async () => {
-    const { importedSessionCwdAllowed } = loadServerInternals(['importedSessionCwdAllowed']);
+    const { createSessionRoutes } = require('../../ruyi-workbench/app/backend/session-routes.cjs');
+    const { resolveContainmentPath } = loadServerInternals(['resolveContainmentPath']);
     const ws = path.join(root, 'i2', 'ws'); const other = path.join(root, 'i2', 'other'); const outside = path.join(root, 'i2', 'outside'); const evil = path.join(root, 'i2', 'ws-evil');
     for (const d of [path.join(ws, 'sub'), other, outside, evil]) fs.mkdirSync(d, { recursive: true });
     let linked = false;
     try { fs.symlinkSync(outside, path.join(ws, 'link'), process.platform === 'win32' ? 'junction' : 'dir'); linked = true; } catch { /* 无权限建链接:跳过该条 */ }
     const config = { defaultWorkspace: ws, workspaces: [{ path: other, read: true, write: true, execute: true }] };
-    assert.equal(await importedSessionCwdAllowed(ws, config), true, '默认工作区本身');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'sub'), config), true, '子目录');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'not-created-yet', 'deeper'), config), true, '尚不存在的子路径(落在工作区内)');
-    assert.equal(await importedSessionCwdAllowed(other, config), true, 'workspaces[] 里的另一条');
-    assert.equal(await importedSessionCwdAllowed('', config), true, '没给 cwd = 用默认,不拦');
-    assert.equal(await importedSessionCwdAllowed(outside, config), false);
-    assert.equal(await importedSessionCwdAllowed(evil, config), false, '同前缀兄弟目录');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, '..', 'outside'), config), false, '.. 逃逸');
-    assert.equal(await importedSessionCwdAllowed(path.parse(ws).root, config), false, '盘符根 / 根目录');
-    if (linked) assert.equal(await importedSessionCwdAllowed(path.join(ws, 'link'), config), false, '工作区里指向外面的链接 / junction 逃不出去');
+    const route = createSessionRoutes({
+      resolveContainmentPath, readConfig: async () => config, envelope: {}, execution: {},
+      sessions: { createSession: async input => input },
+    });
+    async function importedSessionCwdAllowed(cwd) {
+      const body = Buffer.from(JSON.stringify({ cwd, messages: [{ role: 'user', content: 'import fixture' }] }));
+      const req = Object.assign(Readable.from([body]), { method: 'POST' });
+      const response = { writeHead(status) { this.status = status; }, end(value) { this.body = value; } };
+      await route(req, response, '/api/sessions');
+      if (response.status === 200) return true;
+      assert.equal(response.status, 400);
+      assert.equal(JSON.parse(response.body).error.code, 'session.import_cwd_not_allowed');
+      assert.ok(!response.body.includes(cwd), 'the rejection does not echo the path');
+      return false;
+    }
+    assert.equal(await importedSessionCwdAllowed(ws), true, '默认工作区本身');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'sub')), true, '子目录');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'not-created-yet', 'deeper')), true, '尚不存在的子路径(落在工作区内)');
+    assert.equal(await importedSessionCwdAllowed(other), true, 'workspaces[] 里的另一条');
+    assert.equal(await importedSessionCwdAllowed(''), true, '没给 cwd = 用默认,不拦');
+    assert.equal(await importedSessionCwdAllowed(outside), false);
+    assert.equal(await importedSessionCwdAllowed(evil), false, '同前缀兄弟目录');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, '..', 'outside')), false, '.. 逃逸');
+    assert.equal(await importedSessionCwdAllowed(path.parse(ws).root), false, '盘符根 / 根目录');
+    if (linked) assert.equal(await importedSessionCwdAllowed(path.join(ws, 'link')), false, '工作区里指向外面的链接 / junction 逃不出去');
   });
 });

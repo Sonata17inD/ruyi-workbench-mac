@@ -18,6 +18,7 @@ const manifest = JSON.parse(read(path.join(SRC, 'manifest.json')));
 const httpRouter = read(path.join(SRC, '13-http-router.js'));
 const coreDomainRoutes = read(path.join(SRC, '13d-core-domain-routes.js'));
 const agentRunRoutes = read(path.join(SRC, '../backend/agent-run-routes.cjs'));
+const sessionRoutes = read(path.join(SRC, '../backend/session-routes.cjs'));
 const performanceGate = read(path.join(__dirname, 'ec-d-performance.e2e.js'));
 let failures = 0;
 const ok = (condition, label) => {
@@ -82,8 +83,11 @@ ok(CHAT_CSS_ROUTES.length === 5
 const backendFiles = new Set(manifest.modules.map(module => module.file));
 ok(['02-session-store.js', '04-permission-runtime.js', '08-agent-runs.js', '13b-api-domain-routes.js', '13d-core-domain-routes.js']
   .every(file => backendFiles.has(file))
-  && ['handleSessionApiRoutes', 'handleInterventionApiRoutes']
-    .every(name => coreDomainRoutes.includes(`function ${name}(`) && httpRouter.includes(`await ${name}(`))
+  && coreDomainRoutes.includes('function handleInterventionApiRoutes(')
+  && httpRouter.includes('await handleInterventionApiRoutes(')
+  && sessionRoutes.includes('function handleSessionApiRoutes(')
+  && coreDomainRoutes.includes("require('./backend/session-routes.cjs').createSessionRoutes(")
+  && httpRouter.includes('await handleSessionApiRoutes(')
   && agentRunRoutes.includes('function handleAgentRunApiRoutes(')
   && coreDomainRoutes.includes("require('./backend/agent-run-routes.cjs').createAgentRunRoutes(")
   && httpRouter.includes('await handleAgentRunApiRoutes(')

@@ -28,7 +28,8 @@ const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
 const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
 const read = file => fs.readFileSync(file, 'utf8');
 const runtime = read(path.join(SRC, '04-permission-runtime.js'));
-const routes = read(path.join(SRC, '13d-core-domain-routes.js'));
+const routes = read(path.join(SRC, '../backend/session-routes.cjs'));
+const envelope = read(path.join(SRC, '../backend/session-envelope.cjs'));
 const experience = read(path.join(PUBLIC, 'js', 'session-experience.js'));
 const chatLive = read(path.join(PUBLIC, 'css', 'states', 'chat-live.css'));
 const turnSegments = read(path.join(SRC, '../backend/turn-segments.cjs'));
@@ -72,11 +73,11 @@ ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(routes),
 ok(count(routes, /\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/g) === 4,
   `B1b 四条返回路径(带 since 的、?view=live 轻量信封、增量取、全量)都带上它(实测 ${count(routes, /\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/g)} 处)`);
 for (const key of ['full', 'truncated', 'startedAt', 'iterations', 'tools']) {
-  ok(new RegExp(`\\n\\s+${key}:`).test(routes.slice(routes.indexOf('const liveTail = liveReg'), routes.indexOf('const liveTail = liveReg') + 1400)),
+  ok(new RegExp(`\\n\\s+${key}:`).test(envelope.slice(envelope.indexOf('const liveTail = liveReg'), envelope.indexOf('const liveTail = liveReg') + 1400)),
     `B2 信封带上了 ${key}`);
 }
 {
-  const block = routes.slice(routes.indexOf('const liveTail = liveReg'), routes.indexOf('const liveTail = liveReg') + 1400);
+  const block = envelope.slice(envelope.indexOf('const liveTail = liveReg'), envelope.indexOf('const liveTail = liveReg') + 1400);
   // 白名单式搬运:不许 spread 累加器上那份对象(它上面还有 batchMark/lastKind 这类内部游标,
   // tools 里还有工具调用 id)。这条锁的是「以后有人图省事改成 { ...liveReg.liveTail }」。
   ok(!/\.\.\.\s*liveReg\.liveTail/.test(block), 'B3 不 spread 累加器对象,逐字段白名单搬运');
@@ -233,7 +234,7 @@ ok(/liveSegments: turnSegments,/.test(workflow) && /liveSegments: turnSegments \
   'G7 两条引擎路径(provider / Claude CLI)都把这一份账本挂在活回合登记项上');
 ok(count(routes, /\.\.\.\(liveTurn \? \{ liveTurn \} : \{\}\)/g) === 4,
   `G8 liveTurn 与 liveTail 同款【条件展开】,四条返回路径(含增量取)都带(实测 ${count(routes, /\.\.\.\(liveTurn \? \{ liveTurn \} : \{\}\)/g)} 处)`);
-ok(/liveReg\.liveSegments\.liveSnapshot === 'function'/.test(routes),
+ok(/liveReg\.liveSegments\.liveSnapshot === 'function'/.test(envelope),
   'G9 路由只调只读快照,不把构建器本身交出去');
 {
   // 口径对齐锁:服务端挑「工具卡那一行显示哪个参数」的字段顺序,必须与前端 TC_ARG_KEYS 逐字相等。

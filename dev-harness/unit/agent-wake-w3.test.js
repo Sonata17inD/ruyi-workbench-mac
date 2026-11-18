@@ -22,10 +22,11 @@ process.env.HOME = home;
 process.env.USERPROFILE = home;
 const { loadServerInternals } = require('../lib/server-internals');
 const { startFakeProvider, textFrames } = require('../lib/fake-openai-provider');
+const { sessionSearchRowIsNoise } = require('../../ruyi-workbench/app/backend/session-search.cjs');
 const I = loadServerInternals([
   'EventStreamHooks', 'createSession', 'saveSession', 'loadSession', 'listSessions', 'paths', 'readConfig', 'defaultConfig',
   'SessionTurnRuntime', 'activeAgentRuns', 'runSessionTurn',
-  'stewardSourceUserTexts', 'draftPlaybookFromSession', 'draftMemoryFromSession', 'memoryProposalPrefilter', 'sessionSearchRowIsNoise',
+  'stewardSourceUserTexts', 'draftPlaybookFromSession', 'draftMemoryFromSession', 'memoryProposalPrefilter',
   'stewardImplThreadRead', 'runProviderCompact', 'buildOpenAiTools', 'buildStableSystemPrompt', 'calibratedEstimate', 'estimateHistoryTokens',
   'sessionDesktopToolsOf', 'normalizeCwd', 'scheduleAgentWakesAtBoot', 'turnSettlers', 'killAllMcpClients',
 ], { withEval: true });
@@ -233,8 +234,8 @@ describe('L1 wake notices are not the latest user request', () => {
   });
   it('session search ignores wake notices; the steward thread read shows them as system rows', async () => {
     const session = await threadWithWake();
-    assert.equal(I.sessionSearchRowIsNoise(session.messages[2]), true);
-    assert.equal(I.sessionSearchRowIsNoise(session.messages[0]), false);
+    assert.equal(sessionSearchRowIsNoise(session.messages[2]), true);
+    assert.equal(sessionSearchRowIsNoise(session.messages[0]), false);
     const read = await I.stewardImplThreadRead({ sessionId: session.id, tail: 5 }, { session: { id: 'steward' } }, await I.readConfig());
     const row = (read.rows || []).find(r => r.turnSeq === 2 && /自动唤醒/.test(r.text));
     assert.ok(row, 'the notice is still visible to the steward');

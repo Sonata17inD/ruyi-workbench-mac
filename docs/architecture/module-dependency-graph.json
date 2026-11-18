@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 94,
-    "providedSymbols": 2834,
-    "requiredSymbols": 3339,
-    "edges": 639,
+    "providedSymbols": 2807,
+    "requiredSymbols": 3328,
+    "edges": 637,
     "forwardEdges": 21,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -14457,60 +14457,32 @@
       "file": "13d-core-domain-routes.js",
       "order": 68,
       "layer": "transport",
-      "note": "会话与事项路由、提问／权限／计划干预，以及 Agent Run 路由装配",
+      "note": "会话和 Agent Run 装配、事项与提问／权限／计划干预路由",
       "provides": [
         "MISSION_FAILURE_PARAM_KEYS",
-        "NDJSON_EDGE_EXTEND_CHUNK",
-        "NDJSON_EDGE_EXTEND_MAX",
-        "SESSION_SEARCH_ASSISTANT_CHARS",
-        "SESSION_SEARCH_HEAD_BYTES",
-        "SESSION_SEARCH_INDEX_FILE",
-        "SESSION_SEARCH_INDEX_VERSION",
-        "SESSION_SEARCH_MAX_LIMIT",
-        "SESSION_SEARCH_MIN_QUERY",
-        "SESSION_SEARCH_SNIPPET_RADIUS",
-        "SESSION_SEARCH_TAIL_BYTES",
-        "SESSION_SEARCH_UNIT_CAP",
-        "SESSION_SEARCH_USER_CHARS",
         "addMissionCostBucket",
         "agentInterventionAction",
         "agentRunActionCommand",
         "buildMissionAggregateRows",
-        "buildSessionSearchUnit",
         "decideIntervention",
         "emptyMissionCostBucket",
         "handleAgentRunApiRoutes",
         "handleInterventionApiRoutes",
         "handleMissionsApiRoutes",
         "handleSessionApiRoutes",
-        "importedSessionCwdAllowed",
         "missionAggregateStats",
         "missionContainerFailure",
         "missionContainerHttpStatus",
         "overlayMissionAggregateFields",
-        "parseNdjsonRows",
         "pendingInterventionItem",
         "pendingInterventionRefs",
         "pendingInterventionRefsMemo",
-        "readNdjsonEdges",
-        "readSessionSearchIndex",
-        "refreshSessionSearchIndex",
-        "refreshSessionSearchIndexNow",
         "searchSessionsByContent",
         "sessionBackgroundRunRows",
         "sessionEnvelopeEtag",
         "sessionEnvelopeLiveParts",
         "sessionEnvelopeStamp",
-        "sessionMessageText",
-        "sessionSearchCorpusCache",
-        "sessionSearchHayMemo",
-        "sessionSearchHayOf",
-        "sessionSearchIndexCache",
-        "sessionSearchIndexPath",
-        "sessionSearchRefreshChains",
-        "sessionSearchRowIsNoise",
-        "sessionSearchScope",
-        "sessionSearchSnippet"
+        "sessionSearchScope"
       ],
       "requires": [
         {
@@ -14543,13 +14515,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "crypto",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "dataRootAliases",
           "kinds": [
             "call"
@@ -14571,13 +14536,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "fsp",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "json",
           "kinds": [
             "call"
@@ -14587,7 +14545,8 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14614,13 +14573,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "os",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "path",
           "kinds": [
             "read"
@@ -14635,13 +14587,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "readJsonBody",
           "kinds": [
             "call"
@@ -14651,15 +14596,7 @@
           "provider": "00-boot.js",
           "symbol": "redact",
           "kinds": [
-            "call",
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -14673,7 +14610,8 @@
           "provider": "00-boot.js",
           "symbol": "safeDecodeURIComponent",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -14715,7 +14653,7 @@
           "provider": "01-config.js",
           "symbol": "atomicWriteJson",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14745,7 +14683,7 @@
           "provider": "01-config.js",
           "symbol": "sessionPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14760,27 +14698,6 @@
           "symbol": "tokenOk",
           "kinds": [
             "call",
-            "read"
-          ]
-        },
-        {
-          "provider": "01c-runtime-flags.js",
-          "symbol": "sessionSearchIndexEnabled",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODES",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "PERMISSION_MODES_REQUIRING_CONFIRM",
-          "kinds": [
             "read"
           ]
         },
@@ -14893,14 +14810,14 @@
           "provider": "02-session-store.js",
           "symbol": "createSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "detectDanglingTurn",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -14935,14 +14852,16 @@
           "provider": "02-session-store.js",
           "symbol": "listSessions",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "loadSession",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15012,7 +14931,8 @@
           "provider": "02-session-store.js",
           "symbol": "readSessionHeadResilient",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15038,23 +14958,32 @@
         },
         {
           "provider": "02-session-store.js",
+          "symbol": "SESSION_LOAD_OMIT_PROVIDER",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
           "symbol": "sessionBodyPaths",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionBriefOf",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionDisplayTitle",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15068,14 +14997,14 @@
           "provider": "02-session-store.js",
           "symbol": "sessionMessagesDelta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15089,14 +15018,14 @@
           "provider": "02-session-store.js",
           "symbol": "sessionOmittedProviderHistory",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02-session-store.js",
           "symbol": "sessionProviderHistoryLength",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15117,14 +15046,15 @@
           "provider": "02-session-store.js",
           "symbol": "updateSessionMeta",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "02d-session-overrides.js",
           "symbol": "sessionDesktopToolsOf",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15152,7 +15082,7 @@
           "provider": "03-bridge-guard.js",
           "symbol": "resolveContainmentPath",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15222,28 +15152,28 @@
           "provider": "04-permission-runtime.js",
           "symbol": "sessionExecutionObservation",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04-permission-runtime.js",
           "symbol": "sessionExecutionSnapshot",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04g-session-deletion.js",
           "symbol": "bulkDeleteUnpinnedSessions",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
           "provider": "04g-session-deletion.js",
           "symbol": "deleteSession",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -15263,27 +15193,6 @@
         {
           "provider": "06f-autonomy-grants.js",
           "symbol": "consumeGrant",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "createRetrievalCorpusCache",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "rankRetrievalCorpus",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "06h-retrieval-index.js",
-          "symbol": "retrievalTerms",
           "kinds": [
             "call"
           ]
@@ -15488,14 +15397,16 @@
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderEtag",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderHash",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         },
         {
@@ -15523,7 +15434,8 @@
           "provider": "13e-pretender-index.js",
           "symbol": "pretenderNotModified",
           "kinds": [
-            "call"
+            "call",
+            "read"
           ]
         }
       ]
@@ -16646,6 +16558,7 @@
       "layer": "transport",
       "note": "第117波 T1(32 号文 §2.1 拆分):管家线程族工具 thread_*/quick_ask/threads_search 与收件箱行增强(零行为搬家自 13g)",
       "provides": [
+        "SESSION_SEARCH_MIN_QUERY",
         "STEWARD_MEDIATED_PERMISSION_WAIT_MS",
         "STEWARD_WORKSPACE_DERIVE_TRIES",
         "STEWARD_WORKSPACE_SLUG_MAX",
@@ -17322,13 +17235,6 @@
           "symbol": "searchSessionsByContent",
           "kinds": [
             "call"
-          ]
-        },
-        {
-          "provider": "13d-core-domain-routes.js",
-          "symbol": "SESSION_SEARCH_MIN_QUERY",
-          "kinds": [
-            "read"
           ]
         },
         {
@@ -31544,21 +31450,16 @@
         "apiSessionIdInvalid",
         "apiSessionNotFound",
         "cliBridgeToolTier",
-        "crypto",
         "dataRootAliases",
-        "fsp",
         "json",
         "logEvent",
         "makeId",
         "normalizeCwd",
         "nowIso",
-        "os",
         "path",
-        "pathWithinRoot",
         "paths",
         "readJsonBody",
         "redact",
-        "runKeyedChain",
         "safeDecodeURIComponent",
         "send",
         "text",
@@ -31590,18 +31491,8 @@
     },
     {
       "from": "13d-core-domain-routes.js",
-      "to": "01c-runtime-flags.js",
-      "symbols": [
-        "sessionSearchIndexEnabled"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13d-core-domain-routes.js",
       "to": "01e-permission-modes.js",
       "symbols": [
-        "PERMISSION_MODES",
-        "PERMISSION_MODES_REQUIRING_CONFIRM",
         "resolvePermissionMode"
       ],
       "direction": "backward"
@@ -31624,6 +31515,7 @@
       "to": "02-session-store.js",
       "symbols": [
         "AgentRunStore",
+        "SESSION_LOAD_OMIT_PROVIDER",
         "agentRunFile",
         "appendAgentRunEvent",
         "buildMissionAcceptanceProjection",
@@ -31734,16 +31626,6 @@
       "to": "06f-autonomy-grants.js",
       "symbols": [
         "consumeGrant"
-      ],
-      "direction": "backward"
-    },
-    {
-      "from": "13d-core-domain-routes.js",
-      "to": "06h-retrieval-index.js",
-      "symbols": [
-        "createRetrievalCorpusCache",
-        "rankRetrievalCorpus",
-        "retrievalTerms"
       ],
       "direction": "backward"
     },
@@ -32595,7 +32477,6 @@
       "from": "13k-steward-threads.js",
       "to": "13d-core-domain-routes.js",
       "symbols": [
-        "SESSION_SEARCH_MIN_QUERY",
         "buildMissionAggregateRows",
         "searchSessionsByContent",
         "sessionSearchScope"
