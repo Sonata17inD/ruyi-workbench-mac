@@ -1,4 +1,5 @@
 'use strict';
+const fsp = require('node:fs/promises');
 function copyOrdinaryJsonData(value, freeze = true) {
   const ancestors = new Set();
   let nodes = 0;
@@ -50,4 +51,23 @@ function safeJsonParse(raw, fallback = null) {
   }
 }
 
-module.exports = { copyOrdinaryJsonData, safeJsonParse };
+// Only an absent, blank or valid JSON object is eligible for merge. Keep unreadable
+// or malformed user files untouched and give callers a diagnostic reason.
+async function readUserJsonObjectForMerge(file) {
+  let raw;
+  try { raw = await fsp.readFile(file, 'utf8'); }
+  catch (error) {
+    const code = error && error.code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return { ok: true, value: {}, existed: false };
+    return { ok: false, reason: `read-failed:${code || (error && error.message) || 'unknown'}` };
+  }
+  const text = raw.replace(/^\uFEFF/, '');
+  if (!text.trim()) return { ok: true, value: {}, existed: true };
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch (error) { return { ok: false, reason: `invalid-json:${(error && error.message) || 'parse error'}` }; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ok: false, reason: 'root-not-object' };
+  return { ok: true, value: parsed, existed: true };
+}
+
+module.exports = { copyOrdinaryJsonData, safeJsonParse, readUserJsonObjectForMerge };

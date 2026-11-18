@@ -29,6 +29,7 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 const server = readServerSource();
+const claudeSync = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/claude-config-sync.cjs'), 'utf8');
 const configSchema = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/config-schema.cjs'), 'utf8');
 const runall = fs.readFileSync(RUNALL, 'utf8');
 
@@ -38,10 +39,10 @@ ok(/pathWithinRoot\(full,/.test(serveStaticBody), 'S1: serveStatic 用 pathWithi
 ok(!/full\.startsWith\(path\.normalize\(base\)\)/.test(serveStaticBody), 'S1: startsWith 前缀判定已移除');
 
 // ── S2: settings.model 权属 sidecar;无条件 delete 绝迹 ──────────────────────
-ok(server.includes('claude-settings-sync.json'), 'S2: 权属 sidecar 文件存在');
-ok(/prevSyncedModel/.test(server), 'S2: 上次同步值追踪(prevSyncedModel)');
-ok(!/else delete settings\.model;/.test(server), 'S2: 无条件 else delete settings.model 绝迹');
-ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(server), 'S2: 仅权属可证时才删除');
+ok(claudeSync.includes('claude-settings-sync.json'), 'S2: 权属 sidecar 文件存在');
+ok(/prevSyncedModel/.test(claudeSync), 'S2: 上次同步值追踪(prevSyncedModel)');
+ok(!/else delete settings\.model;/.test(claudeSync), 'S2: 无条件 else delete settings.model 绝迹');
+ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(claudeSync), 'S2: 仅权属可证时才删除');
 
 ok(!server.includes('function freeStalePort(') && server.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
 

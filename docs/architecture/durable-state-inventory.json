@@ -237,7 +237,7 @@
     {
       "id": "claude-settings",
       "pattern": "~/.claude/settings.json",
-      "owner": "01-config.js",
+      "owner": "../backend/claude-config-sync.cjs",
       "anchor": "'settings.json'",
       "schema": "external object",
       "writePrimitive": "atomicWriteJson after merge",
@@ -251,7 +251,7 @@
     {
       "id": "claude-settings-sidecar",
       "pattern": "<data>/claude-settings-sync.json",
-      "owner": "01-config.js",
+      "owner": "../backend/claude-config-sync.cjs",
       "anchor": "'claude-settings-sync.json'",
       "schema": "object / implicit v1 ({model, maxThinkingTokens, defaultMode, defaultModePrior}: last values this workbench wrote into ~/.claude/settings.json + the user-owned defaultMode before we first wrote it; ownership = delete or restore only what we wrote; bypass never writes defaultMode)",
       "writePrimitive": "atomicWriteJson",
@@ -265,7 +265,7 @@
     {
       "id": "kimi-mcp",
       "pattern": "~/.kimi-code/mcp.json",
-      "owner": "01-config.js",
+      "owner": "../backend/cli-mcp-sync.cjs",
       "anchor": "'mcp.json'",
       "schema": "external object",
       "writePrimitive": "atomicWriteJson after merge",
@@ -279,7 +279,7 @@
     {
       "id": "kimi-mcp-sidecar",
       "pattern": "<data>/kimi-mcp-sync.json",
-      "owner": "01-config.js",
+      "owner": "../backend/cli-mcp-sync.cjs",
       "anchor": "'kimi-mcp-sync.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",

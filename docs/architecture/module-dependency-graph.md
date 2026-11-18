@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 94 | 2994 | 3394 | 640 | 21 | 0 | 0 |
+| 94 | 2990 | 3387 | 639 | 21 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -34,7 +34,7 @@
 | 16 | `04h-provider-http.js` | foundation | 16 | 1 | 1 |
 | 17 | `04i-provider-anthropic.js` | foundation | 59 | 1 | 1 |
 | 18 | `04i-provider-wire.js` | foundation | 45 | 21 | 2 |
-| 19 | `01-config.js` | foundation | 189 | 47 | 8 |
+| 19 | `01-config.js` | foundation | 185 | 40 | 7 |
 | 20 | `01k-credential-vault.js` | foundation | 1 | 7 | 4 |
 | 21 | `01l-credential-recovery.js` | foundation | 2 | 11 | 3 |
 | 22 | `02c-turn-segments.js` | foundation | 1 | 0 | 0 |
@@ -115,9 +115,8 @@
 | 调用方 | 提供方 | 方向 | 符号 |
 |---|---|---|---|
 | `00-boot.js` | `00-platform-runtime.js` | backward | `platformRuntimeEnvironment` |
-| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `DESKTOP_MCP_SERVER_ID`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `TOOL_PACK_DESCRIPTIONS`, `URL`, `VERSION`, `accPolicyHiddenToolNames`, `agentCliHomes`, `crypto`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `runKeyedChain`, `safeJsonParse`, `samePathKey`, `sanitizeExternalMcpServer`, `scanMcpSources`, `text` |
-| `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId`, `isRuyiMcpServerId` |
-| `01-config.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP`, `agentRoleIsUntrusted`, `claudePermissionMode` |
+| `01-config.js` | `00-boot.js` | backward | `CONFIG_SCHEMA`, `DEFAULT_PORT`, `DESKTOP_MCP_SERVER_ID`, `RUYI_EVENTS`, `SKILL_ID_RE`, `StringDecoder`, `TOOL_PACK_DESCRIPTIONS`, `URL`, `VERSION`, `accPolicyHiddenToolNames`, `agentCliHomes`, `crypto`, `dataRoot`, `ensureDirs`, `externalRoot`, `findRuyiPackageRootFor`, `fs`, `fsp`, `logEvent`, `nowIso`, `os`, `path`, `pathWithinRoot`, `paths`, `safeJsonParse`, `samePathKey`, `text` |
+| `01-config.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_SERVER_ID`, `canonicalRuyiMcpServerId` |
 | `01-config.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `isAgentCliType`, `normalizeAgentCliType` |
 | `01-config.js` | `01h-privacy-core.js` | backward | `PrivacyCore` |
 | `01-config.js` | `01h-process-runtime.js` | backward | `DesktopShell`, `ProcessRuntime`, `existsExecutableAsync`, `spawnProbeAsync`, `spawnProbeSync` |

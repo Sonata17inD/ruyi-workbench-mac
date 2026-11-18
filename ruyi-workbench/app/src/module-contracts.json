@@ -814,7 +814,6 @@
         "RESERVED_SESSION_FILE_IDS",
         "RUNTIME",
         "RUYI_AGENT_FILE_MARKER",
-        "RUYI_AGENT_FILE_MARKER_RE",
         "SCRIPT_FILE_MAX_AGE_MS",
         "SESSION_MCP_CONFIG_MAX_AGE_MS",
         "THREAD_INDEX_RECENT_DEFAULT",
@@ -855,6 +854,7 @@
         "commandForSelfMcp",
         "configEmitWritten",
         "configValueEquals",
+        "createClaudeConfigSync",
         "createConfigSchema",
         "createDesktopPythonProbe",
         "decodeClaudeCliStream",
@@ -916,9 +916,7 @@
         "isLoopbackAddress",
         "isLoopbackBindHost",
         "kimiMcpManagedIds",
-        "kimiMcpSyncChains",
         "legacyAccMemoryMigrationComplete",
-        "looksLikeRuyiSelfMcp",
         "mcpConfigFilePath",
         "mcpDropInDirs",
         "modelCapabilityTier",
@@ -948,7 +946,6 @@
         "readFileTail",
         "readInstallRegistry",
         "readProjectAgentRoles",
-        "readUserJsonObjectForMerge",
         "recordInstallLaunch",
         "refreshInBackground",
         "requestIsLoopback",
@@ -972,7 +969,6 @@
         "syncClaudeCliSettings",
         "syncMcpServersToClaude",
         "syncMcpServersToKimi",
-        "syncMcpServersToKimiNow",
         "tierModelForNode",
         "tokenMatches",
         "tokenOk",
@@ -996,7 +992,7 @@
           "provider": "00-boot.js",
           "symbol": "agentCliHomes",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1054,7 +1050,7 @@
           "provider": "00-boot.js",
           "symbol": "findRuyiPackageRootFor",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
@@ -1075,7 +1071,6 @@
           "provider": "00-boot.js",
           "symbol": "logEvent",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1116,13 +1111,6 @@
         },
         {
           "provider": "00-boot.js",
-          "symbol": "runKeyedChain",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
           "symbol": "RUYI_EVENTS",
           "kinds": [
             "read"
@@ -1132,7 +1120,6 @@
           "provider": "00-boot.js",
           "symbol": "safeJsonParse",
           "kinds": [
-            "call",
             "read"
           ]
         },
@@ -1141,20 +1128,6 @@
           "symbol": "samePathKey",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "sanitizeExternalMcpServer",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "scanMcpSources",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -1208,37 +1181,9 @@
         },
         {
           "provider": "00b-ruyi-names.js",
-          "symbol": "isRuyiMcpServerId",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_SERVER_ID",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "agentRoleIsUntrusted",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "CLAUDE_PERMISSION_MODE_MAP",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01e-permission-modes.js",
-          "symbol": "claudePermissionMode",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -1280,7 +1225,7 @@
           "provider": "01h-process-runtime.js",
           "symbol": "existsExecutableAsync",
           "kinds": [
-            "call"
+            "read"
           ]
         },
         {
