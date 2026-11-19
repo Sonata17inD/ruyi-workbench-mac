@@ -191,12 +191,34 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     private func requestDesktopPermissionsOnFirstLaunch() {
         guard requestsDesktopPermissions, report == nil, ownsInstance, !quitting, NSApp.isActive,
               window?.isKeyWindow == true else { return }
-        let key = "didRequestDesktopPermissionsOnFirstLaunch"
+        let key = "didStartDesktopPermissionSetup"
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: key) else { return }
         defaults.set(true, forKey: key)
         requestScreenRecording()
         requestAccessibility()
+        showDesktopPermissionSetup()
+    }
+
+    private func showDesktopPermissionSetup() {
+        var actions: [(String, String)] = []
+        if !CGPreflightScreenCaptureAccess() {
+            actions.append(("打开录屏设置", "Privacy_ScreenCapture"))
+        }
+        if !AXIsProcessTrusted() || !CGPreflightPostEventAccess() {
+            actions.append(("打开辅助功能设置", "Privacy_Accessibility"))
+        }
+        guard !actions.isEmpty, window.attachedSheet == nil else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "设置桌面权限"
+        alert.informativeText = "录屏用于截图和识别屏幕文字。辅助功能用于点击和键盘输入。你可以按 macOS 提示允许，也可以稍后在「桌面权限」菜单处理。"
+        for (title, _) in actions { alert.addButton(withTitle: title) }
+        alert.addButton(withTitle: "稍后")
+        alert.beginSheetModal(for: window) { [weak self] result in
+            let index = result.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
+            if actions.indices.contains(index) { self?.openPrivacySettings(actions[index].1) }
+        }
     }
 
     @objc private func requestScreenRecording() {
@@ -213,13 +235,15 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     }
 
     @objc private func openScreenRecordingSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-            NSWorkspace.shared.open(url)
-        }
+        openPrivacySettings("Privacy_ScreenCapture")
     }
 
     @objc private func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+        openPrivacySettings("Privacy_Accessibility")
+    }
+
+    private func openPrivacySettings(_ pane: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)") {
             NSWorkspace.shared.open(url)
         }
     }
