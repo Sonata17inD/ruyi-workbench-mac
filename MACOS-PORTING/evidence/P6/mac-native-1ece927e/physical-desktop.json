@@ -1,0 +1,110 @@
+{
+  "sourceCommit": "1ece927eff7d289358bc542a4cd6aa1e2a24db04",
+  "system": "27.0.1",
+  "architecture": "arm64",
+  "bundleIdentifier": "org.ruyi.workbench.development",
+  "variants": [
+    {
+      "variant": "full",
+      "imageSha256": "4bb3610438ba1b5b978a12ed653fb790f99dacf0f0ea4464efc3d74ba7c82b00",
+      "appTreeSha256": "02b07770d9eec40fb659468369e4e29b8cc0d88a1b557ded2a457c5b1ab61800",
+      "bundle": "/private/tmp/ruyi-physical-desktop-DDJI0H/full/Ruyi.app",
+      "nativeHelperSha256": "e2030112508138e24a0fbc9c5af14e6e53c577aae02be75b9d91fc6e5d9ca690",
+      "serverSha256": "9df7870109daa3761fee26fef3178f7b0896d84e2235721e1dd636f13b359ce9",
+      "runtimeSha256": "6ef1c4cfbb1c5625abf10cb0ee67d275b10521bda692883afef16f8d7ec99ce6",
+      "launch": "LaunchServices",
+      "packagedAppVerifiedAfterTests": true,
+      "capture": {
+        "assertionsPassed": 7,
+        "report": "full-reauthorized.riKtxDh0/capture/host.json",
+        "reportSha256": "da9a76cb363828a56993038a4124aad4dc4e7247a358f2b3fa0a2e7e21fc3187",
+        "log": "full-reauthorized.riKtxDh0/capture/run.log",
+        "logSha256": "f013bc24d3faae986de5ccc539443b3112d4ecd630375eab71ebc9356a66bc1f",
+        "authorization": "granted",
+        "actualPng": {
+          "coordinate_space": "macos_global_points",
+          "height": 2214,
+          "ok": true,
+          "scale": 2,
+          "scale_y": 2,
+          "width": 3420
+        },
+        "observedProcessIdentitiesAbsentAfterShutdown": true
+      },
+      "input": {
+        "assertionsPassed": 14,
+        "report": "full-input-reauthorized.vbHIkcf3/input-host.json",
+        "reportSha256": "5cf5df7e8b3002685bbd2c273189deb1d8855b3bfd7f28f7a1f126c812707ad4",
+        "log": "full-input-reauthorized.vbHIkcf3/run.log",
+        "logSha256": "00bb617cad2fc2fb5617a1ac8dea4200d48ae7c5850a1e1ffc6144c92fb62a43",
+        "accessibilityAuthorization": "granted",
+        "eventAuthorization": "granted",
+        "accRuntime": "bundled Python and ACC",
+        "receiver": {
+          "textMatches": true,
+          "counts": {
+            "key_down": 14,
+            "key_up": 14,
+            "left_down": 1,
+            "left_up": 1,
+            "vertical_scroll": 1
+          },
+          "leftHeld": false,
+          "modifierFlags": 0
+        },
+        "observedProcessIdentitiesAbsentAfterShutdown": true
+      }
+    },
+    {
+      "variant": "slim",
+      "imageSha256": "eb0bdcdaa22e288b3ec560922a62f165c946131374a249708d8c08df206b8658",
+      "appTreeSha256": "8c27f53962d73ce194d2e7d4b3463a6828db865e66f1e226141dfd997e1ce0d2",
+      "bundle": "/private/tmp/ruyi-physical-desktop-DDJI0H/slim/Ruyi.app",
+      "nativeHelperSha256": "5f896d5e1c7ed1702dad690e3f72c0679f2e1bba6473e32922352a8123a9b4f2",
+      "serverSha256": "9df7870109daa3761fee26fef3178f7b0896d84e2235721e1dd636f13b359ce9",
+      "runtimeSha256": "6ef1c4cfbb1c5625abf10cb0ee67d275b10521bda692883afef16f8d7ec99ce6",
+      "launch": "LaunchServices",
+      "packagedAppVerifiedAfterTests": true,
+      "capture": {
+        "assertionsPassed": 7,
+        "report": "slim-reauthorized.W7JsWw47/capture/host.json",
+        "reportSha256": "e3b9440540908dc82de8a477d45b76714aab4d2961c6456574b448e49478ceb9",
+        "log": "slim-reauthorized.W7JsWw47/capture/run.log",
+        "logSha256": "f013bc24d3faae986de5ccc539443b3112d4ecd630375eab71ebc9356a66bc1f",
+        "authorization": "granted",
+        "actualPng": {
+          "coordinate_space": "macos_global_points",
+          "height": 2214,
+          "ok": true,
+          "scale": 2,
+          "scale_y": 2,
+          "width": 3420
+        },
+        "observedProcessIdentitiesAbsentAfterShutdown": true
+      },
+      "input": {
+        "assertionsPassed": 14,
+        "report": "slim-reauthorized.W7JsWw47/input/input-host.json",
+        "reportSha256": "2dc8e8e1721376f02021840e3a2a7d3b69e30c9218f4dcfe72f2abcddf18951f",
+        "log": "slim-reauthorized.W7JsWw47/input/run.log",
+        "logSha256": "2a9df8a64df1aac55d5f36b5ff16d68ac51df20648912ad478f94239e8502ee9",
+        "accessibilityAuthorization": "granted",
+        "eventAuthorization": "granted",
+        "accRuntime": "isolated external Python and ACC fixture with bundled native helper",
+        "receiver": {
+          "textMatches": true,
+          "counts": {
+            "key_down": 14,
+            "key_up": 14,
+            "left_down": 1,
+            "left_up": 1,
+            "vertical_scroll": 1
+          },
+          "leftHeld": false,
+          "modifierFlags": 0
+        },
+        "observedProcessIdentitiesAbsentAfterShutdown": true
+      }
+    }
+  ]
+}

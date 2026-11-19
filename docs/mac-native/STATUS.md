@@ -7,9 +7,9 @@
 | --- | --- | --- |
 | 1 能力与基线 | 已完成 | EOL、能力聚合、模板与 UI、Mac 主 CI、工程门通过 |
 | 2 Windows 产品链清理 | 已完成，最终 Full／Slim 载荷通过复验 | 活跃实现与发行载荷移除 Windows 运行链，保留 Mac 数据与共享功能 |
-| 3 监督与空闲能效 | 最终包 helper CPU 复测达标，待实际睡眠唤醒 | 可靠停止与身份清理通过，独占基准 CPU 降幅至少 80% |
+| 3 监督与空闲能效 | 最终包 helper CPU 达标，Full／Slim 实际睡眠唤醒已验证 | 可靠停止与身份清理通过，独占基准 CPU 降幅至少 80% |
 | 4 模块边界与重复工作 | 薄入口及消环已落地，最终源码对照三项达标 | 显式 CommonJS、生产依赖环为零、共享附件、性能在预算内 |
-| 5 集成发行 | 最终同源 Full／Slim 通过安装、离线、升级回退及原生自动化，待实机门 | 同源码 Full／Slim、完整 Mac 适用回归、隔离升级回退与归档 |
+| 5 集成发行 | Full／Slim 本机内测验收完成 | 同源码 Full／Slim、Mac 适用回归对账、隔离升级回退、实际截图／输入／睡眠唤醒及证据归档 |
 
 原完整计划见本次聊天中用户确认的五阶段计划；审查依据见 ../audits/2026-11-13-mac-only/REPORT.md。
 每批实现后记录自查、实际测试和未验边界，独立提交。不将已完成切片当作整体验收。
@@ -1453,3 +1453,7 @@
 - 源码回归、冻结候选清单及自动化验收共 1,592 份记录已归档，解压逐件复核 SHA-256，并核验报告引用的证据哈希。 [归档及核验说明](../../MACOS-PORTING/evidence/P6/archives/README.md)
 - 真实唤醒探针的预检已在两份冻结 DMG 的隔离安装上通过，确认 App 各自启动并形成 SSE 游标，退出后回收子服务。正式运行需解锁，由操作者在两包就绪后触发一次睡眠唤醒。验收同时要求 macOS 电源日志、原 App／Node 进程及服务身份保持一致、页面携带捕获的游标恢复 SSE。预检报告标记实机唤醒待验。 [实机探针](../../dev-harness/macos-physical-wake.js) · [预检结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/physical-wake-preflight-final.json)
 - 解锁后已在两份冻结签名 App 的 LaunchServices 入口重跑截图和输入专项。两个候选均实际返回截图 `permission_denied`，辅助功能和事件投递权限也均被拒绝。已核对实跑 App 树、镜像和 helper 的指纹，保留隔离安装以便授权后重跑。两包同时准备的真实唤醒探针亦启动成功，五分钟内 App 报告及系统电源日志均无睡眠唤醒事件。实机验收仍需系统授权及一次用户触发的睡眠唤醒。 [解锁后的实机记录](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/physical-desktop-aqUHH0/unlocked-desktop-qualification.json)
+- 2026-11-19 14:24:13 实际睡眠，14:27:10 完全唤醒。两份冻结 App 均收到一次系统睡眠及唤醒通知，原 App 和 Node 进程的 PID 与出生身份一致，服务实例保持一致，两个 WKWebView 页面均带睡眠前游标恢复 SSE。原探针的电源日志解析器只接受 `Entering Sleep state`，遇本机的 `Entering DarkWake state` 超时退出。已修正解析规则，用同一轮的实时观测、两包的页面恢复标记和 macOS 电源日志完成对账，并验证清理后四个进程身份均已消失。修正后的解析器已复核原始记录，尚未整轮重跑。 [真实睡眠唤醒证据](../../MACOS-PORTING/evidence/P6/mac-native-1ece927e/physical-wake.json)
+- 同一轮核对 macOS 隐私权限时，录屏列表的同名 Ruyi 条目指向上轮 P6 App，系统日志显示旧签名的代码要求不匹配。用户重新登记冻结 Full 后，实际截图 7 项通过，得到 3420 × 2214 PNG。该轮输入诊断仍以旧签名核对辅助功能，事件投递被拒绝。Full 与 Slim 使用同一 bundle identifier，ad-hoc 签名代码要求分别核验。 [Full 截图](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/full-reauthorized.riKtxDh0/capture/host.json) · [Full 输入诊断](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/full-reauthorized.riKtxDh0/input/input-host.json)
+- 重新登记 Full 的辅助功能后，输入 14 项全过。权限切换至 Slim 后，首轮截图返回拒权，输入已收到中文，但光标位置未确认，滚轮未执行。随后两项复跑分别 7、14 项全过。两个冻结包均取得 3420 × 2214 PNG，输入由受控窗口确认中文、一次按下与释放以及一次滚轮事件。Full 使用随包 Python／ACC，Slim 由验收夹具提供隔离的外部 Python／ACC，两者均使用各自包内的原生 helper。签名、App 树与镜像身份对账通过，观测范围内无残留进程。 [最终实机截图与输入证据](../../MACOS-PORTING/evidence/P6/mac-native-1ece927e/physical-desktop.json)
+- `1ece927e` Full／Slim 的 macOS 27.0.1 arm64 本机内测范围验收完成。当前机器的录屏与辅助功能登记最后切至 Slim。最低 macOS 14、干净标准用户／另一台 Mac、真实下载来源首启及正式签名、公证与升级权限稳定性仍属发行后续。 [发行验收边界](../../ruyi-workbench/docs/MACOS-RELEASE_CN.md#管理与验收边界)

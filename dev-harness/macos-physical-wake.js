@@ -80,7 +80,8 @@ function powerCycleAfter(start) {
     const [, date, time, zone, kind, detail] = match;
     const at = Date.parse(date + 'T' + time + zone);
     if (!Number.isFinite(at) || at < start) continue;
-    if (kind === 'Sleep' && detail.includes('Entering Sleep state')) sleep = { at, line };
+    // Apple Silicon can record explicit System Sleep as an entry into DarkWake.
+    if (kind === 'Sleep' && /^Entering (?:Sleep|DarkWake) state\b/.test(detail)) sleep = { at, line };
     if (sleep && kind === 'Wake' && at >= sleep.at && /Wake from|to FullWake/.test(detail)) {
       return { sleep: sleep.line, wake: line };
     }

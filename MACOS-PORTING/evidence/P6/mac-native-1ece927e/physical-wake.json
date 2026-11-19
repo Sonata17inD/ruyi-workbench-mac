@@ -1,0 +1,81 @@
+{
+  "observedAt": "2026-11-19T06:27:11.144Z",
+  "sourceCommit": "1ece927eff7d289358bc542a4cd6aa1e2a24db04",
+  "system": "27.0.1",
+  "power": {
+    "sleep": "2026-11-19 14:24:13 +0800 Sleep               \tEntering DarkWake state due to 'Software Sleep pid=462':TCPKeepAlive=active Using AC (Charge:100%) 177 secs  ",
+    "wake": "2026-11-19 14:27:10 +0800 Wake                \tDarkWake to FullWake from Deep Idle [CDNVA] : due to HID Activity Using AC (Charge:100%)           "
+  },
+  "variants": [
+    {
+      "variant": "full",
+      "processes": {
+        "app": {
+          "pid": 30286,
+          "created": "1795069415232333"
+        },
+        "service": {
+          "pid": 30291,
+          "created": "1795069418127286"
+        }
+      },
+      "overlayId": "2e853cbd104a",
+      "cursorBefore": "1",
+      "serverInstanceBefore": "2e853cbd104a",
+      "initial": {
+        "sleepEvents": 1,
+        "wakeEvents": 0,
+        "wakeValidated": false,
+        "simulatedSystemEvents": false
+      },
+      "recovered": {
+        "sleepEvents": 1,
+        "wakeEvents": 1,
+        "wakeValidated": true,
+        "pageConfirmedSseResume": true,
+        "simulatedSystemEvents": false
+      },
+      "imageSha256": "4bb3610438ba1b5b978a12ed653fb790f99dacf0f0ea4464efc3d74ba7c82b00",
+      "appTreeSha256": "02b07770d9eec40fb659468369e4e29b8cc0d88a1b557ded2a457c5b1ab61800",
+      "observedProcessesAbsentAfterCleanup": true
+    },
+    {
+      "variant": "slim",
+      "processes": {
+        "app": {
+          "pid": 30346,
+          "created": "1795069421659838"
+        },
+        "service": {
+          "pid": 30349,
+          "created": "1795069422962869"
+        }
+      },
+      "overlayId": "400ff2e38d88",
+      "cursorBefore": "1",
+      "serverInstanceBefore": "400ff2e38d88",
+      "initial": {
+        "sleepEvents": 1,
+        "wakeEvents": 0,
+        "wakeValidated": false,
+        "simulatedSystemEvents": false
+      },
+      "recovered": {
+        "sleepEvents": 1,
+        "wakeEvents": 1,
+        "wakeValidated": true,
+        "pageConfirmedSseResume": true,
+        "simulatedSystemEvents": false
+      },
+      "imageSha256": "eb0bdcdaa22e288b3ec560922a62f165c946131374a249708d8c08df206b8658",
+      "appTreeSha256": "8c27f53962d73ce194d2e7d4b3463a6828db865e66f1e226141dfd997e1ce0d2",
+      "observedProcessesAbsentAfterCleanup": true
+    }
+  ],
+  "originalRunner": {
+    "exitCode": 1,
+    "haltedAt": "macOS power-log parsing",
+    "cause": "Original parser rejected the observed Entering DarkWake state record"
+  },
+  "verification": "Application and SSE were verified by a separate live observer, then reconciled with the matched system power log."
+}
