@@ -111,9 +111,12 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
 
   // ── S 段: 静态锁 ──
   console.log('── S 段: 静态锁 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const src = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-routes.cjs'), 'utf8');
   ok(src.includes("pathname === '/api/mcp/import-config/scan'") && src.includes("pathname === '/api/mcp/import-config/apply'"), 'S1 scan/apply handler 在');
-  ok(src.includes("{ m: 'POST', p: '/api/mcp/import-config/scan', auth: 'token' }"), 'S2 ROUTE_AUTH scan/apply token 条目在');
+  const { ROUTE_AUTH } = require('../ruyi-workbench/app/backend/http-route-policy.cjs');
+  ok(['scan', 'apply'].every(action => ROUTE_AUTH.some(rule =>
+    rule.m === 'POST' && rule.p === '/api/mcp/import-config/' + action && rule.auth === 'token'
+  )), 'S2 scan 和 apply 均受 token 鉴权');
   ok(typeof srv.scanMcpSources === 'function' && typeof srv.parseMcpConfigFile === 'function', 'S3 解析器 export(scanMcpSources/parseMcpConfigFile)');
 
   // ── H 段: HTTP 全路径 ──
@@ -121,7 +124,7 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   const WP = await getFreePort();
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 7, version: '2.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [{ id: 'existing', label: '已有', command: 'old.exe', args: [], env: {}, cwd: '', enabled: true }] }));
   let configReader = null;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   try {
     ok(await up(WP), 'workbench up');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));

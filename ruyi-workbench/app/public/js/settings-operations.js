@@ -7,7 +7,7 @@
 // 由组合根注入，避免反向依赖 app.js。
 import { $, el, toast } from './util.js';
 import { api, apiErrText as fallbackApiErrText } from './net.js';
-import { getLocale, hasTranslation, t, tCount } from './i18n.js';
+import { hasTranslation, t, tCount } from './i18n.js';
 
 export function createSettingsOperationsDomain({
   apiErrText = fallbackApiErrText,
@@ -15,195 +15,7 @@ export function createSettingsOperationsDomain({
   // 118a: 「重新打开引导」。组合根注入与两壳同一个 onboarding-wizard.js 实例。
   openOnboarding = () => {},
 } = {}) {
-  let overlayZipPath = '';
-  let overlaySupported = null;
   let mcpConnectorCache = [];
-
-  /* ---------------- 更新中心 ---------------- */
-  function renderOverlayResult(className, text, withRecovery = false) {
-    const host = $('ovResult');
-    if (!host) return;
-    const status = el('span', className, String(text || ''));
-    if (!withRecovery) {
-      host.replaceChildren(status);
-      return;
-    }
-    const recover = el('button', 'mini', t('settings.update.rollback'));
-    recover.type = 'button';
-    recover.onclick = overlayRollback;
-    host.replaceChildren(status, document.createTextNode(' '), recover);
-  }
-
-  async function refreshOverlayStatus() {
-    try {
-      const status = await api('/api/overlay/status');
-      const current = $('ovCurrent');
-      const hint = $('ovCurrentHint');
-      const audit = $('ovAudit');
-      overlaySupported = status.supported !== false;
-      for (const id of ['ovPickBtn', 'ovPrecheckBtn', 'ovRollbackBtn']) {
-        const button = $(id); if (button) button.disabled = !overlaySupported;
-      }
-      if (!overlaySupported) {
-        const apply = $('ovApplyBtn'); if (apply) apply.disabled = true;
-        const preview = $('ovPreviewBox'); if (preview) preview.style.display = 'none';
-        current.textContent = t('settings.update.unsupportedPlatform');
-        hint.textContent = t('settings.update.unsupportedPlatformHint');
-        if (audit) audit.textContent = '';
-        return;
-      }
-      if (status.current) {
-        current.textContent = `v${status.current.version}  ·  ${new Date(status.current.appliedAt).toLocaleString(getLocale())}`;
-        hint.textContent = status.backups && status.backups.length
-          ? tCount('settings.update.backupsCount', status.backups.length, { p1: status.backups.length })
-          : t('settings.update.noBackups');
-      } else {
-        current.textContent = t('settings.update.notApplied');
-        hint.textContent = '';
-      }
-      if (audit) {
-        const entries = Array.isArray(status.audit) ? status.audit : [];
-        if (!entries.length) {
-          audit.textContent = t('settings.update.noAudit');
-        } else {
-          const fragment = document.createDocumentFragment();
-          for (const entry of entries.slice().reverse()) {
-            const version = entry.version ? ` v${String(entry.version)}` : '';
-            const error = entry.error ? `  (${String(entry.error)})` : '';
-            fragment.appendChild(el('div', '', `#${entry.seq} ${String(entry.action)}${version} -> ${String(entry.result)}${error}`));
-          }
-          audit.replaceChildren(fragment);
-        }
-      }
-    } catch { /* status 失败不阻断 UI */ }
-  }
-
-  async function overlayPickZip() {
-    if (overlaySupported !== true) return;
-    try {
-      const result = await api('/api/pick-file', {
-        method: 'POST',
-        body: JSON.stringify({ filter: t('settings.update.zipFilter') }),
-      });
-      if (!result || result.cancelled) return;
-      if (!result.ok) {
-        toast(apiErrText(result.error) || t('settings.update.pickFailed'), 'err');   // 走查 W1-3：error 是 {code,params,message} 信封，直接插值印 [object Object]
-        return;
-      }
-      overlayZipPath = result.path;
-      const pathLabel = $('ovZipPath'); if (pathLabel) pathLabel.textContent = result.path;
-      const applyButton = $('ovApplyBtn'); if (applyButton) applyButton.disabled = true;
-      const precheckHint = $('ovPrecheckHint'); if (precheckHint) precheckHint.textContent = '';
-      const preview = $('ovPreviewBox'); if (preview) preview.style.display = 'none';
-    } catch (error) {
-      toast(apiErrText(error), 'err');
-    }
-  }
-
-  async function overlayPrecheck() {
-    if (overlaySupported !== true) return;
-    if (!overlayZipPath) {
-      toast(t('settings.update.pickFirst'), 'err');
-      return;
-    }
-    const hint = $('ovPrecheckHint'); if (hint) hint.textContent = t('settings.update.prechecking');
-    const previewBox = $('ovPreviewBox'); if (previewBox) previewBox.style.display = 'none';
-    const applyButton = $('ovApplyBtn'); if (applyButton) applyButton.disabled = true;
-    try {
-      const result = await api('/api/overlay/precheck', {
-        method: 'POST',
-        body: JSON.stringify({ zipPath: overlayZipPath }),
-      });
-      if (result.ok) {
-        if (hint) {
-          hint.textContent = Array.isArray(result.warnings) && result.warnings.length
-            ? result.warnings.join('; ')
-            : t('settings.update.precheckOk', { p1: result.version });
-        }
-        const preview = result.preview || {};
-        const setCount = (id, value) => { const target = $(id); if (target) target.textContent = value; };
-        setCount('ovNew', (preview.new || []).length);
-        setCount('ovOverw', (preview.overwritten || []).length);
-        setCount('ovUnch', (preview.unchanged || []).length);
-        setCount('ovDel', (preview.deleted || []).length);
-        const compat = $('ovCompat');
-        if (compat) compat.textContent = t('settings.update.compatInfo', { p1: result.hostVersion || '?', p2: result.minHostVersion || '?' });
-        const errors = $('ovErrors');
-        if (errors) { errors.style.display = 'none'; errors.textContent = ''; }
-        const enabledApply = $('ovApplyBtn'); if (enabledApply) enabledApply.disabled = false;
-      } else {
-        if (hint) hint.textContent = t('settings.update.precheckFailed');
-        const errors = $('ovErrors');
-        if (errors) { errors.style.display = 'block'; errors.textContent = (result.errors || []).join('; '); }
-        const disabledApply = $('ovApplyBtn'); if (disabledApply) disabledApply.disabled = true;
-      }
-      if (previewBox) previewBox.style.display = 'block';
-    } catch (error) {
-      if (hint) hint.textContent = t('settings.update.precheckFailed') + ': ' + apiErrText(error);
-    }
-  }
-
-  async function overlayApply() {
-    if (overlaySupported !== true) return;
-    if (!overlayZipPath) {
-      toast(t('settings.update.pickFirst'), 'err');
-      return;
-    }
-    const forceCheckbox = $('ovForceChk');
-    const force = Boolean(forceCheckbox && forceCheckbox.checked);
-    const applyButton = $('ovApplyBtn');
-    if (applyButton) { applyButton.disabled = true; applyButton.textContent = t('settings.update.applying'); }
-    const resultBox = $('ovResultBox'); if (resultBox) resultBox.style.display = 'none';
-    try {
-      const result = await api('/api/overlay/apply', {
-        method: 'POST',
-        body: JSON.stringify({ zipPath: overlayZipPath, force }),
-      });
-      if (resultBox) resultBox.style.display = 'block';
-      if (result.ok) {
-        renderOverlayResult('ok', t('settings.update.applyOk', { p1: String(result.version) }));
-        toast(t('settings.update.restartNeeded'), 'ok');
-        if (applyButton) { applyButton.disabled = false; applyButton.textContent = t('settings.update.apply'); }
-        refreshOverlayStatus();
-      } else if (result.idempotent) {
-        renderOverlayResult('warn', t('settings.update.idempotent'));
-        if (applyButton) { applyButton.disabled = false; applyButton.textContent = t('settings.update.apply'); }
-      } else if (result.rejected) {
-        renderOverlayResult('err', t('settings.update.precheckFailed') + ': ' + (result.errors || []).join('; '));
-        if (applyButton) { applyButton.disabled = false; applyButton.textContent = t('settings.update.apply'); }
-      } else {
-        const error = apiErrText(result.error) || (result.verify && result.verify.mismatches && result.verify.mismatches.length
-          ? result.verify.mismatches.join('; ')
-          : t('settings.update.applyFailed'));
-        renderOverlayResult('err', t('settings.update.applyFailed') + ': ' + String(error), true);
-        if (applyButton) { applyButton.disabled = false; applyButton.textContent = t('settings.update.apply'); }
-        toast(t('settings.update.applyFailed'), 'err');
-      }
-    } catch (error) {
-      renderOverlayResult('err', apiErrText(error));
-      if (resultBox) resultBox.style.display = 'block';
-      if (applyButton) { applyButton.disabled = false; applyButton.textContent = t('settings.update.apply'); }
-    }
-  }
-
-  async function overlayRollback() {
-    if (overlaySupported !== true) return;
-    const hint = $('ovRollbackHint'); if (hint) hint.textContent = t('settings.update.rollingBack');
-    try {
-      const result = await api('/api/overlay/rollback', { method: 'POST', body: '{}' });
-      if (result.ok) {
-        if (hint) hint.textContent = t('settings.update.rolledBack', { p1: result.restored });
-        toast(t('settings.update.rolledBackShort'), 'ok');
-        refreshOverlayStatus();
-      } else {
-        const reason = apiErrText(result.error) || t('settings.update.rollbackFailed');
-        if (hint) hint.textContent = reason;
-        toast(reason, 'err');
-      }
-    } catch (error) {
-      if (hint) hint.textContent = apiErrText(error);
-    }
-  }
 
   /* ---------------- MCP 运维页签 ---------------- */
   const MCP_SOURCE_KEYS = { desktop: 'settings.mcp.source.desktop', config: 'settings.mcp.source.config', 'drop-in': 'settings.mcp.source.dropIn', toolbox: 'settings.mcp.source.toolbox' };
@@ -385,17 +197,9 @@ export function createSettingsOperationsDomain({
   }
 
   function bindSettingsOperations() {
-    for (const id of ['ovPickBtn', 'ovPrecheckBtn', 'ovApplyBtn', 'ovRollbackBtn']) {
-      const button = $(id); if (button) button.disabled = true;
-    }
     const refreshMcp = $('mcpRefreshBtn'); if (refreshMcp) refreshMcp.onclick = () => refreshMcpOps(true);
     const importMcp = $('mcpImportBtn');
     if (importMcp) importMcp.onclick = async () => { await importMcpFromFolder(importMcp); refreshMcpOps(false); };
-    const pickOverlay = $('ovPickBtn'); if (pickOverlay) pickOverlay.onclick = overlayPickZip;
-    const precheckOverlay = $('ovPrecheckBtn'); if (precheckOverlay) precheckOverlay.onclick = overlayPrecheck;
-    const applyOverlay = $('ovApplyBtn'); if (applyOverlay) applyOverlay.onclick = overlayApply;
-    const rollbackOverlay = $('ovRollbackBtn'); if (rollbackOverlay) rollbackOverlay.onclick = overlayRollback;
-    const refreshOverlay = $('ovRefreshBtn'); if (refreshOverlay) refreshOverlay.onclick = refreshOverlayStatus;
     // 118a: 设置 → 基础 里的「重新打开引导」。向导可跳过，也必须可重开。
     const reopenOnboarding = $('reopenOnboardingBtn'); if (reopenOnboarding) reopenOnboarding.onclick = () => openOnboarding();
   }
@@ -403,6 +207,5 @@ export function createSettingsOperationsDomain({
   return Object.freeze({
     bindSettingsOperations,
     refreshMcpOps,
-    refreshOverlayStatus,
   });
 }

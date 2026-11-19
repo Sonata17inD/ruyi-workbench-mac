@@ -1,11 +1,35 @@
 'use strict';
 const {test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const vm=require('node:vm');
-const {functionBlock,constBlock,sliceBlock}=require('../lib/source-slice');
+const {functionBlock}=require('../lib/source-slice');
 const read=file=>fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src',file),'utf8');
-const G=read('13g-steward.js'),Q=read('13q-steward-runner-turn.js'),P=read('13p-steward-runner-actions.js'),K=read('13k-steward-threads.js'),H=read('13h-steward-runner.js');
+const Q=read('../backend/steward-turn-runner.cjs');
+const { createStewardToolAdmission } = require('../../ruyi-workbench/app/backend/steward-tool-admission.cjs');
+const { createStewardThreadLauncher } = require('../../ruyi-workbench/app/backend/steward-thread-launch.cjs');
+const { createStewardActionExecution } = require('../../ruyi-workbench/app/backend/steward-action-execution.cjs');
 const deferred=()=>{let resolve;const promise=new Promise(a=>resolve=a);return{promise,resolve};};const tick=()=>new Promise(resolve=>setImmediate(resolve));
-function fixture(){const actor=Object.freeze({}),source=Object.freeze({connectionId:'bot',itemId:'item',senderId:'owner',conversationId:'chat',conversationType:'group',controlRevision:4});let valid=true;let taint=[];let called=0;const runtime={conversationGeneration:0,inflight:null,queue:[],visit:{},turns:[]};const context={AbortController,setTimeout,Date,ExternalBotHooks:{validateActor:async value=>{if(value!==actor||!valid)throw Object.assign(new Error('revoked'),{code:'external_channel.control_revoked'});return source;}},StewardHooks:{currentTurnContext:()=>runtime.inflight?.kind==='external'?{trigger:'external',externalActor:runtime.inflight.externalActor}:null},readConfig:async()=>({stewardEnabledV1:true,stewardAutoActions:{relay:false}}),stewardFail:(error,message,extra)=>({ok:false,error,message,...extra}),stewardRunnerRuntime:runtime,stewardCircuitCheck:async()=>null,stewardNormalizeRouteHint:async()=>null,nowIso:()=>new Date().toISOString(),logEvent(){},STEWARD_USER_QUEUE_WAIT_MS:10000,stewardAbortInflight(){},stewardCtxIsSteward:()=>true,stewardArgTypeProblems:()=>[],stewardTaintGateApplies:()=>true,stewardTurnTaintedBy:()=>taint,stewardRunClaimedTurn:async()=>{called++;return{ok:true};},STEWARD_ACTION_HOOKS:{steward_thread_continue:'threadContinue'},STEWARD_SELF_SERVE_PER_TURN_MAX:3,stewardActLabel:()=>'',safeSessionId:value=>value};
-vm.createContext(context);const namesG=['stewardWithTurnTrigger','stewardExternalOwnerDirected','stewardAuthorizeExternalContext','stewardToolHandler'];const namesK=['stewardTriggerOf','stewardUserDirected'];vm.runInContext([constBlock(G,'stewardExternalContexts'),'const stewardUserWaiters=[];',...namesG.map(n=>functionBlock(G,n)),sliceBlock(G,'ExternalBotHooks.isAuthorizedContext =',';',{inclusive:true}),...namesK.map(n=>functionBlock(K,n)),functionBlock(P,'stewardSelfServeAllows'),functionBlock(P,'stewardExecuteActions'),functionBlock(Q,'runStewardTurn')].join('\n'),context);return{actor,source,context,runtime,revoke(){valid=false;},taint(){taint=['web'];},get called(){return called;}};}
+function fixture(){const actor=Object.freeze({}),source=Object.freeze({connectionId:'bot',itemId:'item',senderId:'owner',conversationId:'chat',conversationType:'group',controlRevision:4});let valid=true;let taint=[];let called=0;const runtime={conversationGeneration:0,inflight:null,queue:[],visit:{},turns:[]};const context={AbortController,setTimeout,Date,ExternalBotHooks:{validateActor:async value=>{if(value!==actor||!valid)throw Object.assign(new Error('revoked'),{code:'external_channel.control_revoked'});return source;}},StewardHooks:{currentTurnContext:()=>runtime.inflight?.kind==='external'?{trigger:'external',externalActor:runtime.inflight.externalActor}:null},readConfig:async()=>({stewardEnabledV1:true,stewardAutoActions:{relay:false}}),stewardFail:(error,message,extra)=>({ok:false,error,message,...extra}),stewardRunnerRuntime:runtime,stewardCircuitCheck:async()=>null,stewardNormalizeRouteHint:async()=>null,nowIso:()=>new Date().toISOString(),logEvent(){},STEWARD_USER_QUEUE_WAIT_MS:10000,stewardAbortInflight(){},stewardTurnTaintedBy:()=>taint,stewardRunClaimedTurn:async()=>{called++;return{ok:true};},STEWARD_ACTION_HOOKS:{steward_thread_continue:'threadContinue'},STEWARD_SELF_SERVE_PER_TURN_MAX:3,stewardActLabel:()=>'',safeSessionId:value=>value};
+context.stewardUserDirected = createStewardThreadLauncher(context).stewardUserDirected;
+Object.assign(context, createStewardToolAdmission({
+  hooks: { ExternalBotHooks: context.ExternalBotHooks, StewardHooks: context.StewardHooks },
+  tools: { stewardFail: context.stewardFail, stewardTurnTaintedBy: context.stewardTurnTaintedBy },
+  runtime: { readConfig: context.readConfig, logEvent: context.logEvent },
+}));
+vm.createContext(context);
+vm.runInContext('const stewardUserWaiters=[];\n' + functionBlock(Q,'runStewardTurn'), context);
+Object.assign(context, createStewardActionExecution({
+  safeSessionId: context.safeSessionId,
+  stewardFail: context.stewardFail,
+  actionHooks: { StewardHooks: context.StewardHooks, STEWARD_ACTION_HOOKS: context.STEWARD_ACTION_HOOKS },
+  admission: {
+    stewardAuthorizeExternalContext: context.stewardAuthorizeExternalContext,
+    stewardExternalOwnerDirected: context.stewardExternalOwnerDirected,
+    stewardTurnTaintedBy: context.stewardTurnTaintedBy,
+  },
+  sessions: {},
+  proposals: { stewardActLabel: context.stewardActLabel },
+  limits: { STEWARD_SELF_SERVE_PER_TURN_MAX: context.STEWARD_SELF_SERVE_PER_TURN_MAX },
+}));
+return{actor,source,context,runtime,revoke(){valid=false;},taint(){taint=['web'];},get called(){return called;}};}
 test('external entry rejects forged actor and metadata-only claims before config/model admission',async()=>{const f=fixture();for(const opts of [{externalActor:{}},{externalOwner:true,externalSource:f.source},{externalActor:JSON.parse(JSON.stringify(f.actor))}]){const r=await f.context.runStewardTurn({trigger:'external',message:'do work',...opts});assert.equal(r.error,'external_channel.control_revoked');}assert.equal(f.called,0);assert.equal(f.runtime.inflight,null);});
 test('verified owner context uses existing directed policy; forged boolean or copied metadata do not',async()=>{const f=fixture();const raw={trigger:'external',externalActor:f.actor};const authorized=await f.context.stewardAuthorizeExternalContext(raw);assert.equal(f.context.stewardUserDirected(authorized),true);assert.equal(authorized.userPressed,undefined);assert.equal(f.context.stewardUserDirected({...authorized}),false);assert.equal(f.context.stewardUserDirected({trigger:'external',externalOwner:true,externalSource:f.source}),false);assert.equal((await f.context.stewardSelfServeAllows('steward_thread_continue',{}, {},'external',authorized)).allowed,true);assert.equal((await f.context.stewardSelfServeAllows('steward_thread_continue',{}, {},'inbox',{trigger:'inbox'})).allowed,false);f.taint();assert.equal((await f.context.stewardSelfServeAllows('steward_thread_continue',{}, {},'external',authorized)).allowed,false);});
 test('tool admission revalidates opaque actor every call and strips model userPressed',async()=>{const f=fixture();let calls=0;f.runtime.inflight={kind:'external',externalActor:f.actor};const tool=f.context.stewardToolHandler('steward_thread_continue',async(args,ctx)=>{calls++;assert.equal(args.userPressed,undefined);assert.equal(ctx.trigger,'external');assert.equal(ctx.userPressed,undefined);assert.equal(f.context.stewardUserDirected(ctx),true);return{ok:true};});assert.equal((await tool({userPressed:true},{session:{kind:'steward'}})).ok,true);f.revoke();assert.equal((await tool({}, {session:{kind:'steward'}})).error,'external_channel.control_revoked');assert.equal(calls,1);});
@@ -15,22 +39,23 @@ test('authorization IO before claiming cannot overlap a local turn admitted duri
 test('model turn persists canonical external source, never capability, and keeps trigger external',async()=>{const f=fixture();let captured;Object.assign(f.context,{ensureStewardSession:async()=>({ok:true,session:{id:'steward',cwd:'fixture'},route:{}}),runSessionTurn:async opts=>{captured=opts;return{ok:false,error:'fixture failure'};},stewardDelegationToolCalls:async()=>[],stewardMergeDelegationReceipts:()=>[]});vm.runInContext(functionBlock(Q,'stewardRunClaimedTurn'),f.context);const r=await f.context.stewardRunClaimedTurn('external',{message:'owner instruction'},{},{externalActor:f.actor,externalSource:f.source,cancelled:''},null,()=>{},[]);assert.equal(r.error,'steward.turn_failed');assert.equal(captured.messageMeta.origin,'external-owner');assert.equal(captured.messageMeta.externalSource.itemId,'item');assert.equal(captured.requestMeta.trigger,'external');assert.equal(captured.requestMeta.external.senderId,'owner');assert.ok(!JSON.stringify(captured).includes('externalActor'));assert.equal(captured.attachments.length,0);});
 test('HTTP message JSON cannot supply external actor or claim a remote trigger',async()=>{
  const f=fixture();let opts,flushed=false,closed=false;const writes=[];
- Object.assign(f.context,{
-  clearTimeout,STEWARD_SESSION_ID:'steward',tokenOk:()=>true,
-  readJsonBody:async()=>({message:'hello',trigger:'external',externalActor:f.actor,externalOwner:true}),
-  stewardSanitizeAttachments:()=>[],
-  // This authorization fixture isolates the display transport. Its identity sink
-  // keeps the real HTTP route and its owner/trigger admission assertions active.
+ const {createStewardRoutes}=require('../../ruyi-workbench/app/backend/steward-routes.cjs');
+ const {handleStewardApiRoutes}=createStewardRoutes({
+  STEWARD_SESSION_ID:'steward',tokenOk:()=>true,readConfig:f.context.readConfig,nowIso:f.context.nowIso,
+  inbox:{},memory:{},delivery:{},
   PrivacyGateway:{createDisplayStream(scopeId,emit){
    assert.equal(scopeId,'steward');
    return{write:async event=>emit(event),flush:async()=>{flushed=true;},close(){assert.equal(flushed,true);closed=true;}};
   }},
-  runStewardTurn:async value=>{opts=value;value.onEvent({type:'assistant_delta',text:'Synthetic local reply'});return{ok:true,say:'Synthetic local reply'};},
+  runner:{stewardSanitizeAttachments:()=>[],
+   runStewardTurn:async value=>{opts=value;value.onEvent({type:'assistant_delta',text:'Synthetic local reply'});return{ok:true,say:'Synthetic local reply'};},
+  },
  });
- const handle=vm.runInContext(functionBlock(H,'handleStewardRunnerApiRoutes')+';handleStewardRunnerApiRoutes',f.context);
- const req={method:'POST',socket:{setNoDelay(){}}};
+ const {Readable}=require('node:stream');
+ const requestBody=Buffer.from(JSON.stringify({message:'hello',trigger:'external',externalActor:f.actor,externalOwner:true}));
+ const req=Object.assign(Readable.from([requestBody]),{method:'POST',headers:{},socket:{setNoDelay(){}}});
  const res={writeHead(){},on(){},write(value){writes.push(JSON.parse(value));},end(){assert.equal(closed,true);this.writableEnded=true;}};
- await handle(req,res,'/api/steward/message');
+ await handleStewardApiRoutes(req,res,'/api/steward/message');
  assert.equal(opts.trigger,'user');assert.equal(opts.externalActor,undefined);assert.equal(opts.externalOwner,undefined);
  assert.equal(opts.message,'hello');assert.equal(res.writableEnded,true);
  assert.equal(writes.find(event=>event.type==='assistant_delta').text,'Synthetic local reply');
@@ -40,8 +65,6 @@ test('revoked external waiter exits while the local turn remains active, without
 test('backend apiCode-only revocation still yields stable tool error',async()=>{const f=fixture();f.context.ExternalBotHooks.validateActor=async()=>{throw Object.assign(new Error('revoked'),{apiCode:'external_channel.control_revoked'});};const tool=f.context.stewardToolHandler('steward_thread_continue',async()=>assert.fail('must not run'));const r=await tool({}, {trigger:'external',externalActor:f.actor,session:{kind:'steward'}});assert.equal(r.error,'external_channel.control_revoked');});
 test('bot setup keeps the production taint gate and strips model userPressed without treating inspect as a write',async()=>{
  const f=fixture();let calls=0;f.context.ExternalBotHooks.stewardSetup=async()=>{calls++;return{ok:true};};
- vm.runInContext([constBlock(G,'STEWARD_TAINT_GATED_TOOLS'),functionBlock(G,'stewardTaintGateApplies'),functionBlock(G,'stewardImplBotSetup')].join('\n'),f.context);
- assert.equal(f.context.stewardTaintGateApplies('steward_bot_setup',{op:'prepare'}),true);assert.equal(f.context.stewardTaintGateApplies('steward_bot_setup',{op:'inspect'}),false);
  const tool=f.context.stewardToolHandler('steward_bot_setup',f.context.stewardImplBotSetup);f.taint();
  const rejected=await tool({op:'prepare',userPressed:true},{trigger:'user',session:{kind:'steward'}});assert.equal(rejected.error,'propose_required');assert.equal(calls,0);
  assert.equal((await tool({op:'inspect'},{trigger:'user',session:{kind:'steward'}})).ok,true);assert.equal(calls,1);

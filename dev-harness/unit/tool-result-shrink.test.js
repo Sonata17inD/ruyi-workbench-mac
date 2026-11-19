@@ -1,34 +1,19 @@
 'use strict';
-// N2 / N3:工具结果的结构感知收缩(10-context-governance.js 的 TOOL-RESULT-SHRINK 区间 + truncateToolResult)。
-// 修前 truncateToolResult 把序列化后的 JSON 串硬切前 60000 字符:shell 结果的 stderr / code / timedOut 与日志末尾一并丢掉,
-// 提示还点名了多数工具没有的 offset/limit。修后:小字段与状态键原样留,大字符串头+尾+「省略 N 字符」标记,数组留计数,
-// 提示按工具给;展示副本(落盘/SSE)同一套收缩、上限更大,原对象不被改动。
-// 区间内只有纯函数与常量,依赖(countCjkCodeUnits / tokensFromTextCounts)从 09d 源码切片注入,零 IO。
+// Exercise the same result budgets used for Provider history, SSE and stored tool attachments.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
-const { sliceBlock, constBlock, functionBlock } = require('../lib/source-slice');
-
-const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const gov = fs.readFileSync(path.join(SRC, '10-context-governance.js'), 'utf8');
-const est = fs.readFileSync(path.join(SRC, '09d-token-estimation.js'), 'utf8');
-
-const region = sliceBlock(gov, '// <<TOOL-RESULT-SHRINK BEGIN', '// >>TOOL-RESULT-SHRINK END');
-// 区间不存在(修前的源码)时退回抽 4 个常量,让 truncateToolResult 至少能跑 —— 这样红的是行为断言,不是加载。
-const constsOnly = ['TOOL_RESULT_CAP', 'FILE_READ_HEAD', 'FILE_READ_TAIL', 'IMG_B64_TRIM_RE'].map(n => constBlock(gov, n)).join('\n');
-const deps = [functionBlock(est, 'countCjkCodeUnits'), functionBlock(est, 'tokensFromTextCounts')].join('\n');
-const ESTIMATION_RULES = { factors: { json: 3.6, code: 3.6 } };
-const T = new Function('ESTIMATION_RULES', `${deps}\n${region || constsOnly}\n${functionBlock(gov, 'truncateToolResult')}
-return { truncateToolResult, shrinkToolResultForDisplay: typeof shrinkToolResultForDisplay === 'function' ? shrinkToolResultForDisplay : null,
-  shrinkToolText: typeof shrinkToolText === 'function' ? shrinkToolText : null, toolResultCharCap: typeof toolResultCharCap === 'function' ? toolResultCharCap : null };`)(ESTIMATION_RULES);
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const T = require('../../ruyi-workbench/app/backend/tool-result-view.cjs');
+const { toolImageSessionTag } = require('../../ruyi-workbench/app/backend/image-content.cjs');
 
 const lines = (n, text) => Array.from({ length: n }, (_, i) => `${text} ${i}`).join('\n') + '\n';
 
 test('N2 shell 结果:stderr / code / timedOut 与 stdout 末尾在截断后仍在', () => {
   const stdout = lines(20000, 'build line') + 'ERROR at end: linker failed';
   const res = { ok: false, code: 3, stdout, stderr: 'fatal stderr', elapsedMs: 1234, timedOut: false, interrupted: false };
-  const out = T.truncateToolResult('powershell_run', JSON.stringify(res));
+  const out = T.truncateToolResult('shell_run', JSON.stringify(res));
   assert.ok(out.length <= 60000, `length ${out.length}`);
   assert.ok(out.length >= 50000, `换行转义后仍应把预算基本用满,而不是收得过狠(实得 ${out.length})`);
   const parsed = JSON.parse(out);                                   // 仍是合法 JSON
@@ -84,15 +69,14 @@ test('N2 数组:按条数截断并留计数标记,其余键不动', () => {
 
 test('N2 幂等:预算内的结果原样返回;已收缩过的结果再收缩一次不变', () => {
   const small = JSON.stringify({ ok: true, stdout: 'x'.repeat(30000), stderr: '' });
-  assert.equal(T.truncateToolResult('powershell_run', small), small);
+  assert.equal(T.truncateToolResult('shell_run', small), small);
   const big = JSON.stringify({ ok: true, code: 0, stdout: lines(30000, 'row') });
-  const once = T.truncateToolResult('powershell_run', big);
-  assert.equal(T.truncateToolResult('powershell_run', once), once);
-  assert.equal(T.truncateToolResult('powershell_run', T.truncateToolResult('powershell_run', big)), once);
+  const once = T.truncateToolResult('shell_run', big);
+  assert.equal(T.truncateToolResult('shell_run', once), once);
+  assert.equal(T.truncateToolResult('shell_run', T.truncateToolResult('shell_run', big)), once);
 });
 
 test('N2 中文结果按 token 口径收紧:同样的字符数,CJK 更早被截', () => {
-  assert.ok(T.toolResultCharCap, '需要 toolResultCharCap');
   const zh = JSON.stringify({ ok: true, text: '汉'.repeat(50000) });
   const en = JSON.stringify({ ok: true, text: 'a'.repeat(50000) });
   assert.equal(T.truncateToolResult('web_fetch', en), en, '英文 50K 字符在预算内');
@@ -125,10 +109,9 @@ test('N2 头尾切点不劈代理对(emoji),也尽量落在行边界', () => {
 });
 
 test('N3 展示副本:大结果同构收缩、原对象不动;小结果同一引用', () => {
-  assert.ok(T.shrinkToolResultForDisplay, '需要 shrinkToolResultForDisplay');
   const res = { ok: true, code: 0, stdout: lines(40000, 'chatty build output line'), stderr: 'warn: x', elapsedMs: 9 };
   const before = JSON.stringify(res);
-  const shown = T.shrinkToolResultForDisplay('powershell_run', res);
+  const shown = T.shrinkToolResultForDisplay('shell_run', res);
   assert.equal(JSON.stringify(res), before, '原对象不被改动(写时复制)');
   assert.notEqual(shown, res);
   const size = JSON.stringify(shown).length;
@@ -140,7 +123,7 @@ test('N3 展示副本:大结果同构收缩、原对象不动;小结果同一引
   const small = { ok: true, path: 'a.txt', content: 'hello' };
   assert.equal(T.shrinkToolResultForDisplay('file_read', small), small);
   const frozen = Object.freeze({ ok: true, stdout: 'z'.repeat(300000) });
-  assert.doesNotThrow(() => T.shrinkToolResultForDisplay('powershell_run', frozen));
+  assert.doesNotThrow(() => T.shrinkToolResultForDisplay('shell_run', frozen));
 });
 
 test('N3 展示副本:嵌套字段(results[i].body)也按最大字段先收', () => {
@@ -152,25 +135,13 @@ test('N3 展示副本:嵌套字段(results[i].body)也按最大字段先收', ()
   assert.match(shown.results[0].body, /已截断/);
 });
 
-// ── N3 图片:大图 base64 落附件,结果里只留占位 + imageAttachments ─────────────────────────────
-// boundToolResultForDisplay 带 IO(uploads 目录),故与上面的纯区间分开抽取,注入临时 uploads 与真 fs。
-const os = require('os');
-const crypto = require('crypto');
-function loadImageBound(uploadsDir, fsOverride) {
-  const parts = [constBlock(gov, 'TOOL_IMAGE_KEY_RE'), constBlock(gov, 'TOOL_IMAGE_B64_MIN'), constBlock(gov, 'TOOL_IMAGE_B64_BODY_RE'),
-    functionBlock(gov, 'toolImageMime'), functionBlock(gov, 'findToolImageFields'), functionBlock(gov, 'boundToolResultForDisplay'),
-    functionBlock(gov, 'cowToolResultParent')].join('\n');
-  return new Function('ESTIMATION_RULES', 'fsp', 'path', 'paths', 'crypto', 'Buffer', 'toolImageSessionTag',
-    `${deps}\n${region}\n${parts}\nreturn boundToolResultForDisplay;`)(ESTIMATION_RULES, fsOverride || fs.promises, path, { uploads: uploadsDir }, crypto, Buffer,
-    sid => 'T' + String(sid).replace(/[^A-Za-z0-9]/g, '').slice(0, 9).padEnd(9, '0'));
-}
 const PNG_HEAD = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
 const fakePng = n => Buffer.concat([PNG_HEAD, Buffer.alloc(n, 7)]);
 
 test('N3 图片:image_base64 落 uploads 附件,存盘/发送的结果只留占位与 imageAttachments', async () => {
   const uploads = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-trs-up-'));
   try {
-    const bound = loadImageBound(uploads);
+    const bound = T.createToolResultDisplay({ paths: { uploads } });
     const png = fakePng(300000);                                     // ≈ 400K base64 字符,修前整段进 messages 与 SSE
     const res = { ok: true, success: true, width: 1920, height: 1080, image_base64: png.toString('base64') };
     const before = JSON.stringify(res);
@@ -193,7 +164,7 @@ test('N3 图片:image_base64 落 uploads 附件,存盘/发送的结果只留占�
 test('N3 图片:data: URI、嵌套 screenshot.image、jpeg 识别;小图与非图字段不动', async () => {
   const uploads = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-trs-up-'));
   try {
-    const bound = loadImageBound(uploads);
+    const bound = T.createToolResultDisplay({ paths: { uploads } });
     const jpg = Buffer.concat([Buffer.from([0xFF, 0xD8, 0xFF, 0xE0]), Buffer.alloc(20000, 3)]);
     const shown = await bound('window_screenshot', { ok: true, screenshot: { image: 'data:image/jpeg;base64,' + jpg.toString('base64'), title: 'w' } });
     assert.equal(shown.screenshot.title, 'w');
@@ -214,7 +185,7 @@ test('N3 图片:uploads 不可写时只留占位(无 imageAttachments),回合不
   const blocker = path.join(os.tmpdir(), 'ruyi-trs-blocker-' + process.pid);
   fs.writeFileSync(blocker, 'x');                                        // 拿一个【文件】当 uploads 根,mkdir 必失败
   try {
-    const bound = loadImageBound(blocker);
+    const bound = T.createToolResultDisplay({ paths: { uploads: blocker } });
     const shown = await bound('screenshot', { ok: true, image_base64: fakePng(20000).toString('base64') });
     assert.match(shown.image_base64, /^\[image omitted from stored result: \d+ base64 chars\]$/);
     assert.equal(shown.imageAttachments, undefined);
@@ -243,19 +214,23 @@ test('[file_read CJK] 默认一页 40K 汉字不被 CJK 收紧挖洞:页面完�
   assert.match(cut.content, /已截断/);
 });
 
-test('N3 图片:附件先写 tmp 再 rename;带会话标签的目录名;同一张图再来不重写', async () => {
+test('N3 图片:附件先写 tmp 再 rename;带会话标签的目录名;同一张图再来不重写', async t => {
   const uploads = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-trs-up-'));
   try {
     const writes = [];
-    const spy = Object.assign({}, fs.promises, {
-      async writeFile(p, data, ...rest) { writes.push({ p: String(p), finalExisted: fs.existsSync(String(p).replace(/\.\d+\.[0-9a-f]+\.tmp$/, '')) }); return fs.promises.writeFile(p, data, ...rest); },
+    const writeFile = fs.promises.writeFile;
+    t.mock.method(fs.promises, 'writeFile', (target, data, ...options) => {
+      const file = String(target);
+      writes.push({ p: file, finalExisted: fs.existsSync(file.replace(/\.\d+\.[0-9a-f]+\.tmp$/, '')) });
+      return writeFile(target, data, ...options);
     });
-    const bound = loadImageBound(uploads, spy);
+    const bound = T.createToolResultDisplay({ paths: { uploads } });
     const png = fakePng(20000);
     const res = { ok: true, image_base64: png.toString('base64') };
     const shown = await bound('ai_computer_control__screenshot', res, { sessionId: 'sess_abcdef123456' });
     const att = shown.imageAttachments[0];
-    assert.match(att.id, /^toolimg_T[A-Za-z0-9]{9}_[0-9a-f]{24}$/, '目录名带会话标签:' + att.id);
+    assert.match(att.id, /^toolimg_[0-9a-f]{10}_[0-9a-f]{24}$/);
+    assert.ok(att.id.startsWith('toolimg_' + toolImageSessionTag('sess_abcdef123456') + '_'), '目录名带真实会话标签');
     assert.ok(att.id.length <= 64, '仍过 /api/upload/content 的 id 校验');
     assert.equal(writes.length, 1);
     assert.match(writes[0].p, /\.tmp$/, '写的是临时文件,不是最终路径');

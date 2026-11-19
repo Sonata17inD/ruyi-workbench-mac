@@ -1,7 +1,7 @@
 'use strict';
 // 按需装载按「缓存账」调整(2026-10)。背景:本机日志里工具表在会话中途每变一次,提供方的前缀缓存就整段失效
 // (命中率 97%→3%、94%→8%),所以优化目标从「每发少带几百 token」换成「一个会话里工具表少变几次」。
-//   [C1] 起手工具:模型服务商回合第一发就带 web_search / web_fetch / powershell_run;被设置关掉的、管家会话、full 模式不受影响。
+//   [C1] 起手工具:模型服务商回合第一发就带 web_search / web_fetch / shell_run;被设置关掉的、管家会话、full 模式不受影响。
 //   [C2] 分包精度:话题词(编码能力 / 测一下 / 偏好 / file_edit 里的 edit)不再把 code、memory 包带进来;明确的代码 / 记忆意图照旧。
 //   [C3] 会话工具表跨重启:进程内冻结表是空的时,按会话头上记的表原序恢复;坏名字、目录里没有的不恢复;进程内已有就不再恢复。
 //   [C4] 装载原因:按原因装进来的工具追加在冻结表尾部(顺序只增不改),frozenNames 给 09 写回会话头。
@@ -22,7 +22,7 @@ after(() => fs.rmSync(root, { recursive: true, force: true }));
 const cfg = srv.defaultConfig();
 const offered = srv.buildOpenAiTools(cfg, capabilities, { skillsEnabled: true });
 const names = state => state.current().map(t => t.function.name);
-const STARTER = ['web_search', 'web_fetch', process.platform === 'darwin' ? 'shell_run' : 'powershell_run'];
+const STARTER = ['web_search', 'web_fetch', process.platform === 'darwin' ? 'shell_run' : 'shell_run'];
 let keySeq = 0;
 const freshKey = () => `sess_cachetest${process.pid}x${(keySeq += 1)}`;   // 冻结表是进程级的,每条用例一把新钥匙
 
@@ -30,10 +30,10 @@ test('[C1] 起手工具第一发就在;被关掉的、管家会话、full 模式
   const chit = names(srv.createToolLoadingState(cfg, '你好', null, offered, null, null));
   for (const n of STARTER) assert.ok(chit.includes(n), `${n} 应在闲聊回合的第一发里`);
   assert.ok(!chit.includes('file_read'), 'file_read 仍按需(tool-loading e2e 钉着的那条)');
-  // allowCommandTools:false → powershell_run 根本不在目录里,起手也不会带
+  // allowCommandTools:false → shell_run 根本不在目录里,起手也不会带
   const noCmd = { ...cfg, allowCommandTools: false };
   const noCmdNames = names(srv.createToolLoadingState(noCmd, '你好', null, srv.buildOpenAiTools(noCmd, capabilities, {}), null, null));
-  assert.ok(!noCmdNames.includes('powershell_run'));
+  assert.ok(!noCmdNames.includes('shell_run'));
   assert.ok(!noCmdNames.includes('shell_run'));
   assert.ok(noCmdNames.includes('web_search'));
   // 管家会话的目录里只有 steward_*,起手工具不会混进来
@@ -90,10 +90,10 @@ test('[C3] 会话工具表跨重启按原序恢复', () => {
 test('[C3] legacy PowerShell tool history retains available tools in order when the platform starter changes', () => {
   const state = srv.createToolLoadingState(cfg, '你好', null, offered, null, freshKey(), { restoredNames: ['powershell_run', 'file_read'] });
   const got = names(state);
-  if (process.platform === 'darwin') {
+  {
     assert.ok(!got.includes('powershell_run'), 'a restored tool list cannot advertise an unavailable platform tool');
     assert.equal(got[0], 'file_read');
-  } else assert.deepEqual(got.slice(0, 2), ['powershell_run', 'file_read']);
+  }
   for (const name of STARTER) assert.ok(got.includes(name));
 });
 

@@ -260,13 +260,6 @@ const PNG_1x1 = Buffer.from(
     const rOut = await pv('path=' + encodeURIComponent(outsideFile) + '&sessionId=' + sid);
     ok(rOut.status === 403 && rOut.json && /allowed workspace/.test(errorText(rOut.json.error)), '(b) file outside allowed roots → 403 path not allowed');
 
-    // A Windows system file, if present — belt-and-suspenders (also outside allowed roots).
-    const winIni = 'C:\\Windows\\win.ini';
-    if (fs.existsSync(winIni)) {
-      const rWin = await pv('path=' + encodeURIComponent(winIni) + '&sessionId=' + sid);
-      ok(rWin.status === 403, '(b) C:\\Windows\\win.ini → 403 (arbitrary-read blocked)');
-    } else { console.log('SKIP (b) win.ini absent'); }
-
     // Relative / non-absolute path → 400.
     const rRel = await pv('path=' + encodeURIComponent('report.md') + '&sessionId=' + sid);
     ok(rRel.status === 400, '(b) relative path → 400 must be absolute');
@@ -293,17 +286,18 @@ const PNG_1x1 = Buffer.from(
     ok(rXlsx.json && rXlsx.json.kind === 'binary' && rXlsx.json.canOpen === true, '(e) xlsx → kind binary, canOpen:true (v1.0 defers station preview)');
 
     // ── (f) v1.0.2-S3: POST /api/file/reveal — token gate + path-safety 护栏 ────────────────────────────
-    // 单元:buildRevealSpawn 绝不走 shell, mode='select' 传 '/select,'+path 为同一参数, mode='open' 传 [path]。
-    const spSelect = srv.buildRevealSpawn('select', 'C:\\ws\\a.txt', 'win32');
-    ok(spSelect.command === 'explorer.exe' && spSelect.args.length === 1 && spSelect.args[0] === '/select,C:\\ws\\a.txt', '(f unit) buildRevealSpawn select: 单参数 /select,+path');
-    const spOpen = srv.buildRevealSpawn('open', 'C:\\ws\\a.txt', 'win32');
-    ok(spOpen.command === 'explorer.exe' && spOpen.args.length === 1 && spOpen.args[0] === 'C:\\ws\\a.txt', '(f unit) buildRevealSpawn open: [path]');
-    // 收官加固防回潮:可执行/脚本类扩展名的 'open' 必须降级为 'select'(否则提示注入可诱导用户一键执行任意程序)。
-    for (const bad of ['evil.bat', 'evil.exe', 'evil.js', 'evil.ps1', 'evil.lnk', 'EVIL.CMD']) {
-      const sp = srv.buildRevealSpawn('open', 'C:\\ws\\' + bad, 'win32');
-      ok(sp.mode === 'select' && sp.degraded === true && sp.args[0] === '/select,C:\\ws\\' + bad, `(f unit) buildRevealSpawn open ${bad} → 降级 select`);
+    // Finder handoff uses literal argv, never shell interpolation.
+    const revealPath = path.join(WS, '中文 report.txt');
+    const spSelect = srv.buildRevealSpawn('select', revealPath, 'darwin');
+    ok(spSelect.command === '/usr/bin/open' && JSON.stringify(spSelect.args) === JSON.stringify(['-R', '--', revealPath]), '(f unit) Finder select preserves literal path');
+    const spOpen = srv.buildRevealSpawn('open', revealPath, 'darwin');
+    ok(spOpen.command === '/usr/bin/open' && JSON.stringify(spOpen.args) === JSON.stringify(['--', revealPath]), '(f unit) document open preserves literal path');
+    for (const bad of ['evil.sh', 'evil.command', 'evil.js', 'evil.app', 'evil.workflow', 'evil.scpt']) {
+      const target = path.join(WS, bad);
+      const sp = srv.buildRevealSpawn('open', target, 'darwin');
+      ok(sp.mode === 'select' && sp.degraded === true && JSON.stringify(sp.args) === JSON.stringify(['-R', '--', target]), `(f unit) open ${bad} → select`);
     }
-    ok(srv.buildRevealSpawn('open', 'C:\\ws\\report.xlsx').mode === 'open', '(f unit) buildRevealSpawn open xlsx: 非可执行不降级');
+    ok(srv.buildRevealSpawn('open', path.join(WS, 'report.xlsx'), 'darwin').mode === 'open', '(f unit) xlsx may open');
     // ① 无 token → 403。
     const revNoTok = await postJson(WB_PORT, '/api/file/reveal', { sessionId: sid, path: mdPath, mode: 'select' }, {});
     ok(revNoTok.status === 403, '(f) reveal 无 token → 403');
@@ -313,37 +307,13 @@ const PNG_1x1 = Buffer.from(
     // ③ 不存在的文件(工作区内)→ 404。
     const revMissing = await postJson(WB_PORT, '/api/file/reveal', { sessionId: sid, path: path.join(WS, 'no-such-file.txt'), mode: 'open' }, hdr);
     ok(revMissing.status === 404 && revMissing.json && /不存在/.test(errorText(revMissing.json.error)), '(f) reveal 不存在文件 → 404 人话');
-    // ④ 合法(工作区内已存在的 report.md)→ ok:true(spawn explorer, 不真验证弹窗)。
+    // Capture the real route's launch handoff without opening a Finder window.
     const revOk = await postJson(WB_PORT, '/api/file/reveal', { sessionId: sid, path: mdPath, mode: 'select' }, hdr);
     ok(revOk.status === 200 && revOk.json && revOk.json.ok === true, '(f) reveal 合法路径 → ok:true');
-    // 107 前置（45 号文 §9.5 插曲）：④ 是真的会开资源管理器的 —— 产品经 PowerShell 助手 Start-Process explorer 并提到前台
-    // （04-desktop-shell revealInExplorer）。修前本件从不收这个窗口：收尾删掉 HOME 之后窗口退到上一级停在 Temp，
-    // 每个挂着的窗口持续占 0.15–0.2 核刷新 Temp；负载循环连跑三十次攒下 29 个、吃掉 12 核里约 4 核，整轮回归被拖成
-    // 347/9/25（mission-index-scale 独占桶里 3922 ms 越过 1500 ms 门）。每轮全量回归都会漏一个、跨轮累积。
-    // 收尸：按【本件独有的工作区目录】精确匹配窗口并 Quit（绝不碰用户自己开的窗口）；目录经环境变量传进脚本，不拼进
-    // 脚本文本。窗口是 fire-and-forget 的（~1 s 后才出现），所以有界轮询等它出现。判据是「收尾之后一个都不剩」——
-    // 无头／非交互环境里窗口压根不出现时 closed=0 left=0，同样成立。
-    if (process.platform === 'darwin') {
-      const recorded = fs.readFileSync(revealRecord, 'utf8').trim().split('\n').map(JSON.parse);
-      ok(recorded.length === 1 && recorded[0].command === '/usr/bin/open'
-        && JSON.stringify(recorded[0].args) === JSON.stringify(['-R', '--', fs.realpathSync(mdPath)]),
-        '(f Mac) exact shell-free Finder selection handoff observed; fixture opens no Finder window');
-    } else {
-    const revealSweep = cp.spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', [
-      "$dir = $env:RUYI_TEST_REVEAL_DIR.TrimEnd('\\')",
-      "$sh = New-Object -ComObject Shell.Application",
-      "function Match($w) { $u = $null; try { $u = $w.LocationURL } catch {}; if (-not $u) { return $false }; try { return (([Uri]$u).LocalPath.TrimEnd('\\') -ieq $dir) } catch { return $false } }",
-      // Quit() is asynchronous; a COM window may still be enumerated after 400 ms.
-      // Keep the same 15 s bound and exact-directory ownership, and wait for a
-      // stable empty interval instead of treating the first Quit call as closure.
-      "$closed = 0; $emptySince = $null; $deadline = (Get-Date).AddSeconds(15)",
-      "do { $owned = @(@($sh.Windows()) | Where-Object { Match $_ }); if ($owned.Count) { $emptySince = $null; foreach ($w in $owned) { try { $w.Quit(); $closed++ } catch {} } } elseif ($closed -gt 0) { if (-not $emptySince) { $emptySince = Get-Date }; if (((Get-Date) - $emptySince).TotalMilliseconds -ge 750) { break } }; Start-Sleep -Milliseconds 200 } while ((Get-Date) -lt $deadline)",
-      "$left = @(@($sh.Windows()) | Where-Object { Match $_ }).Count",
-      "Write-Output ('closed=' + $closed + ' left=' + $left)",
-    ].join('; ')], { env: { ...process.env, RUYI_TEST_REVEAL_DIR: WS }, encoding: 'utf8', timeout: 30000, windowsHide: true });
-    const revealSweepOut = String(revealSweep.stdout || '').trim();
-    ok(/\bleft=0\b/.test(revealSweepOut), `(f) reveal 打开的资源管理器窗口已收尸,不留在桌面上拖慢后续回归(实得 ${JSON.stringify(revealSweepOut || String(revealSweep.stderr || '').slice(0, 200))})`);
-    }
+    const recorded = fs.readFileSync(revealRecord, 'utf8').trim().split('\n').map(JSON.parse);
+    ok(recorded.length === 1 && recorded[0].command === '/usr/bin/open'
+      && JSON.stringify(recorded[0].args) === JSON.stringify(['-R', '--', fs.realpathSync(mdPath)]),
+      '(f Mac) exact shell-free Finder selection handoff observed; fixture opens no Finder window');
 
     // ── (g) v1.5-W1.5 (T3/T4):ACC 写族 bridged 工具 → 产物收割 + 检查点 + 回撤 ─────────────────────────────
     // 单独起一套 workbench(带 fake-mcp 桥)+ fake-openai, 用 FAKE_TOOL_SEQUENCE 让 provider 调

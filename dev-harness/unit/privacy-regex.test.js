@@ -6,11 +6,10 @@ const { PrivacyRegex: regex, PrivacyCore: core } = fixture();
 const rule = (value, flags = '') => ({ id: 'employee', kind: 'regex', value, flags, category: 'INTERNAL' });
 
 test('packaged bytecode without function source still runs isolated workers with unchanged budgets', async () => {
-  const sourceDir = path.join(__dirname, '../../ruyi-workbench/app/src');
-  const source = ['01i-privacy-rules.js', '01h-privacy-core.js', '01m-privacy-regex.js']
-    .map(file => fs.readFileSync(path.join(sourceDir, file), 'utf8')).join('\n');
+  const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/backend/privacy-regex.cjs'), 'utf8');
   const workers = [];
-  const compiled = vm.runInNewContext(`Function.prototype.toString = () => 'function () { [native code] }';\n${source}\n({regex: PrivacyRegex, stripped: (function () {}).toString()})`, {
+  const compiled = vm.runInNewContext(`Function.prototype.toString = () => 'function () { [native code] }';\n${source}\n({regex: module.exports.createPrivacyRegex({core: PrivacyCore}), stripped: (function () {}).toString()})`, {
+    module: { exports: {} }, PrivacyCore: core,
     require: name => name === 'node:worker_threads' ? {
       Worker: class extends require('node:worker_threads').Worker {
         constructor(program, options) { workers.push({ program, options }); super(program, options); }

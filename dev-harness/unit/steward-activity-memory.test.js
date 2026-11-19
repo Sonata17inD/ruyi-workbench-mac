@@ -1,8 +1,9 @@
 'use strict';
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
-const { functionBlock } = require('../lib/source-slice');
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const { createStewardThreadAdmission } = require('../../ruyi-workbench/app/backend/steward-thread-admission.cjs');
+const { createStewardConversationVisits } = require('../../ruyi-workbench/app/backend/steward-conversation-visits.cjs');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-activity-memory-'));
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, includeWorkbenchMcp: false, defaultWorkspace: home }));
@@ -73,12 +74,11 @@ test('新行动可验证经验,同一证据重试不增信;用户确认后行为
 });
 
 test('推断不能作为代替用户回答的依据;双语提示给出主动学习和当前来源', async () => {
-  const sourceCode = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13k-steward-threads.js'), 'utf8');
-  const fn = vm.runInNewContext(functionBlock(sourceCode, 'stewardResolveAnswerBasis') + '\nstewardResolveAnswerBasis', {
+  const { stewardResolveAnswerBasis } = createStewardThreadAdmission({
     stewardReadMemoryStore: async () => ({ entries: [{ id: 'inferred', state: 'active', basis: 'activity' }] }),
-    memoryIsExpired: () => false, stewardBriefTextOf: () => '',
+    memoryIsExpired: () => false,
   });
-  assert.equal((await fn({ memoryIds: ['inferred'], briefQuote: '' }, {})).ok, false);
+  assert.equal((await stewardResolveAnswerBasis({ memoryIds: ['inferred'], briefQuote: '' }, {})).ok, false);
   for (const locale of ['zh-CN', 'en-US']) {
     const pack = srv.getPromptPack(locale).steward;
     const prompt = pack.memoryCapture({ sessionId: 'steward', turnSeq: 12 });
@@ -95,7 +95,7 @@ test('状态查询给未命名线程可读名字,普通执行待决包含脱敏�
   // Assemble a synthetic token at runtime so source hygiene still rejects literal credentials.
   const fakeSecret = 'sk-' + 'abcdefghijklmnopqrstuvwxyz1234567890';
   fs.appendFileSync(path.join(home, 'sessions', session.id + '.interventions.ndjson'), [
-    { id: 'pending_exec', type: 'permission', tier: 'exec', toolName: 'powershell_run', input: { command: 'Get-ChildItem; $api_key="' + fakeSecret + '"' } },
+    { id: 'pending_exec', type: 'permission', tier: 'exec', toolName: 'shell_run', input: { command: 'Get-ChildItem; $api_key="' + fakeSecret + '"' } },
     { id: 'pending_edit', type: 'permission', tier: 'edit', toolName: 'file_write', input: { content: 'private full document' } },
   ].map(iv => JSON.stringify({ ...iv, sessionId: session.id, status: 'pending', requestedAt: new Date().toISOString() })).join('\n') + '\n');
   const status = await call('steward_thread_status', { sessionId: session.id });
@@ -111,16 +111,19 @@ test('状态查询给未命名线程可读名字,普通执行待决包含脱敏�
 test('五种普通事件同时出现时,漏跑和待批日程仍出现在到访摘要,不随水位推进被吞掉', async () => {
   const kinds = ['needs_you', 'failed', 'done', 'stalled', 'budget', 'adopted', 'reminder'];
   const fields = ['upcoming', 'missed', 'needsYou'];
-  const code = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13q-steward-runner-turn.js'), 'utf8');
-  const digest = vm.runInNewContext(functionBlock(code, 'stewardVisitDigest') + '\nstewardVisitDigest', {
-    STEWARD_EVENT_KINDS: kinds, STEWARD_VISIT_DIGEST_PAGES: 25, STEWARD_VISIT_DIGEST_MAX: 5,
-    STEWARD_DIGEST_KIND_TEXT: Object.fromEntries(kinds.map(k => [k, n => k + ':' + n])),
-    STEWARD_COMMITMENT_TEXT: Object.fromEntries(fields.map(k => [k, n => k + ':' + n])),
-    STEWARD_COMMITMENT_I18N: Object.fromEntries(fields.map(k => [k, k])),
-    stewardInboxRead: async () => ({ items: kinds.map((kind, i) => ({ kind, inboxSeq: i + 1 })), inboxSeq: 7, hasMore: false }),
+  const { stewardVisitDigest } = createStewardConversationVisits({
     SchedulerHooks: { commitmentsSince: async () => ({ upcoming: 1, missed: 2, needsYou: 1, fireSeq: 8 }) },
+    inbox: {
+      stewardInboxRead: async () => ({ items: kinds.map((kind, i) => ({ kind, inboxSeq: i + 1 })), inboxSeq: 7, hasMore: false }),
+    },
+    constants: {
+      STEWARD_EVENT_KINDS: kinds,
+      STEWARD_VISIT_DIGEST_MAX: 5,
+      STEWARD_DIGEST_KIND_TEXT: Object.fromEntries(kinds.map(k => [k, n => k + ':' + n])),
+    },
+    sessions: {}, lifecycle: {}, persistence: {},
   });
-  const result = await digest(0, 0);
+  const result = await stewardVisitDigest(0, 0);
   assert.equal(result.items.length, 5);
   assert.deepEqual(Array.from(result.items.filter(i => i.kind === 'commitment'), i => i.field), fields);
   assert.equal(result.inboxSeq, 7); assert.equal(result.fireSeq, 8);

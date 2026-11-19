@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // Production Steward prepare -> dedicated local credentials -> signed pairing -> local CAS authorization.
-// Windows-only: this journey deliberately exercises the real DPAPI password API; env fallback is covered by HTTP/unit tests.
+// The production Mac credential API uses a fixture-local wrapping key so the journey can run with a locked login Keychain.
 // All platform transport is redirected by the fixed-host preload to this test's own fake server.
 require('./lib/self-isolate-home.js');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),http=require('node:http'),crypto=require('node:crypto');
@@ -11,12 +11,12 @@ const {FAKE_BOT_ENV,feishuEvent,feishuWire}=require('./lib/external-bot-fixtures
 const t=createRunner('EXTERNAL BOT SETUP BROWSER'),{ok}=t;
 const zh=require('../ruyi-workbench/app/public/locales/zh-CN.json');
 const shots=path.join(os.tmpdir(),'ruyi-bot-setup-shots-'+Date.now());
-if(process.platform!=='win32'){console.log('SKIP EXTERNAL BOT SETUP BROWSER: real Windows DPAPI journey');process.exit(0);}
+if(process.platform!=='darwin'){console.log('SKIP EXTERNAL BOT SETUP BROWSER: Mac credential journey');process.exit(0);}
 const canary='credential-only-'+crypto.randomBytes(20).toString('hex');
 (async()=>{let fx,official;const modelRequests=[],consoleMessages=[],officialCalls=[];let prepares=0,queries=0;try{
  official=http.createServer(async(req,res)=>{let raw='';for await(const part of req)raw+=part;officialCalls.push({url:req.url});res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(req.url.includes('tenant_access_token')?{code:0,tenant_access_token:'fixture-token',expire:7200}:{code:0,data:{message_id:'setup_reply'}}));});await new Promise(resolve=>official.listen(0,'127.0.0.1',resolve));
  const preload=path.resolve(__dirname,'lib/external-channel-delivery-preload.js');
- fx=await startBrowserFixture({ok,prefix:'ruyi-bot-setup-browser-',width:1440,height:1100,serverEnv:{RUYI_FAKE_EXTERNAL_API_PORT:String(official.address().port),NODE_OPTIONS:[process.env.NODE_OPTIONS||'', '--require='+JSON.stringify(preload)].join(' ')},provider:ctx=>{
+ fx=await startBrowserFixture({ok,prefix:'ruyi-bot-setup-browser-',width:1440,height:1100,isolatedKeychain:true,serverEnv:{RUYI_FAKE_EXTERNAL_API_PORT:String(official.address().port),NODE_OPTIONS:[process.env.NODE_OPTIONS||'', '--require='+JSON.stringify(preload)].join(' ')},provider:ctx=>{
   modelRequests.push(JSON.stringify(ctx.body));const at=ctx.messages.findLastIndex(m=>m.role==='user');const text=String(ctx.messages[at]?.content||'');const answered=ctx.messages.slice(at+1).some(m=>m.role==='tool');
   if(text.includes('SETUP_UI_APP')&&!answered){prepares++;ctx.toolCall('steward_bot_setup',{op:'prepare',platform:'feishu',appId:'cli_fixture',tenantId:'tenant_fixture',botUserId:'ou_bot',label:'SETUP_UI_APP'});return;}
   if(text.includes('REMOTE_SETUP_QUERY')&&!answered){queries++;ctx.toolCall('steward_self_status',{});return;}

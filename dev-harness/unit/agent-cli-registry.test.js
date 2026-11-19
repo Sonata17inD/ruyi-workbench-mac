@@ -33,7 +33,10 @@ const INPUTS = ['claude', 'kimi', undefined, null, '', 'Kimi', 'KIMI', ' kimi', 
 const PROTOTYPE_NAMES = ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'valueOf'];
 
 const DATA_KEYS = { id: 'string', label: 'string', pathKey: 'string', detectedKey: 'string', streaming: 'boolean', interactive: 'boolean', mcp: 'string' };
-const HOOK_KEYS = { installCandidates: 'function', detectPath: 'function', prepareSpawn: 'function', syncMcpManifest: 'function' };
+const HOOK_KEYS = {
+  installCandidates: 'function', detectPath: 'function', prepareSpawn: 'function', syncMcpManifest: 'function',
+  usesStreamJsonInput: 'function', hasNativeQuestionPrompt: 'function',
+};
 
 test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据形状与修前逐字节相同', () => {
   assert.ok(Object.isFrozen(AGENT_CLI_TYPES));
@@ -48,6 +51,8 @@ test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据�
       assert.equal(typeof entry[key], kind, `${id}.${key} 是 ${kind}`);
     }
     assert.equal(agentCliAdapter(id).id, id);
+    assert.equal(agentCliAdapter(id).interactive, entry.usesStreamJsonInput);
+    assert.equal(agentCliAdapter(id).nativeAskUserQuestion, entry.hasNativeQuestionPrompt());
   }
   // /api/status 的 agentCliDrivers 是 `{ ...登记项, path }`:钩子是函数,JSON 里自然消失,下发形状与修前相同。
   // (所以钩子一律是函数、不用 null 表示「没有这一步」—— null 会出现在下发的 JSON 里。)
@@ -60,24 +65,18 @@ test('[R] 登记表成员齐全,键集合与适配器表相同;下发的数据�
 test('[R] 装机候选与起进程钩子金样', () => {
   const join = (...parts) => parts.join('/');
   assert.deepEqual(AGENT_CLI_TYPES.claude.installCandidates({ env: {}, home: '/h', join }), [], 'Claude 有自己的启动器解析');
-  assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: { KIMI_CLI_PATH: 'X:/k/kimi.exe' }, home: '/h', join, platform: 'win32' }), [
-    'X:/k/kimi.exe', 'kimi.cmd', 'kimi.exe', 'kimi', '/h/AppData/Roaming/npm/kimi.cmd', '/h/.local/bin/kimi.exe', '/h/.local/bin/kimi',
-  ]);
-  assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: {}, home: '', join, platform: 'win32' }), ['kimi.cmd', 'kimi.exe', 'kimi'], '没有 HOME 时只剩裸命令');
   assert.deepEqual(AGENT_CLI_TYPES.kimi.installCandidates({ env: { KIMI_CLI_PATH: '/custom/kimi' }, home: '/h', join, platform: 'darwin' }), [
     '/custom/kimi', 'kimi', '/h/.local/bin/kimi', '/opt/homebrew/bin/kimi', '/usr/local/bin/kimi',
   ], 'Mac uses native user and Homebrew launchers without Windows shims');
   const argv = ['-p', 'x y'];
   for (const command of ['C:\\tools\\tool.exe', 'C:\\npm\\claude.cmd', 'X:\\tools\\kimi.exe', 'kimi-not-a-shim']) {
-    const batch = srv.batchSafeSpawn(command, argv);
+    const batch = { command, args: argv, opts: {} };
     assert.deepEqual(srv.prepareAgentCliSpawn('claude', command, argv), batch, `claude 起进程 = batchSafeSpawn(${command})`);
     for (const garbage of INPUTS.filter(v => !['claude', 'kimi'].includes(v)).concat(PROTOTYPE_NAMES)) {
       assert.deepEqual(srv.prepareAgentCliSpawn(garbage, command, argv), batch, `未登记类型 ${String(garbage)} 按 claude 起进程`);
     }
   }
-  // 找不到 npm 入口时 Kimi 与 Claude 一样走 batchSafeSpawn;非数组参数按空数组。
-  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', 'X:\\tools\\kimi.exe', ['acp']), srv.batchSafeSpawn('X:\\tools\\kimi.exe', ['acp']));
-  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', 'X:\\tools\\kimi.exe', 'acp'), srv.batchSafeSpawn('X:\\tools\\kimi.exe', []));
+  assert.deepEqual(srv.prepareAgentCliSpawn('kimi', '/custom/kimi', 'acp'), { command: '/custom/kimi', args: [], opts: {} });
 });
 
 test('[N] CLI 类型归一:对输入表与修前逐项相同', () => {
@@ -115,7 +114,7 @@ test('[N] CLI 类型归一:对输入表与修前逐项相同', () => {
 
 test('[C] 适配器回合外能力:环境说明、原生提问、模型清单、原生上下文状态与压缩', () => {
   const pack = srv.getPromptPack('zh-CN').engineBrief;
-  // 环境说明(06 engineBriefFacts):登记过的 CLI 原样、provider 族归 provider、其余归 claude;交互标志只随适配器的 interactive。
+  // 环境说明与适配器共用 CLI 登记表中的交互输入与原生提问能力。
   const kindOf = engine => srv.buildEngineEnvBrief({ engine, config: { engineMode: 'interactive' } }).facts;
   for (const [engine, kind] of [['claude', 'claude'], ['kimi', 'kimi'], ['provider', 'provider'], ['openai', 'provider'], [undefined, 'claude'], ['codex', 'claude'], ['toString', 'claude']]) {
     const facts = kindOf(engine);
@@ -184,37 +183,50 @@ test('[M] MCP 清单同步一个入口:选中推、切走清、Claude 不碰、�
 
 test('[G] 迁走的调用点不再与 CLI 类型字面量比较', () => {
   const src = readServerSource();
+  const envBrief = fs.readFileSync(path.join(app, 'backend', 'engine-env-brief.cjs'), 'utf8');
+  const configSchema = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
+  const sessionEngineRoute = fs.readFileSync(path.join(app, 'backend', 'session-engine-route.cjs'), 'utf8');
+  const configPatch = fs.readFileSync(path.join(app, 'backend', 'config-patch.cjs'), 'utf8');
+  const agentAutoCompaction = fs.readFileSync(path.join(app, 'backend', 'agent-auto-compaction.cjs'), 'utf8');
+  const compactionRouting = fs.readFileSync(path.join(app, 'backend', 'compaction-routing.cjs'), 'utf8');
+  const cliMcp = fs.readFileSync(path.join(app, 'backend', 'cli-mcp-sync.cjs'), 'utf8');
+  const discovery = fs.readFileSync(path.join(app, 'backend', 'agent-cli-discovery.cjs'), 'utf8');
+  const adapters = fs.readFileSync(path.join(app, 'backend', 'agent-cli-adapters.cjs'), 'utf8');
+  const sessionExecutionRoutes = fs.readFileSync(path.join(app, 'backend', 'session-execution-routes.cjs'), 'utf8');
+  const startup = fs.readFileSync(path.join(app, 'backend', 'server-startup.cjs'), 'utf8');
+  const providerRoutes = fs.readFileSync(path.join(app, 'backend', 'provider-routes.cjs'), 'utf8');
+  const statusRoutes = fs.readFileSync(path.join(app, 'backend', 'status-routes.cjs'), 'utf8');
   const code = text => text.split('\n').map(line => line.replace(/\/\/.*$/, '')).join('\n');
   // 判据:与 'kimi' 字面量比较(kimi 只可能是 CLI 类型);agentCliType 与任何字面量比较;旧的 kind === 'claude';
   // ['claude', 'kimi'] 白名单;`? 'kimi' : 'claude'` 二选一。`engine === 'claude'` 不算 —— 那是引擎族的历史 id(CLI 族 vs provider 族)。
   const LITERAL_CLI_COMPARE = /[!=]==\s*'kimi'|'kimi'\s*[!=]==|agentCliType\s*[!=]==\s*['"`]|['"`]\s*[!=]==\s*[\w.]*agentCliType\b|\bkind\s*[!=]==\s*'claude'|\[\s*'claude'\s*,\s*'kimi'\s*\]|\?\s*'kimi'\s*:\s*'claude'/;
   const blocks = {
-    sanitizeLastUsedEngineRoute: functionBlock(src, 'sanitizeLastUsedEngineRoute'),
-    normalizeSessionEngineRoute: functionBlock(src, 'normalizeSessionEngineRoute'),
-    agentCliInstallCandidates: functionBlock(src, 'agentCliInstallCandidates'),
-    selectedAgentCli: functionBlock(src, 'selectedAgentCli'),
-    prepareAgentCliSpawn: functionBlock(src, 'prepareAgentCliSpawn'),
-    syncAgentCliMcpManifests: functionBlock(src, 'syncAgentCliMcpManifests'),
-    agentCliAdapter: functionBlock(src, 'agentCliAdapter'),
-    maybeAutoCompactAgentSession: functionBlock(src, 'maybeAutoCompactAgentSession'),
-    engineBriefFacts: functionBlock(src, 'engineBriefFacts'),
-    renderCliEnvBrief: functionBlock(src, 'renderCliEnvBrief'),
-    agentConversationContextMeta: functionBlock(src, 'agentConversationContextMeta'),
-    applyConfigPatch: functionBlock(src, 'applyConfigPatch'),
-    startServerInner: functionBlock(src, 'startServerInner'),
-    'route /api/models': bracedBlock(src, "if (req.method === 'GET' && pathname === '/api/models')"),
-    'route /api/agent/compact': bracedBlock(src, "if (req.method === 'POST' && pathname === '/api/agent/compact')"),
+    sanitizeLastUsedEngineRoute: functionBlock(configSchema, 'sanitizeLastUsedEngineRoute'),
+    normalizeSessionEngineRoute: functionBlock(sessionEngineRoute, 'normalizeSessionEngineRoute'),
+    agentCliInstallCandidates: functionBlock(discovery, 'agentCliInstallCandidates'),
+    selectedAgentCli: functionBlock(discovery, 'selectedAgentCli'),
+    prepareAgentCliSpawn: functionBlock(discovery, 'prepareAgentCliSpawn'),
+    syncAgentCliMcpManifests: functionBlock(cliMcp, 'syncAgentCliMcpManifests'),
+    agentCliAdapter: functionBlock(adapters, 'agentCliAdapter'),
+    maybeAutoCompactAgentSession: functionBlock(agentAutoCompaction, 'maybeAutoCompactAgentSession'),
+    engineBriefFacts: functionBlock(envBrief, 'engineBriefFacts'),
+    renderCliEnvBrief: functionBlock(envBrief, 'renderCliEnvBrief'),
+    agentConversationContextMeta: functionBlock(compactionRouting, 'agentConversationContextMeta'),
+    applyConfigPatch: functionBlock(configPatch, 'applyConfigPatch'),
+    startServerInner: functionBlock(startup, 'startServerInner'),
+    'route /api/models': bracedBlock(providerRoutes, "if (req.method === 'GET' && pathname === '/api/models')"),
+    'route /api/agent/compact': bracedBlock(sessionExecutionRoutes, "if (req.method === 'POST' && pathname === '/api/agent/compact')"),
   };
   for (const [name, block] of Object.entries(blocks)) {
     assert.ok(block.length > 60, `切到 ${name}`);
     assert.doesNotMatch(code(block), LITERAL_CLI_COMPARE, `${name} 不再按 CLI 名字面量分叉(问登记表 / 适配器)`);
   }
   // 配置归一里「agentCliType 必须是登记过的类型」那一句也问登记表(normalizeConfig 里仍有 Kimi 旧模型名迁移,那是 Kimi 自己的数据迁移)。
-  const normalizeConfig = code(functionBlock(src, 'normalizeConfig'));
+  const normalizeConfig = code(functionBlock(configSchema, 'normalizeConfig'));
   assert.ok(normalizeConfig.includes('if (!isAgentCliType(config.agentCliType)) {'));
   assert.doesNotMatch(normalizeConfig, /\[\s*'claude'\s*,\s*'kimi'\s*\]/);
   // /api/status 的即时模型清单一行。
-  const statusModels = code(src).split('\n').filter(line => /^\s*models: .*conversationConfig/.test(line));
+  const statusModels = code(statusRoutes).split('\n').filter(line => /^\s*models: .*conversationConfig/.test(line));
   assert.equal(statusModels.length, 1);
   assert.match(statusModels[0], /agentCliAdapter\(conversationConfig\.agentCliType\)\.modelCatalog\.offline\(conversationConfig\)/);
   // 改配置与启动预热两处的 Kimi MCP 同步都收进 01 syncAgentCliMcpManifests(按登记表推),不再直调 Kimi 的同步函数。

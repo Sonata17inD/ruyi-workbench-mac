@@ -185,7 +185,7 @@ fsp.stat = async (p, ...rest) => {
   //       翻红 —— 断言的对错直接绑定在真实源码文本上,不是绑定在这个测试自己另写的一份复现逻辑上。
   {
     const bodySrc = (() => {
-      const localSrc = readServerSource();
+      const localSrc = fs.readFileSync(path.join(WB, 'app/backend/intervention-journal.cjs'), 'utf8');
       const fnMatch = localSrc.match(/^function appendIntervention\(sessionId, record\) \{[\s\S]*?\n\}\n/m);
       if (!fnMatch) return null;
       const bodyMatch = fnMatch[0].match(/\.then\(async \(\) => \{([\s\S]*?)\}\)\.catch\(\(\) => \{\}\);/);
@@ -212,7 +212,7 @@ fsp.stat = async (p, ...rest) => {
     // (c2)
     if (bodySrc) {
       const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-      const writeBlock = new AsyncFunction('file', 'line', 'sid', 'fsp', 'repairMissionChangeTornTail', 'markPretenderIndexDirty', bodySrc);
+      const writeBlock = new AsyncFunction('file', 'line', 'sid', 'fsp', 'repairMissionChangeTornTail', 'RUYI_EVENTS', bodySrc);
       const f2 = tmpFile('c2-append-survives-repair-failure.ndjson');
       const torn2 = '{"id":"a"}\n{"id":"b","noNewline":true';
       fs.writeFileSync(f2, torn2, 'utf8');
@@ -226,7 +226,7 @@ fsp.stat = async (p, ...rest) => {
           return realTruncate2(p, ...rest);
         };
         try {
-          await writeBlock(f2, newLine, 'sid-c2', fsp, repairMissionChangeTornTail, () => {});
+          await writeBlock(f2, newLine, 'sid-c2', fsp, repairMissionChangeTornTail, { emit() {} });
         } catch (e) { writeBlockThrew = true; writeBlockErr = e; }
       } finally { fsp.truncate = realTruncate2; }
       const after2 = fs.readFileSync(f2, 'utf8');
@@ -239,8 +239,9 @@ fsp.stat = async (p, ...rest) => {
 
   // ---------- (d) 静态锁:全仓「尾窗读」原语只有一份定义 ----------
   {
-    const src = readServerSource();
-    const tailDefs = src.match(/async function readFileTail\(/g) || [];
+    const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-changes.cjs'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/intervention-journal.cjs'), 'utf8');
+    const filePersistence = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/file-persistence.cjs'), 'utf8');
+    const tailDefs = (src + '\n' + filePersistence).match(/async function readFileTail\(/g) || [];
     ok(tailDefs.length === 1, '(d) 全仓 readFileTail 只有一份定义(防止长出第五份)');
     const oldRepairDefs = src.match(/async function repairInterventionTornTail\(/g) || [];
     ok(oldRepairDefs.length === 0, '(d2) repairInterventionTornTail 已删除,全仓零残留定义');

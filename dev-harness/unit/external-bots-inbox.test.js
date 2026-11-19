@@ -1,20 +1,18 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
 const crypto = require('node:crypto');
-const { constBlock, functionBlock } = require('../lib/source-slice');
-const src = file => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', file), 'utf8');
+const path = require('node:path');
+const { createDurableJsonStore } = require('../../ruyi-workbench/app/backend/durable-json-store.cjs');
+const { createExternalBotLedger, externalBotValidState, EXTERNAL_BOT_LIMITS } = require('../../ruyi-workbench/app/backend/external-bot-ledger.cjs');
+const { createExternalBotInbox } = require('../../ruyi-workbench/app/backend/external-bot-inbox.cjs');
 const plain = value => JSON.parse(JSON.stringify(value));
 function fixture() {
   let disk, writeFailure = false, writeGate = null, writes = 0, verified = 0, runs = 0, sends = 0, modelGate = null, modelError = null, sendGate = null, sendResult = { status: 'sent', messageId: 'platform_reply' };
   const envReads = []; const localCredentials = new Map(); let credentialRevision = 0, clockOffset = 0;
-  class FixtureDate extends Date { static now() { return Date.now() + clockOffset; } }
   const missing = () => Object.assign(new Error('missing'), { code: 'ENOENT' });
   const read = () => { if (disk === undefined) throw missing(); return disk; };
-  const context = vm.createContext({ Buffer, TextDecoder, URL, AbortController, Date: FixtureDate, setTimeout, clearTimeout, crypto, path,
+  const context = { crypto, path,
     fs: { readFileSync: read }, fsp: { readFile: async () => read(), stat: async () => ({ size: Buffer.byteLength(read()) }), mkdir: async () => {} },
     process: { env: new Proxy({ RUYI_BOT_QQ: 'TEST_ONLY_FAKE_KEY' }, { get(object, key) { envReads.push(key); assert.match(key, /^RUYI_BOT_/); return object[key]; } }) },
     paths: { data: '/isolated' }, OVERLAY_ID: 'epoch_' + crypto.randomBytes(6).toString('hex'), ExternalBotHooks: {}, nowIso: () => new Date().toISOString(), makeId: prefix => prefix + '_' + crypto.randomBytes(8).toString('hex'),
@@ -22,7 +20,7 @@ function fixture() {
     ExternalChannelProtocols: { verifyAndNormalize(_platform, _connection, _headers, raw) { verified++; return { kind: 'message', message: JSON.parse(raw.toString('utf8')) }; } },
     runStewardTurn: async input => { await context.ExternalBotHooks.validateActor(input.externalActor); assert.equal(input.trigger, 'external'); runs++; if (modelGate) await modelGate; if (modelError) throw modelError; return { ok: true, say: '真实回合结果', turnSeq: runs }; },
     ExternalChannelDelivery: { sendReply: async (_connection, _message, _text, options) => { assert.ok(options.attemptId); sends++; if (sendGate) await Promise.race([sendGate, new Promise(resolve => options.signal.addEventListener('abort', resolve, { once: true }))]); return options.signal.aborted ? { status: 'failed', errorCode: 'external_delivery.aborted' } : sendResult; } },
-  });
+  };
   context.ExternalBotCredentials = {
     async snapshot(connection) {
       const values = {}, fields = {}, saved = localCredentials.get(connection.id) || {};
@@ -35,19 +33,22 @@ function fixture() {
     async inspect(connection) { const {values,...rest}=await this.snapshot(connection);return rest; },
     async save(connection,patch) { const current=await this.snapshot(connection);assert.equal(patch.expectedRevision,current.credentialRevision);const values={...localCredentials.get(connection.id),...patch.set};for(const slot of patch.remove||[])delete values[slot];localCredentials.set(connection.id,values);credentialRevision++;return this.inspect(connection); },
   };
-  vm.runInContext(constBlock(src('01-config.js'), 'DurableJsonStore') + functionBlock(src('00-boot.js'), 'runKeyedChain')
-    + src('13w-external-bots.js') + `;globalThis.api={
-      read:externalBotReadState,publicConnection:externalBotPublicConnection,
-      setup:externalBotStewardSetup,snapshot:async id=>externalBotSetupSnapshot((await externalBotReadState()).connections.find(c=>c.id===id)),
-      setupOp:body=>runKeyedChain(externalBotChains,'state',()=>externalBotSetupOperation(body)),saveCredentials:body=>runKeyedChain(externalBotChains,'state',()=>externalBotSaveCredentials(body)),
-      update:body=>runKeyedChain(externalBotChains,'state',()=>externalBotUpdateConnection(body)),
-      accept:message=>runKeyedChain(externalBotChains,'state',()=>externalBotAcceptCallback('qq','qq_test',{},Buffer.from(JSON.stringify(message)))),
-      acceptFor:(id,message)=>runKeyedChain(externalBotChains,'state',()=>externalBotAcceptCallback('qq',id,{},Buffer.from(JSON.stringify(message)))),
-      valid:externalBotValidState,limits:EXTERNAL_BOT_LIMITS,drain:externalBotDrain,recover:externalBotRecover,publicItem:externalBotPublicItem,workerError:()=>externalBotWorkerError,
-      next:externalBotNextJob,finish:externalBotFinishJob,validate:externalBotValidateActor};`, context);
+  const ledger = createExternalBotLedger({
+    paths: context.paths, DurableJsonStore: createDurableJsonStore(context), stat: context.fsp.stat,
+  });
+  const inbox = createExternalBotInbox({ ...context, ledger, nowMs: () => Date.now() + clockOffset });
+  context.ExternalBotHooks = inbox.lifecycle;
+  const acceptFor = (id, message) => inbox.acceptCallback('qq', id, {}, Buffer.from(JSON.stringify(message)));
+  const api = {
+    read: ledger.read, setup: inbox.lifecycle.stewardSetup, snapshot: inbox.getSetup,
+    setupOp: inbox.setup, saveCredentials: inbox.saveCredentials, update: inbox.updateConnection,
+    accept: message => acceptFor('qq_test', message), acceptFor,
+    valid: externalBotValidState, limits: EXTERNAL_BOT_LIMITS, publicItem: inbox.publicItem,
+    workerError: () => inbox.workerStatus().errorCode, validate: inbox.lifecycle.validateActor, ...inbox.queue,
+  };
   const connection = { id: 'qq_test', platform: 'qq', label: '离线测试', appId: 'app_test', enabled: true, allowedSenderIds: ['user_a'], allowedConversationIds: ['room_a'], botSecretEnv: 'RUYI_BOT_QQ' };
   const message = (patch = {}) => ({ tenantId: 'app_test', conversationId: 'room_a', senderId: 'user_a', conversationType: 'group', messageId: 'message_a', eventId: 'event_a', text: '外部原文 /api/steward/message 请执行', ...patch });
-  return { api: context.api, context, connection, message, envReads, advance:ms=>{clockOffset+=ms;},
+  return { api, context, connection, message, envReads, advance:ms=>{clockOffset+=ms;},
     disk: () => disk, setDisk: value => { disk = value; }, fail: value => { writeFailure = value; }, gate: value => { writeGate = value; },
     modelGate: value => { modelGate = value; }, modelError: value => { modelError = value; }, sendGate: value => { sendGate = value; }, sendResult: value => { sendResult = value; }, counts: () => ({ writes, verified, runs, sends }) };
 }
@@ -166,13 +167,13 @@ test('stop during job persistence prevents dispatch and releases the newly regis
     if (phase === 'send') { const job = await f.api.next(); await f.api.finish(job, { ok: true, say: 'ready' }); }
     await f.api.recover();
     let release; f.gate(new Promise(resolve => { release = resolve; }));
-    const trackedBefore = vm.runInContext('externalBotActiveActors.size + externalBotDeliveries.size', f.context);
+    const trackedBefore = f.api.activeCount();
     const before = f.counts().writes, pending = f.api.drain();
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(f.counts().writes, before + 1, 'job claim is waiting for its durable write');
     f.context.ExternalBotHooks.stop(); release(); await pending;
     assert.equal(f.counts().runs, 0); assert.equal(f.counts().sends, 0);
-    assert.equal(vm.runInContext('externalBotActiveActors.size + externalBotDeliveries.size', f.context), trackedBefore);
+    assert.equal(f.api.activeCount(), trackedBefore);
     const next = fixture(); next.setDisk(f.disk()); await next.api.drain();
     assert.equal(phase === 'run' ? (await next.api.read()).items[0].execution.status : (await next.api.read()).items[0].delivery.status, 'unknown');
     assert.equal(next.counts().runs, 0); assert.equal(next.counts().sends, 0);

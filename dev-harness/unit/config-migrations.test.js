@@ -20,12 +20,13 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cfg-migrations-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
+const { functionBlock } = require('../lib/source-slice');
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const { normalizeConfig, CONFIG_MIGRATIONS, CONFIG_SCHEMA } = require(path.join(app, 'server.js'));
 
-// Windows-shaped golden inputs retain their original Windows normalization contract.
+// Golden migrations use Mac absolute paths and preserve explicit settings.
 const { loadServerInternals } = require('../lib/server-internals');
-const windowsConfig = loadServerInternals(['normalizeConfig'], { testPlatform: 'win32' });
+const macConfig = loadServerInternals(['normalizeConfig']);
 
 const FLAGS = ['runtimeHistoryReadDedupV1', 'runtimeSummaryPromptI18nV1', 'runtimeReseedTailUnitsV1'];
 const F3 = { runtimeHistoryReadDedupV1: false, runtimeSummaryPromptI18nV1: false, runtimeReseedTailUnitsV1: false };
@@ -39,10 +40,10 @@ const CASES = {
   'schema 9: legacy stays legacy': { configSchema: 9, engineMode: 'legacy' },
   'schema 9: print alias folds to legacy': { configSchema: 9, engineMode: 'print' },
   'schema 13: bogus engine falls back': { configSchema: 13, engineMode: 'bogus' },
-  'schema 9: no workspaces seeds default + recent': { configSchema: 9, defaultWorkspace: 'D:\\Work\\main', recentWorkspaces: ['D:\\Work\\r1', 'd:\\work\\MAIN', 5, '', 'D:\\Work\\r2\\'] },
-  'schema 9: only unusable rows still seeds': { configSchema: 9, defaultWorkspace: '"D:\\Quoted"', workspaces: [null, 5, 'D:\\str', [], {}, { path: '  ' }] },
-  'schema 9: a usable row blocks the seed': { configSchema: 9, defaultWorkspace: 'D:\\Work\\main', recentWorkspaces: ['D:\\Work\\r1'], workspaces: [{ path: 'D:\\Work\\kept', write: false, note: ' notes ' }] },
-  'schema 10: empty table is not reseeded': { configSchema: 10, defaultWorkspace: 'D:\\Work\\main', recentWorkspaces: ['D:\\Work\\r1'], workspaces: [] },
+  'schema 9: no workspaces seeds default + recent': { configSchema: 9, defaultWorkspace: '/Volumes/FixtureD/Work/main', recentWorkspaces: ['/Volumes/FixtureD/Work/r1', '/Volumes/FixtureD/Work/main', 5, '', '/Volumes/FixtureD/Work/r2/'] },
+  'schema 9: only unusable rows still seeds': { configSchema: 9, defaultWorkspace: '"/Volumes/FixtureD/Quoted"', workspaces: [null, 5, '/Volumes/FixtureD/str', [], {}, { path: '  ' }] },
+  'schema 9: a usable row blocks the seed': { configSchema: 9, defaultWorkspace: '/Volumes/FixtureD/Work/main', recentWorkspaces: ['/Volumes/FixtureD/Work/r1'], workspaces: [{ path: '/Volumes/FixtureD/Work/kept', write: false, note: ' notes ' }] },
+  'schema 10: empty table is not reseeded': { configSchema: 10, defaultWorkspace: '/Volumes/FixtureD/Work/main', recentWorkspaces: ['/Volumes/FixtureD/Work/r1'], workspaces: [] },
   'schema 9: blank default seeds home': { configSchema: 9, defaultWorkspace: '   ' },
   'schema 11: explicit-off flags flip on': { configSchema: 11, ...F3 },
   'schema 11: string "false" is coerced then flipped': { configSchema: 11, runtimeHistoryReadDedupV1: 'false', runtimeSummaryPromptI18nV1: 'false', runtimeReseedTailUnitsV1: 'false' },
@@ -53,7 +54,7 @@ const CASES = {
   'schema 13: killOnDisconnect=true stays': { configSchema: 13, killOnDisconnect: true },
   'schema 12: string "true" killOnDisconnect untouched': { configSchema: 12, killOnDisconnect: 'true' },
   'garbage schema counts as 0': { configSchema: 'x', engineMode: 'legacy', killOnDisconnect: true, ...F3 },
-  'schema 4 full old file': { configSchema: 4, version: '1.0.0', engineMode: 'print', killOnDisconnect: true, ...F3, defaultWorkspace: 'E:\\proj', recentWorkspaces: ['E:\\proj', 'E:\\other'], unknownFutureKey: 1 },
+  'schema 4 full old file': { configSchema: 4, version: '1.0.0', engineMode: 'print', killOnDisconnect: true, ...F3, defaultWorkspace: '/Volumes/FixtureE/proj', recentWorkspaces: ['/Volumes/FixtureE/proj', '/Volumes/FixtureE/other'], unknownFutureKey: 1 },
   // to:14(2026-10 出厂权限档翻成智能自动):盘上已有配置却没存过档的钉回当年的默认 'default';存了的原样保留;
   // 全新安装(null / 空对象)与 14 的稀疏文件吃到新默认 'auto';不认识的档仍回落最保守的 'default'。
   'schema 13: no stored mode pins the old default': { configSchema: 13, killOnDisconnect: false },
@@ -74,10 +75,10 @@ const GOLDEN = {
   "schema 9: legacy stays legacy": {"engineMode":"legacy","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"<HOME>","read":true,"write":true,"execute":true}],"defaultWorkspace":"<HOME>","explicit":["engineMode","permissionMode","workspaces"],"changed":true},
   "schema 9: print alias folds to legacy": {"engineMode":"legacy","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"<HOME>","read":true,"write":true,"execute":true}],"defaultWorkspace":"<HOME>","explicit":["engineMode","permissionMode","workspaces"],"changed":true},
   "schema 13: bogus engine falls back": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
-  "schema 9: no workspaces seeds default + recent": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"D:\\Work\\main","read":true,"write":true,"execute":true},{"path":"D:\\Work\\r1","read":true,"write":true,"execute":true},{"path":"D:\\Work\\r2","read":true,"write":true,"execute":true}],"defaultWorkspace":"D:\\Work\\main","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
-  "schema 9: only unusable rows still seeds": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"D:\\Quoted","read":true,"write":true,"execute":true}],"defaultWorkspace":"D:\\Quoted","explicit":["defaultWorkspace","permissionMode","workspaces"],"changed":true},
-  "schema 9: a usable row blocks the seed": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"D:\\Work\\kept","read":true,"write":false,"execute":true,"note":"notes"}],"defaultWorkspace":"D:\\Work\\kept","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
-  "schema 10: empty table is not reseeded": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"D:\\Work\\main","explicit":["defaultWorkspace","permissionMode","recentWorkspaces"],"changed":true},
+  "schema 9: no workspaces seeds default + recent": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"/Volumes/FixtureD/Work/main","read":true,"write":true,"execute":true},{"path":"/Volumes/FixtureD/Work/r1","read":true,"write":true,"execute":true},{"path":"/Volumes/FixtureD/Work/r2","read":true,"write":true,"execute":true}],"defaultWorkspace":"/Volumes/FixtureD/Work/main","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
+  "schema 9: only unusable rows still seeds": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"/Volumes/FixtureD/Quoted","read":true,"write":true,"execute":true}],"defaultWorkspace":"/Volumes/FixtureD/Quoted","explicit":["defaultWorkspace","permissionMode","workspaces"],"changed":true},
+  "schema 9: a usable row blocks the seed": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"/Volumes/FixtureD/Work/kept","read":true,"write":false,"execute":true,"note":"notes"}],"defaultWorkspace":"/Volumes/FixtureD/Work/kept","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
+  "schema 10: empty table is not reseeded": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"/Volumes/FixtureD/Work/main","explicit":["defaultWorkspace","permissionMode","recentWorkspaces"],"changed":true},
   "schema 9: blank default seeds home": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"<HOME>","read":true,"write":true,"execute":true}],"defaultWorkspace":"<HOME>","explicit":["permissionMode","workspaces"],"changed":true},
   "schema 11: explicit-off flags flip on": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
   "schema 11: string \"false\" is coerced then flipped": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
@@ -88,7 +89,7 @@ const GOLDEN = {
   "schema 13: killOnDisconnect=true stays": {"engineMode":"interactive","killOnDisconnect":true,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["killOnDisconnect","permissionMode"],"changed":true},
   "schema 12: string \"true\" killOnDisconnect untouched": {"engineMode":"interactive","killOnDisconnect":"true","permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["killOnDisconnect","permissionMode"],"changed":true},
   "garbage schema counts as 0": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"<HOME>","read":true,"write":true,"execute":true}],"defaultWorkspace":"<HOME>","explicit":["permissionMode","workspaces"],"changed":true},
-  "schema 4 full old file": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"E:\\proj","read":true,"write":true,"execute":true},{"path":"E:\\other","read":true,"write":true,"execute":true}],"defaultWorkspace":"E:\\proj","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
+  "schema 4 full old file": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[{"path":"/Volumes/FixtureE/proj","read":true,"write":true,"execute":true},{"path":"/Volumes/FixtureE/other","read":true,"write":true,"execute":true}],"defaultWorkspace":"/Volumes/FixtureE/proj","explicit":["defaultWorkspace","permissionMode","recentWorkspaces","workspaces"],"changed":true},
   "schema 13: no stored mode pins the old default": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
   "schema 13: explicit auto stays auto": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"auto","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
   "schema 12 full file: stored default stays default": {"engineMode":"interactive","killOnDisconnect":false,"permissionMode":"default","flags":[true,true,true],"workspaces":[],"defaultWorkspace":"<HOME>","explicit":["permissionMode"],"changed":true},
@@ -124,22 +125,21 @@ test('[A] 迁移表按版本升序、每个版本恰好一条、不超过 CONFIG
 });
 
 test('[B] normalizeConfig 里不再有散落的 schema 阶梯,迁移只从一个点进', () => {
-  const src = fs.readFileSync(path.join(app, 'src', '01-config.js'), 'utf8');
-  const start = src.indexOf('function normalizeConfig(');
-  assert.ok(start > 0, '找不到 normalizeConfig');
-  const end = src.indexOf('\n}\n', start);
-  const body = src.slice(start, end);
+  const src = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
+  const body = functionBlock(src, 'normalizeConfig');
+  assert.ok(body.length > 100, '找不到 normalizeConfig');
   const ladders = body.match(/incomingConfigSchema\s*<\s*\d+/g) || [];
   assert.deepEqual(ladders, [], '一次性迁移请登记进 CONFIG_MIGRATIONS,不要在函数体里写 incomingConfigSchema < N');
   assert.equal((body.match(/applyConfigMigrations\(/g) || []).length, 1, 'applyConfigMigrations 在 normalizeConfig 里应恰好调用一次');
-  const all = fs.readdirSync(path.join(app, 'src')).filter(f => f.endsWith('.js')).map(f => fs.readFileSync(path.join(app, 'src', f), 'utf8')).join('\n');
+  const all = ['src', 'backend'].flatMap(dir => fs.readdirSync(path.join(app, dir)).filter(f => /\.c?js$/.test(f))
+    .map(f => fs.readFileSync(path.join(app, dir, f), 'utf8'))).join('\n');
   assert.equal((all.match(/(?<!function )applyConfigMigrations\(config\b/g) || []).length, 1, 'applyConfigMigrations 只有 normalizeConfig 里那一个调用点');
 });
 
 test('[C] 金样:迁移相关输出逐项钉死', () => {
   assert.deepEqual(Object.keys(GOLDEN), Object.keys(CASES), '金样与输入一一对应');
   for (const [name, raw] of Object.entries(CASES)) {
-    assert.deepEqual(project(windowsConfig.normalizeConfig(clone(raw))), GOLDEN[name], name);
+    assert.deepEqual(project(macConfig.normalizeConfig(clone(raw))), GOLDEN[name], name);
   }
 });
 

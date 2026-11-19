@@ -75,9 +75,9 @@ test('invalid or future revisions refuse before replacing body; rewrite overflow
 });
 test('head commit updates live revision even if a later body stat step fails',async()=>{
   const s=await fixture(),before=s.providerHistoryRevision;s.providerHistory.push({role:'user',content:'committed before stat fault'});
-  internals.__eval("globalThis.__imageOriginalStamp = sessionBodyFileStamp; sessionBodyFileStamp = async () => { throw new Error('isolated post-commit stat fault'); };");
+  internals.__eval("globalThis.__imageOriginalStamp = SessionBodies.sessionBodyFileStamp; SessionBodies.sessionBodyFileStamp = async () => { throw new Error('isolated post-commit stat fault'); };");
   try {await assert.rejects(saveSession(s,{requirePersisted:true}),/post-commit stat fault/);}
-  finally {internals.__eval('sessionBodyFileStamp = globalThis.__imageOriginalStamp; delete globalThis.__imageOriginalStamp;');}
+  finally {internals.__eval('SessionBodies.sessionBodyFileStamp = globalThis.__imageOriginalStamp; delete globalThis.__imageOriginalStamp;');}
   const head=JSON.parse(fs.readFileSync(sessionPath(s.id)));assert.equal(head.providerHistoryRevision,before+1);assert.equal(s.providerHistoryRevision,head.providerHistoryRevision);
   const disk=await loadSession(s.id);assert.equal(disk.providerHistory.at(-1).content,'committed before stat fault');
 });
@@ -160,9 +160,10 @@ test('write-chain recovery removes only verified uncommitted tails on either bod
 test('failed uncommitted-tail truncation refuses save without blessing the tail',async()=>{
   const s=await fixture(),file=sessionPath(s.id),bp=sessionBodyPaths(s.id),head=fs.readFileSync(file);
   fs.appendFileSync(bp.provider,JSON.stringify({role:'user',content:'uncommitted tail'})+'\n');const body=fs.readFileSync(bp.provider);
-  internals.__eval('globalThis.__imageTruncate=truncateSessionBody;truncateSessionBody=async()=>false;');
+  const originalTruncate = fs.promises.truncate;
+  fs.promises.truncate = async () => { throw Object.assign(new Error('isolated truncate fault'), { code: 'EIO' }); };
   try {await assert.rejects(saveSession(s,{requirePersisted:true}),{code:'SESSION_BODY_UNVERIFIED'});}
-  finally {internals.__eval('truncateSessionBody=globalThis.__imageTruncate;delete globalThis.__imageTruncate;');}
+  finally {fs.promises.truncate = originalTruncate;}
   assert.deepEqual(fs.readFileSync(file),head);assert.deepEqual(fs.readFileSync(bp.provider),body);
   assert.deepEqual((await loadSession(s.id)).providerHistory,s.providerHistory);
 });

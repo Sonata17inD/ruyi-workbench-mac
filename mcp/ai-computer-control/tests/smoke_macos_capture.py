@@ -50,6 +50,13 @@ class NativeIPC(unittest.TestCase):
                 macos.request({"op": "status"})
             self.assertEqual(caught.exception.code, "capture_failed")
 
+    def test_failed_status_is_unknown_not_missing(self):
+        self.reply({"ok": True, "protocolVersion": 2})
+        state = macos.capability()
+        self.assertTrue(state["installed"])
+        self.assertFalse(state["queryReady"])
+        self.assertIsNone(state["ready"])
+
     def test_permission_lock_and_query_capabilities_remain_distinct(self):
         for granted, locked in ((False, False), (True, True), (True, False)):
             self.reply({"ok": True, "protocolVersion": 1, "authorization": "granted" if granted else "denied",
@@ -133,6 +140,21 @@ class CaptureTools(unittest.TestCase):
         self.assertEqual(result["width"] / result["scale"], 101)
         self.assertEqual(result["height"] / result["scale_y"], 51)
         self.assertNotEqual(result["scale"], result["scale_y"])
+
+    def test_native_preview_retains_source_scale_and_forwards_requested_budget(self):
+        image, info = self.frame(size=(31, 16))
+        info["source_pixel_scale"] = {"x": 2, "y": 2}
+        with patch.object(macos, "capture", return_value=(image, info)) as capture:
+            result = self.tools.screenshot(max_width=31)
+        self.assertEqual(capture.call_args.kwargs["max_width"], 31)
+        self.assertEqual(result["source_pixel_scale"], {"x": 2, "y": 2})
+        self.assertEqual(result["width"] / result["scale"], 101)
+        self.assertEqual(result["height"] / result["scale_y"], 51)
+        with patch.object(macos, "request") as request:
+            for width in (True, -1, 1.5, 16385):
+                with self.assertRaises(macos.DesktopError):
+                    macos.capture(max_width=width)
+            request.assert_not_called()
 
     def test_invalid_regions_do_not_start_native_capture(self):
         with patch.object(macos, "capture") as capture:

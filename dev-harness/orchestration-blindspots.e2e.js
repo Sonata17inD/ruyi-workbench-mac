@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *  S2 loop×retry 收敛:子回合 loop-guard(连击 5 次中止)× 节点 failurePolicy:'retry' 的交互。
  *     中止不是 transient,但当前重试分类不区分 —— 无论将来是否细化分类,都必须【收敛】:
  *     attempts 封顶 maxRetries+1、每尝试仍在第 5 连击中止、run 到终态不悬挂、中止原因不丢。
- *  S3 双引擎 tier 等价:tierModelForNode/resolveNodeModel 源抽取直测。等价 = 决策契约对称:
+ *  S3 双引擎 tier 等价:直接验证生产模型选择服务。等价 = 决策契约对称:
  *     claude 引擎任何 tier 恒 ''(不替 CLI 挑模型);openai 按 tier 从【本引擎池】挑,绝不跨引擎
  *     (别名 opus/sonnet/haiku 与代理缓存 id 都必须被排除);显式 model 两引擎都原样尊重;'inherit'
  *     两引擎都归 ''。
@@ -137,23 +137,11 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
   if (tA && tA !== 'timeout') server.releaseResourceLease(tA);
   server.releaseResourceLease(hA);
 
-  // ───────────────── S3: 双引擎 tier 等价(源抽取直测) ─────────────────
+  // ───────────────── S3: 双引擎 tier 等价 ─────────────────
   console.log('── S3: 双引擎 tier 等价 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
-  function extractFn(name) {
-    const re = new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`, 'm');
-    const m = src.match(re);
-    if (!m) throw new Error('extract failed: ' + name);
-    return m[0];
-  }
-  const aliasMatch = src.match(/const CLAUDE_ALIAS_IDS = new Set\(\[[^\]]+\]\)/);
-  ok(!!aliasMatch, 'S3 CLAUDE_ALIAS_IDS 可抽取');
-  const sandbox = new Function(
-    'getProxyModelsCache',
-    `${aliasMatch[0]};\n${extractFn('modelCapabilityTier')}\n${extractFn('tierModelForNode')}\n${extractFn('resolveNodeModel')}\nreturn { modelCapabilityTier, tierModelForNode, resolveNodeModel };`
-  );
-  // 代理缓存桩:假装 /v1/models 发现过 kimi-k2(Claude 端),它【绝不】应进 openai 池。
-  const tier = sandbox(() => ({ models: [{ id: 'kimi-k2' }] }));
+  const { createModelSelection } = require('../ruyi-workbench/app/backend/model-selection.cjs');
+  fs.writeFileSync(path.join(HOME, 'proxy-models-cache.json'), JSON.stringify({ models: [{ id: 'kimi-k2' }] }));
+  const tier = createModelSelection({ paths: { data: HOME } });
   const prov = { id: 'p1', model: 'qwen-max', models: [{ id: 'qwen-max' }, { id: 'qwen-turbo' }, { id: 'glm-4' }] };
   const cfgT = { agentAutoModelTiering: true, extraModels: [], knownModels: [] };
   for (const t of ['read', 'edit', 'exec']) {
@@ -182,14 +170,15 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
 
   // ───────────────── S4 静态锁:守卫先于 append ─────────────────
   console.log('── S4: 双冷 resume 窄窗(静态锁 + 并发行为锁) ──');
-  const branchStart = src.indexOf('if (existingRun) {');
-  const appendAt = src.indexOf("appendAgentRunEvent(run, { type: 'run_resumed'");
-  const guardAt = src.indexOf('resumeInFlight.has(runId)', branchStart);
-  const markAt = src.indexOf('resumeInFlight.add(runId)', branchStart);
-  const releaseAt = src.indexOf('resumeInFlight.delete(runId)', branchStart);
+  const workflow = fs.readFileSync(path.join(WB, 'app/backend/agent-workflow.cjs'), 'utf8');
+  const branchStart = workflow.indexOf('if (existingRun) {');
+  const appendAt = workflow.indexOf("appendAgentRunEvent(run, { type: 'run_resumed'");
+  const guardAt = workflow.indexOf('resumeInFlight.has(runId)', branchStart);
+  const markAt = workflow.indexOf('resumeInFlight.add(runId)', branchStart);
+  const releaseAt = workflow.indexOf('resumeInFlight.delete(runId)', branchStart);
   ok(branchStart > 0 && guardAt > branchStart && guardAt < markAt && markAt < appendAt && appendAt < releaseAt,
     'S4 静态锁:守卫 → 占位 → append → finally 释放,全序在 existingRun 分支内');
-  ok(/const resumeInFlight = new Set\(\)/.test(src), 'S4 静态锁:resumeInFlight 在飞标记集定义在');
+  ok(/const resumeInFlight = new Set\(\)/.test(workflow), 'S4 静态锁:恢复占位由工作流服务持有');
 
   // ───────────────── S2 + S4 行为:同一套 workbench 连跑 ─────────────────
   const FP = await getFreePort(), WP = await getFreePort();

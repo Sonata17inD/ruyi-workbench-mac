@@ -1,8 +1,21 @@
 // E2E: 20-T1/20-C1/20-F1 runtime optimization pure logic + wiring locks. No ports, no model calls.
 'use strict';
-const crypto = require('crypto');
+const { isDeepStrictEqual } = require('node:util');
+const rules = require('../ruyi-workbench/app/backend/context-governance-rules.json');
+const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
 const { readServerSource } = require('./src-reader');
-const src = readServerSource();
+const src = [readServerSource(), ...['runtime-policy', 'config-defaults', 'config-schema']
+  .map(name => require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend', name + '.cjs'), 'utf8'))].join('\n');
+const fileToolsSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-tools.cjs'), 'utf8');
+const summarySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-summary.cjs'), 'utf8');
+const kernelSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-kernel.cjs'), 'utf8');
+const compactionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/session-compaction.cjs'), 'utf8');
+const providerTurn = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
+const providerStream = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-stream.cjs'), 'utf8');
+const evidenceSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/summary-evidence.cjs'), 'utf8');
+const toolCatalogSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/tool-catalog.cjs'), 'utf8');
+const t1 = require('../ruyi-workbench/app/backend/tool-catalog.cjs');
+const { classifyRuntimeToolFailure } = require('../ruyi-workbench/app/backend/runtime-tool-telemetry.cjs');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
 
@@ -20,9 +33,13 @@ ok(/function sessionNotesInjectEnabled\(config\)/.test(src) && /function session
 ok(/runtimeEstimateBucketsV1: true/.test(src), 'S runtimeEstimateBucketsV1 defaults true (105e 动态压缩门已过,显式 false 回退)');
 ok(/'runtimeSessionNotesMergeV1', 'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1'/.test(src), 'S runtimeEstimateBucketsV1 入严格布尔 sanitize 表(105c/105d 邻接不动;105f 顺排其后)');
 ok(/function estimateBucketsEnabled\(config\)/.test(src), 'S estimateBucketsEnabled 唯一判定点存在');
-ok(/function setEstimateBucketsV1\(on\)/.test(src) && /function classifyTextForEstimate\(str\)/.test(src), 'S 105e 镜像 setter + 三桶分类器存在');
-ok(/estimation: \{ sampleChars: 2048, jsonStructDensity: 0\.05, codeSignalThreshold: 3, factors: \{ json: 2\.8, code: 3\.2 \} \}/.test(src), 'S rules estimation 块(json 2.8 / code 3.2)在产物 fallback 内');
-ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(src), 'S 入口镜像刷新接线(runOpenAiTurn/runSubAgentCore;maybeAutoCompact 唯一调用点在回合内,不重复刷新)');
+const estimator = createTokenEstimation();
+ok(typeof estimator.setEstimateBucketsV1 === 'function' && typeof estimator.classifyTextForEstimate === 'function',
+  'S 105e 实际估算模块提供分桶 setter 和分类器');
+ok(isDeepStrictEqual(rules.estimation, { sampleChars: 2048, jsonStructDensity: 0.05, codeSignalThreshold: 3, factors: { json: 2.8, code: 3.2 } }),
+  'S 运行时 JSON 锁定估算分桶规则');
+const subagentRunner = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/subagent-runner.cjs'), 'utf8');
+ok(/setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(subagentRunner) && /setEstimateBucketsV1\(estimateBucketsEnabled\(config\)\)/.test(providerTurn), 'S 主回合与子代理入口均刷新估算设置');
 // 105f: 摘要单发优先 —— 历史派生 20–28K 配对模拟与 400 降级门通过后默认开启;显式 false 回退 45a/22-S0。
 ok(/runtimeSummarySingleShotV1: true/.test(src), 'S runtimeSummarySingleShotV1 defaults true (105f 历史派生模拟门已过)');
 ok(/'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1'/.test(src), 'S runtimeSummarySingleShotV1 入严格布尔 sanitize 表(105e 邻接不动;105g 顺排其后)');
@@ -30,55 +47,59 @@ ok(/function summarySingleShotEnabled\(config\)/.test(src), 'S summarySingleShot
 ok(/summarySingleShotMaxTokensV1: 32768/.test(src) && /Math\.min\(131072, Math\.max\(8192, Math\.round\(n\)\)\) : 32768/.test(src), 'S 单发上限默认 32768 且 sanitize 钳位 [8192,131072](无无限档)');
 // 126-111d 重钉签名:reserve 的预算里含「摘要 prompt 有多长」,而 prompt 从此分中英两份 ——
 // 它必须知道这次用的是哪一份,否则英文那份的长度会按中文的算(估算偏差直接进单发预算)。
-ok(/function summarySingleShotCap\(config, provider, model\)/.test(src) && /function summarySingleShotReserveTokens\(config\)/.test(src), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
-ok(/singleShotReserve: \{ systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 \}/.test(src) && /singleShotCap: \{ default: 32768, min: 8192, max: 131072 \}/.test(src), 'S rules singleShotReserve/singleShotCap 块在产物 fallback 内(expectedOutputTokens 随 c7d2507 摘要策略 2048->6144 重钉)');
-ok(/if \(sc\.ok \|\| !singleOn \|\| !isContextOverflowError\(sc\.error\)\) return sc;/.test(src), 'S 105f 仅可识别上下文超窗 400 才降级,其余失败原样上浮');
-ok(/degradedFromSingle: true/.test(src), 'S 105f 降级标记落 mapReduce 元数据(失败调用成本可归因)');
+ok(/function summarySingleShotCap\(config, provider, model\)/.test(summarySource) && /function summarySingleShotReserveTokens\(config\)/.test(summarySource), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
+ok(isDeepStrictEqual(rules.summary.singleShotReserve, { systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 })
+  && isDeepStrictEqual(rules.summary.singleShotCap, { default: 32768, min: 8192, max: 131072 }),
+  'S 运行时 JSON 锁定单发余量与上限');
+ok(/if \(sc\.ok \|\| !singleOn \|\| !isContextOverflowError\(sc\.error\)\) return sc;/.test(summarySource), 'S 105f 仅可识别上下文超窗 400 才降级,其余失败原样上浮');
+ok(/degradedFromSingle: true/.test(summarySource), 'S 105f 降级标记落 mapReduce 元数据(失败调用成本可归因)');
 // 105g(4.3 首项): map-reduce 全局事实表 —— 真实 history-24 配对 A/B 门(实体保留 18.8%→75.0%,调用数零增加)通过后默认开启。
 ok(/runtimeSummaryFactTableV1: true/.test(src), 'S runtimeSummaryFactTableV1 defaults true (105g 真实历史 A/B 门已过,显式 false 回退)');
 ok(/'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1', 'runtimeSummaryRefineV1'/.test(src), 'S runtimeSummaryFactTableV1 入严格布尔 sanitize 表(105f 邻接不动;105h 顺排其后)');
 ok(/function summaryFactTableEnabled\(config\)/.test(src), 'S summaryFactTableEnabled 唯一判定点存在');
 ok(/summaryFactTableMaxSamplesV1: 64/.test(src) && /function summaryFactTableCap\(config\)/.test(src), 'S 105g 事实表甜点位上限配置与唯一解析点存在(超长历史门选 64)');
-ok(/function buildSummaryFactTableMessages\(history(?:, maxSamplesOverride)?\)/.test(src), 'S 105g 事实表构建助手存在(复用 105c 抽取器,零 LLM 调用)');
-ok(/factTable: \{\n        maxSamples: 64,/.test(src), 'S rules factTable 块(maxSamples 64)在产物 fallback 内');
-ok(/factChunkMsg \? \[\.\.\.chunks\[ci\], factChunkMsg\] : chunks\[ci\]/.test(src), 'S 105g 分段注入守门(null 时请求体逐字节不变)');
-ok(/factTable: \{ entities: factTable\.entities \}/.test(src), 'S 105g 事实表元数据落 mapReduce.factTable');
+ok(/function buildSummaryFactTableMessages\(history(?:, maxSamplesOverride)?\)/.test(evidenceSource), 'S 105g 事实表构建助手存在(复用 105c 抽取器,零 LLM 调用)');
+ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
+ok(/factChunkMsg \? \[\.\.\.chunks\[ci\], factChunkMsg\] : chunks\[ci\]/.test(summarySource), 'S 105g 分段注入守门(null 时请求体逐字节不变)');
+ok(rules.summary.factTable.maxSamples === 64, 'S 事实表运行规则至多采样 64 项');
 // 105h(4.3 第二项): <=4 块顺序 refine —— 总门取证前默认关,任一步失败整条回退现有 map-reduce。
 ok(/runtimeSummaryRefineV1: false/.test(src), 'S runtimeSummaryRefineV1 总门无净收益,默认关闭');
 ok(/'runtimeSummaryFactTableV1', 'runtimeSummaryRefineV1', 'runtimeBudgetGuardV1'/.test(src), 'S runtimeSummaryRefineV1 入严格布尔 sanitize 表(105g 邻接不动;106 #13a 顺排其后)');
 ok(/function summaryRefineEnabled\(config\)/.test(src), 'S summaryRefineEnabled 唯一判定点存在');
-ok(/refine: \{\n        maxChunks: 4,/.test(src), 'S rules refine 块(maxChunks 4)在产物 fallback 内');
+ok(rules.summary.refine.maxChunks === 4, 'S refine 运行规则至多处理 4 块');
 // 106 #13a: 预算保护基础层 —— 逐项取证纪律,默认关;预警/预留/停止新增调用/暂停恢复四件套。
 ok(/runtimeBudgetGuardV1: false/.test(src), 'S runtimeBudgetGuardV1 默认关闭(106 波逐项取证,未过门不启用)');
 ok(/'runtimeSummaryRefineV1', 'runtimeBudgetGuardV1', 'runtimeToolTimeBudgetShadowV1', 'runtimeToolTimeBudgetV1', 'runtimeVolatileTailLayoutV1', 'runtimeAppendOnlyToolSchemasV1', 'runtimeExecResultCacheV1', 'runtimeFailureTelemetryV1'/.test(src), 'S 106 六开关入严格布尔 sanitize 表(105h 邻接不动;#13a/#1/#2a 顺排,failureTelemetry 殿后)');
 ok(/budgetGuardTurnTokensV1: 0/.test(src) && /budgetGuardWarnRatioV1: 0\.8/.test(src), 'S #13a 预算默认 0(不设)且预警比例缺省 0.8');
 ok(/function budgetGuardEnabled\(config\)/.test(src) && /function budgetGuardTurnTokens\(config\)/.test(src) && /function budgetGuardWarnRatio\(config\)/.test(src), 'S #13a 唯一判定点与阈值解析存在');
-ok(/function budgetGuardDecision\(spent, reserveEstimate, budget, warnRatio\)/.test(src) && /budgetGuardDecision\(bgSpent, estBeforeCall, budgetGuardBudget, budgetGuardWarn\)/.test(src), 'S #13a 决策纯函数(预警/预留/触顶)存在且接入迭代边界');
-ok(/state: 'budget_guard_paused'/.test(src) && /m\.autoMode = 'supervised'/.test(src), 'S #13a 触顶暂停 until-done(复用 Mission 控制面,降 supervised 非报错)');
+ok(/function budgetGuardDecision\(spent, reserveEstimate, budget, warnRatio\)/.test(src) && /budgetGuardDecision\(bgSpent, estBeforeCall, budgetGuardBudget, budgetGuardWarn\)/.test(providerTurn), 'S #13a 决策纯函数(预警/预留/触顶)存在且接入迭代边界');
+ok(/state: 'budget_guard_paused'/.test(providerTurn) && /m\.autoMode = 'supervised'/.test(providerTurn), 'S #13a 触顶暂停 until-done(复用 Mission 控制面,降 supervised 非报错)');
 // 106 #13a-t: 长命令时间预算 —— shadow/主动双开关默认关;硬终态沿既有 toolAbort 杀树路径。
 ok(/runtimeToolTimeBudgetShadowV1: false/.test(src) && /runtimeToolTimeBudgetV1: false/.test(src), 'S 13a-t shadow/主动双开关默认关闭');
 ok(/function toolTimeBudgetEnabled\(config\)/.test(src) && /function toolTimeBudgetShadowEnabled\(config\)/.test(src), 'S 13a-t 双开关唯一判定点存在');
-ok(/toolAbort\.abort\('tool_time_budget'\)/.test(src), 'S 13a-t 硬终态复用 toolAbort 杀树路径(不造第二套控制器)');
-ok(/signal\.reason === 'tool_time_budget'/.test(src) && /budgetKilled: true/.test(src), 'S 13a-t 04 中断原因感知(仅新原因走专用文案,旧原因逐字节不变)');
-ok(/kind: 'tool_byte_budget_shadow'/.test(src), 'S 13a-t 字节轴只计数不改写(20-C1 High 未解除)');
+ok(/toolAbort\.abort\('tool_time_budget'\)/.test(providerTurn), 'S 13a-t 硬终态复用 toolAbort 杀树路径(不造第二套控制器)');
+const shellSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/desktop-shell.cjs'), 'utf8');
+ok(/signal\.reason === 'tool_time_budget'/.test(shellSource) && /budgetKilled: true/.test(shellSource), 'S 13a-t 04 中断原因感知(仅新原因走专用文案,旧原因逐字节不变)');
+ok(/kind: 'tool_byte_budget_shadow'/.test(providerTurn), 'S 13a-t 字节轴只计数不改写(20-C1 High 未解除)');
 // 106 #1 G1/G2: 前缀缓存布局修复 —— G1 保持默认关,G2 经真实 DeepSeek A/B 门后默认开。
 ok(/runtimeVolatileTailLayoutV1: false/.test(src) && /runtimeAppendOnlyToolSchemasV1: true/.test(src), 'S #1 G1 默认关闭、G2 真实 provider 门后默认开启');
 ok(/function volatileTailLayoutEnabled\(config\)/.test(src) && /function appendOnlyToolSchemasEnabled\(config\)/.test(src), 'S #1 两开关唯一判定点存在');
-ok(/if \(turnVolatile && volatileTail\) appendPromptToLastUserMessage\(msgs, turnVolatile\)/.test(src), 'S G1 尾部布局复用 appendPromptToLastUserMessage(与 recall/notes 同位)');
-ok(/const buildBodyWithLayout = \(withTools, layoutOverride\) =>/.test(src) && /buildBodyWithLayout\(useTools, altLayout\)/.test(src), 'S G1 shadow 双布局构建(candidate 只计量不发送)');
-ok(/econLog\('layout_shadow',/.test(src) && /stablePrefixCharsSent/.test(src) && /stablePrefixCharsAlt/.test(src), 'S G1 layout_shadow 事件含双布局 stablePrefixChars(E4 §7.3)');
-ok(/function toolSchemaFreezeFor\(freezeKey\)/.test(src) && /kind: 'tool_schema_freeze'/.test(src), 'S G2 会话级冻结表与冻结事件存在(init/append/cache_break)');
+ok(/if \(turnVolatile && volatileTail\) appendPromptToLastUserMessage\(msgs, turnVolatile\)/.test(providerTurn), 'S G1 尾部布局复用 appendPromptToLastUserMessage(与 recall/notes 同位)');
+ok(/const buildBodyWithLayout = \(withTools, layoutOverride\) =>/.test(providerTurn) && /buildBodyWithLayout\(useTools, altLayout\)/.test(providerTurn), 'S G1 shadow 双布局构建(candidate 只计量不发送)');
+ok(/econLog\('layout_shadow',/.test(providerTurn) && /stablePrefixCharsSent/.test(providerTurn) && /stablePrefixCharsAlt/.test(providerTurn), 'S G1 layout_shadow 事件含双布局 stablePrefixChars(E4 §7.3)');
+ok(/function toolSchemaFreezeFor\(freezeKey\)/.test(toolCatalogSource) && /kind: 'tool_schema_freeze'/.test(toolCatalogSource), 'S G2 会话级冻结表与冻结事件存在(init/append/cache_break)');
 // 2026-10:调用点多了第 7 个参数 { restoredNames: session.toolSchemaNames }(会话工具表跨重启恢复);判据仍是 freezeKey=session.id。
-ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRoute, session\.id[,)]/.test(src), 'S G2 freezeKey=session.id 接入主循环唯一调用点');
+ok(/createToolLoadingState\(config, fullPrompt, attachments, allTools, bridgedRoute, session\.id[,)]/.test(providerTurn), 'S G2 freezeKey=session.id 接入主循环唯一调用点');
 // 106 #2a: 受限执行结果缓存 —— 22 §6.1 白名单(首批仅 file_read)+ 版本验证失效 + 命中仍验权,
 // 默认关,逐项取证。命中带 cacheHit 诚实标记;错误/中断/竞态不缓存。
 ok(/runtimeExecResultCacheV1: true/.test(src) && /execResultCacheMaxEntriesV1: 200/.test(src), 'S #2a 大文件真实门后默认开启、条数上限缺省 200(显式 false 回退)');
 ok(/function execResultCacheEnabled\(config\)/.test(src) && /function execResultCacheMaxEntries\(config\)/.test(src), 'S #2a 唯一判定点存在(开关×上限双门)');
-ok(/const EXEC_CACHE_WHITELIST = new Set\(\['file_read'\]\)/.test(src), 'S #2a 白名单首批仅 file_read(版本明确的本地只读,22 §6.1)');
-ok(/execCacheContext\('file_read', args, ctx, p\)/.test(src), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
-ok(/execCacheSameVersion/.test(src) && /reason: st \? 'stale' : 'gone'/.test(src), 'S #2a 资源版本 mtimeMs+size 失效(外部写入/删除/重建覆盖)');
-ok(/cacheHit: \{ cachedAt: entry\.cachedAt/.test(src), 'S #2a 命中结果带 cacheHit 诚实标记(不冒称重新执行)');
-ok(/outcome: 'skip', reason: 'race'/.test(src) && /c\.signal && c\.signal\.aborted\) return/.test(src), 'S #2a 竞态/中断结果不缓存');
+const cacheSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/file-read-cache.cjs'), 'utf8');
+ok(/const EXEC_CACHE_WHITELIST = new Set\(\['file_read'\]\)/.test(cacheSource), 'S #2a 白名单首批仅 file_read(版本明确的本地只读,22 §6.1)');
+ok(/FileReadCache\.context\('file_read', args, ctx, p\)/.test(fileToolsSource), 'S #2a 缓存挂在守卫之后读盘之前(命中仍重新验权)');
+ok(/execCacheSameVersion/.test(cacheSource) && /reason: st \? 'stale' : 'gone'/.test(cacheSource), 'S #2a 资源版本 mtimeMs+size 失效(外部写入/删除/重建覆盖)');
+ok(/cacheHit: \{ cachedAt: entry\.cachedAt/.test(cacheSource), 'S #2a 命中结果带 cacheHit 诚实标记(不冒称重新执行)');
+ok(/outcome: 'skip', reason: 'race'/.test(cacheSource) && /c\.signal && c\.signal\.aborted\) return/.test(cacheSource), 'S #2a 竞态/中断结果不缓存');
 for (const flag of ['runtimeToolRetrievalV1', 'runtimeFailureTelemetryV1']) {
   ok(new RegExp(flag + ': false').test(src), `S ${flag} defaults false`);
   ok(new RegExp("config\\[key\\] === true").test(src), `S strict boolean normalization present (${flag})`);
@@ -87,17 +108,13 @@ for (const flag of ['runtimeObservationReducerV1', 'runtimeObservationRecallV1']
   ok(new RegExp(flag + ': true').test(src), `S ${flag} defaults true after 105a real-history adoption gate`);
   ok(new RegExp("config\\[key\\] === true").test(src), `S strict boolean normalization present (${flag})`);
 }
-ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(src), 'S OpenAI catalog uses shared T1 ranker');
-ok(/searchToolCatalog\(catalog, args, config/.test(src), 'S Claude\/MCP catalog uses shared T1 ranker');
-ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(src) && /kind: 'runtime_failure_classified'/.test(src), 'S F1 classification runs under the master shadow switch');
-ok(!/function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(src), 'S F1 shadow slice contains no recovery executor');
+ok(/searchToolCatalog\(catalog, \{ query, limit \}, config/.test(toolCatalogSource), 'S OpenAI catalog uses shared T1 ranker');
+const coreToolSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/workbench-core-tools.cjs'), 'utf8');
+ok(/searchToolCatalog\(catalog, args, config/.test(coreToolSource), 'S Claude\/MCP catalog uses shared T1 ranker');
+ok(/runtimeFailureTelemetryV1 === true \|\| config\.runtimeOptimizationShadowV1 === true/.test(providerTurn) && /kind: 'runtime_failure_classified'/.test(providerTurn), 'S F1 classification runs under the master shadow switch');
+ok(![src, providerTurn].some(code => /function attemptRuntimeRecovery|runtimeRecoveryBriefV1/.test(code)), 'S F1 shadow slice contains no recovery executor');
 
 console.log('\n── [T1] deterministic hybrid retrieval ──');
-const t1Start = src.indexOf('const TOOL_RETRIEVAL_HINTS = Object.freeze({');
-const t1End = src.indexOf('\nfunction listCompactTools(', t1Start);
-ok(t1Start >= 0 && t1End > t1Start, 'T1 source block found');
-const t1Block = src.slice(t1Start, t1End);
-const t1 = new Function('crypto', 'TOOL_PACK_DESCRIPTIONS', t1Block + '\nreturn { searchToolCatalog, compareToolRetrievalShadow, classifyRuntimeToolFailure };')(crypto, { core: 'core', code: 'code', files_read: 'files', files_write: 'writes', network: 'network' });
 const item = (name, pack, tier, aliases, capabilities, parameterText, description) => ({ name, pack, tier, aliases, capabilities, parameterText, description, bridged: false });
 const catalog = [
   item('file_read', 'files_read', 'read', ['读取文件', '查看文件'], ['workspace.file.read'], 'path offset limit', 'Read a workspace file'),
@@ -120,11 +137,12 @@ const comparison = t1.compareToolRetrievalShadow(legacy, shadowCandidate);
 ok(shadowCandidate.retrievalVersion === 'deterministic-v1' && comparison.queryHash && !('query' in comparison), 'T1 shadow evaluates v1 without exposing the raw query');
 
 console.log('\n── [C1] deterministic observation reduction ──');
-const c1Start = src.indexOf('const OBSERVATION_REDUCE_MIN = 1200;');
-const c1End = src.indexOf('\n// v0.8-S5 SHARED SUMMARY KERNEL', c1Start);
-ok(c1Start >= 0 && c1End > c1Start, 'C1 source block found');
-const c1Block = src.slice(c1Start, c1End);
-const c1 = new Function('crypto', 'EVAPORATED_PREFIX', c1Block + '\nreturn { reduceObservationContent, protectedObservation, evaporateHistory, measureObservationReductionShadow };')(crypto, '[已省略:');
+const reductionSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/observation-reduction.cjs'), 'utf8');
+const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
+const historySource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/provider-history.cjs'), 'utf8');
+const planSource = require('node:fs').readFileSync(require('node:path').join(__dirname, '../ruyi-workbench/app/backend/compaction-plan.cjs'), 'utf8');
+const { READ_DEDUP_PREFIX } = require('../ruyi-workbench/app/backend/provider-history.cjs');
+const c1 = createObservationReduction(estimator);
 const large = JSON.stringify({ ok: true, query: 'needle', matches: Array.from({ length: 80 }, (_, i) => ({ path: `src/f${i}.js`, line: i, text: 'X'.repeat(180) })) });
 const reduced = c1.reduceObservationContent('file_search', large, 'history:3:aaaaaaaaaaaaaaaa:2:bbbbbbbbbbbbbbbb');
 ok(reduced.reduced && reduced.visibleChars < reduced.originalChars && reduced.content.includes('rawRef'), 'C1 large JSON becomes a smaller structured model view with rawRef');
@@ -154,83 +172,84 @@ const shadowMetrics = c1.measureObservationReductionShadow(shadowHistory);
 ok(JSON.stringify(shadowHistory) === shadowBefore && shadowMetrics.candidateReducedCount === 1 && shadowMetrics.candidateVisibleChars < shadowMetrics.originalChars, 'C1 shadow measures a copied history without mutating the live prefix');
 
 console.log('\n── [F1] deterministic classification ──');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, error: 'ETIMEDOUT' }, { tier: 'read' }).failureClass === 'transient_read', 'F1 read timeout → transient_read');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'timeout after dispatch' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating timeout → side_effect_unknown');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, error: 'required property path is missing' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 schema error → invalid_arguments');
-ok(t1.classifyRuntimeToolFailure('file_write', { ok: false, error: 'denied by user' }, { tier: 'edit' }).recoverableHint === false, 'F1 permission denial is not auto-recoverable');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: true, content: 'ok' }, { tier: 'read' }) === null, 'F1 successful calls produce no failure record');
-const timedExec = t1.classifyRuntimeToolFailure('powershell_run', { ok: false, code: -1, timedOut: true, stderr: '[timed out; process tree killed]' }, { tier: 'exec' });
+ok(classifyRuntimeToolFailure('file_read', { ok: false, error: 'ETIMEDOUT' }, { tier: 'read' }).failureClass === 'transient_read', 'F1 read timeout → transient_read');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'timeout after dispatch' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating timeout → side_effect_unknown');
+ok(classifyRuntimeToolFailure('file_read', { ok: false, error: 'required property path is missing' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 schema error → invalid_arguments');
+ok(classifyRuntimeToolFailure('file_write', { ok: false, error: 'denied by user' }, { tier: 'edit' }).recoverableHint === false, 'F1 permission denial is not auto-recoverable');
+ok(classifyRuntimeToolFailure('file_read', { ok: true, content: 'ok' }, { tier: 'read' }) === null, 'F1 successful calls produce no failure record');
+const timedExec = classifyRuntimeToolFailure('shell_run', { ok: false, code: -1, timedOut: true, stderr: '[timed out; process tree killed]' }, { tier: 'exec' });
 ok(timedExec.failureClass === 'side_effect_unknown' && timedExec.allowedRepair === 'stop_for_effect_check', 'F1 structured exec timeout stays side-effect-safe');
-ok(t1.classifyRuntimeToolFailure('script_run', { ok: false, code: 1, stderr: 'Traceback (most recent call last)' }, { tier: 'exec' }).failureClass === 'execution_failed', 'F1 non-zero process result → execution_failed');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'oldText was not found' }, { tier: 'edit' }).failureClass === 'edit_conflict', 'F1 stale edit anchor → edit_conflict');
-ok(t1.classifyRuntimeToolFailure('web_search', { ok: false, error: 'query is required' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 required named input → invalid_arguments');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: false, code: 'not-allowed', error: '该路径属于应用内部数据，已禁止文件工具访问' }, { tier: 'read' }).failureClass === 'policy_blocked', 'F1 product guard → policy_blocked');
-ok(t1.classifyRuntimeToolFailure('shell_send', { ok: false, error: "未知 shellId 'gone'" }, { tier: 'exec' }).failureClass === 'resource_not_found', 'F1 expired runtime handle → resource_not_found');
-ok(t1.classifyRuntimeToolFailure('file_edit', { ok: false, error: 'HTTP 503 Service Unavailable' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating transport ambiguity never becomes retry_once');
-ok(t1.classifyRuntimeToolFailure('file_read', { ok: true, error: 'warning field present' }, { tier: 'read' }) === null, 'F1 ok:true warning does not become a failure');
+ok(classifyRuntimeToolFailure('script_run', { ok: false, code: 1, stderr: 'Traceback (most recent call last)' }, { tier: 'exec' }).failureClass === 'execution_failed', 'F1 non-zero process result → execution_failed');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'oldText was not found' }, { tier: 'edit' }).failureClass === 'edit_conflict', 'F1 stale edit anchor → edit_conflict');
+ok(classifyRuntimeToolFailure('web_search', { ok: false, error: 'query is required' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 required named input → invalid_arguments');
+ok(classifyRuntimeToolFailure('file_read', { ok: false, code: 'not-allowed', error: '该路径属于应用内部数据，已禁止文件工具访问' }, { tier: 'read' }).failureClass === 'policy_blocked', 'F1 product guard → policy_blocked');
+ok(classifyRuntimeToolFailure('shell_send', { ok: false, error: "未知 shellId 'gone'" }, { tier: 'exec' }).failureClass === 'resource_not_found', 'F1 expired runtime handle → resource_not_found');
+ok(classifyRuntimeToolFailure('file_edit', { ok: false, error: 'HTTP 503 Service Unavailable' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 mutating transport ambiguity never becomes retry_once');
+ok(classifyRuntimeToolFailure('file_read', { ok: true, error: 'warning field present' }, { tier: 'read' }) === null, 'F1 ok:true warning does not become a failure');
 ok(timedExec.classifierVersion === 'deterministic-v3' && !JSON.stringify(timedExec).includes('process tree killed'), 'F1 v3 telemetry exposes version but not raw stderr');
 // v3:读结构化 failClass / statusCode / blocked / argsInvalid;逐条正反例在 unit/runtime-failure-classifier.test.js,这里只钉住「最先判安全分支」与「403 不再是权限拒绝」两个不变量。
-const webForbidden = t1.classifyRuntimeToolFailure('web_fetch', { ok: false, error: '网站拒绝了请求(HTTP 403,可能反爬)', failClass: 'http', statusCode: 403 }, { tier: 'read' });
+const webForbidden = classifyRuntimeToolFailure('web_fetch', { ok: false, error: '网站拒绝了请求(HTTP 403,可能反爬)', failClass: 'http', statusCode: 403 }, { tier: 'read' });
 ok(webForbidden.failureClass === 'remote_blocked' && webForbidden.allowedRepair === 'use_alternative_source', 'F1 v3 web 403 → remote_blocked(不再是 permission_denied/request_authority)');
-ok(t1.classifyRuntimeToolFailure('web_fetch', { ok: false, error: '页面不存在(HTTP 404)', failClass: 'http', statusCode: 404 }, { tier: 'read' }).failureClass === 'resource_not_found', 'F1 v3 web 404 → resource_not_found');
-ok(t1.classifyRuntimeToolFailure('http_download', { ok: false, error: '对方服务器中断了连接(可能有反爬限制)', failClass: 'reset' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 v3 mutating disconnect stays side_effect_unknown before any new rule');
-ok(t1.classifyRuntimeToolFailure('tool_invoke_read', { ok: false, code: 'tier-mismatch', error: 'risk tier mismatch' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 v3 tier-mismatch → invalid_arguments');
+ok(classifyRuntimeToolFailure('web_fetch', { ok: false, error: '页面不存在(HTTP 404)', failClass: 'http', statusCode: 404 }, { tier: 'read' }).failureClass === 'resource_not_found', 'F1 v3 web 404 → resource_not_found');
+ok(classifyRuntimeToolFailure('http_download', { ok: false, error: '对方服务器中断了连接(可能有反爬限制)', failClass: 'reset' }, { tier: 'edit' }).failureClass === 'side_effect_unknown', 'F1 v3 mutating disconnect stays side_effect_unknown before any new rule');
+ok(classifyRuntimeToolFailure('tool_invoke_read', { ok: false, code: 'tier-mismatch', error: 'risk tier mismatch' }, { tier: 'read' }).failureClass === 'invalid_arguments', 'F1 v3 tier-mismatch → invalid_arguments');
 const v3Samples = [{ error: '网站拒绝了请求', statusCode: 403 }, { error: 'x', failClass: 'tls' }, { error: 'x', failClass: 'reset' }, { error: 'HTTP 500', statusCode: 500 }, { code: 'not_found', error: 'x' }];
-ok(['edit', 'exec'].every(tier => v3Samples.every(r => t1.classifyRuntimeToolFailure('t', { ok: false, ...r }, { tier }).allowedRepair !== 'retry_once')), 'F1 v3 no new rule maps an edit/exec result to retry_once');
+ok(['edit', 'exec'].every(tier => v3Samples.every(r => classifyRuntimeToolFailure('t', { ok: false, ...r }, { tier }).allowedRepair !== 'retry_once')), 'F1 v3 no new rule maps an edit/exec result to retry_once');
 
 console.log('\n── [E0] three-layer call ledger shadow (21) ──');
 ok(/toolEconomicsShadowV1: true/.test(src), 'E0 economics shadow defaults true (sampled)');
-ok(/econLog\('model_call_started'/.test(src) && /econLog\('model_call_completed'/.test(src), 'E0 model_call started/completed events wired');
-ok(/econLog\('assistant_tool_batch'/.test(src), 'E0 assistant_tool_batch event wired');
-ok(/econLog\('tool_call_completed'/.test(src) && /econLog\('tool_phase_completed'/.test(src), 'E0 tool_call/tool_phase completed events wired');
-ok(/ECON_EVENT_CAP = 400/.test(src) && /econSampledIter = iter => iter < ECON_SAMPLE_FULL_ITERS/.test(src), 'E0 sampling + per-turn event cap present');
-ok(/providerResponseId/.test(src), 'E0 provider response id surfaced from stream layer');
-ok(/usageSource: usageCalls > usageSnapshot\.calls \? 'provider' : 'estimated'/.test(src), 'E0 usage source distinguishes provider-reported vs estimated');
-ok(/assistantBatchId: activeProviderBatchId, toolCallId: tc\.id/.test(src), 'E0 tool_call_completed carries the three-layer link');
+ok(/econLog\('model_call_started'/.test(providerTurn) && /econLog\('model_call_completed'/.test(providerTurn), 'E0 model_call started/completed events wired');
+ok(/econLog\('assistant_tool_batch'/.test(providerTurn), 'E0 assistant_tool_batch event wired');
+ok(/econLog\('tool_call_completed'/.test(providerTurn) && /econLog\('tool_phase_completed'/.test(providerTurn), 'E0 tool_call/tool_phase completed events wired');
+ok(/ECON_EVENT_CAP = 400/.test(providerTurn) && /econSampledIter = iter => iter < ECON_SAMPLE_FULL_ITERS/.test(providerTurn), 'E0 sampling + per-turn event cap present');
+ok(/providerResponseId: d\.responseId/.test(providerStream) && /providerResponseId: call\.providerResponseId/.test(providerTurn), 'E0 provider response id surfaced from stream layer and recorded by the turn');
+ok(/usageSource: usageCalls > usageSnapshot\.calls \? 'provider' : 'estimated'/.test(providerTurn), 'E0 usage source distinguishes provider-reported vs estimated');
+ok(/assistantBatchId: activeProviderBatchId, toolCallId: tc\.id/.test(providerTurn), 'E0 tool_call_completed carries the three-layer link');
 ok(!/toolEconomicsShadowV1: false/.test(src), 'E0 economics shadow is not an opt-in-only flag');
 
 console.log('\n── [E2] bounded read scheduler wiring (21) ──');
 ok(/boundedReadSchedulerV1: false/.test(src), 'E2 active scheduler defaults false');
 ok(/boundedReadConcurrencyV1: 4/.test(src), 'E2 default concurrency 4');
-ok(/config\.boundedReadSchedulerV1 === true/.test(src), 'E2 strict boolean gate in the tool loop');
+ok(/config\.boundedReadSchedulerV1 === true/.test(providerTurn), 'E2 strict boolean gate in the tool loop');
 // N9:宽度从「整批」改为「只读岛」(整批全是只读时岛 = 整批,公式不变),变量名随之是 islandCalls。
-ok(/Math\.min\(8, Math\.max\(4, (?:localToolCalls|islandCalls)\.length\)\)/.test(src), 'E2 concurrency formula = min(8, max(4, width)) (decision B)');
-ok(/strategy: poolStrategy/.test(src) && /'pool_read'/.test(src), 'E2 phase event exposes pool_read strategy');
-ok(/queueWaitMs/.test(src), 'E2 resource-queue wait measured');
+ok(/Math\.min\(8, Math\.max\(4, (?:localToolCalls|islandCalls)\.length\)\)/.test(providerTurn), 'E2 concurrency formula = min(8, max(4, width)) (decision B)');
+ok(/strategy: poolStrategy/.test(providerTurn) && /'pool_read'/.test(providerTurn), 'E2 phase event exposes pool_read strategy');
+ok(/queueWaitMs/.test(providerTurn), 'E2 resource-queue wait measured');
 ok(!/boundedReadSchedulerV1: true/.test(src), 'E2 active flag is not defaulted on');
 
 console.log('\n── [E5] meta-tool convergence wiring (21) ──');
 ok(/metaToolHintsV1: false/.test(src), 'E5 meta hints default false');
-ok(/function buildCallHint/.test(src) && /callHint/.test(src) && /requiredArgs/.test(src) && /'blocked'/.test(src), 'E5 search hint builder present (requiredArgs/callHint/state/blockedReason)');
-ok(/config\.metaToolHintsV1 === true/.test(src), 'E5 hints gated on strict boolean');
-ok(/discoveryState = \{ seq: 0, openedAt: 0, awaitingOutcome: false \}/.test(src), 'E5 discoverySeq chain state present');
-ok(/searchSeq: discoveryState\.seq/.test(src) && /discoverySeq: discoveryState\.seq/.test(src), 'E5 searchSeq/discoverySeq emitted into the ledger');
-ok(/unchanged: true, note: '任务清单与当前状态一致/.test(src), 'E5 todo dedupe returns unchanged on identical content');
-ok(/deduped: true/.test(src), 'E5 deduped flag lands in tool_call_completed');
+ok(/function buildCallHint/.test(toolCatalogSource) && /callHint/.test(toolCatalogSource) && /requiredArgs/.test(toolCatalogSource) && /'blocked'/.test(toolCatalogSource), 'E5 search hint builder present (requiredArgs/callHint/state/blockedReason)');
+ok(/config\.metaToolHintsV1 === true/.test(toolCatalogSource), 'E5 hints gated on strict boolean');
+ok(/discoveryState = \{ seq: 0, openedAt: 0, awaitingOutcome: false \}/.test(providerTurn), 'E5 discoverySeq chain state present');
+ok(/searchSeq: discoveryState\.seq/.test(providerTurn) && /discoverySeq: discoveryState\.seq/.test(providerTurn), 'E5 searchSeq/discoverySeq emitted into the ledger');
+ok(/unchanged: true, note: '任务清单与当前状态一致/.test(providerTurn), 'E5 todo dedupe returns unchanged on identical content');
+ok(/deduped: true/.test(providerTurn), 'E5 deduped flag lands in tool_call_completed');
 ok(!/metaToolHintsV1: true/.test(src), 'E5 meta hints are not defaulted on');
 
 console.log('\n── [E3] action-argument model view wiring (21) ──');
 ok(/actionArgumentModelViewV1: false/.test(src), 'E3 action model view defaults false');
-ok(/function projectActionModelView/.test(src) && /ACTION_VIEW_TOOLS = new Set\(/.test(src) && /ACTION_VIEW_MIN_CHARS = 512/.test(src), 'E3 projection block present (whitelist + threshold)');
-ok(/const privacyHistory = typeof PrivacyGateway !== 'undefined' \? PrivacyGateway\.projectHostHistory\(session, session\.providerHistory\) : session\.providerHistory;/.test(src)
-  && /const viewHistory = actionAuditMap\.size \? projectActionModelView\(privacyHistory, actionAuditMap\)\.history : privacyHistory;/.test(src), 'E3 buildBody consumes the privacy history projection followed by the action view');
-ok(/crypto\.createHash\('sha256'\)\.update\(rawArgs\)\.digest\('hex'\) !== entry\.sha256/.test(src), 'E3 sha256 tamper gate on projection');
-ok(/session\.actionAudit\.length > 200/.test(src), 'E3 audit capped (no unbounded growth)');
-ok(/status: isErr \? 'failed' : 'completed'/.test(src), 'E3 failed actions never projected');
+const actionHistory = require('node:fs').readFileSync(require.resolve('../ruyi-workbench/app/backend/provider-action-history.cjs'), 'utf8');
+ok(/function projectActionModelView/.test(actionHistory) && /ACTION_VIEW_TOOLS = new Set\(/.test(actionHistory) && /ACTION_VIEW_MIN_CHARS = 512/.test(actionHistory), 'E3 projection block present (whitelist + threshold)');
+ok(/const privacyHistory = typeof PrivacyGateway !== 'undefined' \? PrivacyGateway\.projectHostHistory\(session, session\.providerHistory\) : session\.providerHistory;/.test(providerTurn)
+  && /const viewHistory = actionAuditMap\.size \? projectActionModelView\(privacyHistory, actionAuditMap\)\.history : privacyHistory;/.test(providerTurn), 'E3 buildBody consumes the privacy history projection followed by the action view');
+ok(/crypto\.createHash\('sha256'\)\.update\(rawArgs\)\.digest\('hex'\) !== entry\.sha256/.test(actionHistory), 'E3 sha256 tamper gate on projection');
+ok(/session\.actionAudit\.length > 200/.test(providerTurn), 'E3 audit capped (no unbounded growth)');
+ok(/status: isErr \? 'failed' : 'completed'/.test(providerTurn), 'E3 failed actions never projected');
 ok(!/actionArgumentModelViewV1: true/.test(src), 'E3 action model view is not defaulted on');
 
 console.log('\n── [F1] 126-111a · L1 蒸发边界改 token 预算 ──');
 ok(/runtimeEvaporateBudgetBoundaryV1: false/.test(src), 'F1 开关默认关');
 ok(!/runtimeEvaporateBudgetBoundaryV1: true/.test(src), 'F1 没有在别处被默认翻开');
 ok(/function evaporateBudgetBoundaryEnabled\(config\)/.test(src), 'F1 判定函数存在(唯一判定口)');
-ok(/function historyUnitStarts\(history\)/.test(src) && /role !== 'tool'/.test(src), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
-ok(/l1ProtectRatio/.test(src) && /l1ProtectMinTokens/.test(src) && /l1ProtectMaxTokens/.test(src), 'F1 保护区三个数来自规则文件(值域唯一,代码里不写死)');
+ok(/function historyUnitStarts\(history\)/.test(historySource) && /role !== 'tool'/.test(historySource), 'F1 单元起点判据存在(不会把 assistant 与它的 tool 回复劈开)');
+ok(/l1ProtectRatio/.test(reductionSource) && /l1ProtectMinTokens/.test(reductionSource) && /l1ProtectMaxTokens/.test(reductionSource), 'F1 保护区三个数来自规则文件(值域唯一,代码里不写死)');
 {
   // **机械锁**:`boundaryBudget` 是「已经过开关把门的」预算 —— evaporateHistory 自己不读开关
   // (它要能被上面 [C1] 那段 new Function 原样切出来跑)。这条推导一旦有人绕过去写个裸预算,
   // 开关就形同虚设。判据:src 里每一处 `boundaryBudget:` 的**赋值**都必须和判定函数同一行。
   // 与 125 波那三把锁同一个模具:判据唯一/表唯一/值域唯一。
-  const lines = src.split(/\r?\n/).filter(line => /\bboundaryBudget\s*:/.test(line));
+  const lines = (kernelSource + "\n" + compactionSource).split(/\r?\n/).filter(line => /\bboundaryBudget\s*:/.test(line));
   const ungated = lines.filter(line => !/evaporateBudgetBoundaryEnabled\s*\(/.test(line));
   // 主回合与子代理的自动压缩共用 10 runAutoCompaction 以后,赋值点只剩那一处(修前两份各一处)。
   ok(lines.length >= 1, `F1 扫得到 boundaryBudget 赋值点（实得 ${lines.length} 处；扫不到 = 本条静默失效）`);
@@ -249,13 +268,13 @@ ok(/runtimeHistoryReadDedupV1: true/.test(src), 'F2 开关默认开(107-T1 起;�
   ok(hits === 1, `F2 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function historyReadDedupEnabled\(config\)/.test(src), 'F2 判定函数存在(唯一判定口)');
-ok(/function fileReadDedupKey\(raw\)/.test(src) && /createHash\('sha256'\)\.update\(body\)/.test(src),
+ok(/function fileReadDedupKey\(raw\)/.test(reductionSource) && /createHash\('sha256'\)\.update\(body\)/.test(reductionSource),
   'F2 去重键 = 路径 ＋ 文件正文的哈希（不是「路径＋mtime＋size」那种版本推断 → 零误报）');
-ok(/const READ_DEDUP_PREFIX = /.test(src) && /startsWith\(READ_DEDUP_PREFIX\)/.test(src), 'F2 指针有独立前缀且被跳过(幂等)');
-ok(/rawRef=\$\{rawRefPrefix\}/.test(src), 'F2 指针带 rawRef —— 换掉的是重复不是信息,原件一直回查得到');
+ok(READ_DEDUP_PREFIX === '[重复读取:' && /startsWith\(READ_DEDUP_PREFIX\)/.test(reductionSource), 'F2 指针有独立前缀且被跳过(幂等)');
+ok(/rawRef=\$\{rawRefPrefix\}/.test(reductionSource), 'F2 指针带 rawRef —— 换掉的是重复不是信息,原件一直回查得到');
 {
   // 与 F1 同一把机械锁：`dedupeReads` 也是「已经过开关把门的」布尔，evaporateHistory 自己不读开关。
-  const lines = src.split(/\r?\n/).filter(line => /\bdedupeReads\s*:/.test(line));
+  const lines = (kernelSource + "\n" + compactionSource).split(/\r?\n/).filter(line => /\bdedupeReads\s*:/.test(line));
   const ungated = lines.filter(line => !/historyReadDedupEnabled\s*\(/.test(line));
   ok(lines.length >= 1, `F2 扫得到 dedupeReads 赋值点（实得 ${lines.length} 处；扫不到 = 本条静默失效）`);
   ok(ungated.length === 0, `F2 每一处 dedupeReads 都由 historyReadDedupEnabled 把门${ungated.length ? '；实得没把门的：' + ungated.map(s => s.trim()).join(' ⏐ ') : ''}`);
@@ -269,24 +288,20 @@ ok(/runtimeSummaryPromptI18nV1: true/.test(src), 'F3 开关默认开(107-T1 起;
   ok(hits === 1, `F3 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function summaryPromptI18nEnabled\(config\)/.test(src), 'F3 判定函数存在(唯一判定口)');
+const formatSource = require('node:fs').readFileSync(
+  require('node:path').resolve(__dirname, '../ruyi-workbench/app/backend/summary-format.cjs'), 'utf8');
 {
-  // F3 语言判据是 06b getPromptPack 的**抄写件**(10 → 06b 是循环边，调不得；见实现处注释)。
-  // 机械对账：两处必须是同一条规则的同一种写法 —— `.trim().toLowerCase() === 'en-us'`。
-  // 改了一边另一边就红，抄写件不会悄悄长成第二套口径（与 steward-tools.static ⑥ 同一个模具）。
-  const RULE = /\.trim\(\)\.toLowerCase\(\) === 'en-us'/g;
-  const hits = (src.match(RULE) || []).length;
-  ok(hits === 2, `F3 「什么算英文界面」全仓恰好两处同样的写法（06b 的 getPromptPack ＋ 10 的抄写件；实得 ${hits} 处）`);
-  ok(/function getPromptPack\(locale\)[\s\S]{0,160}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(src),
-    'F3 其中一处就在 06b 的 getPromptPack 里（抄的是它，不是凭空一条）');
-  ok(/function summaryPromptIsEnglish\(config\)[\s\S]{0,220}\.trim\(\)\.toLowerCase\(\) === 'en-us'/.test(src),
-    'F3 另一处在 summaryPromptIsEnglish 里，且仍然先过 summaryPromptI18nEnabled 这道开关');
+  const { summaryPromptIsEnglish } = require('../ruyi-workbench/app/backend/summary-format.cjs');
+  const { getPromptPack, PROMPT_EN } = require('../ruyi-workbench/app/backend/prompt-registry.cjs');
+  ok(['en-US', ' EN-us ', 'en', 'zh-CN', 'auto', undefined].every(locale =>
+    summaryPromptIsEnglish({ locale, runtimeSummaryPromptI18nV1: true }) === (getPromptPack(locale) === PROMPT_EN)),
+    'F3 摘要与界面提示共用语言包判定');
+  ok(!summaryPromptIsEnglish({ locale: 'en-US', runtimeSummaryPromptI18nV1: false }), 'F3 关闭摘要语言开关时使用默认提示');
 }
-ok(/SUMMARY_PROMPT_EN = CONTEXT_GOVERNANCE_RULES\.summary\.promptEn \|\| SUMMARY_PROMPT/.test(src),
-  'F3 英文那份缺失时回落中文(rules 缺键不静默变成空 prompt)');
-ok(/function summaryPromptWithGuidance\(config\)/.test(src), 'F3 取话口带 config(否则拿不到 locale)');
+ok(/SUMMARY_PROMPT_EN = CONTEXT_GOVERNANCE_RULES\.summary\.promptEn \|\| SUMMARY_PROMPT/.test(formatSource),
+  'F3 英文摘要提示缺失时使用默认提示');
 {
-  // 标题容错那一半**故意不挂开关**(见实现处注释):判据锚在行首,只会让本来就正确的摘要更容易过。
-  const lines = src.split(/\r?\n/).filter(line => /const normHead = /.test(line));
+  const lines = formatSource.split(/\r?\n/).filter(line => /const normHead = /.test(line));
   ok(lines.length === 1, `F3 标题归一只有一处写法（实得 ${lines.length}）`);
   // Exercise the public validator rather than locking the shared heading helper's source shape.
   const fs = require('fs'), os = require('os'), path = require('path');
@@ -316,18 +331,18 @@ ok(/runtimeReseedTailUnitsV1: true/.test(src), 'F4 开关默认开(107-T1 起;�
   ok(hits === 1, `F4 开关默认点全仓恰好一处（实得 ${hits} 处；>1 = 别处又写了一遍,0 = 默认点没了/本条静默失效）`);
 }
 ok(/function reseedTailUnitsEnabled\(config\)/.test(src), 'F4 判定函数存在(唯一判定口)');
-ok(/function recentTurnsBoundary\(history, maxTailTokens, byUnits\)/.test(src), 'F4 边界函数带 byUnits(已过门的布尔,函数体不读开关)');
-ok(/if \(byUnits === true && boundary === history\.length && history\.length\)/.test(src),
+ok(/function recentTurnsBoundary\(history, maxTailTokens, byUnits\)/.test(planSource), 'F4 边界函数带 byUnits(已过门的布尔,函数体不读开关)');
+ok(/if \(byUnits === true && boundary === history\.length && history\.length\)/.test(planSource),
   'F4 **只在「一个 user 回合都装不下」时才退化** —— 装得下时逐字节走老路');
-ok(/historyUnitStarts\(history\)/.test(src), 'F4 退化时用的是 111a 那个单元起点原语(切口永远不落在 tool 上)');
-ok(/以下为摘要之后保留的最近工具往来/.test(src), 'F4 桥接文案在场');
+ok(/historyUnitStarts\(history\)/.test(planSource), 'F4 退化时用的是 111a 那个单元起点原语(切口永远不落在 tool 上)');
+ok(/以下为摘要之后保留的最近工具往来/.test(planSource), 'F4 桥接文案在场');
 {
   // 与 F1／F2 同一把机械锁:byUnits 只能由判定函数把门。
-  const lines = src.split(/\r?\n/).filter(line => /recentTurnsBoundary\(history, tailBudget/.test(line));
+  const lines = planSource.split(/\r?\n/).filter(line => /recentTurnsBoundary\(history, tailBudget/.test(line));
   ok(lines.length === 1, `F4 扫得到 CompactionPlan 里那唯一的边界调用（实得 ${lines.length} 处）`);
   ok(lines.every(line => /reseedTailUnitsEnabled\s*\(/.test(line)),
     `F4 那一处由 reseedTailUnitsEnabled 把门${lines.length ? '；实得：' + lines.map(s => s.trim()).join(' ⏐ ') : ''}`);
-  const nets = src.split(/\r?\n/).filter(line => /repairProviderHistoryPairing\(/.test(line) && /reseedTailUnitsEnabled\s*\(/.test(line));
+  const nets = kernelSource.split(/\r?\n/).filter(line => /repairProviderHistoryPairing\(/.test(line) && /reseedTailUnitsEnabled\s*\(/.test(line));
   // 自动压缩的 L2 重播种出口只剩共用内核那一处(主回合与子代理同走 runAutoCompaction;修前两份各一处)。
   ok(nets.length === 1, `F4 自动压缩唯一的 reseed 出口挂了配对安全网且由开关把门（实得 ${nets.length} 处）`);
 }
@@ -336,10 +351,10 @@ console.log('\n── [F5] 126-111c · 重播种后重附最近读过的文件 �
 ok(/runtimeReseedReattachFilesV1: false/.test(src), 'F5 开关默认关');
 ok(!/runtimeReseedReattachFilesV1: true/.test(src), 'F5 没有在别处被默认翻开');
 ok(/function reseedReattachFilesEnabled\(config\)/.test(src), 'F5 判定函数存在(唯一判定口)');
-ok(/reattachRatio/.test(src) && /reattachMaxTokens/.test(src) && /reattachHeadLines/.test(src) && /reattachMaxFiles/.test(src),
+ok(/reattachRatio/.test(planSource) && /reattachMaxTokens/.test(planSource) && /reattachHeadLines/.test(planSource) && /reattachMaxFiles/.test(planSource),
   'F5 四个界都来自规则文件(值域唯一,代码里不写死)');
 {
-  const lines = src.split(/\r?\n/).filter(line => /\brecentFiles\s*:/.test(line));
+  const lines = planSource.split(/\r?\n/).filter(line => /\brecentFiles\s*:/.test(line));
   ok(lines.length === 1, `F5 扫得到 recentFiles 的那唯一赋值点（实得 ${lines.length} 处）`);
   ok(lines.every(line => /reseedReattachFilesEnabled\s*\(/.test(line)),
     `F5 它由 reseedReattachFilesEnabled 把门${lines.length ? '；实得：' + lines.map(s => s.trim()).join(' ⏐ ') : ''}`);
@@ -348,12 +363,12 @@ ok(/reattachRatio/.test(src) && /reattachMaxTokens/.test(src) && /reattachHeadLi
   // **重附不许碰盘**：内容只能来自手里这份历史。压缩是热路径，而且 rehydrate 那条路要解压快照、
   // 校两道哈希 —— 为了「把已经在手里的东西再读一遍」付这个代价没有道理。这条只有机械判据钉得住：
   // 扫 recentFileReads 的函数体，出现任何文件系统调用即红。
-  const body = (src.match(/function recentFileReads\(history, budgetTokens\) \{[\s\S]*?\n\}/) || [''])[0];
+  const body = (planSource.match(/function recentFileReads\(history, budgetTokens\) \{[\s\S]*?\n  \}/) || [''])[0];
   ok(body.length > 200, `F5 扫得到 recentFileReads 的函数体（实得 ${body.length} 字；扫不到 = 本条静默失效）`);
   const io = body.split(/\r?\n/).filter(line => /\bfsp\.|\bfs\.|readFile|rehydrateObservation|zlib|gunzip/.test(line));
   ok(io.length === 0, `F5 **重附零磁盘读取** —— 内容只取自手里这份历史${io.length ? '；实得：' + io.map(s => s.trim()).join(' ⏐ ') : ''}`);
 }
-ok(/byPath\.delete\(filePath\);/.test(src),
+ok(/byPath\.delete\(filePath\);/.test(planSource),
   'F5 同一个文件再读一遍要先 delete 再 set —— 否则「最近优先」是假的(Map.set 不挪已存在的键)');
 
 console.log('');

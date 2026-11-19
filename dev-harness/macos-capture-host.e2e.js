@@ -107,7 +107,7 @@ width:result.width,height:result.height,scale:result.scale,scale_y:result.scale_
       fs.copyFileSync(path.join(root,'runtime-source.json'),path.join(process.env.RUYI_P5_EVIDENCE,'runtime-source.json'));
       fs.writeFileSync(path.join(process.env.RUYI_P5_EVIDENCE,'host.json'),JSON.stringify({nativePID:result.nativePID,
         servicePID:result.servicePID,launch:'LaunchServices',bundle,bundled:runtime.bundled,
-        workbenchRoot:runtime.workbenchRoot,serverSha256:runtime.serverSha256,
+        workbenchRoot:runtime.workbenchRoot,serverSha256:runtime.serverSha256,runtimeSha256:runtime.runtimeSha256,
         observedProcesses:ownedTree.map(row=>({...row,created:String(row.created)})),...extra},null,2)+'\n');
     }
     await until(()=>launcher.exitCode!==null || launcher.signalCode!==null,10000);

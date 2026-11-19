@@ -599,7 +599,7 @@ describe('[W10] 深度 / 隐藏 / gitignore 两个引擎同口径', () => {
     assert.deepEqual(b.matches.map(m => norm(m.relativePath)).sort(), ['src/a.js', 'vendorx/lib.js']);
   });
 
-  it('[W10] rg 命令行:默认无 --max-depth / --hidden / --no-ignore;传了才加;win32 排除 glob 走 --iglob', { skip: !hasRgBinary }, async () => {
+  it('[W10] rg 命令行:默认无 --max-depth / --hidden / --no-ignore;传了才加;Mac 排除 glob 保持大小写语义', { skip: !hasRgBinary }, async () => {
     const ws = freshWs();
     put(path.join(ws, 'a.txt'), 'x\n');
     await srv.toolCall('file_search', { root: ws, pattern: 'warm' }, ctxFor(ws));   // 预热 rg 探测(探测结果进程内缓存)
@@ -610,10 +610,10 @@ describe('[W10] 深度 / 隐藏 / gitignore 两个引擎同口径', () => {
     const b = await captureRgArgs(ws, { pattern: 'x', maxDepth: 4, includeHidden: true, includeIgnored: true });
     assert.equal(b[b.indexOf('--max-depth') + 1], '5');
     assert.ok(b.includes('--hidden') && b.includes('--no-ignore'));
-    const w = await captureRgArgs(ws, { pattern: 'x', glob: '*.TXT' }, 'win32');
+    const w = await captureRgArgs(ws, { pattern: 'x', glob: '*.TXT' });
     if (w) {
       const i = w.indexOf('!build/');
-      assert.ok(i > 0 && w[i - 1] === '--iglob', '排除 glob 必须 --iglob(rg 的 -g 区分大小写): ' + w.join(' '));
+      assert.ok(i > 0 && w[i - 1] === '-g', 'Mac 排除 glob 使用 -g: ' + w.join(' '));
       assert.equal(w[w.indexOf('*.TXT') - 1], '-g', '调用方自己的 glob 不动');
     }
   });

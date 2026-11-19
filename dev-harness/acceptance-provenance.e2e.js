@@ -236,17 +236,17 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     // ============ (f) 静态锁 ============
     const readSrc = name => fs.readFileSync(path.join(WB, 'app', 'src', name), 'utf8');
     const readPub = name => fs.readFileSync(path.join(WB, 'app', 'public', 'js', name), 'utf8');
-    const srcNames = fs.readdirSync(path.join(WB, 'app', 'src')).filter(name => name.endsWith('.js'));
+    const srcNames = fs.readdirSync(path.join(WB, 'app', 'src')).filter(name => name.endsWith('.js')).concat(fs.readdirSync(path.join(WB, 'app', 'backend')).filter(name => name.endsWith('.cjs')).map(name => '../backend/' + name));
     // f1:机器验收的章 —— 全仓只有一个地方写得了它。
     const stampWriters = srcNames.filter(name => /\.lastCheck\s*=/.test(readSrc(name)));
-    ok(stampWriters.length === 1 && stampWriters[0] === '02-session-store.js',
+    ok(stampWriters.length === 1 && stampWriters[0] === '../backend/session-model.cjs',
       'f1 机器验收的章只有一处写入口(实 ' + JSON.stringify(stampWriters) + ')');
-    ok((readSrc('02-session-store.js').match(/milestone\.lastCheck = /g) || []).length === 1
-      && /function recordMissionCheckResult\(/.test(readSrc('02-session-store.js')),
+    ok((readSrc('../backend/session-model.cjs').match(/milestone\.lastCheck = /g) || []).length === 1
+      && /function recordMissionCheckResult\(/.test(readSrc('../backend/session-model.cjs')),
       'f1 那一处就是 recordMissionCheckResult(不许有第二条赋值)');
     // f2:落章的调用点恰两处,都是真的跑了检查那两条路。
-    const stampCallers = srcNames.filter(name => name !== '02-session-store.js' && /recordMissionCheckResult\(/.test(readSrc(name)));
-    ok(stampCallers.length === 2 && stampCallers.includes('06e-mission-domain.js') && stampCallers.includes('13-http-router.js'),
+    const stampCallers = srcNames.filter(name => name !== '../backend/session-model.cjs' && /recordMissionCheckResult\(/.test(readSrc(name)));
+    ok(stampCallers.length === 2 && stampCallers.includes('../backend/mission-driver.cjs') && stampCallers.includes('../backend/mission-ledger-routes.cjs'),
       'f2 落章的调用点恰两处:驱动器每轮 + action:check(实 ' + JSON.stringify(stampCallers) + ')');
     for (const name of stampCallers) {
       // 128b:action:check 的落盘改走 mutateSession(撤回插在中间时在新读的副本上重放),章不能再紧挨着检查写 ——
@@ -257,27 +257,35 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       const viaMap = /const r = await evaluateMissionCheck\(m\.check, cwd\);\s*results\.push\(\{ id: m\.id, checkType: [^\n]*result: r \}\);/.test(src)
         && /const byId = new Map\(results\.map\(item => \[item\.id, item\.result\]\)\);/.test(src)
         && /const r = byId\.get\(m\.id\);\s*if \(!r\) continue;\s*recordMissionCheckResult\(m, r\);/.test(src);
-      ok(name === '13-http-router.js' ? viaMap : direct,
+      ok(name === '../backend/mission-ledger-routes.cjs' ? viaMap : direct,
         'f2 ' + name + ' 的章来自真跑过的那次 evaluateMissionCheck(不是凭空落章)');
     }
     // f3:容器验收项的写面 —— 规范器只在 02,HTTP 侧三条路由全是 UI header token,模型工具面零处。
     const acceptanceWriters = srcNames.filter(name => /normalizeMissionAcceptance\(/.test(readSrc(name)));
-    ok(acceptanceWriters.length === 1 && acceptanceWriters[0] === '02-session-store.js',
-      'f3 容器验收项的规范器只在 02(实 ' + JSON.stringify(acceptanceWriters) + ')');
-    const src13d = readSrc('13d-core-domain-routes.js');
+    ok(acceptanceWriters.length === 1 && acceptanceWriters[0] === '../backend/mission-store.cjs',
+      'f3 容器验收项的规范器只在 mission-store(实 ' + JSON.stringify(acceptanceWriters) + ')');
+    const missionRoutes = readSrc('../backend/mission-routes.cjs');
     for (const fn of ['createMissionContainer', 'patchMissionContainer', 'missionMergeInto']) {
-      const at = src13d.indexOf('await ' + fn + '(');
-      ok(at > 0 && /tokenOk\(req\)/.test(src13d.slice(Math.max(0, at - 700), at)),
+      const at = missionRoutes.indexOf('await ' + fn + '(');
+      ok(at > 0 && /tokenOk\(req\)/.test(missionRoutes.slice(Math.max(0, at - 700), at)),
         'f3 ' + fn + ' 的 HTTP 入口就在它前面那道 tokenOk(UI header token)门后');
     }
-    const toolFacing = ['09-workflow.js', '11-native-tools.js', '12-tool-dispatch.js', '13f-native-tool-schemas.js',
-      '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', '13t-steward-schedule.js'];
+    const toolFacing = ['../backend/provider-turn.cjs', '../backend/agent-workflow.cjs', '11-native-tools.js', '12-tool-dispatch.js', '../backend/native-tool-schemas.cjs',
+      '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js', '../backend/scheduler-steward.cjs',
+      '../backend/steward-thread-create.cjs', '../backend/steward-thread-edits.cjs',
+      '../backend/steward-decision-tools.cjs', '../backend/steward-memory-tools.cjs', '../backend/steward-status-tools.cjs',
+      '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs',
+      '../backend/steward-external-read-tools.cjs', '../backend/steward-notification-tool.cjs',
+      '../backend/adaptive-tool-invocation.cjs', '../backend/workbench-core-tools.cjs',
+      '../backend/steward-tool-handlers.cjs', '../backend/agent-tool-handlers.cjs',
+      '../backend/code-tool-handlers.cjs', '../backend/desktop-tool-handlers.cjs',
+      '../backend/integration-tool-handlers.cjs', '../backend/network-tool-handlers.cjs', '../backend/shell-tool-handlers.cjs'];
     const leaked = toolFacing.filter(name => /(createMissionContainer|patchMissionContainer|missionMergeInto)\(/.test(readSrc(name)));
     ok(leaked.length === 0, 'f3 模型工具面零处写容器验收项(实 ' + JSON.stringify(leaked) + ')');
     // f4:四态的判据只许有一份 —— 前端不许自己按 checkType 推。
     const facts = readPub('thread-facts.js'), drawer = readPub('steward-drawer.js');
-    ok(/function buildMissionAcceptanceProjection\(/.test(readSrc('02-session-store.js')),
-      'f4 四态判据的正身在服务端 02');
+    ok(/function buildMissionAcceptanceProjection\(/.test(readSrc('../backend/session-model.cjs')),
+      'f4 四态判据的正身在 session-model');
     ok(!/checkType\s*[!=]==?\s*'(command|file_exists)'/.test(facts) && !/checkType\s*[!=]==?\s*'(command|file_exists)'/.test(drawer),
       'f4 前端零处按 checkType 自己推来源(推导只许在服务端那一份)');
     ok(/acceptanceRecorded/.test(facts) && (drawer.match(/acceptanceUnrecorded/g) || []).length === 2,

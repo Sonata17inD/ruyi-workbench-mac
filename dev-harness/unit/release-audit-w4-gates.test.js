@@ -90,9 +90,9 @@ for (const k of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_
 const { loadServerInternals } = require('../lib/server-internals');
 const I = loadServerInternals([
   'readConfig', 'writeConfigAtomic', 'paths', 'toolCall', 'nativeToolGate', 'TOOL_HANDLERS', 'httpRequest',
-  'isSensitiveDataPath', 'isWriteProtectedDataPath', 'dataRoot', 'WRITE_PROTECTED_DATA_DIRS',
+  'isSensitiveDataPath', 'guardFileToolPath', 'dataRoot',
   'syncAgentRolesToClaude', 'RUYI_AGENT_FILE_MARKER', 'authorizeRoute', 'RUNTIME',
-  'stewardMarkTurnTainted', 'openToolUncDenied', 'stewardCollectSessionTurn', 'stewardRuntime', 'turnSettlers',
+  'stewardMarkTurnTainted', 'openToolUncDenied', 'startStewardInbox', 'stopStewardInbox', 'stewardInboxRead', 'turnSettlers',
 ]);
 
 const writeCfg = obj => fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify(obj, null, 2), 'utf8');
@@ -220,14 +220,16 @@ test('[F] steward_file_read:工作区关掉「读」后管家不读;打开后照
 });
 
 // ── [S] 敏感闸剥 NTFS 流后缀 ─────────────────────────────────────────────────
-test('[S] 敏感闸 / 写保护闸:NTFS 流后缀与尾随点不能绕过', () => {
+test('[S] 敏感闸 / 写保护闸:NTFS 流后缀与尾随点不能绕过', async () => {
   const dr = I.dataRoot();
   for (const p of [path.join(dr, 'config.json') + '::$DATA', path.join(dr, 'config.json') + ':stream', path.join(dr, 'config.json') + '.',
     path.join(dr, 'runtime.json') + '::$DATA', path.join(dr, 'sessions::$INDEX_ALLOCATION', 'a.json'), path.join(dr, 'sessions .', 'a.json')]) {
     assert.equal(I.isSensitiveDataPath(p), true, p);
   }
-  const protectedDir = I.WRITE_PROTECTED_DATA_DIRS[0];
-  assert.equal(I.isWriteProtectedDataPath(path.join(dr, protectedDir + '::$INDEX_ALLOCATION', 'x.json')), true);
+  const target = path.join(dr, 'mcp::$INDEX_ALLOCATION', 'x.json');
+  const result = await I.guardFileToolPath(target, { session: { cwd: dr }, config: baseCfg() }, { tool: 'file_write', write: true });
+  assert.equal(result.code, 'not-allowed');
+  assert.match(result.error, /已禁止文件工具写入/);
   assert.equal(I.isSensitiveDataPath(path.join(ws, 'config.json::$DATA')), false, '工作区里的同名文件不受影响');
 });
 
@@ -305,19 +307,32 @@ test('[U] office_open / browser_open:非本机 UNC 在任何 I/O 之前拒;本�
 
 // ── [I] 收件箱:回合窗口里不误报「跑完了」 ──────────────────────────────────
 test('[I] 收件箱:回合已进 runSessionTurn(turnSettlers 已登记)时,已见过的线程不报完成、基线不前进;收尾后照常报一次', async () => {
-  const sid = 'w4inbox';
+  const sid = 'sess_w4inbox';
   craftThread(sid, 'default');
   const headFile = path.join(data, 'sessions', sid + '.json');
   const head = JSON.parse(fs.readFileSync(headFile, 'utf8'));
-  fs.writeFileSync(headFile, JSON.stringify({ ...head, turnSeq: 2, stewardWatch: true, updatedAt: new Date().toISOString() }, null, 2), 'utf8');
-  I.stewardRuntime.cursor.sessionTurns[sid] = { turnSeq: 1, stamp: '' };
-  I.turnSettlers.set(sid, { probe: true });
+  const putHead = turnSeq => fs.writeFileSync(headFile, JSON.stringify({
+    ...head, kind: 'quick_ask', turnSeq, stewardWatch: true, title: '回合 ' + turnSeq + '.'.repeat(turnSeq),
+  }, null, 2));
+  const cursorFile = path.join(data, 'steward', 'cursor-v1.json');
+  const cursor = () => JSON.parse(fs.readFileSync(cursorFile, 'utf8')).sources.sessionTurns[sid].turnSeq;
+  const rows = async () => (await I.stewardInboxRead({})).items.filter(row => row.sessionId === sid);
+  const config = baseCfg();
+  putHead(1);
   try {
-    const during = await I.stewardCollectSessionTurn(sid, sid, { sourceStamp: 'stamp-a' }, Date.now());
-    assert.equal(during, null, '回合还在起手 / 收尾窗口:不报');
-    assert.equal(I.stewardRuntime.cursor.sessionTurns[sid].turnSeq, 1, '基线不前进(否则真结果再也报不出来)');
-  } finally { I.turnSettlers.delete(sid); }
-  const after = await I.stewardCollectSessionTurn(sid, sid, { sourceStamp: 'stamp-b' }, Date.now());
-  assert.ok(after && typeof after === 'object', '回合收尾之后照常报这一回合');
-  assert.equal(I.stewardRuntime.cursor.sessionTurns[sid].turnSeq, 2);
+    await I.startStewardInbox(config);
+    assert.equal(cursor(), 1, '冷启动建立第一回合的基线');
+    I.turnSettlers.set(sid, { probe: true });
+    putHead(2);
+    await I.startStewardInbox(config);
+    assert.deepEqual(await rows(), [], '回合还在起手 / 收尾窗口:不报');
+    assert.equal(cursor(), 1, '基线不前进(否则真结果再也报不出来)');
+    I.turnSettlers.delete(sid);
+    await I.startStewardInbox(config);
+    assert.deepEqual((await rows()).map(row => [row.kind, row.payload.turnSeq]), [['done', 2]], '回合收尾之后照常报一次');
+    assert.equal(cursor(), 2);
+  } finally {
+    I.turnSettlers.delete(sid);
+    I.stopStewardInbox();
+  }
 });

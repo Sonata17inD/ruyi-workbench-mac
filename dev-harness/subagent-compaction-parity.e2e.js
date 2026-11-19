@@ -153,7 +153,7 @@ function logRecords(home) {
     const budget = est[3] - 300;
     const bigTokens = est[1] - est[0];
     // 运行时的估算比这里量到的高 ~1.7K(校准与工具表口径),缩减视图本身也有 ~1.7K;两样一起留 3500 的余量。
-    const sufficient = Math.floor(budget * require('../ruyi-workbench/app/src/context-governance-rules.json').compactionPlan.l1SufficientRatio);
+    const sufficient = Math.floor(budget * require('../ruyi-workbench/app/backend/context-governance-rules.json').compactionPlan.l1SufficientRatio);
     ok(est[3] - bigTokens + 3500 < sufficient, `阶段 0 蒸发大文件之后能压到 L1 低水位以下(${est[3]} - ${bigTokens} + 3500 < ${sufficient})`);
     const windowTokens = Math.ceil(budget / 0.8);
     subBodies.length = 0;

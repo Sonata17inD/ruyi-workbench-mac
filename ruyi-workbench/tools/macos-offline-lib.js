@@ -132,9 +132,17 @@ function nativeAudit(root) {
     if (entry.type !== 'file' || entry.bytes < 4) continue;
     const file = safeChild(root, entry.path);
     const fd = fs.openSync(file, 'r');
-    const magic = Buffer.alloc(4);
-    try { fs.readSync(fd, magic, 0, 4, 0); } finally { fs.closeSync(fd); }
-    if (!['cffaedfe', 'cefaedfe', 'cafebabe', 'bebafeca', 'cafebabf'].includes(magic.toString('hex'))) continue;
+    const probeHeader = Buffer.alloc(64);
+    try {
+      const read = fs.readSync(fd, probeHeader, 0, probeHeader.length, 0);
+      if (read === 64 && probeHeader.readUInt16LE(0) === 0x5a4d) {
+        const offset = probeHeader.readUInt32LE(60);
+        const signature = Buffer.alloc(4);
+        if (offset >= 64 && offset + 4 <= entry.bytes && fs.readSync(fd, signature, 0, 4, offset) === 4
+          && signature.equals(Buffer.from('PE\0\0'))) throw new Error('Windows PE image in Mac package: ' + entry.path);
+      }
+    } finally { fs.closeSync(fd); }
+    if (!['cffaedfe', 'cefaedfe', 'cafebabe', 'bebafeca', 'cafebabf'].includes(probeHeader.subarray(0, 4).toString('hex'))) continue;
     const architectures = inspect(lipo, ['-archs'], file).split(/\s+/);
     if (!architectures.includes('arm64')) throw new Error('Non-arm64 native payload: ' + entry.path);
     const output = inspect(otool, ['-arch', 'arm64', '-L'], file);

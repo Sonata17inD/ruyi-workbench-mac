@@ -169,10 +169,7 @@ const SHELL_SNAPSHOT = `(() => {
     // 121-K1：30s 那一档曾经是交办台自己的轮询。它随交办台退役，这个数字自此恒为 0 ——
     // 判据从「切走后停掉」变成「全仓再没有这一档后台税」，是收紧不是放宽。
     legacyPollTimers: (window.__ruyiLiveIntervals ? window.__ruyiLiveIntervals() : []).filter(ms => ms === 30000).length,
-    // 117b：管家自己的状态轮询。117j W2-4 重钉：表按 5s 下限起（真要不要拉由 pollStewardTick 自己判，
-    // 见 steward-shell.js 那段头注），所以「这是管家的计时器」的身份判据从 config.stewardPollMs
-    // 重钉到 5000 —— 不改的话本断言恒为 0，D8 会从「轮询在跑」变成永远失败。
-    stewardPollTimers: (window.__ruyiLiveIntervals ? window.__ruyiLiveIntervals() : []).filter(ms => ms === 5000).length,
+    stewardPollTimers: window.__ruyiStewardIntervals?.() ?? null,
     avatarState: document.getElementById('stewardAvatar')?.dataset.state || '',
   };
 })()`;
@@ -240,15 +237,25 @@ try {
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
       const live = new Map();
+      const steward = new Set();
       const nativeSet = window.setInterval;
       const nativeClear = window.clearInterval;
       window.setInterval = function (handler, delay, ...rest) {
         const id = nativeSet.call(window, handler, delay, ...rest);
         live.set(id, Number(delay) || 0);
+        if (/steward-shell\\.js/.test(new Error().stack || '')) steward.add(id);
         return id;
       };
-      window.clearInterval = function (id) { live.delete(id); return nativeClear.call(window, id); };
+      window.clearInterval = function (id) { live.delete(id); steward.delete(id); return nativeClear.call(window, id); };
       window.__ruyiLiveIntervals = () => [...live.values()];
+      window.__ruyiStewardIntervals = () => steward.size;
+      window.__ruyiStewardStateReads = 0;
+      const nativeFetch = window.fetch;
+      window.fetch = function (input, ...rest) {
+        const url = new URL(input?.url || input, location.href);
+        if (url.pathname === '/api/steward/state' && /steward-shell\\.js/.test(new Error().stack || '')) window.__ruyiStewardStateReads++;
+        return nativeFetch.call(this, input, ...rest);
+      };
     })();`,
   });
 
@@ -333,15 +340,16 @@ try {
   ok(stewardOn && stewardOn.focused === 'stewardShell', 'D5 进入管家壳后焦点落在同级容器上');
   ok(stewardOn && stewardOn.legacyPollTimers === 0,
     'D6 管家壳不引入 30s 档的后台税（交办台那一档已随它退役）');
-  // 117b：avatar 态 + 自己的状态轮询（仅在管家模式下才起，与 D6 的「零 30s 后台税」互补）。
+  // 检查头像实况、回到可见时的即时刷新以及空闲时的固定轮询。
   ok(stewardOn && stewardOn.avatarState === 'idle',
     'D7 进入管家壳时头像态为 idle(开关开、未停机、无待决、无错误——GET /api/steward/state 的默认实况)');
-  const stewardPolling = await waitForEval(cdp, `(() => {
-    const snapshot = ${SHELL_SNAPSHOT};
-    return snapshot.stewardPollTimers > 0 ? snapshot : null;
+  const stateReads = await cdp.evaluate(`(() => {
+    const before = window.__ruyiStewardStateReads;
+    document.dispatchEvent(new Event('visibilitychange'));
+    return window.__ruyiStewardStateReads - before;
   })()`);
-  ok(stewardPolling && stewardPolling.stewardPollTimers > 0,
-    'D8 管家壳自己对 /api/steward/state 的状态轮询在跑(表按 5s 下限起,只在管家模式下才起)');
+  ok(stateReads === 1 && stewardOn?.stewardPollTimers === 0,
+    'D8 可见时立即刷新管家状态，空闲壳层无固定轮询');
 
   // ─── ③ 刷新恢复 + 管家 → 工作台 → 管家全链路一致 ──────────────────────────────
   await cdp.evaluate('location.reload(); true');
@@ -374,8 +382,13 @@ try {
   })()`);
   ok(segAfterClassic === JSON.stringify({ on: 'classic', pressed: ['steward:false', 'classic:true'] }),
     `E2b 分段钮的样子只读 data-shell-mode（滑块与 aria-pressed 跟着实况，实得 ${segAfterClassic}）`);
-  ok(backToClassic && backToClassic.stewardPollTimers === 0,
-    'E2a 回到工作台后管家自己的状态轮询计时器也被清(MutationObserver 盯 data-shell-mode，立即 stopPolling)');
+  const classicStateReads = await cdp.evaluate(`(() => {
+    const before = window.__ruyiStewardStateReads;
+    document.dispatchEvent(new Event('visibilitychange'));
+    return window.__ruyiStewardStateReads - before;
+  })()`);
+  ok(backToClassic && backToClassic.stewardPollTimers === 0 && classicStateReads === 0,
+    'E2a 回到工作台后，可见事件不再发起管家状态请求');
 
   // 121-K1：原 E3/E3a 走的是「再切回交办台预览」那一档。那一档退役后，全链路的最后一跳改回管家 ——
   // 钉的仍是同一件事：两视之间怎么绕，data-shell-mode / localStorage / 选择器三者始终一致。

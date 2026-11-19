@@ -41,9 +41,9 @@ const indexHtml = read('index.html');
 const styleManifest = read('styles.css');
 const chatStyleManifest = read('css/views/chat.css');
 const layeredCss = readFrontendCss();
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 
 let failures = 0;
 function ok(condition, label) {

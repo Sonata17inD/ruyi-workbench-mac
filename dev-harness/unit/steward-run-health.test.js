@@ -9,7 +9,7 @@ const { pathToFileURL } = require('node:url');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-health-unit-'));
 process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const { loadServerInternals } = require('../lib/server-internals');
-const srv = loadServerInternals(['agentRunHealth', 'missionRunDigest', 'missionHealthRuns', 'buildMissionCard', 'overlayMissionCard', 'pretenderLiveOverlayRevision', 'pretenderIndexRuntime', 'turnSettlers', 'activeChildren', 'activeAgentRuns', 'RUYI_EVENTS', 'saveAgentRun', 'PRETENDER_INDEX_SCHEMA'], { withEval: true });
+const srv = loadServerInternals(['agentRunHealth', 'missionRunDigest', 'missionHealthRuns', 'buildMissionCard', 'overlayMissionCard', 'pretenderLiveOverlayRevision', 'turnSettlers', 'activeChildren', 'activeAgentRuns', 'RUYI_EVENTS', 'saveAgentRun', 'getPretenderProjectionIndex', 'EventStreamHooks', 'sessionExecutionSnapshot', 'stewardThreadTurnQueued', 'stewardAsksYouForThread', 'nowIso']);
 after(() => { srv.activeAgentRuns.clear(); assert.equal(path.dirname(root), path.resolve(os.tmpdir())); assert.ok(path.basename(root).startsWith('ruyi-steward-health-unit-')); fs.rmSync(root, { recursive: true, force: true }); });
 const make = (id = 'run_abcd') => ({ id, sessionId: 'sess_abcdef', status: 'running', createdAt: '2026-10-16T01:00:00Z', updatedAt: '2026-10-16T01:00:00Z', eventSeq: 1, nodes: [{ id: 'idle', status: 'failed' }, { id: 'wait', status: 'waiting_resource', resourceBlockers: [] }], taskPool: [] });
 
@@ -40,7 +40,7 @@ test('health cards keep the actual newest persisted run and every live run, with
     assert.equal(overlay.healthRuns.length, 2);
     assert.equal(overlay.healthRuns.find(run => run.id === older.id).health.persistenceDegraded, true);
     assert.equal(overlay.execution, null);
-    assert.equal(srv.PRETENDER_INDEX_SCHEMA, 8, 'old regenerable cards must rebuild their new fields');
+    assert.equal((await srv.getPretenderProjectionIndex()).schemaVersion, 8, 'old regenerable cards must rebuild their new fields');
   } finally { srv.activeAgentRuns.clear(); }
 });
 
@@ -56,45 +56,58 @@ test('live ETag changes for fault appearance and recovery even when status, even
 });
 
 test('live ETag and actual overlay include startup and queued ownership before any child exists, globally and per session', () => {
-  const sid = 'sess_abfeed'; const previousIndex = srv.pretenderIndexRuntime.value;
+  const sid = 'sess_abfeed';
+  const { createPretenderLiveOverlay } = require('../../ruyi-workbench/app/backend/pretender-live-overlay.cjs');
+  const { pretenderLiveOverlayRevision, overlayMissionCard } = createPretenderLiveOverlay({
+    state: { ...srv, getIndexedPretenderSessionIds: () => [sid] },
+    cards: srv,
+  });
   try {
-    srv.pretenderIndexRuntime.value = { sessions: [{ sessionId: sid }] };
-    const idle = [srv.pretenderLiveOverlayRevision(sid), srv.pretenderLiveOverlayRevision()];
+    const idle = [pretenderLiveOverlayRevision(sid), pretenderLiveOverlayRevision()];
     const owner = { driverRunId: 'driver-A', phase: 'starting' }; srv.turnSettlers.set(sid, owner);
     assert.equal(srv.activeChildren.has(sid), false, 'the admission exists before any engine child');
     let previous = idle;
     for (const phase of ['starting', 'queued', 'running', 'stopping']) {
       owner.phase = phase;
-      const current = [srv.pretenderLiveOverlayRevision(sid), srv.pretenderLiveOverlayRevision()];
+      const current = [pretenderLiveOverlayRevision(sid), pretenderLiveOverlayRevision()];
       assert.notEqual(current[0], previous[0]); assert.notEqual(current[1], previous[1]);
-      const card = srv.overlayMissionCard({ sessionId: sid, card: { sessionId: sid, healthRuns: [] }, interventions: [] });
+      const card = overlayMissionCard({ sessionId: sid, card: { sessionId: sid, healthRuns: [] }, interventions: [] });
       assert.equal(card.execution.driverRunId, owner.driverRunId); assert.equal(card.execution.phase, phase);
       previous = current;
     }
     owner.driverRunId = 'driver-B';
-    assert.notEqual(srv.pretenderLiveOverlayRevision(sid), previous[0]); assert.notEqual(srv.pretenderLiveOverlayRevision(), previous[1]);
+    assert.notEqual(pretenderLiveOverlayRevision(sid), previous[0]); assert.notEqual(pretenderLiveOverlayRevision(), previous[1]);
     srv.turnSettlers.delete(sid);
-    assert.deepEqual([srv.pretenderLiveOverlayRevision(sid), srv.pretenderLiveOverlayRevision()], idle);
-  } finally { srv.turnSettlers.delete(sid); srv.pretenderIndexRuntime.value = previousIndex; }
+    assert.deepEqual([pretenderLiveOverlayRevision(sid), pretenderLiveOverlayRevision()], idle);
+  } finally { srv.turnSettlers.delete(sid); }
 });
 
 test('snapshot-save health transitions publish existing thread.state, and observer failures cannot mask write results', async () => {
   const run = make('run_fade'); run.nodes = []; srv.activeAgentRuns.set(run.id, { run });
+  let forceFailure = false;
+  const { createAgentRunStore } = require('../../ruyi-workbench/app/backend/agent-run-store.cjs');
+  const store = createAgentRunStore({
+    files: { agentRunDir: id => path.join(root, id), agentRunFile: (sid, id) => path.join(root, sid, id + '.json'),
+      atomicWriteJson: async (file, snapshot) => { if (forceFailure) throw new Error('forced snapshot failure'); await fs.promises.writeFile(file, snapshot); } },
+    lifecycle: { sessionAssociatedSaveIsTombstoned: () => false, hasLiveRun: id => srv.activeAgentRuns.has(id), getLiveRun: id => srv.activeAgentRuns.get(id) },
+    signals: { emit: (...args) => srv.RUYI_EVENTS.emit(...args), logEvent() {} },
+    safeSessionId: id => id, nowIso: () => new Date().toISOString(),
+  });
   let events = 0;
   let unsubscribe = () => {};
   const observer = (name, data) => { if (name === 'thread.state' && data.sessionId === run.sessionId) { events += 1; throw new Error('observer failure'); } };
   try {
-    await srv.saveAgentRun(run);
+    await store.saveAgentRun(run);
     unsubscribe = srv.RUYI_EVENTS.subscribe(observer);
-    srv.__eval('globalThis.__healthAtomicWriter = atomicWriteJson; atomicWriteJson = async () => { throw new Error("forced snapshot failure"); };');
-    for (let n = 0; n < 3; n += 1) await assert.rejects(srv.saveAgentRun(run), /forced snapshot failure/);
+    forceFailure = true;
+    for (let n = 0; n < 3; n += 1) await assert.rejects(store.saveAgentRun(run), /forced snapshot failure/);
     assert.equal(run.persistenceDegraded, true); assert.equal(events, 1);
-    srv.__eval('atomicWriteJson = globalThis.__healthAtomicWriter; delete globalThis.__healthAtomicWriter;');
-    await srv.saveAgentRun(run);
+    forceFailure = false;
+    await store.saveAgentRun(run);
     assert.equal(run.persistenceDegraded, false); assert.equal(events, 2);
-    run.idleAborted = true; await srv.saveAgentRun(run); assert.equal(events, 3, 'same-status idle abort wakes global readers');
+    run.idleAborted = true; await store.saveAgentRun(run); assert.equal(events, 3, 'same-status idle abort wakes global readers');
   } finally {
-    srv.__eval('if (globalThis.__healthAtomicWriter) { atomicWriteJson = globalThis.__healthAtomicWriter; delete globalThis.__healthAtomicWriter; }');
+    await store.flushSessionAgentRuns(run.sessionId, [run.id]);
     unsubscribe(); srv.activeAgentRuns.clear();
   }
 });

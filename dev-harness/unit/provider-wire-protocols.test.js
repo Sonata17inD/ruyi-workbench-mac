@@ -263,6 +263,11 @@ test('[G] 协议分叉只住 04i 与前端协议表', () => {
     if (file === '04h-provider-http.js' || file === '04i-provider-wire.js') continue;
     scan(file, fs.readFileSync(path.join(srcDir, file), 'utf8'), backendRules);
   }
+  const modules = path.join(app, 'backend');
+  for (const file of fs.readdirSync(modules).filter(f => f.endsWith('.cjs'))) {
+    if (file === 'provider-http.cjs' || file === 'provider-wire.cjs') continue;
+    scan('backend/' + file, fs.readFileSync(path.join(modules, file), 'utf8'), backendRules);
+  }
   const frontendRules = [['与协议字面量比较', /apiStyle\s*===?\s*'|===?\s*'responses'/]];
   const pub = path.join(app, 'public');
   for (const file of [...fs.readdirSync(path.join(pub, 'js')).filter(f => f.endsWith('.js')).map(f => path.join('js', f)), 'app.js']) {

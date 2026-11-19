@@ -30,9 +30,9 @@ const css = read('css/views/steward-conversation.css');
 const styles = read('styles.css');
 const zh = JSON.parse(read('locales/zh-CN.json'));
 const en = JSON.parse(read('locales/en-US.json'));
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const readFrontendCss = fs.readFileSync(path.join(__dirname, 'read-frontend-css.js'), 'utf8');
 
 // 注释里要写清楚「零 innerHTML」「界面不出现『速问』」这些纪律本身，所以扫禁词与扫危险 API 时
@@ -301,8 +301,7 @@ ok(count(conversation, /setTimeout\(/g) === 1
 ok(count(composer, /setTimeout\(/g) === 1 && count(composer, /clearTimeout\(/g) === 1,
   'I3 steward-composer.js 恰好一处 setTimeout（预判去抖）与一处 clearTimeout');
 ok(count(composer, /setInterval\(/g) === 0, 'I4 steward-composer.js 零 setInterval');
-ok(count(stewardShell, /setInterval\(/g) === 1,
-  'I5 steward-shell.js 仍然全文件恰好一处 setInterval（117b 的 C2a 未被 117c 稀释）');
+ok(!/setInterval\(/.test(stewardShell), 'I5 壳层无固定 interval');
 ok(/function startUndoCountdown\(btn, onExpire\) \{\s*stopUndoCountdown\(\);/.test(conversation)
   && /undoTimer = setInterval\(/.test(conversation)
   && /stopUndoCountdown\(\);\s*onExpire\(\);/.test(conversation),
@@ -620,12 +619,12 @@ ok(mod.stewardInboxTurnSeq('- [2] done · 会话「A」(sess_a) · 会话第 3 �
   && mod.stewardInboxTurnSeq('会话「A」(sess_a) 收工了') === 0,
   'P3b 新词「会话第 N 回合跑完了/失败」同样取到回合号');
 // P3c 【成对改的反向验证】——不钉行号、不钉整句，只钉「服务端现在写的就是解析器认得的那个形状」：
-// 直接拿 src/13i 的摘要生产处来对（生产端改了措辞而这三支正则没跟，或反过来，这条立刻红）。
-const inboxSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '13i-steward-inbox.js'), 'utf8');
+// 对照事件模块生成的摘要。生产端措辞和前端解析必须匹配。
+const inboxSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'steward-inbox-events.cjs'), 'utf8');
 ok(/`会话第 \$\{seq\} 回合失败/.test(inboxSrc) && /`会话第 \$\{seq\} 回合跑完了/.test(inboxSrc)
   && /`会话停住了\(/.test(inboxSrc)
   && mod.stewardInboxTurnSeq('会话第 7 回合跑完了') === 7,
-  'P3c 服务端 13i 现在写的是「会话第 N 回合…／会话停住了」(与上面的解析器同刀改才同时成立)');
+  'P3c 收件箱事件模块现在写的是「会话第 N 回合…／会话停住了」(与上面的解析器同刀改才同时成立)');
 const deliverSession = { messages: [
   { role: 'user', turnSeq: 1, content: '问' },
   { role: 'assistant', turnSeq: 1, content: '第一回合的答' },

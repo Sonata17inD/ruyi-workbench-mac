@@ -16,31 +16,6 @@ envelope and a safety net:
 
 import sys
 
-# ``uiautomation`` imports comtypes while tools are registered.  comtypes defaults the importing
-# thread to STA, but this process runs WinRT OCR awaits on asyncio's Windows Proactor event-loop
-# thread, which has no Win32 message pump.  On affected Windows/WinSDK combinations that leaves
-# BitmapDecoder/OCR completion callbacks undelivered.  Declare the server thread as MTA before any
-# dependency can import comtypes; UIA worker threads initialize COM for themselves where needed.
-if sys.platform == "win32":
-    sys.coinit_flags = 0x0  # COINIT_MULTITHREADED — hint read by comtypes when IT later inits COM
-    # ``sys.coinit_flags`` is only a *hint* to comtypes; it does not initialize COM itself.  A
-    # transitive dependency (winsdk WinRT OCR, a comtypes auto-init path, etc.) can implicitly
-    # CoInitialize the main thread as STA before comtypes reads the flag, and an apartment mode is
-    # immutable once chosen for the thread.  That silently left the live thread as STA on clean
-    # Windows Server images (CI: CoGetApartmentType != MTA) and starved WinRT OCR callbacks.  Make
-    # the MTA choice authoritative by explicitly calling CoInitializeEx(MTA) here, before any
-    # FastMCP/tool/winsdk import runs.  ctypes/ole32 only — no pywin32 import (which would itself
-    # touch COM and reintroduce the ordering problem).
-    import ctypes as _ctypes
-    _ole32 = _ctypes.windll.ole32
-    # COINIT_MULTITHREADED = 0x0; ignore RPC_E_CHANGED_MODE (0x80010106) — already inited, and the
-    # coinit_flags hint above keeps comtypes' own re-init consistent wherever possible.
-    _hr = _ole32.CoInitializeEx(None, 0x0)
-    if _hr < 0 and _hr & 0xFFFFFFFF != 0x80010106 and _hr & 0xFFFFFFFF != 0x00000001:
-        # 0x00000001 (S_FALSE) = already MTA-inited on this thread; that's fine.
-        import warnings as _warnings
-        _warnings.warn(f"CoInitializeEx(MTA) returned 0x{_hr & 0xFFFFFFFF:08X}; COM apartment may not be MTA")
-
 import functools
 import inspect
 import time
@@ -132,7 +107,7 @@ class PlatformMCP(FastMCP):
 
 mcp = PlatformMCP(
     "AI Computer Control",
-    instructions="A comprehensive toolkit for AI agents to control Windows and macOS computers. "
+    instructions="A comprehensive toolkit for AI agents to control macOS computers. "
     "Provides screen capture, mouse/keyboard control, window management, "
     "file operations, browser automation, document editing, and more. "
     "Every tool returns a dict with a boolean 'ok' field. "
@@ -267,8 +242,6 @@ _AUDITED_BY_NAME = frozenset({
     "write_document", "write_excel", "write_pdf",
     "fetch",
     "browser_open", "browser_click", "browser_type", "browser_navigate", "browser_switch_tab", "browser_close",
-    "get_environment_variable",
-    "message_box", "show_notification", "notify_attention",
 })
 
 
@@ -359,59 +332,23 @@ mcp.tool = tool  # type: ignore[assignment]
 import os as _os  # noqa: E402
 
 _TOOLSET_MODULES = {
-    "desktop":   ["screen", "mouse", "keyboard", "clipboard", "window", "application", "system", "desktop_extra", "dialog"],
-    "office":    ["document", "office_excel", "office_pptx", "office_chart", "office_read"],
-    "browser":   ["browser"],
+    "desktop": ["macos_capture", "macos_input", "macos_events", "macos_application"],
+    "office": ["document", "office_excel", "office_pptx", "office_chart", "office_read"],
+    "browser": ["browser"],
     "filesystem": ["filesystem", "editing", "image_tools"],
-    "shell":     ["shell"],
-    "uia":       ["uia"],
-    "ocr":       ["ocr"],
-    "vision":    ["vision", "capture"],
-    "macro":     ["record", "batch"],
-    "memory":    ["memory"],
-    "web":       ["web_fetch"],
-    "thinking":  ["thinking"],
-    "observe":   ["observe", "act_and_verify"],
-    "audio":     ["audio"],
-    "sync":      ["sync"],
+    "shell": ["shell"],
+    "uia": ["macos_ax"],
+    "ocr": ["macos_ocr"],
+    "vision": ["macos_vision", "macos_capture"],
+    "macro": ["macos_record", "batch"],
+    "memory": ["memory"],
+    "web": ["web_fetch"],
+    "thinking": ["thinking"],
+    "observe": ["macos_observe", "macos_act_and_verify"],
 }
 _ALWAYS_MODULES = ["audit", "diagnostics"]
-
-# P5 registers Mac capture, window and clipboard backends separately. Remaining
-# desktop modules stay absent until their Mac work packages have real backends.
-_MAC_UNSUPPORTED_TOOLSETS = frozenset({
-    "desktop", "uia", "ocr", "vision", "macro", "observe", "audio", "sync",
-})
-_UNSUPPORTED_MODULES = {
-    module: "platform.unsupported: macOS desktop backend is not implemented"
-    for group in _MAC_UNSUPPORTED_TOOLSETS for module in _TOOLSET_MODULES[group]
-} if sys.platform == "darwin" else {}
-if sys.platform == "darwin":
-    _UNSUPPORTED_MODULES.pop("screen", None)
-    _UNSUPPORTED_MODULES.pop("capture", None)
-    _UNSUPPORTED_MODULES.pop("window", None)
-    _UNSUPPORTED_MODULES.pop("clipboard", None)
-    _UNSUPPORTED_MODULES.pop("keyboard", None)
-    _UNSUPPORTED_MODULES.pop("mouse", None)
-    _UNSUPPORTED_MODULES.pop("application", None)
-    _UNSUPPORTED_MODULES.pop("uia", None)
-    _UNSUPPORTED_MODULES.pop("ocr", None)
-    _UNSUPPORTED_MODULES.pop("vision", None)
-    _UNSUPPORTED_MODULES.pop("observe", None)
-    _UNSUPPORTED_MODULES.pop("act_and_verify", None)
-    _UNSUPPORTED_MODULES.pop("batch", None)
-    _UNSUPPORTED_MODULES.pop("record", None)
-
-
-def _platform_modules(modules: list[str]) -> list[str]:
-    active = [module for module in modules if module not in _UNSUPPORTED_MODULES]
-    if sys.platform == "darwin":
-        replacements = {"screen": "macos_capture", "capture": "macos_capture",
-                        "window": "macos_input", "clipboard": "macos_input",
-                        "keyboard": "macos_events", "mouse": "macos_events", "application": "macos_application",
-                        "uia": "macos_ax", "ocr": "macos_ocr", "vision": "macos_vision", "observe": "macos_observe", "act_and_verify": "macos_act_and_verify", "record": "macos_record"}
-        active = [replacements.get(module, module) for module in active]
-    return list(dict.fromkeys(active))
+# Retained diagnostic field; retired platforms no longer participate in registration.
+_UNSUPPORTED_MODULES = {}
 
 
 def _active_modules() -> list[str]:
@@ -421,7 +358,7 @@ def _active_modules() -> list[str]:
         mods = []
         for group in _TOOLSET_MODULES.values():
             mods.extend(group)
-        return _platform_modules(_ALWAYS_MODULES + [m for m in mods if not (hide_memory and m == "memory")])
+        return list(dict.fromkeys(_ALWAYS_MODULES + [m for m in mods if not (hide_memory and m == "memory")]))
     mods = list(_ALWAYS_MODULES)
     unknown = []
     for name in (p.strip().lower() for p in raw.split(",")):
@@ -440,13 +377,13 @@ def _active_modules() -> list[str]:
         if m not in seen:
             seen.add(m)
             out.append(m)
-    return _platform_modules([m for m in out if not (hide_memory and m == "memory")])
+    return list(dict.fromkeys([m for m in out if not (hide_memory and m == "memory")]))
 
 
 import importlib as _importlib  # noqa: E402
 
-# Tool modules that failed to import: {module: "ExcType: message"}. One broken hard dependency (a pywin32 DLL,
-# pyautogui without a display, psutil) must not take out unrelated tools (filesystem/office/fetch), so each
+# Tool modules that failed to import: {module: "ExcType: message"}. A broken dependency
+# must not take out unrelated tools (filesystem/office/fetch), so each
 # module is imported on its own. The failure is never silent: one stderr line here and
 # diagnostics().load_errors (which the workbench probe reads).
 _LOAD_ERRORS: dict[str, str] = {}

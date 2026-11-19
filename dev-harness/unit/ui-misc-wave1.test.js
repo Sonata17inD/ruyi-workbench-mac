@@ -190,7 +190,7 @@ describe('[F5] 英文单复数', () => {
 });
 
 describe('[F6] 审计行摘要本地化', () => {
-  const serverSrc = fs.readFileSync(path.join(APP, 'src', '06-provider-engine.js'), 'utf8');
+  const serverSrc = fs.readFileSync(path.join(APP, 'backend', 'audit-timeline.cjs'), 'utf8');
   const mapBlock = constBlock(serverSrc, 'AUDIT_SUMMARY_MAP');
   const mapEntries = [...mapBlock.matchAll(/^\s*([a-z_]+):\s*'([^']*)'/gm)].map(m => [m[1], m[2]]);
 
@@ -244,9 +244,9 @@ describe('[F6] 审计行摘要本地化', () => {
 
 describe('[F7] MCP 兼容性框的本地化键', () => {
   it('服务端 MCP_COMPAT_MATRIX 的每个 transport 都有 capabilities / limitations 两键', () => {
-    const src = fs.readFileSync(path.join(APP, 'src', '04-permission-runtime.js'), 'utf8');
+    const src = fs.readFileSync(path.join(APP, 'backend', 'mcp-client-runtime.cjs'), 'utf8');
     const block = constBlock(src, 'MCP_COMPAT_MATRIX');
-    const transports = [...block.matchAll(/^ {2}(\w+): \{/gm)].map(m => m[1]);
+    const transports = [...block.matchAll(/^ {4}(\w+): \{/gm)].map(m => m[1]);
     assert.deepEqual(transports.sort(), ['http', 'sse', 'stdio']);
     for (const k of transports) {
       for (const field of ['capabilities', 'limitations']) {

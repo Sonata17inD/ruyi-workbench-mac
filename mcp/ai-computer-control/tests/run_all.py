@@ -18,22 +18,17 @@ import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.dirname(_HERE)
-_VENV_PY = os.path.join(_ROOT, ".venv", "Scripts", "python.exe")
+_VENV_PY = os.path.join(_ROOT, ".venv", "bin", "python")
 # 优先用仓库 venv(依赖已装),不在则用当前解释器(离线包/CI setup-python 场景)。
 PYTHON = _VENV_PY if os.path.exists(_VENV_PY) else sys.executable
 
-# CI(windows runner, 无真实显示会话)只跑确认无显示依赖的件;本地全量。
-# 判定依据:import pyautogui 即需要显示会话(windows runner 有虚拟桌面,pyautogui 可用,
-# 但 OCR/UIA 依赖具体窗口/字体渲染,实测后再放行)。smoke_registry/stdio/async_contracts
-# 经本地与 CI 双验证为纯协议/注册表面,稳定。
-# smoke_action_tools: 纯逻辑(假 win32/UIA/pyautogui),不依赖真实显示会话:动作类工具的边界/等待/批量图片/路由判定。
-# smoke_fetch_transport / smoke_office_read_v2: 本机回环 http.server + 临时目录现造文件,无显示依赖、
-# 各约 3-10 秒;可选依赖(reportlab/python-pptx)缺失时相关断言自行跳过。
-# smoke_desktop_edges / smoke_fetch_pinning: 纯逻辑(假 win32/pyautogui/WinRT、本机回环 server + 打桩 DNS),无显示依赖;
-# desktop_edges 末尾的真 PowerShell / 真大小写不敏感卷断言只在 Windows 上跑。
-CI_SUBSET = ("smoke_registry", "smoke_stdio", "smoke_async_contracts", "smoke_toolsets", "smoke_descriptions",
-             "smoke_envelope", "smoke_action_tools", "smoke_fetch_transport", "smoke_office_read_v2",
-             "smoke_desktop_edges", "smoke_fetch_pinning", "smoke_browser_runtime")
+# Mac CI uses native IPC fakes and shared file/document/network contracts.
+# Live screen/permission acceptance remains a separate explicit gate.
+CI_SUBSET = ("smoke_macos_shared", "smoke_macos_capture", "smoke_macos_input",
+             "smoke_macos_events", "smoke_macos_ax", "smoke_macos_visual",
+             "smoke_macos_composed", "smoke_macos_record", "smoke_macos_sequence",
+             "smoke_macos_receipt_session", "smoke_fetch_transport",
+             "smoke_office_read_v2", "smoke_fetch_pinning", "smoke_browser_runtime")
 
 TIMEOUT_S = 300
 

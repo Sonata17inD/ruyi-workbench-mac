@@ -12,7 +12,7 @@ let count = 0;
 async function fixture() {
   const data = path.join(root, 'data-' + (++count)); fs.mkdirSync(data);
   process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
-  const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime', 'turnSettlers', 'writeStartError']);
+  const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime', 'turnSettlers', 'ServerStartNotices']);
   const ownership = await api.ServerOwnership.acquire([data]);
   await api.DesktopExecutionRuntime.initialize(ownership);
   const session = { id: 'sess_runtime', turnSeq: 1, rewindGen: 0 };
@@ -88,7 +88,7 @@ test('replacing owned data directory cannot create a fresh execution authority u
   try {
     fs.renameSync(f.data, f.data + '-moved'); fs.mkdirSync(f.data);
     assert.equal(f.DesktopExecutionRuntime.canWriteStartupError(), false);
-    await f.writeStartError('startup-failed', 'Must not touch replacement');
+    await f.ServerStartNotices.writeStartError('startup-failed', 'Must not touch replacement');
     await assert.rejects(f.DesktopExecutionRuntime.guard(f.session.id), { code: 'execution_owner_lost' });
     assert.throws(() => f.DesktopExecutionRuntime.admit(f.session, f.owner), { code: 'execution_owner_lost' });
     await assert.rejects(prepare(f), { code: 'execution_owner_lost' });

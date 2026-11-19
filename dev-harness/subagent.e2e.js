@@ -25,6 +25,8 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { once } = require('node:events');
+const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-openai-provider');
 
 const { getFreePort } = require('./free-port.js');
 
@@ -266,31 +268,54 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
     ok(stoppedRun && stoppedRun.status === 'stopped', '(a4) stop aborts the workflow and persists stopped state');
 
     // ── (a5) resource-aware DAG: independent nodes sharing desktop must serialize ─────────────────────
-    killp(fake); await sleep(300);
-    const scriptR = JSON.stringify({
-      parent: [{ name: 'orchestrate_agents', args: { nodes: [
-        { id: 'desktop-a', task: '桌面任务 A', toolTier: 'read', resources: ['desktop'] },
-        { id: 'desktop-b', task: '桌面任务 B', toolTier: 'read', resources: ['desktop'] },
-      ] } }],
-      sub: [], subText: '桌面节点完成。', parentText: '资源调度完成。',
+    const priorFakeExited = once(fake, 'exit');
+    killp(fake);
+    await priorFakeExited;
+    const nodesR = [
+      { id: 'desktop-a', task: '桌面任务 A', toolTier: 'read', resources: ['desktop'] },
+      { id: 'desktop-b', task: '桌面任务 B', toolTier: 'read', resources: ['desktop'] },
+    ];
+    const { promise: allowDesktopCompletion, resolve: releaseDesktopResponse } = Promise.withResolvers();
+    const resourceFake = await startFakeProvider({
+      port: FAKE_PORT,
+      async handler({ messages }) {
+        if (messages.some(m => m.role === 'system' && String(m.content).includes('子任务执行体'))) {
+          await allowDesktopCompletion;
+          return textFrames('桌面节点完成。');
+        }
+        if (messages.some(m => m.role === 'tool')) return textFrames('资源调度完成。');
+        return toolCallFrames('orchestrate_agents', { nodes: nodesR }, 'desktop-run');
+      },
     });
-    fake = spawnFake({ FAKE_SUBAGENT_SCRIPT: scriptR, FAKE_STREAM_DELAY_MS: '180' }); procs.push(fake);
-    up = false; for (let i = 0; i < 30 && !up; i++) { await sleep(150); up = await fakeUp(FAKE_PORT); }
-    ok(up, '(a5) resource-aware DAG fake respawned');
-    const cr = await postJson(WB_PORT, '/api/sessions', { title: 'resource-aware DAG', cwd: HOME }, hdr);
-    const sidr = cr.body && cr.body.session && cr.body.session.id;
-    const evr = await streamChat(WB_PORT, { sessionId: sidr, message: '运行两个桌面任务', cwd: HOME });
-    const aStartR = evr.findIndex(e => e.type === 'subagent' && e.state === 'start' && e.agentKey === 'desktop-a');
-    const aEndR = evr.findIndex(e => e.type === 'subagent' && e.state === 'end' && e.agentKey === 'desktop-a');
-    const bStartR = evr.findIndex(e => e.type === 'subagent' && e.state === 'start' && e.agentKey === 'desktop-b');
-    ok(aStartR >= 0 && aEndR >= 0 && bStartR > aEndR, '(a5) same desktop resource serializes otherwise-independent nodes');
-    ok(evr.some(e => e.type === 'agent_resource' && e.state === 'waiting' && e.agentKey === 'desktop-b'), '(a5) waiting resource event is observable');
-    const rr = await getJson(WB_PORT, '/api/agent-runs?sessionId=' + sidr, hdr);
-    const persistedR = rr.runs && rr.runs.find(run => run.nodes && run.nodes.some(n => n.id === 'desktop-a'));
-    ok(persistedR && persistedR.schemaVersion === 4 && persistedR.nodes.every(n => Array.isArray(n.resources) && n.resources[0] === 'desktop'), '(a5) normalized resources persist in schema v4 run record');
+    // Hold the provider reply until the contender reports waiting. Bound the hold so a
+    // regression still completes the stream and can print the failed assertions.
+    const holdDeadline = setTimeout(releaseDesktopResponse, 10000);
+    try {
+      const cr = await postJson(WB_PORT, '/api/sessions', { title: 'resource-aware DAG', cwd: HOME }, hdr);
+      const sidr = cr.body && cr.body.session && cr.body.session.id;
+      const isDesktopWait = e => e.type === 'agent_resource' && e.state === 'waiting' && e.resources.includes('desktop');
+      const evr = await streamChatLive(WB_PORT, { sessionId: sidr, message: '运行两个桌面任务', cwd: HOME }, e => {
+        if (isDesktopWait(e)) releaseDesktopResponse();
+      });
+      const runsR = nodesR.map(({ id }) => ({
+        id,
+        start: evr.findIndex(e => e.type === 'subagent' && e.state === 'start' && e.agentKey === id),
+        end: evr.findIndex(e => e.type === 'subagent' && e.state === 'end' && e.agentKey === id && e.ok === true),
+      })).sort((a, b) => a.start - b.start);
+      const [first, second] = runsR;
+      const waiting = evr.findIndex(e => isDesktopWait(e) && e.agentKey === second.id);
+      ok(first.start >= 0 && first.end > first.start && second.start > first.end && second.end > second.start, '(a5) same desktop resource serializes otherwise-independent nodes');
+      ok(waiting >= 0 && waiting < first.end, '(a5) contender reports waiting before the resource holder finishes');
+      const rr = await getJson(WB_PORT, '/api/agent-runs?sessionId=' + sidr, hdr);
+      const persistedR = rr.runs && rr.runs.find(run => run.nodes && run.nodes.some(n => n.id === 'desktop-a'));
+      ok(persistedR && persistedR.schemaVersion === 4 && persistedR.nodes.every(n => Array.isArray(n.resources) && n.resources[0] === 'desktop'), '(a5) normalized resources persist in schema v4 run record');
+    } finally {
+      clearTimeout(holdDeadline);
+      releaseDesktopResponse();
+      await resourceFake.close();
+    }
 
     // ── (b) nesting forbidden: sub tries the legacy spawn_agent name → refused, but its file_write still runs ──
-    killp(fake); await sleep(300);
     const x2 = path.join(HOME, 'x2.txt');
     const scriptB = JSON.stringify({
       parent: [{ name: 'orchestrate_agents', args: { task: '子任务再派生', toolTier: 'exec' } }],

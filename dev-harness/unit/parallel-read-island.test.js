@@ -6,12 +6,7 @@
 //   · 岛不足 2 个 → [](单个只读无并发收益,走原串行路径)。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
-const { constBlock, functionBlock } = require('../lib/source-slice');
-
-const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/09-workflow.js'), 'utf8');
-const plan = new Function(`${constBlock(src, 'PARALLEL_READ_NEUTRAL')}\n${functionBlock(src, 'planParallelReadIsland')}\nreturn planParallelReadIsland;`)();
+const { planParallelReadIsland: plan } = require('../../ruyi-workbench/app/backend/tool-policy.cjs').createToolPolicy({});
 
 const READS = new Set(['file_read', 'web_fetch', 'file_search', 'glob']);
 const isSafe = tc => Boolean(tc && READS.has(tc.name) && !tc.bad);

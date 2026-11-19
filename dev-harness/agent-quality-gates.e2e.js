@@ -3,6 +3,8 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const {
   parseStructuredAgentOutput, validateAgentJsonSchema, normalizeAgentGate,
   aggregateAgentVote, dedupeAgentFindings, aggregateCoverage, propagateAssignments, QUALITY_GATE_OUTPUT_SCHEMA,
+} = require('../ruyi-workbench/app/backend/agent-quality.cjs');
+const {
   normalizeWorkflowLoop, workflowProgressFingerprint, evaluateNodeToolEvidence,
   indexNodeEvidence, verifyNodeClaims, purgeNodeEvidence, runWorkspaceHash,
   buildNodeEvidenceCatalog, formatNodeEvidencePrompt,

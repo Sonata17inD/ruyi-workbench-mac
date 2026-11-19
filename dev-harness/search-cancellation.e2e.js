@@ -100,7 +100,7 @@ let mode = 'normal', abortOnMatch;
       const ready = path.join(root, 'probe-ready'), finished = path.join(root, 'probe-finished'), calls = path.join(root, 'probe-calls');
       const match = JSON.stringify({ type: 'match', data: { path: { text: normal }, lines: { text: 'needle\n' }, line_number: 1 } }) + '\n';
       fs.writeFileSync(process.env.RUYI_RG_PATH, '#!' + process.execPath + '\n' + `const fs=require('fs');if(process.argv.includes('--version')){fs.appendFileSync(${JSON.stringify(calls)},'v');fs.writeFileSync(${JSON.stringify(ready)},'1');setTimeout(()=>{fs.writeFileSync(${JSON.stringify(finished)},'1');process.exit(0)},500)}else{process.stdout.write(${JSON.stringify(match)})}`, { mode: 0o700 });
-      S.__eval('_rgProbe=undefined; rgProbeCandidates = () => [{command:' + JSON.stringify(process.env.RUYI_RG_PATH) + ',source:"env"}]');
+      S.__eval('({hasRgAsync, probeRg} = require("./backend/rg-probe.cjs").createRgProbe({ProcessRuntime, candidates: () => [{command:' + JSON.stringify(process.env.RUYI_RG_PATH) + ',source:"env"}]}))');
       const first = new AbortController();
       const a = call('file_search', 'needle', first.signal), b = call('file_search', 'needle');
       await until(() => fs.existsSync(ready)); first.abort();

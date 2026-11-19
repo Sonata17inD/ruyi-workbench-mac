@@ -58,7 +58,7 @@ both({ kind: 'quick_ask', pending: { questions: 1 }, ledgerless: true, turnSeq: 
 both({ kind: 'quick_ask', ledgerless: true, turnSeq: 1 }, 'done',
   '跑完的速查线程(无账本 + turnSeq 1 + 账缺席按成功算)');
 both({ kind: 'quick_ask', factsUnknown: true }, 'quick_ask',
-  '没事实的调用方(13d 那条不读会话头的 else 支)-> 仍是 quick_ask');
+  '没事实的调用方(事项聚合模块里那条不读会话头的 else 支)-> 仍是 quick_ask');
 
 // 边角:速查线程的其余两态,以及「事实未知」压过一切真事实(它是【第 0 条】,优先级最高)。
 both({ kind: 'quick_ask', ledgerless: true, turnSeq: 1, lastTurnFailed: true }, 'stopped',
@@ -137,9 +137,9 @@ ok(aggregate(['quick_ask']) === 'stopped', "③ aggregateMissionState(['quick_as
 
 /* ═══════════ ④ 静态锁:逃生舱真的换了判据,而且两份抄写件逐字同一行 ═══════════ */
 
-const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '06i-steward-core.js'), 'utf8');
+const src06i = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '../backend/steward-core.cjs'), 'utf8');
 const srcFront = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'public', 'js', 'mission-state.js'), 'utf8');
-const src13d = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
+const aggregateSource = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'mission-aggregate.cjs'), 'utf8');
 
 // 架构还债批 4 重钉:两份抄写件的分支链换成同 id 判定表,第 0 条守卫从 if 行变成表的第 0 行;
 // 被钉的事实(第 0 条读 factsUnknown、两边逐字同一行)不变。整表同态由 thread-state-differential.test.js 钉。
@@ -154,9 +154,9 @@ ok(/factsUnknown: input\.factsUnknown === true/.test(src06i) && /factsUnknown: n
 // 拿 kind 当 state 用了 —— 这条锁比钉住那一行本身更强。
 // 只数【代码】不数注释:两份源码的注释里都写着这个键名(那是解释,不是调用面)。
 const codeOnly = text => text.split(/\r?\n/).map(line => line.replace(/\/\/.*$/, '')).join('\n');
-const producers = (codeOnly(src13d).match(/factsUnknown:\s*true/g) || []).length;
-ok(producers === 1 && /else derived = deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\);/.test(src13d),
-  `④ factsUnknown:true 在 13d 里恰好一处,就是那条不读会话头的 else 支(got ${producers} 处)`);
+const producers = (codeOnly(aggregateSource).match(/factsUnknown:\s*true/g) || []).length;
+ok(producers === 1 && /else derived = deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\);/.test(aggregateSource),
+  `④ factsUnknown:true 在事项聚合模块里恰好一处,就是那条不读会话头的 else 支(got ${producers} 处)`);
 // 117r 收尾重钉(主会话)：原来这里钉的是【只有 13d 一处】。它钉的是「今天的代码长什么样」,
 // 不是「什么必须成立」—— 13g 的 steward_threads_search 有一条同形的兜底支(没有卡片、一个事实都不喂),
 // D5 之后它掉进「无 run、无回合」那条分支说出「交办中」,那是假话;主会话补了 factsUnknown: true,
@@ -166,17 +166,21 @@ const srcDir = path.join(repo, 'ruyi-workbench', 'app', 'src');
 // 117 波 T1(32 号文 §2.1)重钉:steward_threads_search 随拆分搬进了 13k-steward-threads.js
 // (纯搬家,逐字节不变)。白名单钉的是「哪个调用面允许明说没事实」,不是「哪个文件名」——
 // 故只把落点从 13g 换成它现在真正住的 13k,判据与条数一个字没改。
-const ALLOWED_NO_FACTS = new Set(['13d-core-domain-routes.js', '13k-steward-threads.js']);
-const strayed = fs.readdirSync(srcDir).filter(f => f.endsWith('.js') && !ALLOWED_NO_FACTS.has(f)
+const backendDir = path.join(srcDir, '../backend');
+const serverFiles = fs.readdirSync(srcDir).filter(file => file.endsWith('.js'))
+  .concat(fs.readdirSync(backendDir).filter(file => file.endsWith('.cjs')).map(file => '../backend/' + file));
+const threadQueries = '../backend/steward-thread-queries.cjs';
+const ALLOWED_NO_FACTS = new Set(['../backend/mission-aggregate.cjs', threadQueries]);
+const strayed = serverFiles.filter(f => !ALLOWED_NO_FACTS.has(f)
   && /factsUnknown:\s*true/.test(codeOnly(fs.readFileSync(path.join(srcDir, f), 'utf8'))));
-ok(strayed.length === 0, '④ 「明说没事实」的调用面只许出现在白名单里的两个文件(13d 的 else 支 / 13k 的 threads_search 兜底支)' + (strayed.length ? ' -> ' + strayed.join(',') : ''));
-ok(/factsUnknown: true \}\)\s*$|deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\)/.test(codeOnly(fs.readFileSync(path.join(srcDir, '13k-steward-threads.js'), 'utf8'))),
+ok(strayed.length === 0, '④ 只在事项聚合与线程查询的速查兜底分支显式标记无事实' + (strayed.length ? ' -> ' + strayed.join(',') : ''));
+ok(/factsUnknown: true \}\)\s*$|deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\)/.test(codeOnly(fs.readFileSync(path.join(srcDir, threadQueries), 'utf8'))),
   '④ threads_search 那条兜底支确实是「速查那一侧才说没事实」(mission 那一侧仍落 dispatching,逐字节不变)');
 // 伴随(比原条更强):每一个「明说没事实」的调用,对象字面量里【不许】同时出现任何一个真事实键。
 // 一边说没事实一边喂事实 = 用一个字段把真相盖掉,这正是本刀要根除的那种用法。
 const FACT_KEYS = /\b(activeTurn|turnSeq|pending|runCount|liveRuns|resultStatus|autoMode|milestonesDone|ledgerless|lastTurnFailed)\b/;
 const maskers = [];
-for (const file of fs.readdirSync(srcDir).filter(f => f.endsWith('.js'))) {
+for (const file of serverFiles) {
   const code = codeOnly(fs.readFileSync(path.join(srcDir, file), 'utf8'));
   let at = code.indexOf('factsUnknown: true');
   while (at >= 0) {

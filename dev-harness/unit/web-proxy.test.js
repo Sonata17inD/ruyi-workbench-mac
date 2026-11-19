@@ -1,4 +1,5 @@
 'use strict';
+const { httpGetGuarded } = require('../../ruyi-workbench/app/backend/http-transport.cjs');
 // web_fetch / http_request 经 HTTP(S) 代理出网(审计 NE-10)。假代理是本机 http.Server:普通请求收绝对 URI(http 目标),
 // 'connect' 事件收 CONNECT 隧道(https 目标)。目标域名全是 *.example.test —— 本机解析不了,能通只可能是代理解析的。
 //   [P1] http 目标:绝对 URI 请求发给代理(Host 头是目标、user:pass@ 变 Proxy-Authorization),不做本机 DNS 预检
@@ -287,7 +288,7 @@ test('[P8] CONNECT 握手悬住:总期限到点就掐断对代理的连接(不�
   process.env.HTTPS_PROXY = 'http://127.0.0.1:' + port;
   const t0 = process.hrtime.bigint();
   const enotfound = Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' });
-  const r = await withDnsStub({ 'hang.example.test': enotfound }, () => srv.httpGetGuarded('https://hang.example.test/x', { timeoutMs: 20000, totalTimeoutMs: 400 }));
+  const r = await withDnsStub({ 'hang.example.test': enotfound }, () => httpGetGuarded('https://hang.example.test/x', { timeoutMs: 20000, totalTimeoutMs: 400 }));
   assert.equal(r.ok, false);
   assert.equal(r.failClass, 'timeout');
   const took = await Promise.race([closed.then(() => Number(process.hrtime.bigint() - t0) / 1e6), new Promise(res => setTimeout(() => res(-1), 3000))]);

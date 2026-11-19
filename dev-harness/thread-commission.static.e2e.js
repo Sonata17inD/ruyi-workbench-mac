@@ -115,12 +115,13 @@ const LOCALES = [
     `②i 界面用到的 threadCommission.* 键只剩折叠块这两条（实得 ${used.length} 条：${used.join('、')}）`);
 }
 
-/* ── ③ 委托书写口只有 13k 一处（与横幅无关的前提锁，124-P2 ⑥ 原样保留）───────── */
+/* ── ③ 委托书只有一处写入口 ───────────────────────────────────────────────── */
 {
-  const files = fs.readdirSync(SRC).filter(name => name.endsWith('.js'));
+  const files = fs.readdirSync(SRC).filter(name => name.endsWith('.js')).concat(
+    fs.readdirSync(path.join(SRC, '../backend')).filter(name => name.endsWith('.cjs')).map(name => '../backend/' + name));
   const writers = files.filter(name => /(^|[^\w.])session\.brief\s*=/.test(readSrc(name)));
-  ok(writers.length === 1 && writers[0] === '13k-steward-threads.js',
-    `③ 委托书的写入口全仓恰一处（13k-steward-threads.js），实得 ${JSON.stringify(writers)}`);
+  ok(writers.length === 1 && writers[0] === '../backend/steward-thread-create.cjs',
+    `③ 委托书的唯一写入口在管家线程创建服务，实得 ${JSON.stringify(writers)}`);
 }
 
 /* ── ④ thread-head 头注红线不破：零请求、不读摘要 ───────────────────────────── */

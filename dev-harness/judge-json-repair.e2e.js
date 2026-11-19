@@ -140,9 +140,8 @@ const near = (a, b) => Math.abs(Number(a) - Number(b)) < 1e-6;
   // ================= Section 1: in-process unit (parse hardening + repairJson) =================
   fs.rmSync(UNIT_HOME, { recursive: true, force: true }); fs.mkdirSync(UNIT_HOME, { recursive: true });
   process.env.RUYI_HOME = UNIT_HOME; // sandbox any module-load I/O; require does NOT start a server
-  const server = require(SERVER);
-  const { parseStructuredAgentOutput, repairJson } = server;
-  ok(typeof parseStructuredAgentOutput === 'function' && typeof repairJson === 'function', 'server.js exports parseStructuredAgentOutput + repairJson');
+  const { parseStructuredAgentOutput, repairJson } = require('../ruyi-workbench/app/backend/agent-quality.cjs');
+  ok(typeof parseStructuredAgentOutput === 'function' && typeof repairJson === 'function', 'agent-quality exports parseStructuredAgentOutput + repairJson');
 
   // 1.1 the exact production sample parses directly via the hardening (no provider call needed).
   const p = parseStructuredAgentOutput(BADFIX_SAMPLE);

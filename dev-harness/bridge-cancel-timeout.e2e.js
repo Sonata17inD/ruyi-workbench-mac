@@ -24,7 +24,7 @@ const cp = require('child_process');
 const { getFreePort } = require('./free-port.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
+const BACKEND = path.join(WB, 'app', 'backend');
 const HERE = __dirname;
 const FAKE_MCP = path.join(HERE, 'fake-mcp.js');
 const HOME = path.join(os.tmpdir(), 'ruyi-bridge-cancel');
@@ -86,17 +86,19 @@ function pidAlive(pid) {
 (async () => {
   // ── E 段: 静态锁 ──
   console.log('── E 段: 静态锁(超时表 / cancelled 通知 / kill 兜底) ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
-  ok(/const BRIDGED_TOOL_TIMEOUTS = \{/.test(src) && /run_command: 650000/.test(src), 'E1 声明式按工具超时表在(run_command/launch_application 650s)');
-  ok(src.includes("notifications/cancelled"), 'E2 tools/call 超时发 notifications/cancelled(MCP 标准取消)');
+  const timeouts = fs.readFileSync(path.join(BACKEND, 'mcp-tool-timeouts.cjs'), 'utf8');
+  const transport = fs.readFileSync(path.join(BACKEND, 'mcp-transports.cjs'), 'utf8');
+  const stdio = transport.slice(transport.indexOf('class McpStdioClient'), transport.indexOf('class McpHttpClient'));
+  ok(/const BRIDGED_TOOL_TIMEOUTS = \{/.test(timeouts) && /run_command: 650000/.test(timeouts), 'E1 声明式按工具超时表在(run_command/launch_application 650s)');
+  ok(stdio.includes("notifications/cancelled"), 'E2 tools/call 超时发 notifications/cancelled(MCP 标准取消)');
   // 走查 W1·F7 起超时认【标记】err.mcpTimeout 而不是去匹配 e.message 里的 'timed out'(服务端自己回的「upstream API timed out」
   // 不该被当成桥超时去杀进程树)—— 钉的事实不变:callTool 的 catch 里,超时那一支杀客户端进程树。
-  ok(/catch \(e\) \{[\s\S]{0,400}(?:timed out|mcpTimeout)[\s\S]{0,300}this\.kill\(\)/.test(src), 'E3 callTool catch 内超时即 kill 客户端进程树');
-  ok(src.includes('WCW_BRIDGED_TIMEOUT_OVERRIDE'), 'E4 env 测试缝在(e2e 打秒级超时)');
-  ok(src.includes('bridgedToolTimeoutMs(name)'), 'E5 callTool 缺省超时走声明式表(调用点免费获得)');
-  ok(/function bridgedToolCallTimeoutMs\(name, args\)/.test(src)
-    && /commandSeconds \* 1000 \+ 10000/.test(src)
-    && /bridgedToolCallTimeoutMs\(name, args\)/.test(src),
+  ok(/catch \(e\) \{[\s\S]{0,400}e\.mcpTimeout[\s\S]{0,600}this\.kill\(\)/.test(stdio), 'E3 stdio callTool catch 内超时即 kill 客户端进程树');
+  ok(timeouts.includes('WCW_BRIDGED_TIMEOUT_OVERRIDE'), 'E4 env 测试缝在(e2e 打秒级超时)');
+  ok(stdio.includes('Number(this.toolTimeoutMs) || bridgedToolCallTimeoutMs(name, args)'), 'E5 callTool 缺省超时走声明式表');
+  ok(/function bridgedToolCallTimeoutMs\(name, args\)/.test(timeouts)
+    && /commandSeconds \* 1000 \+ 10000/.test(timeouts)
+    && /bridgedToolCallTimeoutMs\(name, args\)/.test(transport),
   'E6 run_command 桥截止时间跟随本次 timeout 参数,不再一律显示运行中至 650s');
 
   // ── 起服务 ──

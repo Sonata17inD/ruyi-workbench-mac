@@ -13,29 +13,43 @@
 'use strict';
 
 const assert = require('assert');
-const fs = require('fs');
 const http = require('http');
-const os = require('os');
-const path = require('path');
 const { describe, it, before, after } = require('node:test');
-
-process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-probe-stall-'));
+const { createCapabilityService, CAP_UNKNOWN_TTL_MS } = require('../../ruyi-workbench/app/backend/capability-service.cjs');
 process.env.WCW_TEST_NO_NET_ANCHORS = '1';   // 不让真 baidu/bing 替本地对端作答
-const repo = path.resolve(__dirname, '../..');
-const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
+
+function fixture(overrides = {}) {
+  return createCapabilityService({
+    platform: 'darwin',
+    nowIso: () => new Date().toISOString(),
+    probeDesktopMcp: async () => ({ present: false }),
+    probeRgAsync: async () => null,
+    existsExecutableAsync: async () => false,
+    probeGitCliAsync: async () => false,
+    runtimeCapabilitySnapshot: async () => ({}),
+    ...overrides,
+  });
+}
+const srv = fixture();
 const busy = ms => { const end = Date.now() + ms; while (Date.now() < end) { /* spin */ } };
 
 describe('能力探针:同步阻塞不再伪造离线', () => {
   let fast, silent, fastUrl, silentUrl;
+  const requests = [];
   before(async () => {
-    fast = http.createServer((req, res) => { res.writeHead(200); res.end('ok'); });
+    fast = http.createServer((req, res) => { requests.push(req.url); res.writeHead(200); res.end('ok'); });
     silent = http.createServer(() => { /* never answers */ });
     await new Promise(r => fast.listen(0, '127.0.0.1', r));
     await new Promise(r => silent.listen(0, '127.0.0.1', r));
     fastUrl = `http://127.0.0.1:${fast.address().port}/`;
     silentUrl = `http://127.0.0.1:${silent.address().port}/`;
   });
-  after(() => { fast.close(); silent.close(); });
+  after(async () => {
+    await Promise.all([fast, silent].map(server => new Promise(resolve => {
+      server.close(resolve);
+      server.closeAllConnections();
+    })));
+  });
 
   it('[S1] 对端秒回、探测中同步阻塞 → null(未知),不是 false', async () => {
     for (let i = 0; i < 3; i++) {
@@ -60,7 +74,7 @@ describe('能力探针:同步阻塞不再伪造离线', () => {
     const realNow = Date.now;
     let elapsedDuringProbe = 0;
     t.mock.method(Date, 'now', () => realNow() + elapsedDuringProbe);
-    assert.ok(Number(srv.CAP_UNKNOWN_TTL_MS) > 0 && Number(srv.CAP_UNKNOWN_TTL_MS) <= 10000, `未知的缓存期(实 ${srv.CAP_UNKNOWN_TTL_MS})`);
+    assert.ok(CAP_UNKNOWN_TTL_MS > 0 && CAP_UNKNOWN_TTL_MS <= 10000, `未知的缓存期(实 ${CAP_UNKNOWN_TTL_MS})`);
     srv.invalidateCapabilityCache();
     // 用 capabilityProbeUrl 把探测目标钉成本地对端;探测中同步阻塞 → 这一次记未知
     const config = { capabilityProbeUrl: fastUrl, providers: [], externalMcpServers: [] };
@@ -68,33 +82,40 @@ describe('能力探针:同步阻塞不再伪造离线', () => {
     busy(3600);
     // Simulate slow executable/desktop probes after the network request starts. The cache must
     // still have its full TTL when the result is published, independent of machine load.
-    elapsedDuringProbe = Number(srv.CAP_UNKNOWN_TTL_MS) * 2;
+    elapsedDuringProbe = CAP_UNKNOWN_TTL_MS * 2;
     const first = await p;
     assert.strictEqual(first.network.online, null, '阻塞中的那一次记未知');
     // 未知的缓存期内命中缓存;过期后重新探测拿到 true
     const again = await srv.getCapabilities(config);
     assert.strictEqual(again.network.online, null, '缓存期内命中同一份');
-    await new Promise(r => setTimeout(r, Number(srv.CAP_UNKNOWN_TTL_MS) + 100));
+    elapsedDuringProbe += CAP_UNKNOWN_TTL_MS + 100;
     const later = await srv.getCapabilities(config);
     assert.strictEqual(later.network.online, true, '未知过期后重新探测拿到 true(修前要等满 60 s,且那 60 s 里一直是离线)');
+  });
+  it('switching the explicit probe URL bypasses the warm cache', async () => {
+    const service = fixture();
+    const first = { capabilityProbeUrl: fastUrl + 'first-target' };
+    const second = { capabilityProbeUrl: fastUrl + 'second-target' };
+    await service.getCapabilities(first);
+    await service.getCapabilities(first);
+    await service.getCapabilities(second);
+    assert.deepEqual(requests.filter(url => url.endsWith('-target')), ['/first-target', '/second-target']);
   });
 });
 
 it('[P3-04] browser target cache does not publish an older probe over the current snapshot', async () => {
-  const { loadServerInternals } = require('../lib/server-internals');
-  const h = loadServerInternals(['getCapabilities', 'peekCapabilities'], { withEval: true });
-  h.__eval(`globalThis.__ruyiP3Cache={gates:[],counts:new Map()};
-    activeOpenAiProvider=()=>null;networkAnchors=()=>[];
-    probeDesktopMcp=async config=>{const mode=config.browserAutomation.mode;
-      __ruyiP3Cache.counts.set(mode,(__ruyiP3Cache.counts.get(mode)||0)+1);
-      await new Promise(resolve=>__ruyiP3Cache.gates.push({mode,resolve}));
-      return {present:true,browser:{mode,ready:false}};};
-    probeRgAsync=async()=>null;existsExecutableAsync=async()=>false;
-    probeGitCliAsync=async()=>false;withRuntimeCapabilities=async x=>x;`);
-  const state = globalThis.__ruyiP3Cache, pending = [];
+  const gates = [], counts = new Map(), pending = [];
+  const h = fixture({
+    probeDesktopMcp: async config => {
+      const { mode } = config.browserAutomation;
+      counts.set(mode, (counts.get(mode) || 0) + 1);
+      await new Promise(resolve => gates.push({ mode, resolve }));
+      return { present: true, browser: { mode, ready: false } };
+    },
+  });
   const start = (mode, force) => { const result = h.getCapabilities({ browserAutomation: { mode } }, force); pending.push(result); return result; };
   const release = async (mode, result) => {
-    const gate = state.gates.find(g => g.mode === mode && !g.done);
+    const gate = gates.find(g => g.mode === mode && !g.done);
     assert.ok(gate, 'actual capability probe entered ' + mode);
     gate.done = true; gate.resolve(); await result;
   };
@@ -110,11 +131,33 @@ it('[P3-04] browser target cache does not publish an older probe over the curren
     assert.equal(h.peekCapabilities().desktopMcp.browser.mode, 'bundled', 'cache hit also prevents a pending older target from publishing');
     const same1 = start('cdp'), same2 = start('cdp');
     await release('cdp', same1); await same2;
-    assert.equal(state.counts.get('cdp'), 1, 'same-target callers still share one inflight probe');
+    assert.equal(counts.get('cdp'), 1, 'same-target callers still share one inflight probe');
     assert.equal(h.peekCapabilities().desktopMcp.browser.mode, 'cdp');
   } finally {
-    for (const gate of state.gates) gate.resolve();
+    for (const gate of gates) gate.resolve();
     await Promise.allSettled(pending);
-    delete globalThis.__ruyiP3Cache;
+  }
+});
+
+it('invalidation detaches a pending probe and allows a fresh probe for the same configuration', async () => {
+  const gates = [];
+  const service = fixture({
+    probeDesktopMcp: () => new Promise(resolve => gates.push(resolve)),
+  });
+  const config = {};
+  const old = service.getCapabilities(config);
+  service.invalidateCapabilityCache();
+  const fresh = service.getCapabilities(config);
+  try {
+    assert.equal(gates.length, 2);
+    gates[0]({ present: false });
+    assert.equal((await old).desktopMcp.present, false);
+    assert.equal(service.peekCapabilities(), null);
+    gates[1]({ present: true });
+    await fresh;
+    assert.equal(service.peekCapabilities().desktopMcp.present, true);
+  } finally {
+    for (const resolve of gates) resolve({ present: false });
+    await Promise.allSettled([old, fresh]);
   }
 });

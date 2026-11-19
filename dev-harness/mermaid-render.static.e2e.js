@@ -83,11 +83,11 @@ ok(/\|\s*mermaid\s*\|/.test(notices) && notices.includes('mermaid-js/mermaid') &
   'C4 THIRD-PARTY-NOTICES 有 mermaid 行(MIT + 上游地址)');
 ok(notices.includes('mermaid.min.js'), 'C5 通知条目点名 mermaid.min.js 文件');
 // 架构还债批 3·D:载荷登记读打包器运行时的那两张表(require 零副作用),不再在源码里找字面量。
-const overlayTables = require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js'));
-ok(overlayTables.PAYLOAD_FILES.includes('app/public/js/mermaid-runtime.js'), 'C6 运行时模块进入 overlay 载荷');
-ok(['mermaid-source.js', 'mermaid-postprocess.js'].every(name => overlayTables.PAYLOAD_FILES.includes(`app/public/js/${name}`)),
+const overlayTables = require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js'));
+ok(overlayTables.filesFor('workbench').includes('app/public/js/mermaid-runtime.js'), 'C6 运行时模块进入 overlay 载荷');
+ok(['mermaid-source.js', 'mermaid-postprocess.js'].every(name => overlayTables.filesFor('workbench').includes(`app/public/js/${name}`)),
   'C6b 109c 的源码预处理 / 画完收尾两个模块也进入 overlay 载荷(运行时静态 import 它们,缺一个整个图表运行时加载失败)');
-ok(overlayTables.OPTIONAL_PAYLOAD_FILES.includes('app/public/vendor/mermaid.min.js'), 'C7 可选 vendor 登记在 OPTIONAL_PAYLOAD_FILES');
+ok(overlayTables.filesFor('workbench').includes('app/public/vendor/mermaid.min.js'), 'C7 可选 vendor 登记在 OPTIONAL_PAYLOAD_FILES');
 const narrativeCss = fs.readFileSync(path.join(PUBLIC, 'css', 'views', 'chat-narrative.css'), 'utf8');
 for (const selector of ['.mermaid-block', '.mermaid-view', '.mermaid-tools', '.mermaid-hint']) {
   ok(narrativeCss.includes(selector), `C8 chat-narrative.css 含 ${selector} 样式`);

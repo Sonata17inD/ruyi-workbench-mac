@@ -67,7 +67,7 @@ async function until(check) {
     try { t.ok(!(await read()).ok && !fs.existsSync(marker), 'missing supervisor refuses document execution'); }
     finally { S.ProcessRuntimeHooks.helperPath = helperPath; }
     const helper = path.join(root, 'incomplete-helper');
-    const report = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+    const report = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
     const frames = [{ event: 'started', value: 123, created: '1' }, { event: 'cleanup', value: 1, detail: 0, terminated: 0, alreadyExited: 0, observed: 1 },
       { event: 'exit', value: 0, detail: 0 }, { event: 'guardian-cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 0, observed: 0 }];
     fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(report))});process.exit(0)}require('fs').writeSync(3,${JSON.stringify(frames.map(frame => JSON.stringify(frame) + '\n').join(''))});process.stdout.write(JSON.stringify({ok:true,content:'must-fail'}));`, { mode: 0o700 });

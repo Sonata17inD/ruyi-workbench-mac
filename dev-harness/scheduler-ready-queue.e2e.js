@@ -15,7 +15,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     node_start 与 node_settled/node_requeued 按 attemptId 一一配对。
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -74,19 +73,21 @@ const fake = http.createServer((req, res) => {
 (async () => {
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
-  const src = readServerSource();
+  const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name + '.cjs'), 'utf8');
+  const workflow = backend('agent-workflow');
+  const scheduler = backend('workflow-scheduler');
 
   // ── C) 静态锁(第26波c: 判环/派发/就绪逻辑已抽入纯 reducer computeSchedulerStep,静态锁随之校验 reducer 形态) ──
-  ok(!/await Promise\.all\(batch\.map\(/.test(src), 'C 批次屏障代码已移除(Promise.all(batch.map) 不存在)');
-  ok(/const inFlight = new Map\(\)/.test(src) && /raceInFlight/.test(src), 'C 连续队列结构在(inFlight/raceInFlight)');
-  ok(/function computeSchedulerStep\(nodes, opts\)/.test(src), 'C 调度决策已抽为纯 reducer computeSchedulerStep');
+  ok(!/await Promise\.all\(batch\.map\(/.test(workflow), 'C 批次屏障代码已移除(Promise.all(batch.map) 不存在)');
+  ok(/const inFlight = new Map\(\)/.test(workflow) && /raceInFlight/.test(workflow), 'C 连续队列结构在(inFlight/raceInFlight)');
+  ok(/function computeSchedulerStep\(nodes, opts\)/.test(scheduler), 'C 调度决策已抽为纯 reducer computeSchedulerStep');
   // block/skip 也是状态推进；否则多层失败链会在第一层刚 blocked 时把更深层误报成依赖环。
-  ok(/const stateTransitions = toBlock\.length \+ toSkip\.length;[\s\S]{0,160}const cycleDead = stateTransitions === 0 && toDispatch\.length === 0 && toArm\.length === 0 && inFlight\.size === 0 && !anyWaiting && !allTerminal/.test(src), 'C 铁律①: reducer 仅在无 block/skip/派发/武装/在飞/等待且未全终态时判环');
-  ok(/if \(step\.cycleDead && !inFlight\.size\)/.test(src), 'C 铁律①(外壳): cycleDead 且外壳在飞仍空才判死(双保险)');
-  ok(/nodes\.every\(terminal\) && !inFlight\.size/.test(src), 'C 铁律②: 收尾/宽限窗=「全终态 且 在飞空」(防 run_end 后写/queued 僵尸)');
-  ok(/if \(slots <= 0 \|\| inFlight\.has\(node\.id\)\) continue/.test(src), 'C 铁律③a: reducer 派发选择跳过已在飞(防双派发;第28e波与满位判定合并)');
-  ok(/inFlight\.get\(node\.id\) === flight\) inFlight\.delete/.test(src), 'C 铁律③b: finally 删除带身份守卫');
-  ok(/调度器兜底异常/.test(src), 'C 池级兜底不静默(钉节点+落事件)');
+  ok(/const stateTransitions = toBlock\.length \+ toSkip\.length;[\s\S]{0,160}const cycleDead = stateTransitions === 0 && toDispatch\.length === 0 && toArm\.length === 0 && inFlight\.size === 0 && !anyWaiting && !allTerminal/.test(scheduler), 'C 铁律①: reducer 仅在无 block/skip/派发/武装/在飞/等待且未全终态时判环');
+  ok(/if \(step\.cycleDead && !inFlight\.size\)/.test(workflow), 'C 铁律①(外壳): cycleDead 且外壳在飞仍空才判死(双保险)');
+  ok(/nodes\.every\(terminal\) && !inFlight\.size/.test(workflow), 'C 铁律②: 收尾/宽限窗=「全终态 且 在飞空」(防 run_end 后写/queued 僵尸)');
+  ok(/if \(slots <= 0 \|\| inFlight\.has\(node\.id\)\) continue/.test(scheduler), 'C 铁律③a: reducer 派发选择跳过已在飞(防双派发;第28e波与满位判定合并)');
+  ok(/inFlight\.get\(node\.id\) === flight\) inFlight\.delete/.test(workflow), 'C 铁律③b: finally 删除带身份守卫');
+  ok(/调度器兜底异常/.test(workflow), 'C 池级兜底不静默(钉节点+落事件)');
 
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, permissionMode: 'bypass', defaultWorkspace: HOME, subagentMaxConcurrent: 2,

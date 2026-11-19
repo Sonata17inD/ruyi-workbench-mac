@@ -40,9 +40,9 @@ const indexHtml = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8');
 const stylesManifest = fs.readFileSync(path.join(PUBLIC, 'styles.css'), 'utf8');
 const cssSrc = fs.readFileSync(path.join(PUBLIC, 'css', 'components', 'onboarding.css'), 'utf8');
 const cssHarness = fs.readFileSync(path.join(__dirname, 'read-frontend-css.js'), 'utf8');
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 
 /* ═══════════ ⑤ 零 innerHTML(源码级) ═══════════ */
 ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(moduleSrc),

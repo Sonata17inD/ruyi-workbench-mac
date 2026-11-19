@@ -22,7 +22,7 @@ Full/Slim既有安装13项、离线19/7项、Trash12项，以及Slim普通升级
 - [`ruyi-workbench/tools/package-offline.ps1`](../ruyi-workbench/tools/package-offline.ps1)
 - [`ruyi-workbench/tools/Manage-Overlay.ps1`](../ruyi-workbench/tools/Manage-Overlay.ps1)
 - [`ruyi-workbench/app/src/13c-overlay-routes.js`](../ruyi-workbench/app/src/13c-overlay-routes.js)
-- [`ruyi-workbench/app/src/13u-migration-center.js`](../ruyi-workbench/app/src/13u-migration-center.js)
+- [`ruyi-workbench/app/backend/migration-center.cjs`](../ruyi-workbench/app/backend/migration-center.cjs)
 - [`ruyi-workbench/resources/offline-manifest.json`](../ruyi-workbench/resources/offline-manifest.json)
 - [`mcp/ai-computer-control/installer`](../mcp/ai-computer-control/installer)
 - [`THIRD-PARTY-NOTICES.md`](../THIRD-PARTY-NOTICES.md)

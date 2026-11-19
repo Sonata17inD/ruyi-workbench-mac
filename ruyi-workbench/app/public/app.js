@@ -129,7 +129,6 @@ function apiErrText(error) {
 const {
   bindSettingsOperations,
   refreshMcpOps,
-  refreshOverlayStatus,
 } = createSettingsOperationsDomain({
   apiErrText,
   importMcpFromFolder: button => importMcpFromFolder(button),
@@ -532,7 +531,6 @@ const {
   toggleUiMode: () => toggleUiMode(),
   focusFirstInteractive: container => focusFirstInteractive(container),
   loadAgentRoles: () => loadAgentRoles(),
-  refreshOverlayStatus: () => refreshOverlayStatus(),
   refreshMcpOps: probe => refreshMcpOps(probe),
   updateShellPolling: () => updateShellPolling(),
   loadFileTree: () => loadFileTree(),

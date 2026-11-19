@@ -1,9 +1,13 @@
 """Build-time probes for the non-editable offline Python payload; no downloads."""
 import argparse
+import csv
 import importlib.metadata
+import io
 import json
+import os
 import shlex
 from pathlib import Path
+from zipfile import ZipFile
 
 
 def relocate_entrypoints(runtime):
@@ -23,6 +27,46 @@ def relocate_entrypoints(runtime):
             target = directory / entry.name
             target.write_text('#!/bin/sh\nexec "${0%/*}/python3" -c ' + shlex.quote(code) + ' "$@"\n')
             target.chmod(0o755)
+
+
+def prune_bootstrap_wheel(wheel, suffixes):
+    with ZipFile(wheel) as source:
+        removed = {name for name in source.namelist() if Path(name).suffix.lower() in suffixes}
+        if not removed:
+            return
+        updated = wheel.with_suffix('.tmp')
+        with ZipFile(updated, 'x') as target:
+            for member in source.infolist():
+                if member.filename in removed:
+                    continue
+                data = source.read(member)
+                if member.filename.endswith('.dist-info/RECORD'):
+                    rows = csv.reader(io.StringIO(data.decode('utf-8')))
+                    output = io.StringIO(newline='')
+                    csv.writer(output, lineterminator='\n').writerows(row for row in rows if row[0] not in removed)
+                    data = output.getvalue().encode('utf-8')
+                target.writestr(member, data)
+    updated.replace(wheel)
+
+
+def prune_windows_launchers(runtime, suffixes):
+    root = Path(runtime).resolve()
+    removed = set()
+    for file in root.rglob('*'):
+        if file.suffix.lower() in suffixes and (file.is_file() or file.is_symlink()):
+            file.unlink()
+            removed.add(str(file))
+    for record in root.rglob('*.dist-info/RECORD'):
+        with record.open(encoding='utf-8', newline='') as stream:
+            rows = list(csv.reader(stream))
+        kept = [row for row in rows if os.path.abspath(record.parent.parent / row[0]) not in removed]
+        if len(kept) != len(rows):
+            with record.open('w', encoding='utf-8', newline='') as stream:
+                csv.writer(stream, lineterminator='\n').writerows(kept)
+    # Keep Mac venv/ensurepip working. Normalize the runtime's bootstrap wheel
+    # separately from the installed copy of pip and the build-only wheelhouse.
+    for wheel in root.rglob('*.whl'):
+        prune_bootstrap_wheel(wheel, suffixes)
 
 
 def licenses(runtime, output):
@@ -70,8 +114,11 @@ if __name__ == '__main__':
     parser.add_argument('--licenses')
     parser.add_argument('--browser-notices')
     parser.add_argument('--entrypoints', action='store_true')
+    parser.add_argument('--prune-windows-launchers', nargs='+')
     arguments = parser.parse_args()
-    if arguments.entrypoints:
+    if arguments.prune_windows_launchers:
+        prune_windows_launchers(arguments.runtime, set(arguments.prune_windows_launchers))
+    elif arguments.entrypoints:
         relocate_entrypoints(arguments.runtime)
     elif arguments.browser_notices:
         import asyncio

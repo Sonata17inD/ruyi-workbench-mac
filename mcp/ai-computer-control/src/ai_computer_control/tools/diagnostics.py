@@ -1,6 +1,6 @@
 """Environment / self-diagnostics: version, admin, monitors, DPI, optional-module availability."""
 
-import ctypes
+import os
 import importlib.util
 import platform
 import sys
@@ -31,7 +31,7 @@ def _has_module(mod: str) -> bool:
 
 def _is_admin() -> bool | None:
     try:
-        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        return os.geteuid() == 0
     except Exception:
         return None
 
@@ -39,9 +39,7 @@ def _is_admin() -> bool | None:
 def _optional_modules() -> dict:
     """Report which optional backends are importable (drives graceful-degradation behavior)."""
     out = {}
-    for key, mod in (("uiautomation", "uiautomation"), ("winsdk_ocr", "winsdk"),
-                     ("cv2", "cv2"), ("numpy", "numpy"), ("playwright", "playwright"),
-                     ("win10toast", "win10toast"), ("pynput", "pynput"),
+    for key, mod in (("cv2", "cv2"), ("numpy", "numpy"), ("playwright", "playwright"),
                      ("pptx", "pptx"), ("matplotlib", "matplotlib")):
         out[key] = _has_module(mod)
     return out
@@ -50,7 +48,7 @@ def _optional_modules() -> dict:
 def _optional(mac_capture=None) -> dict:
     """Compact optional-backend availability with the exact keys the workbench probe scans.
 
-    The Win Claude Workbench `probeDesktopMcp` reads `diagnostics().optional` for the boolean keys
+    The Ruyi workbench `probeDesktopMcp` reads `diagnostics().optional` for the boolean keys
     {ocr, uia, cv2, playwright}. Keep this shape and these names in lockstep with that probe.
     Prefer each tool module's own `_AVAILABLE` flag (which reflects the true degrade decision) and
     fall back to a bare import check.
@@ -64,13 +62,11 @@ def _optional(mac_capture=None) -> dict:
         return _has_module(mod_name)
 
     return {
-        "ocr": bool(mac_capture and mac_capture.get("installed") and mac_capture.get("ocrSupported"))
-            if sys.platform == "darwin" else flag("ai_computer_control.tools.ocr", "winsdk"),
-        "uia": bool(mac_capture and mac_capture.get("installed") and mac_capture.get("axSupported"))
-            if sys.platform == "darwin" else flag("ai_computer_control.tools.uia", "uiautomation"),
-        "cv2": flag("ai_computer_control.tools.macos_vision" if sys.platform == "darwin" else "ai_computer_control.tools.vision", "cv2"),
+        "ocr": bool(mac_capture and mac_capture.get("installed") and mac_capture.get("ocrSupported")),
+        "uia": bool(mac_capture and mac_capture.get("installed") and mac_capture.get("axSupported")),
+        "cv2": flag("ai_computer_control.tools.macos_vision", "cv2"),
         "playwright": flag("ai_computer_control.tools.browser", "playwright"),
-        "pynput": flag("ai_computer_control.tools.record", "pynput"),
+        "pynput": False,
         # v1.6 Office 模板驱动 optional backends.
         "pptx": flag("ai_computer_control.tools.office_pptx", "pptx"),
         "matplotlib": flag("ai_computer_control.tools.office_chart", "matplotlib"),
@@ -79,7 +75,7 @@ def _optional(mac_capture=None) -> dict:
 
 def _monitors_summary() -> dict:
     try:
-        mod = sys.modules.get(_TOOLS_PKG + ("macos_capture" if sys.platform == "darwin" else "desktop_extra"))
+        mod = sys.modules.get(_TOOLS_PKG + "macos_capture")
         if mod is None:  # toolset not loaded (ACC_TOOLSETS) — don't load it just to report
             return {"count": None, "monitors": []}
         m = mod.list_monitors()
@@ -92,7 +88,7 @@ def _monitors_summary() -> dict:
 
 def _dpi_summary() -> dict:
     try:
-        mod = sys.modules.get(_TOOLS_PKG + ("macos_capture" if sys.platform == "darwin" else "desktop_extra"))
+        mod = sys.modules.get(_TOOLS_PKG + "macos_capture")
         if mod is None:
             return {"awareness": None, "primary_scale": None}
         return mod.get_dpi_info()

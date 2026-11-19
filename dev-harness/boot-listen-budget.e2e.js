@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      —— ① 在「本机没装任何 python」的机器上会变弱（探针本来就不慢），③ 是与机器无关的那一半。
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
-const { readServerSource } = require('./src-reader');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -111,11 +111,9 @@ function getJson(pathname, token, timeoutMs) {
       '/api/status 仍带 mcpConfigPath（探完现算；在飞时只回路径、不重新生成）');
 
     // ── 形状锁:与机器无关的那一半 ──
-    const src = readServerSource();
-    // 锚点必须落在 boot 段【自己】那一句上:`await invalidateSessionIndex();` 在全文里第一处出现于 02，
-    // 拿它切片会把半个仓库都算进 "listen 之前"。这一句带注释的 readConfig 是 boot 段独有的。
-    const bootStart = src.indexOf('let config = await readConfig(); // let: autoImportClaudeCodeMcp 写回后需重绑到最新引用');
-    const listenAt = src.indexOf('const port = await listenWithFallback(server, requestedPort, host, config);');
+    const src = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/server-startup.cjs'), 'utf8'), 'startServerInner');
+    const bootStart = src.indexOf('let config = await readConfig();');
+    const listenAt = src.indexOf('const port = await listenWithFallback(server, requestedPort, host);');
     ok(bootStart > 0 && listenAt > bootStart, 's 定位到 boot 段与 listenWithFallback');
     const beforeListen = src.slice(bootStart, listenAt);
     const afterListen = src.slice(listenAt);
@@ -130,13 +128,16 @@ function getJson(pathname, token, timeoutMs) {
       's 探针段用「listen 之后再让一小段起跑延迟」的形状（同步 spawnSync 会占住事件循环，只 setImmediate 不够）');
     ok(/^\s*const imp = await autoImportClaudeCodeMcp\(config\)/m.test(beforeListen),
       's autoImportClaudeCodeMcp 仍留在 listen 之前（它只读 ~/.claude.json，不碰探针）');
-    ok(/function detectDesktopMcp\(\)/.test(src) && !/async function detectDesktopMcp\(\)/.test(src),
+    const desktopDiscovery = fs.readFileSync(path.join(WB, 'app/backend/desktop-mcp-discovery.cjs'), 'utf8');
+    const pythonSelection = fs.readFileSync(path.join(WB, 'app/backend/desktop-python-selection.cjs'), 'utf8');
+    ok(/function detectDesktopMcp\(\)/.test(desktopDiscovery) && !/async function detectDesktopMcp\(\)/.test(desktopDiscovery),
       's detectDesktopMcp 保持同步签名（39 号文 §2 的拍板：它的调用方 resolveExternalMcpServers 一族散在 8 个模块，改 async 是跨模块大手术）');
     // ── 39 号文的三把形状锁 ──
-    ok(/async function detectDesktopMcpAsync\(\)/.test(src) && /async function pickPythonAsync\(/.test(src),
+    ok(/async function detectDesktopMcpAsync\(\)/.test(desktopDiscovery) && /async function pickPythonAsync\(/.test(pythonSelection),
       's 异步孪生 detectDesktopMcpAsync／pickPythonAsync 都在');
-    ok(/function probeDesktopPythonAsync\(/.test(src) && /cp\.execFile\(candidate\.command/.test(src),
-      's 异步探针走 cp.execFile（不过 shell，与 spawnSync 那支同口径）');
+    const probeSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'desktop-python-probe.cjs'), 'utf8');
+    ok(/ProcessRuntime\.capture\(candidate\.command, probeArgs\(candidate\)/.test(functionBlock(probeSource, 'probeDesktopPythonAsync')),
+      's 异步 Python 探针由原生监督器执行同一组探测参数');
     const warmAt = afterListen.indexOf('void ensureDesktopMcpWarm(config).then(() => {');
     ok(warmAt > 0 && warmAt < afterListen.indexOf('syncMcpServersToClaude(config)'),
       's boot 段先 ensureDesktopMcpWarm()，三处 fire-and-forget 排在它的 .then 里（预热之后它们的同步前缀全部吃缓存）');

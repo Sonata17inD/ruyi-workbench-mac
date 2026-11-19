@@ -7,23 +7,23 @@
 1. **纯离线可用。** 任何功能都必须在**无公网**的机器上可跑。联网是增强,不能是前提;缺网时相关能力应优雅降级而非报错崩溃。
 2. **`server.js` 零 npm 运行时依赖。** 工作台后端 `ruyi-workbench/app/server.js` **只用 Node 内建模块**(`http`/`fs`/`crypto`/`zlib`/`child_process` 等),不引入任何运行时 npm 包。这是内网安全过审的地基,不可动摇。(构建期 devDependencies 如打包器不受此限。)
 3. **Clean-room。** 不得贴入任何来源不明或受限的代码/文本:不含 Anthropic 泄露源码,不分发官方 Claude CLI,不复制第三方插件源码。所有新写文档/代码必须原创。
-4. **Windows 10/11 为一等目标。** 路径、编码、进程、控制台代码页都以 Windows 为首要正确性目标(PowerShell 5.1 无 `&&`;写文本文件用 UTF-8;`.cmd` 保持纯 ASCII)。
-5. **行为变更必须带/更新 e2e。** 改了对外行为(API、事件协议、工具语义、权限判定)就要新增或更新 `dev-harness/` 里对应的离线 e2e。断言**只加不改语义**——可以断言新字段,不要删旧断言。
+4. **Mac 专用。** Apple Silicon arm64、macOS 14 为部署基线；系统能力使用原生 helper，权限和诊断未知时不可声称就绪。保留用户文件的 GB18030、BOM、CRLF 格式支持。
+5. **行为变更必须带/更新 e2e。** 改了对外行为(API、事件协议、工具语义、权限判定)就要新增或更新 `dev-harness/` 里对应的离线 e2e。验证保留行为；删除已退出产品的行为时同步删除过时断言。
 
 ## 跑测试套件
 
 开发、CI 与打包使用 **Node.js 24**；`package.json` 的 Node.js ≥20 是运行最低版本，不是整套开发检查的版本基线。
 
-```powershell
-node dev-harness\plan-mode.e2e.js
-node dev-harness\repo-hygiene.e2e.js
+```bash
+node dev-harness/plan-mode.e2e.js
+node dev-harness/repo-hygiene.e2e.js
 ```
 
-- **直接启动单件时串行跑**:一些夹具使用固定端口，不要手工同时启动多个单件。统一 runner 支持受控并行：`node dev-harness/run-all.js --parallel 4`，并将性能件留到独占阶段；Windows CI 默认串行。
+- **直接启动单件时串行跑**:一些夹具使用固定端口，不要手工同时启动多个单件。统一 runner 支持受控并行：`node dev-harness/run-all.js --parallel 4`，并将性能件留到独占阶段；Mac CI 默认串行。
 - **全绿为过**:每件末行打印 `... E2E: ALL PASS`,进程 `exit 0`。
 - **实弹件可跳过**:`deepseek-live` / `deepseek-tools`(真密钥)、`desktop-bridge-live`(真桌面 MCP)、`desktop-mcp-smoke`(已装 ACC 的 Python 环境)等需外部条件,常规离线回归中跳过。每件文件头部注释写明了它断言的边界与所需条件。
 
-写新 e2e 的自查:临时 `HOME`(tmpdir)、健康轮询起服务(别裸 sleep)、`finally` 里用 `dev-harness/lib/kill-own-tree.js` 的 `killOwnTree` 清理 fake + workbench(不写 `taskkill /T`、不裸 `child.kill()`)、逐条 `PASS/FAIL <label>`、`process.exit(fail?1:0)`、跑两遍确认无端口/临时目录残留导致的偶发。
+写新 e2e 的自查:临时 `HOME`(tmpdir)、健康轮询起服务(别裸 sleep)、`finally` 里用 `dev-harness/lib/kill-own-tree.js` 的 `killOwnTree` 清理 fake + workbench(不写 `taskkill /T`、不裸 `child.kill()`)、逐条 `PASS/FAIL <label>`、`process.exit(fail?1:0)`；失败或存在残留疑点时才重跑。
 
 家目录隔离不只设置 `RUYI_HOME`：启动服务的夹具使用 `lib/self-isolate-home.js`，或用 `lib/fixture-home.js` 的 `fixtureChildEnv` 隔离 `USERPROFILE`／`HOME`／`LOCALAPPDATA`／`APPDATA`，并给被测服务独立数据目录。默认关闭与本件无关的模型、MCP 自动导入及后台任务，避免读写真实 CLI 配置。
 
@@ -61,9 +61,9 @@ Ruyi is an offline-first, air-gap-oriented local AI workbench. A few **hard cons
 1. **Works fully offline.** Networking is an enhancement, never a prerequisite; degrade gracefully when offline.
 2. **`server.js` has zero npm runtime dependencies** — Node built-ins only. (Build-time devDependencies are exempt.)
 3. **Clean-room.** No code/text of unknown or restricted provenance; no leaked Anthropic source, no bundled official Claude CLI, no copied third-party plugin source.
-4. **Windows 10/11 is a first-class target** for paths, encoding, processes, and console code pages.
-5. **Behavior changes must ship/update an e2e** in `dev-harness/`. Assertions are add-only in meaning — assert new fields, don't delete old assertions.
+4. **Mac only:** Apple Silicon arm64 and macOS 14; native system services and explicit unknown permission states.
+5. **Behavior changes must ship/update an e2e** in `dev-harness/`. Preserve supported behavior; remove obsolete assertions when the corresponding product feature is retired.
 
-Use **Node.js 24** for development and CI (Node.js ≥20 is the runtime minimum). Run directly invoked pieces **serially** because some use fixed ports: `node dev-harness\<name>.e2e.js`. The suite runner supports managed parallelism with `node dev-harness/run-all.js --parallel 4` and reserves performance tests for an exclusive phase; Windows CI runs serially. Passing prints `... E2E: ALL PASS` and exits 0. Live tests need your own key/desktop/Python and are skipped by default. Isolate the user home and both AppData locations as well as the data root with `self-isolate-home.js` or `fixtureChildEnv`; disable unrelated live integrations. New tests should use `dev-harness/lib/harness.js` (`createRunner` → `ok`/`fail`/`done`) for PASS/FAIL lines and the verdict, and `dev-harness/lib/fake-openai-provider.js` (`startFakeProvider` + `textFrames`/`toolCallFrames`/`usageFrame`) instead of a hand-rolled fake provider.
+Use **Node.js 24** for development and CI (Node.js ≥20 is the runtime minimum). Run directly invoked pieces **serially** because some use fixed ports: `node dev-harness/<name>.e2e.js`. The suite runner supports managed parallelism with `node dev-harness/run-all.js --parallel 4` and reserves performance tests for an exclusive phase; Mac CI runs serially. Passing prints `... E2E: ALL PASS` and exits 0. Live tests need your own key/desktop/Python and are skipped by default. Isolate the user home and both AppData locations as well as the data root with `self-isolate-home.js` or `fixtureChildEnv`; disable unrelated live integrations. New tests should use `dev-harness/lib/harness.js` (`createRunner` → `ok`/`fail`/`done`) for PASS/FAIL lines and the verdict, and `dev-harness/lib/fake-openai-provider.js` (`startFakeProvider` + `textFrames`/`toolCallFrames`/`usageFrame`) instead of a hand-rolled fake provider.
 
 For ACC (`mcp/ai-computer-control/`): `pip install -e` on **Python 3.12** (`requires-python >=3.12`; CI and the bundled offline wheels are 3.12), run `tests/smoke_*.py`; any new file-mutating tool **must** be registered in the `BRIDGED_WRITE_PATH_ARGS` snapshot table (`checkpoint-coverage.e2e.js` enforces this — a missing entry turns the test red). Add new MCPs the drop-in way via `mcp/` (see [`mcp/README.md`](./mcp/README.md)) — no workbench code changes needed. PRs: small, with verification evidence; Chinese or English both welcome.

@@ -22,7 +22,7 @@ const os = require('os');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePort } = require('./free-port.js');
-const { repairProviderHistoryPairing, repairProviderHistoryToolArgs } = require(path.join(WB, 'app', 'server.js'));
+const { repairProviderHistoryPairing, repairProviderHistoryToolArgs } = require(path.join(WB, 'app/backend/provider-history.cjs')).createProviderHistory({ logEvent() {} });
 const FAKE_PORT = await getFreePort(), WB_PORT = await getFreePort();
 
 const HOME = path.join(os.tmpdir(), 'wcw-provider-pairing-e2e');
@@ -98,7 +98,7 @@ function writeProviderHistory(id, entries) {
 // ─── [U] 单元:repairProviderHistoryPairing 形状 ───
 console.log('── [U] repairProviderHistoryPairing 单元 ──');
 if (typeof repairProviderHistoryPairing !== 'function') {
-  fail++; console.log('FAIL U0 repairProviderHistoryPairing 已从 server.js 导出(修复未落地)');
+  fail++; console.log('FAIL U0 repairProviderHistoryPairing 由 provider-history 模块提供(修复未落地)');
 } else {
   const tc = (id, name) => ({ id, type: 'function', function: { name: name || 'file_read', arguments: '{}' } });
   // a) 完整配对:不动,返回 0
@@ -159,7 +159,7 @@ if (typeof repairProviderHistoryPairing !== 'function') {
 // ─── [U2] 单元:repairProviderHistoryToolArgs 形状(第117波 参数铁律)───
 console.log('── [U2] repairProviderHistoryToolArgs 单元 ──');
 if (typeof repairProviderHistoryToolArgs !== 'function') {
-  fail++; console.log('FAIL U2-0 repairProviderHistoryToolArgs 已从 server.js 导出(修复未落地)');
+  fail++; console.log('FAIL U2-0 repairProviderHistoryToolArgs 由 provider-history 模块提供(修复未落地)');
 } else {
   const tcArgs = (id, args, name) => ({ id, type: 'function', function: { name: name || 'file_read', arguments: args } });
   // a) 五种形状一网打尽:空串 / 半截 JSON(流被截断)/ 非 JSON / 合法 JSON 但不是对象 / 完好。
@@ -225,7 +225,7 @@ const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'),
   windowsHide: true,
 });
 fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
 wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
 wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 try {
@@ -343,7 +343,7 @@ try {
     windowsHide: true,
   });
   fake2.stdout.on('data', d => String(d).trim() && console.log('[fake2] ' + String(d).trim()));
-  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME2 }, windowsHide: true });
+  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2 }, windowsHide: true });
   wb2.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2] ' + l.trim())));
   wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
   let h2 = null; for (let i = 0; i < 40 && !h2; i++) { await sleep(150); h2 = await health(WB_PORT2); }

@@ -6,9 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { createCorpus, createValidationCorpus, createMixedCorpus } = require('../privacy-31/synthetic-catalog-corpus');
-const source = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-const { core, catalog } = vm.runInNewContext(source('01i-privacy-rules.js') + '\n' + source('01h-privacy-core.js')
-  + '\n({ core: PrivacyCore, catalog: PrivacyRuleCatalog });', { require, Buffer });
+const { PrivacyCore: core, PrivacyRuleCatalog: catalog } = require('../lib/privacy-primitives').createPrivacyPrimitives();
 const all = { personal: true, technical: true, confidential: true };
 const metadata = new Map(catalog.list().map(row => [row.id, row]));
 const second = require('../privacy-31/second-scenario-corpus').createSecondCorpus();

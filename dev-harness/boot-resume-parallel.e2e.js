@@ -23,6 +23,7 @@ const { getFreePort } = require('./free-port.js');
 fs.rmSync(HOME, { recursive: true, force: true });
 fs.mkdirSync(HOME, { recursive: true });
 process.env.RUYI_HOME = HOME; // paths.* 在 module load 时定型,必须先设
+const { mapPool } = require('../ruyi-workbench/app/backend/agent-recovery.cjs');
 const srv = require(path.join(WB, 'app', 'server.js'));
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -35,7 +36,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ① mapPool 保序 + 全执行
   {
     const items = Array.from({ length: 9 }, (_, i) => i);
-    const out = await srv.mapPool(items, 4, async i => { await sleep(5); return i * 3; });
+    const out = await mapPool(items, 4, async i => { await sleep(5); return i * 3; });
     ok(JSON.stringify(out) === JSON.stringify(items.map(i => i * 3)), 'U1 mapPool 结果保序且全执行');
   }
   // ② mapPool 真并发(受控延迟:顺序需 8×40=320ms,池(4) 应 ~80-120ms;跟踪 in-flight 证并发且有界)
@@ -43,7 +44,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     let inFlight = 0, maxInFlight = 0;
     const items = Array.from({ length: 8 }, (_, i) => i);
     const t0 = Date.now();
-    await srv.mapPool(items, 4, async () => { inFlight++; maxInFlight = Math.max(maxInFlight, inFlight); await sleep(40); inFlight--; });
+    await mapPool(items, 4, async () => { inFlight++; maxInFlight = Math.max(maxInFlight, inFlight); await sleep(40); inFlight--; });
     const wall = Date.now() - t0;
     ok(maxInFlight > 1 && maxInFlight <= 4, 'U2 mapPool 并发度 1 < max(' + maxInFlight + ') ≤ 4');
     // 墙钟上界豁免：进程内两波 40 ms 定时器、不经服务与 I/O；双负载实得 92 ms，界 280 ms（3 倍）；失败形态是串行 ≥320 ms，真判据是上一条 maxInFlight。

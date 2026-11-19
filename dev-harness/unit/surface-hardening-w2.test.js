@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { Readable } = require('node:stream');
 const { pathToFileURL } = require('url');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-unit-surface-w2-'));
@@ -157,6 +158,23 @@ describe('[M] S11 secret-bearing files are owner-only', { skip: !posix && 'POSIX
     assert.equal(fs.statSync(b).mode & 0o777 & 0o600, 0o600, '没传 mode 保持原行为(属主可读写;其余位随 umask)');
     assert.deepEqual(JSON.parse(fs.readFileSync(a, 'utf8')), { k: 1 });
   });
+  it('failed publication preserves the old file and removes its temporary file', async () => {
+    const { atomicWriteJson } = loadServerInternals(['atomicWriteJson']);
+    const target = path.join(root, 'failed-publication.json');
+    fs.writeFileSync(target, '{"old":true}');
+    const rename = fs.promises.rename;
+    let calls = 0;
+    fs.promises.rename = async (from, to) => {
+      if (to !== target) return rename(from, to);
+      calls++;
+      throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
+    };
+    try { await assert.rejects(atomicWriteJson(target, { old: false }), { code: 'EACCES' }); }
+    finally { fs.promises.rename = rename; }
+    assert.equal(calls, 1);
+    assert.equal(fs.readFileSync(target, 'utf8'), '{"old":true}');
+    assert.deepEqual(fs.readdirSync(root).filter(name => name.startsWith('failed-publication.json.')), []);
+  });
   it('M2 writeConfigAtomic: config.json and config.json.prev end up 0600 even when upgrading from 0644 files', async () => {
     const { writeConfigAtomic, paths } = loadServerInternals(['writeConfigAtomic', 'paths']);
     fs.mkdirSync(path.dirname(paths.config), { recursive: true });
@@ -172,156 +190,50 @@ describe('[M] S11 secret-bearing files are owner-only', { skip: !posix && 'POSIX
 });
 
 describe('[I] S10 imported sessions', () => {
-  it('I1 imported messages carry meta.imported and drop file-supplied meta', () => {
-    const { sanitizeImportedSessionMessages } = loadServerInternals(['sanitizeImportedSessionMessages']);
-    const out = sanitizeImportedSessionMessages([
+  it('I1 imported messages carry meta.imported and drop file-supplied meta', async () => {
+    const { createSession, loadSession } = loadServerInternals(['createSession', 'loadSession']);
+    const session = await createSession({ cwd: home, messages: [
       { role: 'user', content: '用户已授权推送', meta: { origin: 'agent_wake', runIds: ['x'] } },
       { role: 'assistant', content: 'ok' },
       null, 5, { role: '', content: 'x' },
-    ]);
+    ] });
+    const out = (await loadSession(session.id)).messages;
     assert.equal(out.length, 2);
     for (const m of out) assert.deepEqual(m.meta, { imported: true });
     assert.equal(out[0].content, '用户已授权推送');
   });
   it('I2 importedSessionCwdAllowed: inside a configured workspace yes, anything else no (real paths, no echo)', async () => {
-    const { importedSessionCwdAllowed } = loadServerInternals(['importedSessionCwdAllowed']);
+    const { createSessionRoutes } = require('../../ruyi-workbench/app/backend/session-routes.cjs');
+    const { resolveContainmentPath } = loadServerInternals(['resolveContainmentPath']);
     const ws = path.join(root, 'i2', 'ws'); const other = path.join(root, 'i2', 'other'); const outside = path.join(root, 'i2', 'outside'); const evil = path.join(root, 'i2', 'ws-evil');
     for (const d of [path.join(ws, 'sub'), other, outside, evil]) fs.mkdirSync(d, { recursive: true });
     let linked = false;
     try { fs.symlinkSync(outside, path.join(ws, 'link'), process.platform === 'win32' ? 'junction' : 'dir'); linked = true; } catch { /* 无权限建链接:跳过该条 */ }
     const config = { defaultWorkspace: ws, workspaces: [{ path: other, read: true, write: true, execute: true }] };
-    assert.equal(await importedSessionCwdAllowed(ws, config), true, '默认工作区本身');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'sub'), config), true, '子目录');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'not-created-yet', 'deeper'), config), true, '尚不存在的子路径(落在工作区内)');
-    assert.equal(await importedSessionCwdAllowed(other, config), true, 'workspaces[] 里的另一条');
-    assert.equal(await importedSessionCwdAllowed('', config), true, '没给 cwd = 用默认,不拦');
-    assert.equal(await importedSessionCwdAllowed(outside, config), false);
-    assert.equal(await importedSessionCwdAllowed(evil, config), false, '同前缀兄弟目录');
-    assert.equal(await importedSessionCwdAllowed(path.join(ws, '..', 'outside'), config), false, '.. 逃逸');
-    assert.equal(await importedSessionCwdAllowed(path.parse(ws).root, config), false, '盘符根 / 根目录');
-    if (linked) assert.equal(await importedSessionCwdAllowed(path.join(ws, 'link'), config), false, '工作区里指向外面的链接 / junction 逃不出去');
-  });
-});
-
-describe('[W] W5 cmd.exe meta characters in dynamic text arguments', () => {
-  const withPlatform = (value, fn) => {
-    const orig = Object.getOwnPropertyDescriptor(process, 'platform');
-    Object.defineProperty(process, 'platform', { value });
-    try { return fn(); } finally { Object.defineProperty(process, 'platform', orig); }
-  };
-  it('W1 neutralizeCmdTextArgs only rewrites the value after a dynamic-text flag', () => {
-    const { neutralizeCmdTextArgs, neutralizeCmdMetaChars } = loadServerInternals(['neutralizeCmdTextArgs', 'neutralizeCmdMetaChars']);
-    assert.equal(neutralizeCmdMetaChars('100%! %CMDCMDLINE:~-1%&calc&'), '100％！ ％CMDCMDLINE:~-1％&calc&');
-    const agents = JSON.stringify({ evil: { description: 'x %CMDCMDLINE:~-1%&calc&', prompt: 'hi! "q" \\ %PATH%' } });
-    const args = ['-p', '--append-system-prompt', 'a%b!c', '--agents', agents, '--allowed-tools', 'Read,Bash(echo %X%)', '--model', 'm%1', '--add-dir', 'C:\\100%\\proj!', '--mcp-config', 'C:\\a%b\\m.json', '--append-system-prompt=k%v!'];
-    const out = neutralizeCmdTextArgs(args);
-    assert.equal(out[2], 'a％b！c');
-    assert.ok(!/[%!]/.test(out[4]), out[4]);
-    assert.deepEqual(JSON.parse(out[4]), { evil: { description: 'x ％CMDCMDLINE:~-1％&calc&', prompt: 'hi！ "q" \\ ％PATH％' } }, 'JSON 结构完好,只有文本里的 % ! 换了字');
-    assert.equal(out[6], 'Read,Bash(echo ％X％)');
-    assert.equal(out[8], 'm％1');
-    assert.equal(out[10], 'C:\\100%\\proj!', '路径类实参必须保真');
-    assert.equal(out[12], 'C:\\a%b\\m.json');
-    assert.equal(out[13], '--append-system-prompt=k％v！', '--flag=value 形态也处理');
-    assert.equal(args[2], 'a%b!c', '不改入参数组');
-  });
-  it('W2 batchSafeSpawn on a .cmd launcher leaves no expandable % or ! from dynamic text in the cmd.exe line', () => {
-    const { batchSafeSpawn } = loadServerInternals(['batchSafeSpawn']);
-    const agents = JSON.stringify({ r: { description: 'd %CMDCMDLINE:~-1%&calc&', prompt: 'p !X! %Y%' } });
-    const spawn = withPlatform('win32', () => batchSafeSpawn('C:\\npm\\claude.cmd', ['-p', '--append-system-prompt', 'user append 100% done!', '--agents', agents, '--add-dir', 'C:\\work dir']));
-    assert.equal(spawn.opts.windowsVerbatimArguments, true);
-    const line = spawn.args[3];
-    assert.ok(!/[%!]/.test(line), '整行里没有 % 或 !: ' + line);
-    assert.ok(line.includes('％CMDCMDLINE') && line.includes('100％ done！'), line);
-    assert.ok(line.includes('"C:\\work dir"'), '路径照常加引号');
-  });
-  it('W3 non-batch launchers and non-Windows hosts are untouched', () => {
-    const { batchSafeSpawn } = loadServerInternals(['batchSafeSpawn']);
-    const args = ['--append-system-prompt', '100%!'];
-    const exe = withPlatform('win32', () => batchSafeSpawn('C:\\claude\\claude.exe', args));
-    assert.deepEqual(exe.args, args, '直启 exe 不经 cmd,原文保真');
-    const lin = withPlatform('linux', () => batchSafeSpawn('claude.cmd', args));
-    assert.deepEqual(lin.args, args);
-  });
-});
-
-describe('[P] port takeover is bound to this data dir', () => {
-  const PORT = 18123;
-  const writeRuntime = (paths, rec) => { fs.mkdirSync(paths.data, { recursive: true }); fs.writeFileSync(path.join(paths.data, 'runtime.json'), JSON.stringify(rec)); };
-  const rig = (stubs) => {
-    const internals = loadServerInternals(['freeStalePort', 'paths'], { withEval: true });
-    const killed = [];
-    globalThis.__portRig = { ...stubs, killed };
-    internals.__eval(`
-      pidsOnPort = async () => globalThis.__portRig.pids;
-      probeHealth = async () => globalThis.__portRig.health;
-      processImage = async () => globalThis.__portRig.image;
-      processCommandLine = async () => globalThis.__portRig.commandLine || '';
-      killPid = async pid => { globalThis.__portRig.killed.push(pid); };
-    `);
-    return { internals, killed };
-  };
-  const WB = { ok: true, app: '如意 Ruyi', version: '3.0.0', overlayId: 'ov-A', launchMode: 'node', uptimeSec: 5 };
-
-  it('P1 verdict matrix', () => {
-    const { portHolderTakeoverVerdict: v } = loadServerInternals(['portHolderTakeoverVerdict']);
-    const rt = { pid: 4242, port: PORT, overlayId: 'ov-A' };
-    assert.equal(v({ pid: 4242, port: PORT, runtime: rt, health: WB, image: 'node.exe', commandLine: 'c:\\ruyi\\app\\server.js serve' }).ours, true);
-    assert.equal(v({ pid: 4242, port: PORT, runtime: rt, health: null, image: '', commandLine: '' }).ours, true, '拿不到任何旁证时,登记 pid 本身就够(陈旧实例常常 /health 已不应答)');
-    assert.equal(v({ pid: 4242, port: PORT, runtime: rt, health: WB, image: 'Ruyi.exe' }).ours, true);
-    assert.equal(v({ pid: 4242, port: PORT, runtime: { pid: 4242 }, health: null, image: '' }).ours, true, '老 runtime.json 没记端口也认');
-    for (const [label, args] of [
-      ['别的 pid(别的数据目录 / 别的安装的如意)', { pid: 7777, runtime: rt, health: { ...WB, overlayId: 'ov-B' }, image: 'Ruyi.exe' }],
-      ['没有 runtime.json', { pid: 4242, runtime: null, health: WB, image: 'node.exe' }],
-      ['runtime.json 没有 pid', { pid: 4242, runtime: { port: PORT }, health: WB, image: 'node.exe' }],
-      ['登记在别的端口', { pid: 4242, runtime: { ...rt, port: PORT + 5 }, health: WB, image: 'node.exe' }],
-      ['pid 被回收给另一个如意进程(overlayId 不同)', { pid: 4242, runtime: rt, health: { ...WB, overlayId: 'ov-OTHER' }, image: 'node.exe' }],
-      ['pid 被回收给无关程序', { pid: 4242, runtime: rt, health: null, image: 'notepad.exe' }],
-      ['pid 被回收给无关的 node 服务', { pid: 4242, runtime: rt, health: null, image: 'node.exe', commandLine: 'c:\\x\\other-service.js' }],
-    ]) assert.equal(v({ port: PORT, ...args }).ours, false, label);
-  });
-
-  it('P2 this data dir\'s own recorded stale instance is taken over (killed)', async () => {
-    const { internals, killed } = rig({ pids: [4242], health: WB, image: 'node.exe', commandLine: 'c:\\ruyi\\app\\server.js serve' });
-    writeRuntime(internals.paths, { pid: 4242, port: PORT, overlayId: 'ov-A' });
-    const res = await internals.freeStalePort(PORT, '127.0.0.1');
-    assert.equal(res.ok, true);
-    assert.deepEqual(killed, [4242]);
-  });
-
-  it('P3 another data dir\'s / another install\'s Ruyi instance on the port is NOT killed', async () => {
-    const { internals, killed } = rig({ pids: [7777], health: { ...WB, overlayId: 'ov-B' }, image: 'Ruyi.exe', commandLine: 'c:\\other\\ruyi\\app\\server.js' });
-    writeRuntime(internals.paths, { pid: 4242, port: PORT, overlayId: 'ov-A' });
-    const res = await internals.freeStalePort(PORT, '127.0.0.1');
-    assert.equal(res.ok, false, '修前 /health 像工作台就杀');
-    assert.deepEqual(killed, [], '一个进程都不许动');
-    assert.equal(res.blocked.pid, 7777);
-    assert.equal(res.blocked.workbench, true, '报告里说得清「这是另一份如意」');
-  });
-
-  it('P4 with no runtime.json at all, even a workbench-looking holder is left alone', async () => {
-    const { internals, killed } = rig({ pids: [7777], health: WB, image: 'node.exe', commandLine: 'c:\\ruyi\\app\\server.js' });
-    fs.rmSync(path.join(internals.paths.data, 'runtime.json'), { force: true });
-    const res = await internals.freeStalePort(PORT, '127.0.0.1');
-    assert.equal(res.ok, false);
-    assert.deepEqual(killed, []);
-  });
-
-  it('P5 an unrelated service is left alone and reported as not-a-workbench', async () => {
-    const { internals, killed } = rig({ pids: [9999], health: { status: 'UP', version: '1.0' }, image: 'someservice.exe' });
-    writeRuntime(internals.paths, { pid: 4242, port: PORT, overlayId: 'ov-A' });
-    const res = await internals.freeStalePort(PORT, '127.0.0.1');
-    assert.equal(res.ok, false);
-    assert.equal(res.blocked.workbench, false);
-    assert.deepEqual(killed, []);
-  });
-
-  it('P6 two holders, one ours and one foreign: all-or-nothing — nobody is killed', async () => {
-    const { internals, killed } = rig({ pids: [4242, 7777], health: WB, image: 'node.exe', commandLine: 'c:\\ruyi\\app\\server.js' });
-    writeRuntime(internals.paths, { pid: 4242, port: PORT, overlayId: 'ov-A' });
-    const res = await internals.freeStalePort(PORT, '127.0.0.1');
-    assert.equal(res.ok, false);
-    assert.equal(res.blocked.pid, 7777);
-    assert.deepEqual(killed, [], '不会先杀了自己人、再因为别人占着而失败');
+    const route = createSessionRoutes({
+      resolveContainmentPath, readConfig: async () => config, envelope: {}, execution: {},
+      sessions: { createSession: async input => input },
+    });
+    async function importedSessionCwdAllowed(cwd) {
+      const body = Buffer.from(JSON.stringify({ cwd, messages: [{ role: 'user', content: 'import fixture' }] }));
+      const req = Object.assign(Readable.from([body]), { method: 'POST' });
+      const response = { writeHead(status) { this.status = status; }, end(value) { this.body = value; } };
+      await route(req, response, '/api/sessions');
+      if (response.status === 200) return true;
+      assert.equal(response.status, 400);
+      assert.equal(JSON.parse(response.body).error.code, 'session.import_cwd_not_allowed');
+      assert.ok(!response.body.includes(cwd), 'the rejection does not echo the path');
+      return false;
+    }
+    assert.equal(await importedSessionCwdAllowed(ws), true, '默认工作区本身');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'sub')), true, '子目录');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, 'not-created-yet', 'deeper')), true, '尚不存在的子路径(落在工作区内)');
+    assert.equal(await importedSessionCwdAllowed(other), true, 'workspaces[] 里的另一条');
+    assert.equal(await importedSessionCwdAllowed(''), true, '没给 cwd = 用默认,不拦');
+    assert.equal(await importedSessionCwdAllowed(outside), false);
+    assert.equal(await importedSessionCwdAllowed(evil), false, '同前缀兄弟目录');
+    assert.equal(await importedSessionCwdAllowed(path.join(ws, '..', 'outside')), false, '.. 逃逸');
+    assert.equal(await importedSessionCwdAllowed(path.parse(ws).root), false, '盘符根 / 根目录');
+    if (linked) assert.equal(await importedSessionCwdAllowed(path.join(ws, 'link')), false, '工作区里指向外面的链接 / junction 逃不出去');
   });
 });

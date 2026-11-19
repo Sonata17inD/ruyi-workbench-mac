@@ -9,7 +9,7 @@ const root = fs.mkdtempSync(path.join(tempBase, 'ruyi-privacy-file-read-'));
 const data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['FILE_TOOL_HANDLERS', 'PrivacyGateway', 'PrivacyCore', 'execResultCacheBySession']);
+const app = require('../lib/server-internals').loadServerInternals(['FILE_TOOL_HANDLERS', 'PrivacyGateway', 'PrivacyCore']);
 const { fixture } = require('../lib/privacy-test-fixture');
 const vault = fixture().vault;
 app.PrivacyCore.configHooks.sealLocal = vault.sealLocal;
@@ -33,7 +33,7 @@ function refused(value, originals = []) {
   for (const secret of originals) assert.equal(JSON.stringify(value).includes(secret), false);
 }
 after(() => {
-  app.execResultCacheBySession.clear(); vault.clear();
+  vault.clear();
   if (path.dirname(root) !== tempBase || !path.basename(root).startsWith('ruyi-privacy-file-read-')) throw Error('cleanup scope');
   fs.rmSync(root, { recursive: true, force: true });
 });
@@ -130,7 +130,6 @@ test('cache entries created with privacy off cannot bypass the protected view ga
     assert.equal(first.ok, true); assert.ok(cached.cacheHit, 'the real production cache must be warm');
     if (args.limit === undefined) assert.ok(first.non_ascii?.samples.length > 0, 'off mode still reports suspicious source characters');
   }
-  assert.ok(app.execResultCacheBySession.size > 0);
   const policy = config('enhanced', [{ id: 'patient', kind: 'field', value: '/patientCode', category: 'INTERNAL' }]);
   await scoped(policy, async () => {
     for (const args of views.slice(1)) { const view = await app.PrivacyGateway.toolResult(await rawRead(target, args, policy)); assert.equal(view.ok, true); assert.equal(JSON.stringify(view).includes(secret), false); assert.equal('cacheHit' in view, false); }

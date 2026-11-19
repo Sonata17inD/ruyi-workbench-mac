@@ -10,13 +10,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/perf-config-cache.e2e.js
  */
+require('./lib/self-isolate-home');
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
-const HOME = path.join(os.tmpdir(), 'wcw-perf-config-cache');
+const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-perf-config-cache-'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
@@ -33,17 +33,15 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   for (let i = 0; i < 300; i++) { if (await get(port, '/health')) return true; await sleep(120); } return false; }
 
 (async () => {
-  console.log('── 静态锁: P1 回退 + P2 verifyManifest 快路径 ──');
-  const src = fs.readFileSync(SERVER, 'utf8');
-  ok(!/let _configCache = null;/.test(src) && /48b\(P1\) readConfig 内存缓存 -- 经对抗验证【回退】/.test(src), 'S1 P1 readConfig 缓存已回退(对抗验证:5 件 e2e 直接写 config.json 依赖 uncached readConfig)');
-  ok(/let _maniCache = null;/.test(src) && /MANIFEST_FULL_VERIFY_MS = 60000/.test(src), 'S2 P2 verifyManifest 缓存 + 60s 强制全量');
-  ok(/const canSkip = !forceFull && prev && prev\.mtime === st\.mtimeMs && prev\.size === st\.size/.test(src), 'S3 P2 mtime+size 快路径(未变跳过 SHA)');
-  ok(/_maniCache\.version !== manifest\.version/.test(src), 'S4 P2 manifest.version 变更即失效(新 overlay 落地重算)');
-  ok(/_maniCache = null; return \{ present: false \}/.test(src), 'S5 P2 无 manifest 环境清缓存返回 present:false');
+  console.log('── 静态锁: P2 verifyManifest 快路径 ──');
+  const healthSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'workbench-health.cjs'), 'utf8');
+  ok(/let _maniCache = null;/.test(healthSource) && /MANIFEST_FULL_VERIFY_MS = 60000/.test(healthSource), 'S2 P2 verifyManifest 缓存 + 60s 强制全量');
+  ok(/const canSkip = !forceFull && prev && prev\.mtime === st\.mtimeMs && prev\.size === st\.size/.test(healthSource), 'S3 P2 mtime+size 快路径(未变跳过 SHA)');
+  ok(/_maniCache\.version !== manifest\.version/.test(healthSource), 'S4 P2 manifest.version 变更即失效(新 overlay 落地重算)');
+  ok(/_maniCache = null; return \{ present: false \}/.test(healthSource), 'S5 P2 无 manifest 环境清缓存返回 present:false');
 
   // ── 起服务 ──
   const WP = await getFreePort();
-  fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, version: '2.0.0', permissionMode: 'bypass' }));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
   try {
@@ -51,6 +49,18 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));
     const token = (html.match(/name="wcw-token"\s+content="([a-f0-9]+)"/) || [])[1] || '';
     const hdr = { 'x-wcw-token': token };
+
+    // Legacy integrations and fixtures can replace config on disk between reads.
+    const configPath = path.join(HOME, 'config.json');
+    const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const modes = [];
+    for (const uiMode of ['simple', 'pro']) {
+      const file = configPath + '.fixture-next';
+      fs.writeFileSync(file, JSON.stringify({ ...raw, uiMode, configExplicitKeysV1: [...new Set([...(raw.configExplicitKeysV1 || []), 'uiMode'])] }));
+      fs.renameSync(file, configPath);
+      modes.push((await get(WP, '/api/status', hdr))?.json?.config?.uiMode);
+    }
+    ok(modes.join(',') === 'simple,pro', 'P1 两次配置原子替换分别在下一请求可见');
 
     // ── P2 行为:缓存安全 ──
     console.log('── P2 行为: verifyManifest 缓存安全 ──');

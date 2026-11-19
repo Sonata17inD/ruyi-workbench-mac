@@ -195,15 +195,11 @@ async function runLocalModel(resolved) {
 (async () => {
   console.log(localModel ? 'CLAUDE-BINARY LOCAL (真实CLI、本地确定性模型、无真实凭据)' : 'CLAUDE-BINARY LIVE SMOKE (真实二进制,手工触发;未装/未登录自动 SKIP)');
 
-  // ── ① resolveClaudeLauncher 真机解析 ─────────────────────────────────────
-  // 注意:resolver 只对批处理 shim(.cmd/.bat)动手(裸名 'claude' 原样返回 —— isBatchLauncher 门),
-  // 真实启动路径 = detectClaudePath 先 PATH 探 'claude.cmd' 再交给 resolver。本用例镜像该语义。
-  const configured = localModel || process.platform !== 'win32' ? (await srv.readConfig()).claudePath : 'claude.cmd';
-  const resolved = srv.resolveClaudeLauncher(configured);
+  const resolved = (await srv.readConfig()).claudePath;
   if (localModel) { if (!resolved) throw new Error('local-model mode requires a real configured Claude CLI'); await runLocalModel(resolved); return; }
   const bareLauncher = Boolean(resolved && !/[\\/]/.test(resolved));
-  ok(process.platform === 'win32' ? /claude\.exe$/i.test(resolved) && fs.existsSync(resolved) : bareLauncher || fs.existsSync(resolved), `① 平台启动器解析为真实 CLI: ${resolved}`);
-  if ((process.platform === 'win32' || !bareLauncher) && !fs.existsSync(resolved)) { console.log('未安装 claude CLI —— 后续用例整体 SKIP'); console.log('\nCLAUDE-BINARY LIVE: SKIP'); return; }
+  ok(bareLauncher || fs.existsSync(resolved), `① 平台启动器解析为真实 CLI: ${resolved}`);
+  if (!bareLauncher && !fs.existsSync(resolved)) { console.log('未安装 claude CLI —— 后续用例整体 SKIP'); console.log('\nCLAUDE-BINARY LIVE: SKIP'); return; }
 
   // ── ② exe 直启 ────────────────────────────────────────────────────────────
   const ver = await spawnCollect(resolved, ['--version'], { timeoutMs: 60000 });

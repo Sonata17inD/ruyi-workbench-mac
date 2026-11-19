@@ -3,8 +3,7 @@ write_pptx / chart_image / excel_beautify / excel_chart).
 
 Two jobs:
 
-* 原子落盘 + 失败人话:先写同目录临时文件再 os.replace,目标被 Excel/Word/WPS 占用(Windows 上
-  PermissionError / WinError 5|32|33)时返回 ok:false 带恢复提示,并且原文件字节不变。
+* 原子落盘:先写同目录临时文件再 os.replace，权限或占用失败时保留原文件并返回恢复提示。
 * 缺可选依赖(python-docx / openpyxl / python-pptx / matplotlib / reportlab)时给安装提示信封,
   而不是裸 ModuleNotFoundError。
 
@@ -14,9 +13,7 @@ Two jobs:
 import errno
 import os
 import tempfile
-import time
 
-_LOCK_WINERRORS = (5, 32, 33)
 _LOCK_ERRNOS = (errno.EACCES, errno.EPERM, errno.EBUSY)
 
 _INSTALL_HINTS = {
@@ -29,12 +26,10 @@ _INSTALL_HINTS = {
 
 
 def is_locked_error(e: BaseException) -> bool:
-    """True for 「文件被别的进程占用 / 无权写入」class errors (Windows sharing violation included)."""
+    """True for 「文件被别的进程占用 / 无权写入」class errors."""
     if isinstance(e, PermissionError):
         return True
     if isinstance(e, OSError):
-        if getattr(e, "winerror", None) in _LOCK_WINERRORS:
-            return True
         if e.errno in _LOCK_ERRNOS:
             return True
     return False
@@ -86,23 +81,6 @@ def require(module: str):
         return None, missing_dependency(module, str(e))
 
 
-def replace_with_retry(src: str, dst: str, attempts: int = 6, delay: float = 0.05) -> None:
-    """os.replace with a short retry on the TRANSIENT Windows sharing failures (WinError 5/32/33).
-
-    Defender / OneDrive / the search indexer routinely hold a freshly written file for tens of ms; one
-    attempt would report "file_locked: close Excel" for a file nothing has open. Only a failure that
-    persists (~0.75 s) propagates. Other errors (and non-Windows PermissionError) raise immediately.
-    """
-    for i in range(max(1, attempts)):
-        try:
-            os.replace(src, dst)
-            return
-        except PermissionError as e:
-            if i >= attempts - 1 or getattr(e, "winerror", None) not in _LOCK_WINERRORS:
-                raise
-            time.sleep(min(0.2, delay * (i + 1)))
-
-
 def atomic_save(path: str, writer, *, suffix: str | None = None) -> None:
     """Run writer(tmp_path) into a same-directory temp file, then os.replace onto `path`.
 
@@ -117,7 +95,7 @@ def atomic_save(path: str, writer, *, suffix: str | None = None) -> None:
     try:
         writer(tmp)
         # mkstemp makes a 0600 file; keep the old file's mode (or a normal 0644) so POSIX users are not
-        # surprised. On Windows chmod only toggles read-only, and 0644 keeps the file writable.
+        # preserve the destination permissions on replacement.
         try:
             mode = os.stat(target).st_mode & 0o777
         except OSError:
@@ -126,7 +104,7 @@ def atomic_save(path: str, writer, *, suffix: str | None = None) -> None:
             os.chmod(tmp, mode | 0o200)
         except OSError:
             pass
-        replace_with_retry(tmp, target)
+        os.replace(tmp, target)
     except BaseException:
         try:
             os.unlink(tmp)

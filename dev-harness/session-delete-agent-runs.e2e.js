@@ -14,8 +14,8 @@ for (const key of ['RUYI_HOME', 'WIN_CLAUDE_WORKBENCH_HOME', 'HOME', 'USERPROFIL
 const s = loadServerInternals([
   'createSession', 'saveSession', 'loadSession', 'deleteSession', 'runAgentWorkflow',
   'activeAgentRuns', 'agentRunDir', 'readConfig', 'activeOpenAiProvider', 'saveAgentRun',
-  'appendAgentRunEvent', 'flushAgentRunEvents', 'flushSessionIndex', 'getAgentRoleLibrary',
-], { withEval: true });
+  'appendAgentRunEvent', 'flushAgentRunEvents', 'flushSessionIndex',
+]);
 const runner = createRunner('SESSION DELETE AGENT RUNS');
 const { ok } = runner;
 let fake;
@@ -130,15 +130,21 @@ async function session(title) {
     } finally { appendRelease(); fsp.appendFile = originalAppend; fsp.readdir = originalReaddir; }
 
     const pending = await session('preflight pending');
-    const originalRoles = s.getAgentRoleLibrary;
+    const roleFile = path.resolve(pending.cwd, '.ruyi', 'agents.json');
+    const originalStat = fsp.stat;
     let roleReached, roleRelease;
     const roleWait = new Promise(resolve => { roleReached = resolve; });
-    globalThis.__ruyiDeleteRoleReached = roleReached;
-    s.__eval('getAgentRoleLibrary = async () => new Promise(resolve => { globalThis.__ruyiDeleteRoleRelease = () => resolve([]); globalThis.__ruyiDeleteRoleReached(); })');
+    const roleGate = new Promise(resolve => { roleRelease = resolve; });
+    fsp.stat = async function (file, ...args) {
+      if (file === roleFile) {
+        roleReached();
+        await roleGate;
+      }
+      return originalStat.call(this, file, ...args);
+    };
     try {
       const pendingRun = launch(pending, nodes);
       await roleWait;
-      roleRelease = globalThis.__ruyiDeleteRoleRelease;
       await s.deleteSession(pending.id, { purgeAssociated: true });
       const pendingBefore = fake.requests.length;
       roleRelease();
@@ -146,12 +152,8 @@ async function session(title) {
       ok(rejected.ok === false && rejected.startedCount === 0, '启动预检 await 期间删线程,工作流拒绝注册');
       ok(fake.requests.length === pendingBefore && !fs.existsSync(s.agentRunDir(pending.id)), '启动在飞的班组不调模型也不重建目录');
     } finally {
-      if (roleRelease) roleRelease();
-      globalThis.__ruyiDeleteOriginalRoles = originalRoles;
-      s.__eval('getAgentRoleLibrary = globalThis.__ruyiDeleteOriginalRoles');
-      delete globalThis.__ruyiDeleteOriginalRoles;
-      delete globalThis.__ruyiDeleteRoleReached;
-      delete globalThis.__ruyiDeleteRoleRelease;
+      roleRelease();
+      fsp.stat = originalStat;
     }
   } catch (error) { runner.fail(error.stack || String(error)); }
   finally {

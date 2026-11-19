@@ -6,8 +6,7 @@
 //   [S2] createSession 收到非字符串 cwd / title(请求体直传)不再原样落盘(修前 {"cwd":5} 让这条会话每回合都死)。
 //   [H*] 起一个真服务打 HTTP:null 请求体、坏百分号编码、坏会话 id、未知工具/工具参数错、带坏 sessionId 的
 //        /api/chat/stream、超总闸的 Content-Length、SSE 连接上限 —— 修前全是 500(或挂住/静默新建会话/无界)。
-//   [L*] 两条拿不到确定性复现的硬化(子进程 stdin 的 EPIPE、NDJSON 流收尾后的迟到写)只能锁结构:
-//        判据本身就是「这段代码必须挂监听/必须先判流已收尾」。
+//   [L*] 子进程 stdin 有 EPIPE 监听，NDJSON 合批保持顺序并忽略收尾后的迟到事件。
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const cp = require('child_process');
@@ -15,6 +14,8 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const { EventEmitter } = require('node:events');
+const { createHttpNdjsonResponse } = require('../../ruyi-workbench/app/backend/http-ndjson-response.cjs');
 
 const REPO = path.resolve(__dirname, '../..');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-http-hardening-'));
@@ -252,27 +253,48 @@ test('[H9] /api/events/stream 连接数有上限(第 33 条 → 503),已有连�
 
 // ---------------------------------------------------------------------------------------------
 // 结构锁(判据本身是结构性的:这段代码必须挂监听 / 必须先判流已收尾)。
-test('[L1] 子进程 stdin 挂了 error 监听(Kimi ACP RPC、PowerShell 会话):EPIPE 不成 uncaughtException', () => {
-  const rpc = functionBlock(readSrc('05b-kimi-bridge.js'), 'createKimiAcpRpc');
+test('[L1] 子进程 stdin 挂了 error 监听(Kimi ACP RPC、Mac shell 会话):EPIPE 不成 uncaughtException', () => {
+  const rpc = functionBlock(readSrc('../backend/kimi-acp-rpc.cjs'), 'createKimiAcpRpc');
   assert.ok(rpc.length > 200, '切到 createKimiAcpRpc');
   assert.match(rpc, /child\.stdin\.on\('error'/);
-  const shell = functionBlock(readSrc('11-native-tools.js'), 'shellStart');
+  const shell = functionBlock(readSrc('../backend/shell-sessions.cjs'), 'shellStart');
   assert.ok(shell.length > 200, '切到 shellStart');
   assert.match(shell, /child\.stdin\.on\('error'/);
 });
 
-test('[L2] NDJSON 流壳:收尾后的迟到事件不写、res 挂 error 监听(streamChat / 管家运行器)', () => {
-  for (const [file, fn] of [['10-context-governance.js', 'streamChat'], ['13h-steward-runner.js', 'handleStewardRunnerApiRoutes']]) {
-    const block = functionBlock(readSrc(file), fn);
-    assert.ok(block.length > 200, `切到 ${fn}`);
-    const guards = block.match(/if \(res\.writableEnded \|\| res\.destroyed\) return;/g) || [];
-    assert.ok(guards.length >= 2, `${fn}:flushDeltas 与 writeEvent 都先判流已收尾(实 ${guards.length})`);
-    assert.match(block, /res\.on\('error', \(\) => \{\}\)/, `${fn}:res 上挂 error 监听`);
-  }
+test('[L2] NDJSON 合批按边界刷新，收尾后忽略迟到事件和异步写错误', () => {
+  const writes = [];
+  const res = Object.assign(new EventEmitter(), {
+    writeHead(status, headers) {
+      assert.equal(status, 200);
+      assert.equal(headers['content-type'], 'application/x-ndjson; charset=utf-8');
+    },
+    flushHeaders() {},
+    write(value) { writes.push(JSON.parse(value)); },
+  });
+  const response = createHttpNdjsonResponse({}, res, () => 'fixture-time');
+  response.start();
+  response.writeEvent({ type: 'assistant_delta', text: '前' });
+  response.writeEvent({ type: 'assistant_delta', text: '后' });
+  response.writeEvent({ type: 'thinking_delta', text: '思考' });
+  response.writeEvent({ type: 'result', ok: true });
+  assert.deepEqual(writes, [
+    { type: 'assistant_delta', text: '前后', ts: 'fixture-time' },
+    { type: 'thinking_delta', text: '思考', ts: 'fixture-time' },
+    { type: 'result', ok: true, ts: 'fixture-time' },
+  ]);
+  response.writeEvent({ type: 'assistant_delta', text: '等待合批' });
+  res.writableEnded = true;
+  res.emit('close');
+  response.writeEvent({ type: 'assistant_delta', text: '迟到增量' });
+  response.writeEvent({ type: 'result', ok: false });
+  response.flushDeltas();
+  res.emit('error', new Error('write after end'));
+  assert.equal(writes.length, 3);
 });
 
 test('[L3] agent-runs digest 轮询不再深拷贝 live run(只读标量,浅展开等值)', () => {
-  const block = functionBlock(readSrc('13d-core-domain-routes.js'), 'handleAgentRunApiRoutes');
+  const block = functionBlock(readSrc('../backend/agent-run-routes.cjs'), 'handleAgentRunApiRoutes');
   assert.ok(block.length > 200, '切到 handleAgentRunApiRoutes');
   assert.match(block, /digestView \? live\.run : JSON\.parse\(JSON\.stringify\(live\.run\)\)/);
 });

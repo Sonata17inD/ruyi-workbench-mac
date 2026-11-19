@@ -317,9 +317,6 @@ check("missing matplotlib: install-hint envelope", r.get("ok") is False and "pip
 
 print("# io helpers")
 check("io_failure maps WinError 32", office_io.io_failure(OSError(13, "x"), "a.xlsx").get("code") == "file_locked")
-e = OSError(32, "sharing violation")
-e.winerror = 32
-check("io_failure maps winerror 32 OSError", office_io.io_failure(e, "a.xlsx").get("code") == "file_locked")
 check("plain error keeps its text", office_io.io_failure(ValueError("boom"), "a").get("error") == "boom")
 
 print("# review round: markup / excel / pptx / replace retry")
@@ -376,53 +373,23 @@ if r.get("success"):
 
 import errno as _errno  # noqa: E402
 real_replace = os.replace
-attempts = {"n": 0, "fail": 2}
-
-
-def flaky_replace(src, dst):
-    attempts["n"] += 1
-    if attempts["fail"] > 0:
-        attempts["fail"] -= 1
-        err = PermissionError(_errno.EACCES, "sharing violation")
-        err.winerror = 32
-        raise err
-    return real_replace(src, dst)
-
-
-target = root / "retry.bin"
-os.replace = flaky_replace
-slept = []
-real_sleep = office_io.time.sleep
-office_io.time.sleep = lambda sec: slept.append(sec)
+target = root / "atomic.bin"
+target.write_bytes(b"original")
+attempts = []
+def denied_replace(src, dst):
+    attempts.append(1)
+    raise PermissionError(_errno.EACCES, "read-only")
+os.replace = denied_replace
 try:
-    office_io.atomic_save(str(target), lambda tmp: open(tmp, "wb").write(b"ok"))
-    check("atomic_save retries a transient WinError 32 and succeeds", target.read_bytes() == b"ok" and attempts["n"] == 3, attempts)
-    check("retry backs off briefly", 0 < sum(slept) < 1.5, slept)
-    attempts.update(n=0, fail=99)
     try:
         office_io.atomic_save(str(target), lambda tmp: open(tmp, "wb").write(b"new"))
         raised = None
-    except PermissionError as err:
-        raised = err
-    check("a persistent lock still surfaces (then maps to file_locked)",
-          raised is not None and attempts["n"] == 6 and office_io.io_failure(raised, str(target)).get("code") == "file_locked"
-          and target.read_bytes() == b"ok", attempts)
-    check("no orphan temp file after the failure", not [n for n in os.listdir(root) if n.startswith(".ruyi-")])
-    plain = PermissionError(_errno.EACCES, "read-only")      # no winerror: not transient, no retry
-    calls = []
-
-    def always_plain(s_, d_):
-        calls.append(1)
-        raise plain
-    os.replace = always_plain
-    try:
-        office_io.replace_with_retry("a", "b")
-    except PermissionError:
-        pass
-    check("a PermissionError without a sharing-violation winerror is not retried", len(calls) == 1, calls)
+    except PermissionError as error:
+        raised = error
+    check("atomic permission failure preserves original without retry", raised is not None and len(attempts) == 1 and target.read_bytes() == b"original")
+    check("atomic failure removes temporary files", not [n for n in os.listdir(root) if n.startswith(".ruyi-")])
 finally:
     os.replace = real_replace
-    office_io.time.sleep = real_sleep
 
 print("# lazy heavy imports")
 code = ("import sys, os, tempfile\n"

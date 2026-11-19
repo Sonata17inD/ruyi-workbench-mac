@@ -132,21 +132,11 @@ def section_read_file():
     r = _FNS["read_file"](path=f)
     check(r.get("content") == "line one\nline two\n", f"无 BOM 的 UTF-16-LE 也识别 (got {r.get('content')!r})")
 
-    # 英文/西欧 Windows(ACP=cp1252,单字节页什么字节都解得开):GBK 文件不能被静默解成 cp1252 乱码,
-    # 真西文 cp1252 文件也仍按 ACP 解。CI 的 Windows runner 正是 cp1252。
-    _orig_acp = fs._system_acp
-    fs._system_acp = lambda: "cp1252"
-    try:
-        f = P("gbk_on_1252.txt")
-        wb_bytes(f, "中文内容,来自记事本 ANSI".encode("gbk"))
-        r = _FNS["read_file"](path=f)
-        check("中文内容" in r.get("content", ""), f"ACP=cp1252 时 GBK 文件仍解成中文 (enc={r.get('encoding_used')})")
-        f = P("latin_on_1252.txt")
-        wb_bytes(f, "Café crème — naïve résumé\n".encode("cp1252"))
-        r = _FNS["read_file"](path=f)
-        check(r.get("content") == "Café crème — naïve résumé\n", f"ACP=cp1252 时西文文件仍按 cp1252 (enc={r.get('encoding_used')})")
-    finally:
-        fs._system_acp = _orig_acp
+    # Explicit legacy Western encoding remains supported without a host codepage.
+    f = P("latin.txt")
+    wb_bytes(f, "Café crème — naïve résumé\n".encode("cp1252"))
+    r = _FNS["read_file"](path=f, encoding="cp1252")
+    check(r.get("content") == "Café crème — naïve résumé\n", "explicit cp1252 input remains readable")
 
     f = P("gbk.txt")
     wb_bytes(f, "中文内容,来自记事本 ANSI".encode("gbk"))
@@ -292,7 +282,6 @@ def section_memory():
         if flaky["left"] > 0:
             flaky["left"] -= 1
             e = PermissionError(13, "sharing violation")
-            e.winerror = 32
             raise e
         return real_replace(src, dst)
     os.replace = flaky_replace
@@ -300,9 +289,9 @@ def section_memory():
         r = _FNS["memory_save"](key="retry", content="x")
     finally:
         os.replace = real_replace
-    check(r.get("success") is True and len(names) == 3, f"memory_save 遇到瞬时占用(WinError 32)重试后成功 (replace 调用 {len(names)} 次, got {r})")
+    check(r.get("ok") is False and len(names) == 1, f"memory_save 权限失败立即返回，不重试 (replace 调用 {len(names)} 次, got {r})")
     check(all(str(os.getpid()) in n for n in names), f"memory 临时文件名含进程号(两个 ACC 进程不共用一个 .tmp) (got {names[:1]})")
-    check(not [n for n in os.listdir(_DATA) if n.endswith(".tmp")], "成功后没有残留 .tmp")
+    check(not [n for n in os.listdir(_DATA) if n.endswith(".tmp")], "失败后没有残留 .tmp")
 
 
 try:

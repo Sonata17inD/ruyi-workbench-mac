@@ -15,6 +15,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const APP = path.join(ROOT, 'ruyi-workbench', 'app');
@@ -26,33 +27,81 @@ const read = f => fs.readFileSync(path.join(SRC, f), 'utf8');
 
 const manifest = JSON.parse(read('manifest.json'));
 const src06 = read('06-provider-engine.js');
-const src06b = read('06b-prompt-registry.js');
-const src06i = read('06i-steward-core.js');
-const src06k = read('06k-config-patch.js'); // 架构还债批 2 B2:applyConfigPatch(消费 StewardHooks.arbiterRefresh)从 13 搬到这里
-const src09 = read('09-workflow.js');
+const providerServices = ['thread-brief', 'playbooks', 'provider-raw-completion', 'provider-prompt', 'prompt-context', 'engine-env-brief', 'provider-turn']
+  .map(name => [name + '.cjs', read('../backend/' + name + '.cjs')]);
+const src06b = read('../backend/prompt-registry.cjs');
+const src06i = read('../backend/steward-core.cjs');
+const configPatch = read('../backend/config-patch.cjs');
+const providerTurn = read('../backend/provider-turn.cjs');
 const src10 = read('10-context-governance.js');
+const sessionCompaction = read('../backend/session-compaction.cjs');
+const turnRuntime = read('../backend/session-turn-runtime.cjs');
 const src12 = read('12-tool-dispatch.js');
+const stewardToolHandlers = read('../backend/steward-tool-handlers.cjs');
 const src13 = read('13-http-router.js');
+const apiRouter = read('../backend/workbench-api-router.cjs');
 const src13d = read('13d-core-domain-routes.js');
-const src13s = read('13s-scheduler.js'); // scheduler timeout still consumes the internal queue-cancellation hook
+const sessionEnvelope = read('../backend/session-envelope.cjs');
+const sessionRoutes = read('../backend/session-routes.cjs');
+const sessionExecutionRoutes = read('../backend/session-execution-routes.cjs');
+const src13s = read('../backend/scheduler-runtime.cjs'); // scheduler timeout still consumes the internal queue-cancellation hook
 const src13g = read('13g-steward.js');
 // 117 波 T1(32 号文 §2.1):13g 的工具实现与共享原语拆到了三个新文件(纯搬家)。它们与 13g 同属
 // 「13g 族」,同样是 13h 的【消费者】—— 下面 ② 的零前向边判据与 unused 判据都必须覆盖它们,
 // 否则一条 13h 符号只要搬进新文件就能绕过这把锁。
 const src13j = read('13j-steward-tool-base.js');
 const src13k = read('13k-steward-threads.js');
+const threadQueries = read('../backend/steward-thread-queries.cjs');
+const threadCreation = read('../backend/steward-thread-create.cjs');
+const threadLauncher = read('../backend/steward-thread-launch.cjs');
+const threadEdits = read('../backend/steward-thread-edits.cjs');
+const threadServices = [
+  ['steward-thread-queries.cjs', threadQueries],
+  ['steward-thread-create.cjs', threadCreation],
+  ['steward-thread-launch.cjs', threadLauncher],
+  ['steward-thread-edits.cjs', threadEdits],
+  ['steward-thread-admission.cjs', read('../backend/steward-thread-admission.cjs')],
+  ['steward-thread-delivery.cjs', read('../backend/steward-thread-delivery.cjs')],
+];
+const threadServiceSource = threadServices.map(([, source]) => source).join('\n');
 const src13l = read('13l-steward-ops.js');
-// 116-2e:收件箱轮询与游标前移到 13i-steward-inbox.js(零行为搬家),⑤ 的收件箱断言随之改读 13i。
-const src13i = read('13i-steward-inbox.js');
+const decisionTools = 'steward-decision-tools.cjs';
+const toolServices = [
+  'steward-status-tools.cjs', decisionTools, 'steward-memory-tools.cjs', 'steward-external-read-tools.cjs',
+  'steward-notification-tool.cjs', 'steward-settings-tools.cjs', 'steward-content-tools.cjs',
+].map(file => [file, read('../backend/' + file)]);
+const toolServiceSource = toolServices.map(([, source]) => source).join('\n');
+const inboxComposition = read('13i-steward-inbox.js');
+const inboxSource = read('../backend/steward-inbox.cjs');
 const src13h = read('13h-steward-runner.js');
+const stewardRoutes = read('../backend/steward-routes.cjs');
 // 117 波 T2(32 号文 §5):13h 已 2522 行(比 T1 拆之前的 13g 还长),按「谁被谁引用」拆成六个文件
 // (纯搬家,拼接顺序即依赖方向)。这六个合起来才是原来那个「13h」,故下面凡是钉【运行器里有这件事】
 // 的判据一律改读整族 —— 事实一个字没变,只是它现在住在族里的哪个文件由拆分决定;钉【落点】的那几条
 // (① 的顺序链、② 的注册表与 threadStop 实现)仍各自钉到确切的那个文件。
-const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js'];
+const autonomousActions = '../backend/steward-autonomous-actions.cjs';
+const inboxPrompt = '../backend/steward-inbox-prompt.cjs';
+const runnerActionServices = [
+  '../backend/steward-action-execution.cjs', '../backend/steward-turn-circuit.cjs',
+  '../backend/steward-conversation-replies.cjs', autonomousActions, inboxPrompt,
+];
+const turnRunner = '../backend/steward-turn-runner.cjs';
+const conversationVisits = '../backend/steward-conversation-visits.cjs';
+const runnerTurnServices = [
+  '../backend/steward-inbox-queue.cjs', turnRunner, conversationVisits,
+  '../backend/steward-thread-relay.cjs', '../backend/steward-act-receipts.cjs',
+];
+const actionContract = '../backend/steward-action-contract.cjs';
+const systemPrompt = '../backend/steward-system-prompt.cjs';
+const stewardToolAdmission = read('../backend/steward-tool-admission.cjs');
+const stewardThreadControl = '../backend/steward-thread-control.cjs';
+const runnerPolicy = '../backend/steward-runner-policy.cjs';
+const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', runnerPolicy, '../backend/steward-runner-lifecycle.cjs', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+  '../backend/steward-prompt-memory.cjs', '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
+  '../backend/steward-workspace-overview.cjs', systemPrompt, actionContract,
+  '13p-steward-runner-actions.js', ...runnerActionServices, '13q-steward-runner-turn.js', ...runnerTurnServices, stewardThreadControl, '../backend/steward-runner-state.cjs', '13h-steward-runner.js'];
 const srcRunnerFamily = STEWARD_RUNNER_FAMILY.map(read).join('\n');
-const src01b = read('01b-route-auth.js');
+const src01b = read('../backend/http-route-policy.cjs');
 
 /* ═════════════ ① 模块落点 ═════════════ */
 {
@@ -64,9 +113,10 @@ const src01b = read('01b-route-auth.js');
   // 且顺序即依赖方向」。故改钉整条链本身 —— 比原来那个探针更严:族里任何一个被挪出这段连续区间、
   // 或顺序被换,这条都红。
   const iFam = files.indexOf('13g-steward.js') + 1;
-  ok(iFam > 0 && STEWARD_RUNNER_FAMILY.every((f, k) => files[iFam + k] === f),
-    '① 13g 之后是 T2 拆出的运行器族、以 13h 收尾(' + STEWARD_RUNNER_FAMILY.join(' -> ') + ';实得 '
-    + JSON.stringify(files.slice(iFam, iFam + STEWARD_RUNNER_FAMILY.length)) + ')');
+  const stitchedFamily = STEWARD_RUNNER_FAMILY.filter(file => !file.startsWith('../backend/'));
+  ok(iFam > 0 && stitchedFamily.every((f, k) => files[iFam + k] === f),
+    '① 运行器的拼接片段紧跟 13g、以 13h 收尾(' + stitchedFamily.join(' -> ') + ';实得 '
+    + JSON.stringify(files.slice(iFam, iFam + stitchedFamily.length)) + ')');
   // 121 波 K2a 重钉:13h 与 14-main 之间插进了 13r-event-stream.js(事件流,同为 transport 层;
   // 它必须排在【所有】管家模块之后 —— 它订阅总线、读五态与未决计数,排在前面全是前向边)。原来
   // 钉的是「下标恰好差 1」,那钉的是当时的排布长什么样;这条判据的【用意】写在上一行注释里 ——
@@ -83,14 +133,14 @@ const src01b = read('01b-route-auth.js');
   // T2 已经把那笔债还了(13h 拆成六个文件,纯搬家)。故那条豁免删掉,运行器族六个文件与工具族三个
   // 一起进这道闸:以后再往管家回合层加东西,超线的是哪个文件当场就看得见。
   for (const [name, text] of [['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k],
-    ['13l-steward-ops.js', src13l], ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
+    ['13l-steward-ops.js', src13l], ...threadServices, ...toolServices, ...STEWARD_RUNNER_FAMILY.map(f => [f, read(f)])]) {
     const n = text.split('\n').length;
     ok(n < 2000, `① ${name} 也在 SPEC 目标 2000 行以内(got ${n};拆分不许把债换个文件放)`);
   }
   // 117l companion:这条预算不是靠少写注释守住的,而是靠「新判定不往 13g 堆」。本波三个新判据
   // 一个都不在 13g 里 —— 递话通道的判定与执行在 13h,id 人话化 / 模型分档 / 「它在问你」在 06i。
   // 117 波 T1:判据面从 13g 一个文件扩到整个 13g 族 —— 否则拆完之后把新判定塞进 13k/13l 就绕过去了。
-  const famText = src13g + src13j + src13k + src13l;
+  const famText = src13g + src13j + src13k + src13l + threadServiceSource + toolServiceSource;
   for (const symbol of ['stewardRelayChannelFor', 'stewardHumanizeIds', 'stewardThreadEngineRoute', 'stewardAsksYou']) {
     ok(!new RegExp('function ' + symbol + '\\s*\\(').test(famText), `① 117l companion: ${symbol} 的实现不在 13g 族(新判定往 13h/06i 放)`);
   }
@@ -101,17 +151,22 @@ const src01b = read('01b-route-auth.js');
   // 13h 族里所有顶层 function 名(它们是「13h 的符号」)。任何消费者源码里出现其中之一 = 前向边。
   // 117 波 T2 重钉:样本从「13h 一个文件」扩到整族 —— 否则一条符号只要搬进 13m/13n/13o/13p/13q
   // 就能绕过这把锁。判据一字未变,样本比原来大(判得更严)。
-  const runnerSymbols = [...new Set((srcRunnerFamily.match(/^(?:async )?function ([A-Za-z0-9_]+)/gm) || [])
-    .map(m => m.replace(/^(?:async )?function /, '')))];
+  const runnerSymbols = [...new Set([...srcRunnerFamily.matchAll(/^(?: {2}(?=(?:async )?function steward))?(?:async )?function ([A-Za-z0-9_]+)/gm)]
+    .map(match => match[1]))];
   ok(runnerSymbols.length >= 15, `② 13h 顶层函数抽取到 ${runnerSymbols.length} 个(锁的样本足够大)`);
   // 116h 重钉:消费者面从 06/09/10/13g 扩到 06/09/10/12/13/13d/13g —— 仲裁的钩子多了三个新消费者
   // (12 的工具 handler、13 的 /api/stop、13d 的事项聚合行)。加入样本让「零前向边」的判据【更严】
   // (这三个文件同样不许出现 13h 的符号),同时让下面反向的 unused 判据仍然覆盖全部消费者。
   // 117 波 T1 再扩:13g 拆出的三个新文件同属 13g 族,同样不许出现 13h 的符号(判据更严,不是放宽)。
-  const consumers = [['06-provider-engine.js', src06], ['09-workflow.js', src09], ['10-context-governance.js', src10],
-    ['12-tool-dispatch.js', src12], ['13-http-router.js', src13], ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
+  const consumers = [['06-provider-engine.js', src06], ...providerServices, ['10-context-governance.js', src10],
+    ['session-compaction.cjs', sessionCompaction], ['compaction-kernel.cjs', read('../backend/compaction-kernel.cjs')], ['session-turn-runtime.cjs', turnRuntime],
+    ['12-tool-dispatch.js', src12], ['steward-tool-handlers.cjs', stewardToolHandlers],
+    ['13-http-router.js', src13], ['workbench-api-router.cjs', apiRouter],
+    ['13d-core-domain-routes.js', src13d], ['13g-steward.js', src13g],
+    ['session-envelope.cjs', sessionEnvelope], ['session-routes.cjs', sessionRoutes], ['session-execution-routes.cjs', sessionExecutionRoutes],
     ['13j-steward-tool-base.js', src13j], ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
-    ['13i-steward-inbox.js', src13i], ['06k-config-patch.js', src06k]];
+    ...threadServices, ...toolServices,
+    ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource], ['config-patch.cjs', configPatch]];
   const leaks = [];
   for (const [name, text] of consumers) {
     for (const symbol of runnerSymbols) {
@@ -163,20 +218,20 @@ const src01b = read('01b-route-auth.js');
   // 不补的话 09-workflow 造的 ctx 里没有这个字段,所有按 trigger 分档的闸在【模型直接调工具】
   // 这条面上整个失灵(129g 的头注记了全程)。13g -> 13h 是前向边,只能经 06i 迟绑定取。
   ok(hookKeys.length === 21, `② 13h 填充 21 个实现键(116f 8 + 116-pre 1 + 116h 5 + 117l 2 + 117m-A4 1 + 117s-G 1 + 121-K5 1 + 129g 1 + external context 1;got ${hookKeys.length}: ${hookKeys.join(',')})`);
-  ok(hookKeys.includes('threadStop') && /async function stewardImplThreadStop/.test(src13h) && !/async function stewardImplThreadStop/.test(src13g),
-    '② 117m-A4 companion:新增的键是 threadStop,且它的实现真的在 13h、不在 13g(13g 的 2000 行闸就是这么守住的)');
+  ok(hookKeys.includes('threadStop') && /async function stewardImplThreadStop/.test(read(stewardThreadControl)) && /threadStop: stewardToolHandler\('steward_thread_stop', stewardImplThreadStop\)/.test(src13h),
+    '② 停止钩子经管家工具门连接线程控制服务');
   ok(hookKeys.includes('relayDeliver') && hookKeys.includes('applyThreadTier'),
     '② 117l companion:117l 那两个键 relayDeliver 与 applyThreadTier 都还在');
   // 117s-G companion:通道判定上了命名空间,但【只能】这么用 —— 13d 经 StewardHooks.relayChannel 取,
   // 源码里不许出现 13h 的符号(上面那条零前向边的机械判据已经在看着,这里再把「真的有这个消费者」
   // 正面钉一遍:哪天有人把它改回直接引用 13h,两条一起红)。
-  ok(hookKeys.includes('relayChannel') && /StewardHooks\.relayChannel/.test(src13d) && /relayChannel: stewardRelayChannelFor/.test(src13h),
-    '② 117s-G companion:relayChannel 上了命名空间,且 13d 只经 StewardHooks.relayChannel 消费它');
+  ok(hookKeys.includes('relayChannel') && /StewardHooks\.relayChannel/.test(sessionEnvelope) && /relayChannel: stewardRelayChannelFor/.test(src13h),
+    '② 会话信封经 StewardHooks.relayChannel 读取递话通道');
   // 116-2e:onInboxBatch / stopRunner / resumeRunner 的消费者在收件箱侧,随拆分搬进了 13i。
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = src09 + src10 + src12 + src13 + src13d + src13g + src13j + src13k + src13l + src13i + src06k + src13s;
+  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + configPatch + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
   ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
@@ -282,31 +337,31 @@ const srv = require(path.join(APP, 'server.js'));
 
   // ── 117y-S1/S2(27 号文 §11.18):say 的长度由【提示词】管,运行期只剩一道病态载荷天花板。──
   // 钉四件事实,一条一条都可证伪:
-  //   (a) 600 已经不是运行期的刀 —— 13o 里再没有任何 `slice(0, STEWARD_SAY…)`,旧名 STEWARD_SAY_MAX
+  //   (a) 600 已经不是运行期的刀 —— 动作契约里再没有任何 `slice(0, STEWARD_SAY…)`,旧名 STEWARD_SAY_MAX
   //       全族绝迹(留着它 = 留着第二套语义,谁都不知道该信哪个);
   //   (b) 两条解析路径(JSON 解析失败的兜底 / 解析成功的 say)走【同一个函数、同一个天花板】,
   //       不许只改一处 —— 数出现次数,不是「至少有一处」;
   //   (c) 句界裁剪那个纯函数住在 06i(纯函数与常量的归宿),不在运行器族里另抄一份;
   //   (d) 06b 输出契约里写给模型看的那个数字与 STEWARD_SAY_TARGET 是同一个 600(不另立第二套数字)。
-  const src13o = read('13o-steward-runner-prompt.js');
-  const src13m = read('13m-steward-runner-base.js');
+  const actionSource = read(actionContract);
+  const promptSource = read(systemPrompt);
+  const src13m = read(runnerPolicy);
   const sayMaxHits = (srcRunnerFamily.match(/STEWARD_SAY_MAX/g) || []).length;
   ok(sayMaxHits === 0, `③ 117y-S1(a) 旧名 STEWARD_SAY_MAX 在运行器族里绝迹(got ${sayMaxHits} 处)`);
-  const bareSliceHits = (src13o.match(/slice\(0, STEWARD_SAY/g) || []).length;
-  ok(bareSliceHits === 0, `③ 117y-S1(a) 13o 里再没有按 say 常量裸 slice 的写法(got ${bareSliceHits} 处)`);
-  const trimHits = (src13o.match(/stewardTrimSayAtSentence\(/g) || []).length;
-  ok(trimHits === 2, `③ 117y-S1(b) 13o 恰有两处走句界裁剪 = 兜底那条 + say 那条(got ${trimHits} 处)`);
+  const bareSliceHits = (actionSource.match(/slice\(0, STEWARD_SAY/g) || []).length;
+  ok(bareSliceHits === 0, `③ 117y-S1(a) 动作契约没有按 say 常量裸 slice 的写法(got ${bareSliceHits} 处)`);
+  const trimHits = (actionSource.match(/stewardTrimSayAtSentence\(/g) || []).length;
+  ok(trimHits === 2, `③ 117y-S1(b) 动作契约恰有两处走句界裁剪 = 兜底那条 + say 那条(got ${trimHits} 处)`);
   // 注意别写成 `\([^)]*STEWARD_SAY_CEILING\)`:兜底那一处的实参是 `raw.trim()`,里面自带一对括号,
   // 那种写法只数得到一处并给出一条假红(本刀实测)。按「同一行内」定界。
-  const ceilingHits = (src13o.match(/stewardTrimSayAtSentence\([^\n;]*STEWARD_SAY_CEILING\)/g) || []).length;
+  const ceilingHits = (actionSource.match(/stewardTrimSayAtSentence\([^\n;]*STEWARD_SAY_CEILING\)/g) || []).length;
   ok(ceilingHits === 2, `③ 117y-S1(b) 两处用的是同一个天花板常量 STEWARD_SAY_CEILING(got ${ceilingHits} 处)`);
-  // 136:13o 的两个新装配点 —— 人设块(空配置不输出)与可配的预算系数(再夹一道防 raw config 旁路)。
-  ok(/function stewardPersonaBlock\(/.test(src13o) && /if \(persona\) parts\.push\(persona\)/.test(src13o),
-    '③ 136 13o 装配人设块:两键皆空时整段不输出(零字节纪律,与 routeHintBlock 同)');
-  ok(/stewardContextBudgetRatio/.test(src13o) && /Math\.min\(0\.95, Math\.max\(0\.3, ratioRaw\)\)/.test(src13o),
-    '③ 136 13o 预算系数从 stewardContextBudgetRatio 读,缺省回 0.6 并按 [0.3,0.95] 再夹一道');
+  ok(/function stewardPersonaBlock\(/.test(promptSource) && /if \(persona\) parts\.push\(persona\)/.test(promptSource),
+    '③ 136 系统提示词装配人设块:两键皆空时整段不输出(零字节纪律,与 routeHintBlock 同)');
+  ok(/stewardContextBudgetRatio/.test(promptSource) && /Math\.min\(0\.95, Math\.max\(0\.3, ratioRaw\)\)/.test(promptSource),
+    '③ 136 系统提示词预算系数从 stewardContextBudgetRatio 读,缺省回 0.6 并按 [0.3,0.95] 再夹一道');
   ok(/const STEWARD_SAY_TARGET = 600;/.test(src13m) && /const STEWARD_SAY_CEILING = 4000;/.test(src13m),
-    '③ 117y-S1 两个常量拆开定在 13m(TARGET 600 只是提示词目标 / CEILING 4000 只防病态载荷)');
+    '③ 117y-S1 运行器策略分别定义两个常量(TARGET 600 只是提示词目标 / CEILING 4000 只防病态载荷)');
   ok(/function stewardTrimSayAtSentence\(/.test(src06i) && !/function stewardTrimSayAtSentence\(/.test(srcRunnerFamily),
     '③ 117y-S1(c) 句界裁剪的纯函数只在 06i 定义一份,运行器族不另抄');
   // (d) 契约里那句 ≤600 与常量同源:中英两包都写着 600,且 13m 的 TARGET 也是 600。
@@ -418,13 +473,13 @@ const srv = require(path.join(APP, 'server.js'));
   const volatile = srv.buildVolatileParts(provider, tools, null, {}, '', [], [], null);
   ok(!/我记得的关于用户的事/.test(volatile) && !/线程总览/.test(volatile), '④ 管家记忆块与总览绝不泄漏进普通会话易变层');
   // 分叉入口在源码里就是「session.kind === 'steward'」这一条判据(不经 sessionKind 归一)。
-  ok(/const isStewardTurn = session\.kind === 'steward';/.test(src09), "④ 09 的分叉读【原始】 session.kind === 'steward'");
-  ok(/session && session\.kind === 'steward' && typeof StewardHooks\.contextBudget === 'function'/.test(src10),
+  ok(/const isStewardTurn = session\.kind === 'steward';/.test(providerTurn), "④ 09 的分叉读【原始】 session.kind === 'steward'");
+  ok(/session && session\.kind === 'steward' && typeof StewardHooks\.contextBudget === 'function'/.test(sessionCompaction),
     '④ 10 的预算分叉同样读原始 kind,且经 StewardHooks 延迟绑定');
   ok(/stewardSession\) return out\.filter\(t => isStewardToolName/.test(srv.buildOpenAiTools.toString()),
     '④ 07 的管家工具面收口在唯一出口(管家会话只拿 steward_*)');
-  ok(/activePacks\.add\('steward'\)/.test(read('07-autonomy.js')),
-    '④ 按需装载对管家豁免收口在 07 内部(09 的 createToolLoadingState 调用点逐字节不变)');
+  ok(/activePacks\.add\('steward'\)/.test(read('../backend/tool-catalog.cjs')),
+    '④ 工具目录保留管家的按需装载豁免');
 }
 
 /* ═════════════ ⑤ 路由与持久化面登记 ═════════════ */
@@ -435,29 +490,29 @@ const srv = require(path.join(APP, 'server.js'));
   const inventory = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'architecture', 'durable-state-inventory.json'), 'utf8'));
   const rows = Array.isArray(inventory) ? inventory : (inventory.surfaces || inventory.entries || []);
   ok(rows.some(r => (r.id || r.name) === 'steward-visits'), '⑤ 到访归档面已登记进 durable-state-inventory');
-  ok(/stewardEnabledV1 !== true/.test(src13h), '⑤ 13h 有开关 fail-closed 判据(开关关时三条路由 409、零写入)');
+  ok(/stewardEnabledV1 !== true/.test(stewardRoutes), '⑤ 管家路由在开关关闭时返回 409，且不写入');
   ok(/STEWARD_SESSION_ID = 'steward'/.test(src06i), '⑤ 管家会话固定 id 定在 06i(13g 与 13h 共用同一常量)');
-  ok(/if \(sid === STEWARD_SESSION_ID\) continue;/.test(src13i), '⑤ 收件箱轮询排除管家会话自己(防回合自激励成环)');
+  ok(/if \(sid === STEWARD_SESSION_ID\) continue;/.test(inboxSource), '⑤ 收件箱轮询排除管家会话自己(防回合自激励成环)');
   // 123-N1 ①(34 号文;用户 2026-09-13 真机走查「同一段对话出现两遍」):回执带落盘时刻。
   // 钉的是三件必须同时成立的事实,不是某一行的写法:
   //   · 取值来自【最后一条助手消息的 createdAt】—— 与 stewardStampReply 盖章的是同一条消息,
   //     也与 13d 那段 `?since=` 过滤用的是同一个字段(否则水位与增量不是一把尺,又会重画);
   //   · 它进的是回执对象本身(前端 finishReply 从 steward_reply 帧上读它);
   //   · 读不到就【不下发这个键】,老回执逐字节不变、前端自己走「对齐一发」的退路。
-  const src13q = read('13q-steward-runner-turn.js');
-  ok(/async function stewardLastAssistantCreatedAt\(\)/.test(src13q)
-    && /role === 'assistant'\) return String\(messages\[i\]\.createdAt \|\| ''\)/.test(src13q),
-    '⑤ 123-N1 ① 13q 有「最后一条助手消息的 createdAt」这个取数口径(与 stewardStampReply 同一条消息)');
-  ok(/const stampedAt = await stewardLastAssistantCreatedAt\(\);/.test(src13q)
-    && /\.\.\.\(stampedAt \? \{ createdAt: stampedAt \} : \{\}\)/.test(src13q),
+  const turnSource = read(turnRunner);
+  ok(/async function stewardLastAssistantCreatedAt\(\)/.test(turnSource)
+    && /role === 'assistant'\) return String\(messages\[i\]\.createdAt \|\| ''\)/.test(turnSource),
+    '⑤ 123-N1 ① 回合服务读取最后一条助手消息的 createdAt(与 stewardStampReply 同一条消息)');
+  ok(/const stampedAt = await stewardLastAssistantCreatedAt\(\);/.test(turnSource)
+    && /\.\.\.\(stampedAt \? \{ createdAt: stampedAt \} : \{\}\)/.test(turnSource),
     '⑤ 123-N1 ① 回执带 createdAt,且读不到时【不下发这个键】(老回执逐字节不变)');
-  ok(/return Number\.isFinite\(at\) && at > sinceMs;/.test(src13d),
+  ok(/return Number\.isFinite\(at\) && at > sinceMs;/.test(sessionRoutes),
     '⑤ 123-N1 ① 服务端 ?since= 是【严格大于】—— 水位停在本回合末尾正好把这一回合两条消息一起盖住');
   // 123-P1 收尾（38 号文 §4）：`steward_reply` 那一帧是【白名单】，13q 往回执里加的键不写进
   // 白名单就到不了前端。123-N1 ① 的 createdAt 就是这么断的：13q 塞了、白名单没带、前端读到恒空，
   // 主路径从未生效（AB 段 stub 了 fetch 直接喂回执，够不着这一帧）。钉的是「13q 塞进 reply 的
   // 每一个可选键，白名单里都有」这件事本身，不是某一行的写法 —— 将来再加字段照样挡得住。
-  const replyFrame = (src13h.match(/type: 'steward_reply',[\s\S]*?\n      \}\);/) || [''])[0];
+  const replyFrame = (stewardRoutes.match(/type: 'steward_reply',[\s\S]*?\n\s*\}\);/) || [''])[0];
   ok(replyFrame.length > 100, '⑤ 123-P1 steward_reply 那一帧可定位');
   for (const key of ['say', 'why', 'acts', 'actions', 'parsed', 'contractIncomplete', 'createdAt']) {
     ok(replyFrame.includes(key + ':'), `⑤ 123-P1 steward_reply 白名单带 ${key}（13q 塞了就必须能到前端）`);
@@ -479,15 +534,12 @@ const srv = require(path.join(APP, 'server.js'));
   // 下一个人解释这段历史时同样会抄。所以整行注释一律先剔掉 —— 锁要钉的是「代码里没有第二条
   // 挑选式」,不是「这几个字不许出现在文件里」。行尾注释不剔:那种位置上写 rows[0] 本来就可疑。
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13qFocus = read('13q-steward-runner-turn.js');
-  const at = src13qFocus.indexOf('async function stewardVisit(opts) {');
-  const end = at < 0 ? -1 : src13qFocus.indexOf('\n}\n', at);
-  const visitBody = at < 0 ? '' : (end < 0 ? src13qFocus.slice(at) : src13qFocus.slice(at, end));
+  const visitBody = functionBlock(read(conversationVisits), 'stewardVisit');
   ok(visitBody.length > 400,
     `⑥ stewardVisit 函数体切得到(切不到 = 本组静默失效;实得 ${visitBody.length})`);
   ok(visitBody.includes('const threads = rows.slice(0, STEWARD_DIGEST_LIMITS.maxThreads).map('),
     '⑥ 到访只投影 threads,帽子读 06i 的 STEWARD_DIGEST_LIMITS.maxThreads(不另立第二个数字)');
-  ok(/\n    threads,\n/.test(codeOnly(visitBody)),
+  ok(/\n\s+threads,\n/.test(codeOnly(visitBody)),
     '⑥ threads 真的进了到访响应体');
   ok(!codeOnly(visitBody).includes('focusRow') && !/\n\s*focus:/.test(codeOnly(visitBody)),
     '⑥ 到访响应里再没有 focus 这个键,也没有 focusRow 这个中间量');
@@ -527,38 +579,38 @@ const srv = require(path.join(APP, 'server.js'));
 // 它就会悄悄开始说谎而没人发现。
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13p = read('13p-steward-runner-actions.js');
-  const famStop = [['06i-steward-core.js', src06i], ['13k-steward-threads.js', src13k],
-    ['13l-steward-ops.js', src13l], ['13p-steward-runner-actions.js', src13p]];
+  const autoSource = read(autonomousActions);
+  const stopConsumers = [['steward-thread-edits.cjs', threadEdits],
+    [decisionTools, read('../backend/' + decisionTools)], [autonomousActions, autoSource]];
 
   // (a) 判据唯一:函数体只有一处,且在 06i。
   ok((src06i.match(/function stewardStoppedTarget\(/g) || []).length === 1,
     '⑦a 判据 stewardStoppedTarget 的函数体恰一处,且在 06i(现算的判据不许有第二份)');
-  for (const [name, text] of famStop) {
-    if (name === '06i-steward-core.js') continue;
+  for (const [name, text] of [
+    ['13k-steward-threads.js', src13k], ['13l-steward-ops.js', src13l],
+    ...threadServices, ...toolServices, ...runnerActionServices.map(file => [file, read(file)]),
+  ]) {
     ok(!/function stewardStoppedTarget\(/.test(text), `⑦a2 ${name} 没有自己那一份判据(只调,不抄)`);
   }
   // (b) 三处调用点都在,且都只调不抄。
-  for (const [name, text] of famStop.slice(1)) {
+  for (const [name, text] of stopConsumers) {
     ok(codeOnly(text).includes('stewardStoppedTarget('), `⑦b ${name} 真的调了那个判据(掉了 = 那条路上的停被无视)`);
   }
   // (c) 表唯一:两句话只有 06i 那一份,调用点一律走 stewardStoppedRefusal()。
   ok((src06i.match(/const STEWARD_STOPPED_SAY = Object\.freeze\(\{/g) || []).length === 1
     && /run: '/.test(src06i) && /thread: '/.test(src06i),
     '⑦c 拒绝话术表恰一处(班组一句、线程一句)');
-  for (const [name, text] of famStop.slice(1)) {
+  for (const [name, text] of stopConsumers) {
     ok(!text.includes('管家不会自动'), `⑦c2 ${name} 不自己抄那句话(表唯一;要改文案只改 06i)`);
     ok(codeOnly(text).includes('stewardStoppedRefusal('), `⑦c3 ${name} 经 stewardStoppedRefusal() 取话`);
   }
   // (d) 一个 reason 码:三处拒绝都写 'target_stopped',前端与夹具按码认,不按中文认。
-  for (const [name, text] of famStop.slice(1)) {
-    if (name === '13p-steward-runner-actions.js') continue;   // 预闸回的是 {allowed:false,reason:<人话>},码由工具那两处发
+  for (const [name, text] of stopConsumers) {
+    if (name === autonomousActions) continue;   // 预闸回的是 {allowed:false,reason:<人话>},码由工具那两处发
     ok(text.includes("reason: 'target_stopped'"), `⑦d ${name} 用同一个稳定码 target_stopped`);
   }
   // (e) 预闸真的长在闸门函数体里,且排在【配额与计数之前】——切函数体来判,不是「这几个字出现过」。
-  const gateAt = src13p.indexOf('async function stewardSelfServeGate(plan, config) {');
-  const gateEnd = gateAt < 0 ? -1 : src13p.indexOf('\n}\n', gateAt);
-  const gateBody = gateAt < 0 ? '' : (gateEnd < 0 ? src13p.slice(gateAt) : src13p.slice(gateAt, gateEnd));
+  const gateBody = functionBlock(autoSource, 'stewardSelfServeGate');
   ok(gateBody.length > 400, `⑦e stewardSelfServeGate 函数体切得到(切不到 = 本组静默失效;实得 ${gateBody.length})`);
   const gateCode = codeOnly(gateBody);
   const atStop = gateCode.indexOf('stewardStoppedTarget(');
@@ -569,9 +621,7 @@ const srv = require(path.join(APP, 'server.js'));
     '⑦e3 预闸两面都读:班组快照与会话头(只读一面就会漏掉另一半的停)');
 
   // (f) 值域唯一:自理意图表只产出 retry / resume —— 替 42 号文 §1 ④「自动升档今天靠没实现」上保险。
-  const planAt = src13p.indexOf('function stewardSelfServePlan(evt) {');
-  const planEnd = planAt < 0 ? -1 : src13p.indexOf('\n}\n', planAt);
-  const planBody = planAt < 0 ? '' : (planEnd < 0 ? src13p.slice(planAt) : src13p.slice(planAt, planEnd));
+  const planBody = functionBlock(autoSource, 'stewardSelfServePlan');
   ok(planBody.length > 200, `⑦f stewardSelfServePlan 函数体切得到(实得 ${planBody.length})`);
   const intents = [...new Set((codeOnly(planBody).match(/intent: '([a-z_]+)'/g) || []).map(s => s.slice(9, -1)))].sort();
   // 2026-10 加了第三种 continue(回合收了、任务没做完 → 原模型原权限再续一轮,不换模型、不升档;闸与上限见 13p 的
@@ -586,33 +636,34 @@ const srv = require(path.join(APP, 'server.js'));
 // 那样 2.0 的错误卡与管家的说法迟早各说各话。本组把「一张表、一个口」钉死。
 {
   const codeOnly = text => String(text).split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
-  const src13i = read('13i-steward-inbox.js');
-  const src13m = read('13m-steward-runner-base.js');
-  const src13p = read('13p-steward-runner-actions.js');
+  const eventSource = read('../backend/steward-inbox-events.cjs');
+  const src13m = read(runnerPolicy);
+  const promptSource = read(inboxPrompt);
 
   ok((src13m.match(/function stewardFailureExplain\(/g) || []).length === 1,
-    '⑧a 取话口 stewardFailureExplain 的函数体恰一处,且在 13m(它读 06 是干净的后向边;放 06i 会造循环边)');
-  for (const [name, text] of [['13i-steward-inbox.js', src13i], ['13p-steward-runner-actions.js', src13p]]) {
+    '⑧a 取话口 stewardFailureExplain 的函数体恰一处,由运行器策略模块持有');
+  for (const [name, text] of [
+    ['steward-inbox-events.cjs', eventSource], ['13i-steward-inbox.js', inboxComposition], ['steward-inbox.cjs', inboxSource],
+    ['13p-steward-runner-actions.js', read('13p-steward-runner-actions.js')], ...runnerActionServices.map(file => [file, read(file)]),
+  ]) {
     ok(!/function stewardFailureExplain\(/.test(text), `⑧a2 ${name} 没有自己那一份取话口`);
     ok(!/ERROR_CLASSES/.test(codeOnly(text)), `⑧b ${name} 不直接翻那张表(只能经取话口;直接翻 = 迟早长出第二套口径)`);
   }
-  ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 13m 确实引用了 06 的既有表(而不是自己抄一张)');
-  ok(!/zh: '/.test(codeOnly(src13i)) && !/zh: '/.test(codeOnly(src13p)) ,
+  ok((src13m.match(/ERROR_CLASSES/g) || []).length >= 1, '⑧b2 运行器策略使用已有错误分类表(而不是自己抄一张)');
+  ok([eventSource, inboxComposition, inboxSource, ...runnerActionServices.map(read)].every(text => !/zh: '/.test(codeOnly(text))),
     '⑧c 管家侧零第二张「机器类 → 人话」表');
 
   // 事件行只有一处调用:两处调用就意味着两种拼法,用户会在不同地方看到不同措辞。
-  ok((codeOnly(src13p).match(/stewardFailureExplain\(/g) || []).length === 1,
-    `⑧d 事件行里只有一处取话(实得 ${(codeOnly(src13p).match(/stewardFailureExplain\(/g) || []).length})`);
-  const lineAt = src13p.indexOf('function stewardEventLine(row, titleOf) {');
-  const lineEnd = lineAt < 0 ? -1 : src13p.indexOf('\n}\n', lineAt);
-  const lineBody = lineAt < 0 ? '' : (lineEnd < 0 ? src13p.slice(lineAt) : src13p.slice(lineAt, lineEnd));
+  ok((codeOnly(promptSource).match(/stewardFailureExplain\(/g) || []).length === 1,
+    `⑧d 事件行里只有一处取话(实得 ${(codeOnly(promptSource).match(/stewardFailureExplain\(/g) || []).length})`);
+  const lineBody = functionBlock(promptSource, 'stewardEventLine');
   ok(lineBody.length > 200 && codeOnly(lineBody).includes('stewardFailureExplain(payload.errorClass)'),
     `⑧d2 取话就长在事件行那个函数体里(切不到 = 本条静默失效;实得 ${lineBody.length})`);
 
   // 三处摘要不再把机器词拼进括号 —— 机器词留在 payload 上(去重/取证/前端要它),不进模型的那一行。
-  ok(!codeOnly(src13i).includes("payload.errorClass ? '(' + payload.errorClass"),
-    '⑧e 13i 的三处 failed 摘要都不再把 errorClass 拼进括号');
-  ok((src13i.match(/payload\.errorClass = /g) || []).length >= 2,
+  ok(!codeOnly(eventSource).includes("payload.errorClass ? '(' + payload.errorClass"),
+    '⑧e 收件箱事件的三处 failed 摘要不把 errorClass 拼进括号');
+  ok((eventSource.match(/payload\.errorClass = /g) || []).length >= 2,
     '⑧e2 但 payload.errorClass 本身仍然照写(锁的是「给模型看的那一行」,不是把事实删掉)');
 
   // 「不知道就说不知道」:未知类别那句话也只有一处。

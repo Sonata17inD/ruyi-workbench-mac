@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib �
 // E2E:3.0 统一命名 —— 数据目录 ~/.win-claude-workbench → ~/.ruyi-workbench 的一次性迁移,以及 MCP server id 改名为 ruyi。
 // 每个场景一个独立的临时家目录(HOME / USERPROFILE 指过去),子进程里【去掉】RUYI_HOME 与旧变量 WIN_CLAUDE_WORKBENCH_HOME ——
 // 迁移只在「没有任何数据根环境变量」时发生。
-//   M1 只有旧目录 → 直接运行 serve 时搬成新目录,原处留一个指回新目录的链接(Windows 是目录联接);配置原样在新目录里;
+//   M1 只有旧目录 → 直接运行 serve 时搬成新目录，原处留一个指回新目录的符号链接；配置原样在新目录里；
 //      /api/status 的 dataRoot 是新目录、dataRootAliases 列出旧路径;启动行与日志各记一笔;
 //   M2 经旧路径(别名)读 config.json 的文件工具访问照样被拒(敏感子树判定认别名),经新路径同样拒;
 //   M3 第二次启动:不再迁移、不再打迁移行;
@@ -93,7 +93,7 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     const s1 = await serve(h1); running.push(s1);
     ok(fs.existsSync(path.join(next1, 'config.json')) && JSON.parse(fs.readFileSync(path.join(next1, 'config.json'), 'utf8')).marker === 'MARK-M1'
       && fs.readFileSync(path.join(next1, 'sessions', 'keep.txt'), 'utf8') === 'session data MARK-M1', 'M1 旧目录的内容原样搬进 ~/.ruyi-workbench');
-    ok(isLink(legacy1) && same(legacy1, next1), 'M1 旧路径留一个指回新目录的链接(Windows 上是目录联接)');
+    ok(isLink(legacy1) && same(legacy1, next1), 'M1 旧路径留一个指向新目录的符号链接');
     const st1 = await request(s1.port, 'GET', '/api/status', null, s1.headers);
     ok(st1 && same(st1.dataRoot, next1) && Array.isArray(st1.dataRootAliases) && st1.dataRootAliases.some(a => a === legacy1),
       `M1 /api/status:dataRoot 是新目录,dataRootAliases 列出旧路径(${JSON.stringify({ dataRoot: st1 && st1.dataRoot, aliases: st1 && st1.dataRootAliases })})`);
@@ -117,7 +117,7 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     const probe = `const s = require(${JSON.stringify(path.join(WB, 'app', 'server.js'))});
       (async () => {
         const legacy = ${JSON.stringify(legacy1)};
-        const search = await s.toolCall('file_search', { root: legacy, query: 'MARK-M1' });
+        const search = await s.toolCall('file_search', { root: legacy, pattern: 'MARK-M1' });
         const list = await s.toolCall('file_list', { root: legacy });
         console.log('PROBE ' + JSON.stringify({ search, list }));
         process.exit(0);
@@ -128,7 +128,7 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     const probed = JSON.parse(probeLine);
     ok(!probeLine.includes('MARK-M1') && !/config\.json|runtime\.json/.test(probeLine),
       `M2b 带 RUYI_HOME 经旧路径联接搜 / 列:敏感文件不出现(${probeLine.slice(0, 200)})`);
-    ok(!probed.error, 'M2b 探针本身跑通');
+    ok(probed.search?.ok === true && probed.search.matches?.length === 0 && probed.list?.ok === true && Array.isArray(probed.list.files), 'M2b 搜索和列目录实际运行，搜索未返回私有标记');
 
     // ── M4:旧目录里有活实例 → 不动 ──────────────────────────────────────────────────────────────
     const h4 = makeHome('m4');
@@ -139,21 +139,27 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     ok(s4.code === 1 && !isLink(legacy4) && !lexists(path.join(h4, '.ruyi-workbench')), 'M4 旧目录有活实例:既不迁移也不启动第二个服务');
     ok(fs.readFileSync(path.join(legacy4, 'runtime.json'), 'utf8') === oldIdentity && /旧如意进程仍存活/.test(s4.output), 'M4 拒绝时说明原因并保留旧身份记录');
 
-    // ── M8:目录迁移成功、旧位置 junction 创建失败也不能留下捕获旧路径的存储 ──
+    // ── M8: 目录迁移成功但旧路径的符号链接创建失败 ──
     const h8 = makeHome('m8');
     const legacy8 = seedLegacy(h8, 'MARK-M8');
     const next8 = path.join(h8, '.ruyi-workbench');
-    const preloader = path.join(ROOT, 'deny-migration-junction.js');
-    fs.writeFileSync(preloader, `const fs=require('fs');const original=fs.symlinkSync;fs.symlinkSync=function(target,dest,...rest){if(dest===${JSON.stringify(legacy8)})throw Object.assign(new Error('fixture denied junction'),{code:'EPERM'});return original.call(this,target,dest,...rest);};`);
+    const preloader = path.join(ROOT, 'deny-migration-link.js');
+    fs.writeFileSync(preloader, `const fs=require('node:fs');const original=fs.symlinkSync;fs.symlinkSync=function(target,dest,...rest){if(dest===${JSON.stringify(legacy8)})throw Object.assign(new Error('fixture denied link'),{code:'EPERM'});return original.call(this,target,dest,...rest);};`);
     const s8 = await serve(h8, undefined, ['--require', preloader]); running.push(s8);
     const st8 = await request(s8.port, 'GET', '/api/status', null, s8.headers);
     const created8 = await request(s8.port, 'POST', '/api/sessions', { title: 'after migration' }, s8.headers);
     const lex8 = await request(s8.port, 'POST', '/api/audio/lexicon', { text: 'OwnershipTerm' }, s8.headers);
-    ok(st8 && same(st8.dataRoot, next8) && !lexists(legacy8), 'M8 junction失败:权威根指向新目录且没有重建旧目录');
+    const pathsWritten = await waitFor(() => ['install-registry.json', 'memory/.acc-memory-import-v1.json'].every(file => lexists(path.join(next8, file))));
+    const movedEvent = await waitFor(() => fs.readdirSync(path.join(next8, 'logs')).some(file => {
+      const rows = fs.readFileSync(path.join(next8, 'logs', file), 'utf8').split('\n');
+      return rows.some(row => row.includes('"kind":"data_root_migration"') && row.includes('"moved":true') && row.includes('"junction":false'));
+    }));
+    ok(movedEvent && st8 && same(st8.dataRoot, next8) && !lexists(legacy8), 'M8 审计记录确认旧链接创建失败，权威根在新目录且旧路径未重建');
     ok(created8.session?.id && fs.existsSync(path.join(next8, 'sessions', created8.session.id + '.json')), 'M8 会话写入迁移后的目录');
-    ok(lex8.ok === true && fs.existsSync(path.join(next8, 'voice-lexicon.json')) && !lexists(legacy8), 'M8 模块顶层DurableJsonStore回调写入新目录,不依赖旧junction');
+    ok(lex8.ok === true && fs.existsSync(path.join(next8, 'voice-lexicon.json')), 'M8 语音词库写入新目录');
+    ok(pathsWritten && !lexists(legacy8), 'M8 安装登记和 ACC 记忆导入标记写入新目录');
     const duplicate8 = await refused(h8);
-    ok(duplicate8.code === 1, 'M8 junction失败后第二个默认serve仍被新根独占权拒绝');
+    ok(duplicate8.code === 1, 'M8 旧链接创建失败后第二个默认 serve 仍被新根独占权拒绝');
     await s8.stop(); running.pop();
 
     // ── M5:显式 RUYI_HOME → 不迁移 ──────────────────────────────────────────────────────────────
@@ -168,7 +174,7 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     const elsewhere = path.join(ROOT, 'm7-data-on-other-drive');
     fs.mkdirSync(path.join(elsewhere, 'sessions'), { recursive: true });
     fs.writeFileSync(path.join(elsewhere, 'config.json'), JSON.stringify({ configSchema: 12, permissionMode: 'bypass', stewardThreadBriefV1: false, marker: 'MARK-M7' }));
-    fs.symlinkSync(elsewhere, path.join(h7, '.win-claude-workbench'), 'junction');
+    fs.symlinkSync(elsewhere, path.join(h7, '.win-claude-workbench'), 'dir');
     const s7 = await serve(h7); running.push(s7);
     const st7 = await request(s7.port, 'GET', '/api/status', null, s7.headers);
     ok(st7 && same(st7.dataRoot, elsewhere) && !lexists(path.join(h7, '.ruyi-workbench')) && isLink(path.join(h7, '.win-claude-workbench')),

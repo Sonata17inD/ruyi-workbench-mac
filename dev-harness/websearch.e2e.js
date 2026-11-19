@@ -18,6 +18,9 @@ process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 
 //   (f) apiKey mask: searchBackend.apiKey='bing-secret-key-123456' → GET /api/status + POST /api/config responses
 //       mask it to ••••3456; a masked round-trip SAVE preserves the exact recovered key (encrypted on Windows).
 'use strict';
+const { extractMainText, parseBingHtml, parseBaiduHtml } = require('../ruyi-workbench/app/backend/html-content.cjs');
+const { classifyFetchError } = require('../ruyi-workbench/app/backend/http-transport.cjs');
+const { webFetchFailMessage } = require('../ruyi-workbench/app/backend/http-request.cjs');
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process');
 const http = require('http');
@@ -135,11 +138,11 @@ function writeConfig(home, extra) {
   // ─────────────────────────────────────────────────────────────────────────────────────────────────
   // UNIT — extractMainText (剥标签/取标题/段落换行/实体解).
   // ─────────────────────────────────────────────────────────────────────────────────────────────────
-  ok(typeof mod.extractMainText === 'function', 'extractMainText exported');
+  ok(typeof extractMainText === 'function', 'extractMainText exported');
   const html = '<html><head><title>My &amp; Title</title><style>.x{color:#f00}</style></head>'
     + '<body><script>var secret=42;alert(1);</script><h1>Heading</h1><p>Para one text.</p>'
     + '<p>Para&nbsp;two &lt;ok&gt;.</p></body></html>';
-  const ex = mod.extractMainText(html);
+  const ex = extractMainText(html);
   ok(/My & Title/.test(ex.title), 'extract: <title> captured + entity decoded (' + ex.title + ')');
   ok(!/var secret/.test(ex.text) && !/color:#f00/.test(ex.text), 'extract: <script>/<style> content stripped');
   ok(!/alert\(1\)/.test(ex.text), 'extract: script body fully removed');
@@ -236,13 +239,13 @@ function writeConfig(home, extra) {
       + '<div class="c-abstract">百度摘要&nbsp;正文内容。</div></div>'
       + '<div class="result c-container" id="2"><h3><a href="http://www.baidu.com/link?url=REDIR2">第二百度条</a></h3>'
       + '<span class="content-right_8Zs40">第二条百度摘要</span></div>';
-    const parsed = mod.parseBaiduHtml(BAIDU_HTML, 5);
+    const parsed = parseBaiduHtml(BAIDU_HTML, 5);
     ok(parsed.length === 2, 'builtin: parseBaiduHtml → 2 result c-container blocks (' + parsed.length + ')');
     ok(parsed[0].title === '百度标题一 & 二' && /link\?url=REDIR1/.test(parsed[0].url), 'builtin: baidu title decoded (&#x4E00;→一,&amp;→&) + redirect url 照收');
     ok(/百度摘要 正文/.test(parsed[0].snippet) && parsed[0].source === 'baidu', 'builtin: baidu snippet decoded + source:baidu');
     ok(parsed[1].title === '第二百度条', 'builtin: baidu second block parsed');
     // Defensive: garbage in → [] out, never throws.
-    ok(mod.parseBingHtml('<html>no algo blocks</html>', 5).length === 0 && mod.parseBingHtml(null, 5).length === 0, 'builtin: parsers defensive (garbage/null → [])');
+    ok(parseBingHtml('<html>no algo blocks</html>', 5).length === 0 && parseBingHtml(null, 5).length === 0, 'builtin: parsers defensive (garbage/null → [])');
   }
 
   // (T3-c) MIGRATION 'none' → 'builtin' at the normalize layer (changed=true, persisted). And an absent
@@ -267,15 +270,15 @@ function writeConfig(home, extra) {
 
   // (T1) failClass classification + 人话 mapping — NEVER blindly "离线".
   {
-    ok(mod.classifyFetchError({ code: 'ENOTFOUND' }) === 'dns', 'T1: ENOTFOUND → dns');
-    ok(mod.classifyFetchError({ code: 'ECONNRESET' }) === 'reset' && mod.classifyFetchError({ message: 'aborted' }) === 'reset', 'T1: ECONNRESET/aborted → reset');
-    ok(mod.classifyFetchError({ code: 'ECONNREFUSED' }) === 'connect', 'T1: ECONNREFUSED → connect');
-    ok(mod.classifyFetchError({ message: 'unable to verify the first certificate' }) === 'tls', 'T1: cert error → tls');
-    ok(mod.classifyFetchError({ message: 'timeout after 10000ms' }) === 'timeout', 'T1: timeout → timeout');
-    const m403 = mod.webFetchFailMessage({ failClass: 'http', statusCode: 403 });
+    ok(classifyFetchError({ code: 'ENOTFOUND' }) === 'dns', 'T1: ENOTFOUND → dns');
+    ok(classifyFetchError({ code: 'ECONNRESET' }) === 'reset' && classifyFetchError({ message: 'aborted' }) === 'reset', 'T1: ECONNRESET/aborted → reset');
+    ok(classifyFetchError({ code: 'ECONNREFUSED' }) === 'connect', 'T1: ECONNREFUSED → connect');
+    ok(classifyFetchError({ message: 'unable to verify the first certificate' }) === 'tls', 'T1: cert error → tls');
+    ok(classifyFetchError({ message: 'timeout after 10000ms' }) === 'timeout', 'T1: timeout → timeout');
+    const m403 = webFetchFailMessage({ failClass: 'http', statusCode: 403 });
     ok(/反爬/.test(m403.error) && /web_search/.test(m403.hint), 'T1: HTTP 403 → 反爬 message + web_search hint');
-    ok(/反爬|中断/.test(mod.webFetchFailMessage({ failClass: 'reset' }).error), 'T1: reset → 中断/反爬 message');
-    ok(/解析失败/.test(mod.webFetchFailMessage({ failClass: 'dns' }).error) && !/离线/.test(mod.webFetchFailMessage({ failClass: 'dns' }).error), 'T1: dns message says 解析失败, NOT 离线');
+    ok(/反爬|中断/.test(webFetchFailMessage({ failClass: 'reset' }).error), 'T1: reset → 中断/反爬 message');
+    ok(/解析失败/.test(webFetchFailMessage({ failClass: 'dns' }).error) && !/离线/.test(webFetchFailMessage({ failClass: 'dns' }).error), 'T1: dns message says 解析失败, NOT 离线');
   }
 
   // (T2) probeAny semantics: one live + one dead → true; all dead → false; empty → null.

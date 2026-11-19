@@ -2,7 +2,7 @@
   "name": "ruyi-workbench",
   "version": "3.0.1",
   "private": true,
-  "description": "如意 Ruyi — clean-room local all-in-one AI workbench for Windows: dual-engine (Claude Code or Kimi Code Agent CLI + any OpenAI-compatible provider), MCP tools, files, scripting, browser and Office handoff, desktop control.",
+  "description": "Ruyi for Mac — offline-first native agent workbench for Apple Silicon, with Node agents, Web UI and Python document tools.",
   "main": "app/server.js",
   "bin": "app/server.js",
   "scripts": {
@@ -11,29 +11,16 @@
     "predoctor": "node app/build.js --check",
     "doctor": "node app/server.js doctor",
     "test": "node ../dev-harness/run-all.js",
-    "build:exe": "pkg . --targets node24-win-x64 --output dist/Ruyi.exe",
-    "build:desktop": "powershell -ExecutionPolicy Bypass -File desktop/build-desktop.ps1",
+    "build:desktop": "node tools/build-macos-desktop.js",
     "build:desktop:macos": "node tools/build-macos-desktop.js",
     "package:offline:macos:full": "node tools/package-macos-offline.js --variant full",
     "package:offline:macos:slim": "node tools/package-macos-offline.js --variant slim",
     "package:trial:macos": "node tools/package-macos-trial.js",
-    "package:offline": "powershell -ExecutionPolicy Bypass -File tools/package-offline.ps1 -IncludeAcc -Variant full",
-    "package:offline:full": "powershell -ExecutionPolicy Bypass -File tools/package-offline.ps1 -IncludeAcc -Variant full",
-    "package:offline:full:fresh": "powershell -ExecutionPolicy Bypass -File tools/package-offline.ps1 -IncludeAcc -BuildAccOffline -Variant full",
-    "package:offline:slim": "powershell -ExecutionPolicy Bypass -File tools/package-offline.ps1 -Variant slim"
-  },
-  "pkg": {
-    "assets": [
-      "app/public/**/*",
-      "resources/**/*",
-      "config/**/*",
-      "docs/**/*"
-    ]
+    "package:offline": "node tools/package-macos-offline.js --variant full",
+    "package:offline:full": "node tools/package-macos-offline.js --variant full",
+    "package:offline:slim": "node tools/package-macos-offline.js --variant slim"
   },
   "engines": {
     "node": ">=20"
-  },
-  "devDependencies": {
-    "@yao-pkg/pkg": "^6.19.0"
   }
 }

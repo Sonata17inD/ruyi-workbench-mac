@@ -19,7 +19,7 @@ async function runCase(label, desktopMcp, wantPresent, port) {
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 4, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, desktopMcp }, null, 2));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   const out = { pass: 0, fail: 0 };
   const ok = (c, l) => { if (c) { out.pass++; console.log('PASS [' + label + '] ' + l); } else { out.fail++; console.log('FAIL [' + label + '] ' + l); } };
   try {
@@ -84,7 +84,7 @@ async function runImportFolder(port) {
   const physicalHasNoSecrets = secrets => ['config.json', 'config.json.prev', 'credential-vault-v1.json']
     .filter(name => fs.existsSync(path.join(HOME, name)))
     .every(name => secrets.every(secret => !fs.readFileSync(path.join(HOME, name), 'utf8').includes(secret)));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   try {
     let st = null; for (let i = 0; i < 40 && !st; i++) { await sleep2(150); st = await getJson(port, '/api/status'); }
     ok(!!st, 'status reachable');
@@ -126,7 +126,7 @@ async function runImportFolder(port) {
     // ③ 缺清单 → 报错含 template。
     const r3 = await postJson(port, '/api/mcp/import-folder', { path: EMPTY }, hdr);
     ok(r3.status === 200 && r3.json && r3.json.ok === false && r3.json.error?.code === 'api.request_failed' && /缺少有效/.test(r3.json.error?.message || ''), '③ 缺清单 → 结构化错误');
-    ok(r3.json && r3.json.template && r3.json.template.id && r3.json.template.command, '③ 报错附 template 示例对象');
+    ok(r3.json?.template?.id && r3.json.template.command === './server', '③ 报错附 Mac 本地可执行文件示例');
 
     // 107-S0b:远程清单的 headers 在回包里也要盖住(修前只遮 env);清单里残留的掩码不是值,落盘前清空。
     // 放在 ② 之后:这一条会让清单数变成 2,⑤ 的「填到 10」按实际余量填,不受影响。
@@ -215,7 +215,7 @@ async function runDropIn(fakePort, wbPort) {
 
   const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_NAME: 'foo_dropin__echo', FAKE_TOOL_ARGS: JSON.stringify({ message: MARKER }) }, windowsHide: true });
   fake.stdout.on('data', () => {});
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await getJson(wbPort, '/health'); } // 117q:预算 40×150ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)

@@ -36,7 +36,8 @@ process.env.RUYI_HOME = root;
 process.env.WCW_SCHEDULER_CLOCK_FILE = CLOCK;
 process.env.WCW_SCHEDULER_TICK_MS = '40';
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { handleSchedulerApiRoutes, stopScheduler, normalizeSchedulerTask } = srv;
+const { handleSchedulerApiRoutes, stopScheduler } = srv;
+const { normalizeSchedulerTask } = require('../../ruyi-workbench/app/backend/scheduler-core.cjs').createSchedulerCore();
 
 const TASKS = path.join(root, 'scheduler', 'tasks-v1.json');
 const FIRES = path.join(root, 'scheduler', 'fires-v1.ndjson');

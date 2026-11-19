@@ -1,13 +1,13 @@
 ---
 name: 本地 CI 校验
-description: 在离线 Windows 机器上复现 CI 式检查
+description: 在离线 Mac 机器上复现 CI 式检查
 ---
 
-Platform boundary: Windows build/launcher/PowerShell checks require Windows. On macOS run portable Node/Python checks with shell_run or script_run, preserve exact failed/skipped counts, and leave Windows-only checks unverified; a Mac pass cannot establish Windows acceptance.
+Mac execution: use shell_run or script_run (bash/Python/Node), absolute POSIX paths and prepared local dependencies. Never source the user profile to discover tools.
 
 # DevOps CI Local
 
-Use this skill to reproduce CI-like checks on an offline Windows machine.
+Use this skill to reproduce CI-like checks on an offline Mac machine.
 
 Workflow:
 

@@ -16,11 +16,16 @@
 const fs = require('fs');
 const path = require('path');
 const Module = require('module');
+const { COMPOSITION_FILE, resolveRuntimeComposition } = require('../src-reader');
 
 // RUYI_TEST_SERVER_JS:反向验证用 —— 指到修前的 server.js(从基线提交导出一份),确认新测试在旧码上确实红。
 const SERVER = process.env.RUYI_TEST_SERVER_JS
-  ? path.resolve(process.env.RUYI_TEST_SERVER_JS)
-  : path.resolve(__dirname, '..', '..', 'ruyi-workbench', 'app', 'server.js');
+  ? resolveRuntimeComposition(process.env.RUYI_TEST_SERVER_JS)
+  : COMPOSITION_FILE;
+
+function readTestRuntimeSource() {
+  return fs.readFileSync(SERVER, 'utf8');
+}
 
 // opts.withEval:再给一个 __eval(code) —— 在 server.js 的模块作用域里直接 eval,供单测把【模块级】依赖(netstat / tasklist /
 // 杀进程这类 Linux 上没有的外部命令封装)换成桩:`__eval('pidsOnPort = async () => [4242]')`。同一份测试代码因此既能跑新码
@@ -32,7 +37,7 @@ function loadServerInternals(names, opts = {}) {
   if (!Array.isArray(names) || !names.length || !names.every(n => /^[A-Za-z_$][\w$]*$/.test(n))) {
     throw new Error('loadServerInternals: names must be a non-empty array of identifiers');
   }
-  const src = fs.readFileSync(SERVER, 'utf8');
+  const src = readTestRuntimeSource();
   const mod = new Module(SERVER, module);
   mod.filename = SERVER;
   mod.paths = Module._nodeModulePaths(path.dirname(SERVER));
@@ -61,4 +66,4 @@ function loadServerInternals(names, opts = {}) {
   return mod.exports.__internals;
 }
 
-module.exports = { loadServerInternals };
+module.exports = { loadServerInternals, readTestRuntimeSource };

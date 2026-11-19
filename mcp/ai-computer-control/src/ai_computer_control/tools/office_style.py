@@ -275,41 +275,8 @@ def mac_font_candidates() -> list:
 # (family-name-for-matplotlib, absolute font file). family-name is what we set into rcParams AND what
 # FontProperties uses; we register the file under that name so the two always agree.
 def _font_candidates() -> list:
-    """(family, file) probe list. Windows first and %WINDIR% / %SystemRoot% aware (Windows installed on a
-    non-C: drive), plus the per-user font folder; then DengXian; then the usual Linux / macOS CJK faces so
-    charts stay legible when the tool runs off Windows."""
-    win = os.environ.get("WINDIR") or os.environ.get("SystemRoot") or r"C:\Windows"
-    sysfonts = os.path.join(win, "Fonts")
-    userfonts = os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "Windows", "Fonts") \
-        if os.environ.get("LOCALAPPDATA") else ""
-    out = [
-        ("Microsoft YaHei", os.path.join(sysfonts, "msyh.ttc")),
-        ("Microsoft YaHei", os.path.join(sysfonts, "msyh.ttf")),
-        ("SimHei", os.path.join(sysfonts, "simhei.ttf")),
-        ("SimSun", os.path.join(sysfonts, "simsun.ttc")),
-        ("DengXian", os.path.join(sysfonts, "Deng.ttf")),
-    ]
-    if userfonts:
-        out += [("Microsoft YaHei", os.path.join(userfonts, "msyh.ttc")),
-                ("SimHei", os.path.join(userfonts, "simhei.ttf"))]
-    if os.name != "nt":
-        out += [
-            ("Noto Sans CJK SC", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
-            ("Noto Sans CJK SC", "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc"),
-            ("WenQuanYi Zen Hei", "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
-            ("WenQuanYi Micro Hei", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
-        ]
-    if sys.platform == "darwin":
-        out += [(family, regular) for family, regular, _bold in mac_font_candidates()]
-    return out
-
-
-# Kept for callers/tests that read the legacy module attribute (the Windows trio).
-_FONT_CANDIDATES = [
-    ("Microsoft YaHei", r"C:\Windows\Fonts\msyh.ttc"),
-    ("SimHei", r"C:\Windows\Fonts\simhei.ttf"),
-    ("SimSun", r"C:\Windows\Fonts\simsun.ttc"),
-]
+    """Installed Mac CJK font files, in rendering preference order."""
+    return [(family, regular) for family, regular, _bold in mac_font_candidates()]
 
 
 def font_chain() -> dict:
@@ -331,6 +298,6 @@ def font_chain() -> dict:
     _FONT_CHAIN_CACHE = {
         "family": None,
         "path": None,
-        "warning": "未找到可用中文字体（Windows/Linux/macOS 系统字体），图中中文可能显示为方块",
+        "warning": "未找到可用中文字体（macOS 系统字体），图中中文可能显示为方块",
     }
     return _FONT_CHAIN_CACHE

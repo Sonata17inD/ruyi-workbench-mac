@@ -73,6 +73,12 @@ test('valid cached config recovers transient health; failed recovery-marker pers
   await healthy.app.readConfig(); healthy.app.PrivacyGateway.markUnavailable(); await healthy.app.readConfig();
   assert.equal(healthy.app.PrivacyGateway.recoveryRequired(), false);
   const failed = setup(t, '{"broken":'); fs.writeFileSync(failed.file + '.prev', JSON.stringify(off));
-  failed.app.__eval('writeConfigAtomic = async () => { throw Object.assign(new Error("fixture disk failure"), { code: "EIO" }); };');
+  failed.app.__eval(`{
+    const write = atomicWriteJson;
+    atomicWriteJson = (file, ...args) => {
+      if (file === paths.config) throw Object.assign(new Error('fixture disk failure'), { code: 'EIO' });
+      return write(file, ...args);
+    };
+  }`);
   await assert.rejects(() => failed.app.readConfig(), /fixture disk failure/); await blocked(failed.app);
 });

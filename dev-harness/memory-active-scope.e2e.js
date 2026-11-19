@@ -7,16 +7,32 @@ const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-op
 const cp = require('child_process');
 const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port');
+const { createMemoryTools } = require('../ruyi-workbench/app/backend/memory-tools.cjs');
 const t = createRunner('MEMORY ACTIVE SCOPE'), { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-memory-active-'));
 const home = path.join(root, 'home'), work = path.join(root, 'work'); fs.mkdirSync(home); fs.mkdirSync(work);
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const s = loadServerInternals(['saveMemory', 'createSession', 'saveSession', 'listWorkbenchMemories', 'readWorkbenchMemory',
-  'readMemoryItem', 'loadMemoryRegistry', 'projectKeyForCwd', 'proposeMemoryRelation', 'confirmMemoryRelation', 'deleteMemoryRelation', 'activeChildren', 'runSessionTurn', 'loadSession', 'startServer'], { withEval: true });
+  'readMemoryItem', 'loadMemoryRegistry', 'projectKeyForCwd', 'proposeMemoryRelation', 'confirmMemoryRelation', 'deleteMemoryRelation', 'activeChildren',
+  'runSessionTurn', 'loadSession', 'startServer', 'MemoryStore', 'MemorySelection', 'MemoryRecall', 'MemoryRelations', 'readConfig', 'safeSessionId', 'SKILL_ID_RE'], { withEval: true });
 const config = { defaultWorkspace: work, permissionMode: 'bypass', includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
   desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [], stewardEnabledV1: false, toolLoadingMode: 'full', subagentMaxPerTurn: 0 };
 let fake, mcp;
 const ctx = session => ({ session, sessionId: session.id, turnSeq: session.turnSeq, workingDir: work, config });
+
+function pausedMemoryTools(storeMethod) {
+  let release;
+  const tools = createMemoryTools({
+    ...s, selection: s.MemorySelection, recall: s.MemoryRecall, relations: s.MemoryRelations,
+    store: { ...s.MemoryStore, [storeMethod]: async (...args) => {
+      const result = await s.MemoryStore[storeMethod](...args);
+      await new Promise(resolve => { release = resolve; });
+      return result;
+    } },
+  });
+  return { tools, waiting: () => !!release, release: () => { release(); release = null; } };
+}
+
 (async () => {
   try {
     for (const [id, scope, extra] of [['old', 'project', {}], ['replacement', 'project', {}], ['shared', 'global', {}], ['expired', 'project', { expiresAt: '2020-01-01' }]]) {
@@ -49,12 +65,12 @@ const ctx = session => ({ session, sessionId: session.id, turnSeq: session.turnS
     ok(onlyOld.ok && onlyOld.memory.superseded && !onlyOld.memory.supersededBy.length && !onlyOld.memory.body.includes('BODY_replacement'), 'fixed old selection warns without leaking excluded replacement identity');
 
     // Pause real disk-backed read at an await; selection, stop, replacement turn and library changes must discard it.
-    const latch = s.__eval('(() => { const original = readMemoryItem; let release; readMemoryItem = async (...args) => { const r = await original(...args); await new Promise(resolve => { release = resolve; }); return r; }; return { waiting: () => !!release, release: () => { release(); release = null; }, restore: () => { readMemoryItem = original; } }; })()');
+    const latch = pausedMemoryTools('readMemoryItem');
     for (const mutation of ['selection', 'stop', 'turn', 'library', 'relation', 'disk-copy']) {
       session.memoriesExplicit = false; session.memories = []; session.turnSeq = 1;
       const reg = { state: 'running', session }; s.activeChildren.set(session.id, reg);
       if (mutation === 'disk-copy') { s.activeChildren.delete(session.id); await s.saveSession(session); }
-      const pending = s.readWorkbenchMemory({ id: 'old' }, mutation === 'disk-copy' ? { sessionId: session.id, turnSeq: 1, workingDir: work, config } : ctx(session));
+      const pending = latch.tools.readWorkbenchMemory({ id: 'old' }, mutation === 'disk-copy' ? { sessionId: session.id, turnSeq: 1, workingDir: work, config } : ctx(session));
       for (let i = 0; i < 100 && !latch.waiting(); i++) await new Promise(r => setTimeout(r, 10));
       if (!latch.waiting()) throw new Error('read did not reach disk boundary');
       if (mutation === 'selection') { session.memoriesExplicit = true; session.memories = []; }
@@ -67,19 +83,17 @@ const ctx = session => ({ session, sessionId: session.id, turnSeq: session.turnS
       ok(!(await pending).ok, 'late read discarded after ' + mutation);
       s.activeChildren.delete(session.id);
     }
-    latch.restore();
-
     session.memoriesExplicit = false; session.memories = []; s.activeChildren.set(session.id, { state: 'running', session });
-    const usageLatch = s.__eval('(() => { const original = touchMemoryUsage; let release; touchMemoryUsage = async () => { await new Promise(resolve => { release = resolve; }); }; return { waiting: () => !!release, release: () => { release(); release = null; }, restore: () => { touchMemoryUsage = original; } }; })()');
+    const usageLatch = pausedMemoryTools('touchMemoryUsage');
     for (const tool of ['read', 'list']) {
       await s.saveMemory({ id: 'expiry', scope: 'project', name: 'expiry marker', description: 'expiry marker', body: 'SECRET_EXPIRY', expiresAt: new Date(Date.now() + 30000).toISOString() }, work);
-      const pending = tool === 'read' ? s.readWorkbenchMemory({ id: 'expiry' }, ctx(session)) : s.listWorkbenchMemories({ query: 'expiry marker' }, ctx(session));
+      const pending = tool === 'read' ? usageLatch.tools.readWorkbenchMemory({ id: 'expiry' }, ctx(session)) : usageLatch.tools.listWorkbenchMemories({ query: 'expiry marker' }, ctx(session));
       for (let i = 0; i < 100 && !usageLatch.waiting(); i++) await new Promise(r => setTimeout(r, 10));
       if (!usageLatch.waiting()) throw new Error('usage did not reach boundary');
       await s.saveMemory({ id: 'expiry', scope: 'project', name: 'expiry', body: 'EXPIRED', expiresAt: '2020-01-01' }, work);
       usageLatch.release(); ok(!(await pending).ok, tool + ' rechecks library after usage await');
     }
-    usageLatch.restore(); s.activeChildren.delete(session.id);
+    s.activeChildren.delete(session.id);
 
     // Real provider loop: disable while a file read completes, inspect the next actual request.
     const marker = 'MEMORY_SCOPE_MARKER_94831';

@@ -5,7 +5,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -212,10 +211,18 @@ try {
   const degraded = await request('/api/interventions/' + sessionId(2) + '?limit=200', token, { port: WB_PORT });
   ok(degraded.status === 200 && degraded.body?.integrity?.degraded === true && degraded.body?.integrity?.corruptLines === 1, '(j) journal有损显式 degraded，不以重建成功掩盖');
 
-  const src = readServerSource();
-  ok(/function getPretenderProjectionIndex\(\)/.test(src) && /projection\.snapshot_changed/.test(src), '(k) 静态锁:单一索引加载器+revision cursor冲突');
-  ok(/async function compactInterventionJournal\(sessionId, opts = \{\}\)/.test(src) && /if \(folded\.degraded\)/.test(src), '(k) 静态锁:压缩不清洗损坏权威账');
-  ok(/persistentRevision/.test(src) && /liveOverlay/.test(src), '(k) 静态锁:live overlay freshness分层');
+  const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name + '.cjs'), 'utf8');
+  const index = backend('pretender-index');
+  const pagination = backend('pretender-http-projection');
+  const journal = backend('intervention-journal');
+  ok((index.match(/function getPretenderProjectionIndex\(\)/g) || []).length === 1
+    && /projection\.snapshot_changed/.test(pagination), '(k) 静态锁:单一索引加载器+revision cursor冲突');
+  ok(/async function compactInterventionJournal\(sessionId, opts = \{\}\)/.test(journal)
+    && /if \(folded\.degraded\) return \{ ok: false, compacted: false, degraded: true/.test(journal), '(k) 静态锁:压缩不清洗损坏权威账');
+  ok(['pretender-live-overlay', 'mission-routes'].every(name => {
+    const source = backend(name);
+    return /persistentRevision:/.test(source) && /liveOverlay:/.test(source);
+  }), '(k) 静态锁:实时叠加与事项详情都区分持久版本和即时状态');
 } finally {
   kill(wb); await sleep(250); fs.rmSync(HOME, { recursive: true, force: true });
 }

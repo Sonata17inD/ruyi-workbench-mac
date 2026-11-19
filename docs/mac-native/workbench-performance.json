@@ -1,0 +1,81 @@
+{
+  "baselineCommit": "931f9fa21972d8722ad027ca631877f2623ba462",
+  "candidateCommit": "6d6d2c1919c1ffd701c7dd4856c7eb9dd9a18b61",
+  "candidateServerSha256": "c5fe929723f8736f8db5ac5aeacd4e42b1f0012de331ed9897f230596fc78ed5",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.15.0",
+  "workload": "isolated empty session list; 20 warmups, 200 authenticated keepalive requests; 5 process-tree RSS samples",
+  "limitations": [
+    "No model or tool execution; not a full workload performance claim.",
+    "Baseline supervisor compiled from baseline source with identical flags; native leaf helpers and optional Python/MCP installation shared.",
+    "RSS is summed ps snapshots; no physical power or hardware wakeup measurement."
+  ],
+  "samples": {
+    "baseline": [
+      {
+        "startupMs": 159.24308297690004,
+        "requestP95Ms": 0.38908299757167697,
+        "rssKiB": 203360,
+        "processCount": 6
+      },
+      {
+        "startupMs": 157.06029097782448,
+        "requestP95Ms": 0.3849579952657223,
+        "rssKiB": 203424,
+        "processCount": 7
+      },
+      {
+        "startupMs": 153.17079203668982,
+        "requestP95Ms": 0.4075419856235385,
+        "rssKiB": 219792,
+        "processCount": 5
+      }
+    ],
+    "candidate": [
+      {
+        "startupMs": 153.33966701291502,
+        "requestP95Ms": 0.43174996972084045,
+        "rssKiB": 203824,
+        "processCount": 7
+      },
+      {
+        "startupMs": 150.5349999642931,
+        "requestP95Ms": 0.4230840131640434,
+        "rssKiB": 202912,
+        "processCount": 5
+      },
+      {
+        "startupMs": 155.04270803648978,
+        "requestP95Ms": 0.3928330261260271,
+        "rssKiB": 202880,
+        "processCount": 7
+      }
+    ]
+  },
+  "medians": {
+    "baseline": {
+      "startupMs": 157.06029097782448,
+      "requestP95Ms": 0.38908299757167697,
+      "rssKiB": 203424,
+      "processCount": 6
+    },
+    "candidate": {
+      "startupMs": 153.33966701291502,
+      "requestP95Ms": 0.4230840131640434,
+      "rssKiB": 202912,
+      "processCount": 7
+    }
+  },
+  "ratios": {
+    "startupMs": 0.9763108552661807,
+    "rssKiB": 0.9974830895076294,
+    "requestP95Ms": 1.0873875646187874
+  },
+  "withinTenPercent": true,
+  "candidateBackendSha256": {
+    "app/backend/desktop-automation.cjs": "569b988fe60eaf13e3b2ec8f55d275ef9be163ffe2e1b9bb0d37edd32632bf1e",
+    "app/backend/local-crypto.cjs": "c6726a97d22997439548e8f9ce4b0ecd58e5b86b5e330d402926d2c187da1d01",
+    "app/backend/mac-capabilities.cjs": "d575a3fad91e461d4f67943b692a3a4929ebde829621d0360f11b795116d86e3",
+    "app/backend/process-runtime.cjs": "e26a6bd293077898ae7e8be4f29c12ed4b51880e1f5f4c1678b2d640f6486ad0"
+  }
+}

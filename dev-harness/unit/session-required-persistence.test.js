@@ -6,7 +6,8 @@ const fs = require('node:fs'), path = require('node:path'), os = require('node:o
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-required-save-'));
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const { loadServerInternals } = require('../lib/server-internals');
-const s = loadServerInternals(['createSession', 'loadSession', 'saveSession', 'deleteSession', 'recordSessionExecutionOwner', 'sessionWriteChains', 'runSessionTurn', 'stopSession', 'activeChildren', 'TOOL_RESULT_DISPLAY_CAP'], { withEval: true });
+const { TOOL_RESULT_DISPLAY_CAP } = require('../../ruyi-workbench/app/backend/tool-result-view.cjs');
+const s = loadServerInternals(['createSession', 'loadSession', 'saveSession', 'deleteSession', 'recordSessionExecutionOwner', 'sessionWriteChains', 'runSessionTurn', 'stopSession', 'activeChildren'], { withEval: true });
 after(() => fs.rmSync(home, { recursive: true, force: true }));
 const refused = reason => error => error.code === 'SESSION_SAVE_NOT_COMMITTED' && error.reason === reason;
 
@@ -157,7 +158,7 @@ test('steered parallel image result keeps bounded display and a real saved attac
   const first = path.join(home, 'image-prefix.txt'), image = path.join(home, 'parallel-image.png');
   fs.writeFileSync(first, 'image-prefix');
   fs.copyFileSync(path.join(__dirname, '../visual-baselines/workbench-shell-v2-light.png'), image);
-  const base64 = fs.readFileSync(image).toString('base64'); assert.ok(base64.length > s.TOOL_RESULT_DISPLAY_CAP);
+  const base64 = fs.readFileSync(image).toString('base64'); assert.ok(base64.length > TOOL_RESULT_DISPLAY_CAP);
   let sent = false;
   const fake = await configuredProvider(req => {
     if (sent || !req.tools?.some(tool => tool.function?.name === 'file_read')) return textFrames('done');
@@ -175,7 +176,7 @@ test('steered parallel image result keeps bounded display and a real saved attac
     assert.equal(steered, true);
     const shown = events.find(event => event.type === 'tool_result' && event.id === 'image_1');
     assert.equal(shown.isError, false);
-    assert.ok(JSON.stringify(shown.content).length <= s.TOOL_RESULT_DISPLAY_CAP);
+    assert.ok(JSON.stringify(shown.content).length <= TOOL_RESULT_DISPLAY_CAP);
     assert.ok(!JSON.stringify(shown.content).includes(base64));
     const attachments = shown.content.imageAttachments;
     assert.ok(attachments?.length > 0);

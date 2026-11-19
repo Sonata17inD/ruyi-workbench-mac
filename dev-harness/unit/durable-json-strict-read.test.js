@@ -12,7 +12,7 @@ function fixture() {
   const context = vm.createContext({ fs: { readFileSync: read, copyFileSync() { copies++; } },
     fsp: { readFile: async () => read(), mkdir: async () => {} }, path,
     atomicWriteJson: async (_file, value) => { writes++; if (error) throw error; content = JSON.stringify(value); } });
-  vm.runInContext(constBlock(source, 'DurableJsonStore') + ';globalThis.storeApi=DurableJsonStore;', context);
+  context.storeApi = require('../../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
   const create = extra => context.storeApi.create({ id: 'strict', file: 'state.json', schemaVersion: 1,
     defaultValue: () => ({ schema: 1, entries: [] }), cache: false, strictRead: true,
     validate: value => Array.isArray(value.entries) && value.entries.every(row => typeof row === 'string'), ...extra });

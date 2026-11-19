@@ -19,7 +19,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-core-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
-const srv = require(path.join(app, 'server.js'));
+const srv = require('../../ruyi-workbench/app/backend/steward-core.cjs').createStewardCore({});
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -170,7 +170,8 @@ ok(JSON.stringify(STEWARD_EVENT_KINDS) === JSON.stringify(['needs_you', 'failed'
 /* ═══ ④ 117y-S1(27 号文 §11.18.2):正文天花板裁剪 stewardTrimSayAtSentence ═══ */
 // 钉的是【事实】不是实现:600 不再是运行期的刀、天花板处不许裸切、切了必须明说,
 // 外加一条【反向保护】—— 总览行那把 stewardClipSay(200 字 + 省略号)不许被这一刀误伤。
-const { stewardTrimSayAtSentence, stewardClipSay, STEWARD_SAY_TARGET, STEWARD_SAY_CEILING } = srv;
+const { stewardTrimSayAtSentence, stewardClipSay } = srv;
+const { STEWARD_SAY_TARGET, STEWARD_SAY_CEILING } = require(path.join(app, 'server.js'));
 
 ok(STEWARD_SAY_TARGET === 600, `④ TARGET = 600(提示词目标;got ${STEWARD_SAY_TARGET})`);
 ok(STEWARD_SAY_CEILING === 4000, `④ CEILING = 4000(病态载荷天花板;got ${STEWARD_SAY_CEILING})`);

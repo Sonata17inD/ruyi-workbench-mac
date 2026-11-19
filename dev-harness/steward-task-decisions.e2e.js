@@ -1,6 +1,7 @@
 'use strict';
 require('./lib/self-isolate-home');
 const fs = require('fs'), path = require('path'), os = require('os'), http = require('http');
+const fsp = require('node:fs/promises');
 const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const { setTimeout: sleep } = require('node:timers/promises');
@@ -8,13 +9,14 @@ const t = createRunner('STEWARD DECISIONS'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-decisions-api-'));
 process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const s = loadServerInternals(['createSession', 'saveSession', 'writeConfig', 'readConfig', 'createMissionContainer',
-  'requestNativePermission', 'requestPlanApproval', 'requestUserQuestion', 'handleInterventionApiRoutes', 'readInterventions'], { withEval: true });
+  'requestNativePermission', 'requestPlanApproval', 'requestUserQuestion', 'handleInterventionApiRoutes',
+  'readInterventions', 'interventionFilePath', 'RUNTIME']);
 (async () => {
   let server;
   try {
     await s.writeConfig({ ...(await s.readConfig()), defaultWorkspace: root, stewardEnabledV1: true, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false });
     // 只替换本件 HTTP 握手 token；路由、投影、运行时消费者和 CAS 均为生产代码。
-    s.__eval("tokenOk = req => req.headers['x-wcw-token'] === 'fixture-token'");
+    s.RUNTIME.token = 'fixture-token';
     server = http.createServer((req, res) => s.handleInterventionApiRoutes(req, res, new URL(req.url, 'http://localhost').pathname).catch(e => { res.writeHead(500); res.end(String(e)); }));
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const call = async (method, url, body) => {
@@ -56,10 +58,22 @@ const s = loadServerInternals(['createSession', 'saveSession', 'writeConfig', 'r
     const answered = await decide(b.id, q.id, 'answer', 0, 'answer-b', { answer: { answers: [{ questionId: q.questions[0].id, selectedOptionIds: [q.questions[0].options[1].id], otherText: '' }] } });
     ok(answered.json.ok && (await question).ok, '回答绑定原问题及选项身份');
     // 写 applying 之前失败:与写盘失败门相同,不向消费者放行。
-    s.__eval('globalThis.decisionsOriginalAppend = appendIntervention; appendIntervention = async (sid, row) => row.id === ' + JSON.stringify(idB) + ' && row.status === "applying" ? false : globalThis.decisionsOriginalAppend(sid, row)');
-    const failed = await decide(b.id, idB, 'allow');
+    const appendFile = fsp.appendFile;
+    const journal = s.interventionFilePath(b.id);
+    let failed;
+    try {
+      fsp.appendFile = async (file, data, ...options) => {
+        if (file === journal) {
+          const row = JSON.parse(data);
+          if (row.id === idB && row.status === 'applying') throw Object.assign(new Error('fixture write failure'), { code: 'EIO' });
+        }
+        return appendFile(file, data, ...options);
+      };
+      failed = await decide(b.id, idB, 'allow');
+    } finally {
+      fsp.appendFile = appendFile;
+    }
     ok(failed.status === 503 && (await s.readInterventions(b.id)).find(iv => iv.id === idB).status === 'pending', '一项写盘失败仍待决,不冒充批准');
-    s.__eval('appendIntervention = globalThis.decisionsOriginalAppend; delete globalThis.decisionsOriginalAppend');
     const rejectedPlan = await decide(a.id, planId, 'reject');
     ok(rejectedPlan.json.ok && (await plan).decision === 'reject', '另一项仍能独立拒绝,不受失败项影响');
     ok((await decide(b.id, idB, 'deny', 0, 'retry-b-deny')).json.ok && (await permitB).behavior === 'deny', '失败项恢复后仍可明确拒绝');

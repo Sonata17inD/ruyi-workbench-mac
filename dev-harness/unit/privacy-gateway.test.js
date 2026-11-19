@@ -388,7 +388,7 @@ test('technical paths restore before callers inspect the permission target; trav
     const value = await api.toolResult({ content: 'C:\\Users\\Alice\\private.txt' });
     const call = api.prepareCall({ name: 'file_read', rawArgs: JSON.stringify({ path: value.content }) });
     assert.equal(JSON.parse(call.rawArgs).path, 'C:\\Users\\Alice\\private.txt');
-    assert.ok(api.prepareCall({ name: 'powershell_run', rawArgs: JSON.stringify({ command: value.content }) }).privacyError);
+    assert.ok(api.prepareCall({ name: 'shell_run', rawArgs: JSON.stringify({ command: value.content }) }).privacyError);
   });
 });
 

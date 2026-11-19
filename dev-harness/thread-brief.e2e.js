@@ -57,7 +57,7 @@ const providerServer = http.createServer(async (req, res) => {
   }
   let body = null; try { body = JSON.parse(raw); } catch { body = null; }
   const text = String(((body && body.messages) || []).map(m => m && m.content).join(' '));
-  // 起名字那一发的口令来自 06-provider-engine 的 buildThreadBriefMessages 系统层。
+  // The title service sends a distinct system instruction for its auxiliary completion.
   if (text.includes('你给一条对话线程起名字') || text.includes('You name a conversation thread')) {
     briefHits += 1;
     if (briefDelay) await sleep(briefDelay);
@@ -92,7 +92,11 @@ writeConfig();
 process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const { loadServerInternals } = require('./lib/server-internals');
-const srv = loadServerInternals(['createSession','getPretenderProjectionIndex','listSessions','loadSession','maybeWriteThreadBrief','parseThreadBrief','runSessionTurn','saveSession','sessionDisplayTitle','StewardHooks','updateSessionMeta','updateAutomaticThreadTitle','eventStreamEmitThreadState','eventStreamRing','readMissionSessionHead'], { withEval: true });
+const { createThreadBriefService } = require('../ruyi-workbench/app/backend/thread-brief.cjs');
+const srv = loadServerInternals(['createSession','getPretenderProjectionIndex','listSessions','loadSession','maybeWriteThreadBrief','parseThreadBrief',
+  'runSessionTurn','saveSession','sessionDisplayTitle','StewardHooks','updateSessionMeta','updateAutomaticThreadTitle',
+  'eventStreamEmitThreadState','eventStreamRing','readMissionSessionHead','safeSessionId','getSessionTitleOverride',
+  'setSessionTitleOverride','PrivacyGateway','providerRawCompletion','appendUsageLedger','RUYI_EVENTS','nowIso','logEvent']);
 
 const headOf = id => JSON.parse(fs.readFileSync(path.join(HOME, 'sessions', id + '.json'), 'utf8'));
 const newSession = async () => { const s = await srv.createSession({ title: '', cwd: HOME }); await srv.saveSession(s); return s.id; };
@@ -152,29 +156,31 @@ try {
   briefDelay = 0;
   for (const entry of [{ label: 'dynamic', pauseAt: 1 }, { label: 'first naming', pauseAt: 2 }]) {
     const raceId = await newSession();
-    globalThis.__titleRace = { id: raceId, pauseAt: entry.pauseAt, count: 0, held: false };
-    srv.__eval(`globalThis.__titleRace.original = loadSession; loadSession = async (...args) => {
-      const snapshot = await globalThis.__titleRace.original(...args);
-      const gate = globalThis.__titleRace;
-      if (args[0] === gate.id && ++gate.count === gate.pauseAt) {
-        gate.held = true; await new Promise(resolve => { gate.release = resolve; });
-      }
-      return snapshot;
-    };`);
+    const gate = { count: 0 };
+    const resume = () => { gate.open = true; gate.release?.(); };
+    const service = createThreadBriefService({
+      ...srv,
+      loadSession: async id => {
+        const snapshot = await srv.loadSession(id);
+        if (id === raceId && ++gate.count === entry.pauseAt && !gate.open) {
+          await new Promise(resolve => { gate.release = resolve; });
+        }
+        return snapshot;
+      },
+    });
+    const pending = entry.label === 'dynamic'
+      ? service.updateAutomaticThreadTitle({ sessionId: raceId, title: 'Obsolete automatic title' })
+      : service.maybeWriteThreadBrief({ sessionId: raceId, message: RAW, config: BASE_CONFIG, threadProvider: BASE_CONFIG.providers[0] });
     try {
-      const pending = entry.label === 'dynamic'
-        ? srv.updateAutomaticThreadTitle({ sessionId: raceId, title: 'Obsolete automatic title' })
-        : srv.maybeWriteThreadBrief({ sessionId: raceId, message: RAW, config: BASE_CONFIG, threadProvider: BASE_CONFIG.providers[0] });
-      for (let i = 0; i < 100 && !globalThis.__titleRace.held; i++) await sleep(20);
-      ok(globalThis.__titleRace.held, `M9 ${entry.label} snapshot pause reached`);
+      for (let i = 0; i < 100 && !gate.release; i++) await sleep(20);
+      ok(gate.release, `M9 ${entry.label} snapshot pause reached`);
       await srv.updateSessionMeta(raceId, { title: 'Concurrent manual title' });
-      globalThis.__titleRace.release();
+      resume();
       const result = await pending;
       ok(entry.label === 'dynamic' ? result.updated === false : result === null, `M10 ${entry.label} refuses to replace new manual authority`);
       ok(srv.sessionDisplayTitle(await srv.loadSession(raceId)) === 'Concurrent manual title', `M11 ${entry.label} retains manual title after resuming stale snapshot`);
     } finally {
-      srv.__eval('loadSession = globalThis.__titleRace.original;');
-      delete globalThis.__titleRace;
+      resume();
     }
   }
   briefDelay = 0; turnDelay = 0;

@@ -58,7 +58,7 @@ derived from this software without specific prior written permission. THE SOFTWA
 
 | 组件 | 版本 | 许可 | 上游 | 说明 |
 |---|---|---|---|---|
-| ripgrep(`ruyi-workbench/app/vendor-bin/rg.exe`) | 14.x(二进制内嵌的手册页日期为 2024-09-08,与上游 14.1.1 的发布日期相符;精确版本以该文件的 `rg --version` 为准) | MIT 或 Unlicense(双许可,发行方任选其一) | https://github.com/BurntSushi/ripgrep | 上游官方发布流程产出的 Windows 预编译二进制(文件内的构建路径指向上游 GitHub Actions)。Copyright (c) 2015 Andrew Gallant。用于 `file_search` 的快路径,并在服务启动时加进服务进程的 PATH 前部,让模型在终端里也能直接跑 `rg`。`app/` 整树随 Slim 与 Full 发行包一起带走,覆盖包也把它列为可选载荷(文件存在就一并打进去)。文件缺失时 `file_search` 静默退回纯 JS 扫描器,功能降级、不报错。 |
+| ripgrep (`app/vendor-bin/rg` in Mac packages) | Asset-lock version | MIT or Unlicense | https://github.com/BurntSushi/ripgrep | Native arm64 binary, licenses copied from the verified offline asset. Copyright (c) 2015 Andrew Gallant. |
 
 **MIT(ripgrep)**
 
@@ -86,7 +86,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-> `rg.exe` 是预编译的单文件,里面静态链接了若干 Rust 依赖(均为 MIT / Apache-2.0 / BSD / Unlicense 一类宽松许可);
+> `rg` 是预编译的单文件,里面静态链接了若干 Rust 依赖(均为 MIT / Apache-2.0 / BSD / Unlicense 一类宽松许可);
 > 逐条清单以上游对应版本的 `Cargo.lock` 为准。上游的 Unlicense 文本见其仓库根目录的 `UNLICENSE`。
 >
 > 便携 git 等 GPL 系二进制**有意不纳入** `vendor-bin`(GPLv2 再分发义务)。
@@ -102,9 +102,7 @@ ACC 是独立打包的桌面控制 MCP。其运行时依赖在 `mcp/ai-computer-
 | 依赖 | 典型许可 | 用途 |
 |---|---|---|
 | mcp[cli] | MIT | MCP 协议实现 |
-| pyautogui | BSD-3-Clause | 键鼠自动化 |
 | Pillow | MIT-CMU(HPND) | 图像处理 |
-| pywin32 | PSF-2.0 | Windows API |
 | psutil | BSD-3-Clause | 进程/系统信息 |
 | playwright | Apache-2.0 | 浏览器自动化(顶层 import 已守护降级) |
 | python-docx | MIT | Word 读写 |
@@ -112,19 +110,12 @@ ACC 是独立打包的桌面控制 MCP。其运行时依赖在 `mcp/ai-computer-
 | pdfplumber | MIT | PDF 文本抽取 |
 | pyperclip | BSD-3-Clause | 剪贴板 |
 | reportlab | BSD(见上游 LICENSE) | PDF 导出(`write_pdf`,可选降级) |
-| uiautomation | Apache-2.0 | UI Automation 无障碍树(可选降级) |
-| comtypes | MIT | COM 绑定(uiautomation 运行时依赖) |
-| winsdk | MIT | Windows.Media.Ocr 离线 OCR(可选降级) |
 | opencv-python-headless | Apache-2.0(wrapper;OpenCV 本体 Apache-2.0) | 多尺度模板匹配(可选降级) |
 | numpy | BSD-3-Clause | 数值计算 |
 | python-pptx | MIT | PowerPoint 生成(`write_pptx`,可选降级) |
 | matplotlib | PSF-based(matplotlib 许可,BSD 兼容) | 图表出图(`chart_image`,可选降级) |
 | XlsxWriter | BSD-2-Clause | Excel 写入(python-pptx 相关链路的传递依赖) |
 | lxml | BSD-3-Clause | XML 处理(python-docx / python-pptx 的传递依赖) |
-
-> **pynput(LGPL-3.0)** —— 用于宏录制(`record_start` / `record_stop`,缺失时相关工具优雅降级)。
-> 本仓库**仅以依赖名引用 pynput,不在仓库内分发其任何代码**;用户经 `pip` / PyPI 自行获取,其源码可从 PyPI 及上游获得。
-> 以依赖形式动态链接使用 LGPL 库时,义务主要落在**分发其二进制/wheels 的发行方**;本仓库不承载其 wheels。
 
 > 上表为便于审阅的概览;确切版本与许可条款以实际安装的 wheels 元数据(`*.dist-info/METADATA`、`LICENSE`)为准。
 
@@ -181,7 +172,7 @@ _本文件随组件增删更新。如发现遗漏或错误,请提 issue。_
 
 ## 5. Mac arm64 离线候选包（P6-01）
 
-Mac 变体有独立资产锁 `MACOS-PORTING/dependencies/macos-offline-arm64.assets.json`，不将 Windows 二进制混入 Mac 包。
+Mac 变体有独立资产锁 `ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json`，不将 Windows 二进制混入 Mac 包。
 Node 24.15.0（MIT 及其依赖许可）随附上游完整 `runtime/node/LICENSE`；ripgrep 15.1.0 随附 MIT/Unlicense/COPYING。
 Full 额外随附 CPython 3.12.13（PSF 及依赖许可）、ACC 所需锁定 wheels 和 Playwright 1.64.1 对应的 arm64 Chrome for Testing 156.0.8078.4。
 Python 的 `LICENSE.txt`、对应 standalone 构建的 `third-party-notices/` 与各 wheel 的原始许可均保留，`python-licenses.json` 列出分发包与许可文件位置。

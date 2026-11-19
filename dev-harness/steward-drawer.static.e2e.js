@@ -28,9 +28,9 @@ const css = read('css/views/steward-drawer.css');
 const styles = read('styles.css');
 const zh = JSON.parse(read('locales/zh-CN.json'));
 const en = JSON.parse(read('locales/en-US.json'));
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const readFrontendCss = fs.readFileSync(path.join(__dirname, 'read-frontend-css.js'), 'utf8');
 
 // 注释里要写清「零 innerHTML」「不自己实现 PATCH permissionMode」这些纪律本身，所以扫禁词与扫危险
@@ -137,16 +137,13 @@ ok(/textContent/.test(drawer)
   'B3 抽屉的节点创建委托给 steward-chips.js 共享的 el()/clear()（117n-M1 去重）：零本地重复定义，createElement 仍可在 chips.js 里查证（零 innerHTML 的证据没消失，只是搬了家）');
 
 // ─── C 轮询纪律：恰好一处 setInterval／clearInterval，且三重门控 ─────────────────
-ok(count(drawer, /setInterval\(/g) === 1 && count(drawer, /clearInterval\(/g) === 1,
-  `C1 steward-drawer.js 恰好一处 setInterval 与一处 clearInterval（实测 ${count(drawer, /setInterval\(/g)}／${count(drawer, /clearInterval\(/g)}）`);
+ok(count(drawerCode, /setInterval\(/g) === 0 && drawerCode.includes('createDeadlinePoll({'), 'C1 抽屉使用共享期限调度器，无固定 interval');
 ok(count(drawer, /setTimeout\(/g) === 0 && count(chips, /setInterval\(|setTimeout\(/g) === 0,
   'C2 抽屉零 setTimeout；chip 模块零计时器（它不轮询，数据由宿主喂）');
 // 轮询生命周期收编（前端架构债第一批）重钉 C3／C3b／C5：pollTimer ＋ startPolling／stopPolling 收进
 // steward-chips.js 的 createPollLifecycle（启停语义由 steward-shell.static C2g 真跑钉着）。判据一字未变：
 // 门控仍是这三条；起表只经 syncPolling（零直调 polling.start()），停表只有「门控为否」与「关抽屉」两路。
-ok(/const polling = createPollLifecycle\(\{\s*shouldRun: \(\) => isOpen\(\) && isStewardMode\(\) && !\(doc\(\) && doc\(\)\.hidden\),\s*arm: \(\) => setInterval\(pollSlice, STEWARD_DRAWER_POLL_MS_MIN\),\s*disarm: timer => clearInterval\(timer\),\s*\}\);/.test(drawerCode)
-  && /function syncPolling\(\) \{\s*polling\.sync\(\);\s*\}/.test(drawerCode),
-  'C3 唯一入口 syncPolling 的门控是「抽屉开着 && 管家模式 && 页面可见」，任一为否即停表');
+ok(drawerCode.includes('shouldRun: () => isOpen() && isStewardMode() && !(doc() && doc().hidden)') && drawerCode.includes('if (streamConnected && !isLive()) return Infinity;'), 'C3 关闭或隐藏时停表，在线空闲时休眠');
 ok(count(drawerCode, /polling\.start\(\)/g) === 0 && count(drawerCode, /polling\.stop\(\)/g) === 1
   && count(drawerCode, /polling\.sync\(\)/g) === 1 && count(drawerCode, /\bstartPolling\b|\bstopPolling\b|\bpollTimer\b/g) === 0,
   `C3b 起表只由 syncPolling、停表只由 syncPolling 与关抽屉（实测 start ${count(drawerCode, /polling\.start\(\)/g)}／stop ${count(drawerCode, /polling\.stop\(\)/g)}／sync ${count(drawerCode, /polling\.sync\(\)/g)}）`);
@@ -158,8 +155,7 @@ ok(/function closeDrawer\(\{ focusComposer = false \} = \{\}\) \{[\s\S]*?polling
 ok(mod.STEWARD_DRAWER_POLL_MS_MIN === 5000
   && /Math\.max\(STEWARD_DRAWER_POLL_MS_MIN, raw\)/.test(drawer),
   'C6 轮询周期取 config.stewardPollMs 并按 5000 下限 clamp（导出常量，不是散落字面量）');
-ok(count(stewardShell, /setInterval\(/g) === 1,
-  'C7 steward-shell.js 仍然全文件恰好一处 setInterval（117b 的 C2a 未被 117d 稀释）');
+ok(!/setInterval\(/.test(stewardShell), 'C7 壳层没有常驻 interval');
 // 117s-B（用户第九轮走查①④「递话给已有线程／已收工的线程，『它刚说』更新不够及时」）：
 // 表与三重门控一个字不动（C1／C3／C3b／C6 仍然是上面那几条），本组只钉「这一拍拉不拉」的两条判据。
 // 切到 refreshOnce 自己的收尾大括号为止 —— 一路切到 pollSlice 的话会把中间那句模块级的

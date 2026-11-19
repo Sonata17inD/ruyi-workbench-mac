@@ -12,7 +12,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-head-adapter-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const srv = require('../../ruyi-workbench/app/backend/steward-core.cjs').createStewardCore({});
 const { deriveStewardThreadState, stewardThreadStateFromHead } = srv;
 
 // 修前 13d ②支的原样喂法(最宽的那一份:head 可为 null)。

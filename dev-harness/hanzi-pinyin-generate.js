@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// 59 号文 §6(语音词库第二步):生成 ruyi-workbench/app/src/04j-hanzi-pinyin.js —— 汉字 → 普通话读音(不带声调)的离线小表,
+// 59 号文 §6(语音词库第二步):生成 ruyi-workbench/app/backend/hanzi-pinyin.cjs —— 汉字 → 普通话读音(不带声调)的离线小表,
 // 给「用户这处改动读音像不像」用(人名:张伟 → 张玮 读音一样;改内容:三点 → 四点 读音不像)。
 //
 // 数据源:Unicode 汉字数据库 Unihan 的 Unihan_Readings.txt(https://www.unicode.org/Public/UCD/latest/ucd/Unihan.zip),
@@ -11,7 +11,7 @@
 //
 // 用法:
 //   node dev-harness/hanzi-pinyin-generate.js <Unihan_Readings.txt>            只核对:生成结果与仓里那份逐字节相同才退出 0
-//   node dev-harness/hanzi-pinyin-generate.js <Unihan_Readings.txt> --write    重写 04j-hanzi-pinyin.js
+//   node dev-harness/hanzi-pinyin-generate.js <Unihan_Readings.txt> --write    重写 backend/hanzi-pinyin.cjs
 // 仓里不放 Unihan 原文件(约 7 MB),所以 CI 不跑本脚本;表的形状与抽查由 unit/hanzi-pinyin.test.js 钉。
 //
 // 编码(为了把 2 万字压进几十 KB、又不出现要转义的字符):
@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const OUT = path.join(ROOT, 'ruyi-workbench', 'app', 'src', '04j-hanzi-pinyin.js');
+const OUT = path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'hanzi-pinyin.cjs');
 const FROM = 0x4E00, TO = 0x9FFF;
 const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
 
@@ -68,6 +68,7 @@ function render(table) {
   }
   const chunk = (s, n) => { const out = []; for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n)); return out; };
   const lines = [];
+  lines.push("'use strict';");
   lines.push("// 04j-hanzi-pinyin.js - 汉字 → 普通话读音(不带声调)的离线小表,给语音词库判断「这处改动读音像不像」用(59 号文 §6)。");
   lines.push('//');
   lines.push('// 【生成物,不要手改】由 dev-harness/hanzi-pinyin-generate.js 从 Unicode 汉字数据库 Unihan 的 Unihan_Readings.txt 生成:');
@@ -113,6 +114,8 @@ function render(table) {
   lines.push('  }');
   lines.push('  return Object.freeze({ FROM, TO, COUNT, SYLLABLE_COUNT: SYLLABLES.length, readings });');
   lines.push('})();');
+  lines.push('');
+  lines.push('module.exports = { HanziPinyin };');
   return lines.join('\n') + '\n';
 }
 

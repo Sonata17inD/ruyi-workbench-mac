@@ -1,3 +1,0 @@
-SKIP production privacy fixture requires Windows DPAPI; portable gateway behavior is covered by unit tests
-
-PRIVACY PROTOCOLS E2E: ALL PASS

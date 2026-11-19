@@ -40,9 +40,9 @@ const css = read('css/views/steward-board.css');
 const styles = read('styles.css');
 const zh = JSON.parse(read('locales/zh-CN.json'));
 const en = JSON.parse(read('locales/en-US.json'));
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const readFrontendCss = fs.readFileSync(path.join(__dirname, 'read-frontend-css.js'), 'utf8');
 
 // 注释里要写清「不另起聚合判据」「等待原因只有一处」这些纪律本身，所以扫之前先剥注释
@@ -356,8 +356,7 @@ ok(/drawer\.setOnClosed\(mount => \{ if \(mount === 'docked' && !suppressCloseRe
   'E5 关掉 docked 那一份＝关掉「现在这一件」；程序性收起（窄屏／切壳）不记本机偏好');
 
 // ─── F 刷新纪律 + 零 innerHTML ──────────────────────────────────────────────────
-ok(count(board, /setInterval\(/g) === 1 && count(board, /clearInterval\(/g) === 1,
-  `F1 steward-board.js 恰好一处 setInterval 与一处 clearInterval（实测 ${count(board, /setInterval\(/g)}／${count(board, /clearInterval\(/g)}）`);
+ok(count(boardCode, /setInterval\(/g) === 0 && boardCode.includes('createDeadlinePoll({'), 'F1 看板使用共享期限调度器，无固定 interval');
 ok(count(board, /setTimeout\(/g) === 0, 'F2 看板零 setTimeout');
 // 121-K2b（34 号文 §6.2／§6.4）**重钉 F3**：门控从三条收成两条 —— 「看板打开」这一条【删了】。
 // 理由不是放宽而是它的前提没了：状态行那句「N 个事项 · A 条在跑，B 条等你」与右栏「现在这一件」
@@ -369,11 +368,7 @@ ok(count(board, /setTimeout\(/g) === 0, 'F2 看板零 setTimeout');
 // 轮询生命周期收编（前端架构债第一批）重钉 F3：门控从 syncPolling 函数体搬进 createPollLifecycle 的
 // shouldRun（启停语义由 steward-chips.js 那一份统一实现，steward-shell.static C2g 真跑钉着）。判据一字未变：
 // 门控恰好是「管家模式 && 页面可见」，唯一入口 syncPolling 只转给 polling.sync()，本文件零直调 polling.start()。
-ok(/const polling = createPollLifecycle\(\{\s*shouldRun: \(\) => isStewardMode\(\) && !\(doc\(\) && doc\(\)\.hidden\),\s*arm: \(\) => setInterval\(\(\) => \{ void pollTick\(\); \}, STEWARD_BOARD_POLL_MS_MIN\),\s*disarm: timer => clearInterval\(timer\),\s*\}\);/.test(boardCode)
-  && /function syncPolling\(\) \{\s*polling\.sync\(\);\s*\}/.test(boardCode)
-  && count(boardCode, /polling\.start\(\)/g) === 0
-  && !/isBoardOpen\(\) && isStewardMode\(\)/.test(boardCode),
-  'F3 唯一入口 syncPolling 的门控是「管家模式 && 页面可见」，任一为否即停表（121-K2b：「看板关着不刷」那道门已删）');
+ok(boardCode.includes('shouldRun: () => isStewardMode() && !(doc() && doc().hidden)') && boardCode.includes('if (streamConnected && !anyThreadRunning()) return Infinity;'), 'F3 隐藏时停表，SSE 在线且无线程运行时休眠');
 // 121-K2b 新钉（§6.4 的三条语义之二）：兜底轮询【存在】，且事件流连着时节拍 ≥30 s。
 // 「存在」这一半与「≥30 s」这一半必须同时钉：只钉前者，改回 5 s 不会红；只钉后者，把兜底整个
 // 拿掉也不会红 —— 而推送漏一帧时兜底是唯一的自愈路（13r 的环只有 200 条，断太久就补不上）。

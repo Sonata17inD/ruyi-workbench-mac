@@ -44,7 +44,8 @@ async function tokenFor(port) {
   // 活的 Kimi 父回合在离线夹具里起不来,这里钉结构:只有活的 provider 父回合才映射成 'openai',其余按可用引擎挑。
   {
     const { sliceBlock } = require('./lib/source-slice.js');
-    const routing = sliceBlock(fs.readFileSync(path.join(WB, 'app', 'server.js'), 'utf8'), 'const parentEngine = ', ';', { inclusive: true });
+    const workflowRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'agent-workflow-routes.cjs'), 'utf8');
+    const routing = sliceBlock(workflowRoutes, 'const parentEngine = ', ';', { inclusive: true });
     ok(/reg && reg\.kind === 'claude' \? 'claude'/.test(routing) && /reg && reg\.kind === 'openai' \? 'openai'/.test(routing) && /provider \? 'openai' : 'claude'/.test(routing),
       'K launch routing maps only a live provider parent to openai; a Kimi parent (or none) picks from the available engines');
   }
@@ -247,7 +248,7 @@ async function tokenFor(port) {
       ok(flag(argv, '--permission-mode') === 'auto' && ['Write', 'Edit', 'PowerShell', 'Task', 'CronCreate'].every(t => denyOf(argv).includes(t)),
         `D7 auto + read-tier node: hard-capped by --disallowed-tools (got ${flag(argv, '--disallowed-tools')})`);
       ({ r, argv } = await launch({ id: 'long_auto', task: 'look', role: 'long-role', engine: 'claude' }));
-      longRoleArgvLength = srv.spawnCmdLineLength(process.execPath, argv);
+      longRoleArgvLength = Buffer.byteLength(JSON.stringify(argv), 'utf8');
       ok(String(flag(argv, '--append-system-prompt') || '').includes(LONG_MARKER), 'D8 a long role prompt rides on --append-system-prompt when it fits');
     } finally { kill(wb); await sleep(200); fs.rmSync(HOME, { recursive: true, force: true }); }
   }
@@ -277,14 +278,14 @@ async function tokenFor(port) {
       const token = await tokenFor(PORT); const hdr = { 'x-wcw-token': token };
       const sid = (await post(PORT, '/api/sessions', { title: 'dag-ladder', cwd: HOME }, hdr)).session.id;
       const res = await post(PORT, '/api/agent-workflow/launch', { token, sessionId: sid, nodes: [{ id: 'long_ladder', task: 'look', role: 'long-role', engine: 'claude' }] });
-      ok(res.ok === true && res.results[0].status === 'succeeded', 'R1 the long-role node still runs under a tight command-line budget');
+      ok(res.ok === true && res.results[0].status === 'succeeded', 'R1 the retired Windows budget has no effect on Mac role execution');
       const argv = JSON.parse(fs.readFileSync(argvCapture, 'utf8'));
       const appendArg = String(argv[argv.indexOf('--append-system-prompt') + 1] || '');
-      ok(argv.includes('--append-system-prompt') && appendArg.includes('<response-language-policy>') && !appendArg.includes(LONG_MARKER),
-        'R2 the language policy stays on argv; only the role prompt left it');
-      ok(argv.includes('--disallowed-tools'), 'R3 the hard tier cap survives the ladder');
+      ok(argv.includes('--append-system-prompt') && appendArg.includes('<response-language-policy>') && appendArg.includes(LONG_MARKER),
+        'R2 language policy and full role prompt stay on argv');
+      ok(argv.includes('--disallowed-tools'), 'R3 the hard tier cap remains present');
       const stdinText = fs.existsSync(stdinCapture) ? fs.readFileSync(stdinCapture, 'utf8') : '';
-      ok(stdinText.includes(LONG_MARKER), 'R4 the role prompt moved into the first user message (stdin)');
+      ok(!stdinText.includes(LONG_MARKER), 'R4 the role prompt stays on argv without redundant stdin copying');
     } finally { kill(wb); await sleep(200); fs.rmSync(HOME, { recursive: true, force: true }); }
   }
 

@@ -4,14 +4,12 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // resolveBridge 宽容解析:精确前缀优先 / 内建名不被遮蔽 / 裸名唯一命中桥接则路由 / 歧义不猜。
 //
 // (A) 纯单元(无 spawn、无 python,恒跑):resolveBridge 五情形。
-// (B) 实弹(best-effort,需真 ACC python):fake-openai 发【裸名 diagnostics】→ 经桥回真 ACC → 版本 1.8.0,
-//     不再是「Unknown tool」。python/依赖缺失 → SKIP,不算失败。
+// (B) 真 ACC Python 经生产桥接处理合成模型发出的裸名 diagnostics，并回报实际 ACC 版本。
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const REPO = [path.resolve(__dirname, '..', 'ai-computer-control'), path.resolve(__dirname, '..', 'mcp', 'ai-computer-control')]
-  .find(p => fs.existsSync(p)) || path.resolve(__dirname, '..', 'mcp', 'ai-computer-control');
+const REPO = path.resolve(__dirname, '../mcp/ai-computer-control');
 const HERE = __dirname;
 const srv = require(path.join(WB, 'app', 'server.js'));
 const { getFreePort } = require('./free-port.js');
@@ -70,44 +68,45 @@ function postStream(port, payload) {
 }
 
 (async () => {
+  const python = process.env.RUYI_ACC_PYTHON || path.join(REPO, '.venv/bin/python');
+  if (!fs.existsSync(python)) {
+    console.log('SKIP (B) install the ACC environment or set RUYI_ACC_PYTHON');
+    process.exitCode = fail ? 1 : 0;
+    return;
+  }
   const FAKE_PORT = await getFreePort(), WB_PORT = await getFreePort();
-  const HOME = path.join(os.tmpdir(), 'wcw-prefix-tol-e2e');
-  fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
-  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-prefix-tol-'));
+  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({
     configSchema: 5, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false,
+    defaultWorkspace: home, toolLoadingMode: 'full', includeWorkbenchMcp: false,
+    stewardEnabledV1: false, schedulerEnabledV1: false,
     providers: [{ id: 'fakeprov', label: 'FakeProv', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_PORT, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
     activeProvider: 'fakeprov',
     desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
-    externalMcpServers: [{ id: 'acc', label: 'Desktop', command: process.platform === 'win32' ? 'python' : 'python3', args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO, env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' }, enabled: true }],
+    externalMcpServers: [{ id: 'acc', label: 'Desktop', command: python, args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO, env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' }, enabled: true }],
     bridgeExternalToolsToProvider: true,
   }, null, 2));
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: 'diagnostics', FAKE_TOOL_ARGS: '{}' }, windowsHide: true });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(WB_PORT); }
-    if (!h) { console.log('SKIP (B) workbench did not start'); }
-    else {
-      const events = await postStream(WB_PORT, { message: '请调用诊断工具' });
-      const meta = events.find(e => e.type === 'meta');
-      const toolUse = events.find(e => e.type === 'tool_use' && e.name === 'diagnostics');
-      const toolResult = events.find(e => e.type === 'tool_result');
-      const resStr = toolResult ? JSON.stringify(toolResult.content) : '';
-      const bridged = meta && meta.bridgedTools;
-      if (!(bridged >= 80)) { console.log('SKIP (B) real ACC not bridged (python/deps missing?) bridgedTools=' + bridged); }
-      else {
-        ok(!!toolUse, '(B) model emitted BARE `diagnostics` (no prefix)');
-        ok(toolResult && toolResult.isError !== true, '(B) bare call NOT an error (was: Unknown tool)');
-        ok(!/Unknown tool/i.test(resStr), '(B) result is not「Unknown tool」');
-        // 第23波: ACC 版本动态读自其 server.py,不再硬编码(存量过期断言——ACC 已升 1.8.1)。
-        const accVer = (() => { try { const m = fs.readFileSync(path.join(REPO, 'src', 'ai_computer_control', 'server.py'), 'utf8').match(/VERSION\s*=\s*["']([\d.]+)["']/); return m ? m[1] : ''; } catch { return ''; } })();
-        ok(!!accVer && resStr.includes(accVer), '(B) bare `diagnostics` routed to real ACC → version ' + (accVer || '(ACC server.py 未读到版本)'));
-      }
-    }
+    if (!h) throw new Error('workbench did not start');
+    const events = await postStream(WB_PORT, { message: '请调用诊断工具' });
+    const meta = events.find(e => e.type === 'meta');
+    const toolUse = events.find(e => e.type === 'tool_use' && e.name === 'diagnostics');
+    const toolResult = events.find(e => e.type === 'tool_result');
+    const resStr = toolResult ? JSON.stringify(toolResult.content) : '';
+    ok(meta?.bridgedTools > 0, '(B) real ACC tools advertised to the fixture model (got ' + meta?.bridgedTools + ')');
+    ok(!!toolUse, '(B) model emitted BARE `diagnostics` (no prefix)');
+    ok(toolResult && toolResult.isError !== true && !/Unknown tool/i.test(resStr), '(B) bare diagnostics returns a tool result');
+    const accVer = fs.readFileSync(path.join(REPO, 'src', 'ai_computer_control', 'server.py'), 'utf8')
+      .match(/VERSION\s*=\s*["']([\d.]+)["']/)?.[1];
+    ok(!!accVer && resStr.includes(accVer), '(B) bare diagnostics routed to real ACC → version ' + accVer);
   } catch (e) { console.log('ERROR ' + e.message); fail++; }
   finally {
     for (const c of [wb, fake]) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore */ } } }
-    await sleep(400); fs.rmSync(HOME, { recursive: true, force: true });
+    await sleep(400); fs.rmSync(home, { recursive: true, force: true });
     console.log('\nBRIDGED-PREFIX-TOLERANCE E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));
     process.exitCode = fail ? 1 : 0;
   }

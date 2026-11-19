@@ -52,15 +52,13 @@ process.env.RUYI_HOME = dataRootDir;
 process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
-let I;
-try { I = loadServerInternals(['guardFileToolPath', 'toolCall', 'remoteUncDenial', 'uncHostAndPath', 'UNC_DENIED_ERROR'], { withEval: NO_RG }); }
-catch (e) {
-  if (!(e instanceof ReferenceError)) throw e;   // 反向验证:修前没有 UNC 闸符号 → 退回基础名单、UNC 单元断言自然红
-  I = loadServerInternals(['guardFileToolPath', 'toolCall'], { withEval: NO_RG });
-  I.remoteUncDenial = () => ''; I.uncHostAndPath = () => null; I.UNC_DENIED_ERROR = '<none>';
-}
+const { remoteUncDenial, uncHostAndPath } = require('../../ruyi-workbench/app/backend/workspace-unc-policy.cjs');
+const I = {
+  ...loadServerInternals(['guardFileToolPath', 'toolCall', 'UNC_DENIED_ERROR'], { withEval: NO_RG }),
+  remoteUncDenial, uncHostAndPath,
+};
 // 随仓 rg.exe 不走 PATH(Windows CI f2dfa62 红:子进程仍报 engine=rg):直接把模块级探测缓存设为 null = 「探过,没有 rg」。
-if (NO_RG) I.__eval('_rgProbe = null');
+if (NO_RG) I.__eval('hasRgAsync = async () => false; probeRg = () => null');
 
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 
@@ -254,14 +252,13 @@ describe('S7 · 祖先目录当 root(工作区 = 家目录):敏感子树不入�
   });
 });
 
-describe('S7 · 敏感名单两份一致(03 isSensitiveDataPath 与 11 sensitiveGlobsForRg 的 rg !glob 排除)', () => {
-  it('每个敏感名字:文件工具判敏感,rg 的排除 glob 也有它(改一份忘了另一份就红)', () => {
-    let J;
-    try { J = loadServerInternals(['isSensitiveDataPath', 'sensitiveGlobsForRg']); } catch (e) { if (e instanceof ReferenceError) return; throw e; }   // 同一进程里再 load 一份只为取这两个纯函数(状态无关)
+describe('S7 · 文件拒绝与搜索排除共享敏感路径策略', () => {
+  it('每个敏感名字同时受到文件检查与 rg 排除保护', () => {
+    const J = loadServerInternals(['isSensitiveDataPath', 'sensitiveGlobsForRg']);   // 同一进程里再 load 一份只为取这两个纯函数(状态无关)
     const NAMES = ['config.json', 'runtime.json', 'sessions', 'memory', 'usage', 'logs', 'generated', 'agent-runs', 'steward', 'missions', 'scheduler', 'migrations', 'engine-transcripts.json', 'desktop'];
     const globs = J.sensitiveGlobsForRg(home);
     const miss = NAMES.filter(n => !J.isSensitiveDataPath(path.join(dataRootDir, n)) || !globs.includes('!/.ruyi-workbench/' + n));
-    assert.deepEqual(miss, [], '两份名单不一致或漏名字');
+    assert.deepEqual(miss, [], '文件检查或搜索排除遗漏敏感名字');
     assert.equal(J.isSensitiveDataPath(path.join(dataRootDir, 'checkpoints', 's1', '1-1.txt')), false, 'checkpoints 有意不进名单');
   });
 });

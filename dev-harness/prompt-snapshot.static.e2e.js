@@ -78,8 +78,14 @@ const openCount = (full.match(/<skill-index>/g) || []).length;
 const closeCount = (full.match(/<\/skill-index>/g) || []).length;
 ok(openCount === closeCount && openCount >= 1, '$2 skill-index 围栏开/闭数相等(防悬空围栏,伪造中和防线前提) got ' + openCount + '/' + closeCount);
 // 04 Phase A "预算断言":每层预算的静态存在(技能 3000 字上限在 buildSkillsPromptSection)。
-const src = fs.readFileSync(SERVER, 'utf8');
-ok(/整段上限 3000 字符/.test(src) || /budget = 3000/.test(src), '$3 技能索引预算 3000 字上限在(buildSkillsPromptSection)');
+const providerTurn = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
+const { buildSkillsPromptSection } = require('../ruyi-workbench/app/backend/prompt-context.cjs');
+const manySkills = Array.from({ length: 40 }, (_, i) => ({
+  kind: 'skill', id: 'skill-' + i, dir: '/fixture', description: 'a'.repeat(160),
+}));
+const boundedSkills = buildSkillsPromptSection(manySkills, 'openai', config);
+ok(boundedSkills.length <= 3000 && boundedSkills.endsWith('</skill-index>') && boundedSkills.includes('skill-0') && !boundedSkills.includes('skill-39'),
+  '$3 技能索引超出 3000 字时截断条目并保留闭合围栏');
 
 console.log('── D 段: 51d C1a 稳定/易变层拆分(prefix-cache 分层基础) ──');
 // buildStableSystemPrompt 不含 volatile 标记(身份+工具协议+provider,逐字节稳定)
@@ -107,13 +113,13 @@ ok(volatile.length > 100 && volatile.length < 5000, 'D6 volatile 长度合理(go
 // 向后兼容:buildProviderSystemPrompt(包装) = stable + volatile(文本不变)
 ok(full.length >= stable.length + volatile.length - 5, 'D7 包装=stable+volatile(向后兼容,full ' + full.length + ' >= stable ' + stable.length + ' + volatile ' + volatile.length + ')');
 // C1b 请求装配:易变层用真实换行注入,且上下文治理预算必须包含 stable+volatile。
-ok(src.includes("turnVolatile + '\\n\\n'") && !src.includes("turnVolatile + '\\\\n\\\\n'"), 'D8 volatile 前缀使用真实换行,不向模型发送字面量 \\\\n');
+ok(providerTurn.includes("turnVolatile + '\\n\\n'") && !providerTurn.includes("turnVolatile + '\\\\n\\\\n'"), 'D8 volatile 前缀使用真实换行,不向模型发送字面量 \\\\n');
 ok(typeof srv.PROMPT_PACK_VERSION === 'string' && /^20\d\d-w\d+-\d+$/.test(srv.PROMPT_PACK_VERSION), 'D9 PROMPT_PACK_VERSION 语义化版本(52d, got ' + srv.PROMPT_PACK_VERSION + ')');
-ok(/let budgetPrompt = turnVolatile \? sys \+ '\\n\\n' \+ turnVolatile : sys;/.test(src), 'D9 可失效更新的上下文预算提示包含 stable+volatile');
+ok(/let budgetPrompt = turnVolatile \? sys \+ '\\n\\n' \+ turnVolatile : sys;/.test(providerTurn), 'D9 可失效更新的上下文预算提示包含 stable+volatile');
 // 走查 #9:随每条消息变化的记忆回执 + 相关索引改投末条 user 尾部,不再在 turnVolatile 里;它们仍要计预算,所以上下文治理的几处调用
 // 改用 budgetPromptFull(= budgetPrompt + 记忆回合尾部)。D10 的意图(自动压缩与 fallback 估算都用「完整」预算提示)不变,只是完整的含义多了这一段。
-ok(/maybeAutoCompact\(session, provider, budgetPromptFull,/.test(src) && /estimateHistoryTokens\(session\.providerHistory, budgetPromptFull\)/.test(src), 'D10 自动压缩与 fallback 估算均使用完整预算提示(含记忆回合尾部)');
-ok(/let budgetPromptFull = memoryTurnTail \? budgetPrompt \+ '\\n\\n' \+ memoryTurnTail : budgetPrompt;/.test(src), 'D10b 可失效更新的完整预算提示 = stable + volatile + 记忆回合尾部');
+ok(/maybeAutoCompact\(session, provider, budgetPromptFull,/.test(providerTurn) && /estimateHistoryTokens\(session\.providerHistory, budgetPromptFull\)/.test(providerTurn), 'D10 自动压缩与 fallback 估算均使用完整预算提示(含记忆回合尾部)');
+ok(/let budgetPromptFull = memoryTurnTail \? budgetPrompt \+ '\\n\\n' \+ memoryTurnTail : budgetPrompt;/.test(providerTurn), 'D10b 可失效更新的完整预算提示 = stable + volatile + 记忆回合尾部');
 // 108a 运行时身份层:产品名/版本/启动模式进 stable(自我认知),且必须逐字节稳定、identityOnly 不注入。
 // 108a-fix2: stable 层渲染文字必须跨进程恒定:address(随机端口)与 instanceId(每进程随机 OVERLAY_ID)
 // 会让 budget-guard.e2e.js 两个独立栈的请求体逐字节比对失败(E4/E30),故两项与 installDir/dataDir
@@ -182,9 +188,10 @@ const volatileNoSelfStatus = srv.buildVolatileParts(provider, [{ function: { nam
 ok(/workbench_self_status/.test(volatileSelfStatus), 'D18 108c volatile 含 workbench_self_status 时注入自查提示');
 ok(!/workbench_self_status/.test(volatileNoSelfStatus), 'D18b 108c 不含该工具时 volatile 无此提示');
 
-console.log('── E 段: 子代理任务漏斗上下文节流注入(2.2,唯一漏斗 09-workflow effectiveTask) ──');
-ok(/【上下文节流守则】/.test(src), 'E1 子代理任务漏斗含上下文节流守则(09 effectiveTask 注入,spawn/orchestrate 全路径)');
-ok(/reliabilityInstruction \+ throttlingInstruction \+ toolEvidenceInstruction/.test(src), 'E2 拼接顺序:可靠性约束 → 节流守则 → 工具证据(指令层级正确,节流紧随可靠性)');
+console.log('── E 段: 子代理任务的上下文节流 ──');
+const workflow = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/agent-workflow.cjs'), 'utf8');
+ok(/【上下文节流守则】/.test(workflow), 'E1 工作流通过 effectiveTask 注入上下文节流守则');
+ok(/reliabilityInstruction \+ throttlingInstruction \+ toolEvidenceInstruction/.test(workflow), 'E2 拼接顺序:可靠性约束 → 节流守则 → 工具证据(指令层级正确,节流紧随可靠性)');
 
 console.log('── S 段: 116f 管家包(只加) ──');
 // 116f: steward 段是【第二个包】,与普通包并存;它整段替换管家会话的提示词,绝不进普通会话。

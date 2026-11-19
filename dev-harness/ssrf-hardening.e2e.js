@@ -19,7 +19,7 @@ const HOME = path.join(os.tmpdir(), 'wcw-ssrf-hardening-e2e');
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
   process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
-  const mod = require(path.join(WB, 'app', 'server.js'));
+  const mod = require(path.join(WB, 'app', 'backend', 'network-policy.cjs'));
 
   const blocked = u => mod.ssrfCheck(u).allowed === false;
   const allowed = u => mod.ssrfCheck(u).allowed === true;

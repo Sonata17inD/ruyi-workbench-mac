@@ -105,17 +105,8 @@ export function createQuietCard({
   function currentSessionId() {
     return state && state.currentSession ? String(state.currentSession.id || '') : '';
   }
-  // 桌面壳（WebView2）的宿主桥：有就返回那个 webview 对象（postMessage 住在上面），没有就 null。
-  // 走查 S-09：修前桌面壳里 notificationPermission() 恒报 'granted'，可投递仍只用 new Notification(...)，而 WebView2 里
-  // Notification 的真实权限是 default —— 静默不显示；宿主（RuyiDesktop.cs OnWebMessage）等的是
-  // chrome.webview.postMessage({ ruyiNotification:{ title, body } })，前端却再没有任何一处发送方。
-  function desktopBridge() {
-    const bridge = globalThis.chrome && globalThis.chrome.webview;
-    return globalThis.__ruyiDesktop === 1 && bridge && typeof bridge.postMessage === 'function' ? bridge : null;
-  }
   function notificationPermission() {
     if (isMacHost()) return macNotificationPermission();
-    if (desktopBridge()) return 'granted';
     return notificationApi && typeof notificationApi.permission === 'string' ? notificationApi.permission : 'unsupported';
   }
 
@@ -320,12 +311,6 @@ export function createQuietCard({
     const title = String(row.missionTitle || row.title || t('quietCard.fallbackTitle'));
     const body = quietCardHeadline(entry.kind, entry.frame && entry.frame.ask);
     if (isMacHost()) { void sendHostNotification({ id: entry.key, title, body }).catch(() => {}); return; }
-    // 桌面壳走宿主托盘气泡（字段名对着 RuyiDesktop.cs 的解析：ruyiNotification.title／.body；id 宿主不读，带上方便对账）。
-    const bridge = desktopBridge();
-    if (bridge) {
-      try { bridge.postMessage({ ruyiNotification: { id: entry.key, title, body } }); } catch { /* 通知失败不影响卡片 */ }
-      return;
-    }
     if (typeof notificationApi !== 'function') return;
     try { new notificationApi(title, { body, tag: entry.key }); } catch { /* 通知失败不影响卡片 */ }
   }

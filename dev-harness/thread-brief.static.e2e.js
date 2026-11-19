@@ -6,13 +6,13 @@
 // 本件看住的是一条结构性约定,而不是某个行为 —— 行为由 thread-brief.e2e.js / session-search.e2e.js /
 // unit/steward-preroute.test.js 三件跑出来验:
 //
-//   ① 判据只有一处:`sessionDisplayTitle` 在 src/ 里只定义一次(02-session-store.js),
+//   ① 判据只有一处:`sessionDisplayTitle` 在生产模块里只定义一次(session-metadata.cjs),
 //      其余模块一律只【调用】。这条是 112 波摸底那个教训的直接产物(服务端发 54 种、前端认 34 种)——
 //      「哪个名字该显示」只要有第二个判定点,两个面迟早各说各话。
 //   ② 消费面各自读的是【服务端算好的结果】,不是自己拼:六个装配点必须都在。
 //   ③ public/ 下算这条判据的只有一处(经典壳的 session-experience.js,因为「未命名 → 本地化占位」
 //      那条规则依赖 t(),服务端不认识它);管家壳那一侧只读 displayTitle,不许再出现第二份判据。
-//   ④ 红线:摘要不改写 session.title。06-provider-engine 的摘要块只经 updateSessionMeta 写
+//   ④ 红线:摘要不改写 session.title。thread-brief.cjs 只经 updateSessionMeta 写
 //      threadBrief,绝不给 title 赋值。
 //   ⑤ 设置开关三件套齐(HTML 控件 + 填充 + 接线 + 中英两条文案),且默认开(判 `!== false` 而不是
 //      `=== true`),不随 stewardEnabledV1。
@@ -37,29 +37,28 @@ function ok(condition, label) {
   else { failures += 1; console.log('FAIL ' + label); }
 }
 
-const store = readSrc('02-session-store.js');
-const provider = readSrc('06-provider-engine.js');
-const core = readSrc('06i-steward-core.js');
-const config = readSrc('01-config.js');
-const domain = readSrc('13d-core-domain-routes.js');
-// 117 波 T1(32 号文 §2.1):13g 拆成 13j/13k/13l/13g 四个文件(纯搬家),steward_threads_search
-// 现在住 13k-steward-threads.js。这里要钉的事实是「threads_search 的结果带 brief」,与它住哪个
-// 文件无关,故改读整个 13g 族 —— 拆分再动一次也不会假红。
-const steward = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js']
-  .map(readSrc).join('\n');
-// 117 波 T2(32 号文 §5):13h 拆成 13m/13n/13o/13p/13q/13h 六个文件(纯搬家),总览行装配与
-// preroute 索引行都搬进了 13o-steward-runner-prompt.js。这里要钉的事实是「总览行带 displayTitle、
-// preroute 索引行的 title 仍是原话」,与它住哪个文件无关,故与上面 13g 族同办法 —— 改读整族。
-const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-steward-runner-prompt.js',
-  '13p-steward-runner-actions.js', '13q-steward-runner-turn.js', '13h-steward-runner.js']
+const store = readSrc('../backend/session-metadata.cjs');
+const backendSources = fs.readdirSync(path.join(SRC, '../backend')).filter(f => f.endsWith('.cjs')).map(f => '../backend/' + f);
+const serverSources = fs.readdirSync(SRC).filter(f => f.endsWith('.js')).concat(backendSources);
+const brief = readSrc('../backend/thread-brief.cjs');
+const core = readSrc('../backend/steward-core.cjs');
+const config = readSrc('../backend/config-schema.cjs');
+const search = readSrc('../backend/session-search.cjs');
+const sessionRoutes = readSrc('../backend/session-routes.cjs');
+const steward = readSrc('../backend/steward-thread-queries.cjs');
+// 总览行使用 displayTitle，预路由索引保留原始标题。
+const runner = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter.cjs', '13o-steward-runner-prompt.js',
+  '../backend/steward-thread-overview.cjs', '../backend/steward-preroute.cjs',
+  '13p-steward-runner-actions.js', '../backend/steward-conversation-replies.cjs', '../backend/steward-inbox-prompt.cjs',
+  '13q-steward-runner-turn.js', '13h-steward-runner.js']
   .map(readSrc).join('\n');
 
 /* ── ① 判据只有一处 ─────────────────────────────────────────────────────────── */
 {
-  const defs = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+  const defs = serverSources
     .filter(f => /function\s+sessionDisplayTitle\s*\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
-  ok(defs.length === 1 && defs[0] === '02-session-store.js',
-    `① sessionDisplayTitle 在 src/ 里只定义一次,且住 02-session-store.js(实得 ${JSON.stringify(defs)})`);
+  ok(defs.length === 1 && defs[0] === '../backend/session-metadata.cjs',
+    `① sessionDisplayTitle 在生产模块里只定义一次,且住 session-metadata.cjs(实得 ${JSON.stringify(defs)})`);
   ok(/if \(!o \|\| o\.titleSource === 'user'\) return raw;/.test(store),
     '① 优先级第一条:人起的名字压过一切(titleSource === \'user\' 直接回原话)');
   ok(/return generated \|\| raw;/.test(store),
@@ -72,9 +71,9 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
   ok(/return sessionFirstUserExcerpt\(o\) \|\| raw;/.test(store),
     '① 117l-A1-fix companion:第四档是首条用户消息的摘录,取不到仍旧回落原话(绝不返回空标题)');
   {
-    const excerptDefs = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
+    const excerptDefs = serverSources
       .filter(f => /function\s+sessionFirstUserExcerpt\s*\(/.test(fs.readFileSync(path.join(SRC, f), 'utf8')));
-    ok(excerptDefs.length === 1 && excerptDefs[0] === '02-session-store.js',
+    ok(excerptDefs.length === 1 && excerptDefs[0] === '../backend/session-metadata.cjs',
       `① 117l-A1-fix companion:摘录函数也只定义一次,且与判据住同一处(实得 ${JSON.stringify(excerptDefs)})`);
   }
   ok(/const rows = \(o && Array\.isArray\(o\.messages\)\) \? o\.messages : null;\s*\n\s*if \(!rows\) return '';/.test(store),
@@ -83,27 +82,27 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 
 /* ── ② 消费面六个装配点 ─────────────────────────────────────────────────────── */
 {
-  ok(/displayTitle: sessionDisplayTitle\(head\),/.test(domain),
-    '② 事项卡片(13d buildMissionCard)带 displayTitle —— 看板/抽屉/「现在这一件」读它');
-  ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(domain),
+  ok(/displayTitle: sessionDisplayTitle\(head\),/.test(readSrc('../backend/mission-card-projection.cjs')),
+    '② 事项投影卡片带 displayTitle —— 看板/抽屉/「现在这一件」读它');
+  ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(search),
     '② 113b 会话搜索结果带 briefTitle/briefGist');
   // 【117l 重钉】旧断言把 `displayTitle: sessionDisplayTitle(session) }));` 整段(含收尾的 `}));`)
   // 钉成了字面量 —— 它实际钉住的是「这个键在信封里,而且它正好是最后一个键」。后半句不是契约:
   // 117l D4 在同一个信封上追加了 liveTail(活回合的尾巴,只在真有活回合时出现)。改成只钉这个键本身,
   // 并补一条 companion 钉住新契约的另一半:liveTail 必须是【条件展开】,不能无条件出现在信封里
   // (无条件 = 空回合也下发一个空对象,抽屉就会把「它正在说」一直挂在那儿)。
-  ok(/displayTitle: sessionDisplayTitle\(session\)/.test(domain),
+  ok(/displayTitle: sessionDisplayTitle\(session\)/.test(sessionRoutes),
     '② GET /api/sessions/:id 的信封带 displayTitle(抽屉标题读它)');
-  ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(domain),
+  ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(sessionRoutes),
     '② 117l companion:liveTail 在同一个信封上【条件】展开(没有活回合时这个键不存在)');
   // 117l-A1-fix2:抽屉 isLive() 第一判据是 resumable.live === true,而【活回合】分支修前没有这个
   // 键,判据从没走通过。钉住活回合分支带 live:true,且悬挂检测(detectDanglingTurn)那一支原样不动
   // —— 只加了这一个键,没有顺手改别的。
   // (会话正文 perf:historyLength 改由 02 sessionProviderHistoryLength(session) 给出 —— 增量取的装载视图不读 provider
   //  正文,条数从它的记录来;完整会话上它就是 providerHistory.length。两种写法都认,live:true 这一条判据不变。)
-  ok(/\{ dangling: false, kind: null, turnSeq: Math\.max\(0, Number\(session\.turnSeq\) \|\| 0\), historyLength: (?:Array\.isArray\(session\.providerHistory\) \? session\.providerHistory\.length : 0|sessionProviderHistoryLength\(session\)), live: true \}/.test(domain),
+  ok(/\{ dangling: false, kind: null, turnSeq: Math\.max\(0, Number\(session\.turnSeq\) \|\| 0\), historyLength: (?:Array\.isArray\(session\.providerHistory\) \? session\.providerHistory\.length : 0|sessionProviderHistoryLength\(session\)), live: true \}/.test(sessionRoutes),
     '② 117l-A1-fix2:GET /api/sessions/:id 活回合分支的 resumable 带 live:true(抽屉 isLive() 靠它)');
-  ok(/: detectDanglingTurn\(session\);/.test(domain),
+  ok(/: detectDanglingTurn\(session\);/.test(sessionRoutes),
     '② 117l-A1-fix2 companion:非活回合分支仍是 detectDanglingTurn(session) 原样,没被顺手改动');
   ok(/\{ brief: sessionBriefOf\(head\) \|\| sessionBriefOf\(meta\) \}/.test(steward),
     '② steward_threads_search 结果带 brief');
@@ -152,11 +151,10 @@ const runner = ['13m-steward-runner-base.js', '13n-steward-arbiter.js', '13o-ste
 
 /* ── ④ 红线:摘要不改写 session.title ───────────────────────────────────────── */
 {
-  const block = provider.slice(provider.indexOf('function threadBriefEnabled'), provider.indexOf('function threadBriefOnce') + 4000);
-  ok(block.length > 1000, '④ 定位到了 06-provider-engine 的摘要块(锚点没漂)');
-  ok(!/\.title\s*=\s*/.test(block),
+  ok(brief.includes('async function threadBriefOnce('), '④ 定位到了标题生成服务');
+  ok(!/\.title\s*=\s*/.test(brief),
     '④ 红线:摘要块里没有任何给 title 赋值的语句(原话是权威,brief 只是【多】给的一个名字)');
-  ok(/updateSessionMeta\(sid, \{ threadBrief: brief \}\)/.test(block),
+  ok(/updateSessionMeta\(sid, \{ threadBrief: brief \}\)/.test(brief),
     '④ 落盘只经 updateSessionMeta 的白名单,写的只有 threadBrief');
 }
 

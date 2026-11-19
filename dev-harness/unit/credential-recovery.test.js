@@ -1,7 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { fixture, clone } = require('../lib/privacy-test-fixture');
-const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
+const crypto = require('node:crypto'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const { createServerStartNotices } = require('../../ruyi-workbench/app/backend/server-start-notices.cjs');
+const { createOwnedServerStartup } = require('../../ruyi-workbench/app/backend/server-startup.cjs');
+const { createWorkbenchCli } = require('../../ruyi-workbench/app/backend/integration-commands.cjs');
 function setup() {
   const f = fixture(); let disk, journal, busy = false, fault = '', invalidations = 0; const notifications = [];
   const original = { credentialEncryptionV1: true, defaultWorkspace: 'KEEP-WORKSPACE', privacyModeV1: 'enhanced', providers: [{ id: 'same', apiKey: 'old-test-key', baseUrl: 'https://old.test' }, { id: 'keep', apiKey: 'kept-test-key', baseUrl: 'https://keep.test' }] };
@@ -156,42 +159,47 @@ test('an unavailable old wrapping key cannot mutate the old profile; the portabl
 });
 
 test('CLI startup prints fresh-profile recovery guidance only for a locked credential vault', async () => {
-  const f = fixture(), { bracedBlock } = require('../lib/source-slice');
-  const mainSource = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/14-main.js'), 'utf8');
-  const directCli = bracedBlock(mainSource, 'if (require.main === module)'); assert.ok(directCli);
+  const f = fixture();
   const startupGuidance = f.CredentialRecovery.startupGuidance;
-  const guidance = startupGuidance({ code: 'credential_vault.unlock_failed', message: 'MUST-NOT-SHOW-PRIVATE-DETAIL' }, 'win32');
-  for (const phrase of ['保留原数据目录', '不要删除密钥或覆盖旧库', 'RUYI_HOME', '独立、全新的空目录', 'Start-Workbench.cmd', '先预览再确认导入', '不恢复旧聊天']) assert.ok(guidance.includes(phrase), phrase);
+  const guidance = startupGuidance({ code: 'credential_vault.unlock_failed', message: 'MUST-NOT-SHOW-PRIVATE-DETAIL' });
+  for (const phrase of ['保留原数据目录', '不要删除密钥或覆盖旧库', 'RUYI_HOME', '独立、全新的空目录', 'Mac 启动方式', '先预览再确认导入', '不恢复旧聊天']) assert.ok(guidance.includes(phrase), phrase);
   assert.equal(guidance.includes('MUST-NOT-SHOW-PRIVATE-DETAIL'), false);
   const mac = startupGuidance({ code: 'credential_vault.provider_mismatch' }, 'darwin');
   assert.ok(mac.includes('钥匙串') && mac.includes('口令') && mac.includes('RUYI_HOME') && !mac.includes('Start-Workbench.cmd'));
   assert.ok(startupGuidance({ code: 'credential_vault.keychain_locked' }, 'darwin').includes('已解锁'));
   for (const code of ['credential_vault.backup_authentication', 'credential_vault.backup_password', 'credential_vault.unsupported', 'EACCES']) assert.equal(startupGuidance({ code }), '');
   for (const code of ['credential_vault.unlock_failed', 'credential_vault.backup_authentication', 'EACCES']) {
-    const error = Object.assign(new Error('synthetic ' + code), { code }), lines = [], exits = [], entryModule = {};
-    vm.runInNewContext(directCli, { module: entryModule, require: { main: entryModule }, main: async () => { throw error; },
-      PrivacyCore: { configHooks: { startupGuidance } }, console: { error: value => lines.push(value) }, process: { exit: value => exits.push(value) } });
-    await new Promise(setImmediate);
+    const error = Object.assign(new Error('synthetic ' + code), { code }), lines = [], exits = [];
+    const run = createWorkbenchCli({
+      process: { argv: ['node', 'server.js', 'serve'], exit: value => exits.push(value) },
+      console: { error: value => lines.push(value) }, parseArgs: argv => ({ _: argv }),
+      startServer: async () => { throw error; }, startupGuidance,
+    });
+    await run();
     assert.deepEqual(exits, [1]); assert.equal(lines.length, 1);
     assert.equal(lines[0], code === 'credential_vault.unlock_failed' ? startupGuidance(error) : error.stack);
   }
 });
 
-test('startup diagnostic retains its schema, size limit and original error while exposing safe locked-vault guidance', async () => {
-  const f = fixture(), { functionBlock } = require('../lib/source-slice');
-  const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13-http-router.js'), 'utf8');
-  const functions = ['startServer', 'writeStartError', 'startErrorNextText'].map(name => { const code = functionBlock(source, name); assert.ok(code, name); return code; }).join('\n');
+test('startup diagnostic retains its schema, size limit and original error while exposing safe locked-vault guidance', async t => {
+  const f = fixture();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-start-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const paths = { data: path.join(root, 'synthetic-data') };
   for (const code of ['credential_vault.unlock_failed', 'credential_vault.backup_authentication', 'EIO']) {
     const error = Object.assign(new Error(code === 'EIO' ? 'x'.repeat(1600) : 'synthetic failure'), { code }), records = [];
     let finished = 0;
-    const start = vm.runInNewContext(functions + '\nstartServer', {
-      PrivacyCore: { configHooks: { startupGuidance: f.CredentialRecovery.startupGuidance } },
-      paths: { data: 'synthetic-data' }, path, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
+    const DesktopExecutionHooks = { initialize: async () => {}, canWriteStartupError: () => true };
+    const { writeStartError } = createServerStartNotices({
+      paths, DesktopExecutionHooks, atomicWriteJson: async (_file, value) => records.push(value),
+      nowIso: () => '2026-10-20T00:00:00.000Z',
+    });
+    const start = createOwnedServerStartup({
+      startupGuidance: f.CredentialRecovery.startupGuidance,
+      paths, process, resolveBindHost: () => '127.0.0.1', defaultDataRoots: () => ({ legacy: 'synthetic-old', next: 'synthetic-new' }),
       lstatOrNull: () => null, isDirectServeInvocation: () => false, ServerOwnership: { acquire: async () => ({ portable: false, releaseStartup: async () => {} }) },
       startServerInner: async () => { throw error; }, finishBootCliPathProbes: () => { finished++; },
-      DesktopExecutionHooks: { initialize: async () => {}, canWriteStartupError: () => true },
-      START_ERROR_KINDS: ['port-unavailable', 'data-dir-unwritable', 'startup-failed'], LAST_START_ERROR_FILE: 'last-start-error.json',
-      fsp: { mkdir: async () => {} }, atomicWriteJson: async (_file, value) => records.push(value), nowIso: () => '2026-10-20T00:00:00.000Z',
+      DesktopExecutionHooks, writeStartError,
     });
     await assert.rejects(() => start({}), caught => caught === error && caught.code === code);
     assert.equal(finished, 1); assert.equal(records.length, 1);
@@ -202,20 +210,20 @@ test('startup diagnostic retains its schema, size limit and original error while
   }
 });
 
-test('startup diagnostic checks actual authority before mkdir and again before writing', async () => {
-  const { functionBlock } = require('../lib/source-slice');
-  const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13-http-router.js'), 'utf8');
-  const code = functionBlock(source, 'writeStartError');
+test('startup diagnostic checks actual authority before mkdir and again before writing', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-start-authority-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   for (const loseAt of ['before', 'after-mkdir', 'never']) {
-    let allowed = loseAt !== 'before', mkdir = 0, writes = 0;
-    const write = vm.runInNewContext(code + '\nwriteStartError', {
-      DesktopExecutionHooks: { canWriteStartupError: () => allowed }, START_ERROR_KINDS: ['startup-failed'],
-      paths: { data: 'synthetic-data' }, path, LAST_START_ERROR_FILE: 'last-start-error.json', nowIso: () => 'test', startErrorNextText: () => 'test',
-      fsp: { mkdir: async () => { mkdir++; if (loseAt === 'after-mkdir') allowed = false; } },
-      atomicWriteJson: async () => { writes++; },
+    let writes = 0;
+    const data = path.join(root, loseAt);
+    const { writeStartError } = createServerStartNotices({
+      DesktopExecutionHooks: {
+        canWriteStartupError: () => loseAt !== 'before' && (loseAt !== 'after-mkdir' || !fs.existsSync(data)),
+      },
+      paths: { data }, nowIso: () => 'test', atomicWriteJson: async () => { writes++; },
     });
-    await write('startup-failed', 'synthetic');
-    assert.equal(mkdir, loseAt === 'before' ? 0 : 1, loseAt);
+    await writeStartError('startup-failed', 'synthetic');
+    assert.equal(fs.existsSync(data), loseAt !== 'before', loseAt);
     assert.equal(writes, loseAt === 'never' ? 1 : 0, loseAt);
   }
 });

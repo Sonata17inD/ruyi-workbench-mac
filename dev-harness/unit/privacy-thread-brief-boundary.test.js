@@ -1,27 +1,36 @@
 'use strict';
-// Actual threadBriefOnce -> providerRawCompletion -> providerPostJsonOnce boundary.
-// Only persistence metadata and fetch responses are synthetic; no listener/model/CLI/DPAPI process.
-const { test, after } = require('node:test');
+// Exercise the title service through the real auxiliary completion and provider POST boundary.
+const { test, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const { createProviderHttp } = require('../../ruyi-workbench/app/backend/provider-http.cjs');
+const { createThreadBriefService, buildThreadBriefMessages, THREAD_BRIEF_INPUT_CHARS: inputCap, THREAD_BRIEF_REPLY_CHARS: replyCap } =
+  require('../../ruyi-workbench/app/backend/thread-brief.cjs');
 const tempBase = path.resolve(os.tmpdir()), root = fs.mkdtempSync(path.join(tempBase, 'ruyi-thread-brief-boundary-'));
 const data = path.join(root, 'data'); fs.mkdirSync(data);
 Object.assign(process.env, require('../lib/release-checks').releaseEnvironment(path.join(root, 'home'), data));
-const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'threadBriefOnce', 'buildThreadBriefMessages', 'providerPostJsonOnce', 'THREAD_BRIEF_INPUT_CHARS', 'THREAD_BRIEF_REPLY_CHARS'], { withEval: true });
+const app = require('../lib/server-internals').loadServerInternals(['PrivacyGateway', 'PrivacyCore', 'providerRawCompletion', 'safeSessionId', 'nowIso']);
 const f = require('../lib/privacy-test-fixture').fixture();
 let seals = 0, opens = 0, workerStarts = 0, serial = 0;
 app.PrivacyCore.configHooks.sealLocal = (...args) => { seals++; return f.vault.sealLocal(...args); };
 app.PrivacyCore.configHooks.openLocal = (...args) => { opens++; return f.vault.openLocal(...args); };
 const threads = require('node:worker_threads'), OriginalWorker = threads.Worker;
 threads.Worker = class extends OriginalWorker { constructor(...args) { workerStarts++; super(...args); } };
-const state = app.__eval(`(() => {
-  const state = { gate: null, writes: [], logs: [] };
-  loadSession = async id => { if (state.gate) await state.gate(); return { id, kind: 'quick_ask', title: 'New session', rewindGen: 0, turnSeq: 1 }; };
-  updateSessionMeta = async (id, patch) => { state.writes.push({ id, patch }); return { ok: true }; };
-  threadBriefRateLimited = () => false;
-  logEvent = event => { state.logs.push({ kind: event.kind, error: event.error }); };
-  return state;
-})()`);
+const state = { gate: null };
+let briefService;
+beforeEach(() => {
+  briefService = createThreadBriefService({
+    safeSessionId: app.safeSessionId, nowIso: app.nowIso,
+    PrivacyGateway: app.PrivacyGateway, providerRawCompletion: app.providerRawCompletion,
+    loadSession: async id => {
+      if (state.gate) await state.gate();
+      return { id, kind: 'quick_ask', title: 'New session', rewindGen: 0, turnSeq: 1 };
+    },
+    updateSessionMeta: async () => {},
+    getSessionTitleOverride: () => null, setSessionTitleOverride: () => {},
+    RUYI_EVENTS: { emit() {} }, appendUsageLedger() {}, logEvent() {},
+  });
+});
 const captured = [], savedFetch = global.fetch;
 global.fetch = async (url, options) => {
   const body = JSON.parse(options.body); captured.push({ url, body });
@@ -32,7 +41,6 @@ global.fetch = async (url, options) => {
     : { choices: [{ message: { content: text } }] };
   return { ok: true, status: 200, text: async () => JSON.stringify(payload) };
 };
-const inputCap = app.THREAD_BRIEF_INPUT_CHARS, replyCap = app.THREAD_BRIEF_REPLY_CHARS;
 const provider = style => ({ id: 'synthetic-' + style, type: 'openai-compat', apiStyle: style, baseUrl: 'https://fixture.invalid/v1',
   model: 'synthetic-model', apiKey: '', anthropicThinking: 'off', serverWebSearch: false });
 const policy = (mode = 'basic', rules = []) => ({ privacyModeV1: mode, privacyTechnicalV1: false, privacyRulesV1: rules, providers: [], stewardThreadBriefV1: true, locale: 'en-US' });
@@ -40,7 +48,8 @@ const key = 'sk-SYNTHETIC-BRIEF-BOUNDARY-' + 'K'.repeat(24);
 const idPrefix = '11010120000101001', weights = [7,9,10,5,8,4,2,1,6,3,7,9,10,5,8,4,2];
 const identity = idPrefix + '10X98765432'[weights.reduce((sum, weight, i) => sum + weight * Number(idPrefix[i]), 0) % 11];
 const sid = () => 'sess_brief_boundary_' + (++serial);
-const invoke = (id, config, style, message, replyText = '') => app.threadBriefOnce({ sessionId: id, config, threadProvider: provider(style), stage: 'first_turn', message, replyText }, id);
+const invoke = (id, config, style, message, replyText = '') =>
+  briefService.maybeWriteThreadBrief({ sessionId: id, config, threadProvider: provider(style), stage: 'first_turn', message, replyText });
 const wire = from => JSON.stringify(captured.slice(from).map(row => row.body));
 after(() => {
   global.fetch = savedFetch; threads.Worker = OriginalWorker; f.vault.clear();
@@ -76,7 +85,7 @@ test('full structured field context survives title clipping and protected excerp
   // owns the cap; applying the old slice again would split the final opaque token.
   const ref = '[[RUYI_PVT:EMAIL:' + 'a'.repeat(32) + ']]';
   const excerpt = 'p'.repeat(inputCap - 5) + ref;
-  const messages = app.buildThreadBriefMessages('unused original', '', 'en-US', { message: excerpt, reply: '' });
+  const messages = buildThreadBriefMessages('unused original', '', 'en-US', { message: excerpt, reply: '' });
   assert.ok(JSON.stringify(messages).includes(ref));
 });
 
@@ -144,24 +153,26 @@ test('ordinary off title preserves original 1200 and 400 caps without scope stat
 });
 
 test('actual provider POST rechecks policy after boundary resolution and before fetch', async () => {
-  const vm = require('node:vm');
   for (const initial of [policy('off'), policy('basic')]) {
     const gateway = app.PrivacyGateway; gateway.configure(initial);
     let boundaryResolved = 0, fetches = 0;
     // The real boundary finishes first. Resolving this thenable queues the caller's
     // await continuation; change policy synchronously before that continuation runs.
     // Without the POST caller's post-await assert, its actual fetch is now reachable.
-    const post = vm.runInNewContext('(' + app.providerPostJsonOnce.toString() + ')', {
-      AbortController, setTimeout, clearTimeout,
+    const { providerPostJsonOnce: post } = createProviderHttp({
       PrivacyGateway: { ...gateway, beforeModelRequest: body => ({ then(resolve, reject) {
         gateway.beforeModelRequest(body).then(prepared => {
           boundaryResolved++; resolve(prepared); gateway.configure(policy('enhanced'));
         }, reject);
       } }) },
-      fetch: async () => { fetches++; throw Error('stale policy reached fetch'); },
     });
-    const result = await gateway.withPolicy(sid(), () => post({ url: 'https://fixture.invalid/v1/chat/completions', headers: {},
-      body: { messages: [{ role: 'user', content: 'Synthetic public request.' }] }, timeoutMs: 1000 }));
+    const fixtureFetch = global.fetch;
+    global.fetch = async () => { fetches++; throw Error('stale policy reached fetch'); };
+    let result;
+    try {
+      result = await gateway.withPolicy(sid(), () => post({ url: 'https://fixture.invalid/v1/chat/completions', headers: {},
+        body: { messages: [{ role: 'user', content: 'Synthetic public request.' }] }, timeoutMs: 1000 }));
+    } finally { global.fetch = fixtureFetch; }
     assert.equal(boundaryResolved, 1); assert.equal(fetches, 0);
     assert.equal(result.threw, true); assert.equal(result.error.code, 'privacy.policy_changed');
   }

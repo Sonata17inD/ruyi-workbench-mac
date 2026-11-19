@@ -1,12 +1,12 @@
 'use strict';
-const {test,after}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),vm=require('node:vm');
-const {constBlock,functionBlock}=require('../lib/source-slice');
-const guard=fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src/03-bridge-guard.js'),'utf8');
-const tools=fs.readFileSync(path.resolve(__dirname,'../../ruyi-workbench/app/src/11-native-tools.js'),'utf8');
+const {test,after}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const { createSensitivePaths } = require('../../ruyi-workbench/app/backend/sensitive-paths.cjs');
+const { createWorkspaceWriteProtection } = require('../../ruyi-workbench/app/backend/workspace-write-protection.cjs');
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'ruyi-bot-vault-guards-'));const data=path.join(root,'data'),alias=path.join(root,'legacy');fs.mkdirSync(data);
 after(()=>fs.rmSync(root,{recursive:true,force:true}));
-const context=vm.createContext({process,fs,fsp:fs.promises,path,dataRoot:()=>data,dataRootAliases:()=>[alias],_dataRootReal:data});
-vm.runInContext([functionBlock(guard,'macPathAnchor'),functionBlock(guard,'sameFileIdentity'),functionBlock(guard,'macAnchorIgnoresAsciiCase'),functionBlock(guard,'pathWithinRoot'),functionBlock(guard,'isSensitiveDataPath'),constBlock(guard,'WRITE_PROTECTED_DATA_DIRS'),constBlock(guard,'WRITE_PROTECTED_DATA_FILES'),functionBlock(guard,'isWriteProtectedDataPath'),constBlock(guard,'SENSITIVE_HARDLINK_FILES'),functionBlock(guard,'sensitiveFileIdentities'),functionBlock(guard,'isSensitiveHardlinkStat'),functionBlock(tools,'sensitiveGlobsForRg')].join('\n'),context);
+const sensitivePaths = createSensitivePaths({ dataRoot: () => data, dataRootAliases: () => [alias] });
+const { isWriteProtectedDataPath } = createWorkspaceWriteProtection(sensitivePaths);
+const context = { ...sensitivePaths, isWriteProtectedDataPath };
 test('vault and atomic-temp family are equally read/write sensitive through the current root, legacy alias and NTFS suffixes',()=>{
  for(const base of [data,alias])for(const name of ['credential-vault-v1.json','credential-vault-v1.json.123.random.tmp','credential-vault-v1.json::$DATA','external-bot-credentials.json','external-bot-credentials.json.123.random.tmp','external-bot-credentials.json::$DATA','external-bot-credentials.json.','external-bots/state-v1.json','external-bots/state-v1.json.123.random.tmp']){
   const file=path.join(base,name);assert.equal(context.isSensitiveDataPath(file),true,file);assert.equal(context.isWriteProtectedDataPath(file),true,file);
@@ -23,4 +23,12 @@ test('vault and pending-temp hardlinks cannot evade the existing inode gate; unr
  const cv=path.join(data,'credential-vault-v1.json'),cl=path.join(root,'credential-hardlink');fs.writeFileSync(cv,'synthetic encrypted envelope');fs.linkSync(cv,cl);
  const identities=await context.sensitiveFileIdentities();assert.equal(await context.isSensitiveHardlinkStat(await fs.promises.stat(cl,{bigint:true}),identities),true);assert.equal(await context.isSensitiveHardlinkStat(await fs.promises.stat(a,{bigint:true}),identities),true);assert.equal(await context.isSensitiveHardlinkStat(await fs.promises.stat(b,{bigint:true}),identities),true);assert.equal(await context.isSensitiveHardlinkStat(await fs.promises.stat(ordinaryLink,{bigint:true}),identities),false);
  const botDir=path.join(data,'external-bots');fs.mkdirSync(botDir);for(const name of ['state-v1.json','state-v1.json.123.random.tmp']){const source=path.join(botDir,name),link=path.join(root,'hard-'+name);fs.writeFileSync(source,'owner authorization');fs.linkSync(source,link);assert.equal(await context.isSensitiveHardlinkStat(await fs.promises.stat(link,{bigint:true}),await context.sensitiveFileIdentities()),true);}
+});
+
+test('credential migration backups are excluded when searching either the parent or data root', () => {
+ const file = path.join(data, 'credential-import-v1.json.backup');
+ assert.equal(context.isSensitiveDataPath(file), true);
+ assert.ok(context.sensitiveGlobsForRg(root).includes('!/data/credential-import-v1.json*'));
+ assert.ok(context.sensitiveGlobsForRg(data).includes('!/credential-import-v1.json*'));
+ assert.ok(context.sensitiveGlobsForRg(root).includes('!/legacy/credential-import-v1.json*'));
 });

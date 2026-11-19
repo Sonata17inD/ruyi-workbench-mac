@@ -74,7 +74,7 @@ const fake = await startFakeProvider({
         return textFrames('done');
       case 'SKL':
         if (step === 0) return toolCallFrames('skill_list', {}, 's1');
-        if (step === 1) return toolCallFrames('skill_read', { id: 'windows-control' }, 's2');
+        if (step === 1) return toolCallFrames('skill_read', { id: 'browser-debug' }, 's2');
         if (step === 2) return toolCallFrames('skill_read', { id: 'api-debugger' }, 's3');
         return textFrames('done');
       case 'SRCH':
@@ -91,7 +91,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   configSchema: 4, version: '1.0.0', permissionMode: 'bypass', defaultWorkspace: WS, toolLoadingMode: 'auto',
   autoImportClaudeCodeMcp: false, enableMcpDropIn: false,
   desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
-  residentSkills: [{ id: 'windows-control', source: 'builtin' }],
+  residentSkills: [{ id: 'browser-debug', source: 'builtin' }],
   providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'F' }] }],
   activeProvider: 'fake',
 }));
@@ -180,10 +180,10 @@ try {
     'K1 有启用技能且说到技能:skill_list / playbook_* 随 skills 包到位,skill_read 照旧在(语义不变)');
   const kres = parseJson(toolMsg(kreqs[1], 's1'));
   const byId = Object.fromEntries(((kres && kres.skills) || []).map(s => [s.id, s]));
-  ok(kres && kres.ok === true && kres.total >= 20 && byId['windows-control'] && byId['windows-control'].source === 'builtin' && byId['api-debugger'],
+  ok(kres && kres.ok === true && kres.total >= 19 && byId['browser-debug'] && byId['browser-debug'].source === 'builtin' && byId['api-debugger'],
     `K2 skill_list 列出内置技能(got total=${kres && kres.total},ids=${Object.keys(byId).slice(0, 5).join(',')})`);
-  ok(byId['windows-control'] && byId['windows-control'].enabled === true && byId['api-debugger'] && byId['api-debugger'].enabled === false && kres.skills[0].id === 'windows-control' && kres.enabledCount === 1,
-    'K3 enabled 与会话启用一致(resident 的 windows-control = true,其余 false,已启用排最前)');
+  ok(byId['browser-debug'] && byId['browser-debug'].enabled === true && byId['api-debugger'] && byId['api-debugger'].enabled === false && kres.skills[0].id === 'browser-debug' && kres.enabledCount === 1,
+    'K3 enabled 与会话启用一致(resident 的 browser-debug = true,其余 false,已启用排最前)');
   ok(!/"dir"/.test(toolMsg(kreqs[1], 's1')) && !toolMsg(kreqs[1], 's1').includes(WB.replace(/\\/g, '\\\\')), 'K4 不泄漏技能目录路径');
   const s2 = parseJson(toolMsg(kreqs[2], 's2'));
   const s3 = parseJson(toolMsg(kreqs[3], 's3'));

@@ -5,14 +5,7 @@
 // 那件 e2e 在本机测不到,这里直接钉纯函数。
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
-
-const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-unit-compaction-digest-'));
-process.env.RUYI_HOME = home;
-const { loadServerInternals } = require('../lib/server-internals');
-const { compactionToolArgsDigest } = loadServerInternals(['compactionToolArgsDigest']);
+const { compactionToolArgsDigest } = require('../../ruyi-workbench/app/backend/compaction-plan.cjs');
 
 const LONG_WIN = 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\ruyi-e2e-home-gVpc2o\\ruyi-provider-compact-recall\\ws\\big1.txt';
 

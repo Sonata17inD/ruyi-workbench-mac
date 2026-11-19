@@ -6,14 +6,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
-const { constBlock, functionBlock } = require('../lib/source-slice');
-const readSource = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-const source = constBlock(readSource('01-config.js'), 'DurableJsonStore') + '\n' + functionBlock(readSource('00-boot.js'), 'runKeyedChain')
-  + '\n' + readSource('01j-local-crypto.js') + '\n' + readSource('13y-external-bot-credentials.js') + '\nExternalBotCredentials';
 const plain = value => JSON.parse(JSON.stringify(value));
 const connection = (patch = {}) => ({ id: 'bot_one', platform: 'qq', appId: 'app_one', tenantId: 'app_one', botUserId: '', enabled: false, ...patch });
 const coded = suffix => error => error.code === 'external_credentials.' + suffix && Number.isInteger(error.statusCode) && error.message === error.code;
-function fixture({ platform = 'win32' } = {}) {
+function fixture({ platform = 'darwin' } = {}) {
   let disk, writes = 0, children = 0, writeError = false, readError = false, mode = '';
   const key = crypto.randomBytes(32), calls = [], env = { SystemRoot: 'C:\\Windows', RUYI_BOT_UNRELATED: 'not-for-child', PSModulePath: 'C:\\third-party-modules' };
   const missing = () => Object.assign(new Error('missing'), { code: 'ENOENT' });
@@ -23,41 +19,36 @@ function fixture({ platform = 'win32' } = {}) {
     if (mode === 'spawn') throw new Error('must-not-leak-provider-secret');
     const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stdin = new EventEmitter(); child.kill = () => {};
     child.stdin.end = input => {
-      const lines = input.split('\n');
-      assert.equal(lines.length, 4); assert.equal(lines[3], '');
-      const request = { op: lines[0], value: lines[1], entropy: lines[2] }; calls.at(-1).input = request;
+      const request = JSON.parse(input); calls.at(-1).input = request;
+      assert.equal(request.version, 1);
+      assert.ok(['get', 'get-or-create'].includes(request.op));
       if (mode === 'timeout') return;
       setImmediate(() => {
         if (mode === 'capacity') { child.stdout.emit('data', Buffer.alloc(131073)); child.emit('close', 0); return; }
         if (mode === 'malformed') { child.stdout.emit('data', Buffer.from('must-not-leak-provider-secret')); child.emit('close', 0); return; }
         if (mode === 'utf8') { child.stdout.emit('data', Buffer.from([0xff])); child.emit('close', 0); return; }
         if (mode === 'error') { child.emit('error', new Error('must-not-leak-provider-secret')); child.emit('close', 1); return; }
-        let output, ok = mode !== 'exit';
-        try {
-          const bytes = Buffer.from(request.value, 'base64'), entropy = Buffer.from(request.entropy, 'base64');
-          if (request.op === 'protect') {
-            const nonce = crypto.randomBytes(12), cipher = crypto.createCipheriv('aes-256-gcm', key, nonce); cipher.setAAD(entropy);
-            output = Buffer.concat([nonce, cipher.update(bytes), cipher.final(), cipher.getAuthTag()]);
-          } else {
-            const decipher = crypto.createDecipheriv('aes-256-gcm', key, bytes.subarray(0, 12));
-            decipher.setAAD(entropy); decipher.setAuthTag(bytes.subarray(-16));
-            output = Buffer.concat([decipher.update(bytes.subarray(12, -16)), decipher.final()]);
-          }
-        } catch { ok = false; }
-        child.stdout.emit('data', Buffer.from(JSON.stringify(ok ? { ok: true, value: output.toString('base64') } : { ok: false })));
+        const ok = mode !== 'exit';
+        child.stdout.emit('data', Buffer.from(JSON.stringify(ok ? { ok: true, value: key.toString('base64') } : { ok: false })));
         child.emit('close', ok ? 0 : 1);
       });
     };
     return child;
   }
-  const context = { Buffer, TextDecoder, crypto, path,
+  const context = { Buffer, TextDecoder, crypto, path, __dirname: "/fixture/app",
     process: { platform, env }, require: name => { if (name === 'node:path') return path; if (name === 'node:crypto') return crypto; assert.equal(name, 'node:child_process'); return { spawn }; },
     fs: { readFileSync: raw, copyFileSync() { throw new Error('must not quarantine credential ciphertext'); } },
     fsp: { readFile: async () => raw(), stat: async () => ({ size: Buffer.byteLength(raw()) }), mkdir: async () => {} },
     paths: { data: '/isolated' }, atomicWriteJson: async (_file, value) => { writes++; if (writeError) throw new Error('write failed'); disk = JSON.stringify(value); },
     setTimeout: (fn, ms) => setTimeout(fn, mode === 'timeout' ? 1 : ms), clearTimeout,
   };
-  const api = vm.runInNewContext(source, context);
+  const owned = { ...context, module: { exports: {} } };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/backend/local-crypto.cjs'), 'utf8'), owned);
+  context.LocalSecretCrypto = owned.module.exports.createLocalSecretCrypto({
+    process: context.process, hooks: { helperPath: () => '/fixture/runtime/macos/ruyi-keychain-helper' },
+  });
+  context.DurableJsonStore = require('../../ruyi-workbench/app/backend/durable-json-store.cjs').createDurableJsonStore(context);
+  const api = require('../../ruyi-workbench/app/backend/external-bot-credentials.cjs').createExternalBotCredentials(context);
   return { api, env, calls, counts: () => ({ writes, children }), disk: () => disk, setDisk: value => { disk = value; },
     mode: value => { mode = value; }, writeError: value => { writeError = value; }, readError: value => { readError = value; } };
 }
@@ -80,12 +71,11 @@ test('local credentials are encrypted/bound, public inspection omits values, and
   assert.equal((await f.api.read(conn)).botSecret, value);
   for (const call of f.calls) {
     assert.ok(!JSON.stringify(call.args).includes(value)); assert.ok(!JSON.stringify(call.options.env).includes(value));
-    assert.equal(call.options.env.RUYI_BOT_UNRELATED, undefined); assert.equal(call.options.windowsHide, true);
-    assert.equal(call.options.env.PSModulePath, path.join(path.dirname(call.executable), 'Modules'));
+    assert.deepEqual(plain(call.options.env), {});
     assert.deepEqual(plain(call.options.stdio), ['pipe', 'pipe', 'ignore']);
-    assert.match(Buffer.from(call.args.at(-1), 'base64').toString('utf16le'), /DataProtectionScope\]::CurrentUser/);
-    assert.doesNotMatch(Buffer.from(call.args.at(-1), 'base64').toString('utf16le'), /Add-Type|New-Object|ConvertFrom-Json/);
-    assert.equal(call.executable, path.join('C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'));
+    assert.deepEqual(plain(call.args), []);
+    assert.equal(call.executable, '/fixture/runtime/macos/ruyi-keychain-helper');
+
   }
 });
 test('explicit env selection takes precedence; absent/invalid env never falls back to a saved local value', async () => {
@@ -136,11 +126,11 @@ test('unreadable ciphertext retains public revision/presence for explicit comple
   const status = await f.api.inspect(conn);
   for (const slot of Object.keys(values)) {
     assert.equal(status.fields[slot].present, true); assert.equal(status.fields[slot].ready, false);
-    assert.equal(status.fields[slot].errorCode, 'external_credentials.decrypt_failed');
+    assert.equal(status.fields[slot].errorCode, 'external_credentials.provider_mismatch');
   }
   assert.equal(status.values, undefined);
-  await assert.rejects(f.api.snapshot(conn), coded('decrypt_failed'));
-  await assert.rejects(f.api.save(conn, { set: { appSecret: 'new-only' }, expectedRevision: status.credentialRevision }), coded('decrypt_failed'));
+  await assert.rejects(f.api.snapshot(conn), coded('provider_mismatch'));
+  await assert.rejects(f.api.save(conn, { set: { appSecret: 'new-only' }, expectedRevision: status.credentialRevision }), coded('provider_mismatch'));
   await assert.rejects(f.api.save(conn, { set: { appSecret: 'new-only' }, replaceAll: true, expectedRevision: status.credentialRevision }), coded('patch_invalid'));
   const recovered = await f.api.save(conn, { set: values, replaceAll: true, expectedRevision: status.credentialRevision });
   assert.notEqual(recovered.credentialRevision, status.credentialRevision);

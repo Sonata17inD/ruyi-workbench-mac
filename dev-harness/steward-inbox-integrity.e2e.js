@@ -166,9 +166,10 @@ try {
     ok(spread(12000, undefined)[0].count === 3, 'B7b 并成的那一条 count=3(既有「同类 N 条」文案原样复用,不新起措辞)');
     ok(spread(20000, undefined).length === 2, 'B8 距【本组首条】超过 30s 的照样另起一组(窗口是 30s,不是无限攒批)');
     ok(spread(12000, 5000).length === 3, 'B8b 显式传 5000 时仍旧是三条 —— 变的只有缺省常量,函数本身的语义一字未动');
-    const src13i = fs.readFileSync(path.join(WB, 'app', 'src', '13i-steward-inbox.js'), 'utf8');
-    ok(/const STEWARD_MERGE_WINDOW_MS = 30000;/.test(src13i), 'B9 源码常量就是 30000(缺省值的唯一来源,防止有人只改注释)');
-    ok(/stewardMergeInboxEvents\(head, STEWARD_MERGE_WINDOW_MS\)/.test(src13i), 'B9b stewardTickOnce 用的正是这个常量(没有第二个写死的窗口)');
+    const inboxSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox.cjs'), 'utf8');
+    const eventSource = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-inbox-events.cjs'), 'utf8');
+    ok(/const STEWARD_MERGE_WINDOW_MS = 30000;/.test(eventSource), 'B9 源码常量就是 30000(缺省值的唯一来源,防止有人只改注释)');
+    ok(/stewardMergeInboxEvents\(head, STEWARD_MERGE_WINDOW_MS\)/.test(inboxSource), 'B9b stewardTickOnce 用的正是这个常量(没有第二个写死的窗口)');
   }
 } finally {
   try { srv.stopStewardInbox(); } catch { /* ignore */ }

@@ -4,22 +4,9 @@ import os
 import shutil
 import datetime
 import codecs
-import ctypes
 import unicodedata
 from ai_computer_control.server import mcp
-from ai_computer_control.tools.office_io import replace_with_retry as _replace_with_retry
 from ai_computer_control.tools.safety import protected_path_reason
-
-
-_CJK_ACPS = frozenset({"cp936", "cp950", "cp932", "cp949", "gbk"})
-
-
-def _system_acp() -> str:
-    """The system ANSI code page (cp936 on zh-CN). GBK fallback for non-UTF-8 text files."""
-    try:
-        return f"cp{ctypes.windll.kernel32.GetACP()}"
-    except Exception:
-        return "gbk"
 
 
 def _sniff_bom(raw: bytes) -> tuple[str, int] | None:
@@ -72,8 +59,7 @@ def _decode_text(raw: bytes, encoding: str | None, truncated: bool = False) -> t
     """Decode bytes to text. Returns (content, encoding_used, fallback_from).
 
     Default/'auto'/'utf-8' sniffs a Unicode BOM first (UTF-8 BOM is stripped, UTF-16/32 decoded),
-    then tries UTF-8 strict; on UnicodeDecodeError it falls back to the system ANSI code page
-    (cp936 on zh-CN), and to gb18030 when that code page is unusable. Native Chinese apps
+    then tries UTF-8 strict; on UnicodeDecodeError it falls back to GB18030. Native Chinese apps
     (Notepad ANSI, legacy editors, exported configs) write GBK/cp936, and the old errors="replace"
     silently turned every multi-byte GBK char into U+FFFD mojibake. `fallback_from` is set when a
     fallback was applied. `truncated` = the bytes were cut at a byte budget: a dangling partial UTF-8
@@ -94,22 +80,8 @@ def _decode_text(raw: bytes, encoding: str | None, truncated: bool = False) -> t
         try:
             return (_trim_partial_utf8(raw) if truncated else raw).decode("utf-8"), "utf-8", None
         except UnicodeDecodeError:
-            acp = _system_acp()
-            # 中文系统(ACP 是 936/950/932/949 这类双字节页)照旧 ACP 优先。英文/西欧 Windows 的 ACP 是 cp1252 这类
-            # 单字节页:任何字节都「解得开」,GBK 文件会被静默解成乱码 —— 先试【严格】GB18030(西文重音字母几乎
-            # 不可能恰好构成合法 GBK 双字节序列),解不开再落 ACP。截断读时尾部半个字留在增量解码器里不算错。
-            if acp.lower() not in _CJK_ACPS:
-                try:
-                    dec = codecs.getincrementaldecoder("gb18030")(errors="strict")
-                    return dec.decode(raw, final=not truncated), "gb18030", "utf-8"
-                except UnicodeDecodeError:
-                    pass
-            for codec in (acp, "gb18030"):
-                try:
-                    return raw.decode(codec, errors="replace"), codec, "utf-8"
-                except (LookupError, UnicodeDecodeError):
-                    continue
-            return raw.decode("utf-8", errors="replace"), "utf-8", None
+            decoder = codecs.getincrementaldecoder("gb18030")(errors="replace")
+            return decoder.decode(raw, final=not truncated), "gb18030", "utf-8"
     try:
         return raw.decode(enc, errors="replace"), enc, None
     except LookupError:
@@ -267,7 +239,7 @@ def write_file(path: str, content: str, encoding: str = "utf-8", append: bool = 
                 try: os.unlink(tmp)
                 except Exception: pass
             else:
-                _replace_with_retry(tmp, path)
+                os.replace(tmp, path)
         except Exception:
             try: os.unlink(tmp)
             except Exception: pass
@@ -420,12 +392,26 @@ def move_file(source: str, destination: str, allow_protected: bool = False) -> d
         return {"error": f"refused: {reason}. Pass allow_protected=true to override."}
     try:
         os.makedirs(os.path.dirname(os.path.abspath(destination)), exist_ok=True)
-        # normcase: on Windows a case-only rename (readme.md -> README.md) names the SAME file, so the
-        # destination "already exists" only because it is the source itself — that must be allowed.
-        same_path = os.path.normcase(os.path.abspath(source)) == os.path.normcase(os.path.abspath(destination))
-        if os.path.exists(destination) and not same_path:
-            return {"error": f"refused: destination '{destination}' already exists. Delete it first or pick a different destination."}
-        shutil.move(source, destination)
+        source_abs, destination_abs = os.path.abspath(source), os.path.abspath(destination)
+        same_entry = source_abs == destination_abs
+        if os.path.lexists(destination) and not same_entry:
+            # Volume semantics, not platform spelling rules: one directory entry may
+            # accept multiple case/Unicode spellings. Distinct hardlinks stay protected.
+            src_stat, dst_stat = os.lstat(source), os.lstat(destination)
+            same_inode = (src_stat.st_dev, src_stat.st_ino) == (dst_stat.st_dev, dst_stat.st_ino)
+            src_parent, dst_parent = os.path.dirname(source_abs), os.path.dirname(destination_abs)
+            if same_inode and os.path.samefile(src_parent, dst_parent):
+                normalize = lambda name: unicodedata.normalize("NFD", name).casefold()
+                src_name, dst_name = os.path.basename(source_abs), os.path.basename(destination_abs)
+                if normalize(src_name) == normalize(dst_name):
+                    aliases = [name for name in os.listdir(src_parent) if normalize(name) == normalize(src_name)]
+                    same_entry = len(aliases) == 1
+            if not same_entry:
+                return {"error": f"refused: destination '{destination}' already exists. Delete it first or pick a different destination."}
+        if same_entry:
+            os.rename(source, destination)
+        else:
+            shutil.move(source, destination)
         return {"success": True, "source": source, "destination": destination}
     except Exception as e:
         return {"error": str(e)}

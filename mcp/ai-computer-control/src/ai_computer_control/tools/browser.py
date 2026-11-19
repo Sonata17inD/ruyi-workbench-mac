@@ -50,40 +50,7 @@ def _configured_mode() -> str:
 
 def _system_open(url: str, new_tab: bool) -> None:
     """Open through the user's browser without navigating the workbench's current tab."""
-    if sys.platform == "win32":
-        executable = _windows_default_browser_executable()
-        if executable:
-            # Chromium-family browsers accept --new-tab; Firefox uses -new-tab.  Starting the
-            # browser directly is still shell-free and gives a stronger non-destructive contract
-            # than handing the URL to the generic shell association.
-            flag = "-new-tab" if "firefox" in os.path.basename(executable).lower() else "--new-tab"
-            subprocess.Popen([executable, flag, url], start_new_session=True, stdin=subprocess.DEVNULL)
-        else:
-            # Association fallback: Windows normally opens a tab in the existing browser session,
-            # but cannot provide an explicit tab-placement guarantee without its executable.
-            os.startfile(url)  # type: ignore[attr-defined]
-    elif sys.platform == "darwin":
-        subprocess.Popen(["open", url], start_new_session=True, stdin=subprocess.DEVNULL)
-    else:
-        subprocess.Popen(["xdg-open", url], start_new_session=True, stdin=subprocess.DEVNULL)
-
-
-def _windows_default_browser_executable() -> str:
-    """Best-effort resolve of the executable behind the user's HTTP association."""
-    if sys.platform != "win32":
-        return ""
-    try:
-        import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice") as key:
-            prog_id = str(winreg.QueryValueEx(key, "ProgId")[0])
-        with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, prog_id + r"\shell\open\command") as key:
-            command = str(winreg.QueryValueEx(key, "")[0])
-        match = re.match(r'^\s*"([^"]+\.exe)"|^\s*([^\s]+\.exe)', command, re.I)
-        candidate = (match.group(1) or match.group(2)) if match else ""
-        return candidate if candidate and os.path.isfile(candidate) else ""
-    except Exception:
-        return ""
+    subprocess.Popen(["/usr/bin/open", url], start_new_session=True, stdin=subprocess.DEVNULL)
 
 
 def _managed_executable(mode: str) -> str:
@@ -98,7 +65,7 @@ def _managed_executable(mode: str) -> str:
                     candidate = os.path.join(root, app + ".app", "Contents", "MacOS", binary)
                     if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
                         return candidate
-        return _windows_default_browser_executable()
+        return ""
     return ""  # bundled deliberately lets Playwright select Chrome for Testing
 
 
@@ -111,19 +78,13 @@ def _cache_path() -> str:
     if configured:
         # Playwright also accepts 0 (package-local cache). The SDK resolves it.
         return configured  # preserve SDK semantics for relative paths and the special value 0
-    if sys.platform == "darwin":
-        return os.path.expanduser("~/Library/Caches/ms-playwright")
-    if sys.platform == "win32":
-        return os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "ms-playwright")
-    return os.path.expanduser("~/.cache/ms-playwright")
+    return os.path.expanduser("~/Library/Caches/ms-playwright")
 
 
 def _system_hint() -> str:
-    if sys.platform == "darwin":
-        return ("System mode only hands the URL to macOS; it does not attach DOM automation. "
-                "Use managed/custom/bundled/CDP for browser_* tools. Mac desktop automation is not implemented yet.")
-    return ("System mode opens the user's browser. Use desktop screenshot plus UIA/OCR/keyboard tools, "
-            "or choose managed/custom/bundled/CDP for DOM automation.")
+    return ("System mode only hands the URL to macOS; it does not attach DOM automation. "
+            "Use managed/custom/bundled/CDP for browser_* tools. "
+            "Inspect diagnostics for current native capture, input, AX and OCR readiness before desktop actions.")
 
 
 async def _new_owned_page():

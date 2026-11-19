@@ -13,7 +13,6 @@ import difflib
 import re
 import unicodedata
 from ai_computer_control.server import mcp
-from ai_computer_control.tools.office_io import replace_with_retry
 from ai_computer_control.tools.safety import protected_path_reason
 
 _MAX_EDIT_BYTES = 10 * 1024 * 1024  # refuse to load files >10MB into memory for editing
@@ -132,7 +131,7 @@ def edit_file(path: str, old_string: str, new_string: str, replace_all: bool = F
         try:
             with os.fdopen(fd, "wb") as f:
                 f.write(encoded)
-            replace_with_retry(tmp, path)
+            os.replace(tmp, path)
         except Exception:
             try:
                 os.unlink(tmp)

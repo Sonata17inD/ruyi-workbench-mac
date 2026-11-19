@@ -216,6 +216,9 @@ def capability():
             "permission_denied" if status.get("authorization") != "granted" else "display_unavailable")
         return out
     except (OSError, DesktopError) as error:
+        out["queryReady"] = False
+        if out["installed"]:
+            out["ready"] = None
         out["reasonCode"] = getattr(error, "code", "dependency_missing")
         return out
 
@@ -236,7 +239,7 @@ def image_response(result):
     return image, result
 
 
-def capture(region=None, monitor=None, window_title=None):
+def capture(region=None, monitor=None, window_title=None, max_width=None):
     payload = {"op": "capture"}
     if region is not None:
         payload["region"] = list(region)
@@ -250,6 +253,10 @@ def capture(region=None, monitor=None, window_title=None):
         payload["monitor"] = value
     if window_title is not None:
         payload = {"op": "capture", "window_title": window_title}
+    if max_width is not None:
+        if type(max_width) is not int or not 0 <= max_width <= 16384:
+            raise DesktopError("invalid_args", "max_width must be an integer from 0 to 16384")
+        payload["max_width"] = max_width
     image, result = image_response(request(payload))
     bounds = result.get("logical_bounds")
     valid_bounds = isinstance(bounds, dict) and all(type(bounds.get(key)) in (int, float)

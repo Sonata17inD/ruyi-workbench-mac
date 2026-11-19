@@ -1,18 +1,11 @@
 // Unit: 21-E3 action-argument model view — envelope projection, sha256 gate, pairing preservation, idempotency.
 'use strict';
 const crypto = require('crypto');
-const { readServerSource } = require('../src-reader');
-const src = readServerSource();
+const fs = require('node:fs');
+const t3 = require('../../ruyi-workbench/app/backend/provider-action-history.cjs');
+const providerTurn = fs.readFileSync(require.resolve('../../ruyi-workbench/app/backend/provider-turn.cjs'), 'utf8');
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
-
-// 58 号批 1 起 buildResponsesInputItems 搬去了 04i(排在 07 之前),原来「切到它为止」的手写切片会切空;按符号切五段。
-const { constBlock, functionBlock } = require('../lib/source-slice');
-const parts = [constBlock(src, 'ACTION_VIEW_TOOLS'), constBlock(src, 'ACTION_VIEW_MIN_CHARS'),
-  functionBlock(src, 'actionTargetMeta'), functionBlock(src, 'buildActionEnvelope'), functionBlock(src, 'projectActionModelView')];
-ok(parts.every(part => part.length > 20), 'E3 source block found');
-const block = parts.join('\n');
-const t3 = new Function('crypto', 'path', block + '\nreturn { ACTION_VIEW_TOOLS, ACTION_VIEW_MIN_CHARS, buildActionEnvelope, projectActionModelView };')(crypto, require('path'));
 
 const BIG = 'x'.repeat(5000);
 const bigArgs = JSON.stringify({ path: 'C:\\repo\\report.md', content: BIG });
@@ -69,9 +62,9 @@ console.log('\n── 对抗验证 ──');
 // A1: 伪造 audit 条目(sha 对不上)→ 不投影(tamper-safe, 已覆盖)
 // A2: 幂等(已覆盖)
 // A3: responses 路径透传 —— 投影后的 arguments 经 buildResponsesInputItems 原样透传为 function_call.arguments
-ok(src.includes("const privacyHistory = typeof PrivacyGateway !== 'undefined' ? PrivacyGateway.projectHostHistory(session, session.providerHistory) : session.providerHistory;")
-  && src.includes("const viewHistory = actionAuditMap.size ? projectActionModelView(privacyHistory, actionAuditMap).history : privacyHistory;")
-  && src.includes("const msgs = [{ role: 'system', content: sys }, ...viewHistory];"), 'A3 responses+chat buildBody both consume the projected view');
+ok(providerTurn.includes("const privacyHistory = typeof PrivacyGateway !== 'undefined' ? PrivacyGateway.projectHostHistory(session, session.providerHistory) : session.providerHistory;")
+  && providerTurn.includes("const viewHistory = actionAuditMap.size ? projectActionModelView(privacyHistory, actionAuditMap).history : privacyHistory;")
+  && providerTurn.includes("const msgs = [{ role: 'system', content: sys }, ...viewHistory];"), 'A3 responses+chat buildBody both consume the projected view');
 // A4: malformed rawArgs(非 JSON)→ 拒绝生成空 envelope,不投影
 const malformedAudit = new Map([['call-4', { actionRef: 'r4', toolCallId: 'call-4', toolName: 'file_write', sha256: crypto.createHash('sha256').update('{not-json').digest('hex'), status: 'completed' }]]);
 const malformedHist = [{ role: 'assistant', content: '', tool_calls: [{ id: 'call-4', type: 'function', function: { name: 'file_write', arguments: '{not-json' } }] }];
@@ -81,9 +74,9 @@ ok(t3.projectActionModelView(malformedHist, malformedAudit).changed === false, '
 const travEnv = t3.buildActionEnvelope('file_write', { path: 'C:\\repo\\..\\..\\evil.txt' }, '{"path":"C:\\\\repo\\\\..\\\\..\\\\evil.txt"}');
 ok(travEnv.target.basename === 'evil.txt' && !travEnv.target.basename.includes('..'), 'A6 path traversal sanitized: basename is the tail segment only');
 // A7: 审计容量上限 —— server 端 200 条截断存在
-ok(src.includes('session.actionAudit.length > 200') && src.includes("splice(0, session.actionAudit.length - 200)"), 'A7 audit capped at 200 entries (no unbounded growth)');
+ok(providerTurn.includes('session.actionAudit.length > 200') && providerTurn.includes("splice(0, session.actionAudit.length - 200)"), 'A7 audit capped at 200 entries (no unbounded growth)');
 // A8: 失败/中断动作不瘦身(execution view 完整) —— 服务端失败动作落 audit 时记 status=failed
-ok(src.includes("status: isErr ? 'failed' : 'completed'"), 'A8 failed actions recorded as failed (never projected)');
+ok(providerTurn.includes("status: isErr ? 'failed' : 'completed'"), 'A8 failed actions recorded as failed (never projected)');
 
 console.log('');
 if (fail) { console.log(`ACTION-MODEL-VIEW UNIT: FAIL (${fail})`); process.exit(1); }

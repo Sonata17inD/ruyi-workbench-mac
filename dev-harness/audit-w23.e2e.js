@@ -27,6 +27,8 @@ const { getFreePort } = require('./free-port.js');
 const WB = path.join(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
 const src = readServerSource();
+const readBackend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
+const workflow = readBackend('agent-workflow');
 
 // 端口登记(第23波,均在既有 8792-8999 段之外,避免撞车): WB=8751, fake401=8752。
 
@@ -93,15 +95,13 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P1 #2: isSensitiveDataPath 抽出实跑(含对抗轮补漏: runtime.json + realpath 对称) ----
   {
-    const fnM = src.match(/function isSensitiveDataPath\(p\) \{[\s\S]*?\n\}/);
-    const pwM = src.match(/function pathWithinRoot\(target, root\) \{[\s\S]*?\n\}/);
-    ok(!!(fnM && pwM), 'P1#2 isSensitiveDataPath + pathWithinRoot 可抽取');
-    if (fnM && pwM) {
-      const D = path.join('C:', 'data');
-      // isSensitiveDataPath 依赖 dataRoot()、dataRootAliases()(3.0 迁移后旧目录名的联接)、_dataRootReal(module let)、
-      // pathWithinRoot、path —— 注入/本地声明。
-      const make = new Function('path', 'dataRoot', 'dataRootAliases', 'let _dataRootReal = null;\n' + pwM[0] + '\n' + fnM[0] + '\nreturn isSensitiveDataPath;');
-      const sens = make(path, () => D, () => []);
+    const { createSensitivePaths } = require('../ruyi-workbench/app/backend/sensitive-paths.cjs');
+    {
+      const D = path.join(os.tmpdir(), 'audit-sensitive-data');
+      const make = (root, aliases = []) => createSensitivePaths({
+        dataRoot: () => root, dataRootAliases: () => aliases,
+      });
+      const { isSensitiveDataPath: sens } = make(D);
       ok(sens(path.join(D, 'config.json')) === true, 'P1#2 config.json(明文 provider 密钥)拒');
       ok(sens(path.join(D, 'runtime.json')) === true, 'P1#2 runtime.json(明文 WCW_TOKEN)拒 ← 对抗轮补漏');
       ok(sens(path.join(D, 'sessions', 's1.json')) === true, 'P1#2 sessions/ 完整 transcript 拒');
@@ -109,15 +109,23 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
       ok(sens(path.join(D, 'generated', 'workbench.mcp.sess.json')) === true, 'P1#2 generated/ 会话 MCP 配置(含 token)拒');
       ok(sens(path.join(D, 'uploads', 'u.png')) === false, 'P1#2 uploads/ 产物 允许(不误伤合法读)');
       ok(sens(path.join(D, 'checkpoints', 'c.gz')) === false, 'P1#2 checkpoints/ 内容 允许');
-      // realpath 对称: 注入一个把 junction 根 L 解析到真实根 D 的 _dataRootReal,验证以真实根表达的敏感文件仍被命中。
-      const L = path.join('C:', 'link');
-      const make2 = new Function('path', 'dataRoot', 'dataRootAliases', 'let _dataRootReal = ' + JSON.stringify(D) + ';\n' + pwM[0] + '\n' + fnM[0] + '\nreturn isSensitiveDataPath;');
-      const sens2 = make2(path, () => L, () => []); // 词法根=L(junction),realpath 根=D
-      ok(sens2(path.join(D, 'config.json')) === true, 'P1#2 junction 部署: 以 realpath 后根表达的 config.json 仍拒 ← 对抗轮补漏');
-      ok(sens2(path.join(L, 'config.json')) === true, 'P1#2 junction 部署: 以词法根表达的 config.json 仍拒(双根前缀)');
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'audit-sensitive-root-'));
+      try {
+        const directory = path.join(root, 'data');
+        const alias = path.join(root, 'link');
+        fs.mkdirSync(directory);
+        fs.symlinkSync(directory, alias);
+        const paths = make(alias);
+        const canonicalRoot = await paths.ensureDataRootReal();
+        ok(canonicalRoot === fs.realpathSync(directory), 'P1#2 读取数据根的实际路径');
+        ok(paths.isSensitiveDataPath(path.join(canonicalRoot, 'config.json')), 'P1#2 真实根表达的 config.json 仍拒');
+        ok(paths.isSensitiveDataPath(path.join(alias, 'config.json')), 'P1#2 词法根表达的 config.json 仍拒');
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
       // 3.0 数据目录改名:旧目录名 ~/.win-claude-workbench 是指回新目录的联接(dataRootAliases),经它的词法路径同样拒。
-      const A = path.join('C:', 'legacy-alias');
-      const sens3 = make(path, () => D, () => [A]);
+      const A = path.join(os.tmpdir(), 'audit-sensitive-legacy');
+      const { isSensitiveDataPath: sens3 } = make(D, [A]);
       ok(sens3(path.join(A, 'config.json')) === true && sens3(path.join(A, 'sessions', 's.json')) === true, 'P1#2 3.0 改名: 经旧目录名联接(dataRootAliases)的词法路径同样拒');
       ok(sens3(path.join(A, 'uploads', 'u.png')) === false, 'P1#2 3.0 改名: 经旧目录名的 uploads/ 产物照样允许');
     }
@@ -125,7 +133,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P2 #5: runProcess 超时杀进程树 + 单次结算门 ----
   {
-    const slice = require('./lib/source-slice').functionBlock(src, 'runProcess');
+    const slice = require('./lib/source-slice').functionBlock(fs.readFileSync(path.join(WB, 'app/backend/desktop-shell.cjs'), 'utf8'), 'runProcess');
     ok(/cleanup = killChildTree\(child\)/.test(slice), 'P2#5 超时把实际child对象交给按出生身份核验的整树清理,不再只杀直接子进程');
     ok(/let settled = false/.test(slice) && /if \(settled\) return/.test(slice), 'P2#5 单次结算门 finish() 防重复 resolve(close/error/超时兜底共用)');
     ok(/killGraceTimer = setTimeout/.test(slice), 'P2#5 超时后设二次硬兜底(整树杀后 close 仍不触发也不悬挂 promise)');
@@ -133,14 +141,15 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
 
   // ---- P2 #6a: 回合级 401/403 归 provider_misconfigured(源形状) ----
   {
-    const i = src.indexOf("else if (!ok && errorMsg) {");
-    const slice = i > 0 ? src.slice(i, i + 700) : '';
+    const providerTurn = readBackend('provider-turn');
+    const i = providerTurn.indexOf("else if (!ok && errorMsg) {");
+    const slice = i > 0 ? providerTurn.slice(i, i + 700) : '';
     ok(/provider_misconfigured/.test(slice), 'P2#6a 回合失败分类新增 provider_misconfigured 分支');
     ok(/HTTP 401[\s\S]*provider_misconfigured/.test(slice), 'P2#6a 401/403 命中鉴权分支(在 network/tool_error 之前)');
   }
 
   // ---- P2 #7: interrupted 并入 retry reset ----
-  ok(/for \(const n of nodes\) if \(n\.status === 'interrupted'\) reset\.add\(n\.id\);/.test(src),
+  ok(/for \(const n of nodes\) if \(n\.status === 'interrupted'\) reset\.add\(n\.id\);/.test(workflow),
     "P2#7 续跑把 'interrupted' 死状态并入 reset 重新入队(修「依赖图存在环」误诊)");
 
   // ---- P2 #8: 唯一 tmp 名 —— 第25波 25.1 后不变量【中心化】到 atomicWriteJson,saveSession/writeConfigAtomic
@@ -149,27 +158,33 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   {
     // v1.9 存储 v2 后 saveSession 显著变长(头构建+prevbody 防线),窗口 1400 → 6000;锁定的不变量本身不变。
     // 代码走查 C2(旧副本补齐:写链内先把盘上多出来的消息补进旧副本再写)又加了约 430 字,头写落在 6320 处,窗口 6000 → 8000。
-    const ss = require('./lib/source-slice').functionBlock(src, 'saveSession');
+    const ss = require('./lib/source-slice').functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
     // hunt2-P7 在写链里加了「只在当前 config 可解析时才刷新 .prev」的注释与判断,固定 600 字窗口够不着委托行 → 改按函数切。
-    const wc = src.includes('let configWriteChain') ? require('./lib/source-slice').functionBlock(src, 'writeConfigAtomic') : '';
+    const wc = require('./lib/source-slice').functionBlock(readBackend('config-store'), 'writeConfigAtomic');
     ok(/atomicWriteJson\(finalPath, payload\)/.test(ss) && /sessionWriteChains/.test(ss), 'P2#8 saveSession 委托 atomicWriteJson + per-id 写链(对抗轮:防重试窗口旧覆新)');
     // 安全走查 S11 起委托调用多带一个 { mode: 0o600 }(密钥文件只给属主读写):委托这件事不变,判据放宽到「data 之后可以有选项」,
     // 另钉 0600 确实传下去了。
     ok(/atomicWriteJson\(paths\.config, data[,)]/.test(wc) && /configWriteChain/.test(wc), 'P2#8 writeConfigAtomic 委托 atomicWriteJson + 全局写链');
     ok(/atomicWriteJson\(paths\.config, data, \{ mode: 0o600 \}\)/.test(wc), 'P2#8b writeConfigAtomic 写 config.json 用 0600(S11)');
-    const awj = src.slice(src.indexOf('async function atomicWriteJson('), src.indexOf('async function atomicWriteJson(') + 1200);
+    const awj = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/file-persistence.cjs'), 'utf8');
+    ok(/async function atomicWriteJson\(/.test(awj), 'P2#8 原子写由文件持久化模块持有');
     ok(/finalPath \+ '\.' \+ process\.pid \+ '\.' \+ crypto\.randomBytes/.test(awj), 'P2#8 atomicWriteJson 用 pid+随机 tmp 名(不变量中心化)');
     ok(/fsp\.unlink\(tmpPath\)/.test(awj), 'P2#8 atomicWriteJson 失败清 tmp(唯一名无覆写自愈路径)');
   }
 
   // ---- P2 #9: degraded 透传 ----
-  ok(/node\.degraded = !sub\.cleanupIncomplete && !!\(sub && sub\.degraded\);/.test(src), 'P2#9 DAG透传sub.degraded且清理未确认时不得伪装降级成功');
+  ok(/node\.degraded = !sub\.cleanupIncomplete && !!\(sub && sub\.degraded\);/.test(workflow), 'P2#9 DAG透传sub.degraded且清理未确认时不得伪装降级成功');
 
   // ---- 节点数上限 bug(回合内 orchestrate 误用 subagentMaxPerTurn)+ 迁移 + 上限放宽 ----
   {
     // 修:in-turn orchestrate 的 maxNodes 用 agentWorkflowMaxNodes,不再用 subagentTurnCap(=subagentMaxPerTurn)
-    ok(!/maxNodes: subagentTurnCap - subagentTotal/.test(src), 'BUG 修: 回合内 orchestrate 不再用 subagentTurnCap(=subagentMaxPerTurn)做节点数上限');
-    ok((src.match(/maxNodes: Math\.max\(0, Number\(config\.agentWorkflowMaxNodes\)/g) || []).length >= 2, 'BUG 修: in-turn 与 launch 两条 orchestrate 路径都用 agentWorkflowMaxNodes 作节点上限(口径统一,内置模板不再被卡)');
+    const providerTurn = readBackend('provider-turn');
+    const launchRoutes = readBackend('agent-workflow-routes');
+    const persistedLaunch = readBackend('persisted-agent-launch');
+    ok(!/maxNodes: subagentTurnCap - subagentTotal/.test(providerTurn), 'BUG 修: 回合内 orchestrate 不再用 subagentTurnCap(=subagentMaxPerTurn)做节点数上限');
+    const workflowLimit = /maxNodes: Math\.max\(0, Number\(config\.agentWorkflowMaxNodes\)/g;
+    ok([providerTurn, launchRoutes, persistedLaunch].every((source, i) => (source.match(workflowLimit) || []).length === [1, 2, 1][i]),
+      '回合内、HTTP 前后台及持久运行启动都采用 agentWorkflowMaxNodes');
     // 迁移:旧默认 4 → 32(带 flag);deliberate 低值不动;clamp 上限 64;默认 agentWorkflowMaxNodes=48
     const legacy = mod.normalizeConfig({ subagentMaxPerTurn: 4, agentWorkflowMaxNodes: 32 }).config;
     ok(legacy.subagentMaxPerTurn === 32 && legacy.subagentBudgetMigrated === true, '迁移: 存量 subagentMaxPerTurn=4(旧默认)→ 32 + 置 migrated 标记');
@@ -216,7 +231,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   const fake401 = http.createServer((rq, rs) => { rs.writeHead(401, { 'content-type': 'application/json' }); rs.end('{"error":{"message":"invalid api key"}}'); });
   await new Promise(r => fake401.listen(FAKE401_PORT, '127.0.0.1', r));
 
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   const wbLog = [];
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push(l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push('[!] ' + l.trim())));

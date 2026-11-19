@@ -118,9 +118,9 @@ test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时�
   const { functionBlock } = require('../lib/source-slice');
   const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
   const engines = [
-    ['09-workflow.js', 'runOpenAiTurn'],
-    ['05-claude-engine.js', 'runClaudeTurn'],
-    ['05b-kimi-bridge.js', 'runKimiAcpTurnPrepared'],
+    ['../backend/provider-turn.cjs', 'runOpenAiTurn'],
+    ['../backend/agent-cli-turn.cjs', 'runClaudeTurn'],
+    ['../backend/kimi-acp-turn.cjs', 'runKimiAcpTurnPrepared'],
   ];
   for (const [file, fn] of engines) {
     const body = functionBlock(fs.readFileSync(path.join(SRC, file), 'utf8'), fn);
@@ -130,7 +130,7 @@ test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时�
     assert.match(body, /if \(session\.mission && !turnSuperseded\) await bumpMissionChangeSeq\(/, `${fn} 被顶替时不记任务进度`);
   }
   // 09 回合中途的存盘(工具轨迹、计划、强压重试)都带 dropIfTurnSuperseded。
-  const run = functionBlock(fs.readFileSync(path.join(SRC, '09-workflow.js'), 'utf8'), 'runOpenAiTurn');
+  const run = functionBlock(fs.readFileSync(path.join(SRC, '../backend/provider-turn.cjs'), 'utf8'), 'runOpenAiTurn');
   assert.match(run, /const turnSaveOpts = \{[^}]*dropIfTurnSuperseded: true[^}]*executionOwner[^}]*\};/, '工具循环的共享保存选项携带本次 executionOwner');
   const afterStart = run.slice(run.indexOf('const turnSaveOpts'));
   const loop = afterStart.slice(afterStart.indexOf('for (let iter = 0; ; iter++)'));

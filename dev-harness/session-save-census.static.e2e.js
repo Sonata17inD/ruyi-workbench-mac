@@ -8,6 +8,7 @@
 // 另外逐个点名 128b 改过的那十一处,钉住「它们真的走 mutateSession」,免得普查数碰巧对上而改法被撤回。
 const fs = require('fs');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 const SRC = path.join(__dirname, '..', 'ruyi-workbench', 'app', 'src');
 let fail = 0;
 const ok = (c, label) => { if (c) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -16,24 +17,29 @@ const codeLines = text => text.split('\n').map(l => l.replace(/\/\/.*$/, ''));
 
 // ① 普查:各模块 saveSession( 的调用个数(128b 之后)。
 const CENSUS = {
-  '02-session-store.js': 10,     // 回合外的存储层自身:updateSessionMeta ×2、loadSession 自愈 ×2、v1 回退、createSession、撤回、mutateSession、任务控制;
-                                 // + saveTurnFinalSession(三个引擎回合收尾那一存的共用出口,带回合代数闸 —— 被更新的回合顶替过就丢,审计 t4)
-  '05-claude-engine.js': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
-  '05b-kimi-bridge.js': 2,       // Kimi 回合自存(runKimiCompact 已改走 mutateSession;收尾那一存改走 02 saveTurnFinalSession)
-  '06e-mission-domain.js': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
-  '07-autonomy.js': 1,           // steer 排空(回合自存)
-  '09-workflow.js': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
-  '10-context-governance.js': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
-  // 13-http-router.js 0:Kimi 状态那个 GET 回写用量读数(2026-10 走查 W1 #4)已改走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。
-  '13b-api-domain-routes.js': 1, // 插话路由往活回合那份对象里追加(回合自存)
-  '13ac-desktop-execution-runtime.js': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
-  '13d-core-domain-routes.js': 1,// 权限暂停计时器的纯重写
-  '13k-steward-threads.js': 2,   // 建会话
-  '13m-steward-runner-base.js': 2, // ensureStewardSession(建/补管家会话)
-  '13s-scheduler.js': 1,         // 定时触发建会话
+  '../backend/session-rewind.cjs': 1, // 撤回成功的严格提交。
+  '../backend/session-transactions.cjs': 2, // 读改写与回合收尾的共享提交出口。
+  '../backend/session-persistence.cjs': 3, // 装载归一化、旧格式迁移与迁移备份恢复。
+  '02-session-store.js': 1, // 会话元数据存储端口。
+  '../backend/session-creation.cjs': 1, // 新建会话首次提交。
+  '../backend/session-meta-updates.cjs': 2, // 元数据立即／延后提交，使用撤回代数闸与有界重放。
+  '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
+  '../backend/agent-cli-turn.cjs': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
+  '../backend/kimi-acp-turn.cjs': 2, // Kimi 回合自存，收尾走 saveTurnFinalSession。
+  '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
+  '../backend/agent-steering.cjs': 1,           // steer 排空(回合自存)
+  '../backend/provider-turn.cjs': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
+  '../backend/session-compaction.cjs': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
+  // session-execution-routes.cjs 0:Kimi 状态 GET 回写用量走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。
+  '../backend/session-steering.cjs': 1, // 插话路由往活回合那份对象里追加(回合自存)
+  '../backend/desktop-execution-runtime.cjs': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
+  '../backend/intervention-routes.cjs': 1,// 权限暂停计时器的纯重写
+  '../backend/steward-thread-create.cjs': 2,   // 建会话
+  '../backend/steward-runner-lifecycle.cjs': 2, // ensureStewardSession(建/补管家会话)
+  '../backend/scheduler-runtime.cjs': 1,         // 定时触发建会话
 };
 const actual = {};
-for (const n of fs.readdirSync(SRC).filter(x => x.endsWith('.js')).sort()) {
+for (const n of fs.readdirSync(SRC).filter(x => x.endsWith('.js')).concat(fs.readdirSync(path.join(SRC, '../backend')).filter(x => x.endsWith('.cjs')).map(x => '../backend/' + x)).sort()) {
   let c = 0;
   for (const code of codeLines(read(n))) {
     if (/function saveSession\(/.test(code)) continue;
@@ -47,11 +53,8 @@ ok(diffs.length === 0, `① saveSession 普查与表逐项相等${diffs.length ?
 
 // ② 128b 改过的十一处真的走 mutateSession(慢活带 expectGen)。
 function fnBody(file, header) {
-  const text = read(file);
-  const at = text.indexOf(header);
-  if (at < 0) return '';
-  const end = text.indexOf('\n}\n', at);
-  return text.slice(at, end < 0 ? undefined : end);
+  const name = /\bfunction (\w+)\(/.exec(header)?.[1];
+  return name ? functionBlock(read(file), name) : '';
 }
 function routeBlock(file, marker, lines = 70) {
   const text = read(file);
@@ -62,18 +65,17 @@ function routeBlock(file, marker, lines = 70) {
 // 而本件只读源码、并不打这些路由 —— 字面写出来就是一条假覆盖(本件第一版就把 6 条路由的 coveredBy 冒领了)。
 const routeMarker = tail => "pathname === '/" + 'api/' + tail + "'";
 const sites = [
-  ['13-http-router.js setSessionSkillsCore', fnBody('13-http-router.js', 'async function setSessionSkillsCore('), false],
-  ['13-http-router.js 线程记忆设置路由', routeBlock('13-http-router.js', routeMarker('session/memories'), 60), false],
-  ['13-http-router.js todo 回写路由', routeBlock('13-http-router.js', routeMarker('todo'), 25), false],
-  ['13-http-router.js Kimi 状态读数回写路由', routeBlock('13-http-router.js', routeMarker('kimi/status'), 30), false],
-  ['13-http-router.js 任务账本路由(check／start／update)', routeBlock('13-http-router.js', routeMarker('mission'), 110), true],
-  ['10-context-governance.js runProviderCompact', fnBody('10-context-governance.js', 'async function runProviderCompact('), true],
-  ['10-context-governance.js runAgentExternalCompact', fnBody('10-context-governance.js', 'async function runAgentExternalCompact('), true],
-  ['05b-kimi-bridge.js runKimiCompact', fnBody('05b-kimi-bridge.js', 'async function runKimiCompact('), false],
-  ['08-agent-runs.js appendAgentWorkflowSummaryToSession', fnBody('08-agent-runs.js', 'async function appendAgentWorkflowSummaryToSession('), false],
-  ['13p-steward-runner-actions.js stewardStampReply', fnBody('13p-steward-runner-actions.js', 'async function stewardStampReply('), false],
-  ['13q-steward-runner-turn.js stewardArchiveConversation', fnBody('13q-steward-runner-turn.js', 'async function stewardArchiveConversation('), true],
-  ['02-session-store.js missionControlCommand', fnBody('02-session-store.js', 'async function missionControlCommand('), false],
+  ['skill-routes.cjs setSessionSkillsCore', fnBody('../backend/skill-routes.cjs', 'async function setSessionSkillsCore('), false],
+  ['memory-routes.cjs 线程记忆设置路由', routeBlock('../backend/memory-routes.cjs', routeMarker('session/memories'), 60), false],
+  ['mission-ledger-routes.cjs todo 回写路由', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('todo'), 25), false],
+  ['session-execution-routes.cjs Kimi 状态读数回写路由', routeBlock('../backend/session-execution-routes.cjs', routeMarker('kimi/status'), 30), false],
+  ['mission-ledger-routes.cjs 任务账本路由(check／start／update)', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('mission'), 110), true],
+  ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
+  ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
+  ['kimi-native-operations.cjs runKimiCompact', fnBody('../backend/kimi-native-operations.cjs', 'async function runKimiCompact('), false],
+  ['steward-conversation-replies.cjs stewardStampReply', fnBody('../backend/steward-conversation-replies.cjs', 'async function stewardStampReply('), false],
+  ['steward-conversation-visits.cjs stewardArchiveConversation', fnBody('../backend/steward-conversation-visits.cjs', 'async function stewardArchiveConversation('), true],
+  ['mission-control.cjs missionControlCommand', fnBody('../backend/mission-control.cjs', 'async function missionControlCommand('), false],
 ];
 for (const [label, body, needsExpectGen] of sites) {
   const code = codeLines(body).join('\n');
@@ -84,17 +86,17 @@ for (const [label, body, needsExpectGen] of sites) {
 }
 
 // ③ 原语本身:存盘带 throwIfStale、expectGen 不一致就不写。
-const mutate = fnBody('02-session-store.js', 'async function mutateSession(');
+const mutate = fnBody('../backend/session-transactions.cjs', 'async function mutateSession(');
 ok(/throwIfStale:\s*true/.test(mutate) && /expectGen/.test(mutate) && /session\.rewound_during_write|sessionRewoundError/.test(mutate),
   '③ mutateSession 存盘带 throwIfStale、expectGen 不一致即抛 session.rewound_during_write');
 
 // ④ 旁车与驱动器过撤回闸。
-ok(/sessionObjectIsStale\(session\)/.test(fnBody('10-context-governance.js', 'function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
-ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('10-context-governance.js')), '④ 历史快照:陈旧对象不写');
-ok(/sessionObjectIsStale\(session\)/.test(fnBody('06e-mission-domain.js', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
+ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/session-notes.cjs', 'async function maybeWriteSessionNotes(')), '④ 会话笔记旁车:陈旧对象不写');
+ok(/sessionObjectIsStale\(session\)\s*\?\s*''\s*:\s*(?:await\s+)?writeHistorySnapshot\(/.test(read('../backend/session-compaction.cjs')), '④ 历史快照:陈旧对象不写');
+ok(/sessionObjectIsStale\(session\)/.test(fnBody('../backend/mission-driver.cjs', 'async function runMissionDriver(')), '④ 任务驱动器:陈旧对象收手');
 
 // ⑤ 撤回相关的码有稳定码与人话(Brief §4.2 第 18 条)。
-const boot = read('00-boot.js');
+const boot = read('../backend/http-protocol.cjs');
 ok(/\['rewind_superseded', 'session\.rewind_superseded'\]/.test(boot), "⑤ 裸串 'rewind_superseded' 归一成稳定码 session.rewind_superseded");
 const app = fs.readFileSync(path.join(SRC, '..', 'public', 'app.js'), 'utf8');
 const drawer = fs.readFileSync(path.join(SRC, '..', 'public', 'js', 'steward-drawer.js'), 'utf8');

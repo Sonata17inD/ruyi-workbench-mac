@@ -7,10 +7,10 @@
 // invariant (behavior parity, privacy, crash isolation precondition) exits non-zero.
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 const { performance } = require('perf_hooks');
 const ruyi = require('../ruyi-workbench/app/server.js');
-const { readServerSource } = require('./src-reader');
+const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
+const { createTokenEstimation } = require('../ruyi-workbench/app/backend/token-estimation.cjs');
 const { retrievalCases } = require('./runtime-shadow-benchmark.js');
 
 function round(value, digits = 4) { return Number(Number(value || 0).toFixed(digits)); }
@@ -34,14 +34,6 @@ function metric(rows, field) {
     top1: round(ranks.filter(value => value === 1).length / Math.max(1, ranks.length)),
     mrrAt5: round(ranks.reduce((sum, value) => sum + (value > 0 && value <= 5 ? 1 / value : 0), 0) / Math.max(1, ranks.length)),
   };
-}
-function loadContextPrimitives() {
-  const src = readServerSource();
-  const start = src.indexOf('const OBSERVATION_REDUCE_MIN = 1200;');
-  const end = src.indexOf('\n// v0.8-S5 SHARED SUMMARY KERNEL', start);
-  if (start < 0 || end <= start) throw new Error('C1 primitive source block not found');
-  return new Function('crypto', 'EVAPORATED_PREFIX', src.slice(start, end)
-    + '\nreturn { reduceObservationContent, protectedObservation, evaporateHistory, measureObservationReductionShadow };')(crypto, '[已省略:');
 }
 function configAndCatalog() {
   const config = { ...ruyi.defaultConfig(), allowCommandTools: true, allowDesktopTools: true, subagentMaxPerTurn: 2, permissionMode: 'default' };
@@ -451,7 +443,7 @@ function crossAxisSummary(config, retrieval, context, failure) {
 function main() {
   const startedAt = performance.now();
   const { config, catalog } = configAndCatalog();
-  const c1 = loadContextPrimitives();
+  const c1 = createObservationReduction(createTokenEstimation());
   const retrieval = retrievalAudit(config, catalog);
   const context = contextAudit(c1);
   const failure = failureAudit();

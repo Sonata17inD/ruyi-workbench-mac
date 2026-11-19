@@ -18,7 +18,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const SRC = path.join(ROOT, 'ruyi-workbench', 'app', 'src');
@@ -30,45 +29,9 @@ function ok(condition, label) {
   else { console.error('FAIL ' + label); failed += 1; }
 }
 
-// ── 把被测代码从 src 里切出来 ────────────────────────────────────────────────────────────────
-// 切点用稳定字符串锚定,锚点消失即判红(而不是静默测了个空壳)。
-function slice(source, startAnchor, endAnchor, label) {
-  const start = source.indexOf(startAnchor);
-  if (start < 0) throw new Error(`切点丢失(起): ${label} :: ${startAnchor}`);
-  const end = endAnchor ? source.indexOf(endAnchor, start) : source.length;
-  if (end < 0) throw new Error(`切点丢失(止): ${label} :: ${endAnchor}`);
-  return source.slice(start, end);
-}
-
-const retrieval = read('06h-retrieval-index.js');
-const memoryDomain = read('06d-memory-domain.js');
-const runtimeFlags = read('01c-runtime-flags.js');
-
-const rankingSlice = slice(
-  memoryDomain,
-  'const MEMORY_QUERY_STOP = new Set([',
-  '\nfunction memoryExclusionSet(',
-  'memory ranking',
-);
-const flagSlice = slice(runtimeFlags, 'function memoryVectorRecallEnabled(config) {', '\n}\n', 'flag') + '\n}\n';
-
-const context = { console };
-vm.runInNewContext(
-  'const MEMORY_RELEVANCE_MAX = 3;\n'
-  + retrieval + '\n'
-  + flagSlice + '\n'
-  + rankingSlice + '\n'
-  + 'this.rankRelevantMemories = rankRelevantMemories;\n'
-  + 'this.rankMemoriesFused = rankMemoriesFused;\n'
-  + 'this.rankMemoriesForRecall = rankMemoriesForRecall;\n'
-  + 'this.retrievalTerms = retrievalTerms;\n'
-  + 'this.buildRetrievalCorpus = buildRetrievalCorpus;\n'
-  + 'this.rankRetrievalCorpus = rankRetrievalCorpus;\n'
-  + 'this.reciprocalRankFusion = reciprocalRankFusion;\n',
-  context,
-);
-ok(typeof context.rankRelevantMemories === 'function' && typeof context.rankMemoriesFused === 'function',
-  'S0 两条排序路径都从 src 切片装载成功(切点未漂移)');
+const retrieval = require('../ruyi-workbench/app/backend/retrieval-index.cjs');
+const context = { ...retrieval, ...require('../ruyi-workbench/app/backend/memory-recall.cjs').createMemoryRecall({ defaultLimit: 3 }) };
+ok(typeof context.rankRelevantMemories === 'function' && typeof context.rankMemoriesFused === 'function', 'S0 memory recall loads directly from its owning module');
 
 // ── 合成记忆库(40 条)──────────────────────────────────────────────────────────────────────
 let seq = 0;

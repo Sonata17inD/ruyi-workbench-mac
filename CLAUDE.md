@@ -1,7 +1,7 @@
 # CLAUDE.md —— 给 Claude Code(本机与云端)的项目说明
 
 先读 [CONTRIBUTING.md](CONTRIBUTING.md) 的「五条硬约束」:纯离线可用、`server.js` 零 npm 运行时依赖、clean-room、
-**Windows 10/11 为一等目标**、行为变更必须带/更新 e2e。下面只写动手时最容易踩的点。
+**Mac arm64／macOS 14 为目标**、行为变更必须带/更新 e2e。下面只写动手时最容易踩的点。
 
 ## 代码形状
 
@@ -43,15 +43,14 @@
 
 ## 提交前的快速检查(与 CI 同序)
 
-功能实现后必须安排独立 agent 做 code review，修复发现的问题并完成相关验证后再提交。后续功能沿用此流程；复核须记录范围、发现和处理结果，不以实现者自查代替。
+本轮按用户授权采用主执行自查与定向测试，不启动子 agent。记录发现、修复和未验项；开发中不重复打包，最终集成才构建 Full／Slim。
 
-开发检查使用 Node.js 24（与 CI 和单体 exe 构建目标一致）；Node.js ≥20 仅是应用运行最低版本。
+开发检查使用 Node.js 24（与 CI 和 Mac 离线运行时一致）；Node.js ≥20 仅是应用运行最低版本。
 
 ```bash
 node dev-harness/syntax-gate.js
 node ruyi-workbench/app/build.js --check
-node --test "dev-harness/unit/*.test.js"
-node dev-harness/run-all.js --fast            # .static 纯静态锁,秒级
+node dev-harness/run-all.js --fast            # 含单元门与静态检查，避免额外重复跑全量单元
 node dev-harness/<改动相关>.e2e.js             # 单件:末行 ... E2E: ALL PASS,exit 0
 ```
 
@@ -75,19 +74,14 @@ node dev-harness/<改动相关>.e2e.js             # 单件:末行 ... E2E: ALL 
 - 起服务看界面:`node ruyi-workbench/app/server.js serve`(只监听 127.0.0.1,默认 8765,被占自动顺延)。
   用 `HOME=<临时目录>` 起可避免污染数据目录。页面带 SSE 长连接,Playwright 等 `load` 而不是 `networkidle`。
 - 全量回归:`LANG=zh_CN.UTF-8 node dev-harness/run-all.js --parallel 4`(4 核约 25–30 分钟,放后台跑)。
-- **Linux 上的历史全量读数不能当作当前豁免清单。** 2026-09 曾实测 402 件约 366 过；这是当时的快照，当前件数以 `facts.json` 为准。当时未过的主要是:
-  PowerShell 会话、`.cmd` 启动器、资源管理器、`C:\` 路径、像素基线;root 身份下「只读文件写不进去」一类断言。
-  依赖未随开源仓发布的 `realhist-fixtures/` 的件(`observation-recall-*`、`session-notes` 的 [H] 等)缺夹具时 SKIP、不红。**判断回归要和改动前的同环境基线比**,
-  须逐条确认是否属于同一环境限制，不要把新失败自动归为平台问题；最终以 Windows CI(`.github/workflows/e2e.yml` 的 `e2e` job)为准。
-- `mcp/ai-computer-control`(ACC)依赖 pywin32/pyautogui 与真桌面,云端装不上、测不了,改它只能靠 Windows CI。
-- 发布打包(`package:offline*`、`build:desktop`)是 PowerShell 脚本,只在 Windows 上跑。
+- Mac 是主开发和 CI 平台；Linux 只能验证共享的纯逻辑，不替代原生验收。
+- ACC 使用 Python 3.12 与 Mac 原生 helper；桌面权限实机验收与无权限的协议测试分别登记。
+- `npm run build:desktop` 和 `npm run package:offline:{full,slim}` 在 `ruyi-workbench/` 执行。
 - 本地服务测试还须隔离用户家目录与两个 AppData 位置（`dev-harness/lib/fixture-home.js`）；只设 `RUYI_HOME` 不能隔离全局 CLI 配置。
 - 2026-10-16 已在本实施分支修复同一数据根重复 `serve` 干扰待决的问题：第二实例在恢复前明确拒绝，详见 [63 号验收记录](docs/optimization-plan/63-steward-startup-read-contracts.md)。每个并行测试实例仍须使用独立数据根，除非正在专门验证所有权竞争；源码修复不表示安装包已经发布。
 
 ## 平台相关代码的写法
 
-- 模型/用户给的路径按 **Windows 形**处理:取文件名用 `path.win32.basename`(它同时认 `\` 与 `/`),
-  不要用宿主相关的 `path.basename`。
-- 测试收尾杀进程走 `dev-harness/lib/kill-own-tree.js` 的 `killOwnTree`(Windows 按创建时间认子孙,Linux 读 `/proc`),
-  不要写 `taskkill /T` 或裸 `child.kill()`。
-- 只在非 Windows 执行的断言(`if (process.platform !== 'win32')`)不会被 Windows CI 跑到,改接口形状时要记得同步。
+- 执行路径使用 Mac 原生语义。历史会话中的外来路径可以显示，但不重新引入 Windows 运行分支。
+- 用户文件保留 GB18030、BOM 和 CRLF 支持；不要将文件格式兼容误删为平台兼容。
+- 测试通过隔离的数据目录和进程身份清理自己的子进程，不操作真实业务数据。

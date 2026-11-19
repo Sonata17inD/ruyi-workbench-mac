@@ -14,10 +14,10 @@ async function readSourceConfig(file) {
   // repair the user's installation. This host refuses every persistence operation.
   const vm = require('node:vm'), { constBlock } = require('../lib/source-slice');
   const read = name => fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-  const api = vm.runInNewContext(read('01h-privacy-core.js') + '\n' + read('01j-local-crypto.js') + '\n' + constBlock(read('01k-credential-vault.js'), 'CredentialVault') + '\n({PrivacyCore,LocalSecretCrypto,CredentialVault})', { require, Buffer, TextDecoder, URL, structuredClone, process, setTimeout, clearTimeout });
+  const api = { ...require('../lib/privacy-primitives').createPrivacyPrimitives(), LocalSecretCrypto: require('../../ruyi-workbench/app/backend/local-crypto.cjs').createLocalSecretCrypto({ hooks: { helperPath: () => path.resolve(__dirname, '../../ruyi-workbench/runtime/macos/ruyi-keychain-helper') } }) };
   const vaultFile = path.join(path.dirname(path.resolve(file)), 'credential-vault-v1.json');
   const stat = fs.lstatSync(vaultFile); if (!stat.isFile() || stat.isSymbolicLink()) throw Error('configured_vault_refused');
-  const vault = api.CredentialVault.create({ core: api.PrivacyCore, protector: api.LocalSecretCrypto, supportedDefault: () => process.platform === 'win32',
+  const vault = api.CredentialVault.create({ core: api.PrivacyCore, protector: api.LocalSecretCrypto, supportedDefault: () => process.platform === 'darwin',
     size: async () => fs.statSync(vaultFile).size,
     store: { read: async () => JSON.parse(fs.readFileSync(vaultFile, 'utf8').replace(/^\uFEFF/, '')), write: async () => { throw Error('source_configuration_is_read_only'); }, invalidate() {} } });
   try { return (await vault.hydrateConfig(parsed)).raw; } finally { vault.clear(); }

@@ -21,7 +21,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 把 SCHEDULE_OUTCOME_KEYS 里的 unknown 一行删掉 → ⑤ 红（实得缺 unknown）。
 // 判定行：`SCHEDULER UI STATIC E2E: ALL PASS`。
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -134,14 +133,11 @@ for (const [label, catalog] of Object.entries(catalogs)) {
   ok(!/复制|clipboard|download/i.test(htmlBlock), '③c index.html 的定时任务块里也没有复制/下载入口');
 }
 
-/* ═════════ ④/⑤ 与 06j 的值域逐字对账（真产物内省，不靠 grep 形状）═════════ */
-const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-scheduler-ui-static-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = tmpHome;
-process.env.RUYI_HOME = tmpHome;
-const srv = require(path.join(APP, 'server.js'));
+/* ═════════ ④/⑤ 与调度器内核的值域逐字对账 ═════════ */
+const core = require(path.join(APP, 'backend/scheduler-core.cjs')).createSchedulerCore();
 {
-  const describeKeys = [...srv.SCHEDULER_DESCRIBE_KEYS].sort();
-  const dowKeys = [...srv.SCHEDULER_DOW_KEYS].sort();
+  const describeKeys = [...core.SCHEDULER_DESCRIBE_KEYS].sort();
+  const dowKeys = [...core.SCHEDULER_DOW_KEYS].sort();
   for (const [label, catalog] of Object.entries(catalogs)) {
     const missing = [...describeKeys, ...dowKeys].filter(key => typeof catalog[key] !== 'string');
     ok(missing.length === 0, `④ ${label} 覆盖 06j 的 ${describeKeys.length} 个 describe 键 + ${dowKeys.length} 个星期键（缺 ${JSON.stringify(missing)}）`);
@@ -149,7 +145,7 @@ const srv = require(path.join(APP, 'server.js'));
   ok(typeof catalogs['public zh-CN']['scheduler.dowJoin'] === 'string' && typeof catalogs['public en-US']['scheduler.dowJoin'] === 'string',
     '④b 星期之间的连接符也走目录（中文顿号／英文逗号不是同一个字）');
   // weekly 通用那一支的参数名：纯函数给 dayKeys（键的数组），文案要的是拼好的 days。
-  const described = srv.describeSchedule({ kind: 'weekly', at: '18:00', days: [1, 3] }, 'zh');
+  const described = core.describeSchedule({ kind: 'weekly', at: '18:00', days: [1, 3] }, 'zh');
   ok(described.key === 'scheduler.describe.weekly' && Array.isArray(described.params.dayKeys),
     `④c weekly 通用支回 dayKeys 数组（实得 ${JSON.stringify(described.params)}）`);
   ok(placeholders(catalogs['public zh-CN']['scheduler.describe.weekly']).includes('days'),
@@ -158,8 +154,8 @@ const srv = require(path.join(APP, 'server.js'));
 {
   const modeTable = (settingsSrc.split('const SCHEDULE_MODE_KEYS = Object.freeze({')[1] || '').split('});')[0];
   const outcomeTable = (settingsSrc.split('const SCHEDULE_OUTCOME_KEYS = Object.freeze({')[1] || '').split('});')[0];
-  const missModes = [...srv.SCHEDULER_FIRE_MODES].filter(mode => !new RegExp('\\b' + mode + ':').test(modeTable));
-  const missOutcomes = [...srv.SCHEDULER_OUTCOMES].filter(outcome => !new RegExp('\\b' + outcome + ':').test(outcomeTable));
+  const missModes = [...core.SCHEDULER_FIRE_MODES].filter(mode => !new RegExp('\\b' + mode + ':').test(modeTable));
+  const missOutcomes = [...core.SCHEDULER_OUTCOMES].filter(outcome => !new RegExp('\\b' + outcome + ':').test(outcomeTable));
   ok(missModes.length === 0, `⑤ 触发模式三值全部有人话（J10 的静态半边；缺 ${JSON.stringify(missModes)}）`);
   ok(missOutcomes.length === 0, `⑤b 结果五值全部有人话（J11 的静态半边；缺 ${JSON.stringify(missOutcomes)}）`);
   // J11 的措辞：unknown 那一句必须【明说要人核对】，不能只写「未知」两个字更不能退成「成功」。
@@ -187,6 +183,5 @@ for (const [name, source] of [['rail-pocket.js', pocketSrc]]) {
   ok(timers.length === 0, `⑥e steward-settings.js 仍然零计时器（实得 ${JSON.stringify(timers)}）`);
 }
 
-try { fs.rmSync(tmpHome, { recursive: true, force: true }); } catch { /* best-effort */ }
 console.log(fail === 0 ? '\nSCHEDULER UI STATIC E2E: ALL PASS' : `\nSCHEDULER UI STATIC E2E: ${fail} FAILURE(S)`);
 process.exit(fail === 0 ? 0 : 1);

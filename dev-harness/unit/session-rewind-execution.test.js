@@ -5,10 +5,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { functionBlock, sliceBlock, constBlock } = require('../lib/source-slice');
+const { functionBlock, constBlock } = require('../lib/source-slice');
 const root = path.resolve(__dirname, '../..');
 const read = file => fs.readFileSync(path.join(root, 'ruyi-workbench/app', file), 'utf8');
-const store = read('src/02-session-store.js');
+const { createSessionRewind } = require('../../ruyi-workbench/app/backend/session-rewind.cjs');
+const { createSessionTurnRuntime } = require('../../ruyi-workbench/app/backend/session-turn-runtime.cjs');
 const conversation = read('public/js/steward-conversation.js');
 const execution = id => ({ serverInstanceId: 'process-A', driverRunId: id, phase: 'running' });
 const idleOptions = () => ({ guardExecution: true, expectedExecution: null, expectedIdleState: {
@@ -40,10 +41,15 @@ function fixture(overrides = {}) {
     cancelModelRunsOfDiscardedTurns: () => {}, EventStreamHooks: {}, RUYI_EVENTS: { emit() {} },
     ...overrides,
   });
-  const guarded = sliceBlock(store, '// A guarded rewind owns admission', 'async function rewindSessionContents');
-  assert.ok(guarded.includes('async function rewindSession('));
-  vm.runInContext(guarded + '\n' + functionBlock(store, 'rewindSessionContents') + '\nthis.rewind = rewindSession;', ctx);
-  return { ctx, calls, session, rewind: ctx.rewind, blocked: () => ctx.SessionExecutionHooks.admissionBlocked('s') };
+  ctx.storage = { loadSession: ctx.loadSession, saveSession: ctx.saveSession, bumpMissionChangeSeq: ctx.bumpMissionChangeSeq };
+  const service = createSessionRewind({
+    execution: ctx.SessionExecutionHooks, state: ctx, storage: ctx.storage,
+    checkpoints: { rollback: ctx.journalRollback, prune: ctx.journalRevertLogPrune },
+    effects: { ...ctx.EventStreamHooks, cancelModelRunsOfDiscardedTurns: ctx.cancelModelRunsOfDiscardedTurns },
+    events: ctx.RUYI_EVENTS, logEvent: ctx.logEvent, timers: ctx,
+  });
+  ctx.SessionExecutionHooks.admissionBlocked = service.admissionBlocked;
+  return { ctx, calls, session, rewind: service.rewindSession, blocked: () => service.admissionBlocked('s') };
 }
 
 test('guarded rewind rejects missing identity and stop conflicts before reads or rollback, releasing admission', async () => {
@@ -82,8 +88,8 @@ test('admission stays closed through settlement and file rollback, including con
 test('a guarded rewind cannot overlap an already pending legacy rewind', async () => {
   const pendingRead = deferred();
   const f = fixture();
-  const load = f.ctx.loadSession;
-  f.ctx.loadSession = async id => { await pendingRead.promise; return load(id); };
+  const load = f.ctx.storage.loadSession;
+  f.ctx.storage.loadSession = async id => { await pendingRead.promise; return load(id); };
   const legacy = f.rewind('s', 2, false);
   assert.equal((await f.rewind('s', 2, true, { guardExecution: true, expectedExecution: null })).error, 'rewind_in_progress');
   pendingRead.resolve();
@@ -93,24 +99,23 @@ test('a guarded rewind cannot overlap an already pending legacy rewind', async (
 test('the actual turn entry refuses admission while guarded rewind awaits storage', async () => {
   const pendingRead = deferred();
   const f = fixture();
-  const load = f.ctx.loadSession;
-  f.ctx.loadSession = async id => { await pendingRead.promise; return load(id); };
+  const load = f.ctx.storage.loadSession;
+  f.ctx.storage.loadSession = async id => { await pendingRead.promise; return load(id); };
   const pending = f.rewind('s', 2, false, idleOptions());
   assert.equal(f.blocked(), true);
   let registered = 0;
-  Object.assign(f.ctx, {
-    readConfig: async () => ({}), loadSession: async () => ({ id: 's', todos: [] }),
-    AGENT_WAKE_SOURCE: 'agent_wake', EXCLUSIVE_TURN_SOURCES: new Set(),
-    sessionTodosSignature: () => '', resolvePermissionMode: () => 'default', permissionModeFrom: () => '',
-    configForSessionEngineRoute: config => config, agentWakeChain: new Map(), agentWakeSuppressed: new Set(),
-    sessionEngineRouteScopeOverrides: new Map(),
-    makeId: () => { registered++; return 'B'; }, bindDriverRun: () => { registered++; },
+  const { runSessionTurn } = createSessionTurnRuntime({
+    readConfig: async () => ({}),
+    sessions: { loadSession: async () => ({ id: 's', todos: [] }), sessionTodosSignature: () => '' },
+    routing: { configForSessionEngineRoute: config => config, sessionEngineRouteScopeOverrides: new Map() },
+    execution: f.ctx, engines: {}, steward: {}, EventStreamHooks: {},
+    makeId: () => { registered++; return 'B'; },
+    mission: { bindDriverRun: () => { registered++; } },
   });
-  vm.runInContext(functionBlock(read('src/10-context-governance.js'), 'runSessionTurn') + '\nthis.startTurn = runSessionTurn;', f.ctx);
-  await assert.rejects(f.ctx.startTurn({ sessionId: 's', source: 'steward' }), error => error.code === 'SESSION_EXECUTION_LOCKED');
+  await assert.rejects(runSessionTurn({ sessionId: 's', source: 'steward' }), error => error.code === 'SESSION_EXECUTION_LOCKED');
   assert.equal(registered, 0, 'no new driver identity or grant binding occurs');
   assert.equal(f.ctx.turnSettlers.size, 0);
-  f.ctx.loadSession = load;
+  f.ctx.storage.loadSession = load;
   pendingRead.resolve();
   assert.equal((await pending).ok, true);
   assert.equal(f.blocked(), false);
@@ -139,13 +144,20 @@ test('legacy idle rewind remains compatible while guarded explicit idle reaches 
   }
 });
 
+function bindExecutions(f, serverInstanceId = 'process-A') {
+  const service = require('../../ruyi-workbench/app/backend/session-executions.cjs').createSessionExecutions({
+    activeChildren: f.ctx.activeChildren, turnSettlers: f.ctx.turnSettlers, serverInstanceId,
+    hooks: f.ctx.SessionExecutionHooks, stopChild: f.ctx.stopSession,
+  });
+  Object.assign(f.ctx, service);
+  f.ctx.SessionExecutionHooks.checkRewind = service.sessionExecutionCheckRewind;
+  f.ctx.SessionExecutionHooks.observation = service.sessionExecutionObservation;
+}
+
 test('idle undo rejects any intervening admission, tombstone eviction or process change even without turn progression', async () => {
-  const runtime = read('src/04-permission-runtime.js');
   const make = () => {
-    const f = fixture({ OVERLAY_ID: 'process-A', sessionLastExecutions: new Map(), sessionExecutionEvictionGeneration: 0 });
-    vm.runInContext(['recordSessionExecutionOwner', 'sessionExecutionObservation', 'sessionExecutionSnapshot', 'sessionExecutionCheck', 'sessionExecutionCheckRewind']
-      .map(name => functionBlock(runtime, name)).join('\n')
-      + '\nSessionExecutionHooks.checkRewind = sessionExecutionCheckRewind; SessionExecutionHooks.observation = sessionExecutionObservation;', f.ctx);
+    const f = fixture();
+    bindExecutions(f);
     return f;
   };
   const admitted = make();
@@ -161,7 +173,7 @@ test('idle undo rejects any intervening admission, tombstone eviction or process
   assert.equal(evicted.ctx.SessionExecutionHooks.observation('s').lastDriverRunId, null);
   assert.equal((await evicted.rewind('s', 2, true, idleOptions())).error, 'execution_changed');
   assert.deepEqual(evicted.calls, []);
-  const restarted = make(); restarted.ctx.OVERLAY_ID = 'process-B';
+  const restarted = make(); bindExecutions(restarted, 'process-B');
   assert.equal((await restarted.rewind('s', 2, true, idleOptions())).error, 'execution_changed');
   assert.deepEqual(restarted.calls, []);
 });
@@ -182,19 +194,20 @@ test('guarded idle requires the complete observation and checks authoritative tu
 });
 
 test('guarded HTTP rewind keeps stable conflict codes and forwards the original idle observation', async () => {
-  const boot = read('src/00-boot.js');
-  const source = read('src/13b-api-domain-routes.js');
+  const { Readable } = require('node:stream');
+  const { createCheckpointRoutes } = require('../../ruyi-workbench/app/backend/checkpoint-routes.cjs');
   for (const error of ['execution_identity_required', 'execution_identity_unavailable', 'execution_changed', 'rewind_in_progress', 'rewind_settle_timeout']) {
     let options;
-    const ctx = vm.createContext({
-      readJsonBody: async () => ({ sessionId: 's', targetTurnSeq: 2, rollbackFiles: true, ...idleOptions() }),
-      safeSessionId: id => id, send: (_res, value) => value,
-      rewindSession: async (_id, _target, _files, observed) => { options = observed; return { ok: false, error }; },
+    const { handleCheckpointApiRoutes } = createCheckpointRoutes({
+      safeSessionId: id => id, journal: {}, editor: {}, storage: {},
+      execution: {
+        rewindSession: async (_id, _target, _files, observed) => { options = observed; return { ok: false, error }; },
+      },
     });
-    vm.runInContext(constBlock(boot, 'LEGACY_API_ERROR_CODES') + '\n'
-      + ['normalizeApiErrorPayload', 'json', 'apiFailure'].map(name => functionBlock(boot, name)).join('\n') + '\n'
-      + functionBlock(source, 'handleCheckpointApiRoutes') + '\nthis.route = handleCheckpointApiRoutes;', ctx);
-    const response = await ctx.route({ method: 'POST' }, {}, '/api/session/rewind');
+    const payload = Buffer.from(JSON.stringify({ sessionId: 's', targetTurnSeq: 2, rollbackFiles: true, ...idleOptions() }));
+    const req = Object.assign(Readable.from([payload]), { method: 'POST' });
+    const response = { writeHead(status) { this.status = status; }, end(body) { this.body = body; } };
+    await handleCheckpointApiRoutes(req, response, '/api/session/rewind');
     assert.equal(response.status, 409);
     assert.equal(JSON.parse(response.body).error.code, error);
     assert.equal(JSON.stringify(options.expectedIdleState), JSON.stringify(idleOptions().expectedIdleState));
@@ -214,11 +227,9 @@ test('legacy automatic stop compares the pre-read identity and refuses a replace
 });
 
 test('completed A can rewind using bounded admission evidence; completed B invalidates old A', async () => {
-  const runtime = read('src/04-permission-runtime.js');
   const make = () => {
-    const f = fixture({ OVERLAY_ID: 'process-A', sessionLastExecutions: new Map() });
-    vm.runInContext(['recordSessionExecutionOwner', 'sessionExecutionSnapshot', 'sessionExecutionCheck', 'sessionExecutionCheckRewind']
-      .map(name => functionBlock(runtime, name)).join('\n') + '\nSessionExecutionHooks.checkRewind = sessionExecutionCheckRewind;', f.ctx);
+    const f = fixture();
+    bindExecutions(f);
     f.ctx.recordSessionExecutionOwner('s', { driverRunId: 'A' });
     f.ctx.turnSettlers.delete('s');
     return f;
@@ -231,7 +242,7 @@ test('completed A can rewind using bounded admission evidence; completed B inval
   b.ctx.turnSettlers.delete('s');
   assert.equal((await b.rewind('s', 2, true, { guardExecution: true, expectedExecution: execution('A') })).error, 'execution_changed');
   assert.deepEqual(b.calls, []);
-  for (const invalidate of [f => f.ctx.sessionLastExecutions.clear(), f => { f.ctx.OVERLAY_ID = 'process-B'; }]) {
+  for (const invalidate of [f => { for (let i = 0; i < 2048; i++) f.ctx.recordSessionExecutionOwner('other-' + i, { driverRunId: 'r-' + i }); }, f => bindExecutions(f, 'process-B')]) {
     const f = make(); invalidate(f);
     assert.equal((await f.rewind('s', 2, true, { guardExecution: true, expectedExecution: execution('A') })).error, 'execution_changed');
     assert.deepEqual(f.calls, []);
@@ -297,15 +308,16 @@ test('identity conflicts use the existing localized refresh instruction', async 
 });
 
 test('launch registration captures only its own event and resolves unavailable if it never registers', async () => {
-  const source = read('src/13k-steward-threads.js');
+  const { createStewardThreadLauncher } = require('../../ruyi-workbench/app/backend/steward-thread-launch.cjs');
   let input;
   const done = deferred();
-  const ctx = vm.createContext({
-    stewardLaunchingTurns: new Set(), runSessionTurn: value => { input = value; return done.promise; },
-    logEvent() {}, stewardRecordLaunchOutcome: async () => {},
+  const { stewardLaunchTurn: launch, stewardLaunchPending } = createStewardThreadLauncher({
+    runSessionTurn: value => { input = value; return done.promise; },
+    safeSessionId: id => id, nowIso: () => '2026-01-01T00:00:00.000Z',
+    logEvent() {}, updateSessionMeta: async () => {},
   });
-  const launch = vm.runInContext(functionBlock(source, 'stewardLaunchTurn') + '\nstewardLaunchTurn', ctx);
   const running = launch({ sessionId: 's' }, 'test');
+  assert.equal(stewardLaunchPending('s'), true);
   const own = execution('A');
   input.onEvent({ type: 'session', session: { id: 's', turnSeq: 7 }, execution: own });
   own.driverRunId = 'B';
@@ -314,6 +326,7 @@ test('launch registration captures only its own event and resolves unavailable i
   assert.equal(observed.rewindTargetTurnSeq, 8);
   done.resolve({ ok: true });
   await running;
+  assert.equal(stewardLaunchPending('s'), false);
   const early = launch({ sessionId: 's' }, 'test');
   assert.equal(await early.registration, null);
 });

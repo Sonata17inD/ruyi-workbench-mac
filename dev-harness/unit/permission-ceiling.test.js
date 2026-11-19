@@ -34,8 +34,6 @@ const TOOLS = [
   // 127 波 2-bis：shell_send / keyboard_send_keys 放出了工具名判据，高风险全靠内容判据 —— 两边都要在笛卡尔积里。
   { name: 'shell_send', input: { shellId: 's', input: 'Get-ChildItem -Name' }, risky: false },
   { name: 'shell_send', input: { shellId: 's', input: 'rm -rf C:/somewhere' }, risky: true },
-  { name: 'keyboard_send_keys', input: { keys: 'Hello{ENTER}' }, risky: false },
-  { name: 'keyboard_send_keys', input: { keys: 'git push origin main{ENTER}' }, risky: true },
   { name: 'slack_send', input: { text: 'hi' }, risky: true },
 ];
 
@@ -72,9 +70,7 @@ const TOOLS = [
   ok(nativeToolGate('auto', 'exec', 'shell_send', { shellId: 's', input: 'Get-ChildItem -Name' }) === 'allow'
     && nativeToolGate('auto', 'exec', 'shell_send', { shellId: 's', input: 'rm -rf C:/somewhere' }) === 'ask',
     'P3 127 2-bis：auto 档 shell_send 无害放行、带 rm -rf 仍要人按（名字不再恒问，内容判据接得住）');
-  ok(nativeToolGate('auto', 'exec', 'keyboard_send_keys', { keys: 'Hello{ENTER}' }) === 'allow'
-    && nativeToolGate('auto', 'exec', 'keyboard_send_keys', { keys: 'git push origin main{ENTER}' }) === 'ask',
-    'P3 127 2-bis：auto 档 keyboard_send_keys 同上（用户 2026-09-17 拍板放出）');
+
   ok(nativeToolGate('auto', 'exec', 'slack_send', { text: 'hi' }) === 'ask' && nativeToolGate('auto', 'exec', 'mcp__x__send_message', {}) === 'ask',
     'P3 127 2-bis：真正对外发送的名字在 auto 档仍要人按');
   ok(nativeToolGate('auto', 'exec', '', {}) === 'ask',

@@ -1,14 +1,16 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs'), fsp = require('node:fs/promises'), os = require('node:os'), path = require('node:path'), vm = require('node:vm');
-const { functionBlock } = require('../lib/source-slice');
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const { fixture: composerFixture } = require('../lib/composer-race-fixture');
 const { killOwnTree } = require('../lib/kill-own-tree');
+const { pathWithinRoot } = require('../../ruyi-workbench/app/backend/path-containment.cjs');
+const { buildAttachmentPrompt } = require('../../ruyi-workbench/app/backend/attachment-prompt.cjs');
+const { sanitizeFsSegmentName } = require('../../ruyi-workbench/app/backend/attachment-store.cjs');
+const { createSessionSteering } = require('../../ruyi-workbench/app/backend/session-steering.cjs');
+const { createAgentSteering } = require('../../ruyi-workbench/app/backend/agent-steering.cjs');
+const { createCliInteractiveInput } = require('../../ruyi-workbench/app/backend/cli-interactive-input.cjs');
 const src = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const read = file => fs.readFileSync(path.join(src, file), 'utf8');
-const domain = read('13b-api-domain-routes.js');
-const steering = domain.slice(domain.indexOf('const STEER_REFUSAL ='), domain.indexOf('// ── steer 域:'));
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7ZzXcAAAAASUVORK5CYII=', 'base64');
 function backend(t, kind = 'openai') {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steer-images-'));
@@ -19,18 +21,16 @@ function backend(t, kind = 'openai') {
   const session = { id: 'sess_image', turnSeq: 1, messages: [], providerHistory: [] };
   const reg = { kind, session, state: 'running', interactive: true, vision: true, steerQueue: [] };
   const regs = new Map([[session.id, reg]]), events = [], writes = [];
-  const c = vm.createContext({ require, fs, fsp, path, Buffer, Date, paths: { uploads }, activeChildren: regs, STEER_QUEUE_MAX: 3,
-    safeSessionId: s => /^sess_\w+$/.test(String(s)) ? s : '', nowIso: () => new Date().toISOString(),
+  const { buildUserEnvelope } = createCliInteractiveInput({ activeChildren: regs });
+  const c = { createTurnSegmentBuilder: require('../../ruyi-workbench/app/backend/turn-segments.cjs').createTurnSegmentBuilder, VisualPipeline: require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline(), paths: { uploads }, activeChildren: regs, STEER_QUEUE_MAX: 3,
+    safeSessionId: s => /^sess_\w+$/.test(String(s)) ? s : '', nowIso: () => new Date().toISOString(), pathWithinRoot, buildAttachmentPrompt, sanitizeFsSegmentName,
     saveSession: async () => {}, hasPendingQuestionForSession: () => false,
-    writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
-  });
-  const bridge = read('03-bridge-guard.js');
-  vm.runInContext(read('04-visual-pipeline.js') + '\n' + functionBlock(bridge, 'pathWithinRoot') + '\n' +
-    functionBlock(bridge, 'buildAttachmentPrompt') + '\n' + functionBlock(read('04-permission-runtime.js'), 'sanitizeFsSegmentName') + '\n' +
-    functionBlock(read('01-config.js'), 'buildUserEnvelope') + '\n' + steering + '\n' +
-    functionBlock(read('07-autonomy.js'), 'drainSteerQueue') + '\n' + functionBlock(read('02c-turn-segments.js'), 'createTurnSegmentBuilder'), c);
+    buildUserEnvelope, writeToChild: (sid, envelope) => { writes.push(envelope); return true; }, logEvent() {},
+  };
+  c.drainSteerQueue = createAgentSteering({ sessions: c }).drainSteerQueue;
+  c.steerSessionCore = createSessionSteering(c).steerSessionCore;
   reg.onEvent = event => events.push(event);
-  reg.buildSteerAttachmentPrompt = c.buildAttachmentPrompt;
+  reg.buildSteerAttachmentPrompt = buildAttachmentPrompt;
   return { c, reg, session, regs, attachment, events, writes };
 }
 

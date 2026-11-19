@@ -1,7 +1,7 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 
-// Offline contract tests for the 05c Kimi native-search classifier. The fragment is loaded in a VM with
+// Offline contract tests for the Kimi native-search classifier. The production module runs with
 // controlled guard/path helpers, so these tests do not start Ruyi/Kimi, do not spawn an attack command, and
 // do not replace the product implementation. One optional host case uses a real rg discovered on Ruyi's own
 // PATH; it is explicitly skipped when this machine has no independently visible host rg.
@@ -11,19 +11,14 @@ const fsp = require('fs/promises');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
-const FRAGMENT = path.join(ROOT, 'ruyi-workbench', 'app', 'src', '05c-kimi-search-policy.js');
+const FRAGMENT = path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'kimi-search-policy.cjs');
 const source = fs.readFileSync(FRAGMENT, 'utf8');
+const { createKimiSearchPolicy } = require(FRAGMENT);
 
 function loadClassifier(options) {
-  const sandbox = {
-    console,
-    process,
-    os,
-    path,
-    fsp,
+  const guards = {
     dataRoot: () => options.dataRoot,
     appRoot: () => options.appRoot,
     pathWithinRoot(target, root) {
@@ -58,7 +53,7 @@ function loadClassifier(options) {
       });
     },
     async guardFileToolPath(raw, context) {
-      const canonical = await sandbox.realpathForContainment(raw);
+      const canonical = await guards.realpathForContainment(raw);
       const roots = [
         context && context.session && context.session.cwd,
         context && context.config && context.config.defaultWorkspace,
@@ -66,16 +61,14 @@ function loadClassifier(options) {
         ...(context && context.config && Array.isArray(context.config.workspaces) ? context.config.workspaces.map(row => row && row.path) : []),
         options.dataRoot,
       ].filter(value => typeof value === 'string' && value);
-      const allowed = roots.some(root => sandbox.pathWithinRoot(canonical, path.resolve(root)));
-      if (!allowed || sandbox.isSensitiveDataPath(raw) || sandbox.isSensitiveDataPath(canonical)) {
+      const allowed = roots.some(root => guards.pathWithinRoot(canonical, path.resolve(root)));
+      if (!allowed || guards.isSensitiveDataPath(raw) || guards.isSensitiveDataPath(canonical)) {
         return { ok: false, error: 'denied by controlled read guard' };
       }
       return { ok: true, absPath: canonical };
     },
   };
-  vm.createContext(sandbox);
-  vm.runInContext(`${source}\nthis.__classifyKimiAcpReadonlySearch = classifyKimiAcpReadonlySearch;`, sandbox, { filename: FRAGMENT });
-  return sandbox.__classifyKimiAcpReadonlySearch;
+  return createKimiSearchPolicy(guards).classifyKimiAcpReadonlySearch;
 }
 
 function resultIsDenied(result, fragment) {

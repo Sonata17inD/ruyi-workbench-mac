@@ -10,10 +10,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import datetime, timezone
 import hashlib
-try:
-    import fcntl
-except ImportError:  # default non-receipt tool paths remain importable on Windows
-    fcntl = None
+import fcntl
 import json
 import math
 import os
@@ -147,7 +144,7 @@ def _read_marker(directory, name):
 def _base_directory():
     # The current handshake implementation is native Mac/POSIX. Decline unavailable safe
     # descriptor operations rather than silently substituting an unchecked path traversal.
-    if fcntl is None or not hasattr(os, 'O_NOFOLLOW') or os.open not in os.supports_dir_fd:
+    if not hasattr(os, 'O_NOFOLLOW') or os.open not in os.supports_dir_fd:
         raise ExecutionJournalError('execution_journal_unsupported', 'Safe execution evidence storage is unavailable')
     base = Path(logs_dir()) / 'execution-receipts'
     base.mkdir(mode=0o700, exist_ok=True)

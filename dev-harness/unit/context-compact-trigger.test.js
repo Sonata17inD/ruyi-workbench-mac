@@ -10,8 +10,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-trigger-'));
 process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
-const { readServerSource } = require('../src-reader');
-const source = readServerSource();
+const { createAgentAutoCompaction } = require(path.join(app, 'backend', 'agent-auto-compaction.cjs'));
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 // 前端 Agent CLI 登记表（ES 模块）：chat-render-primitives 这个零 import 工厂经 deps.agentCliMeta 拿它，这里注入真表。
 let agentCliRegistry = null;
@@ -19,11 +18,6 @@ before(async () => {
   agentCliRegistry = await import(require('url').pathToFileURL(path.join(app, 'public/js/agent-cli-registry.js')).href);
 });
 
-function extract(name) {
-  const match = source.match(new RegExp(`^(?:async )?function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?^\\}`, 'm'));
-  assert.ok(match, `extract ${name}`);
-  return match[0];
-}
 const key = srv.contextWindowOverrideKey;
 function configFor(limit = 1000000, model = 'ark-code-latest') {
   return {
@@ -42,17 +36,13 @@ function agentTrigger(extra = {}) {
   const calls = [], events = [];
   const context = {
     agentConversationContextMeta: srv.agentConversationContextMeta,
-    resolveContextWindow: srv.resolveContextWindow,
     runAgentExternalCompact: async (...args) => { calls.push(args); return { ok: true, beforeTokens: 800000, afterTokens: 3000 }; },
     loadSession: async () => ({ id: 'test', claudeSessionId: '', messages: [] }),
     kimiSessionStatus: async () => ({ ok: false }),
     applyKimiStatusToSession: () => {},
-    // hunt2-engines#7:触发线的滞回与失败退避是 05b 里的三个小函数 + 一张进程内表,一起放进沙箱(每个沙箱一张新表)。
-    agentAutoCompactFailures: new Map(), AGENT_AUTO_COMPACT_FAIL_COOLDOWN_MS: 10 * 60 * 1000,
     ...extra,
   };
-  const helpers = ['agentAutoCompactTrigger', 'agentAutoCompactBackingOff', 'noteAgentAutoCompactFailure'].map(extract).join('\n');
-  const run = vm.runInNewContext(`${extract('lastSessionContextTokens')}\n${extract('replaceSessionObject')}\n${helpers}\n${extract('maybeAutoCompactAgentSession')}\nmaybeAutoCompactAgentSession`, context);
+  const run = createAgentAutoCompaction(context);
   // 架构还债批 4:第三个参数是该 CLI 的适配器(05 AGENT_CLI_ADAPTERS)。用真适配器,只把「原生状态/原生压缩」两项能力
   // 换成走本沙箱里的桩(与修前直接桩 kimiSessionStatus / applyKimiStatusToSession 的口径相同)。
   const adapterFor = type => {
@@ -188,15 +178,18 @@ test('provider trigger consumes main-model override, not the summarizer window',
   assert.equal(srv.providerConversationContextWindow(config, provider, provider.model), 1000000);
   assert.equal(srv.providerContextWindow(summary.provider, summary.model), 131072);
   assert.equal(provider.contextWindow, 65536, 'does not mutate provider or summary budgets');
-  const events = [];
-  const run = vm.runInNewContext(`${extract('runAutoCompaction')}\n${extract('maybeAutoCompact')}\nmaybeAutoCompact`, {
-    providerConversationContextWindow: srv.providerConversationContextWindow,
-    providerContextWindow: srv.providerContextWindow,
-    calibratedEstimate: () => 241000,
-    writeHistorySnapshot: () => assert.fail('under-budget turns must not start compaction'),
+  const events = [], attempts = [];
+  const { createCompactionKernel } = require(path.join(app, 'backend', 'compaction-kernel.cjs'));
+  const { createSessionCompaction } = require(path.join(app, 'backend', 'session-compaction.cjs'));
+  const kernel = createCompactionKernel({ calibratedEstimate: () => 241000 });
+  const { maybeAutoCompact: run } = createSessionCompaction({
+    CompactionPlan: srv.CompactionPlan, kernel,
+    writeHistorySnapshot: () => { attempts.push('snapshot'); return ''; },
+    logEvent: event => attempts.push(event),
   });
   assert.equal(await run({ providerHistory: [{ role: 'user', content: 'history' }] }, provider, '', config, e => events.push(e), provider.model), false);
   assert.deepEqual(events, []);
+  assert.deepEqual(attempts, []);
 });
 
 test('provider learned safety caps remain authoritative over manual conversation limits', () => {

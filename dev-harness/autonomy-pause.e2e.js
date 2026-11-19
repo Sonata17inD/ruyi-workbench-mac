@@ -1,13 +1,15 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E: 第27f波「权限超时→存档暂停」(AUTONOMY-PLAN §27 §6 / 红队 R2-R4)。无端口(源抽取 + 静态锁,离线 Node 直跑)。
-// [P] 源抽取 requestNativePermission 实跑两段定时:无 pause→基础超时 deny;pause→基础超时发 permission_paused+onPause+延长到 TTL→回落 deny;
+// E2E: 第27f波「权限超时→存档暂停」(AUTONOMY-PLAN §27 §6 / 红队 R2-R4)。无端口(生产审批服务 + 假定时器,离线 Node 直跑)。
+// [P] requestNativePermission 实跑两段定时:无 pause→基础超时 deny;pause→基础超时发 permission_paused+onPause+延长到 TTL→回落 deny;
 //     窗口内经 /api/permission/decision(直接 resolve entry)→按决定返回。
 // [S] 静态锁:config 默认 opt-in false + TTL clamp;provider gate 仅 driverAuto 启用;CLI 桥仅 driverAutoSessions;两路径 fail-closed deny。
 'use strict';
-const { readServerSource } = require('./src-reader');
-const fs = require('fs'), path = require('path');
-const SERVER = path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js');
-const src = readServerSource();
+const fs = require('node:fs'), path = require('node:path');
+const { createNativeApprovalWaiters } = require('../ruyi-workbench/app/backend/native-approval-waiters.cjs');
+const { createPermissionWaitPolicy } = require('../ruyi-workbench/app/backend/permission-wait-policy.cjs');
+const owners = ['config-defaults', 'config-schema', 'provider-turn', 'agent-cli-turn',
+  'intervention-routes', 'session-turn-runtime', 'native-approval-waiters'];
+const src = owners.map(name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name + '.cjs'), 'utf8')).join('\n');
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -24,7 +26,6 @@ ok(/\(config\.autonomyPauseOnTimeout && driverAuto\) \? \{/.test(src), 'S provid
 ok(/const cliPause = config\.autonomyPauseOnTimeout && driverAutoSessions\.has\(sessionId\);/.test(src), 'S CLI 桥仅【opt-in + driverAutoSessions】启用');
 ok(/if \(driverAuto\) driverAutoSessions\.add\(session\.id\);/.test(src) && /if \(driverAuto\) driverAutoSessions\.delete\(session\.id\);/.test(src), 'S runTurn 维护 driverAutoSessions(进出平衡)');
 // fail-closed:两处 pause 分支的 TTL 定时器都 resolve/settle deny(pausedTimeout)。
-// 07-autonomy.js 后经重构用 settle(语义同 resolve);静态锁按行为契约匹配,不绑死 callee 名。
 ok((src.match(/source: 'timeout_permission'/g) || []).length >= 4 && (src.match(/pausedTimeout: true/g) || []).length >= 2, 'S 两引擎路径 TTL 到点均经 command core fail-closed deny(pausedTimeout)');
 // 对抗轮 P2:两引擎 idle 看门狗都在暂停期间豁免(否则 idle 会在 TTL 内先杀回合/子进程,provider 还会 abort 中毒 ctrl 令窗口内批准失效)。
 ok((src.match(/if \(reg\.exited \|\| reg\.pausePending\) return;/g) || []).length >= 2, 'S 两引擎 idle 看门狗暂停期间豁免(reg.exited||reg.pausePending)');
@@ -34,41 +35,32 @@ ok(/reg\.pausePending = false; \/\/ 决定\/TTL-deny/.test(src) || /reg\.pausePe
 ok(/if \(reg\) reg\.pausePending = true;/.test(src) && /if \(reg\) \{ reg\.pausePending = false; reg\.lastEventAt = Date\.now\(\); \}/.test(src), 'S CLI 桥置/解除 pausePending + 重置看门狗时钟');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-// [P] 源抽取 requestNativePermission 两段定时实跑
+// [P] requestNativePermission 两段定时实跑
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] requestNativePermission 两段定时 ──');
-const m = src.match(/function requestNativePermission\(sessionId, toolName, input, onEvent, timeoutMs, tier, pause\) \{[\s\S]*?\n\}/);
-ok(!!m, 'P 源抽取 requestNativePermission(含 pause 形参)');
 const pending = new Map();
-let idc = 0; const makeId = p => p + '_' + (++idc);
-const toolIsRevertible = () => false;
-// 注入【可控 fake setTimeout/clearTimeout】—— clamp 把基础超时夹到 ≥5s、TTL ≥60s,实时等不现实;用假定时器手动触发,确定性且瞬时。
+let idc = 0;
 let timers = [];
 const setTimeoutF = (cb, ms) => { const t = { cb, ms, cleared: false }; timers.push(t); return t; };
 const clearTimeoutF = t => { if (t) t.cleared = true; };
 const fireNext = () => { const live = timers.filter(x => !x.cleared).sort((a, b) => a.ms - b.ms); if (live[0]) { live[0].cleared = true; live[0].cb(); return true; } return false; };
-// 第71波:requestNativePermission 的 settle 内旁路调 settleIntervention(02 持久化),onEvent 后旁路调 registerIntervention。
-// 源抽取注入 noop(本件测定时器行为,不测 Intervention 持久化 -- 后者见 interventions-persist.e2e.js)。
-// 123-M1:baseMs 现在先问一句「这条会话是不是定时任务派的」(07 的 schedulerAskWaitOverrideMs,
-// 由 13s 在派单前后成对写/清)。源抽取件必须把这个新依赖也注进来 —— 71 波那条硬教训的同一个模具:
-// 改了产品代码就要回来核一遍源抽取的注入表,漏一个就是 ReferenceError 而不是断言红。
-// 这里用一张可控的表来喂它,下面 (5) 组就靠它量「换的只是等待窗口,不是判定」。
-const schedulerAskWait = new Map();
-// 2026-09-24:「等多久」的归一改走 04 的 promptWaitMs(0/缺省 = 不限时)。同一条纪律:注进来的是源里抽出来的
-// 【真函数】,不是桩 —— 本件各组传的都是显式 120000,真函数原样返回,定时行为一个字不变。
-const pwSrc = src.match(/const PROMPT_WAIT_UNLIMITED_MS = \d+;[\s\S]*?\nfunction promptWaitMs\(value, floorMs = 5000\) \{[\s\S]*?\n\}/);
-ok(!!pwSrc, 'P 源抽取 promptWaitMs(04:0/缺省 = 不限时)');
-const promptWaitMs = new Function(pwSrc[0] + '\nreturn promptWaitMs;')();
-const requestNativePermission = new Function('makeId', 'toolIsRevertible', 'pendingPermissions', 'setTimeout', 'clearTimeout', 'registerIntervention', 'settleIntervention', 'runAutomaticInterventionDecision', 'schedulerAskWaitOverrideMs', 'promptWaitMs',
-  m[0] + '\nreturn requestNativePermission;')(makeId, toolIsRevertible, pending, setTimeoutF, clearTimeoutF, () => {}, () => {}, (_command, fallback) => fallback(),
-  sid => Number(schedulerAskWait.get(String(sid))) || 0, promptWaitMs);
+const { promptWaitMs } = createPermissionWaitPolicy();
+const { requestNativePermission, schedulerAskWaitSessions: schedulerAskWait } = createNativeApprovalWaiters({
+  pending: { pendingPermissions: pending, pendingPlans: new Map() },
+  interventions: {
+    makeId: prefix => prefix + '_' + (++idc), promptWaitMs,
+    registerIntervention() {}, settleIntervention() {},
+    runAutomaticInterventionDecision(_command, fallback) { fallback(); },
+  },
+  timers: { setTimeout: setTimeoutF, clearTimeout: clearTimeoutF },
+});
 
 (async () => {
   const settle = p => Promise.race([p, sleep(0).then(() => '__pending__')]);
   // (1) 无 pause:基础超时 → deny。
   {
     timers = []; const events = [];
-    const p = requestNativePermission('s1', 'powershell_run', {}, e => events.push(e), 120000, 'exec', null);
+    const p = requestNativePermission('s1', 'shell_run', {}, e => events.push(e), 120000, 'exec', null);
     fireNext(); // 基础超时
     const d = await p;
     ok(d.behavior === 'deny' && !d.pausedTimeout, 'P(1) 无 pause:基础超时→deny(非 pausedTimeout)');
@@ -77,7 +69,7 @@ const requestNativePermission = new Function('makeId', 'toolIsRevertible', 'pend
   // (2) pause 启用:基础超时→发 permission_paused + onPause;延长到 TTL→回落 deny(pausedTimeout)。
   {
     timers = []; const events = []; let paused = 0;
-    const p = requestNativePermission('s2', 'powershell_run', {}, e => events.push(e), 120000, 'exec', { enabled: true, ttlMs: 2700000, onPause: () => { paused++; } });
+    const p = requestNativePermission('s2', 'shell_run', {}, e => events.push(e), 120000, 'exec', { enabled: true, ttlMs: 2700000, onPause: () => { paused++; } });
     fireNext(); // 基础超时 → 进 pause 分支(同步:onPause + emit + 注册 TTL 定时器)
     ok(events.some(e => e.type === 'permission_paused') && paused === 1, 'P(2) 基础超时→发 permission_paused + onPause 检查点(1 次)');
     ok((await settle(p)) === '__pending__', 'P(2) pause 窗口内 promise 仍挂起(未 resolve)');
@@ -100,7 +92,7 @@ const requestNativePermission = new Function('makeId', 'toolIsRevertible', 'pend
   // (4) 基础超时前决定(pause 启用但用户很快决定)→ 不进 pause 窗口,不发 permission_paused。
   {
     timers = []; const events = [];
-    const p = requestNativePermission('s4', 'powershell_run', {}, e => events.push(e), 120000, 'exec', { enabled: true, ttlMs: 2700000, onPause: () => {} });
+    const p = requestNativePermission('s4', 'shell_run', {}, e => events.push(e), 120000, 'exec', { enabled: true, ttlMs: 2700000, onPause: () => {} });
     const rid = events.find(e => e.type === 'permission_request').requestId;
     const entry = pending.get(rid); clearTimeoutF(entry.timer); pending.delete(rid); entry.resolve({ behavior: 'deny', message: 'user denied' }); // 基础超时前决定
     const d = await p;
@@ -111,7 +103,7 @@ const requestNativePermission = new Function('makeId', 'toolIsRevertible', 'pend
   //     毫秒数 —— 而定时器一到点,走的还是同一条 deny。**子集律:只能拒,永不放行。**
   {
     timers = []; const events = [];
-    const p = requestNativePermission('s5', 'powershell_run', {}, e => events.push(e), 120000, 'exec', null);
+    const p = requestNativePermission('s5', 'shell_run', {}, e => events.push(e), 120000, 'exec', null);
     ok(timers.length === 1 && timers[0].ms === 120000, `P(5a) 没登记过的会话:基础窗口仍是 timeoutMs(实测 ${timers[0] && timers[0].ms})`);
     fireNext();
     ok((await p).behavior === 'deny', 'P(5a) 到点仍是 deny');
@@ -119,7 +111,7 @@ const requestNativePermission = new Function('makeId', 'toolIsRevertible', 'pend
   {
     timers = []; const events = [];
     schedulerAskWait.set('s6', 30 * 60000);   // = config.schedulerAskWaitMinutes 默认 30 分钟
-    const p = requestNativePermission('s6', 'powershell_run', {}, e => events.push(e), 120000, 'exec', null);
+    const p = requestNativePermission('s6', 'shell_run', {}, e => events.push(e), 120000, 'exec', null);
     ok(timers.length === 1 && timers[0].ms === 1800000,
       `P(5b) 定时任务的会话:基础窗口换成 30 分钟(实测 ${timers[0] && timers[0].ms},不是 120000)`);
     fireNext();

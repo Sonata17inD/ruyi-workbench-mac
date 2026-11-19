@@ -25,8 +25,8 @@ ok(pkg.version === bootV, `版本一致: package.json(${pkg.version}) == 00-boot
 ok(facts.workbenchVersion === pkg.version, `facts.workbenchVersion(${facts.workbenchVersion}) == package.json(${pkg.version})`);
 
 // 产物里的版本(防改了 src 忘 build)。
-const built = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'), 'utf8');
-ok(built.includes(`const VERSION = '${pkg.version}'`), `产物 server.js 版本与 package.json 一致(${pkg.version})`);
+const built = require('./src-reader').readServerSource();
+ok(built.includes(`const VERSION = '${pkg.version}'`), `生成装配的版本与 package.json 一致(${pkg.version})`);
 
 // 原生工具数:require 产物真身重算。
 const srv = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));
@@ -53,7 +53,7 @@ const accV = (pyproj.match(/^version = "([^"]+)"/m) || [])[1] || '';
 ok(facts.accVersion === accV, `facts.accVersion(${facts.accVersion}) == pyproject(${accV})`);
 
 // ACC 工具数:venv 在 → 活注册表对账;不在 → 形状校验(CI acc-smoke 补活对账)。
-const venvPy = path.join(ROOT, 'mcp', 'ai-computer-control', '.venv', 'Scripts', 'python.exe');
+const venvPy = path.join(ROOT, 'mcp', 'ai-computer-control', '.venv', 'bin', 'python');
 if (fs.existsSync(venvPy)) {
   const r = cp.spawnSync(venvPy, ['-X', 'utf8', '-c',
     "import sys; sys.path.insert(0, r'mcp/ai-computer-control/src'); import ai_computer_control.server as s; print(len(s.mcp._tool_manager.list_tools()))"],
@@ -74,8 +74,9 @@ ok(facts.defaultPort === bootPort, `facts.defaultPort(${facts.defaultPort}) == 0
 // ① ROUTE_AUTH 表有 POST /api/bootstrap 标 auth='open'(浏览器拿 token 唯一通道);
 // ② serveStatic 浏览器导航分支把 __WCW_TOKEN__ 置空(HTML 不再明文下发 token)。
 ok(facts.tokenBootstrap === 'api-bootstrap', `facts.tokenBootstrap(${facts.tokenBootstrap}) == 'api-bootstrap'`);
-ok(built.includes("p: '/api/bootstrap', auth: 'open'"), "ROUTE_AUTH 含 POST /api/bootstrap(auth=open,浏览器拿 token 唯一通道)");
-ok(built.includes('__WCW_TOKEN__') && built.includes("browserNav ? ''"), "serveStatic 浏览器分支置空 token(HTML 不再明文下发)");
+ok(require('../ruyi-workbench/app/backend/http-route-policy.cjs').ROUTE_AUTH.some(r => r.m === 'POST' && r.p === '/api/bootstrap' && r.auth === 'open'), "ROUTE_AUTH 含 POST /api/bootstrap(auth=open,浏览器拿 token 唯一通道)");
+const staticAssetsSource = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/static-assets.cjs'), 'utf8');
+ok(staticAssetsSource.includes('__WCW_TOKEN__') && staticAssetsSource.includes("browserNav ? ''"), "serveStatic 浏览器分支置空 token(HTML 不再明文下发)");
 
 // EC-A:live probe 数 = SKIP 集大小;且每条 SKIP 条目文件名须含 'live' 或在白名单
 // (防 SKIP 混入非 live 件如已知 flaky,使 liveProbes 语义失真)。deepseek-tools 文件名不含 live 但属 live probe(真 API 调用)。
@@ -98,19 +99,10 @@ const accMentions = [...readme.matchAll(/(\d+)\s*个?(?:桌面| )?工具/g), ...
 const accClaimsOk = !accMentions.includes(99) && !accMentions.includes(98);
 ok(accClaimsOk, `README 无过时 ACC 工具数口径(99/98 绝迹;现行 ${facts.accTools})`);
 
-// 117m：README 的三个门面数字也跟 facts 对账。上面那条 ACC 软锁只拦住了 99/98 两个具体值，
-// 而实测 README 已经漂到「89 个原生工具 / 243 项 e2e / 15 组 unit」，真值是 90 / 318 / 30 ——
-// 漂了好几波没人发现，因为没有任何机器在看。这三条只要求「真值在 README 里出现过」，
-// 不钉句式（README 改排版不该把门弄红）；数字一变而 README 没跟，这里就红。
-// 126-111e 顺手收紧的一把松锁:这三条原本写成 `readmeNums.has(n)` —— 只问「这个数字在 README 里
-// 【某处】出现过没有」。README 里到处都是别的数字(版本号、别的计数、表格里的数),于是它几乎永远
-// 是绿的:实测 README 写着「48 组 unit suite」而 facts 已经是 49,这三条照样全过。锁写松了比没有锁
-// 更糟 —— 它给的是假的把握。收紧成:**数字必须贴着它声称在数的那个词**,而且每一处都要对上。
-// (本会话第四次同一族:锁要钉住判据本身,不是「这几个字/这个数出现过」。)
+// Product documentation need not advertise test counts. Any published count must match facts.
 function readmeCounts(file, text, label, patterns) {
   const hits = [];
   for (const re of patterns) for (const m of text.matchAll(re)) hits.push({ text: m[0].trim(), n: Number(m[1]) });
-  ok(hits.length > 0, `${file} 里扫得到「${label}」的说法（实得 ${hits.length} 处；扫不到 = 本条静默失效）`);
   return hits;
 }
 for (const [label, value, zhPatterns, enPatterns] of [

@@ -23,6 +23,7 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(require se
 // 判定行:`ENGINE ENV BRIEF STATIC E2E: ALL PASS`。
 const fs = require('fs');
 const path = require('path');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const SERVER = path.join(ROOT, 'ruyi-workbench', 'app', 'server.js');
@@ -144,10 +145,8 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   ok(/You are Kimi Code/.test(enKimi) && /native AskUserQuestion/.test(enKimi) && /Desktop control: disabled/.test(enKimi) && /no usable ripgrep/.test(enKimi), 'E2 英文 Kimi 版(原生提问/桌面关/无 rg)');
 
   /* ═══════════ F 接线(源码) ═══════════ */
-  const src = fs.readFileSync(SERVER, 'utf8');
-  const claudeStart = src.indexOf('async function runClaudeTurn(');
-  const claudeEnd = src.indexOf('async function runOpenAiTurn(');
-  const region = claudeStart >= 0 && claudeEnd > claudeStart ? src.slice(claudeStart, claudeEnd) : '';
+  const claude = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/agent-cli-turn.cjs'), 'utf8');
+  const region = functionBlock(claude, 'runClaudeTurn');
   const codeOnly = region.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
   const iUser = codeOnly.indexOf("appendSys = String(config.appendSystemPrompt || '');");
   const iBrief = codeOnly.indexOf('if (envBrief && envBrief.text) appendSys +=');
@@ -159,7 +158,8 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
     'F3 并进环境说明的两句旧提示只在没有环境说明时(管家会话)才注入,不重复');
   ok(/session\.kind === 'steward' \? null/.test(codeOnly), 'F4 管家会话不拿这段(它有自己的整套身份)');
   ok(/envBrief: envBrief \? envBrief\.fingerprint : undefined/.test(codeOnly), 'F5 meta 事件带环境说明指纹(可观测)');
-  ok(!/Win Claude Workbench/.test(src.slice(src.indexOf('function renderCliEnvBrief('), src.indexOf('function providerEnvLines('))), 'F6 装配器里不出现旧产品名');
+  const envBrief = fs.readFileSync(path.join(path.dirname(SERVER), 'backend', 'engine-env-brief.cjs'), 'utf8');
+  ok(envBrief.includes('function renderCliEnvBrief(') && !/Win Claude Workbench/.test(envBrief), 'F6 装配器里不出现旧产品名');
 
   /* ═══════════ G rg:PATH 前置 + 来源探测 ═══════════ */
   const vendorDir = path.join(ROOT, 'ruyi-workbench', 'app', 'vendor-bin');
@@ -178,8 +178,9 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   const caps2 = await srv.getCapabilities(null, true).catch(() => null);
   ok(caps2 && caps2.binaries && typeof caps2.binaries.rg === 'boolean' && (caps2.binaries.rg ? typeof caps2.binaries.rgSource === 'string' : caps2.binaries.rgSource === null)
     && typeof caps2.binaries.rgShell === 'string', 'G4 能力矩阵 binaries 加法字段 rgSource/rgShell (' + JSON.stringify(caps2 && caps2.binaries) + ')');
-  const boot = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '00-boot.js'), 'utf8');
-  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(boot) && !/USE_BUILTIN_RIPGREP\s*=/.test(src),
+  const runtimeEnvironment = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'workbench-runtime-environment.cjs'), 'utf8');
+  ok(/st\.isDirectory\(\) && !st\.isSymbolicLink\(\)/.test(runtimeEnvironment) &&
+    !/USE_BUILTIN_RIPGREP\s*=/.test(runtimeEnvironment + require('./src-reader').readServerSource()),
     'G5 只前置锚定的真目录(联接/符号链接不算),且不改 USE_BUILTIN_RIPGREP(Claude Code 自带 rg 行为不动)');
 
   console.log('');

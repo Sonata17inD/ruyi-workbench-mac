@@ -183,30 +183,16 @@ for (const [group, commands] of Object.entries(HIT)) {
 {
   const { stewardExemptReason, STEWARD_EXEMPT_NAME_CARVEOUTS, STEWARD_EXEMPT_CATEGORY_LABELS } = srv;
   ok(Array.isArray(STEWARD_EXEMPT_NAME_CARVEOUTS) && Object.isFrozen(STEWARD_EXEMPT_NAME_CARVEOUTS)
-    && JSON.stringify([...STEWARD_EXEMPT_NAME_CARVEOUTS].sort()) === JSON.stringify(['keyboard_send_keys', 'shell_send']),
-    '⑥ 精确名出口恰好两个本机工具（shell_send / keyboard_send_keys），且冻结');
+    && JSON.stringify([...STEWARD_EXEMPT_NAME_CARVEOUTS].sort()) === JSON.stringify(['shell_send']),
+    '⑥ 精确名出口仅保留本机 shell_send，且冻结');
   ok(STEWARD_EXEMPT_TOOL_PATTERNS.test('shell_send') && STEWARD_EXEMPT_TOOL_PATTERNS.test('keyboard_send_keys'),
     '⑥ 正则本身一个字没动（两者仍命中正则，是出口把它们放出来的）');
 
   // 判据 ①：无害输入不再豁免。
   ok(stewardToolPermanentlyExempt('shell_send') === false && stewardToolPermanentlyExempt('shell_send', { shellId: 's', input: 'Get-ChildItem -Name' }) === false,
     '⑥ ① shell_send 无害输入 -> 不豁免');
-  ok(stewardToolPermanentlyExempt('keyboard_send_keys', { keys: 'Hello{ENTER}' }) === false,
-    '⑥ ① keyboard_send_keys 无害按键 -> 不豁免');
-
-  // 判据 ②：内容判据照样拦；{ENTER} 这类 SendKeys 记号贴在词尾不破坏 \b（`{`/`}` 不是单词字符）。
-  const KB = [
-    [{ keys: 'git push origin main{ENTER}' }, 'push_remote'],
-    [{ keys: 'git push{ENTER}' }, 'push_remote'],
-    [{ keys: 'rm -rf C:\\x{ENTER}' }, 'delete_data'],
-    [{ keys: 'shutdown /s /t 0~' }, 'system_change'],
-  ];
-  const kbWrong = KB.filter(([input, category]) => {
-    const r = stewardExemptReason('keyboard_send_keys', input);
-    return !(r && r.by === 'command_text' && r.category === category);
-  }).map(([input]) => input.keys);
-  ok(kbWrong.length === 0, '⑥ ② keyboard_send_keys 按键里敲的是命中内容判据的命令 -> 仍拦（command_text + 类别）'
-    + (kbWrong.length ? ' → 漏判: ' + kbWrong.join(' | ') : ''));
+  ok(stewardToolPermanentlyExempt('keyboard_send_keys', { keys: 'Hello' }) === true,
+    'removed keyboard tool cannot inherit the shell_send exception');
   const shellRisky = stewardExemptReason('shell_send', { shellId: 's', input: 'rm -rf C:\\somewhere' });
   ok(shellRisky && shellRisky.by === 'command_text' && shellRisky.category === 'delete_data',
     '⑥ ② shell_send 带 rm -rf -> command_text / delete_data（实得 ' + JSON.stringify(shellRisky) + '）');
@@ -324,7 +310,7 @@ for (const [group, commands] of Object.entries(HIT)) {
   const shapes = [];
   const pool = [...Object.values(HIT).flat(), ...CATASTROPHIC, ...ORDINARY, 'npm run build', 'git status', 'echo "format the report"', 'x'.repeat(4100) + ' git push'];
   for (const cmd of pool) {
-    shapes.push(['Bash', { command: cmd }], ['shell_send', { shellId: 's', input: cmd }], ['keyboard_send_keys', { keys: cmd }], ['send_email', { body: cmd }]);
+    shapes.push(['Bash', { command: cmd }], ['shell_send', { shellId: 's', input: cmd }], ['send_email', { body: cmd }]);
     for (const other of ['shutdown /s', 'git push', 'sendmail x', 'rm -rf /', 'npm test']) shapes.push(['script_run', { command: cmd + ' && ' + other }]);
   }
   shapes.push(['http_request', { method: 'POST' }], ['http_request', { method: 'GET', url: 'curl -X POST x -d a' }], ['', null], [null, undefined], ['Bash', 'git push'], ['Bash', ['rm', '-rf', '/']]);
@@ -481,7 +467,7 @@ for (const [group, commands] of Object.entries(HIT)) {
     stewardMergeDelegationReceipts, stewardExemptHits,
   } = srv;
   const brief = v => JSON.stringify(v === undefined ? null : v).slice(0, 240);
-  const scanOf = cmd => stewardExemptHits('powershell_run', { command: cmd });
+  const scanOf = cmd => stewardExemptHits('shell_run', { command: cmd });
   const facts = (cmd, patch) => ({
     enabled: true, liveMode: 'auto', watched: true, origin: 'user', explicitUnwatch: false,
     scan: scanOf(cmd), taint: { tainted: false, taintBy: null }, riskNote: '清理线程自己的临时目录', recentCount: 0,
@@ -593,13 +579,13 @@ for (const [group, commands] of Object.entries(HIT)) {
       && scanOf(MIXED).indirect === true && verdictOf(factsWithExcerpt(MIXED)).blockedBy === 'indirect_command',
       `⑧ S1 ② 拼接构造：单独一条不代批、与 rm -rf ./build 混在一起 → indirect_command（实得 ${brief([verdictOf(factsWithExcerpt(OBF)), verdictOf(factsWithExcerpt(MIXED))])}）`);
     // **豁免判据本身逐字节不变**（钉住今天的输出：②「不改什么算豁免」的全部含义就在这两行）。
-    ok(JSON.stringify(reasonOf('powershell_run', { command: OBF })) === 'null'
-      && stewardToolPermanentlyExempt('powershell_run', { command: OBF }) === false
+    ok(JSON.stringify(reasonOf('shell_run', { command: OBF })) === 'null'
+      && stewardToolPermanentlyExempt('shell_run', { command: OBF }) === false
       && JSON.stringify(scanOf(OBF).hits) === '[]',
-      `⑧ S1 ② stewardExemptReason 对这条【仍然】是 null、布尔仍是 false、hits 仍是空（实得 ${brief([reasonOf('powershell_run', { command: OBF }), scanOf(OBF).hits])}）`);
-    ok(JSON.stringify(reasonOf('powershell_run', { command: MIXED })) === JSON.stringify({ by: 'command_text', category: 'delete_data' })
+      `⑧ S1 ② stewardExemptReason 对这条【仍然】是 null、布尔仍是 false、hits 仍是空（实得 ${brief([reasonOf('shell_run', { command: OBF }), scanOf(OBF).hits])}）`);
+    ok(JSON.stringify(reasonOf('shell_run', { command: MIXED })) === JSON.stringify({ by: 'command_text', category: 'delete_data' })
       && JSON.stringify(scanOf(MIXED).hits) === JSON.stringify([{ by: 'command_text', category: 'delete_data', floor: false }]),
-      `⑧ S1 ② 混在一起那条的 stewardExemptReason／hits 也逐字节不变（实得 ${brief([reasonOf('powershell_run', { command: MIXED }), scanOf(MIXED).hits])}）`);
+      `⑧ S1 ② 混在一起那条的 stewardExemptReason／hits 也逐字节不变（实得 ${brief([reasonOf('shell_run', { command: MIXED }), scanOf(MIXED).hits])}）`);
     const MORE_INDIRECT = ['rm -rf ./build; iex $c', 'rm -rf ./build; Invoke-Expression $c',
       'rm -rf ./build && powershell -enc aGVsbG8gd29ybGQgaGVsbG8=', 'rm -rf ./build; cmd /c sh^utdown /s',
       "rm -rf ./build; [char]0x72 -join ''", 'rm -rf ./build; & ([Convert]::FromBase64String($b))',
@@ -623,9 +609,9 @@ for (const [group, commands] of Object.entries(HIT)) {
     const relWrong = REL.filter(cmd => verdictOf(factsWithExcerpt(cmd)).delegable !== true);
     ok(relWrong.length === 0, `⑧ S1 ③ ${REL.length} 条相对目标仍可代批（词法判据证不出「在不在工作夹里」，那一层由执行闸兜）`
       + (relWrong.length ? ' → 不符: ' + relWrong.map(c => c + '=' + brief(verdictOf(factsWithExcerpt(c)))).join(' | ') : ''));
-    // 按【叶子】判而不是按摊平整段判：powershell_run 常态带一个绝对 cwd，拿整段判会把
+    // 按【叶子】判而不是按摊平整段判：shell_run 常态带一个绝对 cwd，拿整段判会把
     // 「线程清自己的临时目录」全判成绝对目标（B2 的主用例）。
-    const withCwd = stewardExemptHits('powershell_run', { command: 'Remove-Item .\\tmp -Recurse', cwd: 'C:\\Users\\me\\work', timeoutMs: 30000 });
+    const withCwd = stewardExemptHits('shell_run', { command: 'Remove-Item .\\tmp -Recurse', cwd: 'C:\\Users\\me\\work', timeoutMs: 30000 });
     ok(withCwd.absoluteDeleteTarget === false && verdictOf(facts(DEL, { scan: withCwd })).delegable === true,
       `⑧ S1 ③ 同一个 input 里的绝对 cwd 不算删除目标（按叶子判；实得 ${brief(withCwd)}）`);
     // 命中是跨叶子拼出来的（argv 形态）→ 判不出目标在哪个词上 → fail-closed。
@@ -663,7 +649,7 @@ for (const [group, commands] of Object.entries(HIT)) {
   // 污染工具名。
   {
     const yes = ['web_fetch', 'web_search', 'http_request', 'http_download', 'WebFetch', 'WebSearch', 'audio_transcribe', 'browser_open', 'browser_get_text', 'mcp__x__read_file', 'ai-computer-control__screenshot'];
-    const no = ['powershell_run', 'script_run', 'shell_send', 'file_read', 'glob', 'steward_decide', 'browser', 'Web_Fetch', ''];
+    const no = ['shell_run', 'script_run', 'shell_send', 'file_read', 'glob', 'steward_decide', 'browser', 'Web_Fetch', ''];
     ok(yes.every(stewardTaintToolName) && !no.some(stewardTaintToolName), `⑧ 污染工具名：${yes.length} 个算、${no.length} 个不算`);
     // 代理调用：tool_invoke_* 的真正目标在 input.name。
     const proxied = [
@@ -673,7 +659,7 @@ for (const [group, commands] of Object.entries(HIT)) {
       [['tool_invoke_read', { arguments: {} }], 'tool_invoke_read'],
       [['tool_invoke_edit', null], 'tool_invoke_edit'],
       [['web_search', null], 'web_search'],
-      [['powershell_run', { name: 'web_fetch' }], ''],
+      [['shell_run', { name: 'web_fetch' }], ''],
     ];
     const got = proxied.map(([args]) => stewardTaintToolCall(...args));
     ok(JSON.stringify(got) === JSON.stringify(proxied.map(([, want]) => want)),
@@ -681,8 +667,8 @@ for (const [group, commands] of Object.entries(HIT)) {
   }
   // 回合段表上的污染判定。
   {
-    const perm = { type: 'permission', requestId: 'perm_1', toolName: 'powershell_run', status: 'pending' };
-    const own = { type: 'tool', name: 'powershell_run', status: 'running' };
+    const perm = { type: 'permission', requestId: 'perm_1', toolName: 'shell_run', status: 'pending' };
+    const own = { type: 'tool', name: 'shell_run', status: 'running' };
     const T = (segs, sticky) => stewardTurnTaint(segs, 'perm_1', sticky || null);
     ok(JSON.stringify(T([{ type: 'text', text: 'x' }, own, perm])) === '{"tainted":false,"taintBy":null}', '⑧ 段表：权限段之前只有自己那一次调用 → 不污染');
     ok(T([{ type: 'tool', name: 'web_fetch', status: 'done' }, own, perm]).taintBy === 'turn:web_fetch', '⑧ 段表：之前调过 web_fetch → turn:web_fetch');

@@ -42,6 +42,14 @@ function reply(file,result) { fake(file,'console.log('+JSON.stringify(JSON.strin
       && result.bounds.height===120 && result.scale===2 && result.parts.length===2, 'production planner combines negative-origin mixed-scale displays');
     t.ok(result.parts[1].source.x===0 && result.parts[1].source.y===0 && result.parts[1].source.width===120,
       'secondary display crop uses local source coordinates');
+    result = plan({monitor:'all', max_width:110});
+    t.ok(result.ok && result.scale === .5 && result.bounds.x === -120 && result.bounds.width === 220
+      && result.source_pixel_scale.x === 2 && result.source_pixel_scale.y === 2,
+      'native preview reduces pixel allocation while preserving logical and native-source geometry');
+    result = plan({monitor:'all', max_width:0});
+    t.ok(result.ok && result.scale === 2, 'OCR and matching retain native pixels when no preview limit is requested');
+    t.ok(plan({max_width:true}).code === 'invalid_args' && plan({max_width:1.5}).code === 'invalid_args',
+      'preview sizing rejects boolean and fractional limits');
     result = plan({monitor:1});
     t.ok(result.ok && result.scale===1 && result.bounds.x===-120 && result.parts.length===1,
       'non-Retina selected display retains one pixel per logical point');
@@ -56,7 +64,7 @@ function reply(file,result) { fake(file,'console.log('+JSON.stringify(JSON.strin
     t.ok(!result.ok && result.code==='invalid_args', 'nonpositive region fails in production planner');
     const prod = cp.spawnSync(production,[],{input:JSON.stringify({version:1,op:'test_plan',displays}),encoding:'utf8',timeout:3000});
     t.ok(!JSON.parse(prod.stdout).ok, 'production binary excludes fixture-only protocol operations');
-    for (const payload of [{version:true,op:'status'},{version:1,op:'status',unknown:true},null]) {
+    for (const payload of [{version:1,op:'capture',max_width:true},{version:true,op:'status'},{version:1,op:'status',unknown:true},null]) {
       const invalid = cp.spawnSync(production,[],{input:JSON.stringify(payload),encoding:'utf8',timeout:3000});
       t.ok(JSON.parse(invalid.stdout).code==='invalid_args', 'native protocol rejects malformed input before querying desktop');
     }

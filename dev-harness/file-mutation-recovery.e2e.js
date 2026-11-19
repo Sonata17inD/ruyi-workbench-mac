@@ -2,6 +2,7 @@
 require('./lib/self-isolate-home');
 const fs = require('fs');
 const fsp = require('fs/promises');
+const { getEventListeners } = require('node:events');
 const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
@@ -16,7 +17,7 @@ const restore = () => Object.assign(fsp, original);
 const fault = code => Object.assign(new Error('fixture ' + code), { code });
 (async () => {
   try {
-    const S = loadServerInternals(['toolCall', 'journalReadIndex', 'journalDir', 'withFileToolWriteLock', 'fileToolWriteChains']);
+    const S = loadServerInternals(['toolCall', 'journalReadIndex', 'journalDir', 'withFileToolWriteLock']);
     const from = path.join(workspace, 'source.txt'), to = path.join(workspace, 'destination.txt');
     let serial = 0;
     const context = () => { const id = 'mutation-' + (++serial); return { sessionId: id, turnSeq: 1,
@@ -105,12 +106,14 @@ const fault = code => Object.assign(new Error('fixture ' + code), { code });
       reset(); ctx = context(); let release;
       const held = S.withFileToolWriteLock([from, to], null, () => new Promise(resolve => { release = resolve; }));
       while (!release) await new Promise(resolve => setImmediate(resolve));
-      const previous = S.fileToolWriteChains.get('darwin-file-writes');
-      const pending = S.toolCall('file_copy', { from, to: upper, overwrite: true }, ctx);
+      const queued = new AbortController();
+      const pending = S.toolCall('file_copy', { from, to: upper, overwrite: true }, { ...ctx, signal: queued.signal });
       try {
         const deadline = Date.now() + 5000;
-        while (S.fileToolWriteChains.get('darwin-file-writes') === previous && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
-        t.ok(S.fileToolWriteChains.get('darwin-file-writes') !== previous, 'copy is queued before source identity changes');
+        while (!getEventListeners(queued.signal, 'abort').length && Date.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        t.ok(getEventListeners(queued.signal, 'abort').length > 0, 'copy is queued before source identity changes');
         fs.unlinkSync(from); fs.writeFileSync(from, 'new source');
       } finally { release(); await held; }
       result = await pending;

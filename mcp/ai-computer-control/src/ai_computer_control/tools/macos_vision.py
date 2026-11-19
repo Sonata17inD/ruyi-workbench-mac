@@ -1,5 +1,6 @@
 """Offline Mac template matching with bounded read-only workers and cancellable guarded input."""
 import asyncio
+from importlib.util import find_spec
 import time
 
 from ai_computer_control.server import mcp
@@ -9,12 +10,9 @@ from ai_computer_control.utils.macos_visual import select_match
 from ai_computer_control.utils.template_match import _miss, _MULTISCALE
 from ai_computer_control.utils.waits import clamp_wait_s
 
-try:
-    import cv2
-    import numpy
-    _AVAILABLE = True
-except ImportError:
-    _AVAILABLE = False
+# Matching runs in an isolated worker. Importing these native libraries here
+# duplicates their startup/RSS cost in the long-lived ACC host.
+_AVAILABLE = find_spec('cv2') is not None and find_spec('numpy') is not None
 
 
 def _observe(*args):

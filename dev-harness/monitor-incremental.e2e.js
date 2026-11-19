@@ -6,7 +6,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     【验收锁】增量模式传输字节 ≤ 全量模式 20%(忠实模拟客户端算法 N tick)、run.metrics 干预计数、ops 指标端点、单 run GET live 叠加。
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const { readFrontendSrc } = require('./read-frontend-src.js'); // 2.2 门修复:845bb8c 拆域后前端增量缓存逻辑搬到 js/ 域文件,单读 app.js 9 条 S 锁恒红
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
@@ -38,39 +37,51 @@ async function waitToken() {
   for (let i = 0; i < 300; i++) { const t = (readJson(path.join(HOME, 'runtime.json')) || {}).token || ''; if (t) return t; await sleep(150); }
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
-const src = readServerSource();
+const backend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
+const runStore = backend('agent-run-store');
+const runRoutes = backend('agent-run-routes');
+const runControl = backend('agent-run-control');
+const workflow = backend('agent-workflow');
+const interventionActions = backend('agent-intervention-actions');
+const missionDriver = backend('mission-driver');
+const sessionModel = backend('session-model');
+const runRecovery = backend('agent-recovery');
 const app = readFrontendSrc(); // 聚合:public/app.js + public/js/**/*.js(拆域后断言目标分散在域文件)
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态锁 ──');
-ok(/monitorIncremental: true,/.test(src) && /config\.monitorIncremental = config\.monitorIncremental !== false;/.test(src), 'S config monitorIncremental 默认 true(!==false 归一)');
-ok(/const AGENT_RUN_EVENTS_PAGE_MAX = 500;/.test(src) && /async function readAgentRunEvents\(sessionId, runId, afterSeq, limit\)/.test(src), 'S readAgentRunEvents + 分页上限 500');
-ok(/const evt = safeJsonParse\(t, null\);\s*\n\s*if \(!evt \|\| !Number\.isFinite\(Number\(evt\.seq\)\)\) continue;/.test(src), 'S 事件解析逐行 safeJsonParse 跳坏行(尾行半写免疫)');
+ok(/monitorIncremental: true,/.test(backend('config-defaults')) && /config\.monitorIncremental = config\.monitorIncremental !== false;/.test(backend('config-schema')), 'S config monitorIncremental 默认 true(!==false 归一)');
+ok(/const AGENT_RUN_EVENTS_PAGE_MAX = 500;/.test(runStore) && /async function readAgentRunEvents\(sessionId, runId, afterSeq, limit\)/.test(runStore), 'S readAgentRunEvents + 分页上限 500');
+ok(/const evt = safeJsonParse\(t, null\);\s*\n\s*if \(!evt \|\| !Number\.isFinite\(Number\(evt\.seq\)\)\) continue;/.test(runStore), 'S 事件解析逐行 safeJsonParse 跳坏行(尾行半写免疫)');
 // 长任务优化(对抗轮 #1):大文件只读尾窗,回溯不足才回落全读。
-ok(/const AGENT_RUN_EVENTS_TAIL_BYTES = 512 \* 1024;/.test(src), 'S 尾窗/整读阈值 512KB');
-ok(/if \(size <= AGENT_RUN_EVENTS_TAIL_BYTES\) return fullRead\(\);/.test(src), 'S 小文件整读(便宜恒完整)');
-ok(/if \(minSeq <= floor \+ 1\) return finish\(matched\);/.test(src) && /return fullRead\(\);/.test(src), 'S 尾窗回溯到 afterSeq+1 即完整,否则回落全读(冷客户端保正确性)');
-ok(/parseEventWindow\(buf\.toString\('utf8', 0, bytesRead\), floor, true\)/.test(src), 'S 尾窗按字节切 + 丢半行(droppedHead)');
+ok(/const AGENT_RUN_EVENTS_TAIL_BYTES = 512 \* 1024;/.test(runStore), 'S 尾窗/整读阈值 512KB');
+ok(/if \(size <= AGENT_RUN_EVENTS_TAIL_BYTES\) return fullRead\(\);/.test(runStore), 'S 小文件整读(便宜恒完整)');
+ok(/if \(minSeq <= floor \+ 1\) return finish\(matched\);/.test(runStore) && /return fullRead\(\);/.test(runStore), 'S 尾窗回溯到 afterSeq+1 即完整,否则回落全读(冷客户端保正确性)');
+ok(/parseEventWindow\(buf\.toString\('utf8', 0, bytesRead\), floor, true\)/.test(runStore), 'S 尾窗按字节切 + 丢半行(droppedHead)');
 // 路由顺序:events 端点必须排在通配 GET /api/agent-runs/ 之前(线性 if 链顺序即优先级)。
-const evRouteIdx = src.indexOf("pathname.endsWith('/events')");
-const genericGetIdx = src.indexOf("const runId = safeSessionId(pathname.slice('/api/agent-runs/'.length));");
+const evRouteIdx = runRoutes.indexOf("pathname.endsWith('/events')");
+const genericGetIdx = runRoutes.indexOf("if (req.method === 'GET' && pathname.startsWith('/api/agent-runs/'))");
 ok(evRouteIdx > 0 && genericGetIdx > 0 && evRouteIdx < genericGetIdx, 'S events 路由排在通配单 run GET 之前(不被吞)');
-ok(/if \(kind !== 'gen'\) appendAgentRunEvent\(run, \{ type: 'node_progress'/.test(src), 'S node_progress 只记离散里程碑(gen 流式字数不落取证文件)');
-ok(/listUrl\.searchParams\.get\('view'\) === 'digest'/.test(src), 'S 列表路由带 digest 轻量视图');
-ok(/type: 'run_pool', data: \{ action: 'proposed'/.test(src) && (src.match(/type: 'run_pool'/g) || []).length >= 4, 'S 任务池提案/物化/审批均发 run_pool 事件');
-ok(/const liveOne = activeAgentRuns\.get\(runId\);/.test(src) && /run: \{ \.\.\.liveOne\.run, live: true, paused: !!liveOne\.paused \}/.test(src), 'S 单 run GET live 时以内存对象下发(快照节流恒旧)');
-ok(/if \(liveOne\.run\.sessionId !== sessionId\) return send\(res, json\(\{ ok: false, error: 'agent run not found' \}, 404\)\);/.test(src), 'S 单 run GET 内存路径保留跨会话 404 守卫');
+ok(/if \(kind !== 'gen'\) appendAgentRunEvent\(run, \{ type: 'node_progress'/.test(backend('agent-workflow-report')), 'S node_progress 只记离散里程碑(gen 流式字数不落取证文件)');
+ok(/listUrl\.searchParams\.get\('view'\) === 'digest'/.test(runRoutes), 'S 列表路由带 digest 轻量视图');
+ok(/type: 'run_pool', data: \{ action: 'proposed'/.test(workflow) && ((workflow + interventionActions).match(/type: 'run_pool'/g) || []).length >= 4, 'S 任务池提案/物化/审批均发 run_pool 事件');
+ok(/const liveOne = activeAgentRuns\.get\(runId\);/.test(runRoutes) && /run: \{ \.\.\.liveOne\.run, live: true, paused: !!liveOne\.paused \}/.test(runRoutes), 'S 单 run GET live 时以内存对象下发(快照节流恒旧)');
+ok(/if \(liveOne\.run\.sessionId !== sessionId\) return send\(res, json\(\{ ok: false, error: 'agent run not found' \}, 404\)\);/.test(runRoutes), 'S 单 run GET 内存路径保留跨会话 404 守卫');
 // 29c 静态锁
-ok(/function bumpRunIntervention\(run, kind\)/.test(src) && (src.match(/bumpRunIntervention\(/g) || []).length >= 8, 'S bumpRunIntervention 接入 ≥7 个干预点');
-ok(/run\.metrics\.failuresByClass\[cls\] = \(run\.metrics\.failuresByClass\[cls\] \|\| 0\) \+ 1;/.test(src), 'S 收尾聚合 failuresByClass(幂等重算)');
-ok((src.match(/node\.errorClass = '/g) || []).length >= 10, 'S errorClass 显式标注 ≥10 个 error 设置点');
-ok(/kind: 'mission_budget_exhausted'/.test(src) && /kind: 'mission_start'/.test(src), 'S mission 预算超支率分子/分母均落审计账');
-ok((src.match(/kind: 'intervention'/g) || []).length >= 3, 'S 会话级干预(permission/plan/steer)落审计账');
-ok(/async function buildOpsMetrics\(days\)/.test(src) && /pathname === '\/api\/ops\/metrics'/.test(src), 'S ops 指标聚合端点');
-ok(/onEvent\(\{ type: 'subagent_usage'/.test(src) && (src.match(/type: 'subagent_usage'/g) || []).length >= 2, 'S 两引擎子代理用量事件(与台账同源)');
-ok(/function accumulateRunUsage\(run, u\)/.test(src) && /accumulateRunUsage\(run, evt\)/.test(src), 'S nodeEvent 累进 run.usageTotals(点亮前端预订字段)');
+ok(/function bumpRunIntervention\(run, kind\)/.test(runStore) && ((runControl + interventionActions).match(/bumpRunIntervention\(/g) || []).length >= 7, 'S bumpRunIntervention 接入 ≥7 个干预点');
+ok(/run\.metrics\.failuresByClass\[cls\] = \(run\.metrics\.failuresByClass\[cls\] \|\| 0\) \+ 1;/.test(workflow), 'S 收尾聚合 failuresByClass(幂等重算)');
+ok((workflow.match(/node\.errorClass = '/g) || []).length >= 10, 'S errorClass 显式标注 ≥10 个 error 设置点');
+ok(/kind: 'mission_budget_exhausted'/.test(missionDriver) && /kind: 'mission_start'/.test(backend('mission-ledger-routes')), 'S mission 预算超支率分子/分母均落审计账');
+const decisions = backend('intervention-decisions');
+ok(/source === 'legacy_permission' \? 'permission_decision'/.test(decisions)
+  && /source === 'legacy_plan' \? 'plan_decision'/.test(decisions)
+  && /logEvent\(\{ kind: 'intervention', source: auditSource/.test(decisions)
+  && /logEvent\(\{ kind: 'intervention', source: 'steer'/.test(backend('session-steering')), 'S 会话级干预(permission/plan/steer)落审计账');
+ok(/async function buildOpsMetrics\(days\)/.test(backend('audit-timeline')) && /pathname === '\/api\/ops\/metrics'/.test(backend('diagnostic-routes')), 'S ops 指标聚合端点');
+ok(['claude-subagent', 'subagent-runner'].every(name => /onEvent\(\{ type: 'subagent_usage'/.test(backend(name))), 'S 两引擎子代理用量事件(与台账同源)');
+ok(/function accumulateRunUsage\(run, u\)/.test(runStore) && /accumulateRunUsage\(run, evt\)/.test(workflow), 'S nodeEvent 累进 run.usageTotals(点亮前端预订字段)');
 // 前端静态锁
 ok(/const agentRunsCache = \{ sid: '', runs: new Map\(\) \};/.test(app), 'S(前端) per-run 增量缓存');
 ok(/async function loadAgentRuns\(force\)/.test(app) && /state\.config\.monitorIncremental !== false/.test(app), 'S(前端) 总开关回落(config.monitorIncremental=false → 旧全量)');
@@ -85,16 +96,17 @@ ok(/ar\.onclick = \(\) => loadAgentRuns\(true\)/.test(app), 'S(前端) 对抗轮
 ok(/if \(dg\.status && c\.run\.status !== dg\.status\) needFull = true;/.test(app) && !/if \(!dg\.live && dg\.status/.test(app), 'S(前端) 对抗轮 P2(#15): status 漂移检测去掉 !dg.live 门(live run 也比 status)');
 ok(/if \(dg\.updatedAt && c\.run\.updatedAt && dg\.updatedAt !== c\.run\.updatedAt\) needFull = true;/.test(app), 'S(前端) 对抗轮 P3(#13): updatedAt 前进兜底刷新(冷路径 apply_isolation 自愈)');
 ok(/c\.run\.persistenceDegraded = dg\.persistenceDegraded === true;/.test(app) && /c\.run\.resumeTier = dg\.resumeTier \|\| '';/.test(app), 'S(前端) 对抗轮 P3(#16): 旗标叠加对称(dg 值覆写含空,不残留)');
-ok(/logEvent\(\{ kind: 'intervention', source: k, sessionId:/.test(src), 'S 对抗轮 P3(#12): bumpRunIntervention 兼落 logEvent(ops 头条含 run 级干预)');
-ok(/const wasPaused = live\.paused === true;/.test(src) && /if \(!wasPaused\) bumpRunIntervention\(live\.run, 'pause'\)/.test(src), 'S 对抗轮 P3(#8): pause 计数按状态迁移幂等');
-ok(/if \(wasPaused\) bumpRunIntervention\(live\.run, 'resume'\)/.test(src) && /const wasStopping = live\.stopRequested === true;/.test(src), 'S 对抗轮 P3(#8): resume/stop 计数按状态迁移幂等');
-ok(/if \(n\.fromPool && n\.failurePolicy === 'continue' && n\.status !== 'rejected'\) continue;/.test(src), 'S 对抗轮 P2(#7): failuresByClass 对齐 fromPool+continue 排除(与 run 总态口径一致)');
-ok(/const firstExhaust = !m\.budgetExhaustedAt;/.test(src) && /if \(firstExhaust\) logEvent\(\{ kind: 'mission_budget_exhausted'/.test(src), 'S 对抗轮 P2(#6): budget_exhausted 只在转入时落一次(超支率 ≤100%)');
-ok(/budgetExhaustedAt: String\(p\.budgetExhaustedAt \|\| ''\)/.test(src), 'S 对抗轮 P2(#6): normalizeMission 保留 budgetExhaustedAt(update 再武装不清)');
-ok(/if \(node\.status === 'failed'\) node\.errorClass = 'vote_contract_failed';[\s\S]{0,120}else if \(node\.status === 'rejected'\) node\.errorClass = 'gate_rejected';/.test(src), 'S vote 输入契约错误与真实 rejected 分开分类');
+ok(/logEvent\(\{ kind: 'intervention', source: k, sessionId:/.test(runStore), 'S 对抗轮 P3(#12): bumpRunIntervention 兼落 logEvent(ops 头条含 run 级干预)');
+ok(/const wasPaused = live\.paused === true;/.test(runControl) && /if \(!wasPaused\) bumpRunIntervention\(live\.run, 'pause'\)/.test(runControl), 'S 对抗轮 P3(#8): pause 计数按状态迁移幂等');
+ok(/if \(wasPaused\) bumpRunIntervention\(live\.run, 'resume'\)/.test(runControl) && /const wasStopping = live\.stopRequested === true;/.test(runControl), 'S 对抗轮 P3(#8): resume/stop 计数按状态迁移幂等');
+ok(/if \(n\.fromPool && n\.failurePolicy === 'continue' && n\.status !== 'rejected'\) continue;/.test(workflow), 'S 对抗轮 P2(#7): failuresByClass 对齐 fromPool+continue 排除(与 run 总态口径一致)');
+ok(/const firstExhaust = !m\.budgetExhaustedAt;/.test(missionDriver) && /if \(firstExhaust\) logEvent\(\{ kind: 'mission_budget_exhausted'/.test(missionDriver), 'S 对抗轮 P2(#6): budget_exhausted 只在转入时落一次(超支率 ≤100%)');
+ok(/budgetExhaustedAt: String\(p\.budgetExhaustedAt \|\| ''\)/.test(sessionModel), 'S 对抗轮 P2(#6): normalizeMission 保留 budgetExhaustedAt(update 再武装不清)');
+ok(/if \(node\.status === 'failed'\) node\.errorClass = 'vote_contract_failed';[\s\S]{0,120}else if \(node\.status === 'rejected'\) node\.errorClass = 'gate_rejected';/.test(workflow), 'S vote 输入契约错误与真实 rejected 分开分类');
 // 第40波:锁迁移 —— autoResume 并发化(mapPool 回调)后双复检语句从 continue 变 return,语义不变:
 // append/save 前与 syncRunEventSeq await 后各即时复检一次 live 注册,已接管即跳过。
-ok(/if \(activeAgentRuns\.has\(run\.id\)\) return;/.test(src) && (src.match(/if \(activeAgentRuns\.has\(run\.id\)\) return;/g) || []).length >= 2, 'S 对抗轮 P2(#2): autoResume 前后双复检 live(防 seq 重号/陈旧覆盖)');
+ok(/if \(hasLiveRun\(run\.id\)\) return;[\s\S]*?await syncRunEventSeq\(run\);[^\n]*\n\s*if \(hasLiveRun\(run\.id\)\) return;/.test(runRecovery),
+  'S 对抗轮 P2(#2): autoResume 前后双复检 live(防 seq 重号/陈旧覆盖)');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [H] Live

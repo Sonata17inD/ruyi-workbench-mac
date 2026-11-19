@@ -582,14 +582,8 @@ try {
     `B2b 焦点线程是【等你】那条（focusThreadFor：等你＞在跑＞失败＞最近；实测「${docked && docked.nowThread}」）`);
   ok(docked && docked.drawerMount === 'docked' && docked.drawerParent === 'stewardFocus' && docked.drawerHidden === false,
     `B2c 它就是【同一个】抽屉节点被搬进 #stewardFocus（实测 mount=${docked && docked.drawerMount} parent=${docked && docked.drawerParent}）`);
-  // 117j W2-5：三个管家计时器统一按 5s 下限起表（真要不要拉由每一拍自己判），
-  // 所以「这是管家的计时器」的身份判据从 POLL_MS 重钉到 TICK_MS —— 不改的话本断言恒真、形同虚设。
-  // 121-K2b（34 号文 §6.2）重钉：「看板关着不刷」那道门删掉之后，看板那张表在【管家视角里
-  // 一直在跑】（节拍由 pollTick 判：连接正常 30 s、断开回到今天那两档）。所以数得出来的
-  // TICK_MS ms 表多了一张 —— 被钉的那件事一个字没变：每个模块仍然只有一张表、切离管家视角一张不剩
-  // （G1/H1 那一条）。反向验证：把 isBoardOpen() && 加回 steward-board.js 的 syncPolling → 本条真红。
-  ok(docked && docked.intervals.filter(ms => ms === TICK_MS).length === 3,
-    `B2d 看板没打开时也只有三张表（抽屉 + avatar + 看板各一；121-K2b 之前看板那张要等点开才起，现在左栏常开、它一直在跑，节拍改由 pollTick 判；实测 ${docked && JSON.stringify(docked.intervals)}）`);
+  ok(docked && !docked.intervals.includes(TICK_MS),
+    `B2d 看板折叠时没有固定周期轮询（实测 ${docked && JSON.stringify(docked.intervals)}）`);
 
   // ── ② 左栏：分组、验收 a/b、等待原因、chip ─────────────────────────────────────
   // 121-K4-2：不再需要「点开」这一步 —— 左栏常开。这里只等它把两件任务都画出来。
@@ -794,10 +788,8 @@ try {
   ok(Boolean(boardPaint) && /^3px\|rgb/.test(boardPaint.barC) && boardPaint.barC !== boardPaint.barA,
     `C12e 不同任务的色条是不同的颜色值（实测 M=${boardPaint && boardPaint.barA} C=${boardPaint && boardPaint.barC}）`);
 
-  // 121-K2b 重钉：点开看板【不再多】一条 —— 那第三条在看板收起时就已经在跑了（B2d）。
-  // 钉的仍然是同一件事：看板不会因为一次开合长出第二张表。
-  ok(opened.intervals.filter(ms => ms === TICK_MS).length === 3,
-    `C11 点开看板不再多一条计时器（收起时就已经是三张，121-K2b 删掉了「看板关着不刷」那道门；实测 ${JSON.stringify(opened.intervals)}）`);
+  ok(!opened.intervals.includes(TICK_MS),
+    `C11 看板展开时没有固定周期轮询（实测 ${JSON.stringify(opened.intervals)}）`);
 
   // ── 117l-B2 ②：看板视觉的可判定结果（用户第五轮走查 2）──────────────────────────
   const transparent = value => /rgba\(0, 0, 0, 0\)|transparent/.test(String(value));
@@ -1246,7 +1238,7 @@ try {
   ok(Boolean(idH) && Boolean(askedH) && Boolean(idI) && Boolean(liveI),
     `S1b 另外两种状态也就位：一条停在 question 待决（等你，${idH || '失败'}）、一条回合挂着（在跑，${idI || '失败'}）`);
   // 121-K4-2：左栏常开，不用再「先把看板拉开」这一步（那一步原来是为了让表重新起来）。
-  // 行的新鲜度由推送与那张一直在跑的兜底表给（B2d／C11 钉着它只有一张）。
+  // 推送正常时跟随事件，断连时由重新读取补齐。
   ok(Boolean(idG), `S1 第三种状态就位：一条跑完一个回合、此刻没在跑的线程（五态「${zh['mission.state.done']}」；${idG || '失败'}）`);
   // 服务端行序与列内顺序【同一时刻】各取一份再比：行序本身会随状态与 updatedAt 变，
   // 拿一份旧快照去等 DOM 追上来，等到的可能是「两边都对、只是不同时刻」的假红。

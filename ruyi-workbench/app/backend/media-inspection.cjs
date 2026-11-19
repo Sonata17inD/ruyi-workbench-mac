@@ -1,0 +1,266 @@
+'use strict';
+function createMediaInspection({ ProcessRuntime }) {
+  const io = require('fs/promises');
+  const nodePath = require('path');
+  const nodeOs = require('os');
+  const cache = new Map();
+  const finite = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const bounded = (value, fallback, low, high) => value == null || !Number.isFinite(Number(value)) ? fallback : Math.max(low, Math.min(high, Number(value)));
+
+  function run(command, argv, options = {}) {
+    return new Promise((resolve, reject) => {
+    void (async () => {
+      const { StringDecoder } = require('string_decoder');
+      const stdoutDecoder = new StringDecoder('utf8'), stderrDecoder = new StringDecoder('utf8');
+      let stdout = '', stderr = '', child, timer, drainTimer, finished = false, timedOut = false;
+      const abort = () => stop('aborted');
+      const done = async (code, error) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer); clearTimeout(drainTimer);
+        options.signal?.removeEventListener('abort', abort);
+        let cleanup;
+        if (child) {
+          try { cleanup = await ProcessRuntime.waitForCleanup(child, 1500); }
+          catch { cleanup = { scope: 'unknown', incomplete: true }; }
+          child.stdin.destroy(); child.stdout.destroy(); child.stderr.destroy();
+        }
+        stdout = (stdout + stdoutDecoder.end()).slice(-262144);
+        stderr = (stderr + stderrDecoder.end()).slice(-32768);
+        resolve({ ok: code === 0 && !error && !timedOut && !cleanup?.incomplete, code, timedOut, stdout, stderr,
+          ...(error ? { error: String(error.message || error), errorCode: error.code } : {}),
+          ...(cleanup ? { cleanupScope: cleanup.scope, cleanupIncomplete: cleanup.incomplete === true,
+            cleanupEscapeCoverage: cleanup.escapeCoverage, cleanupUnconfirmed: cleanup.unconfirmed } : {}) });
+      };
+      const stop = code => {
+        if (finished) return;
+        try { if (child) ProcessRuntime.stopChild(child); } catch { /* done reports cleanup uncertainty */ }
+        void done(null, Object.assign(new Error('Media process interrupted'), { code }));
+      };
+      if (options.signal?.aborted) { stop('aborted'); return; }
+      try {
+        child = await ProcessRuntime.spawn(command, argv, { signal: options.signal, shell: false, stdio: ['pipe', 'pipe', 'pipe'] },
+          { ...ProcessRuntime.currentOwner(), kind: 'media-inspection' });
+        child.stdout.on('data', b => { if (!finished) stdout = (stdout + stdoutDecoder.write(b)).slice(-262144); });
+        child.stderr.on('data', b => {
+          if (finished) return;
+          const fragment = stderrDecoder.write(b);
+          stderr = (stderr + fragment).slice(-32768);
+          if (options.onStderr) options.onStderr(fragment);
+        });
+        child.once('error', error => { void done(null, error); });
+        child.once('close', code => { void done(code); });
+        child.once('exit', () => {
+          if (!finished) drainTimer = setTimeout(() => {
+            void done(null, Object.assign(new Error('Media output pipes did not close after exit'), { code: 'process_output_incomplete' }));
+          }, 500);
+        });
+        child.stdin.on('error', () => {});
+        options.signal?.addEventListener('abort', abort, { once: true });
+        timer = setTimeout(() => { timedOut = true; stop('media_timeout'); }, options.timeoutMs || 5000);
+        if (options.signal?.aborted) abort();
+        else child.stdin.end(options.input || '');
+      } catch (error) { stop(error.code || 'process_start_failed'); }
+    })().catch(reject);
+    });
+  }
+
+  function cleanupFields(result) {
+    return result.cleanupScope ? { cleanupScope: result.cleanupScope, cleanupIncomplete: result.cleanupIncomplete,
+      cleanupEscapeCoverage: result.cleanupEscapeCoverage, cleanupUnconfirmed: result.cleanupUnconfirmed } : {};
+  }
+
+  async function candidates(names) {
+    const found = [];
+    for (const name of names.filter(Boolean)) {
+      if (nodePath.isAbsolute(name)) { if ((await io.stat(name).catch(() => null))?.isFile()) found.push(name); continue; }
+      for (const dir of String(process.env.PATH || '').split(nodePath.delimiter).filter(Boolean)) {
+        const candidate = nodePath.join(dir, name);
+        if ((await io.stat(candidate).catch(() => null))?.isFile()) found.push(candidate);
+      }
+    }
+    return [...new Set(found)];
+  }
+
+  async function locate(kind, refresh = false, signal) {
+    {
+      const helper = await ProcessRuntime.helperCapabilityAsync();
+      if (!helper.ready) return { available: false, path: null, version: null, code: helper.code, hint: helper.reasonCode };
+      if (signal?.aborted) return { available: false, path: null, version: null, code: 'aborted' };
+    }
+    const key = [kind, process.env.PATH, process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV, process.env.IMAGEIO_FFMPEG_EXE, process.env.FFMPEG_BINARY].join('|');
+    const previous = cache.get(key);
+    if (!refresh && previous && Date.now() - previous.at < 30000 && (!previous.value.path || await io.stat(previous.value.path).catch(() => null))) return previous.value;
+    let names = [];
+    if (kind === 'python') names = [process.env.RUYI_BUNDLED_PYTHON, process.env.VIRTUAL_ENV && nodePath.join(process.env.VIRTUAL_ENV, 'bin/python'), 'python3', 'python'];
+    if (kind === 'node') names = [process.execPath, 'node'];
+    if (kind === 'ffmpeg') names = [process.env.IMAGEIO_FFMPEG_EXE, process.env.FFMPEG_BINARY, 'ffmpeg'];
+    if (kind === 'ffprobe') names = ['ffprobe'];
+    if (kind === 'chrome') names = ['chrome', 'chromium', 'chromium-browser', 'msedge',
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'];
+    let executablePaths = await candidates(names);
+    if (kind === 'ffmpeg' && !executablePaths.length) {
+      const python = await locate('python', refresh, signal);
+      if (python.code) return python;
+      if (python.available) {
+        // Locate the wheel's bundled binary without asking imageio to download anything.
+        const result = await run(python.path, ['-I', '-c', 'import importlib.util,pathlib,json; s=importlib.util.find_spec("imageio_ffmpeg"); print(json.dumps([str(p) for p in (pathlib.Path(s.origin).parent/"binaries").glob("ffmpeg-*") if p.is_file()] if s else []))'], { signal });
+        if (result.cleanupIncomplete || ['aborted', 'process_output_incomplete'].includes(result.errorCode) || /^process_helper_/.test(result.errorCode || '')) return { available: false, path: null, version: null,
+          code: result.cleanupIncomplete ? 'process_cleanup_incomplete' : result.errorCode, ...cleanupFields(result) };
+        if (result.ok) {
+          try { executablePaths = await candidates(JSON.parse(result.stdout.trim())); } catch { /* absent wheel */ }
+        }
+      }
+    }
+    if (kind === 'ffprobe' && !executablePaths.length) {
+      const ffmpeg = await locate('ffmpeg', refresh, signal);
+      if (ffmpeg.code) return ffmpeg;
+      if (ffmpeg.available) executablePaths = await candidates([nodePath.join(nodePath.dirname(ffmpeg.path), 'ffprobe')]);
+    }
+    let value = { available: false, path: null, version: null };
+    for (const candidate of executablePaths.slice(0, 8)) {
+      const r = await run(candidate, [kind === 'ffmpeg' || kind === 'ffprobe' ? '-version' : '--version'], { signal });
+      if (r.cleanupIncomplete || ['aborted', 'process_output_incomplete'].includes(r.errorCode) || /^process_helper_/.test(r.errorCode || '')) return { available: false, path: null, version: null,
+        code: r.cleanupIncomplete ? 'process_cleanup_incomplete' : r.errorCode, ...cleanupFields(r) };
+      if (r.ok) { value = { available: true, path: candidate, version: (r.stdout || r.stderr).split(/\r?\n/)[0].slice(0, 180), verification: 'version_command' }; break; }
+    }
+    if (!value.available) value.hint = kind === 'ffprobe'
+      ? 'Install the full FFmpeg distribution and add its bin directory to PATH; imageio-ffmpeg commonly bundles ffmpeg only. audio_inspect can still analyze audio using ffmpeg.'
+      : kind === 'ffmpeg' ? 'Install FFmpeg and add its bin directory to PATH, or set IMAGEIO_FFMPEG_EXE to its executable. An installed imageio-ffmpeg wheel is also detected.'
+        : `Install ${kind === 'chrome' ? 'Chrome/Chromium/Edge' : kind} and make its executable available on PATH.`;
+    cache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
+  async function dependencies(refresh, signal) {
+    const result = {};
+    for (const kind of ['ffmpeg', 'ffprobe', 'chrome', 'python', 'node']) {
+      result[kind] = await locate(kind, refresh, signal);
+      if (result[kind].code) return { ok: false, code: result[kind].code, dependencies: result, installsPerformed: false, ...cleanupFields(result[kind]) };
+    }
+    return { ok: true, dependencies: result, installsPerformed: false };
+  }
+
+  async function checkSyntax(file, content, signal) {
+    if (Buffer.byteLength(content, "utf8") > 1024 * 1024) return { ok: false, code: "source_too_large", error: "Syntax checks accept at most 1MB of source.", executed: false };
+    const extension = nodePath.extname(file).toLowerCase();
+    if (extension === '.json') {
+      try { JSON.parse(content.replace(/^\uFEFF/, '')); return { ok: true, valid: true, language: 'json', executed: false }; }
+      catch (error) { return { ok: false, valid: false, code: 'syntax_error', language: 'json', error: error.message, executed: false }; }
+    }
+    const kind = extension === '.py' ? 'python' : /\.(?:js|mjs|cjs)$/.test(extension) ? 'node' : '';
+    if (!kind) return { ok: false, code: 'unsupported_syntax', error: 'Parse-only checks support .py, .js, .mjs, .cjs and .json.', executed: false };
+    const executable = await locate(kind, false, signal);
+    if (!executable.available) return { ok: false, code: executable.code || 'dependency_missing', dependency: kind, hint: executable.hint, executed: false, ...cleanupFields(executable) };
+    let result;
+    if (kind === 'python') result = await run(executable.path, ['-I', '-c', 'import ast,sys; ast.parse(sys.stdin.buffer.read().decode("utf-8-sig"), filename=sys.argv[1])', file], { input: content, timeoutMs: 10000, signal });
+    else {
+      const directory = await io.mkdtemp(nodePath.join(nodeOs.tmpdir(), 'ruyi-syntax-'));
+      try {
+        // Node determines .js semantics from the nearest package.json, not the temp directory.
+        let candidateExtension = extension;
+        if (extension === '.js') {
+          // Dependency .js files default to CommonJS even when their package omits type.
+          if (nodePath.resolve(file).split(nodePath.sep).includes('node_modules')) candidateExtension = '.cjs';
+          let current = nodePath.dirname(nodePath.resolve(file));
+          while (nodePath.basename(current) !== 'node_modules') {
+            let packageText;
+            try { packageText = await io.readFile(nodePath.join(current, 'package.json'), 'utf8'); }
+            catch (error) { if (error.code !== 'ENOENT') throw error; }
+            if (packageText !== undefined) {
+              const packageType = JSON.parse(packageText.replace(/^\uFEFF/, '')).type;
+              if (packageType === 'module') candidateExtension = '.mjs';
+              else if (packageType === 'commonjs') candidateExtension = '.cjs';
+              break;
+            }
+            const parent = nodePath.dirname(current);
+            if (parent === current) break;
+            current = parent;
+          }
+        }
+        const candidate = nodePath.join(directory, 'candidate' + candidateExtension);
+        await io.writeFile(candidate, content, 'utf8');
+        result = await run(executable.path, ['--check', candidate], { timeoutMs: 10000, signal });
+      } finally { await io.rm(directory, { recursive: true, force: true }); }
+    }
+    return { ok: result.ok, valid: result.ok, language: kind === 'node' ? 'javascript' : 'python', executed: false, ...cleanupFields(result),
+      ...(result.ok ? {} : { code: result.cleanupIncomplete ? 'process_cleanup_incomplete' : ['aborted', 'process_output_incomplete'].includes(result.errorCode) ? result.errorCode : result.timedOut ? 'syntax_check_timeout' : 'syntax_error', error: (result.stderr || result.error || result.stdout).slice(-6000) }) };
+  }
+
+  function audioCollector(start, interval, limit) {
+    let pending = '', frame = null;
+    const windows = new Map();
+    const channels = new Map();
+    let integratedLufs = null, loudnessRangeLu = null, measuredEnd = 0;
+    const commit = () => {
+      if (!frame) return;
+      const time = start + frame.time;
+      measuredEnd = Math.max(measuredEnd, frame.time + 0.1);
+      const index = Math.floor(frame.time / interval);
+      if (!windows.has(index) && windows.size < limit) windows.set(index, { startSeconds: start + index * interval, endSeconds: time + 0.1, peakDbfs: null, rmsDbfs: null, momentaryLufs: null, shortTermLufs: null });
+      const window = windows.get(index);
+      const maximum = (a, b) => a == null ? b : b == null ? a : Math.max(a, b);
+      for (const [key, raw] of Object.entries(frame.values)) {
+        const value = finite(raw);
+        if (key === 'r128.I') integratedLufs = value;
+        if (key === 'r128.LRA') loudnessRangeLu = value;
+        if (window) {
+          window.endSeconds = time + 0.1;
+          if (key === 'astats.Overall.Peak_level') window.peakDbfs = maximum(window.peakDbfs, value);
+          if (key === 'astats.Overall.RMS_level') window.rmsDbfs = maximum(window.rmsDbfs, value);
+          if (key === 'r128.M') window.momentaryLufs = value;
+          if (key === 'r128.S') window.shortTermLufs = value;
+        }
+        const match = /^astats\.(\d+)\.(Peak_level|RMS_level)$/.exec(key);
+        if (match) {
+          const channel = Number(match[1]);
+          if (!channels.has(channel)) channels.set(channel, { channel, peakDbfs: null, maxWindowRmsDbfs: null });
+          const row = channels.get(channel);
+          const field = match[2] === 'Peak_level' ? 'peakDbfs' : 'maxWindowRmsDbfs';
+          row[field] = maximum(row[field], value);
+        }
+      }
+    };
+    const line = fragment => {
+      const timestamp = /\bpts_time:([\d.e+-]+)/.exec(fragment);
+      if (timestamp) { commit(); frame = { time: Number(timestamp[1]), values: {} }; }
+      const match = /lavfi\.((?:r128|astats)\.[\w.]+)=([^\s]+)/.exec(fragment);
+      if (match && frame) frame.values[match[1]] = match[2];
+    };
+    return {
+      feed(fragment) { pending += fragment; const lines = pending.split(/\r?\n/); pending = lines.pop().slice(-8192); for (const entry of lines) line(entry); },
+      finish() {
+        line(pending); commit();
+        const curve = [...windows.values()];
+        return { measuredSeconds: measuredEnd, integratedLufs, loudnessRangeLu, channels: [...channels.values()], curve,
+          nearClipWindows: curve.filter(w => w.peakDbfs != null && w.peakDbfs >= -0.1).map(w => ({ startSeconds: w.startSeconds, endSeconds: w.endSeconds, peakDbfs: w.peakDbfs })) };
+      },
+    };
+  }
+
+  async function inspectAudio(file, args, signal) {
+    if (!/\.(wav|mp3|m4a|mp4|aac|flac|ogg|opus|webm|mkv|aif|aiff|wma)$/i.test(file)) return { ok: false, code: 'unsupported_media', error: 'Use a local audio/video container; playlists and external media references are not accepted.' };
+    const ffmpeg = await locate('ffmpeg', false, signal);
+    if (!ffmpeg.available) return { ok: false, code: ffmpeg.code || 'dependency_missing', dependency: 'ffmpeg', hint: ffmpeg.hint, ...cleanupFields(ffmpeg) };
+    const start = bounded(args.startSeconds, 0, 0, 86400);
+    const duration = bounded(args.durationSeconds, 120, 0.1, 1800);
+    const interval = Math.max(bounded(args.windowSeconds, 1, 0.1, 60), duration / 600);
+    const stream = Math.floor(bounded(args.stream, 0, 0, 63));
+    const collector = audioCollector(start, interval, 601);
+    const result = await run(ffmpeg.path, ['-nostdin', '-hide_banner', '-nostats', '-protocol_whitelist', 'file,pipe', '-format_whitelist', 'wav,mp3,mov,matroska,webm,ogg,flac,aac,aiff,asf', '-ss', String(start), '-i', file,
+      '-t', String(duration), '-map', `0:a:${stream}`, '-vn', '-sn', '-dn', '-af', 'ebur128=metadata=1:peak=true,astats=metadata=1:reset=1:measure_perchannel=Peak_level+RMS_level:measure_overall=Peak_level+RMS_level,ametadata=mode=print', '-f', 'null', '-'],
+    { timeoutMs: 60000, signal, onStderr: fragment => collector.feed(fragment) });
+    if (!result.ok) return { ok: false, code: result.cleanupIncomplete ? 'process_cleanup_incomplete' : ['aborted', 'process_output_incomplete'].includes(result.errorCode) ? result.errorCode : result.timedOut ? 'media_timeout' : 'audio_decode_failed', error: (result.error || result.stderr).slice(-4000), ...cleanupFields(result), hint: 'Check the audio stream index and media format; try a shorter durationSeconds window.' };
+    const analysis = collector.finish();
+    if (!analysis.curve.length) return { ok: false, code: 'audio_measurement_missing', error: 'FFmpeg returned no audio measurement frames.' };
+    return { ok: true, path: file, stream, startSeconds: start, requestedSeconds: duration, windowSeconds: interval, ...analysis, ...cleanupFields(result),
+      nextStartSeconds: analysis.measuredSeconds >= duration - 0.1 ? start + duration : null,
+      measurement: 'EBU R128 loudness; sample peak dBFS; per-window maximum RMS dBFS',
+      nearClipThresholdDbfs: -0.1, listeningPerformed: false,
+      note: 'Objective signal analysis, not listening. Near-clip windows flag sample peaks at or above -0.1 dBFS; they do not prove audible distortion. Use file_read on visual evidence and user playback for subjective review.' };
+  }
+  return { dependencies, locate, checkSyntax, inspectAudio, audioCollector };
+}
+module.exports = { createMediaInspection };

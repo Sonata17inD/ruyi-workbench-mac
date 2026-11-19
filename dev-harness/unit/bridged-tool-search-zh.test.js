@@ -93,7 +93,7 @@ test('[Z1] 中文说法排得出对应的桥接工具', () => {
   assert.ok(top('键盘输入', 3).includes('@type_text'), top('键盘输入').join(','));
   assert.equal(top('输入文字')[0], '@type_text');
   assert.equal(top('快捷键')[0], '@hotkey');
-  assert.deepEqual(top('按快捷键', 2), ['keyboard_send_keys', '@hotkey']);   // 原生的也能发快捷键,同类时原生在前
+  assert.deepEqual(top('按快捷键', 2), ['@hotkey']);   // 原生的也能发快捷键,同类时原生在前
   // 窗口
   assert.equal(top('关闭窗口')[0], '@close_window');
   assert.equal(top('最大化窗口')[0], '@maximize_window');
@@ -174,5 +174,5 @@ test('[Z3] 别名只给桥接工具、按名字里的词生成;原生的同类�
   assert.ok(ahead('读取文件', 'file_read', '@read_file'), top('读取文件').join(','));
   assert.ok(ahead('修改文件', 'file_edit', '@edit_file'), top('修改文件').join(','));
   assert.deepEqual(top('打开网页', 2), ['browser_open', '@browser_open']);
-  assert.equal(top('键盘输入')[0], 'keyboard_send_keys');
+  assert.equal(top('键盘输入')[0], '@type_text');
 });

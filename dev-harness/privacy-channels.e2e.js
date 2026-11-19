@@ -5,11 +5,16 @@ const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const { killOwnTree } = require('./lib/kill-own-tree');
 const { EventEmitter } = require('node:events');
+const { Readable } = require('node:stream');
+const { createAttachmentEnrichment } = require('../ruyi-workbench/app/backend/attachment-enrichment.cjs');
+const { createStewardPreroute } = require('../ruyi-workbench/app/backend/steward-preroute.cjs');
 const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-openai-provider');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-channels-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
 process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
-const app = loadServerInternals(['readConfig', 'mutateConfig', 'McpStdioClient', 'audioStreamUpstream', 'handleAudioStreamOpen', 'handleAudioStreamSession', 'maybeOcrImageAttachment', 'maybeCompressImageAttachment', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'createKimiAcpRpc', 'writeToChild'], { withEval: true });
+const app = loadServerInternals(['LocalSecretCryptoHooks', 'readConfig', 'mutateConfig', 'McpStdioClient', 'handleAudioApiRoutes', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'createKimiAcpRpc', 'writeToChild'], { withEval: true });
+const keychainHelper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root);
+app.LocalSecretCryptoHooks.helperPath = () => keychainHelper;
 const t = createRunner('PRIVACY CHANNELS');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(check) { for (let i = 0; i < 200; i++) { if (check()) return true; await sleep(50); } return false; }
@@ -19,7 +24,7 @@ const refused = async work => { try { await work(); return false; } catch (error
 async function main() {
   let mcp, audioServer, summaryServer, foreignProvider;
   try {
-    if (process.platform !== 'win32') { console.log('SKIP production channel persistence requires Windows DPAPI'); return; }
+    if (process.platform !== 'darwin') throw Error('Mac privacy integration requires macOS');
     await app.mutateConfig(current => { Object.assign(current, { credentialEncryptionV1: true, privacyModeV1: 'off', privacyRulesV1: [], defaultWorkspace: work, activeProvider: '', permissionMode: 'acceptEdits', providers: [],
       stewardEnabledV1: false, schedulerEnabledV1: false, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, importAgentInstructions: false, bridgeExternalToolsToProvider: false, runtimeOptimizationShadowV1: false, contextAutoCompactEnabled: false }); return {}; });
     const sentinel = 'channel-private@example.test';
@@ -29,8 +34,27 @@ async function main() {
     // A real MCP server and real file_read; only delay its completed result to expose a policy-change race.
     const script = path.join(root, 'delayed-mcp.cjs');
     const internalsPath = path.resolve(__dirname, 'lib/server-internals.js');
-    const delayHook = `const original = toolCall; toolCall = async (name, args) => { const result = await original(name, args); if (name === 'file_read' && ${JSON.stringify([delayed, delayedError])}.includes(args.path)) { fs.writeFileSync(${JSON.stringify(started)}, 'ready'); const until = Date.now() + 12000; while (!fs.existsSync(${JSON.stringify(release)}) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 30)); if (args.path === ${JSON.stringify(delayedError)}) throw new Error(${JSON.stringify('fixture error: ' + sentinel)}); } return result; };`;
-    fs.writeFileSync(script, `const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp'], { withEval: true }); app.__eval(${JSON.stringify(delayHook)}); app.startMcp();`);
+    const serverPath = path.resolve(__dirname, '../ruyi-workbench/app/backend/mcp-server.cjs');
+    fs.writeFileSync(script, `
+      const fs = require('node:fs');
+      const mcpServer = require(${JSON.stringify(serverPath)});
+      const createMcpServer = mcpServer.createMcpServer;
+      mcpServer.createMcpServer = options => createMcpServer({
+        ...options,
+        async toolCall(name, args) {
+          const result = await options.toolCall(name, args);
+          if (name !== 'file_read' || !${JSON.stringify([delayed, delayedError])}.includes(args.path)) return result;
+          fs.writeFileSync(${JSON.stringify(started)}, 'ready');
+          const until = Date.now() + 12000;
+          while (!fs.existsSync(${JSON.stringify(release)}) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 30));
+          if (args.path === ${JSON.stringify(delayedError)}) throw new Error(${JSON.stringify('fixture error: ' + sentinel)});
+          return result;
+        },
+      });
+      const app = require(${JSON.stringify(internalsPath)}).loadServerInternals(['startMcp', 'LocalSecretCryptoHooks']);
+      app.LocalSecretCryptoHooks.helperPath = () => ${JSON.stringify(keychainHelper)};
+      app.startMcp();
+    `);
     mcp = new app.McpStdioClient({ id: 'privacy-fixture', command: process.execPath, args: [script], cwd: work, startupTimeoutMs: 20000 });
     await mcp.start();
     const listed = await mcp._rpc('resources/list', {}); const uri = listed.resources?.[0]?.uri;
@@ -57,20 +81,35 @@ async function main() {
     const audioCalls = [];
     audioServer = http.createServer(async (req, res) => { const chunks = []; for await (const chunk of req) chunks.push(chunk); audioCalls.push({ method: req.method, bytes: Buffer.concat(chunks).length }); res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ id: 'b'.repeat(32), sampleRate: 16000 })); });
     await new Promise(resolve => audioServer.listen(0, '127.0.0.1', resolve));
-    const audioSession = { upstream: 'http://127.0.0.1:' + audioServer.address().port, upstreamId: 'b'.repeat(32), providerId: 'fixture', at: Date.now() };
-    await policy('off'); await app.audioStreamUpstream(audioSession, 'POST', '', JSON.stringify({ hotwords: ['fixture-person'] }));
+    const audioFixture = { id: 'privacy-audio-fixture', label: 'Fixture ASR', type: 'openai-compat',
+      baseUrl: 'http://127.0.0.1:' + audioServer.address().port, models: [{ id: 'speech', label: 'Speech', caps: ['asr-stream'] }] };
+    await app.mutateConfig(current => {
+      current.privacyModeV1 = 'off';
+      current.providers = [...(current.providers || []), audioFixture];
+      current.asrStreamProviderId = audioFixture.id;
+      current.asrStreamModel = 'speech';
+      return {};
+    });
+    const audioBase = '/api/audio/stream/sessions';
+    const openingReq = Object.assign(Readable.from([Buffer.from(JSON.stringify({ hotwords: ['fixture-person'] }))]), { method: 'POST', headers: {} });
+    const openResponse = { writeHead(status) { this.status = status; }, end(body) { this.body = JSON.parse(body); } };
+    await app.handleAudioApiRoutes(openingReq, openResponse, audioBase);
+    if (openResponse.status !== 200 || !/^[a-f0-9]{32}$/.test(openResponse.body.id)) throw Error('Fixture ASR failed to open: ' + JSON.stringify(openResponse.body));
+    const activeAudio = audioBase + '/' + openResponse.body.id;
     await policy('enhanced');
-    t.ok(await refused(() => app.audioStreamUpstream(audioSession, 'POST', '/audio', Buffer.from('private PCM'))), 'A1 an old streaming speech session cannot forward further PCM after enabling privacy');
-    t.ok(await refused(() => app.handleAudioStreamOpen({}, {})), 'A2 live speech fails before reading hotwords or spawning a provider');
-    const audioId = 'a'.repeat(32);
-    app.__eval(`audioStreamSessions.set(${JSON.stringify(audioId)}, ${JSON.stringify(audioSession)});`);
-    t.ok(await refused(() => app.handleAudioStreamSession({ method: 'POST', headers: {} }, {}, '/api/audio/stream/sessions/' + audioId + '/finish')), 'A3 old speech finish also rechecks persisted policy');
+    const pcm = Object.assign(Readable.from([Buffer.from('private PCM sample')]), { method: 'POST', headers: { 'content-type': 'audio/L16' } });
+    t.ok(await refused(() => app.handleAudioApiRoutes(pcm, {}, activeAudio + '/audio')), 'A1 an old streaming speech session cannot forward further PCM after enabling privacy');
+    t.ok(await refused(() => app.handleAudioApiRoutes({ method: 'POST' }, {}, audioBase)), 'A2 live speech fails before reading hotwords or spawning a provider');
+    t.ok(await refused(() => app.handleAudioApiRoutes({ method: 'POST', headers: {} }, {}, activeAudio + '/finish')), 'A3 old speech finish also rechecks persisted policy');
     const response = { writeHead() {}, end() {} };
-    await app.handleAudioStreamSession({ method: 'DELETE' }, response, '/api/audio/stream/sessions/' + audioId);
+    await app.handleAudioApiRoutes({ method: 'DELETE' }, response, activeAudio);
     t.ok(audioCalls.length === 2 && audioCalls[1].method === 'DELETE' && audioCalls[1].bytes === 0, 'A4 cleanup DELETE remains available and sends no private body');
     const image = { kind: 'image', path: path.join(work, 'private.png'), size: 6 * 1024 * 1024 };
-    app.__eval('bridgedToolClient = async () => { throw new Error("fixture media egress must not run"); };');
-    await app.maybeOcrImageAttachment(image); await app.maybeCompressImageAttachment(image);
+    const enrichment = createAttachmentEnrichment({
+      ASR_MAX_BODY_BYTES: 25 * 1024 * 1024, readConfig: app.readConfig, PrivacyGateway: app.PrivacyGateway,
+      activeOpenAiProvider() { throw Error('fixture media egress must stop before provider lookup'); },
+    });
+    await enrichment.maybeOcrImageAttachment(image); await enrichment.maybeCompressImageAttachment(image);
     t.ok(image.ocrError === 'privacy.media_not_supported' && image.compressError === 'privacy.media_not_supported', 'A5 image OCR and compression stop before any MCP connection or file transfer');
 
     // Actual CLI launch gets a stale off snapshot; a hook enables privacy after prompt preparation.
@@ -214,16 +253,21 @@ async function main() {
     t.ok(offIndex.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F9 disabled privacy preserves exact newlines, angle brackets and alias spelling in the actual preroute index');
     // Hold the real projection snapshot stable: unrelated index rebuilds must not
     // accidentally hide a missing privacy component in the preroute cache key.
-    const restoreIndex = await app.__eval('(async () => { const original = getPretenderProjectionIndex, snapshot = await original(); getPretenderProjectionIndex = async () => snapshot; return () => { getPretenderProjectionIndex = original; }; })()');
-    try {
-      const cachedOff = await app.stewardPrerouteIndexRows(await app.readConfig());
-      await policy('enhanced');
-      const onIndex = await app.stewardPrerouteIndexRows(await app.readConfig());
-      await policy('off');
-      const offAgain = await app.stewardPrerouteIndexRows(await app.readConfig());
-      t.ok(cachedOff.find(row => row.sessionId === offHead.id)?.summary === offSummary && !onIndex.find(row => row.sessionId === offHead.id)?.summary.includes('[[RUYI_PVT:')
-        && offAgain.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F10 cached preroute rows follow both privacy transitions with a stable real index and unchanged source head');
-    } finally { restoreIndex(); }
+    const snapshot = await app.__eval('getPretenderProjectionIndex()');
+    const dependencies = app.__eval('({ stewardThreadDigestRows, stewardForeignProjection })');
+    const { stewardPrerouteIndexRows } = createStewardPreroute({
+      dependencies: { ...dependencies, getPretenderProjectionIndex: async () => snapshot },
+    });
+    const offConfig = await app.readConfig();
+    const cachedOff = await stewardPrerouteIndexRows(offConfig);
+    t.ok(await stewardPrerouteIndexRows(offConfig) === cachedOff, 'F10a stable index and privacy mode reuse cached preroute rows');
+    await policy('enhanced');
+    const onIndex = await stewardPrerouteIndexRows(await app.readConfig());
+    await policy('off');
+    const offAgain = await stewardPrerouteIndexRows(await app.readConfig());
+    const onRow = onIndex.find(row => row.sessionId === offHead.id);
+    t.ok(cachedOff.find(row => row.sessionId === offHead.id)?.summary === offSummary && onRow && !onRow.summary.includes('[[RUYI_PVT:')
+      && offAgain.find(row => row.sessionId === offHead.id)?.summary === offSummary, 'F10 cached preroute rows follow both privacy transitions with a stable real index and unchanged source head');
   } catch (error) { t.fail('fixture failure: ' + String(error.stack || error.code || error.message).slice(0, 600)); }
   finally {
     if (mcp?.child) killOwnTree(mcp.child);

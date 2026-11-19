@@ -10,9 +10,9 @@ const html = read('ruyi-workbench/app/public/index.html');
 const js = read('ruyi-workbench/app/public/js/skills-memory.js');
 const nav = read('ruyi-workbench/app/public/js/navigation-controls.js');
 const css = read('ruyi-workbench/app/public/css/components/tool-pane.css');
-// 110-1: MCP_TOOLS(含 workbench_memory_* schema)已搬至 13f-native-tool-schemas.js,改拼接读取,断言原样保留。
-const router = read('ruyi-workbench/app/src/13-http-router.js') + read('ruyi-workbench/app/src/13f-native-tool-schemas.js');
-const autonomy = read('ruyi-workbench/app/src/06d-memory-domain.js');
+const router = read('ruyi-workbench/app/backend/memory-routes.cjs');
+const selection = read('ruyi-workbench/app/backend/memory-selection.cjs');
+const { coreMemoryMaxItems, coreMemoryCharBudget } = require('../ruyi-workbench/app/backend/runtime-policy.cjs');
 const zh = JSON.parse(read('ruyi-workbench/app/public/locales/zh-CN.json'));
 const en = JSON.parse(read('ruyi-workbench/app/public/locales/en-US.json'));
 
@@ -23,12 +23,12 @@ ok(/buildMemoryToolboxCard/.test(js) && /openMemoryEditModal/.test(js) && /delet
 ok(/\/api\/memory\/metadata/.test(js) && /memory-core-toggle/.test(js) && /memory-important-toggle/.test(js), 'toolbox supports core membership and importance protection controls');
 // 2026-09-04: 胶囊容量从硬常量改为可配。锁两件事 —— 兵底常量已抬高，且真正生效的是
 // 01c 里读配置的判定函数(而不是直接用常量)，否则用户改了配置也不会生效。
-ok(/CORE_MEMORY_MAX = 200/.test(autonomy) && /CORE_MEMORY_CHAR_CAP = 16000/.test(autonomy),
+ok(coreMemoryMaxItems(null) === 200 && coreMemoryCharBudget(null) === 16000,
   'core capsule fallbacks track the widened defaults (200 items / 16000 chars)');
-ok(/coreMemoryMaxItems\(config\)/.test(autonomy) && /coreMemoryCharBudget\(config\)/.test(autonomy)
-  && /memoryRelevanceMax\(effectiveConfig\)/.test(autonomy) && /memoryIndexCharCap\(config\)/.test(autonomy),
+ok(/coreMemoryMaxItems\(config\)/.test(selection) && /coreMemoryCharBudget\(config\)/.test(selection)
+  && /memoryRelevanceMax\(effectiveConfig\)/.test(selection) && /memoryIndexCharCap\(config\)/.test(read('ruyi-workbench/app/backend/memory-prompts.cjs')),
   'capsule/retrieval/index limits are resolved through the config-reading predicates, not the raw constants');
-ok(/memoryCoreScore/.test(autonomy) && /important/.test(autonomy) && /core-rule/.test(autonomy), 'protected LRU accounts for importance and implicit rule use');
+ok(/memoryCoreScore/.test(selection) && /important/.test(selection) && /core-rule/.test(selection), 'protected LRU accounts for importance and implicit rule use');
 ok(/pathname === '\/api\/memory\/metadata'/.test(router), 'metadata quick actions preserve the full memory through a dedicated backend route');
 ok(/memory-card\.status-active/.test(css) && /memory-budget-track/.test(css) && /@media \(max-width: 420px\)/.test(css), 'toolbox has distinct active states, budget feedback, and narrow-screen polish');
 ok(zh['memory.toolbox.title'] && en['memory.toolbox.title'] && zh['memory.edit.typePreference'] && en['memory.edit.typePreference'], 'new memory UI is localized in Chinese and English');

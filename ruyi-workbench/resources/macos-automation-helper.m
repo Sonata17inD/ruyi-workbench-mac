@@ -128,6 +128,22 @@ static BOOL WithinCapacity(CGRect rect, CGFloat scale) {
         && width <= 16384 && height <= 16384 && width * height <= 32000000;
 }
 
+// Screenshot/model previews may request fewer pixels. OCR and visual matching
+// omit max_width and retain native resolution. Logical geometry never changes.
+static CGFloat CaptureScale(NSDictionary *request, CGRect bounds, CGFloat nativeScale) {
+    id width = request[@"max_width"];
+    if (!width) return nativeScale;
+    if (![width isKindOfClass:NSNumber.class] || CFGetTypeID((__bridge CFTypeRef)width) == CFBooleanGetTypeID()) return NAN;
+    double value = [width doubleValue];
+    if (!isfinite(value) || value != floor(value) || value < 0 || value > 16384) return NAN;
+    return value == 0 ? nativeScale : MIN(nativeScale, value / bounds.size.width);
+}
+
+static NSDictionary *SourceScale(CGRect bounds, CGFloat scale) {
+    return @{@"x":@(round(bounds.size.width * scale) / bounds.size.width),
+        @"y":@(round(bounds.size.height * scale) / bounds.size.height)};
+}
+
 static void CaptureWindow(NSDictionary *request, SCShareableContent *content, void (^done)(NSDictionary *)) {
     NSString *title = request[@"window_title"];
     NSMutableArray<SCWindow *> *matches = [NSMutableArray array];
@@ -154,7 +170,9 @@ static void CaptureWindow(NSDictionary *request, SCShareableContent *content, vo
     if (!window.isOnScreen) { done(RuyiAutomationFailure(@"window_not_visible", @"Window is minimized or outside the active desktop")); return; }
     CGRect bounds = window.frame;
     SCContentFilter *filter = [[SCContentFilter alloc] initWithDesktopIndependentWindow:window];
-    CGFloat scale = filter.pointPixelScale;
+    CGFloat nativeScale = filter.pointPixelScale;
+    CGFloat scale = CaptureScale(request, bounds, nativeScale);
+    if (!isfinite(scale)) { done(RuyiAutomationFailure(@"invalid_args", @"max_width must be an integer from 0 to 16384")); return; }
     if (!WithinCapacity(bounds, scale)) { done(RuyiAutomationFailure(@"capture_capacity", @"Window size exceeds capture capacity")); return; }
     // A desktop-independent filter captures the selected window even when covered.
     // No focus or restore operation is performed as a side effect of observation.
@@ -169,7 +187,8 @@ static void CaptureWindow(NSDictionary *request, SCShareableContent *content, vo
             done(RuyiAutomationFailure(@"window_changed", @"Window identity, visibility or geometry changed during capture")); return;
         }
         done(Encoded(image, bounds, @{@"matched_title":window.title, @"window_id":@(window.windowID),
-            @"pid":@(window.owningApplication.processID), @"occluded_possible":@NO}));
+            @"pid":@(window.owningApplication.processID), @"occluded_possible":@NO,
+            @"source_pixel_scale":SourceScale(bounds, nativeScale)}));
     });
 }
 
@@ -217,9 +236,12 @@ static NSDictionary *PlanDisplays(NSDictionary *request, NSArray *displays) {
             @"source":RuyiAutomationRectFields(CGRectOffset(intersection, -bounds.origin.x, -bounds.origin.y))}];
     }
     if (!parts.count) return RuyiAutomationFailure(@"region_outside_desktop", @"Region does not intersect an active display");
+    CGFloat nativeScale = scale;
+    scale = CaptureScale(request, clipped, nativeScale);
+    if (!isfinite(scale)) return RuyiAutomationFailure(@"invalid_args", @"max_width must be an integer from 0 to 16384");
     if (!WithinCapacity(clipped, scale)) return RuyiAutomationFailure(@"capture_capacity", @"Region exceeds capture capacity");
     NSMutableDictionary *plan = [@{@"ok":@YES, @"protocolVersion":@1, @"parts":parts, @"bounds":RuyiAutomationRectFields(clipped),
-        @"scale":@(scale), @"clipped":@(!CGRectEqualToRect(requested, clipped))} mutableCopy];
+        @"scale":@(scale), @"source_pixel_scale":SourceScale(clipped, nativeScale), @"clipped":@(!CGRectEqualToRect(requested, clipped))} mutableCopy];
     if (region && !CGRectEqualToRect(requested, clipped)) plan[@"requested_region"] = RuyiAutomationRectFields(requested);
     if (monitor) plan[@"monitor"] = monitor;
     return plan;
@@ -318,7 +340,7 @@ void RuyiAutomationRequest(NSDictionary *request, void (^done)(NSDictionary *)) 
         || [op hasPrefix:@"application."] || [op hasPrefix:@"ax."]) {
         done(RuyiAutomationInputRequest(request)); return;
     }
-    NSSet *keys = [NSSet setWithArray:@[@"version", @"op", @"region", @"monitor", @"window_title"]];
+    NSSet *keys = [NSSet setWithArray:@[@"version", @"op", @"region", @"monitor", @"window_title", @"max_width"]];
     for (NSString *key in request) {
         if (![keys containsObject:key]) { done(RuyiAutomationFailure(@"invalid_args", @"Unexpected request field")); return; }
     }
@@ -330,6 +352,9 @@ void RuyiAutomationRequest(NSDictionary *request, void (^done)(NSDictionary *)) 
     id title = request[@"window_title"];
     if (title && (![title isKindOfClass:NSString.class] || ![title length] || [title length] > 1024)) {
         done(RuyiAutomationFailure(@"invalid_args", @"window_title must contain 1 to 1024 characters")); return;
+    }
+    if (!isfinite(CaptureScale(request, CGRectMake(0, 0, 1, 1), 1))) {
+        done(RuyiAutomationFailure(@"invalid_args", @"max_width must be an integer from 0 to 16384")); return;
     }
     if (RuyiAutomationLocked()) { done(RuyiAutomationFailure(@"session_locked", @"Unlock the desktop before capturing")); return; }
     if (!CGPreflightScreenCaptureAccess()) {

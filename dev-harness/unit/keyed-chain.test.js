@@ -1,5 +1,5 @@
 'use strict';
-// 架构还债批 1 #3:runKeyedChain(00-boot)是按 key 串行写链的唯一实现。修前 02 / 08 七处各自手写。
+// 架构还债批 1 #3:runKeyedChain(keyed-chain.cjs)是按 key 串行写链的唯一实现。修前 02 / 08 七处各自手写。
 //   [K1] 同 key 严格串行、按提交顺序;不同 key 互不等待。
 //   [K2] 前一个失败不挡后一个;失败原样交给这一次的调用方。
 //   [K3] 链尾结算后自清(map 不留长寿条目);中途被接上的新链不会被旧链误删。
@@ -7,13 +7,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-keyed-chain-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
-process.env.RUYI_HOME = root;
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
-const { runKeyedChain } = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const { runKeyedChain } = require(path.resolve(__dirname, '../../ruyi-workbench/app/backend/keyed-chain.cjs'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const settle = () => new Promise(r => setImmediate(r));
 
@@ -53,15 +49,22 @@ test('[K3] 结算后自清;新接上的链不被旧链删掉', async () => {
 test('[K4] 修前的手写副本都已收编', () => {
   const handRolled = /(\w+Chains|\w+Locks)\.get\([^)]*\) \|\| Promise\.resolve\(\);\s*\n\s*const \w+ = \w+\.catch\(\(\) => \{\}\)\.then/g;
   const found = [];
-  for (const f of ['02-session-store.js', '08-agent-runs.js']) {
+  for (const f of ['02-session-store.js', '08-agent-runs.js', '../backend/subagent-runner.cjs', '../backend/session-meta-updates.cjs']) {
     const text = fs.readFileSync(path.join(SRC, f), 'utf8');
     for (const m of text.matchAll(handRolled)) found.push(`${f}:${m[1]}`);
   }
   // 仍手写、且有理由的:saveSession / bumpMissionChangeSeq 的 sessionWriteChains(在飞快照被别处读)、
   // appendIntervention(结算推送 + 压缩计数,且其写入块被 readfiletail-torntail (c2) 原样抠出执行)、
   // setSessionMetaDeferred(自己的延后合并语义)。
-  const allowed = new Set(['02-session-store.js:sessionWriteChains', '02-session-store.js:interventionWriteChains', '02-session-store.js:sessionMetaDeferChains']);
-  assert.deepEqual(found.filter(x => !allowed.has(x)), [], '新写链请用 runKeyedChain(00-boot)');
-});
+  const allowed = new Set(['02-session-store.js:sessionWriteChains', '02-session-store.js:interventionWriteChains', '../backend/session-meta-updates.cjs:sessionMetaDeferChains']);
+  assert.deepEqual(found.filter(x => !allowed.has(x)), [], '新写链请用 runKeyedChain(keyed-chain.cjs)');
+  for (const name of ['checkpoint-journal', 'agent-run-store', 'external-bot-credentials', 'mission-changes',
+    'mission-store', 'shell-sessions', 'memory-relations', 'intervention-journal', 'session-transactions', 'session-scratchpad']) {
+    const text = fs.readFileSync(path.join(SRC, '../backend', name + '.cjs'), 'utf8');
+    assert.match(text, /const \{ runKeyedChain \} = require\('\.\/keyed-chain\.cjs'\)/, name);
+    const specialized = new Set(['mission-changes:sessionWriteChains', 'intervention-journal:interventionWriteChains']);
+    assert.deepEqual([...text.matchAll(handRolled)].map(match => name + ':' + match[1]).filter(key => !specialized.has(key)), [],
+      name + ' only snapshot coordination and intervention compaction keep specialized chains');
+  }
 
-process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+});

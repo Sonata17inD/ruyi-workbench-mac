@@ -172,14 +172,15 @@ try {
   /* ═════════ (C) 共用核心:工具与路由写出来的一模一样 ═════════ */
   console.log('── (C) 共用 setSessionSkillsCore ──');
   {
-    const src13 = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
-    ok(/async function setSessionSkillsCore\(sessionId, skills\)/.test(src13), 'C0a 核心抽在 13-http-router 顶层');
-    ok(/const result = await setSessionSkillsCore\(String\(body && body\.sessionId \|\| ''\), body && body\.skills\);/.test(src13),
+    const skillRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'skill-routes.cjs'), 'utf8');
+    ok(/async function setSessionSkillsCore\(sessionId, skills\)/.test(skillRoutes), 'C0a 技能模块持有共用核心');
+    ok(/const result = await setSessionSkillsCore\(String\(body && body\.sessionId \|\| ''\), body && body\.skills\);/.test(skillRoutes),
       'C0b POST /api/session/skills 只剩壳,调核心');
     // 117 波 T1(32 号文 §2.1)重钉:steward_skill_toggle 的实现随拆分搬进了 13l-steward-ops.js
     // (纯搬家,逐字节不变)。原来钉「13g 这个文件里有这一行」= 钉落点;改成钉「整个 13g 族里
     // 恰好一处调这个核心」—— 跟着搬家走,且比原来严(族里再写第二套判据也红)。
-    const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js']
+    const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
+      '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs']
       .map(f => fs.readFileSync(path.join(WB, 'app', 'src', f), 'utf8')).join('\n');
     ok((stewardFamilySrc.match(/await setSessionSkillsCore\(sessionId, args\.skills\)/g) || []).length === 1,
       'C0c steward_skill_toggle 调同一个核心(不另写第二套判据;13g 族里恰好一处)');

@@ -8,10 +8,7 @@
 //   [G3] 病态 glob 对长文件名:修前的正则要跑几秒,匹配器在 50ms 内给出同样的答案。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { readServerSource } = require('../src-reader');
-const { functionBlock } = require('../lib/source-slice');
-
-const globToMatcher = new Function(functionBlock(readServerSource(), 'globToRegExp') + '\nreturn globToRegExp;')();
+const { globToRegExp: globToMatcher } = require('../../ruyi-workbench/app/backend/path-patterns.cjs');
 
 // 参照实现:glob → 锚定、大小写不敏感的正则(修前那段代码 + 段首 `**/` 的语义修正,见头注)。
 function legacyGlobToRegExp(glob) {

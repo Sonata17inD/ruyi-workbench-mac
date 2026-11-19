@@ -17,7 +17,11 @@ const { ok } = t;
 const man = JSON.parse(fs.readFileSync(path.join(APP, 'src', 'manifest.json'), 'utf8'));
 ok(Array.isArray(man.modules) && man.modules.length > 0, 'manifest.modules 非空');
 
-const built = fs.readFileSync(path.join(APP, 'server.js'), 'utf8');
+const built = fs.readFileSync(require('./src-reader').COMPOSITION_FILE, 'utf8');
+const entry = fs.readFileSync(path.join(APP, 'server.js'), 'utf8');
+const shipped = require('../ruyi-workbench/packaging/macos/runtime-files.json').workbench;
+ok(entry.includes("require('./workbench-runtime.cjs')") && shipped.includes('app/server.js')
+  && shipped.includes('app/workbench-runtime.cjs'), 'Mac 发行白名单包含 CLI 入口及其生成装配');
 let line = 1, prevEnd = 0;
 for (const m of man.modules) {
   const body = fs.readFileSync(path.join(APP, 'src', m.file), 'utf8');

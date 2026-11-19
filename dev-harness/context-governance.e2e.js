@@ -1,13 +1,17 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E: 第28波「上下文与产物治理」(AUTONOMY-PLAN §28)。无端口(纯源抽取 + 静态锁,离线 Node 直跑)。
+// E2E: 第28波「上下文与产物治理」(AUTONOMY-PLAN §28)。无端口，直接验证生产模块与装配契约。
 // 覆盖:§28c 预算化上游上下文 buildUpstreamContext(取代 12000/32000 定长,两站点)· §28b 节点输出四分 deriveNodeOutputs ·
 //       §28a 子代理两级压缩 maybeCompactSubHistory(关键:const 原地 splice + 钉住 task[0] + L1/L2 分级)· §28d degradedPolicy(4 归一 + 翻译接缝)。
-// 技术同 scheduler-reducer/audit-w23:源抽取 + new Function 实跑纯逻辑 + 正则静态锁接线。
 'use strict';
-const { readServerSource } = require('./src-reader');
-const fs = require('fs'), path = require('path');
-const SERVER = path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js');
-const src = readServerSource();
+const fs = require('node:fs');
+const path = require('node:path');
+const { isDeepStrictEqual } = require('node:util');
+const { MCP_TOOLS } = require('../ruyi-workbench/app/backend/native-tool-schemas.cjs');
+const { createWorkflowNodeOutcomes } = require('../ruyi-workbench/app/backend/workflow-node-outcomes.cjs');
+const { createAgentWorkflowReport } = require('../ruyi-workbench/app/backend/agent-workflow-report.cjs');
+const backend = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name), 'utf8');
+const workflow = backend('agent-workflow.cjs');
+const runner = backend('subagent-runner.cjs');
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
@@ -16,152 +20,110 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态源锁 ──');
 // §28c:两处上游装配点都改用 buildUpstreamContext,旧 12000/32000 定长常量在装配点消失。
-ok(/const priorText = buildUpstreamContext\(depNodes, upstreamBudgetTokens\)/.test(src), 'S §28c DAG runNode 用 buildUpstreamContext');
-ok(!/const dependencyText = buildUpstreamContext\(dependsOn\.map/.test(src) && /function singleAgentShorthandNode\(args\)/.test(src), 'S §28c 代理模式 v2:旧 spawn 站点已删,单代理简写走 DAG 同一条 buildUpstreamContext 链');
-ok(!/\.join\('\\n\\n'\)\.slice\(0, 32000\)/.test(src), 'S §28c 旧 join.slice(0,32000) 定长截断已消失');
+ok(/const priorText = buildUpstreamContext\(depNodes, upstreamBudgetTokens\)/.test(workflow), 'S §28c DAG runNode 用 buildUpstreamContext');
+ok(!/const dependencyText = buildUpstreamContext\(dependsOn\.map/.test(workflow)
+  && /function singleAgentShorthandNode\(args\)/.test(backend('agent-workflow-input.cjs')), 'S §28c 单代理简写走 DAG 同一条 buildUpstreamContext 链');
+ok(!/\.join\('\\n\\n'\)\.slice\(0, 32000\)/.test(workflow), 'S §28c DAG 输入使用动态预算');
 // §28b:节点完成派生四分。
-ok(/deriveNodeOutputs\(node\);/.test(src), 'S §28b runNode 完成调 deriveNodeOutputs');
-ok(/function deriveNodeOutputs\(node\)/.test(src) && /node\.summary =/.test(src) && /node\.evidence =/.test(src) && /node\.artifacts =/.test(src), 'S §28b deriveNodeOutputs 产 summary/evidence/artifacts');
+ok(/deriveNodeOutputs\(node\);/.test(workflow), 'S §28b runNode 完成调 deriveNodeOutputs');
 // §28a:子代理循环边界压缩;Claude 引擎不引入。
-ok(/await maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(src), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
-ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(src) && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(src), 'S §28a L2 重播种(自动 / 强压两条路)都用【原地 splice】(const 闭包安全)');
+ok(/await maybeCompactSubHistory\(\{ subHistory, privacyHistoryOwner, sys, provider, subModel, config, onEvent, subagentId, parentSession, tools, runId, state: subCompactState, signal: ctrl && ctrl\.signal \}\)/.test(runner), 'S §28a runSubAgentCore 循环边界调 maybeCompactSubHistory(带隐私历史来源、tools、runId、滞回水位和中止信号)');
+const sessionCompactionSource = backend('session-compaction.cjs');
+ok(/subHistory\.splice\(0, subHistory\.length, \.\.\.r\.reseeded\)/.test(sessionCompactionSource)
+  && /subHistory\.splice\(0, subHistory\.length, \.\.\.forced\.reseeded\)/.test(runner), 'S §28a 自动和强制重播种都原地更新子代理历史');
 {
-  const claudeOnce = (src.match(/async function runClaudeSubAgentOnce\([\s\S]*?\nasync function runSubAgentCore\(/) || [''])[0];
+  const claudeOnce = backend('claude-subagent.cjs');
   // 排除注释里对这些词的提及,只查真实代码模式(声明/调用)。
-  ok(claudeOnce.length > 500 && !/const subHistory|maybeCompactSubHistory\(/.test(claudeOnce), 'S §28a Claude 引擎【不】引入 subHistory 压缩(有意不对称)');
+  ok(/async function runClaudeSubAgentOnce\(/.test(claudeOnce) && !/const subHistory|maybeCompactSubHistory\(/.test(claudeOnce), 'S §28a Claude 子代理由 CLI 管理上下文压缩');
 }
 // §28d:degradedPolicy 归一(模板/新建/resume/工具 schema)+ 翻译接缝。
-ok((src.match(/\['accept', 'retry', 'request_review', 'fail'\]/g) || []).length >= 3, 'S §28d degradedPolicy 枚举 ≥3 处(模板/新建/resume/schema)');
-ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(src), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
-ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(src), 'S §28d 翻译接缝(仅降级成功节点)');
-ok(/degradedPolicy: \{ type: 'string', enum: \['accept', 'retry', 'request_review', 'fail'\]/.test(src), 'S §28d orchestrate 工具 schema 含 degradedPolicy');
+const catalog = backend('agent-workflow-catalog.cjs');
+ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(item\.degradedPolicy\)/.test(catalog),
+  'S §28d 工作流模板目录归一 degradedPolicy');
+ok(/\['accept', 'retry', 'request_review', 'fail'\]\.includes\(raw\.degradedPolicy\)/.test(workflow),
+  'S §28d 工作流新建时归一 degradedPolicy');
+ok(/n\.degradedPolicy = \['accept', 'retry', 'request_review', 'fail'\]\.includes\(n\.degradedPolicy\)/.test(workflow), 'S §28d resume 回填 degradedPolicy(老 run 零回归)');
+ok(/if \(node\.degraded === true && node\.status === 'succeeded'\) \{/.test(workflow), 'S §28d 翻译接缝(仅降级成功节点)');
+const orchestrate = MCP_TOOLS.find(tool => tool.name === 'orchestrate_agents');
+const degradedPolicy = orchestrate?.inputSchema.properties.nodes.items.properties.degradedPolicy;
+ok(degradedPolicy?.type === 'string' && isDeepStrictEqual(degradedPolicy.enum, ['accept', 'retry', 'request_review', 'fail']), 'S §28d orchestrate 工具 schema 含 degradedPolicy');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-// [P] 纯逻辑源抽取:§28c buildUpstreamContext + §28b deriveNodeOutputs
+// [P] 直接验证 §28c buildUpstreamContext 和 §28b deriveNodeOutputs
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] §28b/§28c 纯逻辑 ──');
-const blk = src.match(/const NODE_SUMMARY_MAX = 2000;[\s\S]*?\nfunction buildUpstreamContext\(depNodes, budgetTokens\) \{[\s\S]*?\n\}/);
-ok(!!blk, 'P 源抽取 28b/28c 块');
 // estimateContentTokens 注入桩:~1 token / 4 字符(测预算/分级逻辑,非精确 token)。
 const estimateContentTokens = s => Math.ceil(String(s || '').length / 4);
-const g = new Function('estimateContentTokens', blk[0] + '\nreturn { deriveNodeOutputs, buildUpstreamContext, NODE_WRITE_FAMILY };')(estimateContentTokens);
+const { deriveNodeOutputs } = createWorkflowNodeOutcomes();
+const { buildUpstreamContext } = createAgentWorkflowReport({ estimateContentTokens });
 
 // deriveNodeOutputs:结构化 summary/verdict 优先;findings→evidence;续点写族步骤→artifacts。
 {
   const n1 = { structuredResult: { summary: '核心结论X', findings: [{ a: 1 }, { b: 2 }] }, result: '整段很长的 rawTranscript'.repeat(50), continuation: { steps: [{ tool: 'file_write', argsPreview: 'path=a.js' }, { tool: 'file_read', argsPreview: 'path=b.js' }] } };
-  g.deriveNodeOutputs(n1);
+  deriveNodeOutputs(n1);
   ok(n1.summary === '核心结论X', 'P §28b summary 取结构化 summary');
   ok(Array.isArray(n1.evidence) && n1.evidence.length === 2, 'P §28b evidence 取 findings');
   ok(n1.artifacts.length === 1 && n1.artifacts[0].tool === 'file_write', 'P §28b artifacts 只收写族步骤(file_read 不算)');
   const n2 = { structuredResult: null, result: '  这是   最终   结论文本  ', continuation: null };
-  g.deriveNodeOutputs(n2);
+  deriveNodeOutputs(n2);
   ok(n2.summary === '这是 最终 结论文本', 'P §28b 无结构化→result 扁平化为 summary');
   const n3 = { structuredResult: { verdict: 'fail', confidence: 0.9 }, result: '', continuation: null };
-  g.deriveNodeOutputs(n3);
+  deriveNodeOutputs(n3);
   ok(/verdict=fail/.test(n3.summary), 'P §28b 无 summary 有 verdict→verdict= 摘要');
 }
 // buildUpstreamContext:rung 分级 + 均分预算 + degraded 标注。
 {
-  const empty = g.buildUpstreamContext([], 1000);
+  const empty = buildUpstreamContext([], 1000);
   ok(empty === '', 'P §28c 无依赖→空串');
   // 全文放得下 → rung1 全文无损。
   const deps1 = [{ id: 'a', status: 'succeeded', result: 'short result' }];
-  const t1 = g.buildUpstreamContext(deps1, 1000);
+  const t1 = buildUpstreamContext(deps1, 1000);
   ok(t1.includes('short result') && t1.includes('### a (succeeded)'), 'P §28c rung1:全文放得下→无损全文 + 头');
   // 全文超份额、summary 放得下 → rung2 摘要。
   const bigFull = 'X'.repeat(4000); // ~1000 token
   const deps2 = [{ id: 'b', status: 'succeeded', result: bigFull, summary: '简短摘要' }];
-  const t2 = g.buildUpstreamContext(deps2, 100); // 份额 ~100 token,全文 1000 超,摘要 <100 放得下
+  const t2 = buildUpstreamContext(deps2, 100); // 份额 ~100 token,全文 1000 超,摘要 <100 放得下
   ok(t2.includes('简短摘要') && t2.includes('精简结论') && !t2.includes(bigFull), 'P §28c rung2:全文超份额→用 summary');
   // 无 summary、全文超份额 → rung3 截断(单依赖小预算下,总量硬钳制会接管 → 「按总预算截断」标注)。
   const deps3 = [{ id: 'c', status: 'succeeded', result: bigFull }];
-  const t3 = g.buildUpstreamContext(deps3, 100);
+  const t3 = buildUpstreamContext(deps3, 100);
   ok(/截断/.test(t3) && t3.length < bigFull.length, 'P §28c rung3/总钳:超预算→截断 + 标注');
   // 对抗轮 P3:总量硬钳制 —— 多个各自放得下但【累计超预算】的依赖,拼接结果被总预算截断(旧 32000 硬顶的等价物)。
   const many = Array.from({ length: 20 }, (_, i) => ({ id: 'n' + i, status: 'succeeded', result: 'body-' + i + '-'.repeat(60) }));
-  const tMany = g.buildUpstreamContext(many, 300); // 20 依赖 × 200 下限 body 远超 300 → 总钳制
+  const tMany = buildUpstreamContext(many, 300); // 20 依赖 × 200 下限 body 远超 300 → 总钳制
   ok(estimateContentTokens(tMany) <= 300 + 20, 'P §28c 总量硬钳制:拼接结果 ≤ 预算(+标注余量)不击穿');
   ok(tMany.includes('按总预算截断'), 'P §28c 总钳标注出现');
   // degraded 标注(§28d 上游可见)。
-  const t4 = g.buildUpstreamContext([{ id: 'd', status: 'succeeded', degraded: true, result: 'x' }], 1000);
+  const t4 = buildUpstreamContext([{ id: 'd', status: 'succeeded', degraded: true, result: 'x' }], 1000);
   ok(t4.includes('· 降级'), 'P §28c degraded 前序在标题标注');
   // 多依赖均分:靠后依赖不被靠前大依赖整段挤掉(旧 join.slice 的病)。
-  const t5 = g.buildUpstreamContext([{ id: 'p', status: 'succeeded', result: 'Y'.repeat(8000) }, { id: 'q', status: 'succeeded', result: 'q-body' }], 400);
+  const t5 = buildUpstreamContext([{ id: 'p', status: 'succeeded', result: 'Y'.repeat(8000) }, { id: 'q', status: 'succeeded', result: 'q-body' }], 400);
   ok(t5.includes('### q (succeeded)') && t5.includes('q-body'), 'P §28c 均分预算:靠后依赖 q 仍完整可见(不被 p 挤掉)');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-// [A] 源抽取实跑:§28a maybeCompactSubHistory(L1/L2 + 原地 splice + 钉 task[0])
+// [A] 生产压缩内核:§28a maybeCompactSubHistory(L1/L2 + 原地 splice + 钉 task[0])
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [A] §28a maybeCompactSubHistory ──');
-const mm = src.match(/async function maybeCompactSubHistory\(opts\) \{[\s\S]*?\n\}/);
-// 子代理与主回合共用的两级压缩内核(10 runAutoCompaction)—— 一起抽出来跑,判据只有一处。
-const km = src.match(/async function runAutoCompaction\(ctx\) \{[\s\S]*?\n\}/);
-ok(!!mm && !!km, 'A 源抽取 maybeCompactSubHistory + 共用内核 runAutoCompaction');
-// 抽真 evaporateHistory + recentTurnsBoundary(保真);其余注入桩。
-const em = src.match(/function evaporateHistory\(history(?:, opts)?\) \{[\s\S]*?\n\}/);
-const evaporateHistory = new Function('EVAPORATED_PREFIX', em[0] + '\nreturn evaporateHistory;')('[已省略:'); // 注入模块级常量
-// 126-111b:签名多了第三个形参 byUnits(已过门的布尔)。抽取式跟着放宽 —— 写死旧签名的话,
-// 一改签名这里就 match 到 null,而 null[0] 的报错离真因隔着十万八千里(实测就是这么炸的)。
-const rm = src.match(/function recentTurnsBoundary\(history, maxTailTokens(?:, byUnits)?\) \{[\s\S]*?\n\}/);
-// 桩:窗口 1000 token;估算 = 各消息 content 长度/4 + 40/条;摘要内核可控 ok/summary。
+const { createObservationReduction } = require('../ruyi-workbench/app/backend/observation-reduction.cjs');
+const { createCompactionPlan } = require('../ruyi-workbench/app/backend/compaction-plan.cjs');
+const { createCompactionKernel } = require('../ruyi-workbench/app/backend/compaction-kernel.cjs');
+const { createSessionCompaction } = require('../ruyi-workbench/app/backend/session-compaction.cjs');
 const providerContextWindow = () => 1000;
-const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((t, m) => t + 40 + Math.ceil(String((m && m.content) || '').length / 4), 0);
-const userBlockStarts = history => {
-  const idx = [];
-  for (let i = 0; i < history.length; i++) if (history[i] && history[i].role === 'user') idx.push(i);
-  return idx;
-};
-// 126-111b:退化那一支要用 historyUnitStarts(与 111a 同一个原语)。从源码里【抽真的那一份】注进来,
-// 不在这儿另写一遍 —— 判据只有一处这条纪律在沙箱里也得成立(与 evaporateBudgetBoundaryEnabled 同理)。
-const um = src.match(/function historyUnitStarts\(history\) \{[\s\S]*?\n\}/);
-const historyUnitStarts = new Function(um[0] + '\nreturn historyUnitStarts;')();
-const recentTurnsBoundary = new Function('estimateHistoryTokens', 'userBlockStarts', 'COMPACT_RESEED_TAIL_MAX_TOKENS', 'historyUnitStarts', rm[0] + '\nreturn recentTurnsBoundary;')(
-  estimateHistoryTokens, userBlockStarts, 16000, historyUnitStarts
-);
+const estimateHistoryTokens = h => (Array.isArray(h) ? h : []).reduce((total, m) => total + 40 + Math.ceil(String(m?.content || '').length / 4), 0);
+const reduction = createObservationReduction({ estimateHistoryTokens });
+const { CompactionPlan } = createCompactionPlan({ estimateHistoryTokens, providerContextWindow });
 let summaryOk = true;
 const providerSummaryCall = async () => (summaryOk ? { ok: true, summary: 'SUMMARY', usage: null } : { ok: false, error: 'boom' });
 let recordCalls = 0; const recordCompactUsage = () => { recordCalls++; };
 // 第45波:maybeCompactSubHistory 预算判定改走 calibratedEstimate(45d 校准入口)—— 桩镜像「无样本=因子1」。
 const calibratedEstimate = (p, m, h) => estimateHistoryTokens(h);
-const resolveCompactionProvider = (config, provider) => ({ provider, model: provider && provider.model });
-const CompactionPlan = require(SERVER).CompactionPlan;
-// 126-111a:maybeCompactSubHistory 现在会问一声「L1 边界要不要按 token 预算算」。注**真函数**,
-// 不在这儿另写一份假的(判据只有一处,沙箱里也得成立)。开关默认关,所以本文件的判据逐字节不变;
-// 缺了它会 ReferenceError 被 maybeCompactSubHistory 的 try/catch 吞成「没压缩」,A 组十条全红。
-const evaporateBudgetBoundaryEnabled = require(SERVER).evaporateBudgetBoundaryEnabled;
-const historyReadDedupEnabled = require(SERVER).historyReadDedupEnabled; // 126-111e:同上
-// 126-111b:maybeCompactSubHistory 的 reseed 出口现在会问一声「要不要按单元退化」并过一遍配对安全网。
-// **第三次**了:往这个函数里加任何跨模块调用,都要回来补这处沙箱,否则 ReferenceError 被它自己的
-// try/catch 吞成「没压缩」,A 组一片红而真因在别处。
-const reseedTailUnitsEnabled = require(SERVER).reseedTailUnitsEnabled;
-const repairProviderHistoryPairing = require(SERVER).repairProviderHistoryPairing;
-// 第四次:runAutoCompaction 读 compactionPlan.l1SufficientRatio(L1「够了」的低水位)—— 注真规则(规则 JSON 是唯一可审计输入)。
-const CONTEXT_GOVERNANCE_RULES = require('../ruyi-workbench/app/src/context-governance-rules.json');
-// 第五次:L2 重播种之后附「已执行工具调用」机器索引(10 buildCompactionToolIndex)。本组只验压缩内核的判据与装回,
-// 索引本身另有单测(unit/compaction-tool-index.test.js 经 CompactionPlan/buildObservationRecallPrompt 验)—— 这里注空串桩。
-const buildCompactionToolIndex = () => '';
-const maybeCompactSubHistory = new Function(
-  'providerContextWindow', 'estimateHistoryTokens', 'calibratedEstimate', 'evaporateHistory', 'providerSummaryCall', 'recentTurnsBoundary', 'recordCompactUsage', 'resolveCompactionProvider', 'COMPACT_RESEED_TAIL_MAX_TOKENS', 'CompactionPlan', 'evaporateBudgetBoundaryEnabled', 'historyReadDedupEnabled', 'reseedTailUnitsEnabled', 'repairProviderHistoryPairing', 'logEvent', 'CONTEXT_GOVERNANCE_RULES', 'compactionSummaryFailures', 'COMPACTION_SUMMARY_FAILURE_COOLDOWN_MS', 'buildCompactionToolIndex',
-  km[0] + '\n' + mm[0] + '\nreturn maybeCompactSubHistory;'
-)(providerContextWindow, estimateHistoryTokens, calibratedEstimate, evaporateHistory, providerSummaryCall, recentTurnsBoundary, recordCompactUsage, resolveCompactionProvider, 16000, CompactionPlan, evaporateBudgetBoundaryEnabled, historyReadDedupEnabled, reseedTailUnitsEnabled, repairProviderHistoryPairing, () => {}, CONTEXT_GOVERNANCE_RULES, new Map(), 10 * 60 * 1000, buildCompactionToolIndex);
+const { repairProviderHistoryPairing } = require('../ruyi-workbench/app/backend/provider-history.cjs').createProviderHistory({ logEvent() {} });
+const kernel = createCompactionKernel({ CompactionPlan, estimateHistoryTokens, calibratedEstimate, providerSummaryCall,
+  repairProviderHistoryPairing, logEvent() {}, ...reduction });
+const { maybeCompactSubHistory } = createSessionCompaction({ kernel, CompactionPlan, recordCompactUsage });
 
-// ============ A2: truncateToolResult 的 base64 图片字段专用处理(防 60KB 平切切坏图) ============
-// 抽真 truncateToolResult + IMG_B64_TRIM_RE(保真);TOOL_RESULT_CAP / FILE_READ_* 注入常量。
-const trm = src.match(/const IMG_B64_TRIM_RE = ([^\n]+);/);
-const tm = src.match(/function truncateToolResult\(name, jsonStr\) \{\n[\s\S]*?\n\}/);
-ok(!!trm && !!tm, 'A2 源抽取 truncateToolResult + IMG_B64_TRIM_RE');
-const IMG_B64_TRIM_RE = trm ? eval('(' + trm[1] + ')') : null;
-// N2:truncateToolResult 改为结构感知后依赖 10 里 TOOL-RESULT-SHRINK 区间(纯函数+常量)与 09d 的 CJK 计数/估算公式 ——
-// 区间整段随函数一起抽出并跑(区间自带 4 个常量,故不再注入 TOOL_RESULT_CAP 等)。
-const shrinkRegion = src.slice(src.indexOf('// <<TOOL-RESULT-SHRINK BEGIN'), src.indexOf('// >>TOOL-RESULT-SHRINK END'));
-ok(shrinkRegion.length > 500, 'A2 源抽取 TOOL-RESULT-SHRINK 区间');
-const cjkFn = src.match(/function countCjkCodeUnits\(str\) \{\n[\s\S]*?\n\}/);
-const tokFn = src.match(/function tokensFromTextCounts\(ascii, cjk, bucket\) \{\n[\s\S]*?\n\}/);
-const truncateToolResult = new Function(
-  'ESTIMATION_RULES',
-  cjkFn[0] + '\n' + tokFn[0] + '\n' + shrinkRegion + '\n' + tm[0] + '\nreturn truncateToolResult;'
-)({ factors: { json: 3.6, code: 3.6 } });
+const { truncateToolResult } = require('../ruyi-workbench/app/backend/tool-result-view.cjs');
 
 const cfg = { autoCompactThreshold: 0.8 }; // budget = 0.8 × 1000 = 800 token
 const prov = { id: '__context_governance_fixture__', model: 'm', contextWindow: 1000 };

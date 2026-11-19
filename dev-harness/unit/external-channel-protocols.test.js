@@ -2,12 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src/13v-external-channel-protocols.js'), 'utf8');
-const protocols = vm.runInNewContext(source + '\nExternalChannelProtocols', { crypto, Buffer, TextDecoder });
-const verify = protocols.verifyAndNormalize;
+const { verifyAndNormalize: verify } = require('../../ruyi-workbench/app/backend/external-channel-protocols.cjs');
 const NOW = 1725442341000;
 const feishuConnection = { appId: 'cli_fixture', tenantId: 'tenant-fixture', botUserId: 'ou_bot', verificationToken: 'synthetic-token', encryptKey: 'synthetic-encrypt-key' };
 const qqConnection = { appId: '11111111', botSecret: 'synthetic-qq-secret', botUserId: 'qq_bot' };

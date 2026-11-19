@@ -37,25 +37,46 @@ const MD_PATH = path.join(OUT_DIR, 'route-inventory.md');
 
 // 路由判定点所在模块(顺序即 manifest 声明顺序;13e 只有索引助手、无判定点,扫出来是空,保留在口径里防漏)。
 const ROUTER_FILES = [
-  '13-http-router.js',
-  '13b-api-domain-routes.js',
-  '13c-overlay-routes.js',
+  '../backend/workbench-http-server.cjs',
+  '../backend/workbench-api-router.cjs',
+  '../backend/http-chat-stream.cjs',
+  '../backend/tool-routes.cjs',
+  '../backend/status-routes.cjs',
+  '../backend/workspace-routes.cjs',
+  '../backend/provider-routes.cjs',
+  '../backend/configuration-routes.cjs',
+  '../backend/mission-ledger-routes.cjs',
+  '../backend/autonomy-grant-routes.cjs',
+  '../backend/agent-workflow-routes.cjs',
   '13d-core-domain-routes.js',
   '13e-pretender-index.js',
-  // 第 116 波 116b:管家 /api/steward/* 域路由(13g 拼接顺序在 13 之后,经 StewardHooks 延迟绑定挂接)。
-  '13g-steward.js',
-  // 第 116 波 116f：管家回合与到访路由（13h 拼接顺序在 13g 之后，经 13g 的处理器末尾转交）。
-  '13h-steward-runner.js',
+  '../backend/local-support-routes.cjs',
+  '../backend/diagnostic-routes.cjs',
+  '../backend/checkpoint-routes.cjs',
+  '../backend/agent-run-routes.cjs',
+  '../backend/session-routes.cjs',
+  '../backend/mission-routes.cjs',
+  '../backend/intervention-routes.cjs',
+  '../backend/migration-routes.cjs',
+  '../backend/mcp-routes.cjs',
+  '../backend/session-steering.cjs',
+  '../backend/audio-routes.cjs',
+  '../backend/skill-routes.cjs',
+  '../backend/memory-routes.cjs',
+  '../backend/session-execution-routes.cjs',
+  '../backend/playbook-routes.cjs',
+  '../backend/attachment-routes.cjs',
+  '../backend/steward-routes.cjs',
   // 第 121 波 K2a：事件流 GET /api/events/stream（13r 拼接顺序在 13 之后，经 00-boot 的
   // EventStreamHooks 延迟绑定挂接，与 13g 的 StewardHooks 同款）。
-  '13r-event-stream.js',
+  '../backend/event-stream.cjs',
   // 第 123 波 M1（37 号文 §3.3）：定时任务六条 /api/scheduler/tasks（13s 拼接顺序在 13 之后，
   // 经 handleApi 里一行 `await handleSchedulerApiRoutes(...)` 直调委派，同 13b/13c/13d）。
-  '13s-scheduler.js',
-  '13w-external-bots.js',
-  '13ab-privacy-api.js',
+  '../backend/scheduler-routes.cjs',
+  '../backend/external-bot-routes.cjs',
+  '../backend/privacy-routes.cjs',
 ];
-const ROUTE_AUTH_FILE = '01b-route-auth.js';
+const ROUTE_AUTH_FILE = '../backend/http-route-policy.cjs';
 
 // 正则路由的代表路径(鉴权首配模拟用):key = 正则源码原文,value = 具体化样例路径。
 // 新增正则路由而不登记样例 -> 生成器直接报错,指路此处。
@@ -82,7 +103,6 @@ const DOMAIN_BY_HANDLER = [
   ['handleMcpApiRoutes', 'mcp'],
   ['handleCheckpointApiRoutes', 'checkpoint-storage'],
   ['handleSteerApiRoute', 'steer'],
-  ['handleOverlayApiRoutes', 'overlay'],
   ['handleSessionApiRoutes', 'session'],
   ['handleMissionsApiRoutes', 'mission'],
   ['handleInterventionApiRoutes', 'intervention'],
@@ -94,15 +114,32 @@ const DOMAIN_BY_HANDLER = [
   ['handleSchedulerApiRoutes', 'scheduler'],
 ];
 const DOMAIN_BY_FILE = {
-  '13-http-router.js': 'core-inline',
-  '13b-api-domain-routes.js': 'mcp/checkpoint-storage/steer',
-  '13c-overlay-routes.js': 'overlay',
+  '../backend/privacy-routes.cjs': 'privacy',
+  '../backend/workbench-http-server.cjs': 'listener',
+  '../backend/http-chat-stream.cjs': 'chat',
+  '../backend/tool-routes.cjs': 'tools',
+  '../backend/status-routes.cjs': 'status',
+  '../backend/workspace-routes.cjs': 'workspace',
+  '../backend/provider-routes.cjs': 'provider',
+  '../backend/configuration-routes.cjs': 'configuration',
+  '../backend/mission-ledger-routes.cjs': 'mission-ledger',
+  '../backend/autonomy-grant-routes.cjs': 'autonomy-grant',
+  '../backend/agent-workflow-routes.cjs': 'agent-workflow',
+  '../backend/migration-routes.cjs': 'migration',
+  '../backend/audio-routes.cjs': 'audio',
+  '../backend/skill-routes.cjs': 'skills',
+  '../backend/memory-routes.cjs': 'memory',
+  '../backend/session-execution-routes.cjs': 'session-execution',
+  '../backend/playbook-routes.cjs': 'playbook',
+  '../backend/attachment-routes.cjs': 'attachment',
   '13d-core-domain-routes.js': 'core-domain',
   '13e-pretender-index.js': 'pretender-index',
-  '13g-steward.js': 'steward',
-  '13h-steward-runner.js': 'steward',
-  '13r-event-stream.js': 'event-stream',
-  '13s-scheduler.js': 'scheduler',
+  '../backend/local-support-routes.cjs': 'local-support',
+  '../backend/diagnostic-routes.cjs': 'diagnostics',
+  '../backend/checkpoint-routes.cjs': 'checkpoint-storage',
+  '../backend/steward-routes.cjs': 'steward',
+  '../backend/event-stream.cjs': 'event-stream',
+  '../backend/scheduler-routes.cjs': 'scheduler',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +211,9 @@ function blockText(lines, startIdx) {
 
 function enclosingFunction(lines, idx) {
   for (let i = idx; i >= 0; i--) {
-    const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/) || lines[i].match(/^const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/);
+    const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/)
+      || lines[i].match(/^\s+(?:async\s+)?function\s+(handleApi|handle[A-Za-z]+ApiRoutes?)\s*\(/)
+      || lines[i].match(/^const\s+([A-Za-z0-9_]+)\s*=\s*(?:async\s*)?\(/);
     if (m) return m[1];
   }
   return '(top-level)';
@@ -377,7 +416,7 @@ function computeInventory(opts = {}) {
     schema: 1,
     _comment: '第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。',
     generatedAt: new Date().toISOString(),
-    sources: { routeAuth: 'ruyi-workbench/app/src/' + ROUTE_AUTH_FILE, routers: ROUTER_FILES.map(f => 'ruyi-workbench/app/src/' + f) },
+    sources: { routeAuth: path.posix.normalize('ruyi-workbench/app/src/' + ROUTE_AUTH_FILE), routers: ROUTER_FILES.map(f => path.posix.normalize('ruyi-workbench/app/src/' + f)) },
     summary: {
       routeAuthEntries: routeAuth.length,
       decisionPoints: allPoints.length,

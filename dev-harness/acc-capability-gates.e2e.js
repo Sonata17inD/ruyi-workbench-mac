@@ -231,7 +231,7 @@ try {
     }
     const gAcc = ((globalServers || {})['ai-computer-control'] || {}).env || {};
     const gExt = ((globalServers || {})['ext-mcp'] || {}).env || {};
-    ok(gAcc.ACC_HIDE_TOOLS === 'batch_actions,kill_process,launch_application,macro_run,run_command' && !('ACC_HIDE_TOOLS' in gExt),
+    ok(gAcc.ACC_HIDE_TOOLS === 'batch_actions,launch_application,macro_run,run_command' && !('ACC_HIDE_TOOLS' in gExt),
       `A10 全局 MCP 配置的 ACC 条目按全局闸带 ACC_HIDE_TOOLS,外部条目不带(got ${JSON.stringify(gAcc.ACC_HIDE_TOOLS)})`);
   });
 
@@ -361,7 +361,7 @@ const ask = (env, toolName, input) => new Promise(resolve => {
       const cap = readLines(CAPTURE)[0] || {};
       const accEnv = ((cap.servers || {})['ai-computer-control'] || {}).env || {};
       const hidden = String(accEnv.ACC_HIDE_TOOLS || '').split(',').filter(Boolean);
-      ok(['run_command', 'launch_application', 'kill_process', 'batch_actions', 'macro_run', 'screenshot', 'mouse_click', 'type_text', 'ocr_screen', 'get_clipboard'].every(n => hidden.includes(n))
+      ok(['run_command', 'launch_application', 'batch_actions', 'macro_run', 'screenshot', 'mouse_click', 'type_text', 'ocr_screen', 'get_clipboard'].every(n => hidden.includes(n))
         && !hidden.includes('read_document') && !hidden.includes('ocr_image') && !hidden.includes('list_processes'),
         `C1 直挂 ACC 条目带 ACC_HIDE_TOOLS(命令族 + 转调器 + 会话关掉的桌面族;名单外不在其中)(got ${hidden.length} 件: ${hidden.slice(0, 8).join(',')}…)`);
       const extEnv = ((cap.servers || {})['ext-mcp'] || {}).env || {};

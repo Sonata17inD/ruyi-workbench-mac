@@ -36,15 +36,12 @@ const violations = policyViolations(graph, policy);
 ok(graph.modules.length === manifest.modules.length && graph.modules.every((module, index) => module.file === manifest.modules[index].file),
   '103b graph covers every manifest module in concatenation order');
 ok(graph.duplicateProvides.length === 0, '103b no duplicate top-level provides');
-ok(violations.cycles.length === 0, '103b no cycle edge above the reviewed debt ceiling');
+ok(violations.cycles.length === 0 && graph.stronglyConnectedComponents.length === 0,
+  'production source has no strongly connected modules');
+const fixtureCycle = 'left.js->right.js';
+ok(policyViolations({ cycleEdgeKeys: [fixtureCycle], forwardEdgeKeys: [] }, { allowedCycleEdges: [fixtureCycle] })
+  .cycles.includes(fixtureCycle), 'a policy file cannot exempt a production dependency cycle');
 ok(violations.forward.length === 0, '103b no forward/order-layer edge above the reviewed debt ceiling');
-// 架构还债批 1:环边已有逐条审过的上限,但「被卷进同一个强连通分量的模块数」没有 —— 往白名单里补一条边就可能把
-// 一个本来干净的模块拖进大环。这里给 SCC 的规模也钉一个只降不升的上限(2026-09-27 实数:1 个 SCC、32 个模块)。
-// 新模块默认挂在环外(零入边、经 *Hooks 延迟绑定,先例 06j-scheduler-core / 13t-steward-schedule);拆掉环以后把上限往下调。
-const SCC_MAX_COUNT = 1, SCC_MAX_MEMBERS = 32;
-const sccSizes = graph.stronglyConnectedComponents.map(component => component.length);
-ok(sccSizes.length <= SCC_MAX_COUNT && sccSizes.every(size => size <= SCC_MAX_MEMBERS),
-  `SCC 规模不超过上限(${SCC_MAX_COUNT} 个 / 每个 ≤ ${SCC_MAX_MEMBERS} 个模块;实测 ${JSON.stringify(sccSizes)})`);
 
 // Scanner adversarial: declarations in comments/strings are ignored, template interpolation remains visible,
 // and multi-declarator/destructuring bindings become provides. This protects the contract mechanism itself.
@@ -65,15 +62,28 @@ const executableDeclarations = declarationInfo(tokenize('#!/usr/bin/env node\n' 
 ok(JSON.stringify(executableDeclarations) === JSON.stringify(fixtureDeclarations),
   'platform entry hashbang does not hide declarations or create spurious dependency symbols');
 
-const hooks = graph.modules.find(module => module.file === '06c-agent-loop-hooks.js');
-ok(hooks && JSON.stringify(hooks.provides) === JSON.stringify(['AgentLoopHooks']),
-  '103b isolation pilot exposes one namespace instead of fourteen hook internals');
-ok(hooks && ['makeId', 'logEvent', 'redact'].every(symbol => hooks.requires.some(req => req.symbol === symbol)),
-  '103b isolation pilot declares its three injected external dependencies');
+const divisionFixture = [
+  'const ratio = 1024 / 2; function afterNumber() {}',
+  "const textRatio = '4' / 2; function afterString() {}",
+  'const templateRatio = `4` / 2; function afterTemplate() {}',
+  'const matcher = /[{}]/g; function afterRegex() {}',
+].join('\n');
+const divisionNames = declarationInfo(tokenize(divisionFixture)).provides.map(item => item.name).sort();
+ok(JSON.stringify(divisionNames) === JSON.stringify(['afterNumber', 'afterRegex', 'afterString', 'afterTemplate', 'matcher', 'ratio', 'templateRatio', 'textRatio']),
+  'literal division and regex braces cannot hide later declarations');
+
+const { createAgentLoopHooks } = require('../ruyi-workbench/app/backend/agent-loop-hooks.cjs');
+const hooks = createAgentLoopHooks({ makeId: () => 'fixture-trace', logEvent: () => {}, redact: String });
+ok(Object.isFrozen(hooks) && Object.keys(hooks).length === 7 && hooks.makeAgentLoopTraceId() === 'fixture-trace',
+  'Agent loop hooks expose seven operations and use the injected trace generator');
+const operations = graph.modules.find(item => item.file === '04-permission-runtime.js');
+const hookAssembly = fs.readFileSync(path.join(SRC, operations.file), 'utf8');
+ok(/createAgentLoopHooks\(\{\s*makeId, logEvent: .*?, redact,\s*\}\)/s.test(hookAssembly),
+  'Agent loop composition injects trace generation, logging and redaction');
 for (const consumer of ['05-claude-engine.js', '05b-kimi-bridge.js', '09-workflow.js', '14-main.js']) {
   const module = graph.modules.find(item => item.file === consumer);
-  ok(module && module.requires.some(req => req.provider === '06c-agent-loop-hooks.js' && req.symbol === 'AgentLoopHooks'),
-    `103b ${consumer} consumes the isolated AgentLoopHooks namespace`);
+  ok(module && module.requires.some(req => req.provider === operations.file && req.symbol === 'AgentLoopHooks'),
+    consumer + ' consumes the shared AgentLoopHooks instance');
 }
 
 console.log(`\nMODULE DEPENDENCY GRAPH STATIC E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);

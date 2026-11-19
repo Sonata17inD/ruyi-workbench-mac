@@ -16,7 +16,6 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   否则「跳过」可能是把整条同步弄坏了，而不是按来源跳过。
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
-const { readServerSource } = require('./src-reader');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -134,21 +133,24 @@ async function bootOnce(oldToken) {
     ok(addJsonSeen('origin-x'), `第四次启动:X 恢复同步，日志里有 mcp add-json origin-x（日志：${JSON.stringify(logText().trim().slice(0, 300))}）`);
 
     // ── 形状锁 ──
-    const src = readServerSource();
+    const readBackend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
+    const secrets = readBackend('config-secrets');
+    const importSource = readBackend('cli-mcp-import');
+    const syncSource = readBackend('cli-mcp-sync');
     // W2 迁移中心:自动导入扩到 Codex / Kimi 两家后,放行的 origin 多了 codex / kimi 两个值(仍是白名单,其它丢弃)。
-    ok(/const origin = String\(raw\.origin \|\| ''\)\.trim\(\);/.test(src)
-      && /if \(origin === 'claude-code' \|\| origin === 'ruyi'\) out\.origin = origin;/.test(src)
-      && /else if \(origin === 'codex' \|\| origin === 'kimi'\) out\.origin = origin;/.test(src),
+    ok(/const origin = String\(raw\.origin \|\| ''\)\.trim\(\);/.test(secrets)
+      && /if \(origin === 'claude-code' \|\| origin === 'ruyi'\) out\.origin = origin;/.test(secrets)
+      && /else if \(origin === 'codex' \|\| origin === 'kimi'\) out\.origin = origin;/.test(secrets),
     's sanitizeExternalMcpServer 只放行白名单 origin 值(claude-code/ruyi/codex/kimi)，其它丢弃（缺省不补字段＝存量视为 ruyi）');
     // W2:打标从字面 'claude-code' 改成按来源 src.origin(claude-code 仍是第一个来源,A 段实测它打的是 claude-code)。
-    ok(/sanitizeExternalMcpServer\(\{ \.\.\.raw, origin: src\.origin \}\)/.test(src) && /\{ origin: 'claude-code', label: 'Claude Code', file: homes\.claudeJson \}/.test(src),
+    ok(/sanitizeExternalMcpServer\(\{ \.\.\.raw, origin: src\.origin \}\)/.test(importSource) && /\{ origin: 'claude-code', label: 'Claude Code', file: homes\.claudeJson \}/.test(importSource),
       's autoImportClaudeCodeMcp 给新导入条目按来源打 origin(~/.claude.json 来的是 claude-code)');
-    ok(/if \(fromClaudeCode\.has\(String\(s\.id\)\)\) \{ skippedIds\.push/.test(src),
+    ok(/if \(fromClaudeCode\.has\(String\(s\.id\)\)\) \{ skippedIds\.push/.test(syncSource),
       's syncMcpServersToClaude 跳过 claude-code 来源');
-    ok(/delete clean\.origin;/.test(src), 's /api/mcp upsert 落盘时清掉 origin（用户接管）');
+    ok(/delete clean\.origin;/.test(readBackend('mcp-connector-settings')), 's /api/mcp upsert 落盘时清掉 origin（用户接管）');
     // W2:Kimi 现在也是来源 —— Kimi 同步只多了一件事:从 Kimi 导进来的(origin kimi)不写回、不接管;其余逐字不变。
-    const kimi = src.slice(src.indexOf('function syncMcpServersToKimi(config)'),   // hunt2-engines#14:外层按目标文件串行,正文在 syncMcpServersToKimiNow
-       src.indexOf('async function autoImportClaudeCodeMcp(config)'));
+    const { functionBlock } = require('./lib/source-slice');
+    const kimi = functionBlock(syncSource, 'syncMcpServersToKimiNow');
     const kimiOrigins = kimi.match(/origin/g) || [];
     ok(kimi.length > 200 && /if \(item && item\.origin === 'kimi'\) delete generatedServers\[String\(item\.id\)\];/.test(kimi)
       && !/origin === 'claude-code'/.test(kimi) && !/origin === 'codex'/.test(kimi),

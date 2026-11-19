@@ -1,4 +1,5 @@
 'use strict';
+const { httpGetGuarded } = require('../../ruyi-workbench/app/backend/http-transport.cjs');
 // http_request / web_search 的健壮性与错误形状(审计 NE-11)。全部走本机假服务器,不外连。
 //   [R1] POST 带 Content-Length、不走 chunked;对象体按 JSON 序列化并补 content-type
 //   [R2] timeoutMs 是整个请求的硬期限(对端每 400ms 滴一个字节也拦得住);httpGetGuarded 的 totalTimeoutMs 同理
@@ -84,12 +85,12 @@ test('[R2] httpGetGuarded 的 totalTimeoutMs 给整条链一个硬期限;不传�
     res.on('close', () => clearInterval(iv));
   });
   const t0 = process.hrtime.bigint();
-  const r = await srv.httpGetGuarded(base + '/t', { timeoutMs: 1000, totalTimeoutMs: 700 });
+  const r = await httpGetGuarded(base + '/t', { timeoutMs: 1000, totalTimeoutMs: 700 });
   assert.equal(r.ok, false);
   assert.equal(r.failClass, 'timeout');
   assert.match(r.error, /\(total\)/);
   assert.ok(elapsedMs(t0) < 2000);
-  const ok = await srv.httpGetGuarded(base + '/t2', { timeoutMs: 1000 });
+  const ok = await httpGetGuarded(base + '/t2', { timeoutMs: 1000 });
   assert.equal(ok.ok, true, '没有 totalTimeoutMs 时,持续有数据的响应可以跑完(下载大文件靠这个)');
   assert.equal(ok.body.length, 25);
 });

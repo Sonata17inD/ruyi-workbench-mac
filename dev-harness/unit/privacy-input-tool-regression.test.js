@@ -216,9 +216,8 @@ test('on-to-off host history migration restores old values without secretly enab
 });
 
 test('actual turn admission owns a delayed off-history migration before a second source can enter', async () => {
-  app.__eval("detectClaudePath = () => ''; detectKimiPath = () => ''; maybeWriteThreadBrief = async () => {}; runOpenAiTurn = async function({ session, onEvent }) { await saveSession(session); onEvent({ type: 'result', ok: true }); };");
   fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({ configSchema: 14, privacyModeV1: 'off', credentialEncryptionV1: false,
-    activeProvider: 'migration-fixture', providers: [{ id: 'migration-fixture', type: 'openai-compat', model: 'fixture-model', baseUrl: 'https://fixture.invalid/v1', apiKey: '' }],
+    activeProvider: 'migration-fixture', providers: [{ id: 'migration-fixture', type: 'openai-compat', model: 'fixture-model', baseUrl: 'https://fixture.invalid/v1', keyOptional: true }],
     defaultWorkspace: work, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, importAgentInstructions: false, stewardEnabledV1: false,
     stewardThreadBriefV1: false, schedulerEnabledV1: false, runtimeOptimizationShadowV1: false, contextAutoCompactEnabled: false,
     sessionNotesEnabledV1: false, desktopMcp: { enabled: false, autodetect: false }, missionAutoContinue: false }));
@@ -236,6 +235,10 @@ test('actual turn admission owns a delayed off-history migration before a second
   const blocked = new Promise(resolve => { entered = resolve; });
   const gate = new Promise(resolve => { release = resolve; });
   app.PrivacyCore.configHooks.openLocal = async (...args) => { entered(); await gate; return open(...args); };
+  const savedFetch = global.fetch;
+  global.fetch = async (_url, options) => options?.method === 'HEAD'
+    ? new Response(null, { status: 200 })
+    : Response.json({ choices: [{ message: { content: 'Synthetic migration complete.' }, finish_reason: 'stop' }] });
   let first;
   try {
     first = app.runSessionTurn({ sessionId: session.id, source: 'scheduler', message: 'Resume the synthetic contact.', onEvent() {} });
@@ -249,5 +252,10 @@ test('actual turn admission owns a delayed off-history migration before a second
     assert.equal(stored.providerHistory[0].content, values.email);
     assert.equal(stored.messages[0].content, values.email);
     assert.equal(app.turnSettlers.has(session.id), false);
-  } finally { release(); app.PrivacyCore.configHooks.openLocal = open; if (first) await first; }
+  } finally {
+    release();
+    app.PrivacyCore.configHooks.openLocal = open;
+    try { if (first) await first; }
+    finally { global.fetch = savedFetch; }
+  }
 });

@@ -1,6 +1,6 @@
 'use strict';
 // git_* 工具的 cwd 解析与结果形状(审计 NE-6 / NE-7)。真跑本机 git;没有 git 的机器整件跳过。
-//   [G1] 不传 cwd → 用对话工作目录(与 powershell_run/script_run/shell_start 同一套解析),不是家目录
+//   [G1] 不传 cwd → 用对话工作目录(与 shell_run/script_run/shell_start 同一套解析),不是家目录
 //   [G2] 显式 cwd 不存在 → 报「目录不存在」,不再悄悄换成家目录
 //   [G3] git_diff 只有未跟踪文件 → 列出 untracked,不说「没有改动」
 //   [G4] 中文路径原样显示(core.quotepath=false),不是 "\346\226\260..." 八进制
@@ -139,7 +139,7 @@ test('[G7] git_commit:addAll 默认 false;schema 文字与代码一致;没暂存
   const ok = await srv.toolCall('git_commit', { message: 'all', addAll: true }, ctxFor(repo));
   assert.equal(ok.ok, true, JSON.stringify(ok).slice(0, 300));
   assert.equal(path.resolve(ok.cwd), path.resolve(repo), 'git_commit 也用对话工作目录');
-  const schema = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13f-native-tool-schemas.js'), 'utf8');
+  const schema = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');
   const addAllLine = schema.split('\n').find(l => /addAll:\s*\{/.test(l));
   assert.ok(addAllLine && /default false/.test(addAllLine) && !/default true/.test(addAllLine), addAllLine);
 });

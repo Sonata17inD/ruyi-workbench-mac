@@ -426,7 +426,7 @@ function grantTierLabel(tier) {
   return { read: t('permission.read'), edit: t('permission.edit'), exec: t('permission.execute') }[tier] || tier;
 }
 function grantTierOf(tool) {
-  if (tool === 'powershell_run' || tool === 'script_run' || tool === 'Bash') return 'exec';
+  if (tool === 'shell_run' || tool === 'powershell_run' || tool === 'script_run' || tool === 'Bash') return 'exec';
   if (tool === 'file_read' || tool === 'file_list') return 'read';
   return 'edit';
 }

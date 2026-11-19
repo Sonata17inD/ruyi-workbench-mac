@@ -58,7 +58,7 @@ describe('turn-activity: 阶段判定', () => {
     activity.consume({ type: 'tool_result', id: 'a', content: 'x' });
     assert.equal(activity.snapshot().phase, 'thinking');
     assert.equal(activity.snapshot().toolCalls, 1);
-    activity.consume({ type: 'tool_use', id: 'b', name: 'powershell_run' });
+    activity.consume({ type: 'tool_use', id: 'b', name: 'shell_run' });
     assert.equal(activity.snapshot().toolCalls, 2);
   });
 
@@ -138,7 +138,7 @@ describe('turn-activity: 阶段判定', () => {
       activity.consume({ type: 'meta' });
       activity.consume({ type: 'ask_user', questionId: 'q1' });
       activity.consume({ type: 'permission_request', requestId: 'r1', toolName: 'file_write' });
-      activity.consume({ type: 'permission_paused', requestId: 'r2', toolName: 'powershell_run' });
+      activity.consume({ type: 'permission_paused', requestId: 'r2', toolName: 'shell_run' });
       assert.equal(activity.snapshot().phase, 'waiting_you');
       finish(activity);
       assert.equal(activity.snapshot().phase, 'idle', 'ask/permission 不随回合结束残留');
@@ -159,14 +159,14 @@ describe('turn-activity: 阶段判定', () => {
     const activity = createTurnActivity({ now: clock().now });
     activity.consume({ type: 'meta' });
     activity.consume({ type: 'permission_request', requestId: 'A', toolName: 'file_write' });
-    activity.consume({ type: 'permission_request', requestId: 'B', toolName: 'powershell_run' });
+    activity.consume({ type: 'permission_request', requestId: 'B', toolName: 'shell_run' });
     activity.consume({ type: 'permission_decision', requestId: 'A', behavior: 'allow' });
     let snapshot = activity.snapshot();
     assert.equal(snapshot.phase, 'waiting_you', 'B 仍待决');
     assert.equal(snapshot.waiting.id, 'B');
-    assert.equal(snapshot.waiting.label, 'powershell_run');
+    assert.equal(snapshot.waiting.label, 'shell_run');
     // 同一 requestId 的 paused 覆盖原条目,不另开一格
-    activity.consume({ type: 'permission_paused', requestId: 'B', toolName: 'powershell_run' });
+    activity.consume({ type: 'permission_paused', requestId: 'B', toolName: 'shell_run' });
     assert.equal(activity.snapshot().waiting.kind, 'permission_paused');
     activity.consume({ type: 'permission_decision', requestId: 'B', behavior: 'deny' });
     snapshot = activity.snapshot();
@@ -207,8 +207,8 @@ describe('turn-activity: 112b 补齐的六族事件', () => {
     const c = clock();
     const activity = createTurnActivity({ now: c.now });
     activity.consume({ type: 'meta' });
-    activity.consume({ type: 'tool_use', id: 'a', name: 'powershell_run' });
-    activity.consume({ type: 'tool_progress', id: 'a', name: 'powershell_run', state: 'waiting', elapsedMs: 45_000 });
+    activity.consume({ type: 'tool_use', id: 'a', name: 'shell_run' });
+    activity.consume({ type: 'tool_progress', id: 'a', name: 'shell_run', state: 'waiting', elapsedMs: 45_000 });
     assert.equal(activity.snapshot().tool.elapsedMs, 45_000);
     activity.consume({ type: 'tool_progress', id: 'a', state: 'budget_soft', elapsedMs: 60_000, warnMs: 60_000 });
     assert.equal(activity.snapshot().tool.budget, 'soft');
@@ -344,7 +344,7 @@ describe('turn-activity: 渲染层', () => {
 
     const other = createTurnActivity({ now: clock().now });
     other.consume({ type: 'meta' });
-    other.consume({ type: 'tool_use', id: 'a', name: 'powershell_run' });
+    other.consume({ type: 'tool_use', id: 'a', name: 'shell_run' });
     other.consume({ type: 'tool_progress', id: 'a', state: 'budget_hard', elapsedMs: 1000, deadlineMs: 1000 });
     assert.equal(describeTurnActivity(other.snapshot(), t).severity, 'attention');
   });

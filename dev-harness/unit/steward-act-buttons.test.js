@@ -73,9 +73,8 @@ const toolNames = list => list.filter(a => a.kind === 'tool').map(a => a.tool);
 
 /* ⑤ 全表推导:不挑例子,把两边都跑一遍 */
 {
-  const src13m = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13m-steward-runner-base.js'), 'utf8');
-  const block = src13m.slice(src13m.indexOf('const STEWARD_ACTION_HOOKS'), src13m.indexOf('const STEWARD_ACTION_HOOKS') + 2600);
-  const inTable = [...block.matchAll(/^\s{2}(steward_[a-z_]+):/gm)].map(m => m[1]);
+  const { createStewardRunnerPolicy } = require('../../ruyi-workbench/app/backend/steward-runner-policy.cjs');
+  const inTable = Object.keys(createStewardRunnerPolicy({ labels: {} }).STEWARD_ACTION_HOOKS);
   ok(inTable.length >= 15, `⑤0 扫得到 act 表(实得 ${inTable.length} 个键;扫不到 = 本条静默失效)`);
   // Scheduling now validates executable arguments before showing a button.
   const schemaValue = schema => {
@@ -93,7 +92,7 @@ const toolNames = list => list.filter(a => a.kind === 'tool').map(a => a.tool);
   const rejected = inTable.filter(tool => actsOf([{ label: 'x', kind: 'tool', tool, args: validArgs(tool) }]).length !== 1);
   ok(rejected.length === 0, `⑤ 表里的每一个工具都真的能变成按钮(变不成的:${JSON.stringify(rejected)})`);
 
-  const src13f = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'src', '13f-native-tool-schemas.js'), 'utf8');
+  const src13f = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'native-tool-schemas.cjs'), 'utf8');
   const allTools = [...new Set([...src13f.matchAll(/name:\s*'(steward_[a-z_]+)'/g)].map(m => m[1]))];
   ok(allTools.length >= 30, `⑤1 扫得到管家工具全集(实得 ${allTools.length} 个;扫不到 = 本条静默失效)`);
   const outside = allTools.filter(t => !inTable.includes(t));

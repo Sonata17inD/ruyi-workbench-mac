@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
+const { createRgProbe } = require('../ruyi-workbench/app/backend/rg-probe.cjs');
 const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('MACOS SYNC PROBE');
@@ -13,7 +14,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 (async () => {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP requires macOS supervisor'); return; }
-    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'desktopPythonCache', 'detectClaudePathUncached', 'probeRgInfoSync', 'ProcessRuntime', 'ProcessRuntimeHooks'], { withEval: true });
+    const S = loadServerInternals(['spawnProbeSync', 'probeAgentCliLauncher', 'existsExecutable', 'probeDesktopPython', 'pickPython', 'detectClaudePathUncached', 'ProcessRuntime', 'ProcessRuntimeHooks', 'cliDiscoveryProbes']);
     const cli = path.join(root, '假 CLI 😀');
     const write = source => fs.writeFileSync(cli, '#!' + process.execPath + '\n' + source, { mode: 0o700 });
     const beat = path.join(root, 'heartbeat');
@@ -43,21 +44,23 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const candidate = { command: cli, args: [], source: 'fixture' };
     const env = { EXPECTED_CWD: fs.realpathSync(root), FIXTURE_VALUE: '中文😀' };
     t.ok(S.probeDesktopPython(candidate, root, env) === 'full', 'sync Python import probe preserves cwd/env and Full classification');
+    write('console.log("__RUYI_ACC_CORE__")');
+    t.ok(S.probeDesktopPython(candidate, root, {}) === 'core', 'sync Python recognizes explicit Core classification');
     write('process.exit(0)');
-    t.ok(S.probeDesktopPython(candidate, root, {}) === 'core', 'sync Python retains Core fallback classification');
+    t.ok(S.probeDesktopPython(candidate, root, {}) === '', 'sync Python requires an explicit capability marker');
     const marker = path.join(root, 'later-candidate');
     const second = path.join(root, 'second'); fs.writeFileSync(second, '#!' + process.execPath + '\nrequire("fs").writeFileSync(' + JSON.stringify(marker) + ',"bad");console.log("__RUYI_ACC_FULL__")', { mode: 0o700 });
     const helperPath = S.ProcessRuntimeHooks.helperPath;
     try {
       S.ProcessRuntimeHooks.helperPath = () => path.join(root, 'missing-helper');
       t.ok(S.spawnProbeSync(cli, [], { timeout: 1000 }).error.code === 'process_helper_missing', 'missing helper rejects before target execution');
-      S.__eval('_rgProbe=undefined; rgProbeCandidates = () => [{command:' + JSON.stringify(cli) + ',source:"env"}]');
-      t.ok(S.probeRgInfoSync() === null && S.__eval('_rgProbe') === undefined, 'missing supervisor does not permanently cache rg as absent');
+      let rg = createRgProbe({ ProcessRuntime: S.ProcessRuntime, candidates: () => [{ command: cli, source: 'env' }] });
+      t.ok(rg.probeRgInfoSync() === null && rg.peekRgProbe() === undefined, 'missing supervisor does not permanently cache rg as absent');
       S.ProcessRuntimeHooks.helperPath = helperPath;
-      t.ok(S.probeRgInfoSync()?.path === cli, 'restored supervisor permits cold rg discovery without restarting');
+      t.ok(rg.probeRgInfoSync()?.path === cli, 'restored supervisor permits cold rg discovery without restarting');
 
       const helper = path.join(root, 'fixture-helper');
-      const capabilities = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, deadline: true, escapeCoverage: 'observed-only' };
+      const capabilities = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, deadline: true, escapeCoverage: 'observed-only' };
       const frames = [{ event: 'started', value: 123, created: '1' }, { event: 'cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 1, observed: 1 }, { event: 'exit', value: 0, detail: 0 }, { event: 'guardian-cleanup', value: 0, detail: 1, terminated: 0, alreadyExited: 0, observed: 0 }];
       const fake = (messages, extra = '', suffix = '') => fs.writeFileSync(helper, '#!' + process.execPath + '\n' + `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilities))});process.exit(0)}${extra}require('fs').writeSync(3,${JSON.stringify(messages.map(f=>JSON.stringify(f)+'\n').join('')+suffix)});console.log('__RUYI_ACC_FULL__');process.exit(0);`, { mode: 0o700 });
       fake(frames); S.ProcessRuntimeHooks.helperPath = () => helper;
@@ -81,13 +84,27 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       try { S.spawnProbeSync(cli, [], { timeout: 1000 }); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete, 'trailing blank control frame is rejected consistently with async parser');
       fake(frames.slice(0,-1));
-      S.__eval('claudeProbeCandidates = () => [{command:' + JSON.stringify(cli) + ',mustExist:false},{command:' + JSON.stringify(second) + ',mustExist:false}]');
-      error = null; try { S.detectClaudePathUncached(); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && !fs.existsSync(marker), 'sync Claude candidate scan stops on cleanup uncertainty');
-      error = null; try { S.pickPython(root, {}, { candidates: [candidate, {command:second,args:[],source:'second'}] }); } catch (caught) { error = caught; }
-      t.ok(error?.cleanupIncomplete && !S.desktopPythonCache.has(root+'\n') && !fs.existsSync(marker), 'sync Python scan stops without caching or trying a later candidate');
-      S.__eval('_rgProbe=undefined; rgProbeCandidates = () => [{command:' + JSON.stringify(cli) + ',source:"env"},{command:' + JSON.stringify(second) + ',source:"system"}]');
-      error = null; try { S.probeRgInfoSync(); } catch (caught) { error = caught; }
+      process.env.CLAUDE_CLI_PATH = cli;
+      const probeSync = S.cliDiscoveryProbes.spawnProbeSync;
+      const probed = [];
+      S.cliDiscoveryProbes.spawnProbeSync = (command, ...args) => {
+        probed.push(command);
+        return probeSync(command, ...args);
+      };
+      error = null;
+      try { S.detectClaudePathUncached(); } catch (caught) { error = caught; }
+      finally { S.cliDiscoveryProbes.spawnProbeSync = probeSync; }
+      t.ok(error?.cleanupIncomplete && probed.length === 1 && probed[0] === cli && !fs.existsSync(marker),
+        'sync Claude candidate scan stops on cleanup uncertainty');
+      for (let attempt = 0; attempt < 2; attempt++) {
+        error = null;
+        try { S.pickPython(root, {}, { candidates: [candidate, { command: second, args: [], source: 'second' }] }); }
+        catch (caught) { error = caught; }
+        t.ok(error?.cleanupIncomplete && !fs.existsSync(marker),
+          attempt === 0 ? 'sync Python scan stops before trying a later candidate' : 'incomplete cleanup cannot create a Python cache hit');
+      }
+      rg = createRgProbe({ ProcessRuntime: S.ProcessRuntime, candidates: () => [{ command: cli, source: 'env' }, { command: second, source: 'system' }] });
+      error = null; try { rg.probeRgInfoSync(); } catch (caught) { error = caught; }
       t.ok(error?.cleanupIncomplete && !fs.existsSync(marker), 'sync rg discovery stops on cleanup uncertainty');
       fake(frames, "const leaf=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>process.exit(0),6500)'],{stdio:['ignore','inherit','inherit']});leaf.unref();");
       const began = Date.now(); error = null;

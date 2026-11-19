@@ -1,7 +1,7 @@
 'use strict';
 // 第二波后端走查(2026-10)对「后台代理唤醒 / 压缩索引」的几条修复,钉纯函数与小闭包(真 server.js,经 lib/server-internals)。
 //  C1 压缩工具索引:服务商每次迭代都从 call_1 起编号时,三次调用各配各的结果、三行都在(修前全配到第一次的结果,
-//     算出同一个 rawRef 被去重,一次性的 web_fetch / powershell_run 恰好被丢)。
+//     算出同一个 rawRef 被去重,一次性的 web_fetch / shell_run 恰好被丢)。
 //  C2 手动 L2 塌成的 [摘要, 收到] 再被自动压缩时,「原始任务」取旧摘要的【目标】一节,旧工具索引不会被钉成任务原文(修前出现两份)。
 //  W1 记账键带完成时刻:同一个 run 续跑 / 重试后再交一份信封,键不同 → 会再唤醒;同一份信封键相同。
 //  W2 进程重启打断的(interrupted)与用户叫停的一样不唤醒。
@@ -17,8 +17,9 @@ process.env.RUYI_HOME = home;
 const { loadServerInternals } = require('../lib/server-internals');
 const {
   buildCompactionToolIndex, compactionTaskText, COMPACTION_TOOL_INDEX_HEADER,
-  agentWakeJobKey, agentWakeSkipsStatus, runGit,
-} = loadServerInternals(['buildCompactionToolIndex', 'compactionTaskText', 'COMPACTION_TOOL_INDEX_HEADER', 'agentWakeJobKey', 'agentWakeSkipsStatus', 'runGit']);
+  SessionTurnRuntime, runGit,
+} = loadServerInternals(['buildCompactionToolIndex', 'compactionTaskText', 'COMPACTION_TOOL_INDEX_HEADER', 'SessionTurnRuntime', 'runGit']);
+const { agentWakeJobKey, agentWakeSkipsStatus } = SessionTurnRuntime;
 
 const call = (name, args, id = 'call_1') => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
 const result = (text, id = 'call_1') => ({ role: 'tool', tool_call_id: id, content: text });
@@ -29,7 +30,7 @@ describe('compaction tool index · reused tool_call ids', () => {
       { role: 'user', content: '查一下' },
       call('file_read', { path: 'a.txt' }), result('A'.repeat(500)),
       call('web_fetch', { url: 'https://example.invalid/x' }), result('B'.repeat(900)),
-      call('powershell_run', { command: 'Get-Date' }), result('C'.repeat(1300)),
+      call('shell_run', { command: 'Get-Date' }), result('C'.repeat(1300)),
       { role: 'assistant', content: '好了' },
     ];
     const index = buildCompactionToolIndex(history, { upto: history.length, rawRefPrefix: 'history:3:0123456789abcdef', config: { runtimeObservationRecallV1: true, runtimeObservationReducerV1: true } });
@@ -37,7 +38,7 @@ describe('compaction tool index · reused tool_call ids', () => {
     assert.equal(lines.length, 3, index);
     assert.ok(lines[0].includes('file_read') && lines[0].includes('500 字'), lines[0]);
     assert.ok(lines[1].includes('web_fetch') && lines[1].includes('900 字'), lines[1]);
-    assert.ok(lines[2].includes('powershell_run') && lines[2].includes('1300 字'), lines[2]);
+    assert.ok(lines[2].includes('shell_run') && lines[2].includes('1300 字'), lines[2]);
     const refs = lines.map(l => (l.match(/rawRef=(\S+)/) || [])[1]).filter(Boolean);
     assert.equal(refs.length, 3, 'every call carries a rawRef (recall is on)');
     assert.equal(new Set(refs).size, 3, 'each call has its own rawRef');

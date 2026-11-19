@@ -2,10 +2,10 @@
   "schema": 1,
   "generatedBy": "dev-harness/durable-state-inventory.js",
   "scope": "workbench-managed JSON, JSONL/NDJSON and ownership sidecars plus consumed external state",
-  "count": 72,
+  "count": 71,
   "lifecycleCounts": {
     "dedicated-exemption": 23,
-    "external-exemption": 10,
+    "external-exemption": 9,
     "regenerable-exemption": 7,
     "shared-lifecycle": 32
   },
@@ -13,7 +13,7 @@
     {
       "id": "desktop-executions-v1",
       "pattern": "<data>/desktop-executions-v1/state.json (default-off main and foreground-node candidate)",
-      "owner": "02h-desktop-ledger.js",
+      "owner": "../backend/desktop-execution-ledger.cjs",
       "anchor": "'desktop-executions-v1'",
       "schema": "schema 1 root id, invocation digests/worker/result flags, delivery digests/closed-turn watermarks; optional typed nodeDelivery locator/scope and committed history/binding hashes",
       "writePrimitive": "DurableJsonStore strictRead cache:false quarantine:false ordinaryJson canonicalRead ownedRegular; bounded private IO; root/session admission and full dispatch-to-delivery ticket",
@@ -27,7 +27,7 @@
     {
       "id": "desktop-node-history",
       "pattern": "<data>/desktop-executions-v1/{intent-<scopehash>,delivery-<invocation>}.json",
-      "owner": "02h-desktop-ledger.js",
+      "owner": "../backend/desktop-execution-ledger.cjs",
       "anchor": "'desktop-node-history'",
       "schema": "schema 1 private projected node history with actual identity, batch/call, row and distinct image-position bindings; prepared node reservation replaced exactly once",
       "writePrimitive": "shared strict bounded canonical owned JSON store in the checked ledger directory; serialized immutable snapshot/readback, then typed node acknowledgement",
@@ -55,7 +55,7 @@
     {
       "id": "mac-keychain-wrapping-key",
       "pattern": "Keychain service org.ruyi.workbench.local-secrets / account wrapping-key-v1",
-      "owner": "01j-local-crypto.js",
+      "owner": "../backend/local-crypto.cjs",
       "anchor": "'macos-keychain'",
       "schema": "one 32-byte user-level wrapping key; versioned AES-GCM envelope identifies the provider and key fingerprint",
       "writePrimitive": "native SecItemAdd via bounded stdin/stdout; concurrent first creation rereads the winning item; production has no update/delete operation",
@@ -69,7 +69,7 @@
     {
       "id": "mac-serve-socket-owner",
       "pattern": "/private/tmp/ruyi-serve-v1-<uid>/<root-hash>.lock.<endpoint-hash>.owner.json",
-      "owner": "01g-server-ownership.js",
+      "owner": "../backend/server-ownership.cjs",
       "anchor": "'.owner.json'",
       "schema": "schema 1 canonical root, PID, legacy socket path and filesystem identity",
       "writePrimitive": "private O_NOFOLLOW file write under the kernel ownership lock; no replacement of the lock inode",
@@ -97,7 +97,7 @@
     {
       "id": "privacy-mapping-v1",
       "pattern": "<data>/privacy-scopes/<sha256(scopeId)>.json",
-      "owner": "03a-privacy-gateway.js",
+      "owner": "../backend/privacy-gateway.cjs",
       "anchor": "'privacy-scopes'",
       "schema": "version 1 authenticated encrypted stable reference map",
       "writePrimitive": "host-injected DurableJsonStore strictRead cache:false quarantine:false; per-scope writes chained and completed before network send",
@@ -125,7 +125,7 @@
     {
       "id": "external-bots",
       "pattern": "<data>/external-bots/state-v1.json",
-      "owner": "13w-external-bots.js",
+      "owner": "../backend/external-bot-ledger.cjs",
       "anchor": "externalBotStore",
       "schema": "object / schema 1 (connections, retiredConnectionIds, items with control/execution/delivery receipts; optional bounded setupReceipts semantic hashes, no pairing plaintext)",
       "writePrimitive": "DurableJsonStore strictRead, cache:false, quarantine:false; runKeyedChain shared by configuration, pairing-only receipts, activation, admission and worker transitions",
@@ -139,7 +139,7 @@
     {
       "id": "external-bot-credentials",
       "pattern": "<data>/external-bot-credentials.json",
-      "owner": "13y-external-bot-credentials.js",
+      "owner": "../backend/external-bot-credentials.cjs",
       "anchor": "'external-bot-credentials.json'",
       "schema": "object / schema 1 (bounded records bind full connection identity to platform-protected cipher (Windows DPAPI / Mac Keychain), present slot names and random revision)",
       "writePrimitive": "DurableJsonStore strictRead, cache:false, quarantine:false with atomic write and private vault CAS chain inside the outer connection state chain",
@@ -153,35 +153,35 @@
     {
       "id": "config",
       "pattern": "<data>/config.json",
-      "owner": "01-config.js",
+      "owner": "../backend/config-store.cjs",
       "anchor": "paths.config",
-      "schema": "object / configSchema 7",
-      "writePrimitive": "atomicWriteJson + serialized chain (copies the previous file to config.json.prev first)",
-      "corruption": "normalize; ENOENT with no .prev = fresh install; parse failure or any other read error recovers from config.json.prev (a leading UTF-8 BOM is stripped before parsing; an unparseable file is copied to config.json.corrupt before the recovery overwrites it), else degraded read (defaults for this request only, writeConfig refuses until a good read) — 2026-09-06",
-      "capacity": "bounded fields in normalizeConfig",
-      "cache": "uncached by contract",
-      "recovery": "defaults + migration rewrite",
+      "schema": "object / configSchema 14 (sparse explicit-key projection)",
+      "writePrimitive": "atomicWriteJson through a physical write chain; mutateConfig serializes the complete read/modify/write; valid previous file retained first; read-triggered rewrites verify current source text in the physical write chain",
+      "corruption": "missing or empty config tries the previous copy; invalid JSON is preserved when recovering; read errors and unrecoverable invalid JSON return a degraded view with privacy paused",
+      "capacity": "schema normalization bounds known fields and preserves unknown keys",
+      "cache": "file identity, size, mtime and ctime plus vault stamp and CLI paths; recent writes bypass cache; cached results are cloned and writes invalidate the snapshot",
+      "recovery": "migration or recovery can publish a sparse projection; credential choices and privacy recovery state are retained",
       "lifecycle": "shared-lifecycle",
-      "exemptionReason": "shared atomic write; read lifecycle retained until direct-test writes gain mtime invalidation"
+      "exemptionReason": "normalization and write placement are separate from config-patch side effects"
     },
     {
       "id": "config-backups",
       "pattern": "<data>/config.json.prev + <data>/config.json.corrupt + <data>/config.json.bak-providers-<ts>",
-      "owner": "01-config.js",
+      "owner": "../backend/config-store.cjs",
       "anchor": "paths.config",
-      "schema": "object (verbatim copies of config.json; .corrupt is the raw unparseable text)",
-      "writePrimitive": "copyFile before overwrite (prev) / before a providers wipe (bak-providers) / before a .prev recovery overwrites an unparseable config.json (corrupt)",
-      "corruption": "used by readConfig as the first recovery source; bak-providers is a one-off human-recoverable snapshot; .corrupt keeps what the user hand-edited into a broken state",
-      "capacity": "one .prev (overwritten each write); one .corrupt (overwritten on the next corrupt recovery); bak-providers only when providers go non-empty→empty",
-      "cache": "n/a",
-      "recovery": "never rewritten by migration; .prev is regenerable from the next write",
+      "schema": "previous valid config and corrupt input records; provider removal snapshots use config-patch.cjs",
+      "writePrimitive": "the config store preserves a valid previous config before publish and saves corrupt input before recovery overwrites it; vault protection follows the committed encryption choice",
+      "corruption": "the store tries .prev for missing, empty or invalid current config; .corrupt preserves invalid input; providers wipe snapshots are available for manual recovery",
+      "capacity": "one .prev, one .corrupt; provider removal snapshots when one or more configured providers are removed",
+      "cache": "none",
+      "recovery": "rotation keeps the last valid .prev; encrypted backup migration keeps recovery compatible",
       "lifecycle": "dedicated-exemption",
-      "exemptionReason": "2026-09-06 incident: five providers with keys were wiped by a full settings save; these are the insurance"
+      "exemptionReason": "configuration backups contain credentials or credential references and use private file permissions"
     },
     {
       "id": "runtime-handshake",
       "pattern": "<data>/runtime.json",
-      "owner": "13-http-router.js",
+      "owner": "../backend/server-startup.cjs",
       "anchor": "'runtime.json'",
       "schema": "ephemeral object",
       "writePrimitive": "atomicWriteJson",
@@ -195,7 +195,7 @@
     {
       "id": "last-start-error",
       "pattern": "<data>/last-start-error.json",
-      "owner": "13-http-router.js",
+      "owner": "../backend/server-start-notices.cjs",
       "anchor": "'last-start-error.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -209,7 +209,7 @@
     {
       "id": "usage-ledger",
       "pattern": "<data>/usage/YYYY-MM.jsonl",
-      "owner": "00-boot.js",
+      "owner": "../backend/usage-ledger.cjs",
       "anchor": "'.jsonl'",
       "schema": "NDJSON rows",
       "writePrimitive": "appendFile through usage chain",
@@ -223,7 +223,7 @@
     {
       "id": "audit-log",
       "pattern": "<data>/logs/workbench-YYYY-MM-DD.ndjson",
-      "owner": "04-permission-runtime.js",
+      "owner": "../backend/audit-log.cjs",
       "anchor": "workbench-",
       "schema": "NDJSON events",
       "writePrimitive": "single append stream",
@@ -237,7 +237,7 @@
     {
       "id": "claude-settings",
       "pattern": "~/.claude/settings.json",
-      "owner": "01-config.js",
+      "owner": "../backend/claude-config-sync.cjs",
       "anchor": "'settings.json'",
       "schema": "external object",
       "writePrimitive": "atomicWriteJson after merge",
@@ -251,7 +251,7 @@
     {
       "id": "claude-settings-sidecar",
       "pattern": "<data>/claude-settings-sync.json",
-      "owner": "01-config.js",
+      "owner": "../backend/claude-config-sync.cjs",
       "anchor": "'claude-settings-sync.json'",
       "schema": "object / implicit v1 ({model, maxThinkingTokens, defaultMode, defaultModePrior}: last values this workbench wrote into ~/.claude/settings.json + the user-owned defaultMode before we first wrote it; ownership = delete or restore only what we wrote; bypass never writes defaultMode)",
       "writePrimitive": "atomicWriteJson",
@@ -265,7 +265,7 @@
     {
       "id": "kimi-mcp",
       "pattern": "~/.kimi-code/mcp.json",
-      "owner": "01-config.js",
+      "owner": "../backend/cli-mcp-sync.cjs",
       "anchor": "'mcp.json'",
       "schema": "external object",
       "writePrimitive": "atomicWriteJson after merge",
@@ -279,7 +279,7 @@
     {
       "id": "kimi-mcp-sidecar",
       "pattern": "<data>/kimi-mcp-sync.json",
-      "owner": "01-config.js",
+      "owner": "../backend/cli-mcp-sync.cjs",
       "anchor": "'kimi-mcp-sync.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -293,12 +293,12 @@
     {
       "id": "generated-mcp",
       "pattern": "<data>/generated/workbench.mcp[.<session>].json",
-      "owner": "01-config.js",
+      "owner": "../backend/mcp-manifests.cjs",
       "anchor": "workbench.mcp.",
       "schema": "generated object",
-      "writePrimitive": "atomicWriteJson",
+      "writePrimitive": "private atomicWriteJson",
       "corruption": "regenerate",
-      "capacity": "global + per active session",
+      "capacity": "global + per session / exec node",
       "cache": "none",
       "recovery": "generateMcpConfig",
       "lifecycle": "regenerable-exemption",
@@ -307,7 +307,7 @@
     {
       "id": "session-head",
       "pattern": "<data>/sessions/<id>.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-persistence.cjs",
       "anchor": "sessionPath(id)",
       "schema": "object / storageVersion 2 (116-4 added launchedBy + stewardLastTurn; 116-5 added threadBrief {title,gist,at,model,stage} + titleSource; 117z-E2 added createdBy (origin mark, written once at the two steward createSession sites, never in the applySessionMetaPatch whitelist) + desktopTools (true|false|absent session-level override of the global allowDesktopTools gate); 127-2quater-B2 added stewardTaint {by,at,turnSeq} (sticky external-content taint: written in-memory by runSessionTurn emit when a web/http/browser/bridged tool call returns its result (not at tool_use, so a pending call never taints itself) or a subagent/workflow starts, persisted by the engine save, deleted when the next user-authored turn starts) - all additive, no schema bump, absent on every pre-existing session)",
       "writePrimitive": "atomicWriteJson + per-session chain",
@@ -321,7 +321,7 @@
     {
       "id": "session-messages",
       "pattern": "<data>/sessions/<id>.messages.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-files.cjs",
       "anchor": ".messages.ndjson",
       "schema": "NDJSON messages",
       "writePrimitive": "append whole newline records",
@@ -335,7 +335,7 @@
     {
       "id": "session-provider",
       "pattern": "<data>/sessions/<id>.provider.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-files.cjs",
       "anchor": ".provider.ndjson",
       "schema": "NDJSON provider history",
       "writePrimitive": "append whole newline records",
@@ -349,7 +349,7 @@
     {
       "id": "session-interventions",
       "pattern": "<data>/sessions/<id>.interventions.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/intervention-journal.cjs",
       "anchor": ".interventions.ndjson",
       "schema": "NDJSON command journal",
       "writePrimitive": "serialized append + compaction",
@@ -363,7 +363,7 @@
     {
       "id": "session-changes",
       "pattern": "<data>/sessions/<id>.changes.ndjson",
-      "owner": "02-session-store.js",
+      "owner": "../backend/mission-changes.cjs",
       "anchor": ".changes.ndjson",
       "schema": "NDJSON change records",
       "writePrimitive": "serialized append",
@@ -377,12 +377,12 @@
     {
       "id": "session-scratchpad",
       "pattern": "<data>/sessions/<id>.scratchpad.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-scratchpad.cjs",
       "anchor": "sessionScratchpadStore",
       "schema": "object / schema 1 ({updatedAt, entries:[{key,text,at}]}, array keeps write order)",
       "writePrimitive": "DurableJsonStore (quarantine:false, cache:false, one store per call) -> atomicWriteJson; read-modify-write serialized per session by runKeyedChain",
       "corruption": "missing, unreadable, non-JSON, non-object or wrong schema = empty scratchpad; the bad file stays in place (no .corrupt copy) until the next write replaces it; session_scratchpad_corrupt diagnostic event",
-      "capacity": "20 notes, keys <= 40 chars, <= 500 chars per note, <= 3000 chars in total: the tool refuses over-limit writes and sanitize trims hand-edited files oldest-first",
+      "capacity": "32 notes, keys <= 40 chars, <= 2000 chars per note, <= 12000 chars in total: the tool refuses over-limit writes and sanitize trims hand-edited files oldest-first",
       "cache": "none (cache:false: every read hits the disk, so a deleted session can never resurrect notes from a process cache)",
       "recovery": "empty scratchpad; removed by deleteSession (waits for the in-flight chain; the delete tombstone refuses late writes)",
       "lifecycle": "shared-lifecycle",
@@ -391,7 +391,7 @@
     {
       "id": "session-index",
       "pattern": "<data>/sessions/index.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-index.cjs",
       "anchor": "SESSION_INDEX_FILE",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson; unique sync tmp on exit",
@@ -405,13 +405,13 @@
     {
       "id": "session-search-index",
       "pattern": "<data>/sessions/_search-index-v1.json",
-      "owner": "13d-core-domain-routes.js",
+      "owner": "../backend/session-search.cjs",
       "anchor": "SESSION_SEARCH_INDEX_FILE",
-      "schema": "object / version 1",
+      "schema": "object / version 2",
       "writePrimitive": "atomicWriteJson",
       "corruption": "missing or wrong version rebuilds from scratch",
-      "capacity": "one 4KB unit per session",
-      "cache": "entries kept in memory for the current request only",
+      "capacity": "one 8192-character unit per session",
+      "cache": "index cached by mtime and size; corpus and normalized text cached in process",
       "recovery": "rebuild by re-extracting units from session bodies",
       "lifecycle": "regenerable-exemption",
       "exemptionReason": "fully derived search cache: every byte is recomputable from session NDJSON bodies"
@@ -419,7 +419,7 @@
     {
       "id": "session-v1-backup",
       "pattern": "<data>/sessions/<id>.json.v1bak",
-      "owner": "02-session-store.js",
+      "owner": "../backend/session-persistence.cjs",
       "anchor": "'.v1bak'",
       "schema": "legacy session object",
       "writePrimitive": "COPYFILE_EXCL",
@@ -432,8 +432,8 @@
     },
     {
       "id": "journal-index",
-      "pattern": "<data>/sessions/<id>.journal/index.json",
-      "owner": "02-session-store.js",
+      "pattern": "<data>/checkpoints/<id>/index.json",
+      "owner": "../backend/checkpoint-journal.cjs",
       "anchor": "journalIndexPath",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -447,7 +447,7 @@
     {
       "id": "journal-reverts",
       "pattern": "<data>/checkpoints/<id>/reverts.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/checkpoint-journal.cjs",
       "anchor": "journalRevertLogPath",
       "schema": "object / schema 1 (items[]: seq, turnSeq, entrySeq, tool, op, files, paths <=5, at, revertedAt, announced)",
       "writePrimitive": "atomicWriteJson inside a per-session serialized read-modify-write chain (journalRevertChains)",
@@ -460,8 +460,8 @@
     },
     {
       "id": "journal-history",
-      "pattern": "<data>/sessions/<id>.journal/history-*.json.gz",
-      "owner": "10-context-governance.js",
+      "pattern": "<data>/checkpoints/<id>/history-*.json.gz",
+      "owner": "../backend/history-snapshot-store.cjs",
       "anchor": "history-",
       "schema": "gzip JSON",
       "writePrimitive": "binary write",
@@ -475,7 +475,7 @@
     {
       "id": "kimi-session-index",
       "pattern": "<kimi-home>/session_index.jsonl",
-      "owner": "05b-kimi-bridge.js",
+      "owner": "../backend/kimi-wire.cjs",
       "anchor": "'session_index.jsonl'",
       "schema": "external JSONL",
       "writePrimitive": "Kimi-owned append",
@@ -489,7 +489,7 @@
     {
       "id": "kimi-wire",
       "pattern": "<kimi-session>/agents/*/wire.jsonl",
-      "owner": "05b-kimi-bridge.js",
+      "owner": "../backend/kimi-wire.cjs",
       "anchor": "'wire.jsonl'",
       "schema": "external JSONL",
       "writePrimitive": "Kimi-owned append",
@@ -503,7 +503,7 @@
     {
       "id": "storage-trend",
       "pattern": "<data>/storage-trend.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/runtime-metrics.cjs",
       "anchor": "'storage-trend.json'",
       "schema": "array / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -517,7 +517,7 @@
     {
       "id": "engine-transcript-index",
       "pattern": "<data>/engine-transcripts.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/engine-transcripts.cjs",
       "anchor": "'engine-transcripts.json'",
       "schema": "object / version 1",
       "writePrimitive": "atomicWriteJson + chain",
@@ -531,7 +531,7 @@
     {
       "id": "engine-transcripts",
       "pattern": "<engine-root>/<type>/<session>.jsonl",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/engine-transcripts.cjs",
       "anchor": "'.jsonl'",
       "schema": "external JSONL transcript",
       "writePrimitive": "engine-owned",
@@ -545,7 +545,7 @@
     {
       "id": "playbooks",
       "pattern": "<data>/playbooks/<id>.json",
-      "owner": "06-provider-engine.js",
+      "owner": "../backend/playbooks.cjs",
       "anchor": "paths.playbooks",
       "schema": "object / normalized",
       "writePrimitive": "atomicWriteJson",
@@ -559,13 +559,13 @@
     {
       "id": "memory-body",
       "pattern": "<data>/memory/{global,project/<key>}/<id>.md",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'.md'",
       "schema": "markdown + frontmatter",
       "writePrimitive": "atomicWriteJson (markdown string passthrough)",
       "corruption": "unparsable head yields defaults; oversized (>260KB) file is skipped by the registry",
       "capacity": "one file per memory; 260KB write-side cap",
-      "cache": "in-process head cache keyed by size+mtime (113a)",
+      "cache": "in-process head cache keyed by device/inode/change time/mtime/size",
       "recovery": "user rewrite or re-propose; sidecars are rebuilt from bodies",
       "lifecycle": "shared-lifecycle",
       "exemptionReason": "memory bodies are user-authored content, not derived state: the workbench never regenerates them"
@@ -573,7 +573,7 @@
     {
       "id": "memory-usage",
       "pattern": "<data>/memory/_usage-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'_usage-v1.json'",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson",
@@ -587,7 +587,7 @@
     {
       "id": "memory-meta",
       "pattern": "<data>/memory/**/meta.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-store.cjs",
       "anchor": "'meta.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -601,7 +601,7 @@
     {
       "id": "memory-import-marker",
       "pattern": "<data>/memory/.acc-memory-import-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/acc-memory-import-marker.cjs",
       "anchor": "'.acc-memory-import-v1.json'",
       "schema": "object / schema 1",
       "writePrimitive": "DurableJsonStore (quarantine:false, cache:false) -> atomicWriteJson",
@@ -615,7 +615,7 @@
     {
       "id": "agent-instructions-import",
       "pattern": "<data>/memory/.agent-instructions-import-v1.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/agent-instruction-imports.cjs",
       "anchor": "'.agent-instructions-import-v1.json'",
       "schema": "object / schema 1 (sources.<key>: file/sourceHash/importedAt/entries[{id,hash,core}]/dismissed/sourceChanged/userModified)",
       "writePrimitive": "DurableJsonStore (quarantine:false, cache:false) -> atomicWriteJson, called inside the agentInstructionChain read-modify-write section",
@@ -629,7 +629,7 @@
     {
       "id": "install-registry",
       "pattern": "<data>/install-registry.json",
-      "owner": "00-boot.js",
+      "owner": "../backend/install-registry.cjs",
       "anchor": "'install-registry.json'",
       "schema": "object / schema 1 (packages[{packageRoot,version,launchMode,firstSeenAt,lastLaunchedAt,pid}])",
       "writePrimitive": "atomicWriteJson (boot upsert; migration center remembers reference-discovered packages and forgets recycled ones)",
@@ -643,7 +643,7 @@
     {
       "id": "migration-log",
       "pattern": "<data>/migrations/<ts>.json",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'migrations'",
       "schema": "object / schema 1 (files[{file,kind,backup,items[{serverId,action,changes,removed}]}], undoneAt; W8 adds type:skill-copy logs whose files[] are {kind:skill-copy,file:<data>/skills/<id>,backup,items[{key,id,source,plugin,action:created|updated,copyTreeHash}]} and undoResult.skills)",
       "writePrimitive": "atomicWriteJson once per apply / skill copy; rewritten once on undo",
@@ -657,7 +657,7 @@
     {
       "id": "migration-backups",
       "pattern": "<file>.bak-ruyi-migrate-<ts> beside ~/.claude.json / ~/.kimi-code/mcp.json / ~/.codex/config.toml / <data>/config.json / generated mcp",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'.bak-ruyi-migrate-'",
       "schema": "verbatim copy of the file before the migration edited it",
       "writePrimitive": "fsp.copyFile before the first write to that file",
@@ -671,7 +671,7 @@
     {
       "id": "skill-import-record",
       "pattern": "<data>/skills/<id>/.ruyi-import.json",
-      "owner": "12-tool-dispatch.js",
+      "owner": "../backend/skill-registry.cjs",
       "anchor": "'.ruyi-import.json'",
       "schema": "object / schema 1 {source,sourcePath,plugin,importedAt,sourceTreeHash,copyTreeHash} (W8: skill copied from Claude Code / Codex / Kimi / a Claude Code plugin)",
       "writePrimitive": "fsp.writeFile into the staging dir before the whole dir is renamed into place (13u migrationCopyOneSkill)",
@@ -685,7 +685,7 @@
     {
       "id": "migration-skill-backups",
       "pattern": "<data>/migrations/skill-backups/<ts>/<id>/",
-      "owner": "13u-migration-center.js",
+      "owner": "../backend/migration-center.cjs",
       "anchor": "'skill-backups'",
       "schema": "verbatim previous copy of a user skill directory (including its .ruyi-import.json)",
       "writePrimitive": "fsp.rename of the old <data>/skills/<id> when a copy is updated or overwritten",
@@ -699,7 +699,7 @@
     {
       "id": "memory-proposals",
       "pattern": "<data>/memory/proposals/<session>.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-proposals.cjs",
       "anchor": "'proposals'",
       "schema": "object / schema 1 (current = one pending proposal; kind memory_batch carries items[<=3] with per-item status/memoryId)",
       "writePrimitive": "atomicWriteJson; tool commits and batch confirmation serialized per session (runKeyedChain)",
@@ -713,7 +713,7 @@
     {
       "id": "memory-relations",
       "pattern": "<data>/memory/**/_relations.json",
-      "owner": "06d-memory-domain.js",
+      "owner": "../backend/memory-relations.cjs",
       "anchor": "'_relations.json'",
       "schema": "array / domain normalized",
       "writePrimitive": "atomicWriteJson",
@@ -727,7 +727,7 @@
     {
       "id": "agent-run-snapshot",
       "pattern": "<data>/agent-runs/<session>/<run>.json",
-      "owner": "07-autonomy.js",
+      "owner": "../backend/agent-run-store.cjs",
       "anchor": "agentRunFile",
       "schema": "object / domain versioned",
       "writePrimitive": "atomicWriteJson + per-run chain",
@@ -741,7 +741,7 @@
     {
       "id": "agent-run-events",
       "pattern": "<data>/agent-runs/<session>/<run>.events.ndjson",
-      "owner": "08-agent-runs.js",
+      "owner": "../backend/agent-run-store.cjs",
       "anchor": ".events.ndjson",
       "schema": "NDJSON events",
       "writePrimitive": "serialized append",
@@ -755,7 +755,7 @@
     {
       "id": "project-agents",
       "pattern": "<workspace>/.ruyi/agents.json",
-      "owner": "07-autonomy.js",
+      "owner": "../backend/agent-role-library.cjs",
       "anchor": "'agents.json'",
       "schema": "object / external-compatible",
       "writePrimitive": "atomicWriteJson",
@@ -769,7 +769,7 @@
     {
       "id": "project-workflows",
       "pattern": "<workspace>/.ruyi/workflows.json",
-      "owner": "08-agent-runs.js",
+      "owner": "../backend/agent-workflow-catalog.cjs",
       "anchor": "'workflows.json'",
       "schema": "object / schemaVersion 1",
       "writePrimitive": "atomicWriteJson",
@@ -783,7 +783,7 @@
     {
       "id": "personal-workflows",
       "pattern": "<data>/agent-workflows/<id>.json",
-      "owner": "08-agent-runs.js",
+      "owner": "../backend/agent-workflow-catalog.cjs",
       "anchor": "paths.agentWorkflows",
       "schema": "object / normalized",
       "writePrimitive": "atomicWriteJson",
@@ -797,7 +797,7 @@
     {
       "id": "context-calibration",
       "pattern": "<data>/context-calibration.json",
-      "owner": "10-context-governance.js",
+      "owner": "../backend/context-calibration.cjs",
       "anchor": "'context-calibration.json'",
       "schema": "object / schema 1",
       "writePrimitive": "DurableJsonStore -> atomicWriteJson",
@@ -811,7 +811,7 @@
     {
       "id": "voice-lexicon",
       "pattern": "<data>/voice-lexicon.json",
-      "owner": "05-claude-engine.js",
+      "owner": "../backend/voice-service.cjs",
       "anchor": "'voice-lexicon.json'",
       "schema": "object / schema 1 (base: use the built-in list; learn: learn from the user's edits, default on; terms.<lower-cased term>: {term, heard[<=8 misheard forms], src manual|learned|typed, n, at, off}; pending.<lower-cased term>: {term, heard[], n, at, kind pair|window|typed, group} = learning candidates still gathering evidence)",
       "writePrimitive": "DurableJsonStore -> atomicWriteJson; read-modify-write serialized per key through runKeyedChain (voiceLexiconUpdate, the only writer path: the settings page and learning from edits via POST /api/audio/lexicon/observe)",
@@ -825,7 +825,7 @@
     {
       "id": "web-cache",
       "pattern": "<data>/webcache/<sha256>.json",
-      "owner": "11-native-tools.js",
+      "owner": "../backend/web-tools.cjs",
       "anchor": "webCachePath",
       "schema": "object / domain fields",
       "writePrimitive": "atomicWriteJson",
@@ -839,7 +839,7 @@
     {
       "id": "background-job-ledger",
       "pattern": "<data>/sessions/background-jobs/<sessionId>.json",
-      "owner": "11-native-tools.js",
+      "owner": "../backend/background-jobs.cjs",
       "anchor": "backgroundJobFile",
       "schema": "array of job receipts / implicit v1 (id/shellId/name/sessionId/status/exitCode/output/truncated/completedAt)",
       "writePrimitive": "unique fixed tmp name per file + renameSync INSIDE the child-close synchronous event (single-threaded event loop serializes read-modify-write; async atomicWriteJson would interleave concurrent closes and lose updates)",
@@ -853,7 +853,7 @@
     {
       "id": "proxy-models-cache",
       "pattern": "<data>/proxy-models-cache.json",
-      "owner": "13-http-router.js",
+      "owner": "../backend/model-selection.cjs",
       "anchor": "'proxy-models-cache.json'",
       "schema": "object / implicit v1",
       "writePrimitive": "atomicWriteJson",
@@ -865,51 +865,37 @@
       "exemptionReason": "derived cache; shared atomic write"
     },
     {
-      "id": "overlay-state",
-      "pattern": "<install>/.overlay-applied.json + .overlay-audit.jsonl",
-      "owner": "13c-overlay-routes.js",
-      "anchor": "'.overlay-applied.json'",
-      "schema": "PowerShell applicator protocol",
-      "writePrimitive": "external script atomic/append",
-      "corruption": "applicator rollback/audit",
-      "capacity": "release history",
-      "cache": "none",
-      "recovery": "overlay rollback",
-      "lifecycle": "external-exemption",
-      "exemptionReason": "owned by separately tested overlay applicator"
-    },
-    {
       "id": "steward-inbox",
       "pattern": "<data>/steward/inbox-v1.ndjson",
-      "owner": "13i-steward-inbox.js",
+      "owner": "../backend/steward-inbox.cjs",
       "anchor": "STEWARD_INBOX_FILE",
       "schema": "NDJSON inbox rows / inbox-v1",
       "writePrimitive": "repairMissionChangeTornTail + appendFile through a per-process serialized chain (the session-changes primitive)",
-      "corruption": "torn tail truncated before append; unparsable rows and rows outside the five-kind whitelist are skipped by readers",
-      "capacity": "append-only; a tick writes at most 200 merged rows and only whitelisted kinds",
+      "corruption": "torn tail truncated before append; readers skip unparsable rows and unknown kinds",
+      "capacity": "serialized append with sequence assignment in file order; at most 200 merged rows per tick; hourly retention preserves pending rows and the sequence watermark",
       "cache": "in-process dedupe set rebuilt from the last 2000 rows at load",
-      "recovery": "cursor replay plus the rebuilt dedupe set; already-written keys are never re-appended",
+      "recovery": "cursor replay plus the bounded tail dedupe set",
       "lifecycle": "dedicated-exemption",
-      "exemptionReason": "append-only ledger cannot use whole-file JSON replacement"
+      "exemptionReason": "segmented lifecycle: append-only publication, atomic retention compaction"
     },
     {
       "id": "steward-cursor",
       "pattern": "<data>/steward/cursor-v1.json",
-      "owner": "13i-steward-inbox.js",
+      "owner": "../backend/steward-inbox.cjs",
       "anchor": "STEWARD_CURSOR_FILE",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson",
-      "corruption": "unreadable or wrong-schema cursor restarts from a cold baseline: sources are re-baselined instead of replayed, and the inbox-tail dedupe set prevents duplicates",
+      "corruption": "missing cursor establishes a cold baseline; invalid or unreadable cursor triggers bounded replay and inbox-tail dedupe",
       "capacity": "active sessions and runs only, capped at 500 sessions / 500 runs / 2000 pending ids / 500 sessionTurns entries per save (the caps apply to what is persisted; the in-memory cursor keeps every session still in the index up to 20000 so the poller does not re-read heads beyond the cap, and the file is rewritten only when its content changed, as compact JSON) (116-4 added sources.sessionTurns: sid -> {turnSeq, stamp}, a backward-compatible field — an older cursor without it simply makes every session first-sight)",
       "cache": "stewardRuntime holds the live cursor for this process",
-      "recovery": "rebuild from the inbox tail plus a fresh source baseline",
+      "recovery": "rebuild from the inbox tail plus source baselines and bounded replay",
       "lifecycle": "shared-lifecycle",
       "exemptionReason": "small workbench-owned JSON on the shared atomic-write lifecycle"
     },
     {
       "id": "steward-decisions",
       "pattern": "<data>/steward/decisions-v1.ndjson",
-      "owner": "13j-steward-tool-base.js",
+      "owner": "../backend/steward-decisions.cjs",
       "anchor": "STEWARD_DECISIONS_FILE",
       "schema": "NDJSON decision rows / decisions-v1",
       "writePrimitive": "repairMissionChangeTornTail + appendFile through a per-process serialized chain (the session-changes primitive)",
@@ -923,7 +909,7 @@
     {
       "id": "steward-memory",
       "pattern": "<data>/steward/memory-v1.json",
-      "owner": "13j-steward-tool-base.js",
+      "owner": "../backend/steward-memory-store.cjs",
       "anchor": "STEWARD_MEMORY_FILE",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson through a per-process read-modify-write chain",
@@ -937,7 +923,7 @@
     {
       "id": "steward-visits",
       "pattern": "<data>/steward/visits/<ISO>.json",
-      "owner": "13q-steward-runner-turn.js",
+      "owner": "../backend/steward-conversation-visits.cjs",
       "anchor": "STEWARD_VISITS_DIR",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson",
@@ -951,13 +937,13 @@
     {
       "id": "steward-workspace-derived",
       "pattern": "<stewardWorkspaceRoot, default ~/Ruyi>/<slug(title)>[-N]",
-      "owner": "13k-steward-threads.js",
+      "owner": "../backend/steward-workspaces.cjs",
       "anchor": "stewardClaimDerivedWorkspace",
       "schema": "directory only / no schema (the workbench writes no file of its own inside it)",
       "writePrimitive": "fsp.mkdir({recursive:true}) inside the mutateConfig critical section; the row that records it goes into config.stewardManagedWorkspaces [{path,at,adopted?}] (W7: NOT into workspaces[], which is the user-facing favorites list) through mutateConfig -> writeConfig",
       "corruption": "a collision with an existing NON-EMPTY directory takes the next -N suffix; an existing EMPTY directory is reused (reopening the same task must not grow a second empty shell); a same-named plain file or an unreadable entry skips to the next suffix; after 50 tries derivation gives up and the thread keeps the defaultWorkspace fallback; a failed config write removes the directory it just created",
       "capacity": "slug capped at 64 characters; 50 collision suffixes per title; the stewardManagedWorkspaces table caps at 200 rows (01-config STEWARD_MANAGED_WORKSPACES_CAP) and drops its OLDEST rows beyond that instead of refusing (the user cannot see or clear that table), so a fresh derivation always lands; W7 retired the 117w-W1 4th-cut pre-derivation cap check on workspaces[] because derivation no longer writes there",
-      "cache": "none: the path is written into the session head and never cached (127 2-ter: a prompt scheduler task derives ONE such folder on its first steward-on trigger through the same 13k primitives and reuses it via tasks-v1.json workdir while the folder is still a known workspace; W7: a mission container remembers the first folder one of its threads used and later steward threads of that mission reuse it)",
+      "cache": "none: the path is written into the session head and never cached (127 2-ter: a prompt scheduler task derives ONE such folder on its first steward-on trigger through the same steward workspace service and reuses it via tasks-v1.json workdir while the folder is still a known workspace; W7: a mission container remembers the first folder one of its threads used and later steward threads of that mission reuse it)",
       "recovery": "nothing rebuilds it - the files inside are user work products a thread produced, and the workbench never regenerates user content",
       "lifecycle": "external-exemption",
       "exemptionReason": "the workbench creates the directory but owns nothing inside it: threads write there under their own permission and the workbench never reads it back, rewrites it or deletes it"
@@ -965,7 +951,7 @@
     {
       "id": "mission-container",
       "pattern": "<data>/missions/<missionId>.json",
-      "owner": "02-session-store.js",
+      "owner": "../backend/mission-store.cjs",
       "anchor": "MISSIONS_DIR_NAME",
       "schema": "object / schema 1",
       "writePrimitive": "atomicWriteJson inside a per-mission serialized read-modify-write chain",
@@ -979,7 +965,7 @@
     {
       "id": "scheduler-tasks",
       "pattern": "<data>/scheduler/tasks-v1.json",
-      "owner": "13s-scheduler.js",
+      "owner": "../backend/scheduler-runtime.cjs",
       "anchor": "SCHEDULER_TASKS_FILE",
       "schema": "object / schema 1 (tasks[] = 29 号文 §3 的 Commitment 形状：schedule/payload/target/autonomy/policy/state + revision; 127 2-ter: optional target.tier strong|fast (absent = follow global, kept only for prompt + new-session) and optional server-owned workdir = the folder derived for this task on its first steward-on trigger, never accepted from HTTP/tool input and re-checked against workspaces[] on every trigger)",
       "writePrimitive": "atomicWriteJson through a per-process serialized chain (schedulerTasksChain)",
@@ -993,7 +979,7 @@
     {
       "id": "scheduler-fires",
       "pattern": "<data>/scheduler/fires-v1.ndjson",
-      "owner": "13s-scheduler.js",
+      "owner": "../backend/scheduler-runtime.cjs",
       "anchor": "SCHEDULER_FIRES_FILE",
       "schema": "NDJSON fire rows / fires-v1 (seq + occurrenceKey + executionGeneration + phase registered|dispatched|running|reconciled + outcome succeeded|failed|needs_you|skipped|unknown)",
       "writePrimitive": "repairMissionChangeTornTail + appendFile through a per-process serialized chain (the session-changes primitive, same as steward-inbox)",
@@ -1007,7 +993,7 @@
     {
       "id": "pretender-index",
       "pattern": "<data>/sessions/.pretender/projection-index.json",
-      "owner": "13e-pretender-index.js",
+      "owner": "../backend/pretender-index.cjs",
       "anchor": "PRETENDER_INDEX_FILE",
       "schema": "object / schemaVersion 8",
       "writePrimitive": "atomicWriteJson",

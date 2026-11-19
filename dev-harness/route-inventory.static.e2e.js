@@ -55,7 +55,7 @@ ok(levelAt('GET', '/api/interventions') === 'token-browser', 'GET /api/intervent
 ok(levelAt('GET', '/api/sessions') === 'token-browser' && levelAt('DELETE', '/api/sessions/s_x') === 'token-browser',
   'sessions 读/删保持 token-browser');
 ok(levelAt('POST', '/api/tools/x') === 'token', 'POST /api/tools/ 前缀保持 token');
-ok(levelAt('POST', '/api/overlay/rollback') === 'token', 'overlay 回滚保持 token(53b 破坏性档)');
+ok(levelAt('POST', '/api/overlay/rollback') === 'DENY', 'retired overlay routes are absent');
 
 console.log(fail ? `\nROUTE INVENTORY STATIC E2E: FAIL (${fail})` : '\nROUTE INVENTORY STATIC E2E: ALL PASS');
 process.exit(fail ? 1 : 0);

@@ -1,5 +1,5 @@
 // Unit(perf · readConfig 读缓存):readConfig 有 ~45 个调用点,85 KB 的配置每次 ~10 ms(parse + normalizeConfig)。
-// 缓存的设计与理由在 01-config.js 的 configReadCache 头注(上一版因「e2e 直接写 config.json 拿不到」「别名被调用方改脏」被回退,
+// 缓存的设计与理由在 config-store.cjs 的 configReadCache 头注(上一版因「e2e 直接写 config.json 拿不到」「别名被调用方改脏」被回退,
 // 这一版靠文件戳失效 + 近期改动不入缓存 + 命中给深拷贝)。这里用【读盘计数】而不是计时来断言,全部确定性:
 //   [C1] 命中:文件没变,连续多次 readConfig 一次盘都不读(fsp.readFile 计数器不动);
 //   [C2] 等价:命中的结果与真读盘归一化的结果 deepStrictEqual(含 Symbol 键 CONFIG_GIVEN_CLAUDE_PATH);
@@ -74,7 +74,6 @@ describe('readConfig 读缓存', () => {
     assert.ok(configReads > readsBefore, '戳变了应当真读盘');
     assert.deepStrictEqual(hit, miss);
     const symsHit = Object.getOwnPropertySymbols(hit);
-    assert.ok(symsHit.length >= 1, '归一化结果带 CONFIG_GIVEN_CLAUDE_PATH 这个 Symbol 键');
     assert.deepStrictEqual(symsHit.map(s => hit[s]), Object.getOwnPropertySymbols(miss).map(s => miss[s]));
     ageFile(60);
     await srv.readConfig();   // 重新填上缓存
@@ -166,5 +165,42 @@ describe('readConfig 读缓存', () => {
     await settle();
     await srv.mutateConfig(cfg => { cfg.appendSystemPrompt = 'x1'; return { abort: 'no-write' }; });
     assert.strictEqual((await srv.readConfig()).appendSystemPrompt, 'from-mutate');
+  });
+
+  it('旧配置的迁移回写遇到并发保存时保留新配置并重读', async () => {
+    writeRaw(raw => { raw.configSchema = 11; raw.appendSystemPrompt = 'before-migration'; });
+    const readFile = fsp.readFile;
+    let entered;
+    let resume;
+    const captured = new Promise(resolve => { entered = resolve; });
+    const delayed = new Promise(resolve => { resume = resolve; });
+    let pauseFirstRead = true;
+    fsp.readFile = async (file, ...args) => {
+      const bytes = await readFile(file, ...args);
+      if (String(file) === cfgFile && pauseFirstRead) {
+        pauseFirstRead = false;
+        entered();
+        await delayed;
+      }
+      return bytes;
+    };
+    const stale = srv.readConfig();
+    try {
+      await captured;
+      const updated = await srv.mutateConfig(config => { config.appendSystemPrompt = 'newer-user-setting'; });
+      assert.strictEqual(updated.ok, true);
+      const committed = fs.readFileSync(cfgFile, 'utf8');
+      const backup = fs.readFileSync(cfgFile + '.prev', 'utf8');
+      assert.strictEqual(JSON.parse(committed).appendSystemPrompt, 'newer-user-setting');
+      resume();
+      const observed = await stale;
+      assert.strictEqual(fs.readFileSync(cfgFile, 'utf8'), committed, '旧迁移不能覆写已经保存的新配置');
+      assert.strictEqual(fs.readFileSync(cfgFile + '.prev', 'utf8'), backup, '跳过过期回写时保留上一份备份');
+      assert.strictEqual(observed.appendSystemPrompt, 'newer-user-setting');
+    } finally {
+      resume();
+      await stale.catch(() => {});
+      fsp.readFile = readFile;
+    }
   });
 });

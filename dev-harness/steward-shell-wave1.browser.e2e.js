@@ -228,21 +228,32 @@ const rowSel = id => `#railList li.steward-board-thread[data-session-id="${id}"]
       })()`);
       ok(s15on.card === false, 'S-15b 开了本机通知、时段覆盖此刻 → 不出卡（用户自己调的免打扰仍然生效）');
 
-      // S-09：桌面壳 → postMessage；浏览器 → Notification。
-      const s09 = await ev(`(() => {
+      // S-09：Mac 宿主通过 WKWebView 消息桥投递，普通浏览器使用 Notification。
+      const s09 = await ev(`(async () => {
         const q = window.__q; q.clear(); q.settings = { version: 1, enabled: true, quietStart: '00:00', quietEnd: '00:00' };
-        const realChrome = window.chrome; const had = Object.prototype.hasOwnProperty.call(window, '__ruyiDesktop');
-        window.__ruyiDesktop = 1; window.chrome = { webview: { postMessage: msg => q.posts.push(msg) } };
-        try { q.inst.onFrame(${JSON.stringify(frame('sess_s09a', { ask: '桌面壳里这一句要送到托盘' }))}); }
-        finally { window.chrome = realChrome; if (!had) delete window.__ruyiDesktop; }
+        const savedPlatform = window.__ruyiDesktopPlatform;
+        const savedWebKit = window.webkit;
+        window.__ruyiDesktopPlatform = 'darwin';
+        window.webkit = { messageHandlers: { ruyiHost: { postMessage: async msg => {
+          if (msg.method === 'notificationStatus') return { ok: true, permission: 'granted' };
+          q.posts.push(msg); return { ok: true };
+        } } } };
+        try {
+          await (await import('/js/host-bridge.js')).refreshHostPermissions();
+          q.inst.onFrame(${JSON.stringify(frame('sess_s09a', { ask: '桌面壳里这一句要送到通知中心' }))});
+        } finally {
+          if (savedPlatform === undefined) delete window.__ruyiDesktopPlatform; else window.__ruyiDesktopPlatform = savedPlatform;
+          if (savedWebKit === undefined) delete window.webkit; else window.webkit = savedWebKit;
+        }
         const desktop = { posts: q.posts.slice(), notes: q.notes.slice() };
         q.clear();
         q.inst.onFrame(${JSON.stringify(frame('sess_s09b', { ask: '浏览器里这一句走 Notification' }))});
         return { desktop, browser: { posts: q.posts.slice(), notes: q.notes.slice() } };
       })()`);
-      const post = s09.desktop.posts[0] && s09.desktop.posts[0].ruyiNotification;
-      ok(s09.desktop.posts.length === 1 && post && post.title === '那条线程' && /桌面壳里这一句/.test(post.body || '') && s09.desktop.notes.length === 0,
-        `S-09a 桌面壳里经 chrome.webview.postMessage({ ruyiNotification:{ title, body } }) 投递，不再只 new Notification（实测 ${JSON.stringify(s09.desktop)}）`);
+      const post = s09.desktop.posts[0];
+      ok(s09.desktop.posts.length === 1 && post?.version === 1 && post.method === 'notify'
+        && post.params?.title === '那条线程' && /桌面壳里这一句/.test(post.params?.body || '') && s09.desktop.notes.length === 0,
+        `S-09a Mac 宿主通过 WKWebView 桥发送原生通知（实测 ${JSON.stringify(s09.desktop)}）`);
       ok(s09.browser.posts.length === 0 && s09.browser.notes.length === 1 && /浏览器里这一句/.test(s09.browser.notes[0].body || ''),
         `S-09b 没有桌面壳时仍回落到 Notification（实测 ${JSON.stringify(s09.browser)}）`);
 

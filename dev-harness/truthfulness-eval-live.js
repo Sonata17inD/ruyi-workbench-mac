@@ -6,7 +6,7 @@
 //
 // 它回答两个问题，两个都是 125 波的退出门：
 //   J09 两个来源互相矛盾、摘要器压缩历史之后，**分歧还认得出来吗**？
-//        —— 用的是本仓【真正在用】的那份压缩提示词（src/context-governance-rules.json 的 summary.prompt），
+//        —— 用的是本仓【真正在用】的那份压缩提示词（backend/context-governance-rules.json 的 summary.prompt），
 //           不是为评测另写一句。于是这一版读数直接说明产品今天的行为。
 //   T03 交办话里有歧义时，模型**该问的时候问、不该问的时候别问**（成对任务，配比 1:1）。
 //
@@ -86,7 +86,7 @@ function chat(provider, messages, { temperature = 0 } = {}) {
 }
 
 // ── J09：用【产品真正在用】的那份压缩提示词 ───────────────────────────────────────────────
-const RULES = JSON.parse(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', 'context-governance-rules.json'), 'utf8'));
+const RULES = JSON.parse(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'context-governance-rules.json'), 'utf8'));
 const SUMMARY_PROMPT = String(RULES.summary.prompt);
 
 // 三段带【真实分歧】的历史。每一段都有两个具名来源、两个互相矛盾的数字/结论、各自的日期。

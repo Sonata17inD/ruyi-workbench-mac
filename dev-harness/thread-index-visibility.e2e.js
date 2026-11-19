@@ -28,6 +28,7 @@ const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
+const { functionBlock } = require('./lib/source-slice');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -375,16 +376,23 @@ try {
 
   /* ═════════ 静态锁:判据单点、schema 升号 ═════════ */
   const src = readServerSource();
-  ok(/function threadVisible\(head, input\)/.test(src), 'S1 threadVisible 单点在编译产物里(定义在 06i)');
-  ok(/function threadOriginOf\(head\)/.test(src), 'S2 threadOriginOf 单点在编译产物里(定义在 06i)');
+  const core = fs.readFileSync(path.join(WB, 'app', 'backend', 'steward-core.cjs'), 'utf8');
+  ok(/function threadVisible\(head, input\)/.test(core) && !/function threadVisible\(/.test(src), 'S1 steward-core 持有唯一的 threadVisible');
+  ok(/function threadOriginOf\(head\)/.test(core) && !/function threadOriginOf\(/.test(src), 'S2 steward-core 持有唯一的 threadOriginOf');
   // 性能批 P3 又升到 7(切片排序换成码位序);这里钉的是「K3 那次升号还在」—— 至少 6,不许回退。
-  const schema = Number((/const PRETENDER_INDEX_SCHEMA = (\d+);/.exec(src) || [])[1]);
+  const index = fs.readFileSync(path.join(WB, 'app', 'backend', 'pretender-index.cjs'), 'utf8');
+  const schema = Number((/const PRETENDER_INDEX_SCHEMA = (\d+);/.exec(index) || [])[1]);
   ok(schema >= 6, `S3 投影索引 schema 至少是 6(卡片形状与产生条件都变了,必须强制重建;实 ${schema})`);
-  ok(/if \(head\.stewardWatch === true\) return true;/.test(src) && /if \(head\.stewardWatch === false\) return false;/.test(src),
+  const watched = functionBlock(core, 'stewardWatchedThread');
+  const watchOn = watched.indexOf('if (head.stewardWatch === true) return true;');
+  const watchOff = watched.indexOf('if (head.stewardWatch === false) return false;');
+  const quick = watched.indexOf('if (head.stewardQuick');
+  ok(watchOn >= 0 && watchOff >= 0 && Math.max(watchOn, watchOff) < quick,
     'S4 stewardWatchedThread 的两条显式开关分支排在原三条判据之前');
   // 摘要的三个键取的是 04 那份 reg.liveTail(同一个累加器、同一份预算),不另攒一套。
-  ok(/tool: String\(liveTailReg\.tool \|\| ''\),/.test(src)
-    && /iterations: Math\.max\(0, Number\(liveTailReg\.iterations\) \|\| 0\),/.test(src),
+  const overlay = fs.readFileSync(path.join(WB, 'app', 'backend', 'pretender-live-overlay.cjs'), 'utf8');
+  ok(/tool: String\(liveTailReg\.tool \|\| ''\),/.test(overlay)
+    && /iterations: Math\.max\(0, Number\(liveTailReg\.iterations\) \|\| 0\),/.test(overlay),
     'S5 liveTail 摘要的 tool/iterations 直接取自活回合登记项的累加器(不另攒一套)');
 } finally {
   killTree(server);
@@ -410,8 +418,8 @@ process.exitCode = fail ? 1 : 0;
 //      -> D2 必须 FAIL(管家开的线程收不回来)。
 //   5. F4–F8:把 overlayMissionCard 里的 `liveTail` 改成恒 null -> F4 必须 FAIL。
 //      把摘要改成 `{ ...liveTailReg }`(带上正文)-> F5/F6 必须 FAIL。
-//   6. E1/E2:把 13i stewardCollectSessionTurn 末尾的 `if (!watched || turnSeq <= baseline)` 里的
+//   6. E1/E2:把 steward-inbox.cjs 的 stewardCollectSessionTurn 末尾的 `if (!watched || turnSeq <= baseline)` 里的
 //      `!watched ||` 去掉 -> E2 必须 FAIL(过滤没了,不该进箱的进了箱)。
-//   7. E3/E4:把 13i 的 `RUYI_EVENTS.subscribe` 那段交接订阅注释掉 -> E3 必须 FAIL。
+//   7. E3/E4:把收件箱服务的 `RUYI_EVENTS.subscribe` 那段交接订阅注释掉 -> E3 必须 FAIL。
 // 每改一次都要 `node ruyi-workbench/app/build.js` 再单跑本件;跑完照原样改回来。
 // ────────────────────────────────────────────────────────────────────────────

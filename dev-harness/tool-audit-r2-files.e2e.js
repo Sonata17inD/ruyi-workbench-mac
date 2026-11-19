@@ -175,7 +175,7 @@ try {
   const tw = await call('file_write', { path: '~/x.txt', content: 'hi' });
   ok(tw.ok === true && fs.existsSync(path.join(WS, 'fakehome', 'x.txt')) && !fs.existsSync(path.join(WS, '~')), `W3 ~/x.txt 展开成家目录,不再在工作区里建「~」文件夹(got ${JSON.stringify(tw).slice(0, 140)})`);
   const tw2 = await call('file_write', { path: '%USERPROFILE%' + path.sep + 'y.txt', content: 'hi' });
-  ok(tw2.ok === true && fs.existsSync(path.join(WS, 'fakehome', 'y.txt')) && !fs.existsSync(path.join(WS, '%USERPROFILE%')), `W3b %USERPROFILE%/y.txt 同样展开(got ${JSON.stringify(tw2).slice(0, 140)})`);
+  ok(tw2.ok === true && fs.existsSync(path.join(WS, '%USERPROFILE%', 'y.txt')) && !fs.existsSync(path.join(WS, 'fakehome', 'y.txt')), 'W3b Windows percent variable remains a literal Mac directory');
   fs.writeFileSync(path.join(WS, '~keep.txt'), 'real file named ~keep');
   const keep = await call('file_read', { path: '~keep.txt' });
   ok(keep.ok === true && /real file/.test(keep.content), 'W3c `~keep.txt` 这种真实文件名不被当成家目录');
@@ -183,10 +183,9 @@ try {
   const tw3 = await call('file_write', { path: '~/z.txt', content: 'hi' });
   ok(tw3.ok === false && !fs.existsSync(path.join(OUTSIDE, 'z.txt')), `W3d 展开后落在工作区外 → 围栏照常拒(got ${JSON.stringify(tw3).slice(0, 140)})`);
   for (const [k, v] of Object.entries(prevHome)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; }
-  const exp = new Function(functionBlock(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8'), 'expandFileToolPathVars') + '; return expandFileToolPathVars;')();
-  ok(exp('~', {}, 'H') === 'H' && exp('~/a', {}, 'H') === 'H/a' && exp('~\\a', {}, 'H') === 'H\\a' && exp('~a', {}, 'H') === '~a' && exp('~$x.docx', {}, 'H') === '~$x.docx', 'W3e 纯函数:~ / ~/ / ~\\ 展开,~a 与 ~$x 不展开');
-  ok(exp('%USERPROFILE%\\a', { USERPROFILE: 'C:\\Users\\u' }, 'H') === 'C:\\Users\\u\\a' && exp('%HOMEPATH%\\a', { HOMEDRIVE: 'C:', HOMEPATH: '\\Users\\u' }, 'H') === 'C:\\Users\\u\\a'
-    && exp('%APPDATA%/x', { APPDATA: 'C:\\A' }, 'H') === 'C:\\A/x' && exp('%NOPE%\\a', {}, 'H') === '%NOPE%\\a' && exp('x/%USERPROFILE%', { USERPROFILE: 'Q' }, 'H') === 'x/%USERPROFILE%', 'W3f 纯函数:%USERPROFILE% / %HOMEPATH% / %APPDATA% 只在开头展开,未知变量原样');
+  const { expandFileToolPath: exp } = require('../ruyi-workbench/app/backend/file-tool-paths.cjs');
+  ok(exp('~', 'H') === 'H' && exp('~/a', 'H') === 'H/a' && exp('~a', 'H') === '~a', 'W3e Mac home prefix expands');
+  ok(exp('%USERPROFILE%/a', 'H') === '%USERPROFILE%/a' && exp('~\\a', 'H') === '~\\a', 'W3f percent variables and backslashes remain literal Mac file names');
 
   /* ═════════ (G) glob / file_list ═════════ */
   const g1 = await call('glob', { pattern: './src/*.js' });
@@ -257,14 +256,12 @@ try {
   ok(self.ok === true && self.unchanged === true && journalIndex().length === before && rd('self.txt', 'utf8') === 'same', `M2 file_move 到自己身上:不动、不记检查点(got ${JSON.stringify(self).slice(0, 140)} journal ${before}→${journalIndex().length})`);
   const mv = await call('file_move', { from: 'self.txt', to: 'moved.txt' });
   ok(mv.ok === true && rd('moved.txt', 'utf8') === 'same' && !fs.existsSync(path.join(WS, 'self.txt')), 'M2b 普通移动照常');
-  // 同一文件判定(纯逻辑;win32 大小写改名的依据)。Windows 未实机验证。
-  const sameKind = new Function(functionBlock(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8'), 'fileMoveSameFileKind') + '; return fileMoveSameFileKind;')();
+  const { fileMoveSameFileKind: sameKind } = require('../ruyi-workbench/app/backend/file-tools.cjs');
   const st1 = { dev: 1, ino: 77 }, st2 = { dev: 1, ino: 78 };
-  ok(sameKind('C:\\w\\data.csv', 'C:\\w\\DATA.csv', st1, st1, 'win32') === 'case-only', 'M3 win32:同 dev+ino 仅大小写不同 → case-only(允许改名)');
-  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'darwin') === 'case-only', 'M3b darwin 同理');
-  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'linux') === null, 'M3c linux:大小写敏感,同 ino 只可能是硬链接,不当改名');
-  ok(sameKind('C:\\w\\data.csv', 'C:\\w\\DATA.csv', st1, st2, 'win32') === null, 'M3d win32:ino 不同 = 两个文件 → 照常「目标已存在」');
-  ok(sameKind('C:\\w\\a.csv', 'C:\\w\\a.csv', st1, st1, 'win32') === 'identical' && sameKind('a', 'b', st1, null, 'win32') === null, 'M3e 逐字相同 → identical;目标不存在 → null');
+  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st1, 'darwin') === 'case-only', 'M3 Mac case-only rename uses birth filesystem identity');
+  ok(sameKind('/w/data.csv', '/w/DATA.csv', st1, st2, 'darwin') === null, 'M3b different inode is not a case-only rename');
+  ok(sameKind('/w/a.csv', '/w/b.csv', st1, st1, 'darwin') === null, 'M3c hardlink with different name is not a case-only rename');
+  ok(sameKind('/w/a.csv', '/w/a.csv', st1, st1, 'darwin') === 'identical' && sameKind('a', 'b', st1, null, 'darwin') === null, 'M3d identical and absent destinations');
 
   /* ═════════ (Z) archive_zip / archive_unzip ═════════ */
   fs.mkdirSync(path.join(WS, 'd1')); fs.mkdirSync(path.join(WS, 'd2'));
@@ -319,7 +316,7 @@ try {
   ok(same.ok === true && same.unchanged === true && journalIndex().length === jBefore && fs.statSync(path.join(WS, 'same.txt')).mtimeMs === mt0, `X2 oldText==newText:不写盘、不记检查点(got ${JSON.stringify(same).slice(0, 160)})`);
   const real = await call('file_edit', { path: 'same.txt', oldText: 'foo', newText: 'baz' });
   ok(real.ok === true && real.replacements === 1 && rd('same.txt', 'utf8') === 'baz\nbar\n', 'X2b 真改动照常');
-  const src12 = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '12-tool-dispatch.js'), 'utf8');
+  const src12 = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'file-tools.cjs'), 'utf8');
   ok(!/请改用 read_file/.test(src12) && !/file_edit 只编辑 UTF-8 文件/.test(src12), 'X3 文案:不再点名不存在的 read_file,not_utf8 不再只说 UTF-8');
   fs.writeFileSync(path.join(WS, 'bin-ish.txt'), Buffer.from([0x81, 0x20, 0xfe, 0xfe, 0x80, 0x81, 0xff]));
   const nu = await call('file_edit', { path: 'bin-ish.txt', oldText: 'x', newText: 'y' });

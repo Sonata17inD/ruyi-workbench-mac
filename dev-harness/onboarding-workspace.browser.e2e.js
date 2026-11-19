@@ -83,16 +83,14 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
     const again = await fx.request('POST', '/api/workspace/dedicated', {});
     ok(again && again.json && again.json.ok === true && again.json.path === dedicated, `W4c POST /api/workspace/dedicated 再调一次：复用同一个文件夹（实测 ${JSON.stringify(again && again.json)}）`);
 
-    if (process.platform !== 'win32') {
-      await fx.evaluate(`(document.querySelector('.onboard-wiz-workspace .onboard-wiz-pick').click(), true)`);
-      const err = await fx.waitForEval(`(() => {
-        const e = document.querySelector('.onboard-wiz-workspace .onboard-wiz-error');
-        return e ? { text: e.textContent, role: e.getAttribute('role'), focus: document.activeElement && document.activeElement.classList.contains('onboard-wiz-path-input') } : null;
-      })()`, 200);
-      ok(Boolean(err) && err.role === 'alert' && /Windows/.test(err.text) && /粘贴/.test(err.text) && !/object Object/.test(err.text),
-        `W2 选择器打不开：向导里就地说清原因（role=alert，服务端那句人话、不是「[object Object]」；实测 ${JSON.stringify(err)}）`);
-      ok(Boolean(err) && err.focus, 'W2b 焦点落到手填框上');
-    }
+    await fx.evaluate(`(document.querySelector('.onboard-wiz-workspace .onboard-wiz-pick').click(), true)`);
+    const err = await fx.waitForEval(`(() => {
+      const e = document.querySelector('.onboard-wiz-workspace .onboard-wiz-error');
+      return e ? { text: e.textContent, role: e.getAttribute('role'), focus: document.activeElement && document.activeElement.classList.contains('onboard-wiz-path-input') } : null;
+    })()`, 200);
+    ok(Boolean(err) && err.role === 'alert' && /Mac 应用/.test(err.text) && /粘贴/.test(err.text) && !/object Object/.test(err.text),
+      `W2 选择器打不开时，向导以 role=alert 指向 Mac 应用和路径输入（实测 ${JSON.stringify(err)}）`);
+    ok(Boolean(err) && err.focus, 'W2b 焦点落到手填框上');
 
     await fx.evaluate(`(() => {
       const input = document.querySelector('.onboard-wiz-workspace .onboard-wiz-path-input');

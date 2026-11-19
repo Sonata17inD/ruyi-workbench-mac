@@ -115,7 +115,10 @@ function spawnWb() {
 }
 
 (async () => {
-  const src = readServerSource();
+  const backend = name => fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend', name), 'utf8');
+  const decisions = backend('intervention-decisions.cjs');
+  const runtime = backend('session-intervention-runtime.cjs');
+  const src = [readServerSource(), backend('intervention-journal.cjs'), backend('mission-card-projection.cjs'), backend('http-route-policy.cjs'), backend('intervention-routes.cjs'), backend('agent-run-routes.cjs'), decisions].join('\n');
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'bypass', includeWorkbenchMcp: true,
@@ -336,24 +339,28 @@ function spawnWb() {
     ok(/function appendIntervention\(sessionId, record\)/.test(src) && /function registerIntervention\(sessionId, type, ivId, extra\)/.test(src), 'e 02 有 appendIntervention/registerIntervention');
     ok(/function settleIntervention\(sessionId, ivId, status, extra\)/.test(src) && /async function readInterventions\(sessionId\)/.test(src), 'e 02 有 settleIntervention/readInterventions');
     ok(/async function markInterruptedInterventions\(\)/.test(src) && /cancelled_restart/.test(src), 'e 02 有 markInterruptedInterventions + cancelled_restart 终态');
-    ok(/async function missionPendingCounts\(sessionId, runs, interventions\)/.test(src) && /Array\.isArray\(interventions\).*readInterventions\(sessionId\)/.test(src), 'e 13d missionPendingCounts 支持75c索引切片并以 journal 兜底');
+    ok(/async function missionPendingCounts\(sessionId, runs, interventions\)/.test(src) && /Array\.isArray\(interventions\).*readInterventions\(sessionId\)/.test(src), 'e 投影的 missionPendingCounts 支持75c索引切片并以 journal 兜底');
     // 路由形状:只认 GET /api/interventions/<一段>(审计后续:修前是 startsWith + path.basename,多段路径都成了 <id> 的别名)。
-    ok(/req\.method === 'GET' \? pathname\.match\(\/\^\\\/api\\\/interventions\\\/\(\[\^\/\]\+\)\$\/\)/.test(src), 'e 13d GET /api/interventions/:sid 只读路由');
+    ok(/req\.method === 'GET' \? pathname\.match\(\/\^\\\/api\\\/interventions\\\/\(\[\^\/\]\+\)\$\/\)/.test(src), 'e 干预路由 GET /api/interventions/:sid 只读路由');
     ok(/\{ m: 'GET', p: '\/api\/interventions\/', auth: 'token-browser', prefix: true \}/.test(src), 'e 01-config ROUTE_AUTH /api/interventions/ token-browser');
-    ok(/await markInterruptedInterventions\(\);/.test(src), 'e 13-http-router boot 调 markInterruptedInterventions');
-    ok(/registerIntervention\(sessionId, 'question', id,/.test(src), 'e 04 question 注册点调 registerIntervention');
-    ok(/settleIntervention\(sessionId, id, answer && answer\.ok !== false \? 'answered' : 'cancelled'/.test(src), 'e 04 question deliver 调 settleIntervention');
-    ok(/registerIntervention\(sessionId, 'permission', requestId,/.test(src), 'e 07 原生 permission 注册点调 registerIntervention');
-    ok(/registerIntervention\(sessionId, 'plan', planId,/.test(src), 'e 07 plan 注册点调 registerIntervention');
-    ok(/settleIntervention\(sessionId, requestId, decision && decision\.behavior === 'allow' \? 'allowed' : 'denied'/.test(src), 'e 07 permission settle 调 settleIntervention');
-    ok(/source: 'legacy_permission'/.test(src) && /source: 'legacy_plan'/.test(src), 'e 13d permission/plan 经典端点适配到 decideIntervention');
-    ok(/async function decideIntervention\(command = \{\}\)/.test(src) && /transitionInterventionState\(/.test(src), 'e 13d 单一 command core 调权威 CAS');
+    ok(/await markInterruptedInterventions\(\);/.test(backend('server-startup.cjs')), 'e 启动服务调用 markInterruptedInterventions');
+    ok(/registerIntervention\(sessionId, 'question', id,/.test(runtime), 'e question 注册点调 registerIntervention');
+    ok(/settleIntervention\(sessionId, id, answer && answer\.ok !== false \? 'answered' : 'cancelled'/.test(runtime), 'e question deliver 调 settleIntervention');
+    const nativeApproval = backend('native-approval-waiters.cjs');
+    ok(/registerIntervention\(sessionId, 'permission', requestId,/.test(nativeApproval), 'e 原生 permission 注册点调 registerIntervention');
+    ok(/registerIntervention\(sessionId, 'plan', planId,/.test(nativeApproval), 'e plan 注册点调 registerIntervention');
+    ok(/settleIntervention\(sessionId, requestId, decision && decision\.behavior === 'allow' \? 'allowed' : 'denied'/.test(nativeApproval), 'e permission settle 调 settleIntervention');
+    ok(/source: 'legacy_permission'/.test(src) && /source: 'legacy_plan'/.test(src), 'e 干预路由 permission/plan 经典端点适配到 decideIntervention');
+    ok(/async function decideInterventionCommand\(/.test(decisions) && /transitionInterventionState\(/.test(decisions)
+      && /return decideInterventionCommand\(command, agentInterventionAction\);/.test(src)
+      && /decideInterventionCommand\(\{ \.\.\.command, contractRequest: false, audit: false \}\)/.test(runtime),
+    'e 手动和自动待决入口共用决策服务和权威 CAS');
     ok(/\{ m: 'POST', p: '\/api\/missions\/', auth: 'token', prefix: true \}/.test(src), 'e 75b Mission decision 契约 ROUTE_AUTH=token');
     ok(src.includes("const contractMatch = pathname.match(/^\\/api\\/missions\\/") && /source: 'contract'/.test(src), 'e 75b 契约路由进入 decideIntervention');
     ok(['legacy_question', 'legacy_permission', 'legacy_plan', 'legacy_pool'].every(source => src.includes(`source: '${source}'`)), 'e 75b 经典四端点全部是 command-core 适配器');
     ok(/decisionResponse/.test(src) && /idempotency_conflict/.test(src) && /runAutomaticInterventionDecision/.test(src), 'e 75b 持久重放存根 + key 冲突 + 自动超时同 CAS');
-    ok(/settleIntervention\(sessionId, requestId, 'denied', \{ decidedBy: 'timeout'/.test(src), 'e 13d 桥 permission 超时 timer 调 settleIntervention(timeout)');
-    ok(/settleIntervention\(sessionId, rid, 'denied', \{ decidedBy: 'clear'/.test(src), 'e 04 clearPendingPermissions 调 settleIntervention(clear)');
+    ok(/settleIntervention\(sessionId, requestId, 'denied', \{ decidedBy: 'timeout'/.test(src), 'e 干预路由桥接 permission 超时 timer 调 settleIntervention(timeout)');
+    ok(/settleIntervention\(sessionId, rid, 'denied', \{ decidedBy: 'clear'/.test(runtime), 'e clearPendingPermissions 调 settleIntervention(clear)');
 
   } finally {
     kill(wb); await new Promise(r => provider.close(r));

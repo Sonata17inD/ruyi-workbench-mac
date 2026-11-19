@@ -1,4 +1,5 @@
 'use strict';
+const assert = require('node:assert/strict');
 require('./lib/self-isolate-home.js');
 // Real serve and HTTP routes with only the OS opener replaced. Never opens the user's applications.
 const fs = require('fs');
@@ -14,7 +15,8 @@ const t = createRunner('MACOS RUNTIME START');
 const { ok } = t;
 const root = fs.mkdtempSync(path.join(process.platform === 'darwin' ? '/tmp' : os.tmpdir(), 'ruyi-p1-'));
 process.env.RUYI_HOME = path.join(root, 'unit-data');
-const S = loadServerInternals(['platformRuntimeEnvironment', 'platformOpenSpawn', 'buildRevealSpawn',
+const launchPolicy = require('../ruyi-workbench/app/backend/mac-launch-policy.cjs');
+const S = loadServerInternals(['buildRevealSpawn',
   'desktopPythonCandidates', 'rgProbeCandidates', 'bundledNodeExe', 'DesktopShell', 'CONFIG_SCHEMA']);
 const wb = path.resolve(__dirname, '..', 'ruyi-workbench');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -30,20 +32,16 @@ async function until(fn) {
 
 (async () => {
   try {
-    const env = S.platformRuntimeEnvironment({ PATH: ':/custom/bin:relative:/custom/bin', KEEP: 'yes' }, 'darwin', '/runtime/bin/node');
+    const env = launchPolicy.platformRuntimeEnvironment({ PATH: ':/custom/bin:relative:/custom/bin', KEEP: 'yes' }, 'darwin', '/runtime/bin/node');
     ok(env.PATH === '/runtime/bin:/custom/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
       && env.KEEP === 'yes', 'Mac PATH uses absolute entries, fixed fallbacks and the running Node');
-    ok(S.platformRuntimeEnvironment({ PATH: 'C:\\tools;;.' }, 'win32').PATH === 'C:\\tools;;.', 'Windows PATH stays byte-for-byte compatible');
     const target = '/tmp/中文 空格😀;&$(touch ignored).txt';
-    const open = S.platformOpenSpawn(target, 'open', 'darwin');
+    const open = launchPolicy.platformOpenSpawn(target, 'open', 'darwin');
     ok(open.command === '/usr/bin/open' && JSON.stringify(open.args) === JSON.stringify(['--', target]), 'Mac open passes Unicode/metacharacters as one literal argument');
     const reveal = S.buildRevealSpawn('open', '/tmp/恶意.command', 'darwin');
     ok(reveal.mode === 'select' && reveal.degraded && reveal.args[0] === '-R', 'Mac executable scripts degrade to Finder selection');
-    ok(S.platformOpenSpawn('/tmp/危险.app', 'open', 'darwin').args[0] === '-R', 'Mac app bundles cannot launch through generic open');
-    const win = S.buildRevealSpawn('select', 'C:\\ws\\a.txt', 'win32');
-    ok(win.command === 'explorer.exe' && win.args[0] === '/select,C:\\ws\\a.txt', 'Windows Explorer selection contract is retained');
-    const winBrowser = S.platformOpenSpawn('http://127.0.0.1/', 'browser', 'win32');
-    ok(winBrowser.command === 'cmd.exe' && winBrowser.args.join('|') === '/c|start||http://127.0.0.1/', 'Windows startup browser argv is retained');
+    ok(launchPolicy.platformOpenSpawn('/tmp/危险.app', 'open', 'darwin').args[0] === '-R', 'Mac app bundles cannot launch through generic open');
+    assert.throws(() => launchPolicy.platformOpenSpawn(target, 'open', 'win32'), /Mac desktop is required/);
     ok(S.bundledNodeExe() === process.execPath, 'source-run MCP reuses its running Node executable');
     if (process.platform !== 'darwin') {
       console.log('SKIP real Mac launcher and Finder route integration require macOS');
@@ -73,7 +71,7 @@ async function until(fn) {
         }
         return originalSpawn.call(this, command, args, options);
       };
-      const shown = await S.DesktopShell.revealInExplorer(bundleAlias, 'open');
+      const shown = await S.DesktopShell.revealInFinder(bundleAlias, 'open');
       ok(shown && aliasArgs[0] === '-R' && aliasArgs.at(-1) === fs.realpathSync(appBundle), 'fixed-directory opener resolves aliases before refusing bundle execution');
     } finally { cp.spawn = originalSpawn; }
     fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({
@@ -179,7 +177,10 @@ cp.spawn = function(command, args, options) {
     fs.mkdirSync(path.join(bundle, 'runtime', 'node', 'bin'), { recursive: true });
     fs.mkdirSync(path.join(bundle, 'runtime', 'macos'), { recursive: true });
     fs.copyFileSync(path.join(wb, 'start-macos.command'), path.join(bundle, 'start-macos.command'));
-    fs.copyFileSync(path.join(wb, 'app', 'server.js'), path.join(bundle, 'app', 'server.js'));
+    for (const file of ['server.js', 'workbench-runtime.cjs']) {
+      fs.copyFileSync(path.join(wb, 'app', file), path.join(bundle, 'app', file));
+    }
+    fs.cpSync(path.join(wb, 'app', 'backend'), path.join(bundle, 'app', 'backend'), { recursive: true });
     fs.cpSync(path.join(wb, 'app', 'public'), path.join(bundle, 'app', 'public'), { recursive: true });
     fs.copyFileSync(process.execPath, path.join(bundle, 'runtime', 'node', 'bin', 'node'));
     fs.copyFileSync(path.join(wb, 'runtime', 'macos', 'ruyi-process-helper'), path.join(bundle, 'runtime', 'macos', 'ruyi-process-helper'));

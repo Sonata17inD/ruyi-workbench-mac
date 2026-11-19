@@ -1,4 +1,5 @@
 'use strict';
+const VisualPipeline = require('../../ruyi-workbench/app/backend/visual-pipeline.cjs').createVisualPipeline();
 // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A9/A10/A14/F3/NE-12)的纯逻辑与真子进程覆盖。真 server.js、临时 HOME。
 //   [N1]  tool_invoke_* 把 ctx 带进原生目标(workingDir 生效);回合摘要 / 不可逆账按真正被调用的工具名记。
 //   [N4]  allowCommandTools / allowDesktopTools 在分发点(toolCall,ctx 带 config)也拒绝,与 offer 面同一判据。
@@ -58,7 +59,7 @@ test('[N4] 命令 / 桌面工具开关在分发点也生效(且与 offer 面同�
   const proof = path.join(root, 'n4-proof.txt');
   const code = `require('fs').writeFileSync(${JSON.stringify(proof)},'ran')`;
   const off = { allowCommandTools: false, allowDesktopTools: false };
-  for (const [name, args] of [['script_run', { language: 'node', code }], ['powershell_run', { command: 'echo 1' }], ['shell_start', { command: 'x' }], ['desktop_screenshot', {}], ['keyboard_send_keys', { keys: 'a' }]]) {
+  for (const [name, args] of [['script_run', { language: 'node', code }], ['shell_run', { command: 'echo 1' }], ['shell_start', { command: 'x' }], ['desktop_screenshot', {}]]) {
     const r = await toolCall(name, args, { config: off });
     assert.equal(r.ok, false, name);
     assert.equal(r.code, 'tool-disabled', name);
@@ -69,12 +70,11 @@ test('[N4] 命令 / 桌面工具开关在分发点也生效(且与 offer 面同�
   // 会话级桌面覆盖 true 放行(全局关也一样);覆盖 false 拒
   const overridden = H.nativeToolDisabledByPolicy('desktop_screenshot', off, true);
   assert.equal(overridden, '', 'the implemented screenshot backend honours the session desktop override');
-  if (process.platform === 'darwin') assert.match(H.nativeToolDisabledByPolicy('keyboard_send_keys',off,true),
-    /platform\.unsupported/, 'session override cannot supply a missing input backend');
+  await assert.rejects(toolCall('keyboard_send_keys', { keys: 'a' }, { config: off }), /Unknown tool/);
   assert.notEqual(H.nativeToolDisabledByPolicy('desktop_screenshot', { allowDesktopTools: true }, false), '');
   // offer 面:被拒的工具不在 schema 里
   const names = buildOpenAiTools({ ...off, toolLoadingMode: 'auto' }, null, {}).map(t => t.function.name);
-  for (const n of ['script_run', 'powershell_run', 'shell_start', 'desktop_screenshot', 'keyboard_send_keys']) assert.ok(!names.includes(n), n);
+  for (const n of ['script_run', 'shell_run', 'shell_start', 'desktop_screenshot', 'keyboard_send_keys']) assert.ok(!names.includes(n), n);
 });
 
 test('[N5] 未知工具:toolCall 仍抛 Unknown tool(消息逐字),建议走 toolFailureResult', async () => {
@@ -217,7 +217,7 @@ test('[N6] MCP 标准 content:全部 text 块、image 块映射、不劈 base64'
   assert.deepEqual(o.omittedBlocks, [{ type: 'resource_link', note: 'omitted', uri: 'file:///x', name: 'x' }]);
   assert.deepEqual(n({ content: [] }), { ok: true, content: [] });
   // 映射后的形状就是工具图像通道认识的形状
-  assert.equal(H.VisualPipeline.extractToolImages(only).length, 1);
+  assert.equal(VisualPipeline.extractToolImages(only).length, 1);
 });
 
 test('[N6] 多 text 块:首块是 JSON 就按结构化结果(保住 ok:false),其余块放 extraText;首块不是 JSON 才拼接', () => {
@@ -240,7 +240,7 @@ test('[N6] 多 text 块:首块是 JSON 就按结构化结果(保住 ok:false),�
 });
 
 test('[N7] 非视觉:图像字段换成一行占位', () => {
-  const V = H.VisualPipeline;
+  const V = VisualPipeline;
   const big = 'A'.repeat(40000);
   const res = { ok: true, width: 1280, height: 720, format: 'png', image_base64: big };
   const s = V.stripToolImageFields(res, 'no-vision');
@@ -256,7 +256,7 @@ test('[N7] 非视觉:图像字段换成一行占位', () => {
 });
 
 test('[F3] extractToolImages 的 mime:魔数 > format > png', () => {
-  const V = H.VisualPipeline;
+  const V = VisualPipeline;
   assert.match(V.extractToolImages({ ok: true, image: JPEG_HEAD, format: 'jpeg' })[0], /^data:image\/jpeg;base64,/);
   assert.match(V.extractToolImages({ ok: true, image: JPEG_HEAD })[0], /^data:image\/jpeg;base64,/, '没有 format 也认字节');
   assert.match(V.extractToolImages({ ok: true, image_base64: PNG_1X1, format: 'jpeg' })[0], /^data:image\/png;base64,/, '字节说了算(服务端校验的是字节)');
@@ -301,7 +301,7 @@ test('[A9] 桌面租约按 ACC 真实工具名分类', () => {
   assert.equal(lease('ocr_find_text', { text: 'x', click: true }), 'write');
   for (const n of ['read_document', 'excel_read', 'write_excel', 'memory_save', 'fetch', 'run_command', 'ocr_image']) assert.equal(lease(n, {}), '', `${n} 不占桌面`);
   // 原生桌面工具:键盘注入修前没有锁
-  assert.deepEqual(inferToolResources('keyboard_send_keys', { keys: 'a' }, null, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:write']);
+  assert.deepEqual(inferToolResources('mcp__ai_computer_control__hotkey', { keys: ['CMD', 'a'] }, { toolName: 'hotkey' }, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:write']);
   assert.deepEqual(inferToolResources('desktop_screenshot', {}, null, root, 'exec').map(r => `${r.type}:${r.mode}`), ['desktop:read']);
   // 表外(第三方 MCP)走旧正则兜底
   assert.equal(lease('click_element'), 'write');
@@ -324,7 +324,7 @@ test('[NE-12] desktop_screenshot 的图进 image_base64,路径保留;过大不�
   assert.equal(r.image_base64, PNG_1X1);
   assert.equal(r.path, png);
   assert.deepEqual([r.width, r.height, r.format, r.image_mime], [1, 1, 'png', 'image/png']);
-  assert.equal(H.VisualPipeline.extractToolImages(r).length, 1);
+  assert.equal(VisualPipeline.extractToolImages(r).length, 1);
   // 缩略副本优先,并被清掉
   const side = png + '.vision.jpg';
   fs.writeFileSync(side, Buffer.from(JPEG_HEAD, 'base64'));
@@ -376,9 +376,7 @@ function handle(m) {
 
 // ── [N6b] 工具截图附件:tmp+rename、按会话标签命名、删会话时清 ───────────────────────────────────────────────
 test('[N6b] 删会话时清掉该会话的 toolimg_* 附件目录(别的会话的不动)', async () => {
-  const { functionBlock } = require('../lib/source-slice');
-  const src = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/02-session-store.js'), 'utf8');
-  const tagOf = new Function('crypto', `${functionBlock(src, 'toolImageSessionTag')}\nreturn toolImageSessionTag;`)(require('crypto'));
+  const { toolImageSessionTag: tagOf } = require('../../ruyi-workbench/app/backend/image-content.cjs');
   const a = await srv.createSession({ title: 'a', cwd: root });
   const b = await srv.createSession({ title: 'b', cwd: root });
   const uploads = path.join(process.env.RUYI_HOME, 'uploads');

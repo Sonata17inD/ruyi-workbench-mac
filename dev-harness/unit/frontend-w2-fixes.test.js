@@ -119,7 +119,7 @@ describe('F5 等待原因本地化：stewardWaitText', () => {
 describe('F6 en-US 单复数：「(s)」遗留拆成 .one/.other', () => {
   const KEYS = ['changes.revert.partial', 'chat.agentWake', 'settings.asrLexicon.count', 'settings.asrLexicon.saved',
     'settings.asrLexicon.savedSkipped', 'settings.asrLexicon.countLearned', 'toast.externalDiffOpened', 'toast.externalDiffPartial',
-    'settings.mcp.count', 'settings.update.backupsCount'];
+    'settings.mcp.count'];
   it('en-US 里一条「(s)」都不剩（含新增键）', () => {
     const left = Object.entries(en).filter(([, value]) => /\(s\)/.test(String(value))).map(([key]) => key);
     assert.deepEqual(left, []);

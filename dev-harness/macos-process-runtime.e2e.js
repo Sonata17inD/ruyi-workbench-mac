@@ -12,7 +12,7 @@ const t = createRunner('MACOS PROCESS RUNTIME');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-supervise-'));
 process.env.RUYI_HOME = path.join(root, 'data');
 const helper = path.resolve(__dirname, '../ruyi-workbench/runtime/macos/ruyi-process-helper');
-const capabilityReport = { protocolVersion: 2, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
+const capabilityReport = { protocolVersion: 3, guardian: true, supervise: true, privateFd: true, identityCleanup: true, escapeCoverage: 'observed-only' };
 const capabilityPrelude = `if(process.argv[2]==='--capabilities'){console.log(${JSON.stringify(JSON.stringify(capabilityReport))});process.exit(0);}`;
 const handles = [];
 const children = [];
@@ -30,18 +30,30 @@ function heartbeat(file) {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP native supervisor requires macOS'); return; }
     if (!fs.existsSync(helper)) throw new Error('Build the macOS helper before running this test');
-    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient', 'killKimiAcpTerminal', 'stopToolboxService', 'toolboxServices', 'cleanupKimiAcpTerminals', 'handleKimiAcpTerminalRequest']);
+    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient', 'killKimiAcpTerminal', 'cleanupKimiAcpTerminals', 'handleKimiAcpTerminalRequest']);
     runtime = S.ProcessRuntime;
     const capability = runtime.helperCapability();
-    t.ok(capability.ready && capability.installed && capability.protocolVersion === 2 && Object.isFrozen(capability),
+    t.ok(capability.ready && capability.installed && capability.protocolVersion === 3 && Object.isFrozen(capability),
       'native helper capability requires executable versioned libproc probe');
+    const raceScript = path.join(root, 'cancel-at-fork.sh');
+    fs.writeFileSync(raceScript, 'sleep 30\n');
+    const rapidResults = [];
+    for (let i = 0; i < 100; i++) {
+      const handle = await runtime.start({ executable: '/bin/bash', argv: [raceScript], owner: { kind: 'cancel-at-fork' } });
+      handles.push(handle);
+      await runtime.ready(runtime.child(handle));
+      await sleep(1);
+      rapidResults.push(await runtime.stop(handle, 'cancel-at-fork'));
+    }
+    t.ok(rapidResults.every(result => !result.incomplete && result.unconfirmed === 0),
+      '100 immediate fork/exec cancellations confirm both supervisors: ' + JSON.stringify(rapidResults.filter(result => result.incomplete)));
     const originalHelperPath = S.ProcessRuntimeHooks.helperPath;
     const probeHelper = path.join(root, 'capability-fixture');
     const marker = path.join(root, 'unapproved-target');
     try {
       S.ProcessRuntimeHooks.helperPath = () => probeHelper;
       let blocked = false;
-      try { runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
+      try { await runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
       catch (error) { blocked = error.code === 'process_helper_missing'; }
       t.ok(blocked && !fs.existsSync(marker), 'missing helper blocks every managed execution without unsupervised fallback');
       const gateFailure = await S.DesktopShell.runProcess(process.execPath, ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`], { shape: true });
@@ -51,7 +63,7 @@ function heartbeat(file) {
         fs.writeFileSync(probeHelper, '#!' + process.execPath + '\nconsole.log(' + JSON.stringify(JSON.stringify(report)) + ');', { mode: 0o700 });
         const unavailable = runtime.helperCapability();
         blocked = false;
-        try { runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
+        try { await runtime.start({ executable: process.execPath, argv: ['-e', `require('fs').writeFileSync(${JSON.stringify(marker)},'bad')`] }); }
         catch (error) { blocked = error.code === 'process_helper_incompatible'; }
         t.ok(!unavailable.ready && blocked && !fs.existsSync(marker), 'incompatible version/capability report blocks target before execution');
       }
@@ -78,7 +90,7 @@ function heartbeat(file) {
       const command = fault === 'primary-before-write'
         ? `const fs=require('fs');setTimeout(()=>fs.writeFileSync(${JSON.stringify(faultBeat)},'bad'),400);setTimeout(()=>process.exit(0),2000)`
         : heartbeat(faultBeat);
-      const faultHandle = runtime.start({ executable: process.execPath, argv: ['-e', command], env: fixtureChildEnv(), owner: { kind: 'helper-loss' } });
+      const faultHandle = await runtime.start({ executable: process.execPath, argv: ['-e', command], env: fixtureChildEnv(), owner: { kind: 'helper-loss' } });
       handles.push(faultHandle);
       const guardian = runtime.child(faultHandle);
       t.ok((await runtime.ready(guardian)).ok, fault + ' fixture starts under versioned guardian');
@@ -112,7 +124,7 @@ function heartbeat(file) {
     t.ok(natural.cleanupScope === 'owned-group-and-observed' && !natural.cleanupIncomplete, 'natural completion reports verified scope');
 
     const cancelBeat = path.join(root, 'cancel-beat');
-    const handle = runtime.start({ executable: process.execPath, argv: ['-e', heartbeat(cancelBeat)], env: fixtureChildEnv(), owner: { sessionId: 'fixture', toolCallId: 'cancel' } });
+    const handle = await runtime.start({ executable: process.execPath, argv: ['-e', heartbeat(cancelBeat)], env: fixtureChildEnv(), owner: { sessionId: 'fixture', toolCallId: 'cancel' } });
     handles.push(handle);
     await until(() => runtime.identity(handle) && fs.existsSync(cancelBeat));
     t.ok(Object.isFrozen(handle) && !('pid' in handle) && Object.isFrozen(runtime.identity(handle)), 'opaque handle retains immutable startup identity privately');
@@ -139,7 +151,7 @@ function heartbeat(file) {
 
     const forged = await S.DesktopShell.runProcess(process.execPath, ['-e', `console.log('noise\\n{"event":"cleanup","value":0,"detail":1}');process.exit(7)`]);
     t.ok(forged.code === 7 && forged.stdout.includes('"event":"cleanup"'), 'ordinary stdout cannot spoof private control protocol');
-    const failedStart = runtime.start({ executable: path.join(root, 'missing-ready'), env: fixtureChildEnv() });
+    const failedStart = await runtime.start({ executable: path.join(root, 'missing-ready'), env: fixtureChildEnv() });
     handles.push(failedStart);
     const readiness = await runtime.ready(runtime.child(failedStart));
     t.ok(!readiness.ok && readiness.error.code === 'ENOENT', 'execution readiness rejects missing target after supervisor spawn');
@@ -148,7 +160,7 @@ function heartbeat(file) {
 
     for (const stdio of [['ignore'], ['ignore', 'pipe', 'pipe', 'pipe']]) {
       let rejected = false;
-      try { runtime.start({ executable: process.execPath, spawnOptions: { stdio } }); } catch (error) { rejected = error instanceof TypeError; }
+      try { await runtime.start({ executable: process.execPath, spawnOptions: { stdio } }); } catch (error) { rejected = error instanceof TypeError; }
       t.ok(rejected, 'unsupported stdio layout is rejected before spawning a supervisor');
     }
     const realHelperPath = S.ProcessRuntimeHooks.helperPath;
@@ -160,7 +172,7 @@ function heartbeat(file) {
         fs.writeFileSync(fakeHelper, '#!' + process.execPath + '\n' + capabilityPrelude +
           `require('fs').writeSync(3,${JSON.stringify(frame + '\n')});setTimeout(()=>process.exit(0),100);\n`, { mode: 0o700 });
         S.ProcessRuntimeHooks.helperPath = () => fakeHelper;
-        const malformed = runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'malformed-protocol' } });
+        const malformed = await runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'malformed-protocol' } });
         handles.push(malformed);
         const result = await runtime.completion(malformed);
         t.ok(result.incomplete && result.status === 'incomplete', 'malformed private control frame is contained as incomplete cleanup');
@@ -176,7 +188,7 @@ function heartbeat(file) {
       fs.writeFileSync(fakeHelper, '#!' + process.execPath + '\n' + capabilityPrelude
         + `require('fs').writeSync(3,${JSON.stringify(frames.map(frame => JSON.stringify(frame) + '\n').join(''))});`, { mode: 0o700 });
       S.ProcessRuntimeHooks.helperPath = () => fakeHelper;
-      const delayed = runtime.start({ executable: process.execPath, env: fixtureChildEnv() });
+      const delayed = await runtime.start({ executable: process.execPath, env: fixtureChildEnv() });
       handles.push(delayed);
       const child = runtime.child(delayed);
       child.stdio[3].pause();
@@ -197,7 +209,7 @@ function heartbeat(file) {
       const incompleteDesktop = await S.DesktopShell.runProcess(process.execPath, [], { shape: true });
       t.ok(!incompleteDesktop.ok && incompleteDesktop.cleanupIncomplete && !incompleteDesktop.stderr.includes('process tree killed')
         && /尚未确认/.test(incompleteDesktop.error), 'incomplete cleanup is not reported as full tree termination');
-      const incompleteHandle = runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'incomplete-test' } });
+      const incompleteHandle = await runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'incomplete-test' } });
       handles.push(incompleteHandle);
       await runtime.completion(incompleteHandle);
       const incompleteChild = runtime.child(incompleteHandle);
@@ -222,19 +234,22 @@ function heartbeat(file) {
       const collected = await S.cleanupKimiAcpTerminals(cleanupReg);
       t.ok(collected.unconfirmed === 1 && cleanupReg.kimiAcpCleanupIncomplete === 1 && cleanupEvents.length === 1,
         'background Kimi terminal cleanup records failure without rejecting owner teardown');
-      const entry = { owned: true, child: incompleteChild, state: 'running', error: '' };
-      S.toolboxServices.set('incomplete-test', entry);
-      try {
-        S.stopToolboxService('incomplete-test');
-        await until(() => entry.state === 'failed');
-        t.ok(entry.cleanup.incomplete && entry.error === 'cleanup-unconfirmed', 'toolbox preserves failed cleanup instead of reporting stopped');
-      } finally { S.toolboxServices.delete('incomplete-test'); }
+      const toolbox = require('../ruyi-workbench/app/backend/toolbox-services.cjs').createToolboxServices({
+        ProcessRuntime: runtime, killChildTree: child => runtime.stop(child),
+        logEvent() {}, safeJsonParse: JSON.parse,
+        fetch: async () => ({ ok: true, text: async () => '{}' }),
+      });
+      const component = { id: 'incomplete-test', service: { port: 0, health: '/health', component: 'fixture', portEnv: 'PORT' }, run: { command: process.execPath, args: [], env: fixtureChildEnv() } };
+      const entry = await toolbox.start(component);
+      toolbox.stop(component.id);
+      await until(() => entry.cleanup?.incomplete);
+      t.ok(entry.state === 'failed' && entry.cleanup.incomplete, 'toolbox preserves failed cleanup instead of reporting stopped');
     } finally { S.ProcessRuntimeHooks.helperPath = normalHelperPath; }
 
     for (const mode of ['exit', 'sigkill']) {
       const ownerBeat = path.join(root, 'owner-beat-' + mode);
       const leave = mode === 'exit' ? 'process.exit(0)' : "process.kill(process.pid,'SIGKILL')";
-      const ownerScript = `const cp=require('child_process'),fs=require('fs');const p=cp.spawn(${JSON.stringify(helper)},['--supervise-v2',process.execPath,'-e',${JSON.stringify(heartbeat(ownerBeat))}],{stdio:['ignore','ignore','ignore','pipe']});p.stdio[3].on('data',()=>{});const timer=setInterval(()=>{if(fs.existsSync(${JSON.stringify(ownerBeat)})){clearInterval(timer);${leave}}},10);setTimeout(()=>process.exit(1),3000);`;
+      const ownerScript = `const cp=require('child_process'),fs=require('fs');const p=cp.spawn(${JSON.stringify(helper)},['--supervise-v3',process.execPath,'-e',${JSON.stringify(heartbeat(ownerBeat))}],{stdio:['ignore','ignore','ignore','pipe']});p.stdio[3].on('data',()=>{});const timer=setInterval(()=>{if(fs.existsSync(${JSON.stringify(ownerBeat)})){clearInterval(timer);${leave}}},10);setTimeout(()=>process.exit(1),3000);`;
       const owner = cp.spawn(process.execPath, ['-e', ownerScript], { env: fixtureChildEnv(), stdio: 'ignore' });
       children.push(owner);
       await until(() => owner.exitCode !== null || owner.signalCode !== null);
@@ -279,7 +294,7 @@ rl.on('line',line=>{const m=JSON.parse(line);if(!m.id)return;
       } finally { client.kill(); }
     }
 
-    for (const launchMode of ['--supervise', '--supervise-v2']) {
+    for (const launchMode of ['--supervise-v3']) {
       const anchoredBeat = path.join(root, 'anchored-beat-' + launchMode);
       const anchorInfo = path.join(root, 'anchor-info-' + launchMode);
       const anchorGate = path.join(root, 'anchor-go-' + launchMode);
@@ -290,7 +305,7 @@ rl.on('line',line=>{const m=JSON.parse(line);if(!m.id)return;
       let anchorOutput = ''; anchorOwner.stdout.on('data', d => { anchorOutput += d; });
       const anchorPid = await until(() => Number(anchorOutput.trim()) || 0);
       await until(() => fs.existsSync(anchorInfo) && fs.existsSync(anchoredBeat));
-      if (launchMode === '--supervise-v2') {
+      if (launchMode === '--supervise-v3') {
         const table = snapshotProcessTable();
         const anchor = table.find(row => row.pid === anchorPid);
         const primary = table.find(row => row.ppid === anchorPid && anchor && row.created >= anchor.created);
@@ -308,6 +323,28 @@ rl.on('line',line=>{const m=JSON.parse(line);if(!m.id)return;
       const anchoredSize = fs.statSync(anchoredBeat).size; await sleep(100);
       t.ok(fs.statSync(anchoredBeat).size === anchoredSize, 'external cleanup stops orphan writes even with the supervisor frozen');
     }
+
+    // Concurrent fork bursts, including detached descendants, must remain covered
+    // after identity synchronization has observed them. Every fixture has a bounded life.
+    const burstHandles = [], burstFiles = [];
+    for (let i = 0; i < 4; i++) {
+      const file = path.join(root, 'fork-burst-' + i + '.json');
+      burstFiles.push(file);
+      const script = `const cp=require('child_process'),fs=require('fs');const ids=[];for(let i=0;i<24;i++){const c=cp.spawn('/bin/sleep',['5'],{stdio:'ignore',detached:i%3===0});ids.push(c.pid);}fs.writeFileSync(${JSON.stringify(file)},JSON.stringify(ids));setTimeout(()=>process.exit(0),5000);`;
+      const handle = await runtime.start({ executable: process.execPath, argv: ['-e', script], owner: { kind: 'fork-burst' } });
+      handles.push(handle); burstHandles.push(handle);
+    }
+    await until(() => burstFiles.every(file => fs.existsSync(file)));
+    await sleep(300);
+    const burstPids = new Set(burstFiles.flatMap(file => JSON.parse(fs.readFileSync(file, 'utf8'))));
+    const observedBurst = snapshotProcessTable().filter(row => burstPids.has(row.pid));
+    t.ok(observedBurst.length === 96, 'four concurrent fork bursts start all fixture descendants');
+    for (const handle of burstHandles) runtime.stop(handle, 'fork-burst-complete');
+    const burstResults = await Promise.all(burstHandles.map(handle => runtime.completion(handle)));
+    const afterBurst = snapshotProcessTable();
+    t.ok(burstResults.every(result => !result.incomplete), 'concurrent identity synchronization and cleanup remain complete: ' + JSON.stringify(burstResults));
+    t.ok(observedBurst.every(expected => !afterBurst.some(row => row.pid === expected.pid && row.created === expected.created)),
+      'all observed fork-burst descendants, including detached children, have exited');
 
     const escapeBeat = path.join(root, 'escape-beat');
     const escapeScript = `require('child_process').spawn(process.execPath,['-e',${JSON.stringify(heartbeat(escapeBeat))}],{stdio:'ignore',detached:true});setTimeout(()=>process.exit(0),200);`;

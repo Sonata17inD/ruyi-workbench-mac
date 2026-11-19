@@ -5,7 +5,7 @@
 //   tools/list -> 20 fake tools(第46波46d 由 7 扩到 20,镜像 ACC 关键契约)
 //   tools/call -> executes and returns { content:[{type:'text',text: JSON.stringify(result)}], isError }
 //
-// 46d 扩容原则:BRIDGED_WRITE_PATH_ARGS(02-session-store.js)15 个条目全部有 fake 对应物
+// 46d 扩容原则：bridged-write-targets.cjs 中登记的工具都要有对应夹具。
 // (写族真写文件,快照/回撤语义才能被离线回归);结果形状镜像 ACC 真身(write_* → {success,path,
 // output_path},image_resize/window_screenshot → {ok,...}),仅 write_docx 保留旧版形状
 // (无 output_path,供兼容层测试)。fake-mcp-contract.e2e.js 把「fake 写族 == 快照表键集」钉成静态锁。

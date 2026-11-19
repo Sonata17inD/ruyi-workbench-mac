@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const ui = read('ruyi-workbench/app/public/js/session-experience.js');
 const css = read('ruyi-workbench/app/public/css/components/chat-composer.css');
-const store = read('ruyi-workbench/app/src/02-session-store.js');
+const store = read('ruyi-workbench/app/backend/session-recovery.cjs');
 const zh = JSON.parse(read('ruyi-workbench/app/public/locales/zh-CN.json'));
 const en = JSON.parse(read('ruyi-workbench/app/public/locales/en-US.json'));
 let fail = 0;

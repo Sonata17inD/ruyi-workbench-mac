@@ -4,6 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { copyRuntimeFiles } = require('./macos-runtime-files');
 const { sha256, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage } = require('./macos-offline-lib');
 const { buildMacDesktop } = require('./build-macos-desktop');
 const { buildMacProcessHelper } = require('./build-macos-process-helper');
@@ -12,7 +13,8 @@ const { buildMacTrashHelper } = require('./build-macos-trash-helper');
 const { buildMacAutomationHelper } = require('./build-macos-automation-helper');
 const root = path.resolve(__dirname, '..');
 const repo = path.dirname(root);
-const lockFile = path.join(repo, 'MACOS-PORTING/dependencies/macos-offline-arm64.assets.json');
+const lockFile = path.join(repo, 'ruyi-workbench/packaging/macos/macos-offline-arm64.assets.json');
+const windowsLauncherSuffixes = new Set(['.exe', '.dll', '.pyd', '.cmd', '.bat', '.ps1', '.psm1', '.msi', '.ocx']);
 
 function writeJson(file, value) { fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n'); }
 function buildMacOffline({ assets, output, variant = 'full' }) {
@@ -28,9 +30,9 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   // Also bind new implementation files, before their first commit.
   sourceFiles.push(...run('/usr/bin/git', ['ls-files', '--others', '--exclude-standard', '-z'], { cwd: repo }).split('\0').filter(Boolean));
   const sourceFingerprint = Object.fromEntries(sourceFiles.filter(file => (file.startsWith('ruyi-workbench/')
-    || file.startsWith('mcp/ai-computer-control/') || file.startsWith('MACOS-PORTING/dependencies/')
+    || file.startsWith('mcp/ai-computer-control/')
     || ['LICENSE', 'THIRD-PARTY-NOTICES.md'].includes(file))
-    && fs.statSync(path.join(repo, file)).isFile()).sort().map(file => [file, sha256(path.join(repo, file))]));
+    && fs.existsSync(path.join(repo, file)) && fs.statSync(path.join(repo, file)).isFile()).sort().map(file => [file, sha256(path.join(repo, file))]));
   fs.mkdirSync(path.dirname(output), { recursive: true });
   const staging = fs.mkdtempSync(path.join(path.dirname(output), '.ruyi-offline-'));
   const candidate = path.join(staging, 'candidate');
@@ -46,13 +48,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   fs.mkdirSync(env.TMPDIR);
   try {
     buildMacDesktop(bundle, { bundled: true });
-    fs.mkdirSync(path.join(workbench, 'app'), { recursive: true });
-    for (const file of ['server.js']) fs.copyFileSync(path.join(root, 'app', file), path.join(workbench, 'app', file));
-    copyTree(path.join(root, 'app/public'), path.join(workbench, 'app/public'));
-    for (const directory of ['resources', 'config', 'docs']) copyTree(path.join(root, directory), path.join(workbench, directory));
-    fs.mkdirSync(path.join(workbench, 'desktop-macos'));
-    fs.copyFileSync(path.join(root, 'desktop-macos/service-lease.cjs'), path.join(workbench, 'desktop-macos/service-lease.cjs'));
-    fs.copyFileSync(path.join(root, 'package.json'), path.join(workbench, 'package.json'));
+    copyRuntimeFiles('workbench', root, workbench);
     for (const file of ['LICENSE', 'THIRD-PARTY-NOTICES.md']) fs.copyFileSync(path.join(repo, file), path.join(workbench, file));
     fs.mkdirSync(path.join(workbench, 'runtime'), { recursive: true });
     // Keep the upstream Node license (including its vendored dependency notices); omit npm/corepack.
@@ -73,23 +69,25 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
       const pythonRoot = path.join(acc, 'runtime/python');
       copyTree(inputs.python.directory, pythonRoot);
       const python = path.join(pythonRoot, 'bin/python3');
-      const wheels = path.join(acc, 'wheels');
+      const wheels = path.join(staging, 'wheels');
       copyTree(inputs.wheels.directory, wheels);
       const requirementFile = path.join(acc, 'requirements.lock.txt');
       fs.copyFileSync(path.join(repo, lock.requirements), requirementFile);
       if (sha256(requirementFile) !== lock.requirementsSha256) throw new Error('Requirements lock changed');
       const project = path.join(staging, 'acc-source');
       fs.mkdirSync(project);
-      fs.copyFileSync(path.join(repo, 'mcp/ai-computer-control/pyproject.toml'), path.join(project, 'pyproject.toml'));
-      fs.copyFileSync(path.join(repo, 'mcp/ai-computer-control/LICENSE'), path.join(project, 'LICENSE'));
-      copyTree(path.join(repo, 'mcp/ai-computer-control/src'), path.join(project, 'src'));
+      copyRuntimeFiles('acc', path.join(repo, 'mcp/ai-computer-control'), project);
       // Build a non-editable wheel from the current candidate, with offline build isolation.
       run(python, ['-m', 'pip', 'wheel', '--no-index', '--find-links', wheels, '--no-deps', '--wheel-dir', wheels, project], { env, cwd: staging });
       run(python, ['-m', 'pip', 'install', '--no-index', '--find-links', wheels, '--require-hashes', '--no-compile', '-r', requirementFile], { env, cwd: staging });
       const accWheel = fs.readdirSync(wheels).find(file => /^ai_computer_control-.*\.whl$/.test(file));
       if (!accWheel) throw new Error('ACC wheel was not built');
+      run(python, [path.join(__dirname, 'verify-macos-acc-wheel.py'), path.join(wheels, accWheel),
+        path.join(root, 'packaging/macos/runtime-files.json')], { env, cwd: staging });
       run(python, ['-m', 'pip', 'install', '--no-index', '--find-links', wheels, '--no-deps', '--no-compile',
         'ai-computer-control==' + accWheel.split('-')[1]], { env, cwd: staging });
+      const pythonPackager = path.join(__dirname, 'macos-offline-python.py');
+      run(python, [pythonPackager, '--runtime', pythonRoot, '--prune-windows-launchers', ...windowsLauncherSuffixes], { env, cwd: staging });
       run(python, ['-m', 'pip', 'check'], { env, cwd: staging });
       run(python, [path.join(__dirname, 'macos-offline-python.py'), '--runtime', pythonRoot, '--entrypoints'], { env, cwd: staging });
       const browsers = path.join(acc, 'playwright_browsers/chromium-' + lock.chromiumRevision);
@@ -115,6 +113,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     run('/usr/bin/codesign', ['--force', '--sign', '-', '--timestamp=none', bundle]);
     run('/usr/bin/codesign', ['--verify', '--deep', '--strict', bundle]);
     const files = inventory(bundle);
+    const foreign = files.find(file => file.type !== 'directory' && windowsLauncherSuffixes.has(path.extname(file.path).toLowerCase()));
+    if (foreign) throw new Error('Windows runtime file in Mac package: ' + foreign.path);
     writeJson(path.join(candidate, 'package-manifest.json'), { schemaVersion: 1, app: 'Ruyi.app',
       version: require('../package.json').version, variant, platform: 'darwin', arch: 'arm64', sourceCommit: source,
       sourceFingerprint, assetsLockSha256: sha256(lockFile), capabilities, signing: 'ad-hoc-development', notarized: false,

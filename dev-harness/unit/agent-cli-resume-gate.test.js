@@ -155,11 +155,11 @@ readline.createInterface({ input: process.stdin }).on('line', line => {
 `;
 const kimiShimDir = path.join(root, 'kimi-npm');
 const kimiEntry = path.join(kimiShimDir, 'node_modules', '@moonshot-ai', 'kimi-code', 'dist', 'main.mjs');
-const kimiShim = path.join(kimiShimDir, 'node_modules', '.bin', 'kimi.cmd');
+const kimiShim = path.join(kimiShimDir, 'node_modules', '.bin', 'kimi');
 fs.mkdirSync(path.dirname(kimiEntry), { recursive: true });
 fs.mkdirSync(path.dirname(kimiShim), { recursive: true });
 fs.writeFileSync(kimiEntry, FAKE_MAIN);
-fs.writeFileSync(kimiShim, `@"${process.execPath}" "%~dp0\\..\\@moonshot-ai\\kimi-code\\dist\\main.mjs" %*\r\n`);
+fs.symlinkSync(kimiEntry, kimiShim);
 
 const kimiLog = () => { try { return fs.readFileSync(path.join(fakeDir, 'log.jsonl'), 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; } };
 const resetFake = () => { for (const f of fs.readdirSync(fakeDir)) fs.rmSync(path.join(fakeDir, f), { recursive: true, force: true }); };

@@ -118,7 +118,7 @@ describe('quickRepliesFor: ① 待决优先（permission）', () => {
   it('permission 给「允许」「拒绝」两条，并盖过问句与五态', async () => {
     const { quickRepliesFor } = await loadModule();
     const replies = quickRepliesFor({
-      pending: { id: 'perm_1', type: 'permission', sessionId: 'sess_a', toolName: 'powershell_run' },
+      pending: { id: 'perm_1', type: 'permission', sessionId: 'sess_a', toolName: 'shell_run' },
       lastAssistantText: '要我跑这条命令吗？',
       state: 'running',
       t,
@@ -138,7 +138,7 @@ describe('quickRepliesFor: ① 待决优先（permission）', () => {
     const realRow = {
       id: 'iv_9f2c', type: 'permission', sessionId: 'sess_a', missionId: 'sess_a',
       requestedAt: '2026-09-07T02:11:04.512Z', interventionVersion: 1,
-      toolName: 'powershell_run', tier: 'exec', revertible: false,
+      toolName: 'shell_run', tier: 'exec', revertible: false,
       runId: '', proposedBy: '', task: '',
       input: { command: 'git status' },
       questionSummary: '', questions: [], context: '',

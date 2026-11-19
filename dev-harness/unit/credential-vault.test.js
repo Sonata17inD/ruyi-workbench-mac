@@ -4,8 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
 const { constBlock } = require('../lib/source-slice');
 const read = name => fs.readFileSync(path.join(__dirname, '../../ruyi-workbench/app/src', name), 'utf8');
-const source = read('01i-privacy-rules.js') + '\n' + read('01h-privacy-core.js') + '\n' + constBlock(read('01k-credential-vault.js'), 'CredentialVault');
-const { core, vault, catalog } = vm.runInNewContext(source + '\n({core:PrivacyCore,vault:CredentialVault,catalog:PrivacyRuleCatalog})', { require, Buffer, URL, structuredClone });
+const { PrivacyCore: core, CredentialVault: vault, PrivacyRuleCatalog: catalog } = require('../lib/privacy-primitives').createPrivacyPrimitives();
 const clone = value => JSON.parse(JSON.stringify(value));
 const fails = (fn, suffix) => assert.rejects(fn, error => error.code === 'credential_vault.' + suffix);
 function fixture() {

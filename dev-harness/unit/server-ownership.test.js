@@ -9,8 +9,9 @@ Object.assign(process.env, fixtureChildEnv());
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-owner-unit-'));
 process.env.RUYI_HOME = path.join(root, 'data');
 process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
-const { ServerOwnership: ownership, guardFileToolPath, isSensitiveDataPath, sensitiveGlobsForRg } =
-  require('../lib/server-internals').loadServerInternals(['ServerOwnership', 'guardFileToolPath', 'isSensitiveDataPath', 'sensitiveGlobsForRg']);
+const { ServerOwnership: ownership } = require('../../ruyi-workbench/app/backend/server-ownership.cjs');
+const { guardFileToolPath, isSensitiveDataPath, sensitiveGlobsForRg } =
+  require('../lib/server-internals').loadServerInternals(['guardFileToolPath', 'isSensitiveDataPath', 'sensitiveGlobsForRg']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 test('OS gate is exclusive; repeated old release cannot release a new owner', async () => {
@@ -45,10 +46,7 @@ test('canonical roots collapse junctions and missing leaves without creating dir
 });
 
 test('protocol selection retains Node 20.0 and non-Linux POSIX compatibility', () => {
-  assert.match(ownership.endpointFor('root', 'win32', '20.0.0'), /^\\\\\.\\pipe\\ruyi-serve-/);
-  assert.equal(ownership.endpointFor('root', 'linux', '20.8.0')[0], '\0');
-  assert.equal(ownership.endpointFor('root', 'linux', '24.0.0')[0], '\0');
-  assert.match(ownership.endpointFor('root', 'linux', '20.7.0'), /\.sock$/);
+  assert.throws(() => ownership.endpointFor('root', 'win32'), /macOS/);
   assert.match(ownership.endpointFor('root', 'darwin', '24.0.0'), /^\/private\/tmp\/ruyi-serve-v1-\w+\/[a-f0-9]{32}\.lock$/);
   assert.match(ownership.legacyEndpointFor('root'), /\.sock$/);
 });
@@ -192,7 +190,7 @@ test('Mac FIFO ownership records fail promptly on both read and write paths', { 
     assert.equal(fifo.status, 0);
     try {
       const child = cp.spawnSync(process.execPath, ['-e', `
-        const { ServerOwnership } = require(${JSON.stringify(loader)}).loadServerInternals(['ServerOwnership']);
+        const { ServerOwnership } = require(${JSON.stringify(require.resolve('../../ruyi-workbench/app/backend/server-ownership.cjs'))});
         ServerOwnership.acquire([${JSON.stringify(canonical)}]).then(async lease => {
           await lease.release(); process.exitCode = 2;
         }, error => { console.log(error.code); process.exitCode = error.code === 'DATA_ROOT_OWNER_UNKNOWN' ? 0 : 1; });
@@ -239,7 +237,7 @@ test('Mac socket ownership reads remain bounded when the record grows after stat
         }
         return stat;
       };
-      const { ServerOwnership } = require(${JSON.stringify(require.resolve('../lib/server-internals'))}).loadServerInternals(['ServerOwnership']);
+      const { ServerOwnership } = require(${JSON.stringify(require.resolve('../../ruyi-workbench/app/backend/server-ownership.cjs'))});
       ServerOwnership.acquire([${JSON.stringify(canonical)}]).then(async lease => {
         await lease.release(); process.exitCode = 2;
       }, error => { console.log(error.code); process.exitCode = grew && error.code === 'DATA_ROOT_OWNER_UNKNOWN' ? 0 : 1; });

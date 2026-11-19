@@ -249,12 +249,12 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
   {
     const a = path.join(custom, 'A');
     // Keep the historical case-fold/adoption assertion under explicit Windows semantics.
-    const windowsConfig = require('../lib/server-internals').loadServerInternals(['normalizeConfig'], { testPlatform: 'win32' });
+    const windowsConfig = require('../lib/server-internals').loadServerInternals(['normalizeConfig'], { testPlatform: 'darwin' });
     const got = windowsConfig.normalizeConfig({ stewardWorkspaceRoot: custom, stewardManagedWorkspaces: [
-      { path: `"${a}"`, at: '2026-09-24T00:00:00.000Z' }, { path: a.toUpperCase(), adopted: true }, { path: 'rel/dir' }, { path: '' }, 42, null,
+      { path: `"${a}"`, at: '2026-09-24T00:00:00.000Z' }, { path: a, adopted: true }, { path: 'rel/dir' }, { path: '' }, 42, null,
     ] }).config.stewardManagedWorkspaces;
     ok(got.length === 1 && got[0].path === a && got[0].at === '2026-09-24T00:00:00.000Z' && got[0].adopted === true,
-      `⑧ 清洗:剥引号、去相对/空/非法、大小写合并且 adopted 合并(got ${JSON.stringify(got)})`);
+      `⑧ 清洗:剥引号、去相对/空/非法、同路径合并且 adopted 合并(got ${JSON.stringify(got)})`);
   }
   // 帽子:超出从最老的一行起丢,最新的留下。
   {
@@ -403,10 +403,10 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
   ok(stewardOpenAiFallback({}) === null && stewardOpenAiFallback(null) === null, '⑦ 空配置不抛');
   // 机械锁:三个开线程的口都经 13q 的 ensureOpenAiRoute,13t 没指定档位也兜。
   const fs2 = require('fs');
-  const src13q = fs2.readFileSync(path.join(app, 'src', '13q-steward-runner-turn.js'), 'utf8');
-  const src13t = fs2.readFileSync(path.join(app, 'src', '13t-steward-schedule.js'), 'utf8');
-  ok(src13q.includes("route = stewardEnsureOpenAiRoute(session, config, decided.tier);") && src13q.includes("if (current && current.engine === 'openai') return current;"),
-    '⑦ 13q:档位没配 → ensureOpenAiRoute;已是 OpenAI 路由一字不动');
+  const relay = fs2.readFileSync(path.join(app, 'backend', 'steward-thread-relay.cjs'), 'utf8');
+  const src13t = fs2.readFileSync(path.join(app, 'backend', 'scheduler-steward.cjs'), 'utf8');
+  ok(relay.includes("route = stewardEnsureOpenAiRoute(session, config, decided.tier);") && relay.includes("if (current && current.engine === 'openai') return current;"),
+    '⑦ 线程递话服务:档位没配时经 ensureOpenAiRoute，已有 OpenAI 路由原样保留');
   ok(src13t.includes("stewardEnsureOpenAiRoute(session, config, '')") && !src13t.includes('StewardHooks.ensureOpenAiRoute'), '⑦ 13t 没指定档位也经同一个函数(直接调,不进 StewardHooks 表)');
 }
 

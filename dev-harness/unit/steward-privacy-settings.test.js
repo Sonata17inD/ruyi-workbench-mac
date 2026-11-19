@@ -1,9 +1,9 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm'), crypto = require('node:crypto');
-const { constBlock } = require('../lib/source-slice');
+const crypto = require('node:crypto');
 const { fixture } = require('../lib/privacy-test-fixture');
+const { createPrivacySettings } = require('../../ruyi-workbench/app/backend/privacy-settings-service.cjs');
 function setup() {
   const f = fixture(), turns = new Map(), decisions = [];
   let config = { privacyModeV1: 'off', privacyTechnicalV1: false, privacyRulesV1: [], credentialEncryptionV1: false }, writes = 0;
@@ -22,9 +22,8 @@ function setup() {
     }
     return { matches };
   };
-  const source = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/src/13ab-privacy-api.js'), 'utf8');
-  const api = vm.runInNewContext(constBlock(source, 'PrivacySettings') + '\nPrivacySettings', { PrivacyCore: core, PrivacyRegex: f.PrivacyRegex,
-    PrivacyGateway: { ruleVersion: version, preview }, LocalSecretCrypto: { supported: () => true }, structuredClone, Buffer, process: { platform: 'win32' }, turnSettlers: turns,
+  const api = createPrivacySettings({ configHooks: core.configHooks, PrivacyRegex: f.PrivacyRegex,
+    PrivacyGateway: { ruleVersion: version, preview }, LocalSecretCrypto: { supported: () => true }, turnSettlers: turns,
     readConfig: async () => structuredClone(config), mutateConfig: async fn => { const next = structuredClone(config); fn(next); config = next; writes++; },
     stewardAppendDecision: row => decisions.push(structuredClone(row)) });
   const current = () => structuredClone(config), request = extras => ({ op: 'update', expectedRuleVersion: version(config), ...extras });

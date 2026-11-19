@@ -1,4 +1,5 @@
 'use strict';
+import { createDeadlinePoll } from './deadline-poll.js';
 
 import './mission-state.js';
 import { apiRaw } from './net.js';
@@ -11,7 +12,7 @@ import { acceptanceRecorded, dockToneForMissionState, elapsedLabel, focusThreadF
 // G3 把它原样搬进 steward-chips.js 给【看板与线程详情栏】共用（抽屉不能反过来 import 看板，见那边的
 // 注释）。所以这里接过来的是 chipsWorthPrinting 本身，而不再是 resolveEngineRoute —— 本模块自此
 // 连「会话级 ＞ 全局回落」都不认识，更长不出第二套。
-import { createQuickSwitchChips, doc, byId, el, clear, chipsWorthPrinting, writeNote, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS, createPollLifecycle } from './steward-chips.js';   // 117n-M1：DOM 基础件复用（doc/byId/el/clear 不再本地重复）；33 号文 §4：note 写手（写 #stewardBoardNote）与轮询常量也只有那一条；121-K2b：连接时的兜底节拍同源；轮询生命周期（启停／门控）同一份
+import { createQuickSwitchChips, doc, byId, el, clear, chipsWorthPrinting, writeNote, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS } from './steward-chips.js';   // 117n-M1：DOM 基础件复用（doc/byId/el/clear 不再本地重复）；33 号文 §4：note 写手（写 #stewardBoardNote）与轮询常量也只有那一条；121-K2b：连接时的兜底节拍同源；轮询生命周期（启停／门控）同一份
 // F5a（27 号文 §11.13.1「F 追加」）：动作与五态的字形都取自 icons.js 那一张表。
 // missionStateIcon 是【纯派生】（五态值 → 字形名），不是第二份五态枚举 —— 本模块仍然只把
 // threadStateOf() 的返回值原样递进去，`needs_you`/`'stopped'` 的字面量计数一个没变（M6 锁）。
@@ -61,47 +62,8 @@ import { popover, closePopover, popoverAnchor } from './popover.js';
 // 里各写一遍 —— 事件名 `thread.needs_you` 里那个词不是五态，不该进 B5／M6／N3 那本「五态字面量」账。
 import { EVENT_STREAM_ROW_EVENTS, EVENT_STREAM_LIVE_EVENT, EVENT_STREAM_INSTANCE_EVENT } from './event-stream.js';
 
-// 第117波 117h → 第121波 K4：一行状态 → 【左栏任务索引】 → 管家视角的右栏
-// （34 号文 §2.2／§2.3／§2.6；原 27 号文 §8.2 L1／§8.10 的看板浮层已退役）。
-//
-// 三件事，一个模块：
-//   ① 一行状态 `#stewardStatusLine` 与顶栏那枚全局胶囊 `#appStatusChip`：「N 在跑 · M 等你」。
-//      计数只在 renderStatusLine 一处算（needsYouIds 是它的产物），点开＝把左栏滚到那一组；
-//      一条线程都没有时说 §8.9 那句「还没有任务，直接说你想做什么」。
-//   ② 左栏任务索引 `#railList`（§2.3）：**两视角共用的同一份 DOM**，常开，不再有「点开即看板」
-//      这回事（那个浮层 #stewardBoard 与它的「开合」随 K4-2 退役 —— 一个要点开才新鲜的面本身
-//      就是个错的形状，32 号文 §5 记过这笔账）。单位是【任务】：按 missionId 归组、按聚合五态分
-//      五组（等你／在跑／排队／今天收工／更早），单线程任务就是一行、多线程任务折角展开。
-//      行＝3px 色条（色号按任务）＋任务名＋聚合药丸＋来源图形＋速查徽标，第二行只在有话可说时出现。
-//      「看板」密度（440px）多印一行事实：验收 a/b · 线程数 · 只在与全局不同时印权限 —— **不印费用**。
-//   ③ 管家视角的右栏 `#stewardSide`：焦点那一条的内容就是【同一个】线程抽屉以 docked 挂法挂进来
-//      （steward-drawer.js 的 setMount('docked') 把 #stewardDrawer 节点搬进 #stewardFocus）——
-//      不存在第二份抽屉区块渲染。焦点线程由纯函数 focusThreadFor 决定，用户显式选过就钉住。
-//      F3（32 号文 §2.2「线程即频道」）：其余在办的线程按 GET /api/missions 的【服务端行序】
-//      （117s-A 的 D1 已经在 13d 一处按「状态优先、其次 updatedAt」排好）在抽屉的上下叠成小行 ——
-//      焦点行之前的进上面那条 stack，之后的进下面那条，于是抽屉就插在它自己那一格里，右栏行序与
-//      左栏、抽屉页签逐字节同源；本模块【不再排一次】，也【不复制】任何抽屉区块。
-//
-// 不另起判据（§2.3 逐条）：
-//   · 任务聚合态【只读】行上的 `aggregateState`（116g 由 06i 的 aggregateMissionState 单点算出），
-//     本模块不写「任一 needs_you 则…」这类字面判定；分组只是把那个态映到组名（railGroupFor，纯函数）；
-//   · 线程五态经 mission-state.js 的 fromCard（全仓唯一判据，与抽屉逐字节同源）；
-//   · 等待原因只有 `wait.label` 一处（116h 的 waitReasonFor 单点判定），本模块没有第二套等待文案；
-//   · 「在跑时正在调什么」只读行上的 `liveTail`（13e 的叠加层，K2b 让它随推送实时），本模块不拼流；
-//   · 「这条是不是速查」只读行上的 `quick`（K3 的身份格），不读 kind —— 那是档位不是身份；
-//   · 「它从哪来」只读行上的 `origin`（K3 的 threadOriginOf 一处派生）；
-//   · 权限／模型快切经 steward-chips.js 的同一个工厂（紧凑模式），本模块不自己 PATCH 会话。
-//
-// 刷新纪律：本模块恰好一处 setInterval 与一处 clearInterval，唯一入口 syncPolling() 先判
-// 「管家模式 && 页面可见」，任一为否立刻停表。**工作台视角里左栏靠推送与动作刷新**（thread.* 五类
-// 事件经 pushRefreshRows 落地；开／建／改名／删会话由 session-experience 调 renderRail）——
-// 不为一份共用的左栏在工作台视角再开一条后台计时器（§3.4 红线的延伸）。
 
-// 33 号文 §4「轮询常量收进叶子」：下限 5000／容差 250／默认 15000 这三个值原来与 steward-shell /
-// steward-drawer 两处逐字相同，现在只有 steward-chips.js 一个来源。导出的本地名字没改 —— 锁钉的
-// 是值（导出的 STEWARD_BOARD_POLL_MS_MIN 仍是 5000）与 pollTick 的函数体、起表那一处（createPollLifecycle 的 arm）。
 export const STEWARD_BOARD_POLL_MS_MIN = STEWARD_POLL_MS_MIN;
-// 同 steward-drawer.js：setInterval 会比标称早几毫秒回来，不留容差就会整整推迟一拍。
 const POLL_DUE_SLACK_MS = STEWARD_POLL_DUE_SLACK_MS;
 export const STEWARD_BOARD_POLL_MS_DEFAULT = STEWARD_POLL_MS_DEFAULT;
 export const STEWARD_NOW_MIN_WIDTH = 1000;
@@ -1873,6 +1835,7 @@ export function createStewardBoard({
       if (!inFlight(row)) return;   // 121-K6b：「其它【在途】」——收工的不占焦点栏（§2.6）
       (index >= 0 && at < index ? before : after).appendChild(renderNowThread(row));
     });
+    syncPolling();
     return rows.length;
   }
 
@@ -1899,20 +1862,6 @@ export function createStewardBoard({
     return focus ? String(focus.sessionId) : '';
   }
 
-  // 117s-B（用户第九轮走查①「递话给已有线程也不会自动打开线程详情页」／④「给已收工的线程重新
-  // 递话，『它刚说』更新不够及时」——同一个根）：本函数最后一行原来是
-  //   `if (drawer.currentSessionId() !== focusId) drawer.openThread(focusId);`
-  // ——【相等时什么都不做】。管家递话给一条抽屉正开着的线程时，steward:focus-thread 带的正是同一个
-  // id：行刷了、钉子设了、抽屉却原样不动，屏幕上留着「已收工」与上一回合的「它刚说」，要等抽屉
-  // 自己的空闲节拍（config.stewardPollMs，用户真机 15 s）才发现线程又活了。117r-D2 修的是另一半
-  // （「行里还没有它」的新线程），这一半一直没人管。相等分支改成【强刷一次】：refreshOnce 是
-  // 117m-A2 为「右栏已经开着这一条」这种情形留的既有 API，不新起取数路径、不加计时器
-  // （F1 仍然只准本模块一处 setInterval／一处 clearInterval）。
-  //
-  // 为什么用 focusRequest 门着而不是无条件刷：syncNow 还被 refreshBoard 的每一拍、closeNow、
-  // leaveSteward、断点变化各调一次。无条件强刷等于把抽屉的取数频率绑到看板节拍上，而且抽屉那边
-  // refreshOnce 跑完会把节拍闸清零（117s-B 的另一半），于是空闲线程也会被永久按在 5 s 一拍上 ——
-  // 那是另造一个毛病，不是这一条的修法。真正该刷的时刻只有一个：有人【请求聚焦】这条线程。
   function syncNow({ focusRequest = false } = {}) {
     const now = byId('stewardSide');
     if (!now || !drawer) return false;
@@ -2012,6 +1961,7 @@ export function createStewardBoard({
     renderRail();
     syncNow();
     if (changed) { try { onRowsChanged(rows.length); } catch { /* 宿主重画失败不该把看板打回去 */ } }
+    syncPolling();
     return rows.length;
   }
 
@@ -2025,6 +1975,7 @@ export function createStewardBoard({
     // 128f：推送那一路（pushRefreshRows）只走到这里，修前行变了只重画左栏、不告诉宿主 —— 工作台线程头
     // （管家条三句话、面包屑、五态）读的也是这批行，于是它停在上一份上。与 refreshBoard 同一个出口。
     if (changed) { try { onRowsChanged(rows.length); } catch { /* 宿主重画失败不该把看板打回去 */ } }
+    syncPolling();
     return rows.length;
   }
 
@@ -2126,7 +2077,7 @@ export function createStewardBoard({
   function setEventStream(stream) {
     if (!stream || typeof stream.on !== 'function') return false;
     streamConnected = typeof stream.isConnected === 'function' ? stream.isConnected() === true : false;
-    stream.on('connection', payload => { streamConnected = Boolean(payload && payload.connected); });
+    stream.on('connection', payload => { streamConnected = Boolean(payload && payload.connected); syncPolling(); if (isStewardMode() && !doc()?.hidden) void refreshBoard(); });
     stream.on(EVENT_STREAM_INSTANCE_EVENT, () => {
       boardReadGeneration += 1; missionsLoadSeq += 1; arbiterReadSeq += 1; missionsEtag = '';
       serverRefreshPending = true;
@@ -2155,9 +2106,6 @@ export function createStewardBoard({
     return true;
   }
 
-  // 117j W2-5（用户走查④，与抽屉同一条纪律）：表按下限（5s）走，真要不要拉由这一拍自己判 ——
-  // 有线程在跑就每拍都拉（「跑完了」最多 5 秒就出现在看板与「现在这一件」上），空闲时仍按配置节拍。
-  // 不动态换表的理由同抽屉：F1/F3 锁死了本模块只有一处 setInterval 与那一个 syncPolling 形状。
   let lastRefreshAt = 0;
   function anyThreadRunning() {
     return rows.some(row => row && row.activeTurn === true);
@@ -2171,13 +2119,14 @@ export function createStewardBoard({
     await refreshBoard();
   }
 
-  // 幂等启停与门控走 steward-chips.js 的 createPollLifecycle（壳层／抽屉同一份）；起表时不先拉 ——
-  // 首趟由 enterSteward 的 await refreshBoard() 负责。计时器本身仍只在这里起、在这里清。
-  const polling = createPollLifecycle({
+  const polling = createDeadlinePoll({
     shouldRun: () => isStewardMode() && !(doc() && doc().hidden),
-    // 表走下限，节拍由 pollTick 自己按「有没有在跑的线程」判（见那里的头注）。
-    arm: () => setInterval(() => { void pollTick(); }, STEWARD_BOARD_POLL_MS_MIN),
-    disarm: timer => clearInterval(timer),
+    delay: () => {
+      if (streamConnected && !anyThreadRunning()) return Infinity;
+      const due = streamConnected ? STEWARD_POLL_MS_CONNECTED : (anyThreadRunning() ? STEWARD_BOARD_POLL_MS_MIN : pollIntervalMs());
+      return Math.max(1, due - (Date.now() - lastRefreshAt));
+    },
+    tick: pollTick,
   });
   // 唯一入口：还在管家模式 且 页面可见 —— 任一为否立刻停表（零后台活动）。
   // 121-K2b（§6.2）：「看板关着不刷」那道门【删掉】了。它本来的道理是「看不见就别烧请求」，
@@ -2295,6 +2244,7 @@ export function createStewardBoard({
   // 进壳：刷一次行与仲裁面（一次性，不起计时器），状态行随即有真数字，「现在这一件」随即就位。
   async function enterSteward() {
     await refreshBoard();
+    syncPolling();
     syncPolling();
     return rows.length;
   }

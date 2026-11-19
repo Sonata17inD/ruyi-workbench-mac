@@ -33,13 +33,13 @@ function meetsCriteria(text, c, input) {
   try {
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ providers: [provider], activeProvider: provider.id,
       includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, stewardEnabledV1: true, permissionMode: 'acceptEdits', toolLoadingMode: 'full', defaultWorkspace: work, workspaces: [{ path: work }] }));
-    const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'playbookReuseSources', 'draftPlaybookFromSession', 'saveUserPlaybook', 'StewardHooks', 'stewardLaunchingTurns', 'readInterventions']);
+    const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'playbookReuseSources', 'draftPlaybookFromSession', 'saveUserPlaybook', 'StewardHooks', 'stewardLaunchPending', 'readInterventions']);
     const terminal = async run => {
       let session = run.ok ? await s.loadSession(run.sessionId) : null;
       for (let i = 0; run.ok && i < 100 && session?.stewardLastTurn?.seq !== session?.turnSeq; i++) { await new Promise(resolve => setTimeout(resolve, 20)); session = await s.loadSession(run.sessionId); }
       const final = session?.messages?.findLast(m => m.role === 'assistant'), outcome = session?.stewardLastTurn;
       const pending = run.ok ? (await s.readInterventions(run.sessionId)).filter(iv => ['pending', 'applying'].includes(iv.status)).length : 0;
-      const settled = run.ok && !s.stewardLaunchingTurns.has(run.sessionId) && outcome?.seq === session?.turnSeq && outcome.ok === true && outcome.aborted !== true && !outcome.errorClass && !!final?.turnSummary && final.source?.startsWith('provider:') && !!final.content?.trim() && !pending && !(final.toolCalls || []).some(call => call.result?.ok === false || call.error);
+      const settled = run.ok && !s.stewardLaunchPending(run.sessionId) && outcome?.seq === session?.turnSeq && outcome.ok === true && outcome.aborted !== true && !outcome.errorClass && !!final?.turnSummary && final.source?.startsWith('provider:') && !!final.content?.trim() && !pending && !(final.toolCalls || []).some(call => call.result?.ok === false || call.error);
       return { settled, pending, outcome, source: final?.source, final: final?.content, usage: final?.usage };
     };
     const history = await s.createSession({ title: '固定认可历史样本', cwd: work });
@@ -68,7 +68,7 @@ function meetsCriteria(text, c, input) {
       const input = c.name + '.txt', output = c.name + '-report.md', start = Date.now(); fs.writeFileSync(path.join(work, input), c.material);
       const baselineOutput = c.name + '-baseline.md';
       const baseline = await s.StewardHooks.threadNew({ cwd: work, brief: { userText: `请用 file_read 读取 ${input}，汇总预算并用 file_write 写到 ${baselineOutput}。只用这两个文件工具。` } }, ctx);
-      for (let i = 0; i < 900 && s.stewardLaunchingTurns.has(baseline.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 100));
+      for (let i = 0; i < 900 && s.stewardLaunchPending(baseline.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 100));
       const baselineFile = path.join(work, baselineOutput), baselineText = fs.existsSync(baselineFile) ? fs.readFileSync(baselineFile, 'utf8') : '';
       const baselineState = await terminal(baseline); ok(baselineState.settled, c.name + '对照线程真实收尾且无待决/工具失败');
       rows.push({ phase: 'baseline', name: c.name, elapsedMs: Date.now() - start, output: baselineFile, content: baselineText, ...baselineState, passed: baselineState.settled && meetsCriteria(baselineText, c, input) });
@@ -76,7 +76,7 @@ function meetsCriteria(text, c, input) {
       const run = await s.StewardHooks.threadNew({ cwd: work, brief: { userText: '在这份新材料上验证已保存做法，并逐项核对验收规则。仅使用 file_read 读取 UTF-8 材料及 file_write 写报告，不运行命令。', playbook: { id: pb.id, inputs: { material: input, output } } } }, ctx);
       ok(run.ok, c.name + '沿原Playbook线程执行');
       if (!run.ok) continue;
-      for (let i = 0; i < 2400 && s.stewardLaunchingTurns.has(run.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 100));
+      for (let i = 0; i < 2400 && s.stewardLaunchPending(run.sessionId); i++) await new Promise(resolve => setTimeout(resolve, 100));
       const file = path.join(work, output), text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
       const state = await terminal(run); ok(state.settled, c.name + '复用线程真实收尾且无待决/工具失败');
       const passed = state.settled && meetsCriteria(text, c, input);

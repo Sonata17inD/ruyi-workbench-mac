@@ -86,7 +86,7 @@ describe('权限请求等多久:permissionWaitMs', () => {
   it('[W8] 权限挂着 → hasPendingPermissionForSession 为真;清掉之后为假且按拒落定', async () => {
     const psid = 'sess_permwait02';
     assert.strictEqual(srv.hasPendingPermissionForSession(psid), false);
-    const decision = srv.requestNativePermission(psid, 'powershell_run', { command: 'echo hi' }, () => {}, 60000, 'exec');
+    const decision = srv.requestNativePermission(psid, 'shell_run', { command: 'echo hi' }, () => {}, 60000, 'exec');
     assert.strictEqual(srv.hasPendingPermissionForSession(psid), true);
     assert.strictEqual(srv.hasPendingPermissionForSession('sess_someone_else'), false);
     srv.clearPendingPermissions(psid, 'unit test clear');

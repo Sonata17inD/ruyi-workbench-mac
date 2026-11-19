@@ -62,7 +62,6 @@ export function createNavigationControlsDomain({
   toggleUiMode = () => {},
   focusFirstInteractive = () => null,
   loadAgentRoles = async () => {},
-  refreshOverlayStatus = async () => {},
   refreshMcpOps = async () => {},
   updateShellPolling = () => {},
   loadFileTree = async () => {},
@@ -705,7 +704,19 @@ function buildCapabilityPopoverContent() {
   const dm = caps.desktopMcp || {};
   wrap.appendChild(item(t(macShared ? 'capability.sharedMcp' : 'capability.desktopMcp'), dm.present ? tCount('capability.connected', dm.toolCount || 0) : t('capability.notConnected'), dm.present ? 'ok' : 'muted'));
   if (macShared) {
-    wrap.appendChild(item(t('capability.desktopControl'), t('capability.macDesktopUnsupported'), 'muted'));
+    for (const [key, label] of [['capture', 'capability.capture'], ['input', 'capability.input'],
+      ['accessibility', 'capability.accessibility'], ['ocr', 'capability.localOcr'], ['screenOcr', 'capability.screenOcr']]) {
+      const capability = dm[key];
+      const unknown = _capFailed || !capability || capability.ready == null;
+      const value = _capPending ? 'capability.checking' : unknown ? 'capability.network.unknown'
+        : capability.ready ? 'capability.available' : capability.installed === false ? 'capability.missing'
+          : capability.reasonCode === 'session_locked' ? 'capability.sessionLocked'
+            : capability.reasonCode === 'permission_denied' ? 'capability.permissionDenied' : 'capability.unavailable';
+      const row = item(t(label), t(value), !_capPending && !unknown && capability.ready ? 'ok' : 'muted');
+      row.dataset.capability = key;
+      row.dataset.reasonCode = capability?.reasonCode || '';
+      wrap.appendChild(row);
+    }
     const browser = dm.browser || {};
     const ready = !_capPending && !_capFailed && browser.ready === true;
     const value = _capPending ? 'capability.checking' : _capFailed ? 'capability.network.unknown'
@@ -988,7 +999,6 @@ function switchSettingsTab(name, force) {
   if (name === 'storage') openStorageTab();   // 2026-10：占用／清理／保留策略从体检页搬到「存储与数据」
   // 技能与模板页的三段是 open() 首次拉到数据后才挂上的 —— 挂完再重建一次锚点条，首次进页也有段内跳转。
   if (name === 'skills') Promise.resolve(openSettingsSkills()).then(() => { if (state._settingsTab === 'skills') buildSettingsJumpList('stab-skills'); }).catch(() => {});
-  if (name === 'update') refreshOverlayStatus();
   if (name === 'integrations') refreshMcpOps(false); // 55c:打开页签先取清单(不 probe);「全部重测」按钮才 probe=1。W6:连接器清单并进了「集成与 MCP」
 }
 

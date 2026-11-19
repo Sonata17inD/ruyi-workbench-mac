@@ -409,16 +409,16 @@ try {
   //   G1 行为:thread.live 的 textTail 取自 reg.liveTail.text,而旁路订阅者是在 appendLiveTail
   //      【更新完尾巴之后】才被调的 —— 收到的帧里尾巴非空、且就是模型这一回合说的话,
   //      说明旁路看见的是引擎那一步的结果,不是它之前的空壳。旁路要是排在前面,textTail 恒为空。
-  //   G2 静态:04 的 installActiveChildEventFanout 里,engineSubscriber( 必须出现在
+  //   G2 静态:installActiveChildEventFanout 里,engineSubscriber( 必须出现在
   //      notifyActiveChildTaps( 之前(顺序即「谁先收到」)。
   const liveWithText = liveSoFar.find(f => String(f.data.textTail || '').length > 0);
   ok(Boolean(liveWithText && liveWithText.data.textTail.includes('我在看这件事')),
     `G1 thread.live 的 textTail 是引擎这一步刚写进 liveTail 的话(实得 ${JSON.stringify(liveWithText && liveWithText.data.textTail.slice(-24))})`);
-  const src04 = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '04-permission-runtime.js'), 'utf8');
-  const fanout = src04.slice(src04.indexOf('function installActiveChildEventFanout('));
+  const liveEvents = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'active-child-events.cjs'), 'utf8');
+  const fanout = liveEvents.slice(liveEvents.indexOf('function installActiveChildEventFanout('));
   const iEngine = fanout.indexOf('engineSubscriber(evt)');
   const iTaps = fanout.indexOf('notifyActiveChildTaps(reg, evt)');
-  ok(iEngine > 0 && iTaps > iEngine, `G2 04 的扇出里引擎订阅者排在旁路【之前】(engineSubscriber@${iEngine} < taps@${iTaps})`);
+  ok(iEngine > 0 && iTaps > iEngine, `G2 扇出里引擎订阅者排在旁路【之前】(engineSubscriber@${iEngine} < taps@${iTaps})`);
 
   /* ═════════ H3 会话头落盘:看得见的变了才推(128f-⑫)═════════ */
   // 会话头每落一次盘(02 saveSession)都会「碰」一下推送层,可只有这一行看得见的东西变了才真推 —— 回合里 saveSession

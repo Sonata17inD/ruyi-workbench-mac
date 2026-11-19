@@ -1,3 +1,0 @@
-SKIP opt-in real capture/window transition
-
-MACOS CAPTURE TRANSITION E2E: ALL PASS

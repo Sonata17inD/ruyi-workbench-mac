@@ -23,7 +23,8 @@ after(() => {
 });
 const REPO = process.env.RUYI_REVIEW_REPO || path.resolve(__dirname, '../..');
 const SERVER = path.join(REPO, 'ruyi-workbench/app/server.js');
-const CANDIDATE = process.env.RUYI_TEST_SERVER_JS || SERVER;
+const { resolveRuntimeComposition } = require('../src-reader');
+const CANDIDATE = resolveRuntimeComposition(process.env.RUYI_TEST_SERVER_JS || SERVER);
 const TEMP = path.resolve(os.tmpdir());
 const PASSWORD = 'synthetic-missing-config-recovery-password';
 const SECRET = 'SYNTHETIC-MISSING-CONFIG-CREDENTIAL';
@@ -43,11 +44,20 @@ function setup(t, seed = initial(true)) {
   function load() {
     const mod = new Module(SERVER, module); mod.filename = SERVER;
     mod.paths = Module._nodeModulePaths(path.dirname(SERVER));
-    mod._compile(fs.readFileSync(CANDIDATE, 'utf8') + '\n;module.exports.__review = { CredentialVault, PrivacyCore, PrivacyGateway, readConfig, mutateConfig, handleApi, __eval: code => eval(code) };', SERVER);
+    const source = fs.readFileSync(CANDIDATE, 'utf8');
+    const probeStubs = 'detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";'
+      + 'desktopMcpDetectionPending=()=>true;probeRgAsync=async()=>null;';
+    const syntheticHealth = 'async()=>({health:{},manifest:{}})';
+    const statusComposition = "const handleStatusApiRoutes = require('./backend/status-routes.cjs')";
+    const healthPort = 'computeHealth, getCapabilities, probeRgAsync,';
+    const statusStart = source.indexOf(statusComposition);
+    const fixtureSource = statusStart < 0 ? source : source.slice(0, statusStart) + probeStubs + '\n'
+      + source.slice(statusStart).replace(healthPort, 'computeHealth: ' + syntheticHealth + ', getCapabilities, probeRgAsync,');
+    if (statusStart >= 0) assert.ok(fixtureSource.includes('computeHealth: ' + syntheticHealth));
+    mod._compile(fixtureSource + '\n;module.exports.__review = { CredentialVault, PrivacyCore, PrivacyGateway, readConfig, mutateConfig, handleApi, __eval: code => eval(code) };', SERVER);
     const app = mod.exports.__review;
-    app.__eval('detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";resolveClaudeLauncher=value=>value;RUNTIME.token="synthetic-missing-config-token";'
-      + 'desktopMcpDetectionPending=()=>true;computeHealth=async()=>({health:{},manifest:{}});'
-      + 'agentConversationContextMeta=async()=>({contextWindow:4096,contextWindowSource:"fixture",contextAgentCliType:"claude"});probeRgAsync=async()=>null;');
+    if (statusStart < 0) app.__eval(probeStubs + 'computeHealth=' + syntheticHealth + ';');
+    app.__eval('RUNTIME.token="synthetic-missing-config-token";');
     let wraps = 0;
     const vault = app.CredentialVault.create({ core: app.PrivacyCore,
       size: async () => fs.existsSync(vaultFile) ? fs.statSync(vaultFile).size : 0,
@@ -65,7 +75,11 @@ function setup(t, seed = initial(true)) {
       const req = Readable.from(value === undefined ? [] : [Buffer.from(JSON.stringify(value))]);
       Object.assign(req, { method, url: route, headers: { host: '127.0.0.1', 'x-wcw-token': 'synthetic-missing-config-token' }, socket: { remoteAddress: '127.0.0.1' } });
       let status, body;
-      const res = { writeHead(code) { status = code; }, end(value) { body = JSON.parse(value); } };
+      const res = {
+        writableEnded: false,
+        writeHead(code) { assert.equal(this.writableEnded, false); status = code; },
+        end(value) { body = JSON.parse(value); this.writableEnded = true; },
+      };
       await app.handleApi(req, res, route);
       return { status, body };
     };
@@ -189,6 +203,7 @@ test('an unknown previous config respects a newer committed plaintext snapshot i
   assert.equal(cfg.privacyPolicyRecoveryRequiredV1, true); assert.equal(f.hash(), hash); await readable(f); await paused(f.app);
 });
 test('recovery choice matrix prioritizes real refs, real boolean choices, committed snapshots and conservative existing-vault protection', t => {
+  const { configRecoveryCredentialChoice } = require('../../ruyi-workbench/app/backend/config-store.cjs');
   const f = setup(t, null);
   const unknown = [[null, false, true], [true, false, true]];
   const shapes = [
@@ -205,7 +220,7 @@ test('recovery choice matrix prioritizes real refs, real boolean choices, commit
   let cases = 0;
   for (const shape of shapes) for (const [vaultIndex, nonempty] of [false, true].entries()) {
     for (const [snapshotIndex, snapshot] of [null, false, true].entries()) {
-      const actual = f.app.__eval('configRecoveryCredentialChoice(' + JSON.stringify(shape.raw) + ',' + JSON.stringify(snapshot) + ',' + nonempty + ')');
+      const actual = configRecoveryCredentialChoice(shape.raw, snapshot, nonempty);
       assert.equal(actual, shape.expected[vaultIndex][snapshotIndex], shape.source + '/vault=' + nonempty + '/snapshot=' + snapshot); cases++;
     }
   }

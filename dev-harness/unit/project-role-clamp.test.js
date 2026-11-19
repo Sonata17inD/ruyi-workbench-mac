@@ -40,14 +40,7 @@ const { loadServerInternals } = require('../lib/server-internals');
 const { startFakeProvider, toolCallFrames, textFrames } = require('../lib/fake-openai-provider');
 
 const BASE = ['runSubAgentCore', 'runClaudeSubAgentOnce', 'readConfig', 'activeOpenAiProvider', 'getAgentRoleLibrary', 'buildClaudeAgentDefinitions'];
-const NEW = ['clampAgentRoleToParent', 'annotateAgentRoleEffective', 'agentRoleIsUntrusted'];
-let I;
-try { I = loadServerInternals([...BASE, ...NEW]); }
-catch (e) {
-  if (!(e instanceof ReferenceError)) throw e;   // 反向验证:修前没有夹紧符号 → 退回基础名单,[A] 的纯函数断言红
-  I = loadServerInternals(BASE);
-  I.clampAgentRoleToParent = () => ({ permissionMode: '', toolTier: 'read', clamped: null }); I.annotateAgentRoleEffective = r => r; I.agentRoleIsUntrusted = () => false;
-}
+const I = { ...loadServerInternals(BASE), ...require('../../ruyi-workbench/app/backend/agent-role-policy.cjs') };
 
 let fake;
 let marker;

@@ -6,7 +6,9 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-trash-unit-'));
 process.env.RUYI_HOME = path.join(root, 'data'); fs.mkdirSync(process.env.RUYI_HOME);
 delete process.env.RUYI_MIGRATION_RECYCLE_STUB_DIR;
 const { loadServerInternals } = require('../lib/server-internals');
-const S = loadServerInternals(['MigrationTrashHooks', 'migrationSendToRecycleBin', 'migrationTrashTarget', 'migrationRecycle', 'migrationRememberPackages', 'mutateConfig'], { testPlatform: 'darwin', withEval: true });
+const { MigrationCenter: S, mutateConfig, process: fixtureProcess } = loadServerInternals(
+  ['MigrationCenter', 'mutateConfig', 'process'], { testPlatform: 'darwin' },
+);
 const target = path.join(root, '旧包 空格😀;$(touch should-not-exist)');
 test('Mac Trash uses one literal path argument and requires confirmed native success', async () => {
   fs.mkdirSync(target); const trashedPath = path.join(root, 'moved');
@@ -56,13 +58,20 @@ test('physical App aliases cannot bypass references or running registry entries'
     desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [{ id: 'retained', command: path.join(app, 'Contents/MacOS/RuyiDesktop') }] }));
   await S.migrationRememberPackages([wb, aliasWb]);
   let invoked = 0; S.MigrationTrashHooks.run = async () => { invoked++; throw new Error('must not move referenced/running App'); };
-  const referenced = await S.migrationRecycle({ root: aliasWb, confirm: aliasWb });
+  const referenced = await S.recycle({ root: aliasWb, confirm: aliasWb });
   assert.equal(referenced.error, 'referenced'); assert.equal(invoked, 0); assert.ok(fs.existsSync(app));
-  await S.mutateConfig(config => { config.externalMcpServers = []; });
+  await mutateConfig(config => { config.externalMcpServers = []; });
   const regFile = path.join(process.env.RUYI_HOME, 'install-registry.json'), reg = JSON.parse(fs.readFileSync(regFile, 'utf8'));
   reg.packages.find(p => p.packageRoot === wb).pid = 123456789;
-  fs.writeFileSync(regFile, JSON.stringify(reg)); S.__eval('migrationPidAlive = pid => pid === 123456789');
-  assert.equal((await S.migrationRecycle({ root: aliasWb, confirm: aliasWb })).error, 'running'); assert.equal(invoked, 0);
+  fs.writeFileSync(regFile, JSON.stringify(reg));
+  const kill = fixtureProcess.kill;
+  try {
+    fixtureProcess.kill = (pid, signal) => pid === 123456789 && signal === 0 ? true : kill(pid, signal);
+    assert.equal((await S.recycle({ root: aliasWb, confirm: aliasWb })).error, 'running');
+    assert.equal(invoked, 0);
+  } finally {
+    fixtureProcess.kill = kill;
+  }
   fs.unlinkSync(alias); // remove the test-owned recursive ancestor alias before fixture teardown
 });
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));

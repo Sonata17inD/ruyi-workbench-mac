@@ -170,12 +170,12 @@ const canonPath = p => path.resolve(String(p || '')).toLowerCase();
 const tableRows = () => (Array.isArray(configOnDisk().stewardManagedWorkspaces) ? configOnDisk().stewardManagedWorkspaces : []);
 const favRows = () => (Array.isArray(configOnDisk().workspaces) ? configOnDisk().workspaces : []);
 const inTable = p => tableRows().some(row => row && canonPath(row.path) === canonPath(p));
-// 仲裁器的锁键口径(13n stewardArbiterCwdKey:resolve → realpath → win32 折小写 → sha1 前 12 位)。这里照算一遍只为
+// 仲裁器的锁键口径(stewardArbiterCwdKey: resolve → realpath → sha1 前 12 位)。这里照算一遍只为
 // 把「两条线程的键不一样」打印成人能对的两个值;判据本身同时看 arbiterWait(真仲裁器)与回合先后。
 const cwdKeyOf = p => {
   let abs = path.resolve(String(p || ''));
   try { abs = fs.realpathSync.native(abs); } catch { /* 目录不在:用 resolve 结果 */ }
-  return require('crypto').createHash('sha1').update(process.platform === 'win32' ? abs.toLowerCase() : abs).digest('hex').slice(0, 12);
+  return require('crypto').createHash('sha1').update(abs).digest('hex').slice(0, 12);
 };
 const taskOnDisk = id => tasksOnDisk().find(t => t.id === id) || null;
 // 这条任务每次触发开的线程 id(fires 里 dispatched 那一行带 sessionId),按 seq 升序。

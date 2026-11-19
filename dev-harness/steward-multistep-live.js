@@ -16,7 +16,7 @@ const home = path.join(root, 'home'), work = path.join(root, 'work'); fs.mkdirSy
 process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ providers: [provider], activeProvider: provider.id, stewardProviderId: provider.id, stewardModel: provider.model,
   includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, stewardEnabledV1: true, permissionMode: 'acceptEdits', subagentMaxPerTurn: 4, defaultWorkspace: work, workspaces: [{ path: work }] }));
-const s = loadServerInternals(['runStewardTurn', 'listSessions', 'listAgentRuns', 'stewardLaunchingTurns', 'loadSession']);
+const s = loadServerInternals(['runStewardTurn', 'listSessions', 'listAgentRuns', 'stewardLaunchPending', 'loadSession']);
 const rows = [];
 function cleanup() {
   for (const name of ['config.json', 'config.json.prev']) {
@@ -40,7 +40,7 @@ function cleanup() {
       ok(created.length === 1, c.title + '真实模型只创建一个协调线程');
       const sid = created[0]?.id;
       if (!sid) { rows.push({ title: c.title, say: reply.say, created: created.length }); continue; }
-      for (let i = 0; i < 2400 && s.stewardLaunchingTurns.has(sid); i++) await new Promise(resolve => setTimeout(resolve, 100));
+      for (let i = 0; i < 2400 && s.stewardLaunchPending(sid); i++) await new Promise(resolve => setTimeout(resolve, 100));
       const runs = await s.listAgentRuns(sid), run = runs[0], session = await s.loadSession(sid);
       const file = path.join(dir, c.output), text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
       const evidence = text.includes('LIVE_EVIDENCE_7842') && (c.dir !== 'summary' || text.includes('200')) && (c.dir !== 'compare' || /A|Ａ/.test(text) && /B|Ｂ/.test(text) && text.includes('成本') && text.includes('时效')) && (c.dir !== 'organize' || ['预算', '时效', '结论'].every(word => text.includes(word)));

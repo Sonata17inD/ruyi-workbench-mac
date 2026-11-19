@@ -1,27 +1,24 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-const { shellTool, writeFile, echo } = require('./lib/platform-shell-fixture');
+const { writeFile, echo } = require('./lib/platform-shell-fixture');
 (async () => {
 'use strict';
 // E2E(127 波 2-bis · 45 号文 §2-bis):永久豁免把 shell_send 误判成「对外发送」—— 真夹具。
 //
 // 用户真机:「A 股盘中巡检」线程(全自动、原生引擎)每一步 shell_send 都卡在放行上 —— 工具名判据
 // STEWARD_EXEMPT_TOOL_PATTERNS 是裸子串正则,shell_send 只因为名字里有 send 就进了永久豁免;而同族的
-// powershell_run/run_command 不命中名字,走的是命令文本扫描。方向是反的。
+// shell_run/run_command 不命中名字,走的是命令文本扫描。
 //
 // 本件先证【前提】(派单稿第 2 处):命令文本扫描确实拿得到 shell_send 的 input —— 两条真实路径各验一遍:
 //   (H) 原生引擎回合路径(09 gateWithLiveMode → 07 nativeToolGate):真服务 + 进程内 fake provider,
-//       线程切全自动,模型真的发 shell_start / shell_send,PowerShell 会话真的起、命令真的跑;
+//       线程切全自动,模型发 shell_start / shell_send,托管 Bash 会话启动并执行命令;
 //   (P) 管家代答路径(13l stewardImplDecide,exec 档把 current.input 交给判据):用 (H) 里【真回合】
 //       留下的那条 pending 权限待决(不是手搓的行),停服后进程内直调 steward_decide。
 // 然后是 2-bis 的四条判据:
-//   ① shell_send / keyboard_send_keys 输入无害时,全自动档不再恒「要人按」(真回合里不弹权限且命令真跑了);
+//   ① shell_send 输入无害时,全自动档不弹权限且命令真跑了;
 //   ② 同一个 shell_send,input 里带 rm -rf 时仍然拦下(原生:弹权限;管家:propose_required + exemptBy:'command_text');
 //   ③ 真正对外发送的工具名(send_email/slack_send/send_message/mcp__x__send_message/post_message…)在
 //      五个权限档 × 三个 tier 下恒 propose_required(exemptBy:'tool_name');精确名出口不被前缀/大小写变体借走;
 //   ④ 命中内容判据时 message 带类别人话(删数据/改系统/装卸载/对外发送/推送远端),details 带 exemptCategory 机器键。
-//
-// keyboard_send_keys【不跑真回合】:放行的那一支会把按键真的敲进本机前台窗口(跑回归的人正在用的那个)。
-// 它只在进程内走 steward_decide 与判据本身 —— 这两处不执行工具。
 //
 // 端口全部 getFreePort()。判定行:`STEWARD EXEMPT SHELL_SEND E2E: ALL PASS`。
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
@@ -140,7 +137,7 @@ const markerD = path.join(HOME, 'captured-ran.txt');
 try {
   /* ══════════════════════ (H) 原生引擎真回合 ══════════════════════ */
   console.log('── (H) 原生引擎回合路径(真服务) ──');
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let up = null; for (let i = 0; i < 200 && !up; i++) { await sleep(150); up = await health(WB_PORT); }
@@ -150,9 +147,7 @@ try {
   const set = await reqJson('PATCH', '/api/sessions/' + A, { permissionMode: 'auto', confirm: true });
   ok(set.status === 200 && set.json && set.json.sessionMeta && set.json.sessionMeta.permissionMode === 'auto', 'H01 线程切到全自动(与用户真机那条同档)');
 
-  // 注(2026-10 net-exec 第二轮):没有 powershell.exe 的环境(Linux 云端)里 shell_start 现在回 ok:false/windows_only(此前是死会话 ok:true),
-  // H0 在 Linux 上因此红 —— 有意的行为变更,Windows CI 照旧起真会话。
-  // H0 起一个真 PowerShell 会话(shell_start 名字不命中任何判据,全自动档本来就不问)。
+  // H0 启动托管 Bash 会话。
   {
     nextTool = { name: 'shell_start', args: { shellId: SHELL_ID, cwd: HOME } };
     const ev = await runTurn({ sessionId: A, message: '起一个 shell', cwd: HOME }, denyOnAsk);
@@ -163,17 +158,17 @@ try {
 
   // H1 判据 ①:无害的 shell_send 在全自动档不再「要人按」,而且命令真的跑了。
   {
-    nextTool = { name: 'shell_send', args: { shellId: SHELL_ID, input: (process.platform === 'win32' ? 'Get-ChildItem -Name; ' : 'ls -1; ') + writeFile(markerA) + '; ' + echo('HARMLESS_DONE'), timeoutMs: 20000 } };
+    nextTool = { name: 'shell_send', args: { shellId: SHELL_ID, input: 'ls -1; ' + writeFile(markerA) + '; ' + echo('HARMLESS_DONE'), timeoutMs: 20000 } };
     const ev = await runTurn({ sessionId: A, message: '列一下目录', cwd: HOME }, denyOnAsk);
     const asks = permissionAsks(ev);
     ok(asks.length === 0, `H1 ① 全自动 + shell_send 无害输入 → 不弹权限(实得 ${asks.length} 次` + (asks.length ? `,toolName=${asks[0].toolName}` : '') + ')');
     const ran = await waitFor(() => fs.existsSync(markerA), 15000);
     const r = toolResults(ev)[0];
     ok(!!ran && r && r.content && r.content.ok === true && String(r.content.output || '').includes('HARMLESS_DONE'),
-      `H1 ① 而且命令真的在那个 PowerShell 会话里跑了(标记文件=${!!ran},输出含 HARMLESS_DONE=${String(r && r.content && r.content.output || '').includes('HARMLESS_DONE')})`);
+      `H1 ① 命令确实在托管 Bash 会话里运行(标记文件=${!!ran},输出含 HARMLESS_DONE=${String(r && r.content && r.content.output || '').includes('HARMLESS_DONE')})`);
   }
 
-  // H2 判据 ②:同一个 shell_send,input 里带 rm -rf(PowerShell 注释里,真跑也不删东西)→ 仍然弹权限。
+  // H2 判据 ②:同一个 shell_send 的 Bash 注释带 rm -rf → 仍然弹权限。
   //   放行了就会写出 markerB —— 所以「没被拦住」在磁盘上看得见,不只看事件。
   {
     const input = writeFile(markerB) + ' # rm -rf C:\\somewhere';
@@ -262,41 +257,21 @@ try {
   // P2 判据 ①(管家侧):同一条真行的形状,只把命令换成无害的 —— 不再以永久豁免拒。
   {
     const base = ivRows(A).filter(x => x.id === capturedRequestId).pop() || { toolName: 'shell_send', tier: 'exec', input: { shellId: SHELL_ID, timeoutMs: 20000 } };
-    putIv(A, 'iv_bis_harmless', { toolName: base.toolName, tier: base.tier, revertible: false, input: { ...base.input, input: 'Get-ChildItem -Name' } });
+    putIv(A, 'iv_bis_harmless', { toolName: base.toolName, tier: base.tier, revertible: false, input: { ...base.input, input: 'ls -1' } });
     const r = await decide(A, 'iv_bis_harmless');
     ok(!(r && r.reason === 'permanently_exempt'), `P2 ① 全自动线程 + shell_send 无害输入 → 管家不再以永久豁免拒(实得 ${brief(r)})`);
   }
 
-  // P3 用户 2026-09-17 拍板:keyboard_send_keys 也放出来。无害按键不再恒豁免;按键里敲的是命中内容判据的命令照样拦。
-  //   {ENTER} 这类 SendKeys 记号贴在词尾时,\b 仍然成立(`}`/`{` 不是单词字符)—— 下面两条就是实测。
-  {
-    const cases = [
-      ['iv_kb_plain', 'Hello{ENTER}', null],
-      ['iv_kb_push', 'git push origin main{ENTER}', 'push_remote'],
-      ['iv_kb_push_tight', 'git push{ENTER}', 'push_remote'],
-      ['iv_kb_rm', 'rm -rf C:\\x{ENTER}', 'delete_data'],
-    ];
-    for (const [id, keys] of cases) putIv(A, id, { toolName: 'keyboard_send_keys', tier: 'exec', revertible: false, input: { keys } });
-    for (const [id, keys, category] of cases) {
-      const r = await decide(A, id);
-      if (category === null) {
-        ok(!(r && r.reason === 'permanently_exempt'), `P3 ① keyboard_send_keys{keys:${JSON.stringify(keys)}} → 不再以永久豁免拒(实得 ${brief(r)})`);
-      } else {
-        ok(r && r.error === 'propose_required' && r.reason === 'permanently_exempt' && r.exemptBy === 'command_text' && r.exemptCategory === category,
-          `P3 ② keyboard_send_keys{keys:${JSON.stringify(keys)}} → 仍拦,exemptBy:'command_text'、类别 ${category}(实得 ${brief(r)})`);
-      }
-    }
-  }
-
   // P4 判据 ③:真正对外发送的工具名在【五个权限档 × 三个 tier】下恒 propose_required(tool_name)。
   //   同时钉住精确名出口不被借走:前缀形态、大小写变体、「名字里含 shell_send」的外部工具一律仍按名字拦。
+  //   老会话中退役的 keyboard_send_keys 待决也走同一个名字闸。
   {
     const MODES = ['default', 'acceptEdits', 'auto', 'bypass', 'plan'];
     const TIERS = ['read', 'edit', 'exec'];
     const NAMES = [
       'send_email', 'slack_send', 'send_message', 'mcp__x__send_message', 'post_message', 'sms_send', 'pay_invoice', 'mcp_configure',
       'mcp__ruyi__shell_send', 'mcp__x__shell_send', 'x__shell_send', 'Shell_Send', 'shell_send_email',
-      'mcp__ruyi__keyboard_send_keys', 'Keyboard_Send_Keys',
+      'keyboard_send_keys', 'mcp__ruyi__keyboard_send_keys', 'Keyboard_Send_Keys',
     ];
     const missed = [];
     let n = 0;

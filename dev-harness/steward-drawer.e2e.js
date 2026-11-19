@@ -53,11 +53,7 @@ const A_FIRST3 = '我先看了一眼报表。三个区的数字都对上了。�
 // 【同一条助手消息】（09-workflow 每回合只 push 一条，segments 记 text -> tool -> text 的次序），
 // 所以这条线程正是「content 里既有过程叙述又有交付」的真夹具 —— 它刚说该只显示这一句。
 const D_DELIVERED = '知道了，就按这个来。';
-const POLL_MS = 120000;   // 配置的节拍拉满：测试窗口内不会真的去拉，计时器只按周期数个数
-// 117j W2-5：表按 5s 下限起（见 steward-drawer.js pollSlice 头注），所以数计时器要按这个周期。
-// 表虽然每 5 秒响一次，但 pollSlice 第一件事就是「离上次拉够 120000ms 了吗」——不够就原地返回，
-// 测试窗口内一个请求都不会多发，断言仍然是确定的。
-const TICK_MS = 5000;
+const POLL_MS = 120000; // 断连补偿期限拉长，抽屉交互在测试窗口内由实际操作与推送驱动。
 
 // ── 117x-M2 收口（27 号文 §11.17.8 第一行登记的债）：模型选择器的【真浏览器】夹具 ───────────
 // M2 的单测（dev-harness/unit/steward-model-menu.test.js）是驱动真工厂跑的，判据有覆盖；没覆盖的
@@ -527,6 +523,7 @@ try {
   browser = cp.spawn(executable, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
+    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
   ], { windowsHide: true, stdio: 'ignore' });
@@ -544,19 +541,22 @@ try {
       const nativeClear = window.clearInterval;
       window.setInterval = function (handler, delay, ...rest) {
         const id = nativeSet.call(window, handler, delay, ...rest);
-        live.set(id, Number(delay) || 0);
+        if (/steward-(?:drawer|avatar|board)\\.js/.test(new Error().stack || '')) live.set(id, Number(delay) || 0);
         return id;
       };
       window.clearInterval = function (id) { live.delete(id); return nativeClear.call(window, id); };
       window.__ruyiLiveIntervals = () => [...live.values()];
     })();`,
   });
-  // addScriptToEvaluateOnNewDocument 只作用于【新文档】：连上 CDP 时页面已经加载完了，必须刷一次
-  // 才装得上计时器探针。
-  await cdp.evaluate('location.reload(); true');
-  await waitForEval(cdp, READY);
-  ok(Boolean(await waitForEval(cdp, 'Array.isArray(window.__ruyiLiveIntervals && window.__ruyiLiveIntervals()) ? 1 : null')),
-    'A10 计时器探针已装上');
+  // 显式导航会创建安装探针的新文档，即使首次打开的标签页还没完成加载。
+  const navigation = await cdp.send('Page.navigate', { url: appUrl });
+  if (navigation.errorText) throw new Error(`workbench navigation failed: ${navigation.errorText}`);
+  const ready = await waitForEval(cdp, `(${READY}) && typeof window.__ruyiLiveIntervals === 'function'`);
+  ok(Boolean(ready), 'A10 工作台就绪，计时器探针已装上');
+  if (!ready) {
+    const state = await cdp.evaluate('({ url: location.href, title: document.title, ready: document.readyState, hasShellMode: Boolean(document.getElementById("cfgShellMode")) })');
+    throw new Error('workbench page did not finish booting: ' + JSON.stringify(state));
+  }
 
   // ── ① 进管家壳 → 派发 steward:open-thread(A) ────────────────────────────────
   await cdp.evaluate(`(() => {
@@ -662,22 +662,9 @@ try {
   ok(chA && chA.isDefault === true && chA.painted === true && chA.valuesPainted === 0 && chA.keysPainted === 3
     && openedA.chipValues[0] === zh['stewardShell.chips.followGlobal'],
     `B14b 跟随全局时详情栏【不印默认值但留着控件】（实测 is-default=${chA && chA.isDefault} 行画出来=${chA && chA.painted} 值画出来=${chA && chA.valuesPainted} 键画出来=${chA && chA.keysPainted}），值仍读得出「${openedA.chipValues[0]}」`);
-  // 117j W2-5：三个管家计时器统一按 5s 下限起表（真要不要拉由每一拍自己判），
-  // 所以「这是管家的计时器」的身份判据从 POLL_MS 重钉到 TICK_MS —— 不改的话本断言恒真、形同虚设。
-  // 121-K2b（34 号文 §6.2）重钉：「看板关着不刷」那道门删掉之后，看板那张表在【管家视角里
-  // 一直在跑】（节拍由 pollTick 判：连接正常 30 s、断开回到今天那两档）。所以数得出来的
-  // TICK_MS ms 表多了一张 —— 被钉的那件事一个字没变：每个模块仍然只有一张表、切离管家视角一张不剩
-  // （G1/H1 那一条）。反向验证：把 isBoardOpen() && 加回 steward-board.js 的 syncPolling → 本条真红。
-  // 128f（b0f4b63 之后负载 6×1 里 1/6 绿；拿掉 b0f4b63 看板的三处改动任一处都只回到 3–5/6，不是哪一处坏了）：看板那张表在
-  // enterSteward 的【首趟 refreshBoard 落地之后】才起（steward-board.js enterSteward：await refreshBoard(); syncPolling();），
-  // 而 openedA 是「抽屉把 A 填满」那一刻 —— 两件事之间没有先后保证，b0f4b63 让首趟取行多等一发（在场回执那一发、
-  // 被取代的等最后一发）就把这个没钉住的先后翻了过来。本条要钉的是「每个模块一张表、看板那张在管家视角里常驻」，
-  // 不是「看板比抽屉先起表」：等它起（有上限），数目仍然必须【恰好】3 —— 起不来、多起一张都照样红。
-  const intervalsNow = await waitForEval(cdp, `(() => { const l = window.__ruyiLiveIntervals ? window.__ruyiLiveIntervals() : [];
-    return l.filter(ms => ms === ${TICK_MS}).length >= 3 ? l : null; })()`, 125)
-    || await cdp.evaluate('window.__ruyiLiveIntervals ? window.__ruyiLiveIntervals() : []');
-  ok(intervalsNow.filter(ms => ms === TICK_MS).length === 3,
-    `B15 抽屉、avatar、看板各一张表（121-K2b 之前看板那张要等点开才起；A 填满那一刻 ${JSON.stringify(openedA.intervals)}，等表起齐 ${JSON.stringify(intervalsNow)}）`);
+  // 三处改用一次性期限调度，记录来源便于区分页面其他组件的 interval。
+  const intervalsNow = await cdp.evaluate('window.__ruyiLiveIntervals()');
+  ok(intervalsNow.length === 0, `B15 抽屉打开时，抽屉、avatar、看板均无固定轮询（实测 ${JSON.stringify(intervalsNow)}）`);
 
   // ── ⑤ 权限 chip 切「改文件不问」 ────────────────────────────────────────────
   await cdp.evaluate(`document.querySelector('#stewardDrawerChips [data-chip="permission"]').click(), true`);
@@ -1417,10 +1404,8 @@ try {
   })()`);
   ok(Boolean(closed), 'F1 窄屏（<1000px，§7.3 那一档）右栏让位：抽屉回覆盖式并收起');
   ok(closed && closed.shellDrawer === '', 'F1b 关闭后管家壳不再让出右栏');
-  // 121-K2b 重钉：剩下的是 avatar 与看板两张（后者自此在管家视角里常驻，见 B15 的注）。
-  // 被钉的那件事一个字没变：**抽屉自己那张表关抽屉即停** —— 三张变两张，差的就是它。
-  ok(closed && closed.intervals.filter(ms => ms === TICK_MS).length === 2,
-    `F2 关抽屉即停表，只剩 avatar 与看板那两张（实测 ${closed && JSON.stringify(closed.intervals)}）`);
+  ok(closed && closed.intervals.length === 0,
+    `F2 收起抽屉后管家三处均无固定轮询（实测 ${closed && JSON.stringify(closed.intervals)}）`);
   // Esc 在覆盖式那一档仍然是关它的那一记（这里它已经关着，钉的是「再按一下不会把它弄开」）。
   await cdp.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`);
   await sleep(200);
@@ -1439,7 +1424,7 @@ try {
     const snapshot = ${DRAWER};
     return document.documentElement.getAttribute('data-shell-mode') === 'classic' ? snapshot : null;
   })()`);
-  ok(Boolean(classic) && classic.intervals.filter(ms => ms === TICK_MS).length === 0,
+  ok(Boolean(classic) && classic.intervals.length === 0,
     `G1 切回经典壳后管家侧零残留定时器（实测 ${classic && JSON.stringify(classic.intervals)}）`);
   ok(Boolean(classic) && classic.hidden === true, 'G2 抽屉在经典壳里保持关闭');
 } catch (error) {

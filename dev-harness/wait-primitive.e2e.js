@@ -1,17 +1,15 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
 // E2E: 第28e波「wait_for 等待原语」(AUTONOMY-PLAN §28e)。端口 WB 9118(已登记)。
-// [P] 纯逻辑源抽取:normalizeWaitSpec(clamp/校验)+ evalWaitCondition(timer/file/process/url 四模式,注入护栏桩)。
+// [P] 纯逻辑:normalizeWaitSpec(clamp/校验)+ evalWaitCondition(timer/file/process/url 四模式,注入护栏桩)。
 // [S] 静态锁:reducer 传 isWaitNode、外壳 arm/poll/tick、wait×worktree 互斥、process 仅信号0、file 过工作区护栏、url 过 SSRF。
 // [H] Live:纯 timer wait 节点 arm→waiting→succeeded(零 token,无 provider 调用);file wait 中途建文件→succeeded;超时→failed。
 'use strict';
 const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
-const { readServerSource } = require('./src-reader');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
 const WB_PORT = await getFreePort();
 const HOME = path.join(os.tmpdir(), 'wcw-wait-primitive-e2e');
 const WS = path.join(HOME, 'ws');
@@ -37,34 +35,38 @@ async function waitToken() {
   for (let i = 0; i < 300; i++) { const t = (readJson(path.join(HOME, 'runtime.json')) || {}).token || ''; if (t) return t; await sleep(150); }
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
-const src = readServerSource();
+const backendSource = file => fs.readFileSync(path.join(WB, 'app/backend', file), 'utf8');
+const workflow = backendSource('agent-workflow.cjs');
+const scheduler = backendSource('workflow-scheduler.cjs');
+const catalog = backendSource('agent-workflow-catalog.cjs');
+const waitSource = backendSource('workflow-wait.cjs');
+const reportSource = backendSource('agent-workflow-report.cjs');
+const { createWorkflowWait } = require('../ruyi-workbench/app/backend/workflow-wait.cjs');
+const { normalizeWaitSpec } = require('../ruyi-workbench/app/backend/agent-workflow-catalog.cjs');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态锁
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态锁 ──');
-ok(/isWaitNode: n => !!\(n && n\.wait\)/.test(src), 'S reducer 调用点传 isWaitNode');
-ok(/const toDispatch = \[\], toArm = \[\];/.test(src) && /toArm\.push\(node\.id\)/.test(src), 'S reducer 就绪 wait 节点单列 toArm');
-ok(/for \(const id of \(step\.toArm \|\| \[\]\)\)/.test(src) && /node\.status = 'waiting'; node\.waitStartedAt = nowIso\(\)/.test(src), 'S 外壳 arm:queued→waiting + waitStartedAt');
-ok(/await evalWaitCondition\(node, \{ session: parentSession, config, cwd: waitCwd \}\)/.test(src), 'S 外壳 poll 块调 evalWaitCondition');
-ok(/else if \(anyWaiting\) await abortableSleep\(waitPollMs\(\)\)/.test(src), 'S 外壳 tick:仅 waiting 时可中断 sleep(防 busy-spin)');
-ok(/isolationMode: \(!wait &&/.test(src) && /\(item\.isolation === 'worktree' && !wait\)/.test(src), 'S wait × worktree 互斥(两归一器均降级 none,无不可启动模板)');
-ok(/spec\.timeoutMs = Math\.max\(spec\.timeoutMs, spec\.durationMs \+ spec\.pollMs\)/.test(src), 'S 对抗轮 P2:timer 的 timeoutMs 抬到 ≥ durationMs+pollMs(超时不抢先)');
-ok(/if \(Date\.now\(\) - \(Number\(node\.lastWaitPollAt\) \|\| 0\) < \(Number\(w\.pollMs\)/.test(src), 'S 对抗轮 P3:per-node pollMs 节流');
-ok(/for \(const n of nodes\) if \(n\.status === 'waiting' && n\.waitStartedAt\) \{ const t = Date\.parse/.test(src), 'S 对抗轮 P2:暂停补偿 waitStartedAt');
-ok(/for \(const n of nodes\) if \(n\.status === 'waiting'\) n\.waitStartedAt = nowIso\(\);/.test(src), 'S 对抗轮 P3:resume 重置 waiting 等待窗');
-ok(/process\.kill\(w\.pid, 0\)/.test(src) && !/process\.kill\(w\.pid, ['"]?SIG/.test(src), 'S process 模式仅发信号 0(绝不真实信号)');
-ok(/guardWorkspacePath\(path\.resolve\(String\(ctx\.cwd \|\| ''\), String\(w\.path \|\| ''\)\), ctx\.session, ctx\.config\)/.test(src), 'S file 模式过 guardWorkspacePath(按 ctx.cwd 解析 + 工作区/敏感面护栏)');
-ok(/const chk = ssrfCheck\(String\(w\.url \|\| ''\)\)/.test(src) && /httpGetGuarded\(String\(w\.url/.test(src), 'S url 模式过 ssrfCheck + httpGetGuarded');
-ok(/waiting: '等待条件'/.test(src), 'S agentWorkflowStatusText 含 waiting:等待条件');
+ok(/isWaitNode: n => !!\(n && n\.wait\)/.test(workflow), 'S reducer 调用点传 isWaitNode');
+ok(/const toDispatch = \[\], toArm = \[\];/.test(scheduler) && /toArm\.push\(node\.id\)/.test(scheduler), 'S reducer 就绪 wait 节点单列 toArm');
+ok(/for \(const id of \(step\.toArm \|\| \[\]\)\)/.test(workflow) && /node\.status = 'waiting'; node\.waitStartedAt = nowIso\(\)/.test(workflow), 'S 外壳 arm:queued→waiting + waitStartedAt');
+ok(/await evalWaitCondition\(node, \{ session: parentSession, config, cwd: waitCwd \}\)/.test(workflow), 'S 外壳 poll 块调 evalWaitCondition');
+ok(/else if \(anyWaiting\) await abortableSleep\(waitPollMs\(\)\)/.test(workflow), 'S 外壳 tick:仅 waiting 时可中断 sleep(防 busy-spin)');
+ok(/isolationMode: \(!wait &&/.test(workflow) && /\(item\.isolation === 'worktree' && !wait\)/.test(catalog), 'S wait × worktree 互斥(两归一器均降级 none,无不可启动模板)');
+ok(/spec\.timeoutMs = Math\.max\(spec\.timeoutMs, spec\.durationMs \+ spec\.pollMs\)/.test(catalog), 'S 对抗轮 P2:timer 的 timeoutMs 抬到 ≥ durationMs+pollMs(超时不抢先)');
+ok(/if \(Date\.now\(\) - \(Number\(node\.lastWaitPollAt\) \|\| 0\) < \(Number\(w\.pollMs\)/.test(workflow), 'S 对抗轮 P3:per-node pollMs 节流');
+ok(/for \(const n of nodes\) if \(n\.status === 'waiting' && n\.waitStartedAt\) \{ const t = Date\.parse/.test(workflow), 'S 对抗轮 P2:暂停补偿 waitStartedAt');
+ok(/for \(const n of nodes\) if \(n\.status === 'waiting'\) n\.waitStartedAt = nowIso\(\);/.test(workflow), 'S 对抗轮 P3:resume 重置 waiting 等待窗');
+ok(/process\.kill\(w\.pid, 0\)/.test(waitSource) && !/process\.kill\(w\.pid, ['"]?SIG/.test(waitSource), 'S process 模式仅发信号 0(绝不真实信号)');
+ok(/guardWorkspacePath\(path\.resolve\(String\(ctx\.cwd \|\| ''\), String\(w\.path \|\| ''\)\), ctx\.session, ctx\.config\)/.test(waitSource), 'S file 模式过 guardWorkspacePath(按 ctx.cwd 解析 + 工作区/敏感面护栏)');
+ok(/const chk = ssrfCheck\(String\(w\.url \|\| ''\)\)/.test(waitSource) && /httpGetGuarded\(String\(w\.url/.test(waitSource), 'S url 模式过 ssrfCheck + httpGetGuarded');
+ok(/waiting: '等待条件'/.test(reportSource), 'S agentWorkflowStatusText 含 waiting:等待条件');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [P] 纯逻辑:normalizeWaitSpec + evalWaitCondition
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [P] normalizeWaitSpec ──');
-const nm = src.match(/function normalizeWaitSpec\(raw\) \{[\s\S]*?\n\}/);
-ok(!!nm, 'P 源抽取 normalizeWaitSpec');
-const normalizeWaitSpec = new Function(nm[0] + '\nreturn normalizeWaitSpec;')();
 ok(normalizeWaitSpec(null) === null && normalizeWaitSpec({ mode: 'nope' }) === null, 'P 非法/未知 mode → null');
 {
   const t = normalizeWaitSpec({ mode: 'timer', durationMs: 5000, timeoutMs: 999, pollMs: 100 });
@@ -86,17 +88,12 @@ ok(normalizeWaitSpec({ mode: 'process', pid: 4242 }).state === 'alive', 'P proce
 ok(normalizeWaitSpec({ mode: 'url' }) === null && !!normalizeWaitSpec({ mode: 'url', url: 'http://x' }), 'P url 缺 url → null');
 
 console.log('\n── [P] evalWaitCondition(注入护栏桩) ──');
-const em = src.match(/async function evalWaitCondition\(node, ctx\) \{[\s\S]*?\n\}/);
-ok(!!em, 'P 源抽取 evalWaitCondition');
-// 注入:guardWorkspacePath(桩:含 SENS→拒,否则 ok)、fsp(真)、path(真)、process(真)、ssrfCheck/httpGetGuarded(桩)。
-const fsp = require('fs').promises;
 let guardCalls = 0, lastGuardPath = '';
 const guardWorkspacePath = async (p) => { guardCalls++; lastGuardPath = String(p); return /SENS/.test(String(p)) ? { ok: false, error: '敏感面拒绝' } : { ok: true, absPath: String(p) }; };
 let ssrfAllow = true, httpOk = true;
 const ssrfCheck = () => ({ allowed: ssrfAllow, reason: 'stub' });
 const httpGetGuarded = async () => (httpOk ? { ok: true, status: 200 } : { ok: false, failClass: 'connect' });
-const evalWaitCondition = new Function('guardWorkspacePath', 'fsp', 'path', 'process', 'ssrfCheck', 'httpGetGuarded',
-  em[0] + '\nreturn evalWaitCondition;')(guardWorkspacePath, fsp, path, process, ssrfCheck, httpGetGuarded);
+const { evalWaitCondition } = createWorkflowWait({ guardWorkspacePath, ssrfCheck, httpGetGuarded });
 
 (async () => {
   // timer:未到→not done;已到→done。

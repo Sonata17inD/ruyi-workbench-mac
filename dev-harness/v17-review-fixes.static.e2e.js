@@ -29,54 +29,48 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 const server = readServerSource();
+const claudeSync = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/claude-config-sync.cjs'), 'utf8');
+const configSchema = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/config-schema.cjs'), 'utf8');
 const runall = fs.readFileSync(RUNALL, 'utf8');
 
 // ── S1: serveStatic 用段比较,startsWith 前缀判定绝迹 ─────────────────────────
-const serveStaticBody = server.slice(server.indexOf('async function serveStatic'), server.indexOf('async function serveStatic') + 900);
+const serveStaticBody = fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/static-assets.cjs'), 'utf8');
 ok(/pathWithinRoot\(full,/.test(serveStaticBody), 'S1: serveStatic 用 pathWithinRoot 段比较');
 ok(!/full\.startsWith\(path\.normalize\(base\)\)/.test(serveStaticBody), 'S1: startsWith 前缀判定已移除');
 
 // ── S2: settings.model 权属 sidecar;无条件 delete 绝迹 ──────────────────────
-ok(server.includes('claude-settings-sync.json'), 'S2: 权属 sidecar 文件存在');
-ok(/prevSyncedModel/.test(server), 'S2: 上次同步值追踪(prevSyncedModel)');
-ok(!/else delete settings\.model;/.test(server), 'S2: 无条件 else delete settings.model 绝迹');
-ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(server), 'S2: 仅权属可证时才删除');
+ok(claudeSync.includes('claude-settings-sync.json'), 'S2: 权属 sidecar 文件存在');
+ok(/prevSyncedModel/.test(claudeSync), 'S2: 上次同步值追踪(prevSyncedModel)');
+ok(!/else delete settings\.model;/.test(claudeSync), 'S2: 无条件 else delete settings.model 绝迹');
+ok(/else if \(prevSyncedModel && settings\.model === prevSyncedModel\) delete settings\.model;/.test(claudeSync), 'S2: 仅权属可证时才删除');
 
-// ── S3: freeStalePort 命令行取证 ────────────────────────────────────────────
-ok(/function processCommandLine\(pid\)/.test(server), 'S3: processCommandLine 取证助手存在');
-ok(server.includes("why = 'image:node+cmdline'"), 'S3: node.exe 需命令行佐证(image:node+cmdline)');
-ok(!/why = 'image:node';/.test(server), 'S3: 裸 image:node 处死分支绝迹');
+const startNotices = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/server-start-notices.cjs'), 'utf8');
+ok(!server.includes('function freeStalePort(') && !startNotices.includes('function freeStalePort(')
+  && startNotices.includes('return await listenOnNextFreePort('), 'occupied ports use fallback without killing another process');
 
 // ── S4: desktop_screenshot 输出路径写闸 ─────────────────────────────────────
-ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(server), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');
+const desktopTools = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/desktop-tool-handlers.cjs'), 'utf8');
+ok(/guardFileToolPath\(outPathRaw, ctx, \{ tool: 'desktop_screenshot', write: true \}\)/.test(desktopTools), 'S4: 模型给定 outputPath 过 guardFileToolPath 写闸');
 
 // ── S5: uiMode 回退 'simple' ────────────────────────────────────────────────
-ok(/config\.uiMode : 'simple'/.test(server), "S5: uiMode 非法值回退 'simple'");
-ok(!/config\.uiMode : 'pro'/.test(server), "S5: 回退 'pro' 绝迹");
+ok(/config\.uiMode : 'simple'/.test(configSchema), "S5: uiMode 非法值回退 'simple'");
+ok(!/config\.uiMode : 'pro'/.test(configSchema), "S5: 回退 'pro' 绝迹");
 
 // ── S6: orchestrate maxItems 三方对齐 64 ────────────────────────────────────
-ok(/type: 'array', minItems: 1, maxItems: 64,/.test(server), 'S6: orchestrate_agents schema maxItems=64');
-ok(!/maxItems: 32/.test(server), 'S6: schema maxItems:32 绝迹');
+const toolSchemas = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/native-tool-schemas.cjs'), 'utf8');
+ok(/type: 'array', minItems: 1, maxItems: 64,/.test(toolSchemas), 'S6: orchestrate_agents schema maxItems=64');
+ok(!/maxItems: 32/.test(toolSchemas), 'S6: schema maxItems:32 绝迹');
 
 // ── S7: D6 目录可用口径 ─────────────────────────────────────────────────────
-ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(server), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');
+const providerPrompt = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/provider-prompt.cjs'), 'utf8');
+ok(/toolRequirementsMet\('web_search', caps, false, config\)/.test(providerPrompt), 'S7: D6 按 TOOL_REQUIRES 目录可用判定');
 
 // ── S8: ACC 侧修复(静态)─────────────────────────────────────────────────────
-const accCapture = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'capture.py'), 'utf8');
-const accClip = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'desktop_extra.py'), 'utf8');
 const accAudit = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'audit.py'), 'utf8');
 const accFs = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'filesystem.py'), 'utf8');
-const accApp = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'application.py'), 'utf8');
-const accOcr = fs.readFileSync(path.join(ACC, 'src', 'ai_computer_control', 'tools', 'ocr.py'), 'utf8');
-const updateBat = fs.readFileSync(path.join(ACC, 'installer', 'update.bat'), 'utf8');
-ok(/protected_path_reason\(output_path\)/.test(accCapture), 'S8: window_screenshot 输出路径 protected 护栏');
-ok(/protected_path_reason\(save_path\)/.test(accClip), 'S8: get_clipboard_image 保存路径 protected 护栏');
-ok(/_SECRET_VALUE_PATTERNS/.test(accAudit) && /_scrub_value/.test(accAudit), 'S8: audit 值级脱敏在');
-ok(/open\(path, "rb"\)/.test(accFs), 'S8: read_file 二进制读(真字节预算)');
-ok(!/f\.read\(max_bytes\)/.test(accFs), 'S8: read_file 字符读旧实现绝迹');
-ok(/wait_timeout: float = 120\.0/.test(accApp), 'S8: launch_application 独立 wait_timeout');
-ok(!/"ok": True, "found": True, "error"/.test(accOcr), 'S8: ocr_click nth 越界自矛盾包络绝迹');
-ok(updateBat.includes('runtime\\python\\python.exe') && updateBat.includes('venv\\Scripts\\python.exe'), 'S8: update.bat 双布局探测');
+ok(/_SECRET_VALUE_PATTERNS/.test(accAudit) && /_scrub_value/.test(accAudit), 'S8: audit values remain redacted');
+ok(/open\(path, "rb"\)/.test(accFs), 'S8: file reads use byte budgets');
+// Native capture, clipboard paths and OCR are covered by the Mac protocol suites.
 
 // ── S9: 端口审计在 + capabilities 毕业 ──────────────────────────────────────
 // 第46波46a: 实现抽至 lib/port-audit.js 真身(runner 与 unit 同源);锁改为"run-all require 真身

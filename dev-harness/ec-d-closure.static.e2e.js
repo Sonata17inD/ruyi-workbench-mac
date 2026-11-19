@@ -15,8 +15,11 @@ const read = file => fs.readFileSync(file, 'utf8');
 const frontend = readFrontendSrc();
 const html = read(path.join(PUBLIC, 'index.html'));
 const manifest = JSON.parse(read(path.join(SRC, 'manifest.json')));
-const httpRouter = read(path.join(SRC, '13-http-router.js'));
+const httpRouter = read(path.join(SRC, '../backend/workbench-api-router.cjs'));
 const coreDomainRoutes = read(path.join(SRC, '13d-core-domain-routes.js'));
+const agentRunRoutes = read(path.join(SRC, '../backend/agent-run-routes.cjs'));
+const sessionRoutes = read(path.join(SRC, '../backend/session-routes.cjs'));
+const interventionRoutes = read(path.join(SRC, '../backend/intervention-routes.cjs'));
 const performanceGate = read(path.join(__dirname, 'ec-d-performance.e2e.js'));
 let failures = 0;
 const ok = (condition, label) => {
@@ -57,11 +60,11 @@ ok(/data-message-key/.test(frontend)
 'E4 消息重绘使用 keyed reconciliation，并保留滚动锚点与活动回合');
 
 // 110-3b: createTurnSegmentBuilder 已搬至 02c-turn-segments.js,改为源+目标拼接读取(正则原样保留)。
-const sessionStoreDomain = read(path.join(SRC, '02-session-store.js')) + read(path.join(SRC, '02c-turn-segments.js'));
+const sessionStoreDomain = read(path.join(SRC, '02-session-store.js')) + read(path.join(SRC, '../backend/turn-segments.cjs'));
 ok(/function createTurnSegmentBuilder\(/.test(sessionStoreDomain)
   && /const batchId = String\(evt\.batchId/.test(sessionStoreDomain)
-  && /createTurnSegmentBuilder\(\)/.test(read(path.join(SRC, '05-claude-engine.js')))
-  && /activeProviderBatchId/.test(read(path.join(SRC, '09-workflow.js'))),
+  && /createTurnSegmentBuilder\(\)/.test(read(path.join(SRC, '../backend/agent-cli-turn.cjs')))
+  && /activeProviderBatchId/.test(read(path.join(SRC, '../backend/provider-turn.cjs'))),
 'E5 双引擎统一有序 segments，并保留并行工具 batchId');
 
 ok(/turn-record/.test(frontend)
@@ -81,8 +84,15 @@ ok(CHAT_CSS_ROUTES.length === 5
 const backendFiles = new Set(manifest.modules.map(module => module.file));
 ok(['02-session-store.js', '04-permission-runtime.js', '08-agent-runs.js', '13b-api-domain-routes.js', '13d-core-domain-routes.js']
   .every(file => backendFiles.has(file))
-  && ['handleSessionApiRoutes', 'handleInterventionApiRoutes', 'handleAgentRunApiRoutes']
-    .every(name => coreDomainRoutes.includes(`function ${name}(`) && httpRouter.includes(`await ${name}(`))
+  && interventionRoutes.includes('function handleInterventionApiRoutes(')
+  && coreDomainRoutes.includes("require('./backend/intervention-routes.cjs').createInterventionRoutes(")
+  && httpRouter.includes('await handleInterventionApiRoutes(')
+  && sessionRoutes.includes('function handleSessionApiRoutes(')
+  && coreDomainRoutes.includes("require('./backend/session-routes.cjs').createSessionRoutes(")
+  && httpRouter.includes('await handleSessionApiRoutes(')
+  && agentRunRoutes.includes('function handleAgentRunApiRoutes(')
+  && coreDomainRoutes.includes("require('./backend/agent-run-routes.cjs').createAgentRunRoutes(")
+  && httpRouter.includes('await handleAgentRunApiRoutes(')
   && !/pathname === '\/api\/(sessions|permission\/request|agent-runs)'/.test(httpRouter),
 'E8 session、permission、agent-runs 实现与 API 编排均完成后端物理拆域');
 

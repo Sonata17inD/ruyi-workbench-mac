@@ -52,27 +52,22 @@ import re as _re
 _HINTS: tuple[tuple, ...] = tuple(
     (_re.compile(e[0], _re.I), *e[1:]) for e in (
         (r"window not found|no window (?:found|matching)|invalid window handle",
-         "Call list_windows() for the exact titles/hwnds (titles change); use wait_for_window(title) if the "
-         "app was just launched."),
+         "Call list_windows() again and use the complete current window target; titles and identities can change."),
         (r"screen ?grab|cannot identify (?:image|display)|no display|failed to (?:take|capture) screenshot|"
          r"screenshot failed",
-         "The desktop may be locked, on the UAC secure desktop, or the RDP session is disconnected; unlock/"
-         "reconnect and retry. get_screen_info() shows what is capturable."),
-        (r"fail-?safe",
-         "pyautogui's fail-safe fired (pointer in a screen corner). Move the mouse to the middle of the "
-         "screen and retry."),
+         "Check diagnostics() for screen recording authorization and session readiness. Unlock the Mac before retrying capture."),
         (r"winerror 32|being used by another process|sharing violation",
          "The file is open in another program (Excel/Word/an editor). Close it, or write to a different path."),
         (r"permissionerror|access is denied|permission denied|winerror 5\b|operation not permitted",
-         "Access denied: the path/process is protected, read-only or needs elevation. Check "
-         "diagnostics().is_admin, pick another location, or close the program holding it."),
+         "Access denied: check the path permissions and diagnostics() for required Mac authorization; "
+         "use a writable location or restore the required permission."),
         # Only hard "it is not there" phrasings; a bare "not available" is usually transient (network, a busy
         # OCR engine), so it gets no hint and never the give-up sentence.
         (r"no module named|modulenotfounderror|importerror|dll load failed|not installed",
          "An optional dependency is missing or failed to load; call diagnostics() (optional / load_errors) to "
          "see what is available. Retrying will not help."),
         (r"filenotfounderror|no such file|file not found|文件不存在|源文件不存在|cannot find the (?:file|path)",
-         "Check the path (absolute Windows path, correct extension) with list_directory / file_info."),
+         "Check the path (absolute Mac path, correct extension) with list_directory / file_info."),
         (r"isadirectoryerror|is a directory",
          "That path is a folder, not a file; use list_directory for folders or pass a file path."),
         (r"notadirectoryerror|not a directory",
@@ -98,7 +93,7 @@ _HINTS: tuple[tuple, ...] = tuple(
         (r"(?:coordinates?|pixels?|\bx\b|\by\b|x=|y=|screen|monitor|display|desktop|position|point)\b[^\n]{0,30}"
          r"out of range|out of range[^\n]{0,30}\b(?:screen|monitor|display|desktop)\b|"
          r"outside (?:the )?(?:screen|virtual desktop)|off-?screen|coordinates?.*(?:invalid|bounds)",
-         "Call get_screen_info() for the screen bounds and re-target inside them."),
+         "Call list_monitors() for the screen bounds and re-target inside them."),
         (r"no space left|disk full|winerror 112",
          "The disk is full; free space or write to another drive."),
     )

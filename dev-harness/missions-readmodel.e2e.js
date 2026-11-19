@@ -217,18 +217,19 @@ function spawnFake(seq, extraEnv) {
     ok(nf.status === 404, '(f) 未知 sessionId → 404(实 ' + nf.status + ')');
 
     // ============ (e) 静态锁 ============
-    const srcRouter = fs.readFileSync(path.join(WB, 'app', 'src', '13-http-router.js'), 'utf8');
+    const srcRouter = fs.readFileSync(path.join(WB, 'app', 'backend', 'workbench-api-router.cjs'), 'utf8');
     // 110-2a: ROUTE_AUTH 已搬至 01b-route-auth.js,改为源+目标拼接读取(断言原样保留)。
     const srcConfig = fs.readFileSync(path.join(WB, 'app', 'src', '01-config.js'), 'utf8')
-      + fs.readFileSync(path.join(WB, 'app', 'src', '01b-route-auth.js'), 'utf8');
-    const src13d = fs.readFileSync(path.join(WB, 'app', 'src', '13d-core-domain-routes.js'), 'utf8');
-    const src02 = fs.readFileSync(path.join(WB, 'app', 'src', '02-session-store.js'), 'utf8');
+      + fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
+    const missionRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'mission-routes.cjs'), 'utf8');
+    const sessionCreation = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-creation.cjs'), 'utf8');
     ok(/\{ m: 'GET', p: '\/api\/missions', auth: 'token-browser' \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions 标 token-browser');
     ok(/\{ m: 'GET', p: '\/api\/missions\/', auth: 'token-browser', prefix: true \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions/ 前缀标 token-browser');
-    ok(/async function handleMissionsApiRoutes\(/.test(src13d), '(e) handleMissionsApiRoutes 在 13d 核心域路由');
+    ok(/async function handleMissionsApiRoutes\(/.test(missionRoutes), '(e) 事项处理器归独立路由模块');
     ok(/await handleMissionsApiRoutes\(req, res, pathname\)/.test(srcRouter), '(e) 路由器挂载 missions 处理器');
-    ok(/kind: 'quick_ask'/.test(src02), '(e) createSession 显式写入 kind=quick_ask');
-    ok(/function sessionKind\(/.test(src02), '(e) sessionKind 只读派生器在 02');
+    ok(/kind: 'quick_ask'/.test(sessionCreation), '(e) createSession 显式写入 kind=quick_ask');
+    const metadata = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-metadata.cjs'), 'utf8');
+    ok(/function sessionKind\(/.test(metadata), '(e) 会话类型由元数据模块只读派生');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e.message || e)); fail++; }
   finally {
     for (const c of procs) killp(c);

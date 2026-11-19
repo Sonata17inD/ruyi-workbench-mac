@@ -175,15 +175,15 @@ test('[P5] playbook_read:不可用如实说原因、不给步骤;野参数列在
 });
 
 test('[S1] skill_list:内置 + 用户层,enabled 与会话启用口径一致,已启用排前', async () => {
-  const r = await call('skill_list', { limit: 100 }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const r = await call('skill_list', { limit: 100 }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(r.ok, true);
   assert.ok(r.total >= 21, `20 个内置 + 1 个用户层(got ${r.total})`);
   const byId = Object.fromEntries(r.skills.map(s => [s.id, s]));
-  assert.equal(byId['windows-control'].enabled, true);
-  assert.equal(byId['windows-control'].source, 'builtin');
+  assert.equal(byId['browser-debug'].enabled, true);
+  assert.equal(byId['browser-debug'].source, 'builtin');
   assert.equal(byId['api-debugger'].enabled, false);
   assert.equal(byId['u-evil-skill'].source, 'user');
-  assert.equal(r.skills[0].id, 'windows-control', '已启用的排最前');
+  assert.equal(r.skills[0].id, 'browser-debug', '已启用的排最前');
   assert.equal(r.enabledCount, 1);
   assert.doesNotMatch(JSON.stringify(r), /[<>]/, '作者文本里的尖括号一律中和');
   assert.ok(!JSON.stringify(r).includes(root.replace(/\\/g, '\\\\')) && !/"dir"/.test(JSON.stringify(r)), '不泄漏技能目录路径');
@@ -191,8 +191,8 @@ test('[S1] skill_list:内置 + 用户层,enabled 与会话启用口径一致,已
 });
 
 test('[S2] skill_list:来源锁不一致不算已启用;有界与 query 过滤;无会话也能列', async () => {
-  const mismatch = await call('skill_list', { limit: 100 }, { skills: [{ id: 'windows-control', source: 'project' }] });
-  assert.equal(mismatch.skills.find(s => s.id === 'windows-control').enabled, false, '启用时锁定 project 而现在解析成 builtin = 已被调包,不算启用');
+  const mismatch = await call('skill_list', { limit: 100 }, { skills: [{ id: 'browser-debug', source: 'project' }] });
+  assert.equal(mismatch.skills.find(s => s.id === 'browser-debug').enabled, false, '启用时锁定 project 而现在解析成 builtin = 已被调包,不算启用');
   const capped = await call('skill_list', { limit: 3 });
   assert.equal(capped.shown, 3);
   assert.equal(capped.truncated, true);
@@ -205,9 +205,47 @@ test('[S2] skill_list:来源锁不一致不算已启用;有界与 query 过滤;�
 });
 
 test('[S3] skill_read 语义不变:没启用的技能读不了(skill_list 只列、不放开)', async () => {
-  const r = await call('skill_read', { id: 'api-debugger' }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const r = await call('skill_read', { id: 'api-debugger' }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(r.ok, false);
   assert.match(r.error, /未启用|不存在/);
-  const ok = await call('skill_read', { id: 'windows-control' }, { skills: [{ id: 'windows-control', source: 'builtin' }] });
+  const ok = await call('skill_read', { id: 'browser-debug' }, { skills: [{ id: 'browser-debug', source: 'builtin' }] });
   assert.equal(ok.ok, true);
+});
+
+test('standalone skill registry respects injected CLI homes, source precedence and source locks', async () => {
+  const { createSkillRegistry } = require('../../ruyi-workbench/app/backend/skill-registry.cjs');
+  const base = path.join(root, 'registry-module'), cli = Object.fromEntries(['claude', 'codex', 'kimi'].map(name => [name, path.join(base, name)]));
+  const user = path.join(base, 'user'), project = path.join(base, 'project');
+  const put = (dir, id, body) => { const dest = path.join(dir, id); fs.mkdirSync(dest, { recursive: true }); fs.writeFileSync(path.join(dest, 'SKILL.md'), body); };
+  put(path.join(cli.claude, 'skills'), 'external', '---\nname: Injected CLI skill\n---\nbody');
+  put(user, 'same', 'user body'); put(path.join(project, '.ruyi/skills'), 'same', 'project body');
+  const parse = (raw, fallback) => { try { return JSON.parse(raw); } catch { return fallback; } };
+  const registry = createSkillRegistry({ paths: { skills: user }, agentCliHomes: () => cli, externalRoot: () => base,
+    SKILL_ID_RE: /^[a-z0-9_-]+$/,
+    readIfExists: async (file, cap) => { try { return (await fs.promises.readFile(file, 'utf8')).slice(0, cap); } catch { return ''; } }, safeJsonParse: parse });
+  const entries = await registry.loadSkillRegistry(project, {}, async () => []);
+  assert.equal(entries.find(e => e.id === 'external').source, 'claude-code');
+  assert.equal(entries.find(e => e.id === 'same').source, 'project');
+  const mismatches = [];
+  const selected = await registry.resolveEnabledSkillEntries({ skills: [{ id: 'same', source: 'user' }, { id: 'external', source: 'claude-code' }] }, {}, project, {}, (...args) => mismatches.push(args));
+  assert.deepEqual(selected.map(e => e.id), ['external']);
+  assert.deepEqual(mismatches, [['same', 'user', 'project']]);
+});
+
+test('playbook storage owns validation and reports failed deletion without claiming success', async () => {
+  const { createPlaybooks } = require('../../ruyi-workbench/app/backend/playbooks.cjs');
+  const io = fs.promises, base = path.join(root, 'playbook-module'), user = path.join(base, 'user');
+  const store = createPlaybooks({ paths: { playbooks: user }, externalRoot: () => base,
+    safeSessionId: value => /^[a-z0-9_-]+$/i.test(value) ? value : null,
+    safeJsonParse: (text, fallback) => { try { return JSON.parse(text); } catch { return fallback; } },
+    atomicWriteJson: (file, value) => io.writeFile(file, JSON.stringify(value)) });
+  const draft = { id: 'valid', title: 'Valid', promptTemplate: 'Do {task}', inputs: [] };
+  await assert.rejects(() => store.saveUserPlaybook({ ...draft, id: '../escape' }), e => e.code === 'invalid_playbook');
+  assert.equal(fs.existsSync(path.join(base, 'escape.json')), false);
+  await store.saveUserPlaybook(draft);
+  assert.equal((await store.loadAllPlaybooks())[0].id, 'valid');
+  await io.mkdir(path.join(user, 'cannot-delete.json'));
+  await assert.rejects(() => store.deleteUserPlaybook('cannot-delete'));
+  assert.equal(fs.existsSync(path.join(user, 'cannot-delete.json')), true);
+  assert.equal((await store.deleteUserPlaybook('valid')).deleted, 'valid');
 });

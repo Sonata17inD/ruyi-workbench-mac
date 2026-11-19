@@ -114,6 +114,8 @@ export function createPromptQueue({
   let lastTypingTarget = null;   // 体验走查 #5：刚打过字的那个框 —— 已经发出去（框空了）就不算「正在打字」
   let lastModalActivityAt = 0;   // 弹窗里的点按／键入:有人在处理就不自动收起
   let lastReconcileAt = 0;
+  let streamConnected = false;
+  let started = false;
 
   // 3.0 预览收口(quiet-card-typing D1/D5/D7):粘贴、输入法上屏、Input.insertText 不发 keydown,
   // 只听 keydown 会把正在输入的人当成「空闲」—— input 事件一起算。
@@ -206,7 +208,8 @@ export function createPromptQueue({
       active = null;
       try { handle && handle.close && handle.close(); } catch { /* 已关 */ }
     }
-    if (!items.size) { minimized = false; expanded = false; }
+    if (!items.size) { minimized = false; expanded = false; clearInterval(ticker); ticker = null; }
+    if (started) scheduleReconcile();
     pump();
     render();
   }
@@ -270,8 +273,7 @@ export function createPromptQueue({
   // ── 对账：跨会话登记簿 ────────────────────────────────────────────────────────────
   async function reconcile() {
     if (reconciling || !api) return;
-    // 页面在后台就先不拉,但【照样排下一拍】—— 修前这里直接 return,切走一次对账链就断了。
-    try { if (doc().hidden) { scheduleReconcile(); return; } } catch { /* ignore */ }
+    if (doc().hidden) return;
     reconciling = true;
     lastReconcileAt = now();
     try {
@@ -314,12 +316,14 @@ export function createPromptQueue({
   }
   function scheduleReconcile() {
     clearTimeout(reconcileTimer);
+    reconcileTimer = null;
+    if (!api || doc().hidden || (!items.size && streamConnected)) return;
     reconcileTimer = setTimeout(reconcile, items.size ? RECONCILE_BUSY_MS : RECONCILE_IDLE_MS);
   }
 
   // ── 计时 ─────────────────────────────────────────────────────────────────────────
   function ensureTicker() {
-    if (ticker) return;
+    if (ticker || !items.size || doc().hidden) return;
     ticker = setInterval(() => {
       if (!items.size) { clearInterval(ticker); ticker = null; return; }
       autoMinimize();
@@ -504,24 +508,41 @@ export function createPromptQueue({
   }
 
   function start() {
+    if (started) return;
+    started = true;
     reconcile();
-    // 135c 同一处发现:页面在后台时对账只排不拉,切回前台立刻对一次,别让等你的那条再晚 5～15 s 露面。
-    try { doc().addEventListener('visibilitychange', () => { try { if (!doc().hidden) kick(); } catch { /* ignore */ } }); } catch { /* ignore */ }
+    doc().addEventListener('visibilitychange', () => {
+      if (doc().hidden) {
+        clearInterval(ticker); ticker = null;
+        clearTimeout(reconcileTimer); reconcileTimer = null;
+        clearTimeout(kickTimer); kickTimer = null;
+      } else {
+        ensureTicker();
+        kick();
+      }
+    });
   }
   // 推送来了(有线程在等你 / 线程状态变了)就尽快对一次账,不必等 5／15 s 的轮询 —— 真机验证:
   // 后台线程的申请只靠空闲轮询要 ~17 s 才露面,而默认 120 s 就自动拒绝。250 ms 合并一串连发的帧。
   // 真机量过:回合跑起来时 thread.state 一秒好几帧,不设下限会把对账打成每秒数发。两次对账至少隔 1 s。
   let kickTimer = null;
   function kick() {
-    clearTimeout(kickTimer);
+    if (doc().hidden || kickTimer) return;
     const wait = Math.max(250, MIN_RECONCILE_GAP_MS - (now() - lastReconcileAt));
-    kickTimer = setTimeout(() => { clearTimeout(reconcileTimer); reconcile(); }, wait);
+    kickTimer = setTimeout(() => { kickTimer = null; clearTimeout(reconcileTimer); reconcile(); }, wait);
   }
   function bindEventStream(eventStream) {
     if (!eventStream || typeof eventStream.on !== 'function') return false;
     for (const name of ['thread.needs_you', 'thread.state']) {
       try { eventStream.on(name, kick); } catch { /* 推送是旁路,轮询兜底 */ }
     }
+    streamConnected = typeof eventStream.isConnected === 'function' && eventStream.isConnected();
+    eventStream.on('connection', state => {
+      streamConnected = !!(state && state.connected);
+      scheduleReconcile();
+      kick(); // Reconnect takes a snapshot even if the replay window missed changes.
+    });
+    scheduleReconcile();
     return true;
   }
 

@@ -8,7 +8,7 @@ const { getFreePort } = require('./free-port.js');
 // 端口: WB 9116(已登记 dev-harness/README)。无需 fake provider(授权书路由不触发模型)。
 // 三段:
 //   [S] 静态源锁 —— 验收锁的结构不变式(签发主权路由、子集律插桩点、R-P1-1 子代理不消耗、exec 不持久、不进 digest)。
-//   [P] 纯逻辑源抽取 —— new Function 实跑 grantIssueTierInfo/resolveToolPermissionContext/normalizeGrant/consumeGrant/撤销,
+//   [P] 模块直接实例化 —— 实跑 grantIssueTierInfo/resolveToolPermissionContext/normalizeGrant/consumeGrant/撤销,
 //        穷举 tier×entrypoint×path-glob×cmdAllow×net×metachar×scope×TTL×maxUses×revoke×fail-closed 组合(技术同 scheduler-reducer)。
 //   [H] Live HTTP —— 签发主权(body-token 含 body.token===RUNTIME.token 必 403)、签发校验(exec 无 cmdAllow/spawn_agent 拒)、
 //        撤销、列举、【纯内存】(grant 不落 session 文件)。
@@ -16,8 +16,7 @@ const { getFreePort } = require('./free-port.js');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const SERVER = path.join(WB, 'app', 'server.js');
-// 架构还债批 3·D:AUTOEXEC_DENYLIST / hashArgs / pathWithinRoot 三者都经 14-main 导出,直接取产物里的那一份
-// (修前是正则抠源码再 new Function 求值);授权书核心块与 globToRegExp 未导出,仍源抽取。
+// 对照实际装配的路径阻断名单，授权书与参数指纹直接引用所属模块。
 const srv = require(SERVER);
 const WB_PORT = await getFreePort();
 const HOME = path.join(os.tmpdir(), 'wcw-autonomy-grant-e2e');
@@ -45,60 +44,69 @@ async function waitToken() {
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
 
-const src = readServerSource();
+const src = readServerSource() + '\n' + fs.readFileSync(path.join(__dirname, '../ruyi-workbench/app/backend/mission-driver.cjs'), 'utf8') + '\n' + fs.readFileSync(path.join(WB, 'app/backend/autonomy-grants.cjs'), 'utf8');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [S] 静态源锁
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 console.log('\n── [S] 静态源锁 ──');
+const routePolicySource = fs.readFileSync(path.join(WB, 'app/backend/http-route-policy.cjs'), 'utf8');
+const fileToolsSource = fs.readFileSync(path.join(WB, 'app/backend/file-tools.cjs'), 'utf8');
 
 // S1 签发主权律(第33波起 ROUTE_AUTH 表替代 needsToken OR 链):/api/autonomy/ 在 ROUTE_AUTH 表里标 'token'(header-token 门)。
-ok(/\{ m: 'POST', p: '\/api\/autonomy\/', auth: 'token', prefix: true \}/.test(src), 'S1 /api/autonomy/ 在 ROUTE_AUTH 表标 token(header-token 门)');
+ok(/\{ m: 'POST', p: '\/api\/autonomy\/', auth: 'token', prefix: true \}/.test(routePolicySource), 'S1 /api/autonomy/ 在 ROUTE_AUTH 表标 token(header-token 门)');
 
 // S2 R-P2-2:/api/autonomy 【不】是 body-token 路由(body-token 仅 permission/request·todo·mission·launch,不可 body-token 绕过)。
-const bodyTokenEntries = (src.match(/\{[^}]*auth: 'body-token'[^}]*\}/g) || []).join('\n');
-ok(!/autonomy/.test(bodyTokenEntries), 'S2 /api/autonomy 不在 body-token 路由(不可 body-token 绕过)');
+const bodyTokenEntries = (routePolicySource.match(/\{[^}]*auth: 'body-token'[^}]*\}/g) || []).join('\n');
+ok(bodyTokenEntries.length > 0 && !/autonomy/.test(bodyTokenEntries), 'S2 /api/autonomy 不在 body-token 路由(不可 body-token 绕过)');
 
 // S3 R-P2-2:三个 autonomy handler 各自 tokenOk(req) 自查,且授权书路由区【无】body-token 兜底。
-const autonomyRegion = (src.match(/\/\/ ── 第27波:自主性授权书 API[\s\S]*?if \(req\.method === 'POST' && pathname === '\/api\/agent-workflow\/launch'\)/) || [''])[0];
-ok(autonomyRegion.length > 200, 'S3 授权书路由区可定位');
+const autonomyRegion = fs.readFileSync(path.join(WB, 'app/backend/autonomy-grant-routes.cjs'), 'utf8');
+ok(/async function handleAutonomyGrantApiRoutes\(/.test(autonomyRegion), 'S3 授权书路由区可定位');
 ok((autonomyRegion.match(/if \(!tokenOk\(req\)\) return send\(res, json\(\{ ok: false, error: 'missing or invalid workbench token' \}, 403\)\)/g) || []).length >= 3, 'S3 三路由各自 tokenOk 自查(≥3 处 403)');
 ok(!/bodyTokenOk|body\.token === RUNTIME\.token|RUNTIME\.token &&/.test(autonomyRegion), 'S3 授权书路由区【无】body-token 兜底(R-P2-2)');
 
+const providerTurn = fs.readFileSync(path.join(WB, 'app/backend/provider-turn.cjs'), 'utf8');
+const cliInterventions = fs.readFileSync(path.join(WB, 'app/backend/intervention-routes.cjs'), 'utf8');
+
 // S4 子集律插桩:provider 主 gate 仅在 gate==='ask' && !bridge 时 consumeGrant('native');CLI 桥 consumeGrant('cli')。
-ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(src), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
-ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(src), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
+ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(providerTurn), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
+ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(cliInterventions), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
 // 117m-A3 重钉（理由）：原文钉死了源码字面 nativeToolGate(config.permissionMode, bridgeTier)。
 // 117m-A1 把闸门签名扩成 (mode, tier, toolName, input)；不把工具名与入参传进去，CLI 桥这一侧的
 // auto 档就还是老口径 —— 同一个「全自动」在两个引擎下行为不一。天花板语义一字未改：
 // 仍是「只有闸门判 ask 才允许授权书降级」。下面三条比旧那一条强：除了钉住复检本身，
 // 还钉住它【吃到了工具名与入参】且 auto 档判 allow 时不得再弹一次窗。
-ok(src.includes("const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});"),
+ok(cliInterventions.includes("const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});"),
   'S4 CLI 桥的闸门判定吃到工具名与入参(与原生主 gate 同口径)');
 // 代码走查 C5：CLI 报的是 Claude 名(Edit/Write/Bash)。修前按原生表查，一律落成 exec —— 「改文件不问」档在 CLI 引擎下不生效、弹窗徽标也错。
-ok(/const bridgeTier = Object\.prototype\.hasOwnProperty\.call\(CLI_TOOL_TIER, /.test(src) && !/const bridgeTier = nativeToolTier\(/.test(src),
-  'S4c CLI 桥的档位先查 CLI 表(Edit→edit、Read→read)，认不出的才回落原生表');
-ok(src.includes("if (bridgeGate === 'ask') {")
-  && src.indexOf("consumeGrant({ id: sessionId }") > src.indexOf("if (bridgeGate === 'ask') {"),
+const { cliBridgeToolTier } = require('../ruyi-workbench/app/backend/cli-tool-tiers.cjs');
+ok(cliInterventions.includes("const bridgeTier = cliBridgeToolTier(String(body.toolName || ''));")
+  && cliBridgeToolTier('Edit') === 'edit' && cliBridgeToolTier('Read') === 'read'
+  && cliBridgeToolTier('file_read') === 'read' && cliBridgeToolTier('unknown') === 'exec',
+  'S4c CLI 权限桥使用共享档位及原生工具兜底');
+ok(cliInterventions.includes("if (bridgeGate === 'ask') {")
+  && cliInterventions.indexOf("consumeGrant({ id: sessionId }") > cliInterventions.indexOf("if (bridgeGate === 'ask') {"),
   'S4 CLI 桥消耗前复检闸门天花板(P3 对称；只降 ask，plan 的 block 永不放行)');
-ok(src.includes("if (bridgeMode === 'auto' && bridgeGate === 'allow') {"),
+ok(cliInterventions.includes("if (bridgeMode === 'auto' && bridgeGate === 'allow') {"),
   'S4 auto 档判 allow 时 CLI 桥直接放行(不再弹窗；只对 auto 档短路)');
 // 主 gate 消耗点必须落在 gate==='block' 判定【之前】(子集律:只作用于 ask 分支)。
-const nativeConsumeIdx = src.indexOf("consumeGrant(session, tc.name, args, 'native'");
-const blockCheckIdx = src.indexOf("if (gate === 'block') {", nativeConsumeIdx - 2000);
+const nativeConsumeIdx = providerTurn.indexOf("consumeGrant(session, tc.name, args, 'native'");
+const blockCheckIdx = providerTurn.indexOf("if (gate === 'block') {", nativeConsumeIdx - 2000);
 ok(nativeConsumeIdx > 0 && blockCheckIdx > nativeConsumeIdx, 'S4 native 消耗点在 gate===block 判定之前(只降 ask,永不碰 block)');
 
 // S5 R-P1-1:runSubAgentCore 内【绝不】调用 consumeGrant(子代理不消耗父授权)。
-const subCore = (src.match(/async function runSubAgentCore\([\s\S]*?\nasync function runSubAgent\(opts\)/) || [''])[0];
-ok(subCore.length > 1000, 'S5 runSubAgentCore 可定位');
-ok(!/consumeGrant/.test(subCore), 'S5 子代理执行体【无】consumeGrant(R-P1-1:不消耗父授权)');
+const subagentSource = fs.readFileSync(path.join(WB, 'app/backend/subagent-runner.cjs'), 'utf8');
+ok(/function runSubAgentCore\(/.test(subagentSource) && /function runSubAgentCoreBody\(/.test(subagentSource),
+  'S5 生产子代理模块包含回合入口与执行体');
+ok(!/\bconsumeGrant\s*\(/.test(subagentSource), 'S5 子代理执行不消耗父授权');
 
 // S6 exec 永不持久:saveSession / normalizeConfig 体内【不】触碰 autonomyGrants。
 // 122 波合并（36 号文 §5.4）：saveSession 的签名从 (session) 变成 (session, opts)（§2.4 写链内合并旗子），
 // 定位正则放宽到可选第二参；判据本身（体内不触碰 autonomyGrants）一个字不动。
-const saveSessionBody = functionBlock(src, 'saveSession');
+const saveSessionBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
 ok(saveSessionBody.length > 100 && !/autonomyGrants/.test(saveSessionBody), 'S6 saveSession 不落 autonomyGrants(不进会话文件)');
-const normConfigBody = functionBlock(src, 'normalizeConfig');
+const normConfigBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/config-schema.cjs'), 'utf8'), 'normalizeConfig');
 ok(normConfigBody.length > 100 && !/autonomyGrants/.test(normConfigBody), 'S6 normalizeConfig 不含 autonomyGrants(不进 config)');
 
 // S7 不进 digest/系统提示:任务账本 digest 与系统提示构建体内【无】grant 字段泄漏。
@@ -139,44 +147,27 @@ ok(grantBlock.length > 1000
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [P] 纯逻辑源抽取
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
-console.log('\n── [P] 纯逻辑源抽取(new Function 实跑)──');
-
-// 抽真 globToRegExp(未导出,保真不重写);pathWithinRoot 取产物导出的那一个。
-const globToRegExp = new Function(functionBlock(src, 'globToRegExp') + '\nreturn globToRegExp;')();
-const pathWithinRoot = srv.pathWithinRoot;
+console.log('\n── [P] 所属授权模块直测──');
 
 // 抽授权书核心块(autonomyGrants 声明 → listGrantsView 结束)。
 const mm = grantBlock ? [grantBlock] : null;
 ok(!!mm, 'P 源抽取授权书核心块');
 if (!mm) { console.log('\nAUTONOMY-GRANT E2E: FAIL (源抽取失败)'); process.exit(1); }
 
-const NATIVE_TOOL_TIER_STUB = {
-  file_read: 'read', file_list: 'read', file_write: 'edit', file_edit: 'edit', file_delete: 'edit',
-  file_move: 'edit', file_copy: 'edit', archive_zip: 'edit', archive_unzip: 'edit', http_download: 'edit',
-  powershell_run: 'exec', script_run: 'exec', git_commit: 'exec', spawn_agent: 'exec', orchestrate_agents: 'exec',
-};
-const nativeToolTier = name => NATIVE_TOOL_TIER_STUB[name] || 'exec';
 const isSensitiveDataPath = p => /SENSITIVE_MARK/.test(String(p || ''));
-const normalizeCwd = (cwd, fb) => path.resolve(cwd || fb || '.');
 let _idc = 0; const makeId = pfx => pfx + '_' + (++_idc);
-const crypto = require('crypto');
 
 
-// 03 工具层 AUTOEXEC_DENYLIST(117q-B2 起 06f 的 GRANT_EDIT_AUTOEXEC_DENY 派生自它,授权书块运行需要这个符号)。
-const AUTOEXEC_DENYLIST = srv.AUTOEXEC_DENYLIST;
-ok(Array.isArray(AUTOEXEC_DENYLIST), 'P 取到 AUTOEXEC_DENYLIST(03 工具层表,产物导出)');
-if (!Array.isArray(AUTOEXEC_DENYLIST)) { console.log('\nAUTONOMY-GRANT E2E: FAIL (AUTOEXEC_DENYLIST 未导出)'); process.exit(1); }
 
-// 真 hashArgs(00-boot.js,117q-B7(P2-16)单一事实源;consumeGrant 现在调它算 argsHash,不再手写 sha1 字面量)。
-const hashArgs = srv.hashArgs;
-ok(typeof hashArgs === 'function', 'P 取到 hashArgs(00-boot.js 单一事实源,产物导出)');
-if (typeof hashArgs !== 'function') { console.log('\nAUTONOMY-GRANT E2E: FAIL (hashArgs 未导出)'); process.exit(1); }
+const { AUTOEXEC_DENYLIST } = require('../ruyi-workbench/app/backend/autoexec-paths.cjs');
+ok(srv.AUTOEXEC_DENYLIST === AUTOEXEC_DENYLIST, 'P 文件护栏和授权书共用 AUTOEXEC_DENYLIST');
 
-const factory = new Function(
-  'NATIVE_TOOL_TIER', 'nativeToolTier', 'globToRegExp', 'isSensitiveDataPath', 'pathWithinRoot', 'normalizeCwd', 'makeId', 'crypto', 'logEvent', 'path', 'AUTOEXEC_DENYLIST', 'hashArgs',
-  mm[0] + '\nreturn { autonomyGrants, activeDriverRuns, grantIssueTierInfo, resolveToolPermissionContext, normalizeGrant, consumeGrant, revokeGrant, revokeAllGrants, revokeGrantsForRun, bindDriverRun, listGrantsView, GRANT_EXEC_METACHARS, GRANT_NET_PATTERN, GRANT_EDIT_AUTOEXEC_DENY };'
-);
-const G = factory(NATIVE_TOOL_TIER_STUB, nativeToolTier, globToRegExp, isSensitiveDataPath, pathWithinRoot, normalizeCwd, makeId, crypto, () => {}, path, AUTOEXEC_DENYLIST, hashArgs);
+const { hashArgs } = require('../ruyi-workbench/app/backend/execution-arguments.cjs');
+
+const createGrantService = () => require('../ruyi-workbench/app/backend/autonomy-grants.cjs').createAutonomyGrants({
+  isSensitiveDataPath, makeId, logEvent() {}, hashArgs,
+});
+let G = createGrantService();
 
 // 并集表组合关系的行为级对账:授权书层 = 1(整条 .git/) + 03 表全长。
 ok(G.GRANT_EDIT_AUTOEXEC_DENY.length === AUTOEXEC_DENYLIST.length + 1, 'P 并集表长度 = 03 表 + 1(整条 .git/)');
@@ -187,10 +178,10 @@ const CFG = { defaultWorkspace: ROOT };
 const NOW = Date.now();   // 签发用真实钟(consumeGrant 用 Date.now();固定过去值会全判过期)
 // helper:签发一张 grant 并入 Map(scope 默认改 'session' 以便无 run 也可测消耗;run scope 单列测)。
 function issue(overrides) {
-  G.autonomyGrants.clear(); G.activeDriverRuns.clear();
+  G = createGrantService();
   const norm = G.normalizeGrant({ scope: 'session', ...overrides }, SESS, CFG, NOW);
   if (!norm.ok) return norm;
-  G.autonomyGrants.set('s1', [norm.grant]);
+  G.installGrant('s1', norm.grant);
   return norm;
 }
 
@@ -200,7 +191,7 @@ ok(G.grantIssueTierInfo('orchestrate_agents') === null, 'P1 orchestrate_agents �
 ok(G.grantIssueTierInfo('*') === null, 'P1 通配 * → null');
 ok(G.grantIssueTierInfo('file_write').entrypoint === 'native' && G.grantIssueTierInfo('file_write').tier === 'edit', 'P1 file_write → native/edit');
 ok(G.grantIssueTierInfo('file_read').tier === 'read', 'P1 file_read → read');
-ok(G.grantIssueTierInfo('powershell_run').tier === 'exec', 'P1 powershell_run → exec');
+ok(G.grantIssueTierInfo('shell_run').tier === 'exec', 'P1 shell_run → exec');
 ok(G.grantIssueTierInfo('Edit').entrypoint === 'cli' && G.grantIssueTierInfo('Edit').tier === 'edit', 'P1 Edit → cli/edit');
 ok(G.grantIssueTierInfo('Bash').entrypoint === 'cli' && G.grantIssueTierInfo('Bash').tier === 'exec', 'P1 Bash → cli/exec');
 ok(G.grantIssueTierInfo('nonexistent_tool') === null, 'P1 未知工具 → null(不可签)');
@@ -208,9 +199,9 @@ ok(G.grantIssueTierInfo('nonexistent_tool') === null, 'P1 未知工具 → null(
 ok(G.grantIssueTierInfo('script_run') === null, 'P1 script_run → null(field-shadow:执行 code≠校验字段,禁签 exec)');
 ok(G.grantIssueTierInfo('git_commit') === null, 'P1 git_commit → null(触发 .git/hooks,禁签 exec)');
 {
-  // powershell_run 命令按【真正执行字段 command】取,忽略夹带的 code —— 否则「校验 command、执行 code」= 绕过 cmdAllow 的 RCE。
-  const c = G.resolveToolPermissionContext('powershell_run', { command: 'npm run build', code: 'rm -rf /' }, 'native');
-  ok(c.cmdArg === 'npm run build', 'P1 field-exact:powershell_run 只取 command,忽略夹带 code');
+  // shell_run 命令按【真正执行字段 command】取,忽略夹带的 code —— 否则「校验 command、执行 code」= 绕过 cmdAllow 的 RCE。
+  const c = G.resolveToolPermissionContext('shell_run', { command: 'npm run build', code: 'rm -rf /' }, 'native');
+  ok(c.cmdArg === 'npm run build', 'P1 field-exact:shell_run 只取 command,忽略夹带 code');
   const n = G.normalizeGrant({ tool: 'script_run', cmdAllow: ['^npm'], scope: 'session' }, SESS, CFG, NOW);
   ok(n.ok === false, 'P1 script_run 签发被拒(不可签 exec 授权)');
 }
@@ -226,13 +217,13 @@ const cCliEditEmpty = G.resolveToolPermissionContext('Edit', { old_string: 'a', 
 ok(cCliEditEmpty.pathArgs.length === 0 && cCliEditEmpty.fileFamily, 'P2 CLI Edit 无路径键 → pathArgs 空(fileFamily → 后续 fail-closed)');
 const cBash = G.resolveToolPermissionContext('Bash', { command: 'npm run build' }, 'cli');
 ok(cBash.tier === 'exec' && cBash.cmdArg === 'npm run build', 'P2 CLI Bash 抽 command');
-const cPwsh = G.resolveToolPermissionContext('powershell_run', { command: 'npm test', cwd: 'C:/x' }, 'native');
-ok(cPwsh.cmdArg === 'npm test' && cPwsh.cwdArg === 'C:/x', 'P2 native powershell_run 抽 command+cwd');
+const cPwsh = G.resolveToolPermissionContext('shell_run', { command: 'npm test', cwd: 'C:/x' }, 'native');
+ok(cPwsh.cmdArg === 'npm test' && cPwsh.cwdArg === 'C:/x', 'P2 native shell_run 抽 command+cwd');
 
 // P3 normalizeGrant:校验/裁剪/夹取。
-ok(G.normalizeGrant({ tool: 'powershell_run', scope: 'session' }, SESS, CFG, NOW).ok === false, 'P3 exec 无 cmdAllow → 拒收');
+ok(G.normalizeGrant({ tool: 'shell_run', scope: 'session' }, SESS, CFG, NOW).ok === false, 'P3 exec 无 cmdAllow → 拒收');
 {
-  const n = G.normalizeGrant({ tool: 'powershell_run', cmdAllow: ['^npm run build'], scope: 'session' }, SESS, CFG, NOW);
+  const n = G.normalizeGrant({ tool: 'shell_run', cmdAllow: ['^npm run build'], scope: 'session' }, SESS, CFG, NOW);
   ok(n.ok && n.grant.cmdAllow[0] === 'npm run build', 'P3 cmdAllow 去 ^ 锚存前缀');
 }
 {
@@ -241,11 +232,11 @@ ok(G.normalizeGrant({ tool: 'powershell_run', scope: 'session' }, SESS, CFG, NOW
   ok(n.dropped.some(d => /\.\./.test(d.glob)), 'P3 裁剪原因回显');
 }
 {
-  const n = G.normalizeGrant({ tool: 'powershell_run', cmdAllow: ['npm; curl evil', '^npm run build'], scope: 'session' }, SESS, CFG, NOW);
+  const n = G.normalizeGrant({ tool: 'shell_run', cmdAllow: ['npm; curl evil', '^npm run build'], scope: 'session' }, SESS, CFG, NOW);
   ok(n.ok && n.grant.cmdAllow.length === 1 && n.grant.cmdAllow[0] === 'npm run build', 'P3 cmdAllow 含元字符前缀被剔除');
 }
 {
-  const n = G.normalizeGrant({ tool: 'powershell_run', cmdAllow: ['^npm'], maxUses: 999, ttlMs: 99 * 60 * 60 * 1000, scope: 'session' }, SESS, CFG, NOW);
+  const n = G.normalizeGrant({ tool: 'shell_run', cmdAllow: ['^npm'], maxUses: 999, ttlMs: 99 * 60 * 60 * 1000, scope: 'session' }, SESS, CFG, NOW);
   ok(n.grant.maxUses === 5, 'P3 exec maxUses 夹到 ≤5(实 ' + n.grant.maxUses + ')');
   ok(n.grant.expiresAt - n.grant.issuedAt === 30 * 60 * 1000, 'P3 exec TTL 夹到 ≤30min');
 }
@@ -316,20 +307,20 @@ ok(G.normalizeGrant({ tool: 'powershell_run', scope: 'session' }, SESS, CFG, NOW
 
 // P5 consumeGrant exec:cmdAllow 锚定 + 元字符 + 禁网 + 前缀边界 + cwd 越界。
 {
-  issue({ tool: 'powershell_run', cmdAllow: ['^npm run build'] });
-  ok(!!G.consumeGrant(SESS, 'powershell_run', { command: 'npm run build' }, 'native', ROOT), 'P5 ^npm run build 命中');
-  issue({ tool: 'powershell_run', cmdAllow: ['^npm run build'] });
-  ok(!!G.consumeGrant(SESS, 'powershell_run', { command: 'npm run build --prod' }, 'native', ROOT), 'P5 前缀后接空格+参数 命中');
-  issue({ tool: 'powershell_run', cmdAllow: ['^npm run build'] });
-  ok(G.consumeGrant(SESS, 'powershell_run', { command: 'npm run buildEVIL' }, 'native', ROOT) === null, 'P5 前缀边界:buildEVIL 不命中(挡粘连)');
-  issue({ tool: 'powershell_run', cmdAllow: ['^npm run build'] });
-  ok(G.consumeGrant(SESS, 'powershell_run', { command: 'npm run build; curl http://evil' }, 'native', ROOT) === null, 'P5 元字符 ; → 失配');
-  issue({ tool: 'powershell_run', cmdAllow: ['^curl'] });
-  ok(G.consumeGrant(SESS, 'powershell_run', { command: 'curl http://x' }, 'native', ROOT) === null, 'P5 默认禁网:curl 失配(netAllowed=false)');
-  issue({ tool: 'powershell_run', cmdAllow: ['^curl'], netAllowed: true });
-  ok(!!G.consumeGrant(SESS, 'powershell_run', { command: 'curl http://x' }, 'native', ROOT), 'P5 netAllowed=true → curl 命中');
-  issue({ tool: 'powershell_run', cmdAllow: ['^npm test'] });
-  ok(G.consumeGrant(SESS, 'powershell_run', { command: 'npm test', cwd: path.resolve(ROOT, '..') }, 'native', ROOT) === null, 'P5 cwd 越 grantRoot → 失配');
+  issue({ tool: 'shell_run', cmdAllow: ['^npm run build'] });
+  ok(!!G.consumeGrant(SESS, 'shell_run', { command: 'npm run build' }, 'native', ROOT), 'P5 ^npm run build 命中');
+  issue({ tool: 'shell_run', cmdAllow: ['^npm run build'] });
+  ok(!!G.consumeGrant(SESS, 'shell_run', { command: 'npm run build --prod' }, 'native', ROOT), 'P5 前缀后接空格+参数 命中');
+  issue({ tool: 'shell_run', cmdAllow: ['^npm run build'] });
+  ok(G.consumeGrant(SESS, 'shell_run', { command: 'npm run buildEVIL' }, 'native', ROOT) === null, 'P5 前缀边界:buildEVIL 不命中(挡粘连)');
+  issue({ tool: 'shell_run', cmdAllow: ['^npm run build'] });
+  ok(G.consumeGrant(SESS, 'shell_run', { command: 'npm run build; curl http://evil' }, 'native', ROOT) === null, 'P5 元字符 ; → 失配');
+  issue({ tool: 'shell_run', cmdAllow: ['^curl'] });
+  ok(G.consumeGrant(SESS, 'shell_run', { command: 'curl http://x' }, 'native', ROOT) === null, 'P5 默认禁网:curl 失配(netAllowed=false)');
+  issue({ tool: 'shell_run', cmdAllow: ['^curl'], netAllowed: true });
+  ok(!!G.consumeGrant(SESS, 'shell_run', { command: 'curl http://x' }, 'native', ROOT), 'P5 netAllowed=true → curl 命中');
+  issue({ tool: 'shell_run', cmdAllow: ['^npm test'] });
+  ok(G.consumeGrant(SESS, 'shell_run', { command: 'npm test', cwd: path.resolve(ROOT, '..') }, 'native', ROOT) === null, 'P5 cwd 越 grantRoot → 失配');
 }
 
 // P6 tier / entrypoint / scope / TTL / maxUses / revoke。
@@ -341,21 +332,21 @@ ok(G.normalizeGrant({ tool: 'powershell_run', scope: 'session' }, SESS, CFG, NOW
 }
 {
   // scope='run':未绑定 run(activeDriverRuns 空)→ 不命中;绑定后命中。
-  G.autonomyGrants.clear(); G.activeDriverRuns.clear();
+  G = createGrantService();
   const n = G.normalizeGrant({ tool: 'file_write', pathGlob: ['**'], scope: 'run' }, SESS, CFG, NOW);
-  G.autonomyGrants.set('s1', [n.grant]);
+  G.installGrant('s1', n.grant);
   ok(G.consumeGrant(SESS, 'file_write', { path: path.join(ROOT, 'a.js') }, 'native', ROOT) === null, 'P6 scope=run 无活动 run → 不命中');
   G.bindDriverRun('s1', 'drun_1');
   ok(!!G.consumeGrant(SESS, 'file_write', { path: path.join(ROOT, 'a.js') }, 'native', ROOT), 'P6 bindDriverRun 补绑后 → 命中');
-  G.activeDriverRuns.set('s1', 'drun_2');
+  G.bindDriverRun('s1', 'drun_2');
   ok(G.consumeGrant(SESS, 'file_write', { path: path.join(ROOT, 'a.js') }, 'native', ROOT) === null, 'P6 换 run(drun_2)→ 旧 run 授权不命中(scope 隔离)');
 }
 {
   // TTL 过期:issuedAt 很久前 → expiresAt < Date.now()。用极短 ttl 造过期(normalizeGrant now 参数控制)。
-  G.autonomyGrants.clear(); G.activeDriverRuns.clear();
+  G = createGrantService();
   const past = Date.now() - 10 * 60 * 60 * 1000; // 10h 前
   const n = G.normalizeGrant({ tool: 'file_write', pathGlob: ['**'], scope: 'session', ttlMs: 60 * 1000 }, SESS, CFG, past);
-  G.autonomyGrants.set('s1', [n.grant]);
+  G.installGrant('s1', n.grant);
   ok(G.consumeGrant(SESS, 'file_write', { path: path.join(ROOT, 'a.js') }, 'native', ROOT) === null, 'P6 TTL 过期 → 不命中');
 }
 {
@@ -374,13 +365,25 @@ ok(G.normalizeGrant({ tool: 'powershell_run', scope: 'session' }, SESS, CFG, NOW
 }
 {
   // revokeGrantsForRun:只撤匹配 run。
-  G.autonomyGrants.clear(); G.activeDriverRuns.clear(); G.bindDriverRun('s1', 'drun_X');
+  G = createGrantService(); G.bindDriverRun('s1', 'drun_X');
   const a = G.normalizeGrant({ tool: 'file_write', pathGlob: ['**'], scope: 'run' }, SESS, CFG, NOW).grant;
   const b = G.normalizeGrant({ tool: 'file_read', pathGlob: ['**'], scope: 'session' }, SESS, CFG, NOW).grant;
-  G.autonomyGrants.set('s1', [a, b]);
+  G.installGrant('s1', a); G.installGrant('s1', b);
   G.revokeGrantsForRun('s1', 'drun_X');
   const live = G.listGrantsView('s1');
   ok(live.length === 1 && live[0].tool === 'file_read', 'P6 revokeGrantsForRun 只撤 scope=run 匹配项,session 授权存活');
+}
+
+// Service ownership: fresh runtimes have no grants; a stale driver's teardown
+// cannot erase the binding of a newer run.
+{
+  const isolated = createGrantService();
+  ok(isolated.listGrantsView('s1').length === 0, 'P6 新服务不继承其他实例的授权');
+  isolated.bindDriverRun('s1', 'old'); isolated.bindDriverRun('s1', 'new');
+  isolated.endDriverRun('s1', 'old');
+  ok(isolated.activeDriverRunOf('s1') === 'new', 'P6 旧运行收尾不能清除新运行绑定');
+  isolated.endDriverRun('s1', 'new');
+  ok(isolated.activeDriverRunOf('s1') === null, 'P6 当前运行收尾清除自己的绑定');
 }
 
 // ── P7) 对抗验证轮修复(archive_zip 源受控 + move/copy/unzip 可消耗 + .git 尾点)──
@@ -425,8 +428,8 @@ console.log('\n── [P7] 对抗验证修复回归 ──');
 }
 
 // S9 对抗轮 P2 GapB 静态锁:archive_zip/archive_unzip 处理体现调用 guardFileToolPath(源/目标护栏)。
-ok(/guardFileToolPath\(path\.resolve\(String\(raw\)\), ctx, \{ tool: 'archive_zip', write: false \}\)/.test(src) && /guardFileToolPath\(dest, ctx, \{ tool: 'archive_zip', write: true \}\)/.test(src), 'S9 archive_zip 源(读)+dest(写)过 guardFileToolPath(Gap B)');
-ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.test(src) && /guardFileToolPath\(destDir, ctx, \{ tool: 'archive_unzip', write: true \}\)/.test(src), 'S9 archive_unzip src(读)+destDir(写)过 guardFileToolPath(Gap B)');
+ok(/guardFileToolPath\(path\.resolve\(String\(raw\)\), ctx, \{ tool: 'archive_zip', write: false \}\)/.test(fileToolsSource) && /guardFileToolPath\(dest, ctx, \{ tool: 'archive_zip', write: true \}\)/.test(fileToolsSource), 'S9 archive_zip 源(读)+dest(写)过 guardFileToolPath(Gap B)');
+ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.test(fileToolsSource) && /guardFileToolPath\(destDir, ctx, \{ tool: 'archive_unzip', write: true \}\)/.test(fileToolsSource), 'S9 archive_unzip src(读)+destDir(写)过 guardFileToolPath(Gap B)');
 
 // ══════════════════════════════════════════════════════════════════════════════════════════════════
 // [H] Live HTTP
@@ -438,7 +441,7 @@ ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.te
   fs.writeFileSync(path.join(WS, 'src', 'a.js'), '// a', 'utf8');
   fs.writeFileSync(path.join(WS, 'src', 'b.js'), '// b', 'utf8');
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'default', defaultWorkspace: WS }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   try {
     console.log('\n── [H] Live HTTP ──');
@@ -456,7 +459,7 @@ ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.te
     ok(bodyTok.status === 403, 'H1 body.token===RUNTIME.token 但无 header → 仍 403(签发主权律)');
 
     // H2 签发校验:exec 无 cmdAllow → 400;spawn_agent → 400。
-    const execNoCmd = await req('POST', '/api/autonomy/grant', { sessionId: s.id, tool: 'powershell_run' }, H);
+    const execNoCmd = await req('POST', '/api/autonomy/grant', { sessionId: s.id, tool: 'shell_run' }, H);
     ok(execNoCmd.status === 400, 'H2 exec 无 cmdAllow → 400');
     const spawnGrant = await req('POST', '/api/autonomy/grant', { sessionId: s.id, tool: 'spawn_agent', pathGlob: ['**'] }, H);
     ok(spawnGrant.status === 400, 'H2 spawn_agent 签发 → 400(红线#4)');

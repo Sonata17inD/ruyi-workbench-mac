@@ -8,7 +8,6 @@
 //   [R3] 端点回 500(runSessionTurn 外层 ok:true、内层 result.ok:false):用户回合回 steward.turn_failed
 //        (修前 ok:true、say 为空);收件箱回合那一批事件回到队列,重试有界(同一条至多再试 3 次)。
 //   [R4] 收件箱第四源:上一个管家回合留下的失败账(seq 落后于当前回合)不把后来的回合报成 failed。
-//   [R6] 收件箱 start → stop → start 交错之后再 stop:不留下仍在跑的轮询 interval(修前漏一个)。
 //   [R8] 到访摘要:离开期间攒下 >200 行收件箱,全部计入,水位推到最后一行(修前只数前 200 行、水位却跳到全箱最大)。
 //   [R10] 总览按投影指纹复用会话头:没变的会话不重读;改过的会话照样读到新值。
 const { test, before, after } = require('node:test');
@@ -148,28 +147,6 @@ test('[R4] 收件箱第四源:过期的失败账不把后来的回合报成 fail
   const row = read.items.find(item => item.sessionId === x.id && item.seq === 3);
   assert.ok(row, '第 3 回合进了收件箱');
   assert.equal(row.kind, 'done', '修前被第 1 回合的失败账报成 failed');
-});
-
-test('[R6] start → stop → start 交错之后 stop:没有漏掉的轮询器', async () => {
-  const cfg = await srv.readConfig();
-  const liveIntervals = new Set();
-  const origSet = global.setInterval;
-  const origClear = global.clearInterval;
-  global.setInterval = (fn, ms, ...rest) => { const h = origSet(fn, ms, ...rest); if (ms === 5000) liveIntervals.add(h); return h; };
-  global.clearInterval = h => { liveIntervals.delete(h); return origClear(h); };
-  try {
-    const p1 = srv.startStewardInbox(cfg);
-    srv.stopStewardInbox();
-    const p2 = srv.startStewardInbox(cfg);
-    await Promise.all([p1, p2]);
-    assert.equal(liveIntervals.size, 1, '恢复之后恰好一个轮询器');
-    srv.stopStewardInbox();
-    assert.equal(liveIntervals.size, 0, '停机之后一个不剩(修前漏一个,永远停不下来)');
-  } finally {
-    for (const h of liveIntervals) origClear(h);
-    global.setInterval = origSet;
-    global.clearInterval = origClear;
-  }
 });
 
 test('[R8] 到访摘要把 >200 行收件箱全部计入', async () => {

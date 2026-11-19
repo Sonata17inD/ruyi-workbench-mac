@@ -32,9 +32,9 @@ const css = read('css/views/steward-settings.css');
 const styles = read('styles.css');
 const zh = JSON.parse(read('locales/zh-CN.json'));
 const en = JSON.parse(read('locales/en-US.json'));
-// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(build-overlay.js 被 require 时零副作用),
+// 架构还债批 3·D:载荷登记断言读打包器运行时遍历的那份数组(macos-runtime-files.js 被 require 时零副作用),
 // 不再在打包器源码里找 'app/…' 字面量(表改成派生或换引号就静默失明)。
-const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'build-overlay.js')).PAYLOAD_FILES);
+const overlayPayload = new Set(require(path.join(ROOT, 'ruyi-workbench', 'tools', 'macos-runtime-files.js')).filesFor('workbench'));
 const readFrontendCss = fs.readFileSync(path.join(__dirname, 'read-frontend-css.js'), 'utf8');
 
 // 注释里要写清楚「零 innerHTML」这类纪律本身，扫危险 API 前先把注释剥掉（与 117c/117d 同一手法）。
@@ -267,8 +267,7 @@ ok(count(settingsCode, /setInterval\(/g) === 0 && count(settingsCode, /setTimeou
   'D3 设置页零计时器（不轮询；停机态由壳层那一处已有的 setInterval 喂进来）');
 ok(count(settingsCode, /\.download = /g) === 1 && /anchor\.download = 'steward-memory\.json';/.test(settings),
   'D4 全模块恰好一处 `<a download>`，且只用于记忆导出');
-ok(count(stewardShell, /setInterval\(/g) === 1,
-  'D5 steward-shell.js 仍然全文件恰好一处 setInterval（117b 的 C2a 未被 117e 稀释）');
+ok(!/setInterval\(/.test(stewardShell), 'D5 壳层无固定 interval');
 ok(count(stewardShell, /\bapi\(/g) === 1,
   'D6 steward-shell.js 仍然全文件恰好一处 api() 调用（117a 的 C3a 未被稀释；settings 拿到的是注入的引用）');
 // 结构化 error 绝不 String() 直落（与 117e 第 0 步给 conversation 立的同一条纪律）。
@@ -391,9 +390,7 @@ ok(missingTemplate.length === 0, `H4 模板拼出来的 ${template.length} 个�
 // 117m-A4 新增 steward_thread_stop 时就漏了这一条，后果是「行动流水」那一列把内部 id
 // 原样显给用户（§8.1 原则 7 明文禁止，上一轮用户就为这类事提过意见）。
 // 钉成逐名对账：以后再加管家工具，漏登记会当场红，而不是等用户在界面上看到 id。
-// 117 波 T2(32 号文 §5):13h 拆成六个文件(纯搬家),STEWARD_ACTION_HOOKS 这张表随共享常量块
-// 搬进 13m-steward-runner-base.js。钉的事实(表里每个工具在前端都有人话标签)一字未改,只换读取来源。
-const runnerSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'src', '13m-steward-runner-base.js'), 'utf8');
+const runnerSrc = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'steward-runner-policy.cjs'), 'utf8');
 const hooksBlock = (runnerSrc.split('const STEWARD_ACTION_HOOKS = Object.freeze({')[1] || '').split('});')[0];
 const hookNames = [...hooksBlock.matchAll(new RegExp('^\\s*(steward_[a-z_]+):', 'gm'))].map(m => m[1]);
 const labelled = new Set(Object.keys(mod.STEWARD_TOOL_LABEL_KEYS));

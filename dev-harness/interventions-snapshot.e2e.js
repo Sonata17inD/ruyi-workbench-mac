@@ -118,7 +118,11 @@ let wb = null;
 const cbsDone = [];
 
 // ════════════════════════════ 主流程 ════════════════════════════
-const src = readServerSource(); // 顺带验证 src/产物新鲜度
+const src = readServerSource(); // 验证 src 与产物一致
+const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name), 'utf8');
+const routes = backend('intervention-routes.cjs');
+const routePolicy = backend('http-route-policy.cjs');
+const decisions = backend('intervention-decisions.cjs');
 fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
 fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   configSchema: 7, activeProvider: 'fake', engineMode: 'interactive', permissionMode: 'default',
@@ -259,25 +263,26 @@ try {
     409, { ok: false, error: { code: 'api.request_failed', params: {}, message: '运行已结束;可在新运行中执行该任务' } });
 
   // ─────────── S. 静态锚:五端点+contract 路由在源码与 ROUTE_AUTH 的既定等级 ───────────
-  ok(src.includes("pathname.match(/^\\/api\\/missions\\/([^/]+)\\/interventions\\/([^/]+)\\/decision$/)"), '(S) contract 路由仍在 13d');
+  ok(routes.includes("pathname.match(/^\\/api\\/missions\\/([^/]+)\\/interventions\\/([^/]+)\\/decision$/)"), '(S) 干预模块持有 contract 路由');
   for (const p of ['/api/chat/answer', '/api/permission/decision', '/api/plan/decision']) {
-    ok(src.includes(`pathname === '${p}'`), `(S) 适配器路由在源码: ${p}`);
+    ok(routes.includes(`pathname === '${p}'`), `(S) 适配器路由在源码: ${p}`);
   }
-  ok(src.includes("auth: 'body-token'") && src.includes("auth: 'token-browser'"), '(S) ROUTE_AUTH 等级字面量仍在');
+  ok(routePolicy.includes("auth: 'body-token'") && routePolicy.includes("auth: 'token-browser'"), '(S) ROUTE_AUTH 等级字面量仍在');
 
   // ─────────── S2(116c). 管家来源(source:'steward')共用同一套响应形状,不新开决策端点 ───────────
   // 27 号文 §3.5:管家的决定必须经命令核心(decideIntervention),不得旁路成第二条 HTTP 决策路径。
   // 本波【没有】新增任何管家决策路由,所以这里只锁「同一个核心 + 管家来源自成审计标签 + 放行范围受
   // stewardMayAct 与永久豁免约束」这三件事;管家侧的成功/版本冲突/越权行为快照在 steward-tools.e2e.js,
   // CAS 层的 source:'steward' 三条路径在 interventions-cas.e2e.js (f)。
-  ok(!/pathname === '\/api\/steward\/decision'/.test(src) && !/steward\/interventions/.test(src),
+  const routeSources = [src, routes, backend('steward-routes.cjs')].join('\n');
+  ok(!/pathname === '\/api\/steward\/decision'/.test(routeSources) && !/steward\/interventions/.test(routeSources),
     "(S2) 116c 未新增任何管家决策路由(管家决定只经 decideIntervention 命令核心)");
-  ok(/source === 'steward' \? 'steward_decision'/.test(src),
-    "(S2) 13d 审计标签 switch 有 source==='steward' -> 'steward_decision' 分支(管家代答一眼可辨)");
-  ok(/decidedBy: 'steward'/.test(src) && /source: 'steward'/.test(src) && /contractRequest: true/.test(src),
-    "(S2) 管家决策以 {source:'steward', decidedBy:'steward', contractRequest:true} 进核心(与 UI 同一条契约路径)");
-  // 127 波 2-bis ③:13l 改为一次问 stewardExemptReason(布尔判据由它派生,仍是 06i 同一个单点),两种写法都认。
-  ok(/stewardToolPermanentlyExempt\(toolName\)|stewardExemptReason\(toolName, exemptInput\)/.test(src) && /reason: 'permanently_exempt'/.test(src),
+  ok(/source === 'steward' \? 'steward_decision'/.test(decisions),
+    "(S2) 干预决策审计标签 有 source==='steward' -> 'steward_decision' 分支(管家代答一眼可辨)");
+  const stewardDecisions = backend('steward-decision-tools.cjs');
+  ok(/decidedBy: 'steward'/.test(stewardDecisions) && /source: 'steward'/.test(stewardDecisions) && /contractRequest: true/.test(stewardDecisions),
+    "(S2) 管家决策标记进入共同命令核心");
+  ok(/stewardExemptReason\(toolName, exemptInput\)/.test(stewardDecisions) && /reason: 'permanently_exempt'/.test(stewardDecisions),
     '(S2) 永久豁免清单在真正下决定【之前】拦截,任何权限档都降级为提议');
 
   console.log(fail ? `\nINTERVENTIONS SNAPSHOT E2E: FAIL (${fail})` : '\nINTERVENTIONS SNAPSHOT E2E: ALL PASS');

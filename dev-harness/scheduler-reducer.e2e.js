@@ -1,20 +1,11 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 // E2E: 第26波c —— 调度核心纯 reducer computeSchedulerStep 组合单测。
-// 源抽取 + new Function 实跑(无需起服务,纯函数),穷举 retry×loop×gate×pause×crash×inflight 组合,
-// 锁死 26a 三铁律 + block/skip/condition/并发/依赖门语义。技术同 audit-w23 的源抽取范式。
+// 直接引用调度模块(无需起服务,纯函数),穷举 retry×loop×gate×pause×crash×inflight 组合,
+// 锁死 26a 三铁律 + block/skip/condition/并发/依赖门语义。
 'use strict';
-const { readServerSource } = require('./src-reader');
-const fs = require('fs'), path = require('path');
-const SERVER = path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js');
-const src = readServerSource();
+const { computeSchedulerStep: compute, computeWaveSeq: computeWaves } = require('../ruyi-workbench/app/backend/workflow-scheduler.cjs');
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
-
-// ── 源抽取 computeSchedulerStep(顶层函数,到首个 column-0 '}') ──
-const m = src.match(/function computeSchedulerStep\(nodes, opts\) \{[\s\S]*?\n\}/);
-ok(!!m, '源抽取 computeSchedulerStep');
-if (!m) { console.log('\nSCHEDULER-REDUCER E2E: FAIL (' + fail + ')'); process.exit(1); }
-const compute = new Function(m[0] + '\nreturn computeSchedulerStep;')();
 
 // 默认 helpers:terminal 集合 + failureContinues(默认恒 false)+ evalCondition(读 node._cond 布尔)。
 const TERMINAL = new Set(['succeeded', 'failed', 'cancelled', 'blocked', 'skipped', 'rejected']);
@@ -234,10 +225,7 @@ const W = (id, status, deps, extra = {}) => N(id, status, deps, { wait: { mode: 
 }
 
 // 17) Crew graph dispatch waves share the scheduler's ordering, concurrency and wait-slot semantics.
-const waveMatch = src.match(/function computeWaveSeq\(nodes, opts\) \{[\s\S]*?\n\}/);
-ok(!!waveMatch, '17 extract computeWaveSeq');
-if (waveMatch) {
-  const computeWaves = new Function(waveMatch[0] + '\nreturn computeWaveSeq;')();
+{
   const roots = [N('a', 'queued', []), N('b', 'queued', []), N('c', 'queued', [])];
   const rootWaves = computeWaves(roots, { concurrency: 2 });
   ok(rootWaves.get('a') === 0 && rootWaves.get('b') === 0 && rootWaves.get('c') === 1,

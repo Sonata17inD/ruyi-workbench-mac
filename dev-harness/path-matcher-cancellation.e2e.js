@@ -17,7 +17,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function until(check) { const deadline = Date.now() + 5000; while (Date.now() < deadline) { if (check()) return; await sleep(10); } throw new Error('fixture condition timed out'); }
 (async () => {
   try {
-    const S = loadServerInternals(['toolCall', 'walkFiles', 'createBoundedPathMatcher'], { withEval: true });
+    const S = loadServerInternals(['toolCall', 'ensureDataRootReal', 'isSensitiveDataPath', 'isSensitiveHardlinkAlias', 'pathWithinRoot', 'realpathForContainment']);
+    const { createBoundedPathMatcher } = require('../ruyi-workbench/app/backend/search-workers.cjs');
     wt.Worker = class extends OriginalWorker {
       constructor(...args) {
         super(...args); this.cleanupMode = mode; this.online = false; this.exited = false; workers.push(this);
@@ -64,31 +65,32 @@ async function until(check) { const deadline = Date.now() + 5000; while (Date.no
     mode = 'reject-after-exit';
     t.ok((await call('file_list', {pattern:'\\.(txt|md)$'})).ok && workers.at(-1).threadId === -1, 'confirmed exit remains usable despite a late termination rejection');
     mode = 'normal';
-    const matcher = S.createBoundedPathMatcher('(txt|md)$', '', 1500);
+    const matcher = createBoundedPathMatcher('(txt|md)$', '', 1500);
     const first = await matcher.match(['alpha.txt']);
     t.ok(first.hits.length === 1, 'matcher returns normal batch hits before an idle failure');
     const idleWorker = workers.at(-1); idleWorker.emit('error', new Error('fixture between-batch error'));
     const failed = await matcher.match(['beta.md']);
     t.ok(failed.error.includes('between-batch') && !failed.cleanupIncomplete && idleWorker.threadId === -1, 'between-batch errors are handled and worker exit is confirmed');
     t.ok(matcher.close() === matcher.close(), 'close is idempotent and shares its confirmation promise');
-    const exitMatcher = S.createBoundedPathMatcher('(txt|md)$', '', 1500);
+    const exitMatcher = createBoundedPathMatcher('(txt|md)$', '', 1500);
     await exitMatcher.match(['alpha.txt']); const exitedWorker = workers.at(-1);
     await OriginalWorker.prototype.terminate.call(exitedWorker);
     const afterExit = await exitMatcher.match(['beta.md']);
     t.ok(!!afterExit.error && !afterExit.cleanupIncomplete && exitedWorker.threadId === -1, 'unexpected exit between batches cannot leave a later match pending');
-    const direct = S.createBoundedPathMatcher('^(a+)+$', '', 1500);
+    const direct = createBoundedPathMatcher('^(a+)+$', '', 1500);
     const directPending = direct.match([badName]); const directWorker = workers.at(-1);
     await until(() => directWorker.online); await sleep(50);
     const closed = direct.close(); const closedMatch = await directPending;
     t.ok(!!closedMatch.error && !(await closed).cleanupIncomplete && directWorker.threadId === -1, 'explicit close settles an in-flight match and confirms exit');
-    const idleAbort = new AbortController(); const idle = S.createBoundedPathMatcher('(txt|md)$', '', 1500, idleAbort.signal);
+    const idleAbort = new AbortController(); const idle = createBoundedPathMatcher('(txt|md)$', '', 1500, idleAbort.signal);
     await idle.match(['alpha.txt']); idleAbort.abort(); const afterAbort = await idle.match(['beta.md']);
     t.ok(afterAbort.aborted && !afterAbort.cleanupIncomplete && getEventListeners(idleAbort.signal,'abort').length === 0, 'cancellation between batches closes the worker before another match');
     const startupBefore = workers.length;
-    S.__eval('globalThis.__savedSearchIdentities=sensitiveFileIdentities; sensitiveFileIdentities=async()=>{throw new Error("fixture filesystem startup failure")};');
+    const brokenWalker = require('../ruyi-workbench/app/backend/file-walker.cjs').createFileWalker({
+      ...S, sensitiveFileIdentities: async () => { throw new Error('fixture filesystem startup failure'); },
+    });
     let startupFailed = false;
-    try { await S.walkFiles(workspace, { pattern:'(txt|md)$' }); } catch (error) { startupFailed = error.message.includes('startup failure'); }
-    finally { S.__eval('sensitiveFileIdentities=globalThis.__savedSearchIdentities;delete globalThis.__savedSearchIdentities;'); }
+    try { await brokenWalker.walkFiles(workspace, { pattern:'(txt|md)$' }); } catch (error) { startupFailed = error.message.includes('startup failure'); }
     t.ok(startupFailed && workers.length === startupBefore, 'filesystem initialization failure occurs before allocating a path worker');
     for (const [tool,args] of [['glob',{pattern:'**/*.txt'}],['project_snapshot',{}]]) {
       const abort = new AbortController(); abort.abort();

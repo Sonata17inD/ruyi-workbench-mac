@@ -28,8 +28,13 @@ process.env.RUYI_HOME = path.join(root, 'data');
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
-const { McpStdioClient, McpHttpClient, collectBridgedTools, probeMcpConnector, killAllMcpClients, parseMcpConfigFile,
+const { collectBridgedTools, probeMcpConnector, killAllMcpClients, parseMcpConfigFile,
   resolveExternalMcpServers, invalidateMcpDropInCache } = srv;
+const transportPorts = require('../lib/server-internals').loadServerInternals([
+  'safeJsonParse', 'DesktopExecutionHooks', 'ProcessRuntime', 'killChildTree',
+  '_expandMcpVar', 'RUYI_MCP_SERVER_ID', 'VERSION',
+]);
+const { McpStdioClient, McpHttpClient } = require('../../ruyi-workbench/app/backend/mcp-transports.cjs').createMcpTransports(transportPorts);
 
 test('stdio abort attempts the matching cancellation packet before immediate owned cleanup', async () => {
   const client = new McpStdioClient({ id: 'cancel-contract', command: 'never-executed' }), order = [], packets = [];
@@ -433,4 +438,28 @@ test('[F7] http:服务端 JSON-RPC error 含 "timed out" 原样回传、连接�
     const st = await c2.callTool('t', {}, 10000, { signal: ac.signal });
     assert.equal(st.steerInterrupted, true, JSON.stringify(st));
   } finally { s.closeAllConnections(); s.close(); }
+});
+
+// A connection is already owned before the server sends its first response header.
+test('killing legacy SSE during pending headers closes startup and never initializes', async () => {
+  let accept;
+  const accepted = new Promise(resolve => { accept = resolve; });
+  let requestCount = 0;
+  const server = http.createServer((_req, res) => { requestCount++; accept(res); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const client = new McpHttpClient({ id: 'pending-sse', transport: 'sse', url: `http://127.0.0.1:${server.address().port}/sse`, startupTimeoutMs: 5000 });
+  const starting = client.start();
+  const rejected = assert.rejects(starting, /mcp client killed/);
+  try {
+    await accepted;
+    client.kill();
+    await rejected;
+    assert.equal(client.dead, true);
+    assert.equal(client._sseReq, null);
+    assert.equal(requestCount, 1, 'cancelled startup must not send initialize');
+  } finally {
+    client.kill();
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
 });
