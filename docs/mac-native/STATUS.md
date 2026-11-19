@@ -1452,3 +1452,4 @@
 - 验收对账已记录两份镜像和 App 树身份、自动化证据的 SHA-256 及剩余实机门。 [冻结候选验收对账](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/frozen-acceptance-audit.json)
 - 源码回归、冻结候选清单及自动化验收共 1,592 份记录已归档，解压逐件复核 SHA-256，并核验报告引用的证据哈希。 [归档及核验说明](../../MACOS-PORTING/evidence/P6/archives/README.md)
 - 真实唤醒探针的预检已在两份冻结 DMG 的隔离安装上通过，确认 App 各自启动并形成 SSE 游标，退出后回收子服务。正式运行需解锁，由操作者在两包就绪后触发一次睡眠唤醒。验收同时要求 macOS 电源日志、原 App／Node 进程及服务身份保持一致、页面携带捕获的游标恢复 SSE。预检报告标记实机唤醒待验。 [实机探针](../../dev-harness/macos-physical-wake.js) · [预检结果](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/physical-wake-preflight-final.json)
+- 解锁后已在两份冻结签名 App 的 LaunchServices 入口重跑截图和输入专项。两个候选均实际返回截图 `permission_denied`，辅助功能和事件投递权限也均被拒绝。已核对实跑 App 树、镜像和 helper 的指纹，保留隔离安装以便授权后重跑。两包同时准备的真实唤醒探针亦启动成功，五分钟内 App 报告及系统电源日志均无睡眠唤醒事件。实机验收仍需系统授权及一次用户触发的睡眠唤醒。 [解锁后的实机记录](../../ruyi-workbench/dist/Ruyi-macos-arm64-native-1ece927e/validation/physical-desktop-aqUHH0/unlocked-desktop-qualification.json)
