@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 @preconcurrency import WebKit
 import CryptoKit
 import Darwin
@@ -7,6 +8,7 @@ import ServiceManagement
 
 final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
     private let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "如意工作台"
+    private let requestsDesktopPermissions = Bundle.main.object(forInfoDictionaryKey: "RuyiDesktopPermissionRequests") as? String == "true"
     private var window: NSWindow!
     private var webView: WKWebView!
     private var status: NSStackView!
@@ -152,6 +154,17 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         loginMenuItem = appMenu.addItem(withTitle: "登录时启动", action: #selector(toggleLoginStartup), keyEquivalent: "")
         loginMenuItem?.target = self
         updateLoginMenu()
+        if requestsDesktopPermissions {
+            let permissionsItem = NSMenuItem(title: "桌面权限", action: nil, keyEquivalent: "")
+            let permissions = NSMenu(title: "桌面权限")
+            permissions.addItem(withTitle: "请求屏幕录制权限…", action: #selector(requestScreenRecording), keyEquivalent: "").target = self
+            permissions.addItem(withTitle: "请求辅助功能权限…", action: #selector(requestAccessibility), keyEquivalent: "").target = self
+            permissions.addItem(.separator())
+            permissions.addItem(withTitle: "打开录屏设置…", action: #selector(openScreenRecordingSettings), keyEquivalent: "").target = self
+            permissions.addItem(withTitle: "打开辅助功能设置…", action: #selector(openAccessibilitySettings), keyEquivalent: "").target = self
+            permissionsItem.submenu = permissions
+            appMenu.addItem(permissionsItem)
+        }
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "隐藏\(appName)", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: "退出\(appName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -173,6 +186,42 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         }
         menu.addItem(file)
         NSApp.mainMenu = menu
+    }
+
+    private func requestDesktopPermissionsOnFirstLaunch() {
+        guard requestsDesktopPermissions, report == nil, ownsInstance, !quitting, NSApp.isActive,
+              window?.isKeyWindow == true else { return }
+        let key = "didRequestDesktopPermissionsOnFirstLaunch"
+        let defaults = UserDefaults.standard
+        guard !defaults.bool(forKey: key) else { return }
+        defaults.set(true, forKey: key)
+        requestScreenRecording()
+        requestAccessibility()
+    }
+
+    @objc private func requestScreenRecording() {
+        if !CGPreflightScreenCaptureAccess() { _ = CGRequestScreenCaptureAccess() }
+    }
+
+    @objc private func requestAccessibility() {
+        if !AXIsProcessTrusted() {
+            let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
+            _ = AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
+        } else if !CGPreflightPostEventAccess() {
+            _ = CGRequestPostEventAccess()
+        }
+    }
+
+    @objc private func openScreenRecordingSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc private func openAccessibilitySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private func updateLoginMenu() {
@@ -262,7 +311,14 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     }
 
     func applicationDidHide(_ notification: Notification) { suspendPage() }
-    func applicationDidBecomeActive(_ notification: Notification) { updateLoginMenu() }
+    func applicationDidBecomeActive(_ notification: Notification) {
+        updateLoginMenu()
+        DispatchQueue.main.async { [weak self] in self?.requestDesktopPermissionsOnFirstLaunch() }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.requestDesktopPermissionsOnFirstLaunch() }
+    }
     func windowDidMiniaturize(_ notification: Notification) { suspendPage() }
 
     private func installHostMarker(_ url: URL) {

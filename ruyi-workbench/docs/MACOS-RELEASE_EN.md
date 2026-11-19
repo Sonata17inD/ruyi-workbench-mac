@@ -8,7 +8,7 @@ Obtain a matching DMG and SHA256 from a trusted sender. Verify the checksum, ope
 
 Downloaded applications may trigger Gatekeeper. After checking the source and checksum, follow the actual Open Anyway workflow offered in Privacy & Security, subject to device-management policy. Do not remove quarantine or disable Gatekeeper/SIP. Successful local installation under the current account does not qualify first approval of a downloaded application.
 
-Screen recording, accessibility and microphone access require OS/user authorization. A denied permission disables the corresponding capability. A different ad-hoc build can request permissions or Keychain access again. An initialized window does not prove all desktop capabilities are authorized and ready.
+At its first foreground launch, Ruyi Full asks macOS for any missing Screen Recording and Accessibility permissions. Use the Desktop Permissions menu to retry or open the relevant System Settings pane. Full has the dedicated bundle ID `org.ruyi.workbench.full` and separate permission entries from Slim. The app requests microphone access when voice features are used.
 
 ## Variants and compatibility
 

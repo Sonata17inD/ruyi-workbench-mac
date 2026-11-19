@@ -67,7 +67,7 @@ function buildMacDesktop(output, { bundled = false, variant } = {}) {
       NSMicrophoneUsageDescription: '将语音转换为工作台输入文字。',
       NSDocumentsFolderUsageDescription: '读取文稿目录中的本地工作台程序文件和你选择的工作区。',
       ...(bundled ? { RuyiBundledWorkbench: 'true' } : { RuyiWorkbenchRoot: root }),
-      ...(full ? { RuyiDataDirectory: '.ruyi-workbench-full' } : {}) };
+      ...(full ? { RuyiDataDirectory: '.ruyi-workbench-full', RuyiDesktopPermissionRequests: 'true' } : {}) };
     fs.writeFileSync(path.join(contents, 'Info.plist'), '<?xml version="1.0" encoding="UTF-8"?>\n'
       + '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
       + '<plist version="1.0"><dict>' + Object.entries(info).map(([key, value]) => '<key>' + key + '</key><string>' + escape(value) + '</string>').join('')
