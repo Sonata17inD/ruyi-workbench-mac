@@ -70,7 +70,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     let staged;
     if (cloneStaging) {
       fs.mkdirSync(stage);
-      staged = path.join(stage, 'Ruyi.app');
+      staged = path.join(stage, newManifest.app);
       run('/bin/cp', ['-cR', installed, staged]);
       const oldRoot = fs.lstatSync(installed), newRoot = fs.lstatSync(staged);
       const independent = (oldRoot.dev !== newRoot.dev || oldRoot.ino !== newRoot.ino)
@@ -89,7 +89,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     } else staged = installTrial(mountNew, stage);
     detachTrial(mountNew); mounts.delete(mountNew);
     t.ok(digest(staged) === next.appTreeSha256 && digest(installed) === savedApp, 'complete new App is validated separately while the old installation remains intact');
-    const retained = path.join(fixture.home, 'rollback', 'Ruyi.app'); fs.mkdirSync(path.dirname(retained));
+    const retained = path.join(fixture.home, 'rollback', oldManifest.app); fs.mkdirSync(path.dirname(retained));
     fs.renameSync(installed, retained); fs.renameSync(staged, installed);
     t.ok(digest(retained) === savedApp && digest(installed) === next.appTreeSha256 && digest(data) === savedData,
       'whole-App replacement keeps the previous signed App and leaves business data separate');

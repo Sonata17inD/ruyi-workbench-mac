@@ -4,7 +4,7 @@ Applies to Ruyi3.0.1, Apple Silicon arm64, local/internal trial channel. The cur
 
 ## Installation and first launch
 
-Obtain a matching DMG and SHA256 from a trusted sender. Verify the checksum, open the image, copy the complete `Ruyi.app` to `/Applications` or personal `~/Applications`, wait for completion, eject the image, then open the installed App. The target machine needs no separate Node, Python, Homebrew or Xcode installation.
+Obtain a matching DMG and SHA256 from a trusted sender. Verify the checksum, open the image, copy the complete App (`Ruyi Full.app` for Full or `Ruyi.app` for Slim) to `/Applications` or personal `~/Applications`, wait for completion, eject the image, then open the installed App. The target machine needs no separate Node, Python, Homebrew or Xcode installation.
 
 Downloaded applications may trigger Gatekeeper. After checking the source and checksum, follow the actual Open Anyway workflow offered in Privacy & Security, subject to device-management policy. Do not remove quarantine or disable Gatekeeper/SIP. Successful local installation under the current account does not qualify first approval of a downloaded application.
 
@@ -26,7 +26,7 @@ The system browser mode only hands off URLs. Navigation and DOM operations requi
 ## Whole-App upgrade
 
 1. Save work, stop active tasks, and quit every Ruyi instance using the data directory through Quit or Cmd-Q. Closing the window normally leaves the service running. Stop separately launched CLI services normally as well.
-2. Retain the previous App and its provenance/checksums. Data normally lives in `~/.ruyi-workbench` or the explicit `RUYI_HOME`; `WIN_CLAUDE_WORKBENCH_HOME` is a compatibility input. Identify the actual data root and copy it completely to a separate protected backup location. Verify the copy and keep backups outside the App.
+2. Retain the previous App and its provenance/checksums. Data defaults to `~/.ruyi-workbench-full` for Full and `~/.ruyi-workbench` for Slim and older builds. An explicit `RUYI_HOME` takes precedence; `WIN_CLAUDE_WORKBENCH_HOME` is a compatibility input. Identify the actual data root and copy it completely to a separate protected backup location. Verify the copy and keep backups outside the App.
 3. If credential encryption is enabled, separately retain the password-protected credential recovery export and recovery password. A data-directory snapshot does not include system Keychain entries, TCC grants, external workspace files or global CLI configuration. Protect backups as sensitive business data.
 4. Verify the new DMG, copy the complete App to a new staging location, eject the image and check the App. Keep the previous App in a dedicated pre-upgrade folder, then put the complete new App at the installation location. If copying fails, retain the previous App and retry. Never merge App internals. This is a manual replacement workflow, not an atomic replacement guarantee.
 5. Start the installed new App and check initialization, workspaces, sessions, configuration and required tools. The product version can remain the same across builds: retain the application/packager commits from `trial-manifest.json` and the DMG checksum from `distribution.json` and `.dmg.sha256`. Switching Full/Slim changes dependencies. Review absolute old-package references in the migration center.

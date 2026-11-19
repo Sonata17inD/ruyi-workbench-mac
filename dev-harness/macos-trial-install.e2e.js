@@ -6,7 +6,7 @@ const fs = require('node:fs'), path = require('node:path'), os = require('node:o
 const { createRunner } = require('./lib/harness');
 const { fixtureChildEnv } = require('./lib/fixture-home');
 const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree');
-const { run, sha256, verifyPackage, inventory, treeDigest } = require('../ruyi-workbench/tools/macos-offline-lib');
+const { run, sha256, verifyPackage, inventory, treeDigest, FULL_APP_NAME } = require('../ruyi-workbench/tools/macos-offline-lib');
 const { attachTrial, detachTrial, verifyTrialDirectory, verifyDistribution, installTrial, verifyInstalledApp, signatureTarget } = require('../ruyi-workbench/tools/package-macos-trial');
 const t = createRunner('MACOS TRIAL INSTALL'); const { ok } = t;
 const distribution = process.env.RUYI_TRIAL_DISTRIBUTION;
@@ -35,7 +35,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     let readOnly = false;
     try { fs.writeFileSync(path.join(mount, 'write-probe'), 'probe'); } catch (error) { readOnly = ['EROFS', 'EACCES', 'EPERM'].includes(error.code); }
     ok(readOnly, 'mounted DMG is actually read-only');
-    const app = path.join(mount, 'Ruyi.app');
+    const app = path.join(mount, manifest.app);
     const native = read(path.join(app, 'Contents/Resources/workbench/native-dependencies.json'));
     for (const target of new Set(native.map(item => signatureTarget(app, item.path)))) run('/usr/bin/codesign', ['--verify', '--deep', '--strict', target]);
     ok(true, 'every native code object or resource-bearing container verifies after trial sealing');
@@ -46,12 +46,14 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     ok(refused && treeDigest(inventory(installed)) === manifest.treeSha256, 'existing installation is refused without replacing its bytes');
     for (const name of ['package-manifest.json', 'SHA256SUMS']) fs.copyFileSync(path.join(mount, name), path.join(applications, name));
     detachTrial(mount); attached = false;
-    const data = path.join(fixture.home, 'data'), workspace = path.join(fixture.home, 'workspace'); fs.mkdirSync(data); fs.mkdirSync(workspace);
+    const standaloneFull = manifest.app === FULL_APP_NAME;
+    const data = path.join(fixture.home, standaloneFull ? '.ruyi-workbench-full' : 'data');
+    const workspace = path.join(fixture.home, 'workspace'); fs.mkdirSync(data); fs.mkdirSync(workspace);
     fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({ configSchema: 14, defaultWorkspace: workspace,
       stewardEnabledV1: false, schedulerEnabledV1: false, autoImportClaudeCodeMcp: false, includeWorkbenchMcp: false,
       enableMcpDropIn: false, desktopMcp: { enabled: false, autodetect: false }, providers: [] }));
     const marker = path.join(data, 'retained.txt'); fs.writeFileSync(marker, 'keep user data');
-    const environment = { ...fixture.env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: '', PATH: '/usr/bin:/bin', RUYI_NODE_PATH: '/missing/node',
+    const environment = { ...fixture.env, RUYI_HOME: standaloneFull ? '' : data, WIN_CLAUDE_WORKBENCH_HOME: '', PATH: '/usr/bin:/bin', RUYI_NODE_PATH: '/missing/node',
       NODE_OPTIONS: '', NODE_PATH: '', PYTHONPATH: '', PYTHONHOME: '' };
     const report = path.join(scratch, 'native.json');
     const nativeHost = cp.spawn(path.join(installed, 'Contents/MacOS/RuyiDesktop'), ['--acceptance-report', report, '--acceptance-auto-quit'],
@@ -63,7 +65,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     const lsReport = path.join(scratch, 'launch-services.json');
     const launcher = cp.spawn('/usr/bin/open', ['-n', '-W', '-a', installed,
       '--env', 'HOME=' + fixture.home, '--env', 'USERPROFILE=' + fixture.home,
-      '--env', 'RUYI_HOME=' + data, '--env', 'RUYI_NODE_PATH=/missing/node', '--env', 'PATH=/usr/bin:/bin',
+      '--env', 'RUYI_HOME=' + environment.RUYI_HOME, '--env', 'WIN_CLAUDE_WORKBENCH_HOME=', '--env', 'RUYI_NODE_PATH=/missing/node', '--env', 'PATH=/usr/bin:/bin',
       '--args', '--acceptance-report', lsReport, '--acceptance-auto-quit'],
     { env: { ...process.env, ...fixture.env }, stdio: ['ignore', 'ignore', 'pipe'] });
     children.push(launcher); launcher.stderr.on('data', () => {});
@@ -74,6 +76,9 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     });
     ok(launcher.exitCode === 0 && read(lsReport)?.state === 'ready' && read(lsReport)?.page?.configLoaded,
       'LaunchServices opens the installed App from its actual installation path after eject');
+    if (standaloneFull) {
+      ok(!fs.existsSync(path.join(fixture.home, '.ruyi-workbench')), 'Full starts without an override and leaves the legacy default data root unused');
+    }
     ok(fs.readFileSync(marker, 'utf8') === 'keep user data', 'relaunch leaves separate user data unchanged');
     verifyInstalledApp(installed, manifest); verifyPackage(applications);
     ok(true, 'installed payload stays unchanged after both actual native entries');

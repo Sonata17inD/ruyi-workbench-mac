@@ -27,6 +27,7 @@ enum DesktopFailure: Error {
 final class DesktopService {
     let root: URL
     let dataRoot: URL
+    private let bundleDataDirectory: String?
     private let runtimeRoots: [URL]
     private(set) var process: Process?
     private var lease: Pipe?
@@ -46,6 +47,13 @@ final class DesktopService {
         let home = environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path
         let explicit = [environment["RUYI_HOME"], environment["WIN_CLAUDE_WORKBENCH_HOME"]]
             .compactMap { $0 }.first { !$0.isEmpty }
+        bundleDataDirectory = Bundle.main.object(forInfoDictionaryKey: "RuyiDataDirectory") as? String
+        if let directory = bundleDataDirectory {
+            let fallback = URL(fileURLWithPath: home).appendingPathComponent(directory)
+            dataRoot = desktopCanonicalURL(URL(fileURLWithPath: explicit ?? fallback.path, relativeTo: root))
+            runtimeRoots = [dataRoot]
+            return
+        }
         let next = URL(fileURLWithPath: home).appendingPathComponent(".ruyi-workbench")
         let legacy = URL(fileURLWithPath: home).appendingPathComponent(".win-claude-workbench")
         let legacyType = try? FileManager.default.attributesOfItem(atPath: legacy.path)[.type] as? FileAttributeType
@@ -62,6 +70,7 @@ final class DesktopService {
         guard process?.isRunning != true else { throw DesktopFailure.unavailable("service_already_running") }
         let files = FileManager.default
         var environment = ProcessInfo.processInfo.environment
+        if bundleDataDirectory != nil { environment["RUYI_HOME"] = dataRoot.path }
         let home = environment["HOME"] ?? files.homeDirectoryForCurrentUser.path
         let bundled = Bundle.main.object(forInfoDictionaryKey: "RuyiBundledWorkbench") as? String == "true"
         let selected = bundled ? root.appendingPathComponent("runtime/node/bin/node").path

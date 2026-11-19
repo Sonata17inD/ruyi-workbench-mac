@@ -33,7 +33,7 @@ function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-offline-acceptance-'));
   const moved = path.join(scratch, '搬移 如意 离线😀');
   const children = [];
-  let client, api, web, cleanupMcp;
+  let app, client, api, web, cleanupMcp;
   const modes = [];
   try {
     const manifest = verifyPackage(candidate);
@@ -48,7 +48,7 @@ function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
     // APFS clone copies keep this 1GB-scale acceptance independent without duplicating disk blocks.
     run('/bin/cp', ['-cR', path.resolve(candidate), moved]);
     verifyPackage(moved);
-    const app = path.join(moved, 'Ruyi.app');
+    app = path.join(moved, manifest.app);
     const workbench = path.join(app, 'Contents/Resources/workbench');
     const node = path.join(workbench, 'runtime/node/bin/node');
     const serverJs = path.join(workbench, 'app/server.js');
@@ -198,7 +198,7 @@ console.log(JSON.stringify(result));})().catch(e=>{console.error(e);process.exit
       fs.rmSync(fixture.home, { recursive: true, force: true });
       // Keep reports and copied manifests; the byte-verified App clone is reproducible
       // from the frozen input and otherwise consumes >1GB per successful Full run.
-      fs.rmSync(path.join(moved, 'Ruyi.app'), { recursive: true, force: true });
+      fs.rmSync(app, { recursive: true, force: true });
       console.log('INFO successful moved App clone removed; reports, metadata and frozen input retained');
     }
   }

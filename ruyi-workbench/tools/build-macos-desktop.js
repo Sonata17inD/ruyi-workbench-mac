@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const cp = require('node:child_process');
 const crypto = require('node:crypto');
+const { FULL_APP_ID } = require('./macos-offline-lib');
 
 function run(command, args) {
   const result = cp.spawnSync(command, args, { encoding: 'utf8', timeout: 180000, maxBuffer: 4 * 1024 * 1024 });
@@ -12,7 +13,7 @@ function run(command, args) {
   return result.stdout.trim();
 }
 
-function buildMacDesktop(output, { bundled = false } = {}) {
+function buildMacDesktop(output, { bundled = false, variant } = {}) {
   if (process.platform !== 'darwin') throw new Error('The Mac desktop App requires macOS and the Apple SDK');
   const root = path.resolve(__dirname, '..');
   const destination = path.resolve(output || path.join(root, 'dist', 'Ruyi.app'));
@@ -58,12 +59,15 @@ function buildMacDesktop(output, { bundled = false } = {}) {
     run(compiler, [...flags, ...sources, '-o', binary]);
     if (JSON.stringify(sourceFingerprint) !== JSON.stringify(fingerprints())) throw new Error('Desktop sources changed during compilation. Rebuild the App');
     const escape = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const info = { CFBundleExecutable: 'RuyiDesktop', CFBundleIdentifier: 'org.ruyi.workbench.development',
-      CFBundleName: '如意工作台', CFBundleDisplayName: '如意工作台', CFBundlePackageType: 'APPL',
+    const full = bundled && variant === 'full';
+    const name = full ? 'Ruyi Full' : '如意工作台';
+    const info = { CFBundleExecutable: 'RuyiDesktop', CFBundleIdentifier: full ? FULL_APP_ID : 'org.ruyi.workbench.development',
+      CFBundleName: name, CFBundleDisplayName: name, CFBundlePackageType: 'APPL',
       CFBundleShortVersionString: '3.0.1', CFBundleVersion: '3.0.1', LSMinimumSystemVersion: '14.0',
       NSMicrophoneUsageDescription: '将语音转换为工作台输入文字。',
       NSDocumentsFolderUsageDescription: '读取文稿目录中的本地工作台程序文件和你选择的工作区。',
-      ...(bundled ? { RuyiBundledWorkbench: 'true' } : { RuyiWorkbenchRoot: root }) };
+      ...(bundled ? { RuyiBundledWorkbench: 'true' } : { RuyiWorkbenchRoot: root }),
+      ...(full ? { RuyiDataDirectory: '.ruyi-workbench-full' } : {}) };
     fs.writeFileSync(path.join(contents, 'Info.plist'), '<?xml version="1.0" encoding="UTF-8"?>\n'
       + '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
       + '<plist version="1.0"><dict>' + Object.entries(info).map(([key, value]) => '<key>' + key + '</key><string>' + escape(value) + '</string>').join('')

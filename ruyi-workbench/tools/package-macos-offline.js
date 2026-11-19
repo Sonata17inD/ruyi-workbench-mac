@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const { copyRuntimeFiles } = require('./macos-runtime-files');
-const { sha256, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage } = require('./macos-offline-lib');
+const { sha256, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage,
+  FULL_APP_NAME, FULL_APP_ID } = require('./macos-offline-lib');
 const { buildMacDesktop } = require('./build-macos-desktop');
 const { buildMacProcessHelper } = require('./build-macos-process-helper');
 const { buildMacKeychainHelper } = require('./build-macos-keychain-helper');
@@ -36,7 +37,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
   const staging = fs.mkdtempSync(path.join(path.dirname(output), '.ruyi-offline-'));
   const candidate = path.join(staging, 'candidate');
-  const bundle = path.join(candidate, 'Ruyi.app');
+  const app = variant === 'full' ? FULL_APP_NAME : 'Ruyi.app';
+  const bundle = path.join(candidate, app);
   const workbench = path.join(bundle, 'Contents/Resources/workbench');
   const home = path.join(staging, 'home');
   fs.mkdirSync(home);
@@ -47,7 +49,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     MPLCONFIGDIR: path.join(home, 'matplotlib') };
   fs.mkdirSync(env.TMPDIR);
   try {
-    buildMacDesktop(bundle, { bundled: true });
+    buildMacDesktop(bundle, { bundled: true, variant });
     copyRuntimeFiles('workbench', root, workbench);
     for (const file of ['LICENSE', 'THIRD-PARTY-NOTICES.md']) fs.copyFileSync(path.join(repo, file), path.join(workbench, file));
     fs.mkdirSync(path.join(workbench, 'runtime'), { recursive: true });
@@ -63,7 +65,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     buildMacProcessHelper(path.join(workbench, 'runtime/macos/ruyi-process-helper'));
     buildMacKeychainHelper({ output: path.join(workbench, 'runtime/macos/ruyi-keychain-helper') });
     buildMacTrashHelper(path.join(workbench, 'runtime/macos/ruyi-trash-helper'));
-    buildMacAutomationHelper({ output: path.join(workbench, 'runtime/macos/ruyi-automation-helper') });
+    buildMacAutomationHelper({ output: path.join(workbench, 'runtime/macos/ruyi-automation-helper'),
+      signingIdentifier: variant === 'full' ? FULL_APP_ID + '.automation' : undefined });
     if (variant === 'full') {
       const acc = path.join(workbench, 'mcp/ai-computer-control');
       const pythonRoot = path.join(acc, 'runtime/python');
@@ -115,7 +118,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     const files = inventory(bundle);
     const foreign = files.find(file => file.type !== 'directory' && windowsLauncherSuffixes.has(path.extname(file.path).toLowerCase()));
     if (foreign) throw new Error('Windows runtime file in Mac package: ' + foreign.path);
-    writeJson(path.join(candidate, 'package-manifest.json'), { schemaVersion: 1, app: 'Ruyi.app',
+    writeJson(path.join(candidate, 'package-manifest.json'), { schemaVersion: 1, app,
       version: require('../package.json').version, variant, platform: 'darwin', arch: 'arm64', sourceCommit: source,
       sourceFingerprint, assetsLockSha256: sha256(lockFile), capabilities, signing: 'ad-hoc-development', notarized: false,
       minimumSystemTarget: '14.0', minimumSystemRuntimeVerified: false, treeSha256: treeDigest(files), files });
@@ -123,7 +126,8 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
     fs.writeFileSync(path.join(candidate, 'README.txt'), '如意 Mac 离线候选包 / Ruyi Mac offline candidate\n'
       + 'Variant: ' + variant + '\nApple Silicon arm64. Development signature; not notarized.\n'
       + 'macOS14 is a target, not yet runtime-qualified. No official Agent CLI or Git bundled.\n'
-      + 'Copy Ruyi.app to a writable local directory. Data stays in ~/.ruyi-workbench or RUYI_HOME.\n'
+      + 'Copy ' + app + ' to a writable local directory. Data stays in '
+      + (variant === 'full' ? '~/.ruyi-workbench-full' : '~/.ruyi-workbench') + ' or RUYI_HOME.\n'
       + 'Full includes Python/ACC/Office/Chromium. Slim does not include these dependencies.\n'
       + 'Cloud providers require a network. System permissions are granted separately by the user.\n');
     verifyPackage(candidate);

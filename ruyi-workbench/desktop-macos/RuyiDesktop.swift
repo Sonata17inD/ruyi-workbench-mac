@@ -6,6 +6,7 @@ import UserNotifications
 import ServiceManagement
 
 final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate {
+    private let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "如意工作台"
     private var window: NSWindow!
     private var webView: WKWebView!
     private var status: NSStackView!
@@ -144,7 +145,7 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         let menu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "显示如意工作台", action: #selector(activateWindow), keyEquivalent: "0").target = self
+        appMenu.addItem(withTitle: "显示\(appName)", action: #selector(activateWindow), keyEquivalent: "0").target = self
         backgroundMenuItem = appMenu.addItem(withTitle: "关闭窗口后继续后台运行", action: #selector(toggleBackgroundOnClose), keyEquivalent: "")
         backgroundMenuItem?.target = self
         backgroundMenuItem?.state = .on
@@ -152,8 +153,8 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         loginMenuItem?.target = self
         updateLoginMenu()
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "隐藏如意工作台", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "退出如意工作台", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "隐藏\(appName)", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "退出\(appName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         menu.addItem(appItem)
         let edit = NSMenuItem()
@@ -215,13 +216,13 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     private func buildStatusMenu() {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: "如意工作台")
-        item.button?.toolTip = "如意工作台"
+        item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: appName)
+        item.button?.toolTip = appName
         let menu = NSMenu()
         menu.addItem(withTitle: "显示工作台", action: #selector(activateWindow), keyEquivalent: "").target = self
         menu.addItem(withTitle: "设置…", action: #selector(showSettings), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "退出如意工作台", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "退出\(appName)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         item.menu = menu
         statusItem = item
     }
@@ -280,7 +281,7 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         backgroundMenuItem?.state = backgroundOnClose ? .on : .off
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 840),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "如意工作台"
+        window.title = appName
         window.minSize = NSSize(width: 780, height: 560)
         window.isReleasedWhenClosed = false
         window.center()

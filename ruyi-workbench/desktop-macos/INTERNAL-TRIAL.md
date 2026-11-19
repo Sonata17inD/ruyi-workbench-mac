@@ -29,7 +29,7 @@ ad-hoc 签名证明本地代码结构一致性，不证明 Apple 认可的发布
 
 ## DMG 内容与安装
 
-只读 HFS+ 压缩 DMG 包含 `Ruyi.app`、指向 `/Applications` 的专用快捷方式、中英文安装说明及校验/来源清单。这个唯一的 DMG 根快捷方式单独检查，不放宽 App 内禁止外部 symlink 的完整性规则。
+只读 HFS+ 压缩 DMG 包含完整应用（Full 为 `Ruyi Full.app`，Slim 为 `Ruyi.app`）、指向 `/Applications` 的快捷方式、中英文安装说明及校验和来源清单。DMG 根快捷方式单独检查，App 内的链接须指向包内。
 
 用户双击 DMG，将 App 复制到应用程序目录；没有共享目录写入权限时使用 `~/Applications`。拷贝结束后推出 DMG，再从安装位置运行。已有安装先保留，升级、回退与完整数据恢复按[中英文用户／管理员说明](../docs/MACOS-RELEASE_CN.md)操作。
 

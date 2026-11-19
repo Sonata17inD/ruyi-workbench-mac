@@ -31,7 +31,7 @@ Full／Slim 使用本地离线运行时和资产锁。构建所需资产与验�
 
 ## 数据与权限
 
-数据目录保持 `~/.ruyi-workbench`，可用 `RUYI_HOME` 指定隔离目录。旧 Mac 数据迁移、会话与凭据继续保留。开发测试不得使用真实业务数据。
+独立安装的 `Ruyi Full.app` 默认使用 `~/.ruyi-workbench-full`，在 macOS 中以 `Ruyi Full` 单独授权。Slim 和开发版默认使用 `~/.ruyi-workbench`。可用 `RUYI_HOME` 指定数据目录。开发测试使用隔离数据。
 
 截图、屏幕 OCR、输入与辅助功能分别按原生诊断显示权限和就绪状态；本地图片 OCR 无需录屏权限。诊断失败显示未知，不视为已授权或已就绪。用户文件继续支持 GB18030、BOM 与 CRLF。
 

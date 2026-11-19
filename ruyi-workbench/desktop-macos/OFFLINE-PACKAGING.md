@@ -1,6 +1,6 @@
 # Mac arm64 离线候选包 / Offline candidates
 
-P6-01 将 AppKit/WKWebView 宿主、Node/Web 程序、运行时与许可放在一个可搬移的 `Ruyi.app` 中。当前为 **ad-hoc 开发签名、未公证的候选包**；正式 Developer ID、Gatekeeper 首次安装、签名身份下的 Keychain/TCC、升级/回退归 P6-02/03，最终发行回归归 P6-04。
+离线构建将 AppKit/WKWebView 宿主、Node/Web 程序、运行时与许可放在一个可搬移的应用中。Full 的应用名为 `Ruyi Full.app`，使用 `org.ruyi.workbench.full`；Slim 保留 `Ruyi.app`。当前为 **ad-hoc 开发签名、未公证的候选包**。
 
 目标为 Apple Silicon arm64/macOS14。原生文件的 arm64 架构、最低部署声明和动态库闭包会在构建时检查；**这不等于已在 macOS14 实际运行**。当前实测系统在证据记录中逐项注明，不宣传未验兼容。
 
@@ -46,7 +46,7 @@ Wheelhouse 只用于构建。打包器从已安装的 Python 依赖和 `ensurepi
 
 ```text
 Ruyi-full-candidate/
-  Ruyi.app/Contents/
+  Ruyi Full.app/Contents/
     MacOS/RuyiDesktop
     Resources/workbench/
       app/server.js, app/public/, app/vendor-bin/rg
@@ -66,7 +66,7 @@ Ruyi-full-candidate/
   README.txt
 ```
 
-App 按自身 Resources 定位工作台，忽略开发用的 `--workbench-root`/`RUYI_NODE_PATH` 覆盖；已安装 ACC 直接用包内 Python 的 site-packages，不使用 PYTHONPATH 指向源码。Python/rg 也进入工作台子命令的 PATH。数据仍写入 `~/.ruyi-workbench` 或显式 `RUYI_HOME`；App 内载荷按只读使用。Python 提供相对 `python` 别名，wheel 的 console entrypoints 改用同目录 Python 的相对启动脚本，避免 pip 生成的临时 staging 绝对 shebang 在搬移后失效。
+App 按自身 Resources 定位工作台，忽略开发用的 `--workbench-root`/`RUYI_NODE_PATH` 覆盖；已安装 ACC 直接用包内 Python 的 site-packages。Python/rg 也进入工作台子命令的 PATH。Full 和 Slim 分别默认使用 `~/.ruyi-workbench-full` 和 `~/.ruyi-workbench`，显式 `RUYI_HOME` 优先。Python 提供相对 `python` 别名，wheel 的 console entrypoints 使用同目录 Python 的相对启动脚本，支持搬移后运行。
 
 ## 校验与验收
 

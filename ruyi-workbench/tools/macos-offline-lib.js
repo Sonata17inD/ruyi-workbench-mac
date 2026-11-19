@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const cp = require('node:child_process');
+const FULL_APP_NAME = 'Ruyi Full.app';
+const FULL_APP_ID = 'org.ruyi.workbench.full';
 
 function sha256(file) {
   const digest = crypto.createHash('sha256');
@@ -217,11 +219,15 @@ function nativeAudit(root) {
 }
 function verifyPackage(directory) {
   const manifest = JSON.parse(fs.readFileSync(path.join(directory, 'package-manifest.json'), 'utf8'));
-  if (manifest.schemaVersion !== 1 || !['full', 'slim'].includes(manifest.variant) || manifest.app !== 'Ruyi.app') throw new Error('Invalid package manifest');
+  const standaloneFull = manifest.variant === 'full' && manifest.app === FULL_APP_NAME;
+  if (manifest.schemaVersion !== 1 || !['full', 'slim'].includes(manifest.variant)
+    || (manifest.app !== 'Ruyi.app' && !standaloneFull)) throw new Error('Invalid package manifest');
   const app = path.join(directory, manifest.app);
   if (fs.lstatSync(app).isSymbolicLink() || !fs.lstatSync(app).isDirectory()) throw new Error('App root must be a real directory');
   const actual = inventory(app);
   if (JSON.stringify(actual) !== JSON.stringify(manifest.files) || treeDigest(actual) !== manifest.treeSha256) throw new Error('Package integrity check failed');
+  if (standaloneFull && run('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIdentifier',
+    path.join(app, 'Contents', 'Info.plist')]) !== FULL_APP_ID) throw new Error('Invalid Full App bundle identifier');
   return manifest;
 }
-module.exports = { sha256, safeChild, inside, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage };
+module.exports = { sha256, safeChild, inside, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage, FULL_APP_NAME, FULL_APP_ID };

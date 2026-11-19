@@ -4,10 +4,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { sha256, inventory, treeDigest, copyTree, run, safeChild, inside, verifyPackage } = require('./macos-offline-lib');
+const { sha256, inventory, treeDigest, copyTree, run, safeChild, inside, verifyPackage, FULL_APP_NAME } = require('./macos-offline-lib');
 const guideRoot = path.resolve(__dirname, '../desktop-macos/trial');
 const GUIDE_NAMES = ['INSTALL-CN.txt', 'INSTALL-EN.txt'];
-const ROOT_NAMES = ['Applications', 'Ruyi.app', 'package-manifest.json', 'SHA256SUMS', 'trial-manifest.json', ...GUIDE_NAMES].sort();
+const ROOT_NAMES = ['Applications', 'package-manifest.json', 'SHA256SUMS', 'trial-manifest.json', ...GUIDE_NAMES];
 const writeJson = (file, value) => fs.writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
 function exists(file) { try { fs.lstatSync(file); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } }
 function canonicalDestination(file) {
@@ -77,7 +77,6 @@ function signTrial(app) {
 }
 function verifyTrialDirectory(directory) {
   const names = fs.readdirSync(directory).sort();
-  if (JSON.stringify(names) !== JSON.stringify(ROOT_NAMES)) throw new Error('Unexpected trial image contents');
   const link = path.join(directory, 'Applications');
   if (!fs.lstatSync(link).isSymbolicLink() || fs.readlinkSync(link) !== '/Applications') throw new Error('Invalid Applications shortcut');
   for (const name of [...GUIDE_NAMES, 'package-manifest.json', 'trial-manifest.json', 'SHA256SUMS']) {
@@ -92,6 +91,7 @@ function verifyTrialDirectory(directory) {
   if (fs.readFileSync(path.join(directory, 'SHA256SUMS'), 'utf8') !== sha256(packageFile) + '  package-manifest.json\n') throw new Error('Package checksum differs');
   for (const name of GUIDE_NAMES) if (sha256(path.join(directory, name)) !== trial.guideHashes[name]) throw new Error('Install guide differs');
   const manifest = verifyPackage(directory);
+  if (JSON.stringify(names) !== JSON.stringify([...ROOT_NAMES, manifest.app].sort())) throw new Error('Unexpected trial image contents');
   if (manifest.signing !== trial.signing || manifest.treeSha256 !== trial.appTreeSha256 || manifest.sourceCommit !== trial.applicationSourceCommit
     || manifest.variant !== trial.variant) throw new Error('Trial provenance differs');
   const packaging = manifest.packaging;
@@ -146,13 +146,13 @@ function verifyInstalledApp(app, manifest) {
 function installTrial(directory, applications) {
   const { manifest } = verifyTrialDirectory(directory);
   fs.mkdirSync(applications, { recursive: true });
-  const destination = path.join(applications, 'Ruyi.app');
+  const destination = path.join(applications, manifest.app);
   // Reserve exclusively, including against dangling symlinks. Copy has normal Finder-style
   // progress semantics; this does not claim an atomic App replacement or support upgrades.
   fs.mkdirSync(destination);
   const identity = fs.lstatSync(destination);
   try {
-    run('/usr/bin/ditto', [path.join(directory, 'Ruyi.app'), destination]);
+    run('/usr/bin/ditto', [path.join(directory, manifest.app), destination]);
     verifyInstalledApp(destination, manifest);
     return destination;
   } catch (error) {
@@ -181,9 +181,10 @@ function buildTrial({ package: source, output }) {
     const materials = [__filename, path.join(__dirname, 'macos-offline-lib.js'), ...GUIDE_NAMES.map(name => path.join(guideRoot, name))];
     const fingerprints = Object.fromEntries(materials.map(file => [path.relative(path.resolve(__dirname, '../..'), file), sha256(file)]));
     fs.mkdirSync(imageRoot);
-    copyTree(path.join(source, 'Ruyi.app'), path.join(imageRoot, 'Ruyi.app'));
-    const signatures = signTrial(path.join(imageRoot, 'Ruyi.app'));
-    const files = inventory(path.join(imageRoot, 'Ruyi.app'));
+    const app = path.join(imageRoot, original.app);
+    copyTree(path.join(source, original.app), app);
+    const signatures = signTrial(app);
+    const files = inventory(app);
     const wrapperCommit = run('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: path.resolve(__dirname, '../..') });
     const manifest = { ...original, signing: signatures.signing, files, treeSha256: treeDigest(files),
       packaging: { channel: 'local-internal-trial', packagerCommit: wrapperCommit, packagerFingerprint: fingerprints,
@@ -191,7 +192,13 @@ function buildTrial({ package: source, output }) {
     writeJson(path.join(imageRoot, 'package-manifest.json'), manifest);
     fs.writeFileSync(path.join(imageRoot, 'SHA256SUMS'), sha256(path.join(imageRoot, 'package-manifest.json')) + '  package-manifest.json\n');
     const guideHashes = {};
-    for (const name of GUIDE_NAMES) { fs.copyFileSync(path.join(guideRoot, name), path.join(imageRoot, name)); guideHashes[name] = sha256(path.join(imageRoot, name)); }
+    for (const name of GUIDE_NAMES) {
+      const guide = fs.readFileSync(path.join(guideRoot, name), 'utf8');
+      const dataRoot = original.app === FULL_APP_NAME ? '~/.ruyi-workbench-full' : '~/.ruyi-workbench';
+      const destination = path.join(imageRoot, name);
+      fs.writeFileSync(destination, guide.replaceAll('{{app}}', original.app).replaceAll('{{dataRoot}}', dataRoot));
+      guideHashes[name] = sha256(destination);
+    }
     fs.symlinkSync('/Applications', path.join(imageRoot, 'Applications'));
     const trial = { schemaVersion: 1, channel: 'local-internal-trial', variant: original.variant, version: original.version,
       signing: signatures.signing, notarized: false, developerIdentityVerified: false,
