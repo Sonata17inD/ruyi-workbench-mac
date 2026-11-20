@@ -11,7 +11,7 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
   const { StewardHooks, ToolboxHooks } = hooks;
   const {
     invalidateAgentCliPathCaches, rememberLastUsedEngineRoute, sessionEngineRouteFromConfig,
-    syncAgentCliMcpManifests, syncAgentRolesToClaude, syncClaudeCliSettings,
+    syncAgentRolesToClaude, syncClaudeCliSettings,
   } = cli;
   const { invalidateMcpRuntime, syncMcpServersToClaude } = mcp;
 
@@ -132,7 +132,7 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
     // 的队列 —— 仲裁器每次唤醒都重读配置(不缓存),但唤醒本身只由「入队/释放/插队」触发,没有这一行
     // 的话调大上限要等下一条线程跑完才生效。队列为空(含管家关着)时是无操作。
     if (typeof StewardHooks.arbiterRefresh === 'function') { try { StewardHooks.arbiterRefresh(); } catch { /* best-effort */ } }
-    if (body && ['agentCliType', 'claudePath', 'kimiPath'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
+    if (body && ['agentCliType', 'claudePath'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
       invalidateAgentCliPathCaches();
     }
     // 123-N2 合并复核（主会话）：用户在设置里改全局引擎（activeProvider／agentCliType／model）也是一次
@@ -161,18 +161,9 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
         if (beforeMcp.get(id) !== afterMcp.get(id)) invalidateMcpRuntime(id);
       }
       await syncMcpServersToClaude(next);
-      await syncAgentCliMcpManifests(next, null, { requireWorkbenchMcp: true });
     } else if (body && ['allowCommandTools', 'allowDesktopTools'].some(k => Object.prototype.hasOwnProperty.call(body, k)
         && (current && current[k]) !== (next && next[k]))) {
-      // 2026-10 能力总闸:两个开关一变,写给 CLI 的直挂 ACC 条目里的 ACC_HIDE_TOOLS 就过时了 —— 推一次
-      // Claude 的用户级条目与 Kimi 的 mcp.json(同一次保存里 externalMcpServers 也改了的话上面那支已经推过)。不等它:claude mcp
-      // add-json 串行可达十几秒,开关的保存不该卡在这里;Kimi 每个回合起手还会再推一次(05b),这里只是把空窗缩短。
       void syncMcpServersToClaude(next).catch(() => {});
-      void syncAgentCliMcpManifests(next, null, { requireWorkbenchMcp: true }).catch(() => {});
-    }
-    // 选中的 CLI 若从用户配置读 MCP(登记表 syncMcpManifest),推一次;从这样一家切走时把如意接管的条目清掉(见 01)。
-    if (body && (Object.prototype.hasOwnProperty.call(body, 'agentCliType') || Object.prototype.hasOwnProperty.call(body, 'includeWorkbenchMcp'))) {
-      await syncAgentCliMcpManifests(next, current);
     }
     return options.capture === true ? { config: next, previous: current } : next;
   }

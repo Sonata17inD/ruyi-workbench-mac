@@ -37,7 +37,7 @@ ok(/\.audit-badge\.src-workbench\s*\{[^}]*var\(--accent\)/.test(css), 'A5 工作
 ok(/\.audit-badge\.src-desktop\s*\{[^}]*var\(--warn(?:-fg|-bg)?\)/.test(css), 'A5 桌面审计徽标以 var(--warn*) 语义色着色（P1:-fg/-bg 接线）');
 
 // ───────────── A5 引擎色统一:Claude 消息徽标/头像用 --accent(青花蓝) ─────────────
-ok(/return\s*\{\s*letter:[^}]+colorVar:\s*'var\(--accent\)'/.test(src), 'A5 app.js engineVisual:Agent CLI（Claude/Kimi）引擎色 = var(--accent)');
+ok(/return\s*\{\s*letter:[^}]+colorVar:\s*'var\(--accent\)'/.test(src), 'A5 app.js engineVisual:Agent CLI（Claude）引擎色 = var(--accent)');
 ok(/--wf-claude:\s*var\(--accent\)/.test(css) && /--wf-provider:\s*var\(--eng-claude\)/.test(css),
   'A5 工作流 token 未动:--wf-claude=accent / --wf-provider=eng-claude(赭,保持)');
 

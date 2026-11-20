@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // A 段(read 豁免): file_read{path: <same>} 重复 6 次 → 第 3 次起 loopWarning,但【不 abort】,6 次全执行,
 //   结果 errorClass !== 'tool_loop'(正常结束)。
 // B 段(轮询豁免): 同一 wait_agents(无 runId)重复 6 次 → 连 loopWarning 都不该出现(轮询原语完全豁免)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -56,8 +56,8 @@ function writeConfig(home, fakePort) {
   // ---- A 段: file_read 重复 6 次(read tier → 只 warn 不 abort) ----
   const stepA = { name: 'file_read', args: { path: target } };
   const seqA = JSON.stringify([stepA, stepA, stepA, stepA, stepA, stepA]);
-  const fakeA = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seqA }, windowsHide: true });
-  const wbA = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const fakeA = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seqA } });
+  const wbA = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   procs.push(fakeA, wbA);
 
   try {
@@ -94,8 +94,8 @@ function writeConfig(home, fakePort) {
   writeConfig(HOME, FAKE_PORT);
   const stepB = { name: 'wait_agents', args: {} };
   const seqB = JSON.stringify([stepB, stepB, stepB, stepB, stepB, stepB]);
-  const fakeB = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seqB }, windowsHide: true });
-  const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const fakeB = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seqB } });
+  const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   procs.push(fakeB, wbB);
 
   try {

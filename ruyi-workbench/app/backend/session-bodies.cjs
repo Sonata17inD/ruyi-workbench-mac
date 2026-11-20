@@ -1,6 +1,5 @@
 'use strict';
 const crypto = require('node:crypto');
-const SESSION_HEAD_READ_RETRIES = 4;
 // Owns NDJSON decoding, prefix proofs and bounded per-process body cache.
 function createSessionBodies({ isWriting, logEvent, fsp = require('node:fs/promises') }) {
 function danglingTurnState(length, at) {
@@ -223,28 +222,19 @@ function sessionBodyDanglingFromLines(lines) {
 // 其所属的头写未完成,等于那次 save 没发生)—— 发现即【物理截断】到最后一个好行边界,而不是只在内存里
 // 容忍:否则磁盘上留着半行,下次快路径 append 会接在撕裂字节之后,把新的真消息焊进坏行 → 中间坏行 →
 // 整个会话被判 corrupt 隔离(真丢数据)。中间空行/坏行一律 corrupt(不应发生,发生即数据事故)。
-// hunt2-P3:只有 ENOENT 才是「文件缺失」(null)。EBUSY/EPERM/EACCES(Windows 杀软/索引器短暂持锁)、
-// EMFILE/ENFILE(句柄一时耗尽)这类读失败先有界重试;仍失败回 { unreadable:true } —— 修前一律 null,
-// loadSession 把它当「正文丢了」,整条会话连头带正文改名 .corrupt(一次瞬时锁 = 会话从列表里消失)。
+// Only a missing file may enter recovery. An unreadable body stays in place.
 // perf:按字节读、在字节上找 '\n'、逐行解码再 JSON.parse。修前是整份解码成一个大字符串再 split:正文里只要有一个
 // 中文字符,整份(连同 split 出来的每一行)就都是双字节串,解码、解析都慢一截;行尾字节偏移还要每行再 Buffer.byteLength
 // 一遍。现在偏移直接就是字节下标(对非法 utf8 字节也精确 —— 修前按解码后的 U+FFFD 计 3 字节,截断点会偏)。
 // 不再在这里算每行 hash:要比对的人拿 lines(行原文)比,见 sessionBodyState 头注。
 // 分行判据与修前逐字节相同:'\n' 不会出现在任何 utf8 多字节序列里,按字节切与按字符切切在同一处。
-const SESSION_BODY_READ_TRANSIENT = new Set(['EPERM', 'EBUSY', 'EACCES', 'EMFILE', 'ENFILE', 'EAGAIN']);
 async function readSessionBodyFile(p) {
-  let buf, before = null;
-  for (let attempt = 0; ; attempt++) {
-    try {
-      before = await fsp.stat(p, { bigint: true }).catch(() => null);
-      buf = await fsp.readFile(p);
-      break;
-    } catch (error) {
-      const code = String((error && error.code) || '');
-      if (code === 'ENOENT') return null;
-      if (!SESSION_BODY_READ_TRANSIENT.has(code) || attempt >= SESSION_HEAD_READ_RETRIES) return { unreadable: true, code: code || 'EREAD' };
-      await new Promise(resolve => setTimeout(resolve, 5 + attempt * 10));
-    }
+  const before = await fsp.stat(p, { bigint: true }).catch(() => null);
+  let buf;
+  try {
+    buf = await fsp.readFile(p);
+  } catch (error) {
+    return error.code === 'ENOENT' ? null : { unreadable: true, code: error.code || 'EREAD' };
   }
   sessionBodyPerfStats.bodyReads++;
   if (!Buffer.isBuffer(buf)) buf = Buffer.from(String(buf), 'utf8');
@@ -356,6 +346,6 @@ async function rebaseStaleSessionBody(id, bp, state, messages, providerHistory) 
 }
 
 function getSessionBodyState(id) { return sessionBodyState.get(id); }
-return { sessionMessagesStamp, sessionMessagesDelta, sessionBodyFileStamp, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, SESSION_BODY_READ_TRANSIENT, SESSION_HEAD_READ_RETRIES, danglingTurnState, getSessionBodyState };
+return { sessionMessagesStamp, sessionMessagesDelta, sessionBodyFileStamp, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, danglingTurnState, getSessionBodyState };
 }
 module.exports = { createSessionBodies };

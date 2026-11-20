@@ -12,7 +12,7 @@ const { readFrontendSrc, PUB } = require('./read-frontend-src.js');
 const css = require('./read-frontend-css.js').readFrontendCss();
 const html = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
 const src = readFrontendSrc(); // app.js + js/**
-const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
+const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
 
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };

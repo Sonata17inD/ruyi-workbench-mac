@@ -84,8 +84,8 @@ function noisyText(seed) {
 
   const wbPort = await getFreePort();
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], {
-    cwd: WB, windowsHide: true,
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home, RUYI_JOURNAL_GLOBAL_MAX_BYTES: String(CAP) },
+    cwd: WB,
+    env: { ...process.env, RUYI_HOME: home, RUYI_JOURNAL_GLOBAL_MAX_BYTES: String(CAP) },
   });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   try {
@@ -124,7 +124,7 @@ function noisyText(seed) {
   // ── 真缺文件时的失败信息(进程内直调,不依赖整仓清扫)────────────────────────────────────────────
   {
     const HOME2 = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-orsc-u-'));
-    process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME2; process.env.RUYI_HOME = HOME2;
+     process.env.RUYI_HOME = HOME2;
     fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify({ configSchema: 6, version: '1.0.0', permissionMode: 'bypass', runtimeObservationReducerV1: true, runtimeObservationRecallV1: true }));
     const srv = require(path.join(WB, 'app', 'server.js'));
     const r = await srv.toolCall('observation_recall', { rawRef: 'history:12:d66a180b2794c811:0:2a70a591984010f2' }, { session: { id: 'sess_gone', turnSeq: 12, providerHistory: [{ role: 'user', content: 'x' }] } });

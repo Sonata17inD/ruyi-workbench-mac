@@ -102,7 +102,7 @@ const run = async (name, message) => {
     };
     fs.writeFileSync(path.join(DATA, 'config.json'), JSON.stringify(cfg));
     // 只准备既有交付夹具;被验收的查询/读/交办全部通过 HTTP→生产 provider 循环。
-    process.env.RUYI_HOME = DATA; process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
+    process.env.RUYI_HOME = DATA;
     const srv = require(path.join(WB, 'app/server.js'));
     const target = await srv.createSession({ title: '已有报告', cwd: WS });
     targetId = target.id;
@@ -110,9 +110,9 @@ const run = async (name, message) => {
     await srv.saveSession(target);
     port = await getFreePort();
     wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-      cwd: WB, windowsHide: true, stdio: 'ignore',
+      cwd: WB, stdio: 'ignore',
       // Preserve runner injection first; fixtureChildEnv replaces HOME/USERPROFILE and both AppData roots.
-      env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: DATA, WIN_CLAUDE_WORKBENCH_HOME: DATA },
+      env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: DATA },
     });
     let healthy = false;
     for (let i = 0; i < 250 && !healthy; i++) { try { healthy = (await request('GET', '/health')).status === 200; } catch { /* startup */ } if (!healthy) await sleep(100); }

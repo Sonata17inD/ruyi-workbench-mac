@@ -16,7 +16,6 @@ const path = require('path');
 const { functionBlock } = require('../lib/source-slice');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-delta-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const { createSession, registerIntervention, transitionInterventionState, readInterventions, compactInterventionJournal } = srv;

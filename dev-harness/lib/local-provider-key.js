@@ -12,31 +12,17 @@
 //   ③ **只给 live 件用**。`run-all.js` 只收 `.e2e.js`,live 件不进全量 ——
 //      任何进全量的件都不许引用本模块(引用了就意味着全量会去读用户的真密钥)。
 //
-// 找配置的顺序与产品一致:显式环境变量 > 家目录 > LOCALAPPDATA > 旧版目录。
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
-
-function candidateRoots() {
-  return [
-    process.env.RUYI_HOME,
-    process.env.WIN_CLAUDE_WORKBENCH_HOME,
-    path.join(os.homedir(), 'Ruyi'),
-    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Ruyi') : '',
-    path.join(os.homedir(), '.ruyi-workbench'),
-    path.join(os.homedir(), '.win-claude-workbench'), // 3.0 之前的数据目录名(还没被新版本启动迁移过)
-  ].filter(Boolean);
-}
+const { createWorkbenchDataRoots } = require('../../ruyi-workbench/app/backend/workbench-data-roots.cjs');
+const { dataRoot } = createWorkbenchDataRoots({ process });
 
 function readLocalConfig() {
-  for (const root of candidateRoots()) {
-    const file = path.join(root, 'config.json');
-    try {
-      if (!fs.existsSync(file)) continue;
-      const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (raw && Array.isArray(raw.providers)) return { config: raw, file };
-    } catch { /* 坏文件就当没有,继续找下一个 —— 绝不尝试修它 */ }
-  }
+  const file = path.join(dataRoot(), 'config.json');
+  try {
+    const config = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (Array.isArray(config?.providers)) return { config, file };
+  } catch { /* Missing or unreadable configuration makes the live probe unavailable. */ }
   return { config: null, file: '' };
 }
 

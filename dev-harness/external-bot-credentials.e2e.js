@@ -67,7 +67,7 @@ async function main() {
   async function run(task) {
     return new Promise((resolve, reject) => {
       const childEnv = { ...fixtureChildEnv(), RUYI_HOME: data, HOME: path.join(root, 'home') };
-      const child = cp.spawn(process.execPath, [__filename, '--credential-worker'], { env: { ...process.env, ...childEnv }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+      const child = cp.spawn(process.execPath, [__filename, '--credential-worker'], { env: { ...process.env, ...childEnv }, stdio: ['pipe', 'pipe', 'pipe'] });
       children.add(child); const chunks = []; let size = 0;
       // A save may inspect, protect, and inspect again, each with its own bounded cold helper startup.
       const timer = setTimeout(() => { killOwnTree(child); reject(new Error('credential fixture timed out')); }, 60000);

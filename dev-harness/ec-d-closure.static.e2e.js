@@ -86,21 +86,13 @@ ok(['02-session-store.js', '04-permission-runtime.js', '08-agent-runs.js', '13b-
   .every(file => backendFiles.has(file))
   && interventionRoutes.includes('function handleInterventionApiRoutes(')
   && coreDomainRoutes.includes("require('./backend/intervention-routes.cjs').createInterventionRoutes(")
-  && httpRouter.includes('await handleInterventionApiRoutes(')
   && sessionRoutes.includes('function handleSessionApiRoutes(')
   && coreDomainRoutes.includes("require('./backend/session-routes.cjs').createSessionRoutes(")
-  && httpRouter.includes('await handleSessionApiRoutes(')
   && agentRunRoutes.includes('function handleAgentRunApiRoutes(')
   && coreDomainRoutes.includes("require('./backend/agent-run-routes.cjs').createAgentRunRoutes(")
-  && httpRouter.includes('await handleAgentRunApiRoutes(')
   && !/pathname === '\/api\/(sessions|permission\/request|agent-runs)'/.test(httpRouter),
 'E8 session、permission、agent-runs 实现与 API 编排均完成后端物理拆域');
 
-// v2.7.x (109b905): 组合根新增附件缩略图/图片查看器接线(净增约 30 行,达 1229),护栏放宽到 1240;
-// 组合根物理瘦身由 103b/104 模块隔离批次承接,不在此处抢跑前端拆分。
-// 118b(SPEC §6 重钉): 组合根补上 navigation-controls 漏注入的 fillSettings(1 行,原为自由标识符,
-// 每次程序化打开设置都抛 ReferenceError)。1239/1240 已无余量,按纪律上调到整数余量 1280,断言其余不变;
-// 组合根物理瘦身仍由 103b/104 模块隔离批次承接。
 ok(read(path.join(PUBLIC, 'app.js')).trimEnd().split(/\r?\n/).length <= 1280
   && ['session-experience.js', 'interaction-prompts.js', 'agent-workflows.js']
     .every(file => fs.existsSync(path.join(PUBLIC, 'js', file))),

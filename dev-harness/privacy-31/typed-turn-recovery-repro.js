@@ -26,7 +26,7 @@ const app = loadWithProviderStream(() => {
 }, createStream);
 const f = fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
-app.__eval("detectClaudePath = () => ''; detectKimiPath = () => '';");
+app.__eval("detectClaudePath = () => '';");
 app.setLegacyStream?.(createStream(app.PrivacyGateway));
 const protocol = process.argv.find(arg => arg.startsWith('--protocol='))?.split('=')[1] || 'chat';
 if (!['chat', 'responses', 'anthropic'].includes(protocol)) throw Error('protocol_invalid');
@@ -61,9 +61,7 @@ async function turn(sessionId, message) {
     report.canonicalArgumentsRetained = saved.providerHistory.some(message => message.tool_calls?.some(tool => tool.id === 'typed-write' && tool.function.arguments.includes('apiKey')));
     const resultSession = await app.createSession({ cwd: work, title: 'Synthetic typed tool result' });
     const { shellTool, quote } = require('../lib/platform-shell-fixture');
-    const command = process.platform === 'win32'
-      ? "Add-Content -LiteralPath './counter.txt' -Value '1'; Write-Output '" + source + "'"
-      : "printf '%s\\n' '1' >> './counter.txt'; printf '%s\\n' " + quote(source);
+    const command = "printf '%s\\n' '1' >> './counter.txt'; printf '%s\\n' " + quote(source);
     state.steps.length = 0; state.steps.push(call('typed-output', shellTool, { command }), text('RESULT_FINISHED'));
     report.toolResult = await turn(resultSession.id, 'Run the synthetic local counter once and report its result.');
     report.counterExecutions = fs.existsSync(path.join(work, 'counter.txt')) ? fs.readFileSync(path.join(work, 'counter.txt'), 'utf8').trim().split(/\r?\n/).length : 0;

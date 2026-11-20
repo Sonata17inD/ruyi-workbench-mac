@@ -33,12 +33,6 @@ const DEFAULT_PORT = 8765;
 // (同一请求流里先撞哪条闸,决定 26 MB 夹具拿到的是 413 还是放行;反向:把本常量换成 MAX_BODY_BYTES
 // 或把判定挪到 readBody 之后,asr-transcribe.e2e.js 的 24.9/26 MB 返回码对照当场红)。
 const ASR_MAX_BODY_BYTES = 25 * 1024 * 1024;
-// 14(2026-10):出厂权限档翻成「智能自动」。<14 的存量文件里没存过档的,迁移钉回当年的默认 'default'
-// (01-config CONFIG_MIGRATIONS to:14)—— 新默认只给全新安装,不悄悄放开老用户。
-// 13(128a,48 号文 §2):配置只落「改过的键」——显式键集合 configExplicitKeysV1 ＋ 稀疏落盘,没碰过的设置跟随
-// 产品当前默认;迁移按显式键判。本号本身不挂迁移(推断每次读都跑),只标记「这份文件是稀疏格式写的」。
-// 12(v2.8 / 107-T1): 126-111b/111d/111e 三个压缩开关翻成默认开,并对 schema<12 的存量配置做一次性
-// 迁移(盘上显式写着的 false → true)。11 = v2.8 selectable Agent CLI driver (Claude Code / Kimi Code)。
 const CONFIG_SCHEMA = 14;
 // v0.8-S0: session file schema. Bumped independently of CONFIG_SCHEMA; normalizeSession backfills.
 const SESSION_SCHEMA = 1;
@@ -275,13 +269,13 @@ const sanitizeProvider = createProviderConfigNormalizer({
 
 const { createConfigSchema, BROWSER_AUTOMATION_MODES } = require('./backend/config-schema.cjs');
 const { THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX } = require('./backend/config-defaults.cjs');
-const ConfigWorkspaces = require('./backend/config-workspaces.cjs').createWorkspaceConfig({ platform: process.platform });
+const ConfigWorkspaces = require('./backend/config-workspaces.cjs').createWorkspaceConfig();
 const { normalizeWorkspacePathString } = ConfigWorkspaces;
 const {
   defaultConfig, normalizeConfig, CONFIG_MIGRATIONS, configValueEquals, prepareConfigWrite,
 } = createConfigSchema({
   CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, sanitizeProvider, PrivacyCore, workspaces: ConfigWorkspaces,
-  detectClaudePath: () => detectClaudePath(), detectKimiPath: () => detectKimiPath(),
+  detectClaudePath: () => detectClaudePath(),
 });
 
 // 本进程落进 sessions 目录【本层】的原子写次数(会话头、会话索引、搜索索引……)。13e 投影索引据此区分
@@ -326,7 +320,7 @@ const {
 } = require('./backend/config-store.cjs').createConfigStore({
   paths, ensureDirs, safeJsonParse, atomicWriteJson: (...args) => atomicWriteJson(...args),
   normalizeConfig, prepareConfigWrite, privacyHooks: PrivacyCore.configHooks, logEvent,
-  detectClaudePath: () => detectClaudePath(), detectKimiPath: () => detectKimiPath(),
+  detectClaudePath: () => detectClaudePath(),
   waitForConfigCliProbes: () => AgentCliDiscovery.waitForConfigCliProbes(),
   onWritten: status => RUYI_EVENTS.emit('config.written', status),
 });
@@ -348,38 +342,30 @@ const { externalServerJs, bundledNodeExe, commandForSelfMcp, mcpConfigFilePath, 
   paths, runtime: RUNTIME, hostFile: cliEntryFile, externalRoot, ensureDirs, readConfig, resolveExternalMcpServers,
   ensureDesktopMcpWarm: config => ensureDesktopMcpWarm(config), atomicWriteJson, process,
 });
-const { syncMcpServersToClaude, syncAgentCliMcpManifests, syncMcpServersToKimi } =
-  require('./backend/cli-mcp-sync.cjs').createCliMcpSync({
-    paths, ensureDirs, generateMcpConfig, resolveExternalMcpServers, existsExecutableAsync,
-    DesktopShell, getAgentCliHost: () => AGENT_CLI_HOST, atomicWriteJson, logEvent,
-  });
-const { autoImportClaudeCodeMcp, agentMcpImportSources, kimiMcpManagedIds, classifyAgentMcpCandidate } =
+const { syncMcpServersToClaude } = require('./backend/cli-mcp-sync.cjs').createCliMcpSync({
+  resolveExternalMcpServers, existsExecutableAsync, DesktopShell, logEvent,
+});
+const { autoImportClaudeCodeMcp, agentMcpImportSources, classifyAgentMcpCandidate } =
   require('./backend/cli-mcp-import.cjs').createCliMcpImport({
     paths, agentCliHomes, findRuyiPackageRootFor, mutateConfig, logEvent,
   });
 
 const cliDiscoveryProbes = { spawnProbeSync, spawnProbeAsync };
 const AgentCliDiscovery = require('./backend/agent-cli-discovery.cjs').createAgentCliDiscovery({
-  probes: cliDiscoveryProbes, bundledNodeExe, process,
+  probes: cliDiscoveryProbes, process,
 });
 const {
   detectClaudePathUncached, detectClaudePathUncachedAsync, claudeProbeCandidates,
-  detectAgentCliPathUncachedAsync, agentCliInstallCandidates, resolveKimiNpmEntry,
   probeAgentCliLauncher, probeAgentCliLauncherVerdictAsync, agentCliProbeVerdict,
   agentCliLauncherOk, agentCliLauncherUsable, invalidateClaudePathCache, invalidateAgentCliPathCaches,
   beginBootCliPathProbes, finishBootCliPathProbes, waitForBootCliPathProbes,
 } = AgentCliDiscovery;
 function detectClaudePath() { return AgentCliDiscovery.detectClaudePath(); }
-function detectAgentCliPath(type) { return AgentCliDiscovery.detectAgentCliPath(type); }
 
 const AGENT_CLI_HOST = Object.freeze({
   detectClaudePath: () => detectClaudePath(),
-  detectFromInstallCandidates: type => detectAgentCliPath(type),
-  resolveKimiNpmEntry: command => resolveKimiNpmEntry(command),
   bundledNodeExe: () => bundledNodeExe(),
-  syncMcpServersToKimi: config => syncMcpServersToKimi(config),
 });
-function detectKimiPath() { return detectAgentCliPath('kimi'); }
 const { selectedAgentCli, prepareAgentCliSpawn } =
   require('./backend/agent-cli-discovery.cjs').createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST });
 
@@ -604,7 +590,7 @@ const { interventionFilePath, dropInterventionSessionState, appendIntervention, 
 const SessionBodies = require('./backend/session-bodies.cjs').createSessionBodies({
   isWriting: id => sessionWriteChains.has(id), logEvent,
 });
-const { sessionMessagesStamp, sessionMessagesDelta, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, SESSION_BODY_READ_TRANSIENT, SESSION_HEAD_READ_RETRIES, danglingTurnState, getSessionBodyState } = SessionBodies;
+const { sessionMessagesStamp, sessionMessagesDelta, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, danglingTurnState, getSessionBodyState } = SessionBodies;
 
 
 // ===== PF2: session metadata index (sessions/index.json) =====================================================
@@ -725,7 +711,7 @@ const SessionPersistence = require('./backend/session-persistence.cjs').createSe
   },
   events: RUYI_EVENTS, safeSessionId, safeJsonParse, nowIso, logEvent, storageVersion: SESSION_STORAGE_VERSION,
 });
-const { sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER, readSessionRouteHead } = SessionPersistence;
+const { sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER, readSessionRouteHead, reconcileTurnMetadata } = SessionPersistence;
 // Legacy host adapters disappear with the HTTP/engine composition migration.
 async function loadSession(...args) { return SessionPersistence.loadSession(...args); }
 async function saveSession(...args) { return SessionPersistence.saveSession(...args); }
@@ -939,11 +925,6 @@ const turnOutcomePending = new Set();
 
 const driverAutoSessions = new Set();
 
-const { kimiModelList, discoverKimiModels, kimiContextWindow } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
-  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
-});
-const AGENT_CLI_CONTEXT_WINDOW_PROBES = Object.freeze({ kimi: kimiContextWindow });
-
 const AgentLoopHooks = require('./backend/agent-loop-hooks.cjs').createAgentLoopHooks({
   makeId, logEvent: (...args) => logEvent(...args), redact,
 });
@@ -1012,8 +993,7 @@ const {
 });
 
 const {
-  nativeClaudeAgentResultInfo, parseAgentCliEvent, parseClaudeEvent, parseClaudeTaskNotification,
-  parseKimiStreamJsonEvent,
+  nativeClaudeAgentResultInfo, parseClaudeEvent, parseClaudeTaskNotification,
 } = require('./backend/agent-cli-events.cjs').createAgentCliEvents({
   safeJsonParse,
 });
@@ -1129,16 +1109,6 @@ const { AGENT_CLI_ADAPTERS, agentCliAdapter } = require('./backend/agent-cli-ada
     CLAUDE_PERMISSION_MODE_MAP, RUYI_MCP_CLI_TOOL_PREFIX, buildClaudeAgentDefinitions, claudeCostFields,
     discoverModels, effectiveAnthropicEnv, isClaudeResumeMissingError, offlineModelList, parseClaudeEvent,
   },
-  kimi: {
-    applyKimiStatusToSession: (...args) => applyKimiStatusToSession(...args), discoverKimiModels,
-    kimiContextWindow, kimiModelList, kimiSessionStatus: (...args) => kimiSessionStatus(...args),
-    kimiUsageFromStatus: (...args) => kimiUsageFromStatus(...args), parseKimiStreamJsonEvent,
-    runKimiAcpTurnPrepared: (...args) => runKimiAcpTurnPrepared(...args),
-    runKimiCompact: (...args) => runKimiCompact(...args),
-    syncKimiSessionUsage: (...args) => syncKimiSessionUsage(...args),
-    syncKimiTurnPreferences: (...args) => syncKimiTurnPreferences(...args), syncMcpServersToKimi,
-    watchKimiWire: (...args) => watchKimiWire(...args),
-  },
   tools: {
     classifyToolPacks: (...args) => classifyToolPacks(...args), generateSessionMcpConfig,
     sessionDesktopToolsOf,
@@ -1186,76 +1156,9 @@ const { runClaudeTurn } = require('./backend/agent-cli-turn.cjs').createAgentCli
   },
   storage: {
     buildTurnSummary, bumpMissionChangeSeq, captureWorkspaceTurnBaseline, createTurnSegmentBuilder,
-    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine, loadSession,
-    mergeMissionBeforeSave, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
+    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine,
+    reconcileTurnMetadata, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
   },
-});
-
-// Kimi Code integration. Turns use the official ACP JSON-RPC/NDJSON protocol; the local Server API remains
-// operation-scoped for native compaction, and the documented wire transcript supplements ACP's usage update
-// with exact compaction/failure state. A separate ACP process is kept for the whole Ruyi turn so reverse RPC
-// (permissions/questions) and queued follow-up steering share one live native Kimi session.
-const { classifyKimiAcpReadonlySearch, KIMI_ACP_SEARCH_BLOCKED_ENV_RE } =
-  require('./backend/kimi-search-policy.cjs').createKimiSearchPolicy({
-    dataRoot, appRoot, pathWithinRoot, fileAllowedRoots, realpathForContainment, isSensitiveDataPath, guardFileToolPath,
-  });
-const buildKimiAcpPromptParts = require('./backend/kimi-prompt-parts.cjs').createKimiPromptParts({
-  guardFileToolPath, realpathForContainment,
-});
-
-
-const { createKimiAcpRpc: createAcpRpc } = require('./backend/kimi-acp-rpc.cjs');
-const {
-  kimiAcpSessionRestoreMethods, kimiAcpUnknownSessionError, kimiAcpModeOptionFromActivated, kimiAcpFreshActualForOperation,
-} = require('./backend/kimi-acp-session.cjs');
-const { parseKimiWireCompaction, parseKimiWireAgentEvents, watchKimiWire } = require('./backend/kimi-wire.cjs');
-
-const { createKimiAcpInterventions, kimiAcpSamePath } = require('./backend/kimi-acp-interventions.cjs');
-const KimiAcpInterventions = createKimiAcpInterventions({
-  dataRoot, fileAllowedRoots, workspaceWriteRoots, guardFileToolPath, realpathForContainment,
-  makeId, requestNativePermission: (...args) => requestNativePermission(...args), requestUserQuestion,
-  permissionWaitMs, runAutomaticInterventionDecision, buildOpenSpawn, spawnDetachedChecked, process,
-});
-const {
-  kimiAcpInferConcreteToolInput, kimiAcpPermissionToolCall, handleKimiAcpPermissionRequest, consumeKimiAcpApproval,
-  kimiAcpSuccessfulEnterPlanMode, kimiAcpNativeShellQuote, kimiAcpNativeBashWrapperTexts, kimiAcpNativeBashWrapperCandidate,
-  ensureKimiAcpOperationPermission,
-} = KimiAcpInterventions;
-const KimiAcpFiles = require('./backend/kimi-acp-files.cjs').createKimiAcpFiles({
-  realpathForContainment, kimiAcpSamePath, guardFileToolPath, ensureKimiAcpOperationPermission,
-  toolCall: (...args) => toolCall(...args), normalizeTodoItems,
-});
-const { isKimiAcpPlanFilePath, resolveKimiAcpPlanFilePath } = KimiAcpFiles;
-const KimiAcpTerminals = require('./backend/kimi-acp-terminals.cjs').createKimiAcpTerminals({
-  classifyKimiAcpReadonlySearch, KIMI_ACP_SEARCH_BLOCKED_ENV_RE, guardWorkspaceExecute,
-  ensureKimiAcpOperationPermission, kimiAcpNativeBashWrapperCandidate, ProcessRuntime, killChildTree, makeId,
-});
-const { handleKimiAcpTerminalRequest, cleanupKimiAcpTerminals, killKimiAcpTerminal } = KimiAcpTerminals;
-
-function createKimiAcpRpc(child, handlers) {
-  return createAcpRpc(child, handlers, () => PrivacyGateway.assertCliAllowed());
-}
-
-const {
-  syncKimiTurnPreferences, kimiSessionStatus, kimiUsageFromStatus, applyKimiStatusToSession, kimiStatusFingerprint,
-  syncKimiSessionUsage, runKimiCompact,
-} = require('./backend/kimi-native-operations.cjs').createKimiNativeOperations({
-  selectedAgentCli, agentCliLauncherUsable, prepareAgentCliSpawn, ProcessRuntime, killChildTree, PrivacyGateway,
-  readConfig, loadSession, mutateSession, kimiContextWindow, nowIso, logEvent, process,
-  runAgentExternalCompact: (...args) => runAgentExternalCompact(...args),
-  upsertCompactMarker: (...args) => upsertCompactMarker(...args),
-});
-
-const { runKimiAcpTurnPrepared, prepareKimiAcpSpawn } = require('./backend/kimi-acp-turn.cjs').createKimiAcpTurn({
-  paths, dataRoot, runtime: RUNTIME, externalRoot, process,
-  files: KimiAcpFiles, terminals: KimiAcpTerminals, interventions: KimiAcpInterventions,
-  createKimiAcpRpc, prepareAgentCliSpawn, syncMcpServersToKimi, buildKimiAcpPromptParts, syncKimiSessionUsage,
-  processRuntime: { ProcessRuntime, killChildTree, assertSessionExecutionOwner, registerSessionExecutionChild, activeChildren, stopSession },
-  sessions: { readConfig, loadSession, saveSession, saveTurnFinalSession, isUntitledSessionTitle },
-  permissions: { permissionWaitMs, clearPendingPermissions, clearPendingQuestions, clearPendingPlans, hasPendingPermissionForSession },
-  journal: { captureWorkspaceTurnBaseline, reconcileWorkspaceTurnBaseline, journalReadIndex },
-  mission: { bumpMissionChangeSeq, finalizeMissionAfterTurn, mergeMissionBeforeSave },
-  hooks: { AgentLoopHooks, PrivacyGateway, RUYI_EVENTS, logEvent, nowIso, cwdWarning },
 });
 
 const maybeAutoCompactAgentSession = require('./backend/agent-auto-compaction.cjs').createAgentAutoCompaction({
@@ -1589,7 +1492,7 @@ const applyConfigPatch = require('./backend/config-patch.cjs').createConfigPatch
   hooks: { StewardHooks, ToolboxHooks },
   cli: {
     invalidateAgentCliPathCaches, rememberLastUsedEngineRoute, sessionEngineRouteFromConfig,
-    syncAgentCliMcpManifests, syncAgentRolesToClaude, syncClaudeCliSettings,
+    syncAgentRolesToClaude, syncClaudeCliSettings,
   },
   mcp: { invalidateMcpRuntime, syncMcpServersToClaude },
 });
@@ -1775,6 +1678,7 @@ Object.assign(SubAgentMemoryHooks, {
 });
 
 const agentWorkflowPorts = {
+  backgroundChanged: sessionId => RUYI_EVENTS.emit('background.changed', { sessionId }),
   activeAgentRuns, sessionSaveIsTombstoned, safeSessionId, makeId, nowIso,
   runs: AgentRunStore,
   worktrees: { createAgentWorktree, finalizeAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry },
@@ -1840,7 +1744,7 @@ function planParallelReadIsland(...args) { return ToolPolicy.planParallelReadIsl
 const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn({
   appendUsageLedger, cwdWarning, isStewardToolName, logEvent, makeId, nowIso, readConfig, safeSessionId,
   session: {
-    loadSession, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
+    loadSession, reconcileTurnMetadata, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
     normalizeTodoItems, liveSessionPermissionMode,
   },
   history: {
@@ -1910,7 +1814,7 @@ const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn(
     runAgentWorkflow: (...args) => runAgentWorkflow(...args),
   },
   missions: {
-    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn, mergeMissionBeforeSave,
+    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn,
     recordMissionBudgetTrippedChange, recordMissionStalledChange, normalizeMetaToolArgs,
   },
   checkpoints: {
@@ -1965,7 +1869,7 @@ const { providerSummaryCall, fitHistoryForSummary, chunkHistoryByBudget,
 const { createCompactionRouting, resolveCompactionProvider, lastSessionContextTokens,
   contextWindowOverrideKey, configuredConversationWindow } = require('./backend/compaction-routing.cjs');
 const { compactHistoryFromSession, providerConversationContextWindow, agentNodeContextWindow, agentConversationContextMeta } =
-  createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway, agentCliContextWindowProbes: AGENT_CLI_CONTEXT_WINDOW_PROBES });
+  createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway });
 const { createCompactionRecords, COMPACT_MARKER_MIN_SAVED_TOKENS } = require('./backend/compaction-records.cjs');
 const { recordCompactUsage, openCompactMarker, upsertCompactMarker } = createCompactionRecords({
   estimateContentTokens, fmtTokensServer, appendUsageLedger, nowIso,
@@ -2032,6 +1936,7 @@ EventStreamHooks.recentBackgroundAgentJobSessions = BackgroundJobs.recentBackgro
 
 const ShellSessions = require('./backend/shell-sessions.cjs').createShellSessions({
   ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
+  backgroundChanged: sessionId => RUYI_EVENTS.emit('background.changed', { sessionId }),
   redact,  safeSessionId, sessionPath,
 });
 const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,
@@ -2326,7 +2231,6 @@ const handlePlaybookApiRoutes = require('./backend/playbook-routes.cjs').createP
 const handleSessionExecutionApiRoutes = require('./backend/session-execution-routes.cjs').createSessionExecutionRoutes({
   safeSessionId, readConfig, loadSession, mutateSession, logEvent, activeChildren, requestSessionExecutionStop, StewardHooks,
   compaction: { runProviderCompactTracked, runAgentExternalCompact, configForSessionEngineRoute, agentCliAdapter },
-  kimi: { kimiSessionStatus, kimiStatusFingerprint, applyKimiStatusToSession, kimiUsageFromStatus },
 });
 
 const handleStatusApiRoutes = require('./backend/status-routes.cjs').createStatusRoutes({
@@ -2334,7 +2238,7 @@ const handleStatusApiRoutes = require('./backend/status-routes.cjs').createStatu
   identity: { APP_NAME, VERSION, CONFIG_SCHEMA, OVERLAY_ID, dataRootAliases, exePath },
   conversation: { safeSessionId, readSessionRouteHead, configForSessionEngineRoute, activeOpenAiProvider,
     agentConversationContextMeta, configuredConversationWindow, resolveContextWindow, learnedWindowCap },
-  cli: { agentCliAdapter, detectClaudePath, detectKimiPath, AGENT_CLI_TYPES, selectedAgentCli },
+  cli: { agentCliAdapter, detectClaudePath, AGENT_CLI_TYPES, selectedAgentCli },
   desktopMcp: { desktopMcpDetectionPending, mcpConfigFilePath, generateMcpConfig, ensureDesktopMcpWarm,
     detectDesktopMcp, resolveExternalMcpServers },
   tools: { MCP_TOOLS, runtimeToolRequirementsMet, nativeToolDisabledByPolicy, observationRecallEnabled, isStewardToolName },
@@ -2391,7 +2295,7 @@ const MigrationCenter = require('./backend/migration-center.cjs').createMigratio
     run: (...args) => DesktopShell.runProcess(...args),
   },
   packages: { externalRoot, findRuyiPackageRootFor, ruyiPackageInfo, samePathKey, readInstallRegistry, writeInstallRegistry },
-  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig, kimiMcpManagedIds },
+  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig },
   skills: { agentCliHomes, tildePath, SkillRegistry, syncAgentInstructionImports },
 });
 const handleMigrationApiRoutes = require('./backend/migration-routes.cjs').createMigrationRoutes({ migration: MigrationCenter });
@@ -2629,7 +2533,7 @@ StewardHooks.deliveryProjection = stewardDeliveryProjection;
 StewardHooks.validateDeliveryReference = stewardValidateDeliveryReference;
 
 const {
-  stewardCanonWorkspacePath, stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
+  stewardCanonWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
   stewardWorkspaceNameOf, stewardValidateCwd, stewardResolveThreadCwd, stewardRecordMissionWorkspace, stewardDeriveThreadCwd,
 } = require('./backend/steward-workspaces.cjs').createStewardWorkspaces({
   dataRoot, dataRootAliases, nowIso, sanitizeFsSegmentName, safeSessionId, mutateConfig, normalizeWorkspacePathString,
@@ -2673,7 +2577,7 @@ const {
     activeChildren, sessionExecutionSnapshot, sessionPermissionModeOf, StewardHooks,
   },
   workspaces: {
-    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath, stewardFoldWorkspacePath,
+    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath,
   },
   policy: {
     deriveStewardThreadState, stewardAsksYouForThread, stewardClipSay, stewardForeignProjection,
@@ -3042,7 +2946,7 @@ const { stewardKnownWorkspaceRows, stewardWorkspaceTableBlock } = require('./bac
   sessions: { listSessions, readMissionContainer, sessionDisplayTitle, sessionMetaIsSteward },
   workspaces: {
     STEWARD_KNOWN_WORKSPACE_LIMITS, STEWARD_WORKSPACE_TABLE_MAX, redact, stewardCanonWorkspacePath,
-    stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardSanitizeText,
+    stewardKnownWorkspaces, stewardSanitizeText,
   },
 });
 
@@ -3195,67 +3099,6 @@ const { stewardRunAct } = require('./backend/steward-act-receipts.cjs').createSt
 
 });
 
-// ============================================================================
-// 第 117 波 T2(32 号文 §5「13h-steward-runner.js 2522 行」):管家回合运行器族的注册表、
-// 三条路由与两个「够不着才落在这里」的工具实现。
-//
-// 落点(transport 层,manifest 中位于 13q-steward-runner-turn.js 之后、14-main.js 之前)。
-// T2 拆分:本文件曾 2522 行(比 T1 拆之前的 13g 还长,而 31 号文七轴的回合层改动全要往它
-// 里面加)。按「谁被谁引用」拆成六个文件,拼接顺序即依赖方向,零新增前向边:
-//   · 13m-steward-runner-base.js —— 六个文件都要用的共享面:落盘面常量、回合层数值口径、
-//     自理动作与到访摘要的文本表、可由 actions 执行的写工具白名单、运行时内存态
-//     stewardRunnerRuntime、停机/唤醒/中止,以及管家会话单例(引擎解析 + 懒创建);
-//   · 13n-steward-arbiter.js —— 116h 线程间仲裁(并发位 / 同 cwd 写锁 / 预算 / 可解释的排队 / 饥饿提升)。
-//     它排在提示词之前,因为总览行与递话通道都要读它的等待原因(stewardArbiterWait);
-//   · 13o-steward-runner-prompt.js —— 提示词装配(记忆块 / 线程摘要 / 递话预判 / 总览 /
-//     两个分叉入口)与 {say,acts,actions,why} 输出契约解析;
-//   · 13p-steward-runner-actions.js —— actions 执行与降级、116-2b 确定性自理动作、id 人话化、
-//     熔断、收件箱消息装配、输入区预判归一;
-//   · 13q-steward-runner-turn.js —— 回合入口 runStewardTurn、收件箱去抖驱动、到访与归档、
-//     117l D2 递话通道、117l D7 线程分档落盘、acts 落定;
-//   · 13h-steward-runner.js —— 两个「够不着才落在这里」的工具实现(thread_prioritize /
-//     thread_stop)、三条路由、运行器状态与 StewardHooks 注册表(排在最后:注册表要引用
-//     上面五个文件里的实现,排在后面才是后向边)。
-// 本次拆分是【纯搬家】:所有函数体逐字节不变,新写的只有各文件的头部注释。
-//
-// 下面这段 116f 的横幅逐字节原样保留。它描述的是【整个 13h 族】合起来做的那件事 ——
-// 里面的「本文件」如今指的是 13m/13n/13o/13p/13q/13h 这六个文件,不再只是一个文件;
-// 开关红线、零入边、steward_reply 投放口径三条铁律一字未改,对整族同样成立。
-// ============================================================================
-// ============================================================================
-// 第 116 波 116f(27 号文 §11.3「116f 回合运行器与到访」):管家回合运行器、输出契约、熔断与到访。
-//
-// 定位(transport 层,manifest 中位于 13g-steward.js 之后、14-main.js 之前):
-//   13g 是「箱子与工具」,本文件是「回合与到访」—— 它把用户消息或收件箱事件组装成一个回合,交给既有
-//   回合机器(runSessionTurn)去跑,再把模型的结构化输出解析成 {say, acts, actions, why},按【目标线程】
-//   的权限执行 actions 或把它降级成一个提议按钮,最后落决策日志并把结构化结果返回给调用方。
-//
-// steward_reply 的投放口径(有意与回合流事件分开):它【不是】回合流事件,而是管家通道这一次请求的
-//   响应载荷 —— 回合早已收尾、模型也早已说完,它是工作台【事后】按契约解析并执行完 actions 之后
-//   拼出来的东西。所以运行器只把它放进返回值与 stewardRunnerRuntime.lastReply(/api/steward/state 可读),
-//   由 /api/steward/message 的 SSE 壳作为流的最后一帧写出;回合过程中的既有事件(session/
-//   assistant_delta/tool_use/result …)照旧原样透传给调用方的 onEvent。这样经典壳与 Preview 壳的
-//   回合事件契约(112b progress-events 的双向登记表)一条都不用动 —— 那两个壳根本不接管家通道。
-//
-// 依赖纪律(§11.3「不得新增前向边」):
-//   · 13h 只引用拼接顺序在它之前的模块符号(00/01/02/04/06b/06i/08/09/10/13e/13g …),全部后向边;
-//   · 没有任何模块引用 13h 的符号 —— 09(提示词分叉)、10(预算分叉)、13g(轮询器出口/state/路由转交)
-//     一律经 06i 的 StewardHooks 延迟绑定拿实现,故 13h 零入边、不进任何强连通分量;
-//   · 反过来 13h 直接调 13g 的内部函数(stewardDir/stewardFail/stewardAppendDecision …)是后向边,合法。
-//     13g 想复用本文件的东西则【不可以】—— 那是前向边,故总览行的装配在本文件里另写一份(用的仍是
-//     06i/13g 的同一批原语与同一批事实源,不新造第二个事实源)。
-//
-// 开关(§3.4 红线):`stewardEnabledV1 !== true` 时本文件【零副作用】—— 不建管家会话、不起任何 timer、
-// 不写任何文件;三条路由仍在(路由清册不因开关变化),一律返回 409 `steward.disabled`。
-//
-// 管家会话(§3.1「管家自身是 kind:'steward' 的特殊会话」):
-//   固定 id `steward`(06i 的 STEWARD_SESSION_ID)、标题「如意管家」、cwd = 数据根;开关开且首次被唤醒时
-//   懒创建。排除面(会话列表 / 113b 内容搜索 / 13e 投影 / 116b 收件箱)一律按会话头【原始】 kind 判定,
-//   不经 sessionKind()(它会把 steward 归一成 quick_ask,拿它当身份判据等于把门拆了)。
-//
-// 本切片只支持 OpenAI 兼容 provider:解析到 Claude / Kimi CLI 引擎时返回稳定信封
-// `steward.unsupported_engine`(116-2 候选:CLI 引擎的管家回合要另接 runClaudeTurn 的事件流与工具协议)。
-// ============================================================================
 const { stewardImplThreadPrioritize, stewardImplThreadStop, stewardAppendUserStop } =
   require('./backend/steward-thread-control.cjs').createStewardThreadControl({
     execution: { requestSessionExecutionStop, stewardArbiterPrioritize, stewardArbiterWait },
@@ -3452,7 +3295,9 @@ Object.assign(DesktopExecutionHooks, DesktopExecutionRuntime);
 ProviderHttpHooks.beforeModelRequest = DesktopExecutionRuntime.beforeModelRequest;
 
 const handleApi = require('./backend/workbench-api-router.cjs').createWorkbenchApiRouter({
-  authorizeRoute, privacyRoutes: PrivacyCore.configHooks, ExternalBotHooks, StewardHooks, EventStreamHooks,
+  authorizeRoute, handlePrivacyApiRoutes: PrivacyCore.configHooks.handleApiRoutes,
+  handleExternalBotApiRoutes: ExternalBotHooks.handleApiRoutes, handleStewardApiRoutes: StewardHooks.handleApiRoutes,
+  handleEventStreamApiRoutes: EventStreamHooks.handleApiRoutes,
   handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
   handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
   handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
@@ -3482,7 +3327,7 @@ const { startServerInner, resolveBindHost, stopAllActiveTurnsSync } = createServ
     warmPretenderProjectionIndex, autoResumeInterruptedRuns, migrateLegacyAccMemory },
   config: { readConfig, syncClaudeCliSettings, syncAgentRolesToClaude, autoImportClaudeCodeMcp,
     recordInstallLaunch, syncAgentInstructionImports, syncMcpServersToClaude,
-    syncAgentCliMcpManifests, getCapabilities, generateMcpConfig },
+    getCapabilities, generateMcpConfig },
   probes: { beginBootCliPathProbes, waitForBootCliPathProbes, finishBootCliPathProbes, ensureDesktopMcpWarm },
   runtime: { activeChildren, stopSession, startScheduler, stopScheduler, killAllMcpClients, killAllShellSessions,
     EventStreamHooks, ExternalBotHooks, StewardHooks, ToolboxHooks, platformOpenSpawn, spawnDetachedChecked },
@@ -3504,56 +3349,38 @@ function startWorkbenchFromCommandLine() {
 }
 
 const createWorkbenchApi = () => ({
-  // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A14/F3/NE-12;走查 W1·F10 的 sweepStaleScriptFiles)的纯函数与钩子,一个键收口 —— unit/tool-dispatch-hardening.test.js 直调(sweepStaleScriptFiles:unit/script-run-cleanup.test.js)。
-  // 2026-10 能力总闸补桥接面:toolDisabledByPolicy / accPolicyHiddenToolNames / dropPolicyDisabledBridgedTools / ACC_POLICY_TOOL_FAMILIES 同住这个键(unit/acc-capability-gates.test.js 直调)。
   dispatchTestHooks: { sweepStaleScriptFiles, validateNativeToolArgs, suggestToolNames, toolFailureResult, nativeToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, dropPolicyDisabledBridgedTools, ACC_POLICY_TOOL_FAMILIES, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, toolArgsSkeleton, withToolArgsGuide, toolArgsMissingRequired, normalizeMcpToolResult, attachScreenshotImage, desktopAuditEntriesFromResult, bridgedDesktopLeaseMode, mcpChildExitResult, bridgedServerUnavailableMessage },
-  spawnDetachedChecked, // 分离式外部启动带 'error' 监听的唯一入口(unit/http-input-hardening.test.js 直测 ENOENT 不成 uncaughtException)
-  // 架构还债批 2·A:服务商 HTTP 原语(04h)与两个非流式补全外壳 —— unit/provider-http.test.js 钉请求逐字节形状;
-  // 瞬时错误重试骨架 —— unit/transient-retry.test.js 钉判据、次数、退避序列与「首字节后不重试」。
+  spawnDetachedChecked,
   providerBaseWithV1, providerResponsesBase, providerApiBase, providerCompletionUrl, providerRequestHeaders, providerRawCompletion, providerFixCompletion,
   providerCallIsTransient, abortableDelay, withTransientRetry, openAiStreamOnce,
-  // 58 号批 1:服务商线协议登记表(04i)—— unit/provider-wire-protocols.test.js 钉成员齐全、归一口径与各成员金样。
   PROVIDER_WIRE_PROTOCOLS, normalizeProviderApiStyle, providerWireProtocol,
-  // 131b(52 号文):句尾改错的三个纯函数 — exposed for unit(提示词加固形状／出参合理性／端点解析的失败码)。
   asrFixMessages,
   asrFixSanity,
   resolveAsrFixProvider,
-  // 59 号文:语音词库的纯函数内核(04j 冻结对象,一个键收口)—— unit/voice-lexicon.test.js 直调(文本读写、清洗、挑词、三处出形、原厂表自检)。
-  // 59 号文 §6:从修改里学的纯函数内核(04j 冻结对象,一个键收口;拼音表经它的 HanziPinyin 属性带出)—— unit/voice-learn.test.js 直调。
   McpStdioClient,
-  McpHttpClient, // 49c: 远程 MCP transport(sse/streamable-http) — exposed for e2e 直连契约断言。
-  estimateHistoryTokens, // v0.8-S5: exposed for e2e direct unit testing (parts-aware token estimate v2)
-  // 129a:提示词预算的尺子。管家稳定层/规则层的闸从「字符数」改成「token 估算」——
-  // 字符闸对两种语言的真实成本不等价(2500 字符 ≈ 中文 1660 tok / 英文 695 tok),
-  // 于是英文包被挤得塞不下规则,中文包的「余量」又是假的。静态锁要用同一把尺子,故导出。
+  McpHttpClient,
+  estimateHistoryTokens,
   estimateTextTokens,
-  // 第45波(压缩 v2):摘要内核 + 45a 预算适配/map-reduce 分组 — exposed for e2e(死锁角回归)。
   providerSummaryCall,
   validateStructuredSummary,
   fitHistoryForSummary,
   chunkHistoryByBudget,
   recentTurnsBoundary,
   CompactionPlan,
-  // 126-111a: L1 蒸发与它的两个新原语 — exposed for e2e 白盒契约(开关关时逐字节等价老边界、
-  // 开关开时按 token 预算护住尾部、边界永不落在 tool 上)。
   evaporateHistory,
   evaporateBudgetBoundary,
   historyUnitStarts,
   evaporateBudgetBoundaryEnabled,
-  // 126-111e: 历史内重复读取去重 — exposed for e2e 白盒契约(键零误报/最新一次留全文/幂等)。
   dedupeRepeatedReads,
   fileReadDedupKey,
   historyReadDedupEnabled,
-  // 126-111d: 摘要 prompt 双语 — exposed for e2e(开关判定/语言选择/标题容错)。
   summaryPromptI18nEnabled,
   summaryPromptWithGuidance,
-  // 126-111b/111c: L2 尾部按单元保留 ＋ 重附最近读过的文件 — exposed for e2e 白盒契约。
   reseedTailUnitsEnabled,
   recentFileReads,
   reseedReattachFilesEnabled,
   COMPACT_RESEED_TAIL_MAX_TOKENS,
   resolveCompactionProvider,
-  // 105b: session-notes.md 状态外置 — exposed for e2e 白盒契约(确定性切节/写读回环/显式关闭门)。
   sessionNotesEnabled,
   extractSessionNotes,
   renderSessionNotesMarkdown,
@@ -3561,7 +3388,6 @@ const createWorkbenchApi = () => ({
   writeSessionNotes,
   readSessionNotes,
   maybeWriteSessionNotes,
-  // 105d: session notes 回注 + 增量合并 — exposed for e2e 白盒契约(开关判定/有界 prompt/解析/合并)。
   sessionNotesInjectEnabled,
   sessionNotesMergeEnabled,
   buildSessionNotesInjectPrompt,
@@ -3569,30 +3395,23 @@ const createWorkbenchApi = () => ({
   mergeSessionNotes,
   historyStartsWithCompactionSummary,
   appendPromptToLastUserMessage,
-  // 105c: 摘要实体确定性抽检 — exposed for e2e 白盒契约(抽取/检查/开关唯一判定点)。
   summaryEntityCheckEnabled,
   extractSummaryEntities,
   checkSummaryEntities,
-  // 105e: 估算因子分桶 — exposed for e2e 白盒契约(开关唯一判定点/镜像 setter/三桶分类器)。
   estimateBucketsEnabled,
   setEstimateBucketsV1,
   classifyTextForEstimate,
-  // 105f: 摘要单发优先 — exposed for e2e 白盒契约(开关唯一判定点/上限解析/reserve 预算)。
   summarySingleShotEnabled,
   summarySingleShotCap,
   summarySingleShotReserveTokens,
   resolveSummaryCallPolicy,
-  // 105g(4.3 首项): map-reduce 全局事实表 — exposed for e2e 白盒契约(开关唯一判定点/注入消息构建)。
   summaryFactTableEnabled,
   summaryFactTableCap,
   buildSummaryFactTableMessages,
-  // 105h(4.3 第二项): <=4 块顺序 refine — exposed for e2e 白盒契约。
   summaryRefineEnabled,
   buildSummaryRefineMessages,
-  // 105i: map-reduce 有界并发 + fail-fast 取消 — exposed for e2e 白盒契约(上限解析/并发助手)。
   summaryMaxConcurrent,
   mapSummaryWithLimit,
-  // 106 #13a/13a-t: 预算保护基础层 + 长命令时间预算 — exposed for e2e 白盒契约(开关唯一判定点/阈值解析)。
   budgetGuardEnabled,
   budgetGuardTurnTokens,
   budgetGuardWarnRatio,
@@ -3602,7 +3421,6 @@ const createWorkbenchApi = () => ({
   toolTimeBudgetWarnMs,
   toolTimeBudgetHardMs,
   toolByteBudgetShadowBytes,
-  // 106 #1 G1/G2: 前缀缓存布局开关 — exposed for e2e 白盒契约(开关唯一判定点)。
   volatileTailLayoutEnabled,
   appendOnlyToolSchemasEnabled,
   execResultCacheEnabled,
@@ -3611,34 +3429,12 @@ const createWorkbenchApi = () => ({
   configuredConversationWindow,
   providerConversationContextWindow,
   agentConversationContextMeta,
-  // 代理模式 v2:信封/取全文/窗口链(e2e 白盒直调)。
   agentNodeContextWindow,
   buildAgentRunEnvelope,
   cutAtSentence,
   singleAgentShorthandNode,
   legacySpawnToOrchestrateArgs,
   waitForAgentRunResults,
-  parseKimiWireCompaction,
-  parseKimiWireAgentEvents,
-  isKimiAcpPlanFilePath,
-  resolveKimiAcpPlanFilePath,
-  kimiAcpSessionRestoreMethods,
-  kimiAcpUnknownSessionError,
-  kimiAcpModeOptionFromActivated,
-  kimiAcpFreshActualForOperation,
-  kimiAcpInferConcreteToolInput,
-  consumeKimiAcpApproval,
-  kimiAcpSuccessfulEnterPlanMode,
-  kimiAcpNativeShellQuote,
-  kimiAcpNativeBashWrapperTexts,
-  kimiAcpNativeBashWrapperCandidate,
-  kimiAcpPermissionToolCall,
-  prepareKimiAcpSpawn,
-  watchKimiWire,
-  kimiSessionStatus,
-  runKimiCompact,
-  // 20-T1/20-C1/20-F1 runtime optimization pure primitives. Exported for offline replay/e2e; the master
-  // shadow switch only measures candidates, while production behavior remains behind strict active flags.
   searchToolCatalog,
   compareToolRetrievalShadow,
   reduceObservationContent,
@@ -3646,21 +3442,18 @@ const createWorkbenchApi = () => ({
   measureObservationReductionShadow,
   rehydrateObservation,
   classifyRuntimeToolFailure,
-  // 第45波 45b/45d:context-400 判定 + 估算自校准/窗口学习 — exposed for e2e(校准 EMA/只降不升/超窗重试)。
   isContextOverflowError,
   noteEstimateSample,
   estimateFactor,
   noteWindowOvershoot,
   learnedWindowCap,
   calibratedEstimate,
-  // v1.0.2-S2: context-window three-level resolution — exposed for e2e direct units.
   resolveContextWindow,
   providerContextWindow,
   contextWindowFromTable,
   extractContextLength,
   fetchOpenAiModels,
   CONTEXT_WINDOW_FALLBACK,
-  // v2.6.2 压缩标记合并 + token 读数 — exposed for e2e direct units(合并/门槛/滞回/尾零回归)。
   fmtTokensServer,
   openCompactMarker,
   upsertCompactMarker,
@@ -3669,7 +3462,6 @@ const createWorkbenchApi = () => ({
   pickPython,
   desktopPythonCandidates,
   desktopMcpFromInstalledRoot,
-  // 39 号文:异步孪生与预热闸门 — 单测直接拿它们量「探针不占事件循环」与「预热之后同步那支零探针」。
   detectDesktopMcpAsync,
   pickPythonAsync,
   ensureDesktopMcpWarm,
@@ -3678,77 +3470,61 @@ const createWorkbenchApi = () => ({
   configureMcpFromTool,
   buildBrowserAutomationHint,
   buildToolCustomizationHint,
-  // v1.1-W2 (T2): MCP drop-in scan — exposed for mcp-config e2e (invalidate cache after fixturing folders).
   invalidateMcpDropInCache,
   collectBridgedTools,
-  adaptiveCatalogForMcp, // 105a: exposed for e2e 直测(observation_recall 目录门)
-  resolveBridge, // v1.4.1: bridged-name prefix-tolerant routing (models that drop the serverId__ prefix)
-  // 第55波 EC-C(55a): MCP 运维闭环 -- 统一读模型 + 健康探针 + 错误归类 + 兼容矩阵 - exposed for e2e 直测。
+  adaptiveCatalogForMcp,
+  resolveBridge,
   MCP_COMPAT_MATRIX,
   classifyMcpError,
   probeMcpConnector,
   buildMcpConnectorInventory,
-  safeUrlForDisplay, // 55a:远程 URL 展示脱敏 - exposed for e2e 直测
-  killChildTree, // 128i:发出去就算的那一支(14 处调用点的旧形状)—— exposed for unit/kill-own-process-tree.test.js [R2]
-  killAllMcpClients, // 55a:e2e 直测探针后清理 spawn 的 fake-mcp 子进程(避免 unref 子进程泄漏)
-  normalizeConfig, CONFIG_MIGRATIONS, // 架构还债批 2 B1:一次性 schema 迁移表(unit/config-migrations.test.js 钉顺序与金样)
-  // 128a:读-改-写整条环 exposed for unit/config-explicit-keys.test.js(真读盘、真写盘,临时 HOME)。
+  safeUrlForDisplay,
+  killChildTree,
+  killAllMcpClients,
+  normalizeConfig, CONFIG_MIGRATIONS,
   readConfig,
   mutateConfig,
   AGENT_CLI_TYPES,
-  normalizeAgentCliType, syncAgentCliMcpManifests, // 架构还债批 4:CLI 类型归一与 MCP 清单同步 —— exposed for unit/agent-cli-registry.test.js
+  normalizeAgentCliType,
   probeAgentCliLauncher,
   prepareAgentCliSpawn,
-  syncMcpServersToKimi,
-  parseAgentCliEvent,
-  AGENT_CLI_ADAPTERS, agentCliAdapter, // 架构还债批 3 A:CLI 适配器 —— exposed for unit/agent-cli-adapters.test.js(方法集同构 + 金样)
+  AGENT_CLI_ADAPTERS, agentCliAdapter,
   providerReasoningEffort,
   applyProviderReasoningEffort,
   buildClaudeCliEnv,
   decodeClaudeCliText,
-  // v1.9 数据管家 — exposed for e2e direct unit assertions(保留策略归一/统计/sweep/归档读取回退)。
   normalizeStoragePolicy,
   collectStorageStats,
   storageSweep,
   readAgentRunEvents, appendAgentRunEvent, flushAgentRunEvents, runSubAgentCore,
-  // 第40波:boot 恢复并发化 + syncRunEventSeq 尾窗化 — exposed for e2e(尾窗/全读回落/池语义直测)。
   syncRunEventSeq,
   autoResumeInterruptedRuns,
   markInterruptedAgentRuns,
-  // 第40波:性能观测面 — exposed for e2e(路径归一化/直方图分桶/趋势节流直测)。
   recordRequestMetric,
   normalizeMetricsPath,
   maybeRecordStorageTrend,
   readStorageTrend,
   buildMetricsPayload,
-  // v1.9 会话存储 v2 + 引擎转录 GC — exposed for e2e(迁移/快路径/撕裂容忍/白名单账本/保留期清理)。
   loadSession,
   createSession,
   updateSessionMeta,
-  sessionMeta, // 116-2a: 侧栏/索引同源的元数据读形(含会话级 permissionMode 与派生 effectivePermissionMode)
-  normalizeSessionEngineRoute,
-  sessionEngineRouteFromConfig,
+  sessionMeta,
   configForSessionEngineRoute,
   saveSession,
   deleteSession,
   listSessions,
-  mutateSession, // 128b:会话读改写原语 —— exposed for unit/session-mutate.test.js
-  sessionObjectIsStale, // 128b
-  runMissionDriver, // 128b:驱动器撤回后收手 —— exposed for unit/session-mutate.test.js [D1]
-  rewindSession, // 107-F7b: exposed for unit(撤回代数闸:撤回之前攥在手里的副本写不回去、之后新读的照常落盘)
-  flushSessionIndexSync, // 107-F9a: exposed for unit(退出时的同步刷写要把「在途」那一批也写进去,不许随被放弃的异步写一起丢)
-  // 第75c波:可重建 Mission/Intervention 索引与无损 journal 压缩原语。
+  mutateSession,
+  sessionObjectIsStale,
+  runMissionDriver,
+  rewindSession,
+  flushSessionIndexSync,
   getPretenderProjectionIndex,
-  warmPretenderProjectionIndex,
   compactInterventionJournal,
   bumpMissionChangeSeq,
   sessionBodyPaths,
-  // 117q-B6(30 号文 P2-10/P2-11):尾窗读原语 + 撕裂尾修复合一 — exposed for e2e 字节级直测
-  // (造真撕裂尾文件、跑修复、断言截断后字节逐字节等于预期;不经 HTTP,直接函数调用可控)。
   readFileTail,
   repairMissionChangeTornTail,
   recordEngineTranscript,
-  claudeProjectsRoot,
   claudeProjectDirKey,
   fenceSafeSlice,
   shrinkFencedSection,
@@ -3758,68 +3534,54 @@ const createWorkbenchApi = () => ({
   readClaudeProjectAgentRoles,
   saveProjectAgentRoles,
   buildClaudeAgentDefinitions,
-  classifyClaudeSubagentFailure, // cmd8191: 「命令行太长。」→ definitive 签名 — exposed for e2e unit assertions
+  classifyClaudeSubagentFailure,
   parseClaudeTaskNotification,
   nativeClaudeAgentResultInfo,
   BUILTIN_AGENT_ROLES,
   normalizeSession,
-  isUntitledSessionTitle, // 50-fix: 未命名标题判定(双引擎自动命名共用) — exposed for e2e
-  // 第 116 波 116-5a(27 号文 §11.8「线程自动摘要」):线程的名字与一句概括。
-  //   sessionDisplayTitle —— 「这条线程该显示什么名字」的唯一判据(人起的 > 生成的 > 原话),
-  //     服务端一处装配、多处消费,前端不许各算一遍;
-  //   maybeWriteThreadBrief / parseThreadBrief —— exposed for e2e 与单测直测(生成与解析各自可判定)。
+  isUntitledSessionTitle,
   sessionDisplayTitle,
-  // 117j 收尾:会话头的【带瞬时重试】读取。Windows 的 rename 替换会开一个 ENOENT 窗口,
-  // 单发 readFile 会把「正在被原子替换」误判成「不存在」。exposed for unit/session-head-read.test.js。
   readSessionHeadResilient, registerIntervention, transitionInterventionState, readInterventions, makeAttachmentRecord, threadVisible,
   maybeWriteThreadBrief,
   parseThreadBrief,
   detectDanglingTurn,
   bridgedToolTier,
-  bridgedReadPathGate,   // 安全修复(审计 A②):桥接读文件的读边界 —— unit/security-audit-fixes.test.js 直调
+  bridgedReadPathGate,
   cwdWarning,
   defaultConfig,
   DurableJsonStore,
   sanitizeExternalMcpServer,
-  // 启动时把本机 Claude Code(~/.claude.json)的 MCP 自动映射进 Ruyi(e2e 直测:幂等/上限/dismissed 跳过)。
   autoImportClaudeCodeMcp,
-  // 48c: MCP 配置导入器解析器(e2e 直测 TOML/JSON 边角)。
   parseMcpConfigFile,
   scanMcpSources,
-  // v0.8-S6: capability matrix + layered prompt + error枚举 (exposed for e2e + UI).
   getCapabilities,
   invalidateCapabilityCache,
   CAP_UNKNOWN_TTL_MS,
-  // 128f-⑧:unit/session-index-rebuild-race 用。
   buildUsageSummary,
-  forEachUsageRow, readUsageRows, usageLedgerCacheStats,   // 性能批 P1:unit/usage-ledger-cache 直调(新旧两条读账路径差分 + 增量计数)
-  pretenderIndexTestHooks,   // 性能批 P2:unit/pretender-index-incremental 直调(名单比对 / 后台校验 / 延迟落盘的计数)
+  forEachUsageRow, readUsageRows, usageLedgerCacheStats,
+  pretenderIndexTestHooks,
   flushSessionIndex,
   invalidateSessionIndex,
   setSessionIndexRebuildScanHookForTest,
-  // 128f-⑪:unit/permission-wait 用。
   permissionWaitMs,
   stewardMediatedPermissionWaitMs,
   hasPendingPermissionForSession,
   requestNativePermission,
   clearPendingPermissions,
   schedulerAskWaitSessions,
-  // 129f — exposed for e2e:事件总线。「该不该叫」这道门只能在总线上验 —— 经 SSE 验的话
-  // 测的就成了事件流那一层的转发与前端订阅,不是这道门本身(那一层另有 event-stream 的件在钉)。
   RUYI_EVENTS,
   EventStreamHooks,
-  // 128f-⑥:unit/usage-ledger-exit-flush 用。
   appendUsageLedger,
   flushUsageLedgerSync,
-  peekCapabilities, // 108b-fix2:非阻塞能力缓存读取(不触发探测)
+  peekCapabilities,
   buildProviderSystemPrompt,
-  PROMPT_PACK_VERSION, // 52d: 提示词包版本(语义化版本检查)
-  getPromptPack, // 116f: 提示词包选择器(locale 感知) — exposed for 静态锁直读 steward 段的分层预算
-  buildStableSystemPrompt, // 51d C1a:稳定层(prefix-cache 友好)
-  buildRuntimeIdentityFacts, // 108a:运行时身份事实(进程内恒定量,e2e 直测)
-  buildEngineEnvBrief, resolveEngineEnvBrief, probeRgAsync, peekRgProbe, // 145-W3:引擎运行环境说明 + rg 来源探测(静态件直测)
-  buildVolatileParts, // 51d C1a:易变层(C1b 移 user 侧)
-  buildPlaybookIndexSection, // 108b:Playbook 精简索引段(e2e 直测围栏/上限/尾行)
+  PROMPT_PACK_VERSION,
+  getPromptPack,
+  buildStableSystemPrompt,
+  buildRuntimeIdentityFacts,
+  buildEngineEnvBrief, resolveEngineEnvBrief, probeRgAsync, peekRgProbe,
+  buildVolatileParts,
+  buildPlaybookIndexSection,
   buildAgentTeamHint,
   buildClaudeNativeAgentPolicy,
   softwareEngineeringTaskProfile,
@@ -3838,58 +3600,35 @@ const createWorkbenchApi = () => ({
   listAgentLoopHooks: AgentLoopHooks.listAgentLoopHooks,
   dispatchAgentLoopHooks: AgentLoopHooks.dispatchAgentLoopHooks,
   summarizeAgentLoopToolResult: AgentLoopHooks.summarizeAgentLoopToolResult,
-  // 第116波116a(27号文§11.3): 管家(Steward)引擎侧纯函数与延迟绑定命名空间 — exposed for e2e/单测。
   StewardHooks,
   STEWARD_EVENT_KINDS,
   STEWARD_DIGEST_LIMITS,
   stewardMayAct,
-  // 125-P0/P1:被停下来的目标判据(06i)与失败类别的取话口(13m)—— exposed for 单测
-  //   (unit/steward-inbox-core.test.js 直测两者的真值表与「未知类别」诚实回退)。
   stewardStoppedTarget,
   stewardFailureExplain,
   buildStewardDigestLine,
-  // 第117波117y-S1(27号文§11.18.2): 管家正文的天花板裁剪(句界 + 诚实标记)与它【绝不能被误伤】的
-  // 那个同名邻居 stewardClipSay(总览行/待决一行话的 200 字 + 省略号)—— 两个都 exposed for
-  // unit/steward-core.test.js:一个正测句界裁剪,一个做反向保护断言。
   stewardTrimSayAtSentence,
   stewardClipSay,
   STEWARD_SAY_TARGET,
   STEWARD_SAY_CEILING,
-  // 第116波116-2a(27号文§3.3/§8.6): 线程级权限 — 三层解析纯函数(请求级>会话级>全局)与
-  // 「管家只能收紧」的序表。exposed for 单测(permission-resolve.test.js)与 e2e 直测。
   resolvePermissionMode,
-  // 第117波117m-A1(27号文§3.3/§8.6): 原生引擎权限闸门本体(mode,tier,toolName,input)与「活回合此刻
-  // 的会话级档」只读访问器 — exposed for e2e 直测(auto 档的高风险判据、中途改档立刻生效两条)。
   nativeToolGate,
   liveSessionPermissionMode,
   PERMISSION_MODES_REQUIRING_CONFIRM,
   STEWARD_PERMISSION_RANK,
   stewardPermissionRank,
   stewardMayTightenTo,
-  // 第116波116-pre(27号文§8.12/§11.3): 递话预判纯函数 — exposed for 单测(steward-preroute.test.js)。
   STEWARD_PREROUTE_DEFAULTS,
   prerouteText,
-  // 第116波116h(27号文§3.1 116h 行/§8.10): 等待原因的唯一判定点(等你>等锁>等预算>等并发位)
-  //   与它的两张常量表 — exposed for 单测(steward-wait-reason.test.js)与 e2e 直测形状对账。
   STEWARD_WAIT_REASONS,
   STEWARD_WAIT_LABELS,
   waitReasonFor,
-  // 第117波117l-A1(27号文§11.9 D5/D7/D4): id 人话化、新线程模型分档、「它在问你」三态 —— 三个纯
-  //   函数(只吃入参、无 IO),exposed for 单测(unit/steward-humanize.test.js)与 e2e 直测。
   stewardHumanizeIds,
   stewardThreadEngineRoute,
-  stewardOpenAiFallback,   // 133d:管家线程只走 OpenAI 兼容端点的回落顺序(纯函数,unit/steward-config-tier.test.js 直测)
+  stewardOpenAiFallback,
   stewardAsksYou,
-  // 第117波117q-B5(30号文§3 总表 P2-8): 中和伪造围栏标签 —— 纯函数(只吃入参、无 IO),六个调用点(06d/06e/06/09)
-  //   的单一事实源。exposed for 单测(unit/neutralize-fence-tag.test.js)。
   neutralizeFenceTag,
-  // 第117波117q-B7(30号文§3 总表 P2-16): argsHash 指纹算法 —— 纯函数(只吃入参、无 IO),06f-autonomy-grants.js
-  //   ::consumeGrant 与 09b-replan-ledger.js::recordNodeContinuation 两个调用点的单一事实源。
-  //   exposed for 单测(unit/hash-args.test.js)。
-  // 第116波116c-0(27号文§1/§3.5): 会话回合核心 —— 进程内(不经 HTTP)在任意会话上发起一个完整回合,
-  //   自带 sink;HTTP 的 /api/chat/stream 现在也只是它的一层壳。exposed for e2e 等价性直测与后续切片调用。
   runSessionTurn,
-  // 第116波116b(27号文§11.3): 管家收件箱 — 生命周期 + 归一化/合并/去重纯函数(exposed for 单测/e2e)。
   startStewardInbox,
   stopStewardInbox,
   STEWARD_SOURCE_EVENT_MAP,
@@ -3900,30 +3639,18 @@ const createWorkbenchApi = () => ({
   stewardMergeInboxEvents,
   stewardEventDedupeKey,
   stewardInboxRowDedupeKeys,
-  // 第116波116c(27号文§3.3/§3.5/§4): 管家工具集 — 06i 纯函数(委托书/五态判据/豁免正则/记忆去重)
-  // exposed for 单测与 e2e 直测;工具实现本身经 StewardHooks 与 TOOL_HANDLERS 触达,不另开导出面。
   STEWARD_EXEMPT_TOOL_PATTERNS,
   stewardToolPermanentlyExempt,
-  // 127 波 2-bis:豁免原因(单点判据,布尔由它派生)/ 精确名出口 / 类别人话表 —— 单测与 e2e 直测。
   stewardExemptReason,
   STEWARD_EXEMPT_NAME_CARVEOUTS,
   STEWARD_EXEMPT_CATEGORY_LABELS,
-  // 127 波 2-quater B1:全部命中 + 底线 + 扫没扫全 / tier 口径单点 / 命令摘录(中和 + 截 300)/ 摘录上游的脱敏,
-  // 以及收件箱消息装配与降级按钮 —— 单测与 e2e 直测(13k 的摘要生产者经 StewardHooks.enrichInboxRows 与
-  // steward_thread_status 触达,不另开导出面:14-main -> 13k 会是一条新边)。
   stewardExemptHits,
   stewardExemptScanInput,
   stewardExemptExcerpt,
   redact,
   stewardInboxMessage,
   stewardDowngradeActions,
-  // 127 波 2-quater B2:代批十道闸的纯判据 / 污染判据(工具名 + 活回合段表)/ riskNote 清洗 / 闸名表与小时上限,
-  // 以及 13q 的确定性回执合并 —— 单测直测(13k 的活回合读取经 steward_decide 真路径触达,不另开导出面)。
   stewardExemptDelegationVerdict,
-  // 129c 污染规则(31 号文红线 4)的两个判定面 —— exposed for e2e:「读过外界内容之后写动作
-  // 降级成提议」只有把这两个直调起来才测得出【判据本身】,否则只能经一次真模型回合间接看结果。
-  // 129e — exposed for e2e:「活回合期间不许换工作目录」这条忙锁,只有把在跑的那一格摆出来才测得到
-  // (起一个真回合再去改,测的就成了回合调度的时序,不是这条闸本身)。
   activeChildren,
   stewardSelfServeAllows,
   stewardTurnTaintedBy,
@@ -3935,40 +3662,26 @@ const createWorkbenchApi = () => ({
   STEWARD_EXEMPT_DELEGATIONS_PER_HOUR,
   STEWARD_EXEMPT_DELEGATION_TEXT_MAX,
   stewardMergeDelegationReceipts,
-  // 107-S1(46 号文 §5 S1):①②③④ 的四个新纯判据 —— 摘录长度常量(闸 5 绑在它上面)、间接构造、
-  // 删数据的绝对目标、confirm 族的确认清单。单测直测;act 的服务端标签与确认行经 stewardNormalizeAct
-  // 的真路径(管家回合 / 降级按钮)在 e2e 里读。
   STEWARD_EXEMPT_EXCERPT_CHARS,
   stewardActConfirmSpec,
   stewardNormalizeAct,
   stewardActLabel,
   isStewardToolName,
   buildStewardBrief,
-  // 129h:两个纯函数 —— 占位组装与「哪些参数没给值」。导出只为单测直测
-  // (unit/steward-playbook-run.test.js 拿前端那份 assemblePlaybookPrompt 与它逐例对照)。
   stewardAssemblePlaybookPrompt,
   stewardPlaybookMissingInputs,
   STEWARD_BRIEF_LIMITS,
   deriveStewardThreadState,
   stewardThreadStateFromCard,
-  stewardThreadStateFromHead,   // 架构还债批 1 #1:会话头 → 五态证据的唯一适配器(unit/steward-head-adapter.test.js)
-  // 第116波116g(§3.1 事项跨会话升格): 事项级聚合状态的唯一定义(纯函数,unit 穷举真值表)。
+  stewardThreadStateFromHead,
   aggregateMissionState,
-  // 117s-A D1(§11.13 ③):行序的状态秩(纯函数,单测/e2e 直测)。
-  stewardThreadStateRank,
   STEWARD_MEMORY_KINDS,
   stewardTermJaccard,
-  // 第116波116-2e(27号文§3.5「如意设置」行): steward_config_* 的三级分级(allowlist + fail-closed)。
-  //   exposed for 单测 unit/steward-config-tier.test.js —— 它拿 Object.keys(normalizeConfig({}).config)
-  //   遍历默认表的每一个键,要求逐个落到 free/confirm/forbidden 三级之一,不许漏。
   STEWARD_CONFIG_TIERS,
   stewardConfigTierFor,
   STEWARD_QUICK_ANSWER_CHARS,
-  // 117s-H1(27 号文 §11.13.3「交付进箱」): 交付正文的三个预算 —— e2e 直接拿它们断言,
-  //   数字只许有一份(06i 一份、13h 两份),测试不再自带字面量。
   STEWARD_DELIVERABLE_CHARS,
   STEWARD_INBOX_MESSAGE_CHARS,
-  // 第116波116g: 事项容器(02 持久化面)—— e2e 直测反向索引、损坏隔离与四个归属操作的幂等。
   readMissionContainer,
   listMissionContainers,
   createMissionContainer,
@@ -3977,14 +3690,11 @@ const createWorkbenchApi = () => ({
   missionMergeInto,
   missionSplitThreads,
   MISSION_CONTAINER_MAX_FILES,
-  // 第116波116f(27号文§11.3): 管家回合运行器与到访 — 会话单例常量、回合入口、到访、输出契约解析器
-  // 与两个分叉入口(提示词/预算)。exposed for e2e 直测;09/10/13g 侧一律经 StewardHooks 触达。
   STEWARD_SESSION_ID,
   STEWARD_SESSION_TITLE,
   runStewardTurn,
   stewardResetConversation,
   nativeToolSchema,
-  // 第117波117m-A1: 熔断判据本体 — exposed for e2e 直测(小时窗只节流 trigger!=='user' 的自主回合)。
   stewardCircuitCheck,
   stewardVisit,
   stewardParseReply,
@@ -3992,10 +3702,7 @@ const createWorkbenchApi = () => ({
   ensureStewardSession,
   buildStewardSystemPrompt,
   stewardContextBudget,
-  // 116-pre(27号文§8.12/§11.3): 递话预判端点的装配层 — exposed for e2e 直测(缓存命中/未命中两路径)。
   stewardPreroute,
-  // 116c: 班组动作核心(从 POST /api/agent-runs/:id 路由零行为抽出)与 108c 自状态装配 — e2e 直测等价性。
-  // 第41波(41a/41b): 表驱动工具注册表 — exposed for e2e(guard 声明化行为锁内省 + 分发行为直测)。
   TOOL_HANDLERS,
   NATIVE_TOOL_TIER,
   NATIVE_TOOL_PACKS,
@@ -4012,55 +3719,39 @@ const createWorkbenchApi = () => ({
   CONFIG_SCHEMA,
   PERMISSION_MODES,
   ROUTE_AUTH,
-  // v0.9-S2: playbooks — exposed for e2e direct unit testing (normalize / availability / draft-parse).
   normalizePlaybook,
   evalPlaybookAvailability,
-  matchServiceEntry, // 127-⑧:服务入口整体序(可用 > 需配置 > 未知 > 暂无模板)的进程内单测
-  // v0.9-S3 (C3): workspace-by-fingerprint — exposed for e2e direct unit testing of the resolver.
+  matchServiceEntry,
   resolveWorkspace,
-  // PF1: checkpoint GC size-cap cache — exposed for e2e (assert no per-write full sweep + still purges over-cap).
   journalRecord,
   journalGc,
   journalGcProbe,
-  writeHistorySnapshot, // PF1 fix: history snapshots also grow the cap-governed tree — exposed so the e2e can
-                        // assert repeated snapshots move the cache AND auto-trigger a purge (bug: neither happened).
-  // v0.9-S4 (C4): artifacts kind classifier + preview path-safety + summary builder — exposed for e2e units.
+  writeHistorySnapshot,
   kindForPath,
   buildTurnSummary,
-  // v1.5-W1.5 (T3): bridged 写族路径提取 — exposed for e2e 直接单测(args→目标路径+op)。
   collectBridgedWriteTarget,
-  // v1.2-B: 多目标路径提取(move/copy 两条式)+ 机制性防漏审计 — exposed for checkpoint-coverage e2e 直测。
   collectBridgedWriteTargets,
   auditBridgedWriteCoverage,
   BRIDGED_WRITE_PATH_ARGS,
-  // v1.2: 终端命令内联手写 Office 的桥接分发软闸 — exposed for e2e 直接单测。
   bridgedOfficeScriptGate,
   pathWithinRoot,
   pathWithinAnyRoot,
-  // v1.0.2-S3: reveal-in-explorer path guard + spawn-argv builder — exposed for e2e 单测护栏逻辑。
   guardWorkspacePath,
   buildRevealSpawn,
-  // Native code-editor handoff + exact turn baselines — exposed for offline regression tests.
   buildCodeEditorSpawn,
   captureWorkspaceTurnBaseline,
   reconcileWorkspaceTurnBaseline,
-  // v1.4.6-S2/S3: shell-free open-spawn argv builders + native file-tool workspace boundary guard + local
-  // provider detection — exposed for e2e (pure argv / containment assertions).
   buildOpenSpawn,
   buildBrowserOpenSpawn,
   guardFileToolPath,
   providerIsLocal,
-  // 第31波B(L1): autoexec denylist + 路径归一 — exposed for shell-sandbox e2e 直接单测。
   AUTOEXEC_DENYLIST,
-  // v0.9-S9: web_search / web_fetch — SSRF guard + main-text extraction + cache (exposed for e2e direct units).
   ssrfCheck,
   webCachePath,
   readWebCache,
   writeWebCache,
   webFetch,
   webSearch,
-  // v1.1-W1a (T1/T2/T3): fetch error classification + multi-target probe + builtin HTML search — exposed for e2e units.
-  // v1.1-W2 (T1): zero-dep ZIP codec + download dest guard — exposed for tools-v3 e2e direct units.
   crc32,
   zipWrite,
   zipReadCentralDir,
@@ -4068,7 +3759,6 @@ const createWorkbenchApi = () => ({
   guardDownloadDest,
   probeAny,
   networkAnchors,
-  // Resource-aware DAG scheduler primitives (pure normalization/conflict checks plus lease integration tests).
   normalizeAgentResource,
   normalizeAgentResources,
   remapAgentResources,
@@ -4078,7 +3768,7 @@ const createWorkbenchApi = () => ({
   releaseResourceLease,
   resourceBlockers,
   parseStructuredAgentOutput,
-  repairJson, // v1.5 (Judge JSON 修复): 零依赖修复器 — exposed for judge-json-repair e2e 直接单测。
+  repairJson,
   validateAgentJsonSchema,
   normalizeAgentGate,
   aggregateAgentVote,
@@ -4090,14 +3780,12 @@ const createWorkbenchApi = () => ({
   normalizeWorkflowLoop,
   workflowProgressFingerprint,
   evaluateNodeToolEvidence,
-  // R1(13-r1-evidence-graph.md): evidence 索引 + claim 引用校验 - exposed for e2e 直测(四态:verified/unverified/跨工作区/无refs)。
   indexNodeEvidence,
   verifyNodeClaims,
   purgeNodeEvidence,
   runWorkspaceHash,
   buildNodeEvidenceCatalog,
   formatNodeEvidencePrompt,
-  // R4(15-r4-memory-graph.md): 记忆关系边 + 冲突感知检索 - exposed for e2e 直测(propose/confirm/scope隔离/conflict)。
   saveMemory,
   loadMemoryRegistry,
   listWorkbenchMemories,
@@ -4139,34 +3827,20 @@ const createWorkbenchApi = () => ({
   maskSecrets,
   unmaskSecrets,
   unmaskProviders,
-  // 107-S2:掩码回传的启动向量闸(providers/searchBackend/modelsApiKey 的密钥会去哪几个地址)- exposed for e2e 直测。
   maskedSecretConflicts,
   providerLaunchVectorKey,
-  // Responses strict pairing adapter — exposed for e2e: shallow-copy repair must not mutate persisted history.
   responsesHistoryWithCompleteToolPairs,
   buildResponsesInputItems,
-  // 117q-B1(30 号文 §4.1): 子进程 NDJSON 逐行喂入器 — exposed for unit 直测(chunk 边界切开 CJK 字节不得产生 U+FFFD)。
   createNdjsonLineFeeder,
-  // 第 123 波 M1 §3.2/§3.4:调度器生命周期与假时钟 —— exposed for e2e 直测与 14 的 boot 起停。
   startScheduler,
   stopScheduler,
   schedulerRuntimeSnapshot,
-  // 安全修复(审计 D):定时回合权限档的天花板(= 全局档,永不含 bypass)—— unit/security-permission-ceilings.test.js 直调整张真值表。
   schedulerPermissionModeFor,
-  // 127 波 2-ter S-b:六条路由的处理函数本体 —— exposed for scheduler-steward.e2e.js 在进程内挂一个 http 壳直测
-  //   「HTTP 新建 / PATCH 写不进 workdir、PATCH 保住服务端那一份」(workdir 只在管家开着且真触发过之后才有,
-  //   而那件是进程内夹具;鉴权表是另一件事,由 scheduler-api.e2e.js 经真服务钉着)。
   handleSchedulerApiRoutes,
-  // 第 123 波 M2 §3.5:管家面的两个观测口 —— 定时任务回调/承诺读口的延迟绑定命名空间,
-  //   与「回来摘要」那一支(七类事件 + 承诺三项) exposed for scheduler-steward.e2e.js 的直测。
   stewardVisitDigest,
-  // 性能批(GET /api/missions 聚合装配 + GET /api/agent-runs?view=digest 摘要缓存):unit/poll-path-caches.test.js 直调
-  //   两个装配/列举函数、用 saveAgentRun 验「进程内写即作废」,并读确定性计数器(perfCounters)断言「没重算 / 没重读」。
   buildMissionAggregateRows,
   listAgentRunDigests,
   saveAgentRun,
-  // 会话正文 perf(逐行 sha1 去重 + 增量取不读 provider 正文):unit/session-body-line-cache.test.js 读 perfCounters.sessionBody
-  //   的确定性计数器,并把 sessionMessagesDelta 的字节戳路径与逐条序列化路径逐格比对。
   perfCounters: { missionAggregate: missionAggregateStats, agentRunDigest: AgentRunStore.stats, sessionBody: sessionBodyPerfStats },
   sessionMessagesDelta,
 });

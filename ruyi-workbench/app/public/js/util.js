@@ -36,14 +36,17 @@ export const fileBasename = pathValue => {
 // 落在数据目录里(管家会话自己的目录、子代理的临时工作树、上传与临时文件全在那儿),或者是如意为任务
 // 开的、用户还没亲手加进常用的(config.stewardManagedWorkspaces 里 adopted !== true 的那些)。
 // 判据与服务端 06i 的 stewardRuyiOwnedPath 同一口径:分隔符两种写法都认、不分大小写、前缀按整段比。
-const workspaceKey = value => String(value == null ? '' : value).replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase();
+export function workspaceKey(value) {
+  const path = String(value ?? '');
+  return path.replace(/\/+$/, '') || (path.startsWith('/') ? '/' : '');
+}
 // dataRootAliases:/api/status 给的数据根其它写法(改名迁移后旧位置上的联接;改名前存的工作区写的是旧前缀)。
 export function isRuyiOwnedWorkspace(pathValue, { dataRoot = '', dataRootAliases = [], owned = [] } = {}) {
   const target = workspaceKey(pathValue);
   if (!target) return false;
   for (const base of [dataRoot, ...(Array.isArray(dataRootAliases) ? dataRootAliases : [])]) {
     const root = workspaceKey(base);
-    if (root && (target === root || target.startsWith(root + '/'))) return true;
+    if (root && (target === root || target.startsWith(root === '/' ? '/' : root + '/'))) return true;
   }
   return (Array.isArray(owned) ? owned : []).some(row => row && row.adopted !== true && workspaceKey(row.path) === target);
 }
@@ -54,23 +57,15 @@ export function visibleFavoriteWorkspaces(rows, ctx) {
 }
 
 // 工作文件夹路径的两个纯判定（原在 workspace-preferences.js，设置页「添加/默认工作文件夹」要同一口径所以搬到这里）。
-// v1.0.2 返修:Windows「复制文件地址」会给路径包上双引号("C:\path"),部分终端复制还带单引号/全角引号——
-// 先剥掉成对的包裹引号再校验,否则用户按系统习惯复制的路径全被误拒。只剥【成对且在首尾】的引号,不动路径内部。
-export function stripWrappingQuotes(p) {
-  let s = String(p || '').trim();
-  const pairs = [['"', '"'], ["'", "'"], ['“', '”'], ['‘', '’']];
-  for (let guard = 0; guard < 3; guard++) { // 最多剥三层(防 ""C:\x"" 类粘贴),够用且防死循环
-    const hit = pairs.find(([a, b]) => s.length >= 2 && s.startsWith(a) && s.endsWith(b));
-    if (!hit) break;
-    s = s.slice(1, -1).trim();
-  }
-  return s;
+export function stripWrappingQuotes(value) {
+  const raw = String(value ?? '');
+  if (raw.startsWith('/')) return raw;
+  const text = raw.trim();
+  const pairs = { '"': '"', "'": "'", '“': '”', '‘': '’' };
+  return text.length > 1 && pairs[text[0]] === text.at(-1) ? text.slice(1, -1) : text;
 }
-export function looksAbsolutePath(p) {
-  const s = stripWrappingQuotes(p);
-  if (!s) return false;
-  // Windows 盘符 (C:\ / C:/) 或 UNC (\\server\share) 或 POSIX 绝对 (/foo)。
-  return /^[a-zA-Z]:[\\/]/.test(s) || /^\\\\/.test(s) || /^\//.test(s);
+export function looksAbsolutePath(value) {
+  return stripWrappingQuotes(value).startsWith('/');
 }
 
 // HTML 转义(XSS 安全渲染兜底)。
@@ -261,10 +256,10 @@ export function chatProviders(config) {
 function camelizePresetId(id) {
   return String(id || '').replace(/[-_](\w)/g, (_, c) => c.toUpperCase());
 }
-export function presetDisplayLabel(namespace, preset) {
+export function presetDisplayLabel(namespace, preset, translate = t) {
   if (!preset) return '';
   const key = `${namespace}.preset.${camelizePresetId(preset.id)}.label`;
-  const translated = t(key);
+  const translated = translate(key);
   return translated === `[${key}]` ? (preset.label || preset.id) : translated;
 }
 

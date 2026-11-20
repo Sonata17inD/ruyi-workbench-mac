@@ -29,7 +29,7 @@
 //      `crypto.createHash('sha1').update(...).digest('hex').slice(0, 12)` 字面量
 //
 // 与既有 dev-harness/unit 件同款约定(见 neutralize-fence-tag.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
+// RUYI_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
 const path = require('path');

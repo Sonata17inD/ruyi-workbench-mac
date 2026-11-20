@@ -28,7 +28,7 @@ function safeChild(root, relative) {
   if (!inside(root, file)) throw new Error('Payload escapes root: ' + relative);
   return file;
 }
-function inventory(root) {
+function inventory(root, { hashFiles = true } = {}) {
   root = fs.realpathSync(root);
   if (!fs.statSync(root).isDirectory()) throw new Error('Expected a payload directory');
   const entries = [];
@@ -45,7 +45,9 @@ function inventory(root) {
         entries.push({ path: relative, type: 'directory', mode: stat.mode & 0o777 });
         walk(file);
       } else if (stat.isFile()) {
-        entries.push({ path: relative, type: 'file', mode: stat.mode & 0o777, bytes: stat.size, sha256: sha256(file) });
+        const entry = { path: relative, type: 'file', mode: stat.mode & 0o777, bytes: stat.size };
+        if (hashFiles) entry.sha256 = sha256(file);
+        entries.push(entry);
       } else throw new Error('Unsupported payload file: ' + relative);
     }
   }
@@ -57,7 +59,7 @@ function treeDigest(entries) {
 }
 function copyTree(source, destination) {
   // Validate the complete source before copying; preserve internal relative symlinks verbatim.
-  inventory(source);
+  inventory(source, { hashFiles: false });
   // APFS copy-on-write avoids allocating the full offline runtime repeatedly. Node falls
   // back to a normal copy on filesystems without cloning; subsequent writes stay isolated.
   fs.cpSync(source, destination, { recursive: true, verbatimSymlinks: true, force: false, errorOnExist: true,
@@ -65,8 +67,8 @@ function copyTree(source, destination) {
 }
 function run(command, args, options = {}) {
   const result = cp.spawnSync(command, args, { encoding: 'utf8', timeout: 180000, maxBuffer: 16 * 1024 * 1024,
-    ...options, detached: process.platform !== 'win32' });
-  if ((result.error || result.status !== 0) && process.platform !== 'win32' && result.pid > 0) {
+    ...options, detached: true });
+  if ((result.error || result.status !== 0) && result.pid > 0) {
     // This is the dedicated group created by this invocation, never a PID/name search.
     try { process.kill(-result.pid, 'SIGKILL'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
   }
@@ -92,10 +94,11 @@ function verifyAssets(root, lock, variant) {
   }
   if (variant === 'full') {
     const wheels = safeChild(root, lock.wheelsPath);
-    const expected = lock.wheels.map(item => item.filename).sort();
-    if (JSON.stringify(fs.readdirSync(wheels).sort()) !== JSON.stringify(expected)) throw new Error('Wheelhouse contents differ from lock');
+    if (!inside(fs.realpathSync(root), fs.realpathSync(wheels))) throw new Error('Wheel directory escapes root');
     for (const wheel of lock.wheels) {
-      if (sha256(safeChild(wheels, wheel.filename)) !== wheel.sha256) throw new Error('Wheel hash mismatch: ' + wheel.filename);
+      const file = safeChild(wheels, wheel.filename);
+      if (!fs.lstatSync(file).isFile()) throw new Error('Expected a wheel file: ' + wheel.filename);
+      if (sha256(file) !== wheel.sha256) throw new Error('Wheel hash mismatch: ' + wheel.filename);
     }
     components.wheels = { directory: wheels };
   }
@@ -130,7 +133,7 @@ function nativeAudit(root) {
       return run(command, [...args, alias]);
     } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
   }
-  for (const entry of inventory(root)) {
+  for (const entry of inventory(root, { hashFiles: false })) {
     if (entry.type !== 'file' || entry.bytes < 4) continue;
     const file = safeChild(root, entry.path);
     const fd = fs.openSync(file, 'r');

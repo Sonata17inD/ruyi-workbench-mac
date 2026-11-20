@@ -1,6 +1,6 @@
 'use strict';
 require('./lib/self-isolate-home.js');
-// Real config migration + Windows DPAPI across fresh processes. Synthetic credentials, no model calls.
+// Exercise Mac config migration across fresh processes sharing an isolated key provider.
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os'), cp = require('node:child_process'), crypto = require('node:crypto');
 const { fixtureChildEnv } = require('./lib/fixture-home');
 const { killOwnTree } = require('./lib/kill-own-tree');
@@ -9,7 +9,8 @@ async function worker() {
   const chunks = []; for await (const chunk of process.stdin) chunks.push(chunk);
   const task = JSON.parse(Buffer.concat(chunks));
   try {
-    const app = require('./lib/server-internals').loadServerInternals(['readConfig', 'mutateConfig', 'PrivacyCore']);
+    const app = require('./lib/server-internals').loadServerInternals(['readConfig', 'mutateConfig', 'PrivacyCore', 'LocalSecretCryptoHooks']);
+    app.LocalSecretCryptoHooks.helperPath = () => task.helper;
     const hooks = app.PrivacyCore.configHooks;
     let config = await app.readConfig();
     if (task.recoveryCrash) {
@@ -42,10 +43,10 @@ async function worker() {
 }
 async function main() {
   const t = createRunner('CREDENTIAL VAULT');
-  if (process.platform !== 'win32') { console.log('SKIP Windows DPAPI fixture; Mac Keychain has its own isolated runtime e2e'); t.done(); return; }
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-credential-vault-'));
   const data = path.join(root, 'data'), vaultFile = path.join(data, 'credential-vault-v1.json'), configFile = path.join(data, 'config.json');
   fs.mkdirSync(data);
+  const helper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root);
   const secret = 'fixture-vault-' + crypto.randomBytes(16).toString('hex'), header = 'fixture-header-' + crypto.randomBytes(16).toString('hex');
   const replacement = 'fixture-replacement-' + crypto.randomBytes(16).toString('hex');
   const original = { configSchema: 14, credentialEncryptionV1: true, activeProvider: 'fixture',
@@ -58,8 +59,8 @@ async function main() {
   function run(task = {}) {
     return new Promise((resolve, reject) => {
       const home = path.join(root, 'home'); fs.mkdirSync(home, { recursive: true });
-      const child = cp.spawn(process.execPath, [__filename, '--worker'], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
-        env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, USERPROFILE: home, HOME: home,
+      const child = cp.spawn(process.execPath, [__filename, '--worker'], { stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: data, USERPROFILE: home, HOME: home,
           APPDATA: path.join(root, 'roaming'), LOCALAPPDATA: path.join(root, 'local') } });
       children.add(child); const output = []; let bytes = 0;
       const timer = setTimeout(() => { killOwnTree(child); reject(Error('fixture timeout')); }, 45000);
@@ -74,7 +75,7 @@ async function main() {
           resolve(JSON.parse(value));
         } catch { reject(Error('fixture result invalid')); }
       });
-      child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify({ expected: secret, header, ...task }));
+      child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify({ expected: secret, header, helper, ...task }));
     });
   }
   try {
@@ -86,7 +87,7 @@ async function main() {
     const disk = JSON.parse(fs.readFileSync(configFile, 'utf8'));
     t.ok(disk.credentialRefsV1?.slots.length === 2 && disk.providers[0].apiKey === '', 'A4 configuration has references and empty persistence slots');
     const restarted = await run();
-    t.ok(restarted.ok && restarted.matches && restarted.headersMatch, 'A5 fresh Node process unwraps DPAPI master and restores credentials');
+    t.ok(restarted.ok && restarted.matches && restarted.headersMatch, 'A5 fresh Node process opens the Mac vault and restores credentials');
     const cached = await run({ cacheTamper: true });
     t.ok(!cached.ok && cached.code === 'credential_vault.decrypt_failed', 'A5b changing the vault invalidates an already-populated runtime config cache');
     const edited = await run({ replace: replacement, expected: replacement });

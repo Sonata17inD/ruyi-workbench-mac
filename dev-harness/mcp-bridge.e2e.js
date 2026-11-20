@@ -1,10 +1,10 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 (async () => {
 // E2E (v0.7d core acceptance): full bridge chain. fake-openai (provider) asks the workbench to call a
 // BRIDGED tool `fake__echo`; the workbench's in-process MCP stdio client forwards it to fake-mcp.js
 // (a stdio JSON-RPC MCP child); the result is fed back and the model echoes it. Fully offline.
 //   model -> workbench -> McpStdioClient -> fake-mcp child -> result -> back to model
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = require('path').resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePort } = require('./free-port.js');
@@ -46,10 +46,10 @@ function postStream(port, payload) {
 (async () => {
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
-  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: 'fake__echo', FAKE_TOOL_ARGS: JSON.stringify({ message: MARKER }) }, windowsHide: true });
+  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: 'fake__echo', FAKE_TOOL_ARGS: JSON.stringify({ message: MARKER }) } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   fake.stderr.on('data', d => String(d).trim() && console.log('[fake!] ' + String(d).trim()));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {

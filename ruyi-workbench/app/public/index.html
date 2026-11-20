@@ -1662,7 +1662,7 @@
             </div>
           </div>
 
-          <!-- ===== Agent CLI (Claude Code / Kimi Code) ===== -->
+          <!-- ===== Agent CLI (Claude Code) ===== -->
           <!-- W6：只留命令行引擎自己的项。「用哪个命令行引擎」并进了「模型分配」的主模型那一行（原 #cfgAgentCliType）， -->
           <!-- --max-turns 去了「用量与限额」、权限弹窗桥接去了「权限与安全」、MCP 命令模式去了「集成与 MCP」。 -->
 <!-- ===== 语音识别（2026-10 设置补全：修前 renderAsrSettings 追加在「服务商」页最底下）===== -->
@@ -1678,10 +1678,6 @@
             <div class="field-block" data-agent-cli-path="claude">
               <label for="claudePathInput" data-i18n="settings.claudePath">Claude CLI 路径</label>
               <input id="claudePathInput" type="text" placeholder="claude.cmd 或内网 CLI 完整路径" data-i18n-attr="placeholder:settings.claudePathPlaceholder" />
-            </div>
-            <div class="field-block" data-agent-cli-path="kimi">
-              <label for="kimiPathInput" data-i18n="settings.kimiPath">Kimi Code CLI 路径</label>
-              <input id="kimiPathInput" type="text" placeholder="kimi.cmd 或 kimi.exe" data-i18n-attr="placeholder:settings.kimiPathPlaceholder" />
             </div>
             <div class="field-row" data-agent-cli-only="claude">
               <label class="check"><input type="checkbox" id="cfgPartial" /> <span data-i18n="settings.partialStreaming">实时流式 (--include-partial-messages)</span></label>
@@ -1922,7 +1918,7 @@
 
           <!-- ===== 迁移中心（2026-10 设置补全：修前运行时追加在「集成与 MCP」末尾、简易模式下整页被藏，用户找不到。区块仍由 migration-center.js 运行时挂进来）===== -->
           <div class="settings-tab" id="stab-migration">
-            <p class="muted prov-hint" data-i18n="settings.migration.pageHint">从 Claude Code、Codex、Kimi Code 和老版本如意导入指令、MCP 与技能；每一步都可以撤销。</p>
+            <p class="muted prov-hint" data-i18n="settings.migration.pageHint">从 Claude Code、Codex 和老版本如意导入指令、MCP 与技能；每一步都可以撤销。</p>
           </div>
 
           <!-- ===== 体检 ===== -->

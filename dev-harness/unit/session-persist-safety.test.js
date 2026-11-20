@@ -20,7 +20,6 @@ const path = require('path');
 const { startFakeProvider } = require('../lib/fake-openai-provider');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-session-persist-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const {
@@ -109,7 +108,7 @@ test('[D3] 墓碑不误伤:同 id、删除之后新建的对象照常落盘', as
   await deleteSession(id);
 });
 
-test('[R1] 正文读撞上一次瞬时 EBUSY:照常读回,不隔离', async () => {
+test('[R1] 正文读撞上一次瞬时 EBUSY:下次可读,不隔离', async () => {
   const s = await sessionWithMessages(2);
   const orig = fsp.readFile;
   let hits = 0;
@@ -119,8 +118,9 @@ test('[R1] 正文读撞上一次瞬时 EBUSY:照常读回,不隔离', async () =
   };
   let loaded;
   try { loaded = await loadSession(s.id); } finally { fsp.readFile = orig; }
-  assert.ok(loaded, '读回来了');
-  assert.equal(loaded.messages.length, 2);
+  assert.equal(loaded, null);
+  assert.equal(hits, 1);
+  assert.equal((await loadSession(s.id)).messages.length, 2);
   assert.ok(!filesOf(s.id).some(f => f.endsWith('.corrupt')), '没有任何 .corrupt');
 });
 

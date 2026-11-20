@@ -26,7 +26,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * 离线、零依赖。内联 fake-openai(9107) + workbench(9108)。判定行(exact): JUDGE-JSON-REPAIR E2E: ALL PASS
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -183,7 +183,7 @@ const near = (a, b) => Math.abs(Number(a) - Number(b)) < 1e-6;
     activeProvider: 'fake',
   }));
   await new Promise(r => fake.listen(FP, '127.0.0.1', r));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     ok(await up(FP, '/models') && await up(WP), 'fake provider and workbench start');

@@ -30,7 +30,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 判定行:`LIVE FULL TEXT E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -158,7 +158,7 @@ let hdr = {};
 let wb = null;
 try {
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));

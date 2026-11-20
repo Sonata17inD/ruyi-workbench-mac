@@ -1,7 +1,7 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E: the live Provider loop extends a small standard budget only after distinct successful progress.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -82,8 +82,8 @@ function killTree(child) {
       { name: 'tool_search', args: { query: 'run tests' } },
     ];
     fs.mkdirSync(CAPTURE, { recursive: true });
-    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_SEQUENCE: JSON.stringify(sequence), FAKE_CAPTURE_DIR: CAPTURE }, windowsHide: true });
-    const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_SEQUENCE: JSON.stringify(sequence), FAKE_CAPTURE_DIR: CAPTURE } });
+    const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     children.push(fake, wb);
     let live = null;
     for (let i = 0; i < 50 && !live; i++) { await sleep(120); live = await health(wbPort); }

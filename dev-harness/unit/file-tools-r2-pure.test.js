@@ -38,9 +38,9 @@ describe('Mac file path expansion', () => {
 describe('normalizeGlobPatternForRoot', () => {
   const { normalizeGlobPatternForRoot: norm } = require('../../ruyi-workbench/app/backend/path-patterns.cjs');
   const root = path.resolve('/ws/proj');
-  it('前导 ./ 与 .\\ 被剥掉并说明', () => {
+  it('前导 ./ 按 Mac 分隔符解析', () => {
     assert.equal(norm('./src/*.js', root).pattern, 'src/*.js');
-    assert.equal(norm('.\\src\\*.js', root).pattern, 'src\\*.js');
+    assert.equal(norm('.\\src\\*.js', root).pattern, '.\\src\\*.js');
     assert.equal(norm('././a', root).pattern, 'a');
     assert.match(norm('./a', root).note, /leading/);
     assert.equal(norm('**/*.js', root).note, '');

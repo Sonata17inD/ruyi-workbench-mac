@@ -10,47 +10,10 @@ function createStewardWorkspaces({
   const { readMissionContainer, withMissionContainerLock, writeMissionContainer } = missions;
   const { STEWARD_WORKSPACE_TABLE_MAX, stewardRuyiOwnedPath, stewardWorkspaceLabels, stewardFail } = rules;
 
-  // ── 117w-W1 提交①(27 号文 §11.19.4):cwd 校验先行 ──────────────────────────────────────
-  // 病灶:thread_new / quick_ask 原先把 args.cwd 【原样透传】给 createSession(零校验),而 createSession
-  // 的回落链是 `cwd || config.defaultWorkspace || os.homedir()`。校验先行:表外一律拒,不静默回落。
-  //
-  // W7(用户 2026-09-24:「如果是如意自己开的工作区,默认不显示在常用工作区中,不要让用户自己感知到;
-  // 然后管家需要把工作区和任务联系起来,有时候很多任务应该在特定工作区开的,管家会新开工作区」)
-  // 把这一节从「三态」改成【一条选择顺序】,并把「表」扩成【已知工作区】。根因三条,如实记:
-  //   ① 管家上下文里的候选表只给末段名(全路径是围栏信息),而这里的校验【只收绝对路径】—— 模型照表
-  //      填回来的名字一律被当成相对路径拒掉,拒绝文案又教它「不确定就省掉 cwd」。于是它从来填不对任何
-  //      一个 cwd,每件事都走省略 → 在 Ruyi 根下按标题新开一个文件夹(真机两条股票线程各开了一个)。
-  //   ② 省略 cwd 时没有任何「沿用」:同一事项、接着某条线程的活,也照样按标题新开。
-  //   ③ 新开的文件夹被追加进 workspaces[] —— 那张表就是界面上的「常用工作区」,用户于是看见一串
-  //      自己没开过的文件夹。
-  // 改法:
-  //   · 已知工作区 = 用户的常用工作区(config.workspaces,第一行是默认)∪ 如意自己开的文件夹
-  //     (config.stewardManagedWorkspaces)。每行有一个【名字】(06i stewardWorkspaceLabels:末段名,撞名
-  //     往上多带一段),上下文里给的是名字,这里收名字,也收绝对路径。recentWorkspaces 仍不进(打开过 ≠ 授权过)。
-  //   · 选择顺序(stewardResolveThreadCwd):① 明确给了 cwd → 用它;② 带了 missionId 且事项容器记着
-  //     工作区 → 沿用;③ 带了 relatedSessionId → 沿用那条线程的目录;带了 missionId → 沿用同事项里最近一条
-  //     线程的目录;④ 都没有 → 在 Ruyi 根下按标题新开一个文件夹,登记进如意自己那张表(不进常用工作区)。
-  //     派生失败才落到 createSession 的回落链(用户默认工作区)。
-  //   · 为什么第 ④ 步不是「用户默认工作区」(派单稿的写法):真机的默认工作区就是主目录根 —— 03 的
-  //     cwdWarning 把它判成最高风险目标,13n 的同目录写锁又会让所有落在那儿的线程排成一队(40 号文 §8
-  //     那次灌水 409 就是这么来的)。默认工作区仍在清单第一行、标着「默认」,活属于它就由管家点名。
-  //
-  // 归一化用仓里既有的那一份:01-config 清洗 workspaces 时用的 normalizeWorkspacePathString(剥
-  // Windows「复制为路径」带的引号 + trim + 截 1000),外加 path.resolve 收斜杠与尾斜杠。两侧【同一个
-  // 函数、同一个顺序】,否则表里的 `C:\a\` 与传入的 `C:/a` 会被判成两个东西。
-  // 候选上限【读 06i 的 STEWARD_WORKSPACE_TABLE_MAX】,与 13o 的清单投影同一个数字(§11.19.7 裁决)。
-
-  // 把一个工作区路径字符串折成可逐字比较的规范形;非绝对路径一律折成 ''(相对路径会被 path.resolve
-  // 按【服务进程的 cwd】补全,那是一条无声的越权路,所以在这里就掐掉)。
   function stewardCanonWorkspacePath(stewardWsPathRaw) {
     const cleaned = normalizeWorkspacePathString(stewardWsPathRaw);
     if (!cleaned || !path.isAbsolute(cleaned)) return '';
     return path.resolve(cleaned);
-  }
-
-  // 目录比较沿用配置表中的规范路径，保留路径大小写。
-  function stewardFoldWorkspacePath(stewardWsPathCanon) {
-    return String(stewardWsPathCanon);
   }
 
   // W7:已知工作区(同步、纯读配置)。用户的常用工作区在前(顺序即优先级),如意自己开的在后(新开的在前)。
@@ -59,14 +22,13 @@ function createStewardWorkspaces({
   function stewardKnownWorkspaces(stewardKnownConfig) {
     const out = [];
     const seen = new Set();
-    const defaultKey = stewardFoldWorkspacePath(stewardCanonWorkspacePath(stewardKnownConfig && stewardKnownConfig.defaultWorkspace));
+    const defaultKey = stewardCanonWorkspacePath(stewardKnownConfig && stewardKnownConfig.defaultWorkspace);
     const push = (row, extra) => {
       const canon = stewardCanonWorkspacePath(row && row.path);
       if (!canon) return;
-      const key = stewardFoldWorkspacePath(canon);
-      if (seen.has(key)) return;
-      seen.add(key);
-      out.push({ path: canon, ...extra, isDefault: extra.user === true && key === defaultKey });
+      if (seen.has(canon)) return;
+      seen.add(canon);
+      out.push({ path: canon, ...extra, isDefault: extra.user === true && canon === defaultKey });
     };
     for (const row of (Array.isArray(stewardKnownConfig && stewardKnownConfig.workspaces) ? stewardKnownConfig.workspaces : [])) {
       push(row, { user: true, write: !(row && row.write === false), note: String((row && row.note) || ''), owned: false });
@@ -81,19 +43,14 @@ function createStewardWorkspaces({
     return out;
   }
 
-  // 名字或绝对路径 → 已知工作区那一行(没有就 null)。名字按不分大小写比:06i 造名字时就是按不分大小写
-  // 去撞车的,所以同一份清单里不会有两个只差大小写的名字。
+  // Labels use the same case-sensitive identity as the generated workspace list.
   function stewardMatchKnownWorkspace(stewardMatchRaw, stewardMatchKnown) {
-    const raw = String(stewardMatchRaw == null ? '' : stewardMatchRaw).trim();
+    const raw = String(stewardMatchRaw ?? '');
     if (!raw) return null;
     const known = Array.isArray(stewardMatchKnown) ? stewardMatchKnown : [];
     const canon = stewardCanonWorkspacePath(raw);
-    if (canon) {
-      const key = stewardFoldWorkspacePath(canon);
-      return known.find(row => stewardFoldWorkspacePath(row.path) === key) || null;
-    }
-    const wanted = normalizeWorkspacePathString(raw).replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase();
-    return wanted ? (known.find(row => String(row.label).toLowerCase() === wanted) || null) : null;
+    if (canon) return known.find(row => row.path === canon) || null;
+    return known.find(row => row.label === raw) || null;
   }
 
   // 一条路径的【名字】(给读模型用):落在哪个已知工作区里就报那个工作区的名字(子目录也归它),
@@ -102,11 +59,10 @@ function createStewardWorkspaces({
     const canon = stewardCanonWorkspacePath(stewardNameCwd);
     if (!canon) return null;
     const known = Array.isArray(stewardNameKnown) ? stewardNameKnown : stewardKnownWorkspaces(stewardNameConfig);
-    const key = stewardFoldWorkspacePath(canon);
     let best = null;
     for (const row of known) {
-      const rowKey = stewardFoldWorkspacePath(row.path);
-      if (key === rowKey || key.startsWith(rowKey + path.sep) || key.startsWith(rowKey + '/')) {
+      const rowKey = row.path;
+      if (canon === rowKey || canon.startsWith(rowKey === '/' ? '/' : rowKey + '/')) {
         if (!best || row.path.length > best.path.length) best = row;
       }
     }
@@ -140,9 +96,8 @@ function createStewardWorkspaces({
   async function stewardInheritableCwd(stewardInheritRaw) {
     const canon = stewardCanonWorkspacePath(stewardInheritRaw);
     if (!canon) return '';
-    const dataKey = stewardFoldWorkspacePath(stewardCanonWorkspacePath(dataRoot()));
-    const key = stewardFoldWorkspacePath(canon);
-    if (dataKey && (key === dataKey || key.startsWith(dataKey + path.sep) || key.startsWith(dataKey + '/'))) return '';
+    const dataKey = stewardCanonWorkspacePath(dataRoot());
+    if (dataKey && (canon === dataKey || canon.startsWith(dataKey === '/' ? '/' : dataKey + '/'))) return '';
     try {
       const stat = await fsp.stat(canon);
       if (!stat.isDirectory()) return '';
@@ -289,7 +244,7 @@ function createStewardWorkspaces({
     let claimedDir = '';
     let claimedKey = '';
     let outcome = null;
-    const keyOf = row => stewardFoldWorkspacePath(stewardCanonWorkspacePath(row && row.path));
+    const keyOf = row => stewardCanonWorkspacePath(row && row.path);
     try {
       outcome = await mutateConfig(async current => {
         // ① 占目录。占不到(撞名试满)= 不派生,不留任何东西。
@@ -297,7 +252,7 @@ function createStewardWorkspaces({
         if (!claimed.dir) return { abort: 'no_dir' };
         claimedDir = claimed.dir;
         if (claimed.created) builtDir = claimed.dir;
-        claimedKey = stewardFoldWorkspacePath(stewardCanonWorkspacePath(claimed.dir));
+        claimedKey = stewardCanonWorkspacePath(claimed.dir);
         if (!claimedKey) return { abort: 'no_dir' };
         // ② 已经登记过(同一件事重开线程复用了空目录;或用户早把它加进了常用)-> 不写盘,那一行在盘上。
         const userRows = Array.isArray(current.workspaces) ? current.workspaces : [];
@@ -337,7 +292,7 @@ function createStewardWorkspaces({
   }
 
   return {
-    stewardCanonWorkspacePath, stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
+    stewardCanonWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
     stewardWorkspaceNameOf, stewardValidateCwd, stewardResolveThreadCwd, stewardRecordMissionWorkspace, stewardDeriveThreadCwd,
   };
 }

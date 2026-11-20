@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       开关开:第二次调用命中(exec_result_cache hit/store 事件 + 配对 tool 消息仅差
 //       cacheHit 标记);开关关:零缓存事件、两条 tool 消息逐字节一致(现状基线)。
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -21,7 +21,7 @@ const os = require('os');
 const path = require('path');
 
 // 隔离纪律(同 budget-guard):require server.js 之前把数据根指向临时目录。
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-106-2a-unit-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-106-2a-unit-'));
 
 const HERE = __dirname;
 const WB = path.resolve(HERE, '..', 'ruyi-workbench');
@@ -49,10 +49,9 @@ async function launchStack(tag, flags, fakeEnv) {
     ...(flags || {}),
   }, null, 2));
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_CAPTURE_DIR: CAP, ...(fakeEnv || {}) },
   });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: EHOME, RUYI_HOME: EHOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: EHOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!' + tag + '] ' + l.trim())));
   let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(250); h = await new Promise(resolve => { const r = http.get({ host: '127.0.0.1', port: WB_PORT, path: '/health', timeout: 3000 }, res => { res.resume(); resolve({ status: res.statusCode }); }); r.on('error', () => resolve(null)); r.on('timeout', () => { r.destroy(); resolve(null); }); }); } // 117q:预算 80×250ms=20s 低于 30 号文 P1-31 建议的 300×同款间隔量级,为同批口径统一一并抬高(30 号文 P1-31)
   const readCap = n => { try { return JSON.parse(fs.readFileSync(path.join(CAP, 'req-' + String(n).padStart(3, '0') + '.json'), 'utf8')); } catch { return null; } };

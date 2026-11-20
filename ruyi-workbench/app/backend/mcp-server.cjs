@@ -43,8 +43,6 @@ function createMcpServer({ input, output, env, version, configPath,
             });
           }
           if (msg.method === 'tools/list') {
-            // 代理模式 v2:orchestrate_agents / wait_agents / agent_result 三个代理工具都可以 advertise —— 在 Claude/Kimi
-            // 会话里它们回环到 serve 进程(/api/agent-workflow/launch|wait|result),节点由配置的 provider 或 Claude CLI 跑。
             const userInputEnabled = Boolean(env.WCW_SESSION_ID) && env.WCW_DISABLE_USER_INPUT !== '1';
             const mode = env.WCW_TOOL_LOADING_MODE || 'full';
             const routedPacks = new Set(String(env.WCW_TOOL_PACKS || '').split(',').filter(Boolean));
@@ -55,8 +53,6 @@ function createMcpServer({ input, output, env, version, configPath,
             if (PrivacyGateway.enabled(listConfig)) return sendMcp(msg.id, { tools: [], _meta: { privacy: 'privacy.engine_not_supported' } });
             const runtime = await ProcessRuntime.capabilitySnapshot();
             const recallEnabled = observationRecallEnabled(listConfig);
-            // 116c: Claude/Kimi CLI 桥的 offer 面。管家会话由注入的 WCW_SESSION_KIND 标识;缺失/非
-            // 'steward' 一律隐藏 steward_*(fail-closed —— 普通 CLI 会话永远看不到管家工具)。
             const stewardSession = env.WCW_SESSION_KIND === 'steward';
             const desktopOverride = await policyDesktopOverrideFor();
             const listed = MCP_TOOLS.filter(t => {

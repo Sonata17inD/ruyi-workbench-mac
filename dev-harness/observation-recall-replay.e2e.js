@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 硬约束:原历史记录(<数据根>/checkpoints)零写入;deepseek 密钥只从本机 config
 // 复制进临时 HOME,绝不打印。
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), fs = require('fs'), os = require('os'), path = require('path'),
   http = require('http'), zlib = require('zlib');
 const HERE = __dirname, WB = path.resolve(HERE, '..', 'ruyi-workbench');
@@ -84,7 +84,7 @@ function postStream(port, payload, timeoutMs) {
   const targetIndex = targetOriginal.indexOf(TARGET_FACT);
   ok(targetIndex >= 900 && targetIndex < 5200, 'S2 真实目标事实位于缩减省略区且处于默认 recall 8K head 内(index=' + targetIndex + ')');
 
-  process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+  process.env.RUYI_HOME = HOME;
   const srv = require(path.join(WB, 'app', 'server.js'));
   const seedSession = await srv.createSession({ title: 'replay-seed' });
   seedSession.providerHistory = seed;
@@ -159,12 +159,11 @@ function postStream(port, payload, timeoutMs) {
 
   // ═══ [R] 回合:种子会话上发起新任务 ═══
   const fake = PROVIDER === 'fake' ? cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_NO_USAGE: '1', FAKE_SEQUENCE_FROM_LAST_USER: '1', FAKE_LOG_BODY: path.join(HOME, 'reqs.ndjson'), FAKE_RECORD_SUMMARY_DIR: path.join(HOME, 'sums'), FAKE_TOOL_SEQUENCE: JSON.stringify([
       { name: 'observation_recall', argsFromLastRawRef: true },
     ]) },
   }) : null;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => { const t = l.trim(); if (t) console.log('[wb] ' + t.slice(0, 260)); }));
   try {

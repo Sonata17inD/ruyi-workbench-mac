@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // "the previous assistant turn ran on the provider engine" and force-injects just the trailing Provider turns
 // into the Claude recovery history. Sequence exercised here: Claude(A) -> Provider(B) -> Claude(C), asserting
 // C's Claude prompt re-injects B's work but NOT A's (A is already in the CLI transcript).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -74,12 +74,12 @@ function latestProviderRequest() {
 (async () => {
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: PROVIDER_CAP }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: PROVIDER_CAP } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   // USERPROFILE/HOME isolate ~/.claude; WCW_FAKE_CLAUDE replays offline; WCW_FAKE_STDIN_CAPTURE records the
   // exact prompt the workbench feeds Claude on each Claude turn (overwritten per turn).
-  const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP };
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {

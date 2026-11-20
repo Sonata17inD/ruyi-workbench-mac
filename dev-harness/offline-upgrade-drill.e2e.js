@@ -63,8 +63,9 @@ fs.writeFileSync(path.join(HOME, 'steward', 'memory-v1.json'), JSON.stringify({
 }, null, 2), 'utf8');
 
 process.env.RUYI_HOME = HOME;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
-const srv = require('./lib/server-internals').loadServerInternals(['CONFIG_SCHEMA', 'createSession', 'listSessions', 'loadSession', 'readConfig', 'saveSession', 'PrivacyCore']);
+const srv = require('./lib/server-internals').loadServerInternals(['CONFIG_SCHEMA', 'createSession', 'listSessions', 'loadSession', 'readConfig', 'saveSession', 'PrivacyCore', 'LocalSecretCryptoHooks']);
+const helper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(HOME);
+srv.LocalSecretCryptoHooks.helperPath = () => helper;
 
 // 用真原语造几条会话(它们的落盘形状才与产线一致)
 const madeIds = [];
@@ -143,7 +144,7 @@ try {
   ok(cfgNow.credentialEncryptionV1 === false && !onDisk.credentialRefsV1 && onDisk.providers?.[0]?.apiKey === 'k-old'
     && !fs.existsSync(path.join(HOME, 'credential-vault-v1.json')),
     'C2-default 升级保留原明文配置、默认不启用加密或初始化凭据库');
-  if (process.platform === 'win32') {
+  {
     const req = require('node:stream').Readable.from([Buffer.from(JSON.stringify({ enabled: true }))]); req.method = 'POST'; req.headers = {};
     let status, body; const res = { writeHead(code) { status = code; }, end(value) { body = JSON.parse(value); } };
     await srv.PrivacyCore.configHooks.handleApiRoutes(req, res, '/api/privacy/encryption');
@@ -151,11 +152,11 @@ try {
     const encryptedDisk = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
     ok(encryptedDisk.credentialEncryptionV1 === true && encryptedDisk.credentialRefsV1?.version === 1 && encryptedDisk.providers[0].apiKey === ''
       && (await srv.readConfig()).providers[0].apiKey === 'k-old',
-      'C2a Windows 显式开启后将旧密钥改为加密引用,运行时凭据仍准确');
+      'C2a Mac 显式开启后将旧密钥改为加密引用,运行时凭据仍准确');
     const persisted = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(HOME, name)));
     ok(persisted.every(name => !fs.readFileSync(path.join(HOME, name), 'utf8').includes('k-old')),
       'C2b 主配置、历史备份与凭据库都没有旧密钥明文');
-  } else ok(onDisk.providers?.[0]?.apiKey === 'k-old', 'C2a 未支持 DPAPI 的旧存储模式保持精确原值');
+  }
 
   /* ═════════ (D) 断电:写到一半的行 ═════════ */
   console.log('── (D) 断电 ──');

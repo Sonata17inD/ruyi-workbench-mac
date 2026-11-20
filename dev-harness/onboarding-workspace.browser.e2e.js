@@ -81,7 +81,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
     })()`, 300);
     ok(Boolean(dedicated) && fs.existsSync(dedicated), `W4b 点它：建出「如意工作区」、设成默认、提示消失（实测 ${dedicated}）`);
     const again = await fx.request('POST', '/api/workspace/dedicated', {});
-    ok(again && again.json && again.json.ok === true && again.json.path === dedicated, `W4c POST /api/workspace/dedicated 再调一次：复用同一个文件夹（实测 ${JSON.stringify(again && again.json)}）`);
+    ok(again && again.json && again.json.ok === true && fs.realpathSync(again.json.path) === dedicated, `W4c POST /api/workspace/dedicated 再调一次：复用同一个文件夹（实测 ${JSON.stringify(again && again.json)}）`);
 
     await fx.evaluate(`(document.querySelector('.onboard-wiz-workspace .onboard-wiz-pick').click(), true)`);
     const err = await fx.waitForEval(`(() => {
@@ -99,7 +99,6 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
       document.querySelector('.onboard-wiz-workspace .onboard-wiz-path-use').click();
       return true;
     })()`);
-    // 比「文件夹名」而不是整条路径：Windows 上服务端会把 8.3 短名（RUNNER~1）等归一化，整条逐字比会假红。
     const done = await fx.waitForEval(`(() => {
       const w = document.querySelector('.onboard-wiz-workspace');
       if (!w || !/[\\\\/]my-folder$/.test(String(window.state.config.defaultWorkspace || ''))) return null;
@@ -108,11 +107,11 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
     })()`, 300) || await fx.evaluate(`(() => { const w = document.querySelector('.onboard-wiz-workspace'); return w ? { current: w.textContent.includes('my-folder'), error: Boolean(w.querySelector('.onboard-wiz-error')), dw: window.state.config.defaultWorkspace } : null; })()`);
     ok(Boolean(done) && done.current && !done.error, `W3 粘贴带引号的完整路径 → 成为默认工作文件夹、原因那句消失（实测 ${JSON.stringify(done)}）`);
     let saved = '';
-    for (let i = 0; i < 50 && saved !== target; i++) {
+    for (let i = 0; i < 50 && saved !== fs.realpathSync(target); i++) {
       try { saved = JSON.parse(fs.readFileSync(path.join(fx.home, 'config.json'), 'utf8')).defaultWorkspace || ''; } catch { saved = ''; }
-      if (saved !== target) await sleep(100);
+      if (saved !== fs.realpathSync(target)) await sleep(100);
     }
-    ok(saved === target, `W3b 落盘：config.json 的 defaultWorkspace 就是它（实测 ${saved}）`);
+    ok(saved === fs.realpathSync(target), `W3b 落盘：config.json 的 defaultWorkspace 就是它（实测 ${saved}）`);
     // W6：走到最后一步，那里不再给「退出引导」。
     for (let i = 0; i < 6; i++) {
       if (await fx.evaluate(`Boolean(document.querySelector('.onboard-wiz-finish'))`)) break;

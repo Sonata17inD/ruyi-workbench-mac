@@ -13,7 +13,6 @@
 // 报告只落计量数字、布尔正确性和脱敏事件摘要，不落历史正文、回复文本或 API key。
 // 用法: node dev-harness/prefix-layout-real-live.js [结果JSON路径]
 
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -49,8 +48,7 @@ function health(port) {
 function kill(proc) {
   if (!proc || !proc.pid) return;
   try {
-    if (process.platform === 'win32') killOwnTree(proc);
-    else proc.kill('SIGTERM');
+    proc.kill('SIGTERM');
   } catch { /* already exited */ }
 }
 function postStream(port, payload) {
@@ -145,8 +143,8 @@ async function launchScenario(scenario) {
   };
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(cfg, null, 2));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, windowsHide: true,
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home },
+    cwd: WB,
+    env: { ...process.env, RUYI_HOME: home },
   });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   let healthy = false;

@@ -10,7 +10,7 @@ const os = require('os');
 const path = require('path');
 
 const REAL_HOME = require('./lib/real-data-root.js').realDataRoot();
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-long-context-pressure-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-long-context-pressure-'));
 const srv = require(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js'));
 
 const args = process.argv.slice(2);

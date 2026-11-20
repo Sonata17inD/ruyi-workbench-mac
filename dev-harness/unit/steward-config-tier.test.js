@@ -16,7 +16,7 @@
 //   ⑤ 117w-W1 提交②:围栏三兄弟(stewardWorkspaceRoot / workspaces / defaultWorkspace)被【点名】
 //      钉成 forbidden;新键 stewardWorkspaceRoot 的出厂值与清洗;workspaces[].note 的清洗
 //
-// 与既有 dev-harness/unit 件同款约定:require server.js 前先把 WIN_CLAUDE_WORKBENCH_HOME 覆盖到
+// 与既有 dev-harness/unit 件同款约定:require server.js 前先把 RUYI_HOME 覆盖到
 // 临时目录(它是系统级环境变量,曾污染真实数据);PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
@@ -24,7 +24,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-cfgtier-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
@@ -121,7 +120,7 @@ const EXPECTED = {
   // 已知工作区、cwd 校验与 steward_file_read 的可读根。管家能改它 = 能给自己登记一个可读可派的新目录。
   stewardManagedWorkspaces: 'forbidden',
   configSchema: 'forbidden', configExplicitKeysV1: 'forbidden', credentialEncryptionV1: 'forbidden', privacyModeV1: 'forbidden', privacyTechnicalV1: 'forbidden', privacyRulesV1: 'forbidden', privacyPolicyRecoveryRequiredV1: 'forbidden', version: 'forbidden', lastUsedEngineRoute: 'forbidden',
-  claudePath: 'forbidden', kimiPath: 'forbidden', defaultWorkspace: 'forbidden', extraClaudeArgs: 'forbidden',
+  claudePath: 'forbidden', defaultWorkspace: 'forbidden', extraClaudeArgs: 'forbidden',
   allowCommandTools: 'forbidden', allowDesktopTools: 'forbidden', mcpCommandMode: 'forbidden', permissionBridge: 'forbidden',
   autonomyAutoResume: 'forbidden', modelsApiKey: 'forbidden', claudeAuthMode: 'forbidden', providers: 'forbidden',
   desktopMcp: 'forbidden', autoImportClaudeCodeMcp: 'forbidden', bridgeExternalToolsToProvider: 'forbidden', summarySingleShotMaxTokensV1: 'forbidden',
@@ -215,7 +214,7 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
     ok(normalizeConfig({ stewardWorkspaceRoot: bad }).config.stewardWorkspaceRoot === path.join(os.homedir(), 'Ruyi'),
       `⑤ 非法根 ${JSON.stringify(bad)} -> 回落 ~/Ruyi`);
   }
-  const custom = process.platform === 'win32' ? 'D:\\Work\\Ruyi' : '/srv/ruyi';
+  const custom = '/srv/ruyi';
   ok(normalizeConfig({ stewardWorkspaceRoot: `"${custom}"` }).config.stewardWorkspaceRoot === custom,
     '⑤ 绝对路径原样留下,且「复制为路径」带的引号被剥掉(与 defaultWorkspace 同一口径)');
 }
@@ -241,16 +240,14 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
   const norm = raw => normalizeConfig(raw).config;
   const home = os.homedir();
   const factory = path.join(home, 'Ruyi');
-  const custom = process.platform === 'win32' ? 'D:\\Work\\RuyiRoot' : '/srv/ruyi-root';
-  const userWs = process.platform === 'win32' ? 'D:\\Projects\\app' : '/srv/projects/app';
+  const custom = '/srv/ruyi-root';
+  const userWs = '/srv/projects/app';
   const row = p => ({ path: p, read: true, write: true, execute: true });
   ok(Array.isArray(norm({}).stewardManagedWorkspaces) && norm({}).stewardManagedWorkspaces.length === 0, '⑧ 出厂是空表');
   // 清洗:非绝对/空/非字符串丢掉;「复制为路径」的引号剥掉;大小写不同算同一行(adopted 合并);at 截 40。
   {
     const a = path.join(custom, 'A');
-    // Keep the historical case-fold/adoption assertion under explicit Windows semantics.
-    const windowsConfig = require('../lib/server-internals').loadServerInternals(['normalizeConfig'], { testPlatform: 'darwin' });
-    const got = windowsConfig.normalizeConfig({ stewardWorkspaceRoot: custom, stewardManagedWorkspaces: [
+    const got = normalizeConfig({ stewardWorkspaceRoot: custom, stewardManagedWorkspaces: [
       { path: `"${a}"`, at: '2026-09-24T00:00:00.000Z' }, { path: a, adopted: true }, { path: 'rel/dir' }, { path: '' }, 42, null,
     ] }).config.stewardManagedWorkspaces;
     ok(got.length === 1 && got[0].path === a && got[0].at === '2026-09-24T00:00:00.000Z' && got[0].adopted === true,
@@ -388,7 +385,7 @@ for (const key of ['stewardWorkspaceRoot', 'workspaces', 'defaultWorkspace', 'st
     { id: 'ds', label: 'DS', baseUrl: 'http://127.0.0.1:3', model: 'ds-flash', models: [{ id: 'ds-flash' }, { id: 'ds-pro' }] },
     { id: 'mimo', label: 'MiMo', baseUrl: 'http://127.0.0.1:4', model: 'mimo-1', models: [{ id: 'mimo-1' }, { id: 'mimo-asr', caps: ['asr'] }] },
   ];
-  const r1 = stewardOpenAiFallback({ providers, activeProvider: '', agentCliType: 'kimi' });
+  const r1 = stewardOpenAiFallback({ providers, activeProvider: '', agentCliType: 'claude' });
   ok(r1 && r1.providerId === 'ds' && r1.model === 'ds-flash' && r1.source === 'first', `⑦ 全局是 CLI、别的都没配 → 第一个能对话的端点(跳过 toolbox- 与只做语音的)(实得 ${JSON.stringify(r1)})`);
   const r2 = stewardOpenAiFallback({ providers, activeProvider: 'claude-cli', stewardProviderId: 'mimo', stewardModel: '' });
   ok(r2 && r2.providerId === 'mimo' && r2.model === 'mimo-1' && r2.source === 'steward', `⑦ 管家自己的端点优先,模型空则用该端点缺省(实得 ${JSON.stringify(r2)})`);

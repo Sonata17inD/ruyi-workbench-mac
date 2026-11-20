@@ -33,7 +33,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // ①–⑥ 走真服务 HTTP;⑦⑧ 在服务停掉之后【进程内】直调 TOOL_HANDLERS(合成管家 ctx),读的是同一个
 // 数据根 —— 于是「HTTP 改的档,管家看得见」也是被验证的。
 // 端口全部 getFreePort() 动态取。判定行:`SESSION PERMISSION MODE E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -174,7 +174,7 @@ function liveModeLogRows() {
 
 let wb = null;
 try {
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let up = null; for (let i = 0; i < 60 && !up; i++) { await sleep(150); up = await health(WB_PORT); }
   ok(!!up, '00 workbench 起来了');
@@ -375,7 +375,6 @@ try {
   /* ═══════════════ ⑦⑧ 管家侧:先把服务停掉,再进程内直调工具 ═══════════════ */
   killp(wb); wb = null; await sleep(600);
   writeConfig({ stewardEnabledV1: true, stewardPollMs: 120000 });
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
   process.env.RUYI_HOME = HOME;
   const srv = require(SERVER);
   const stewardCtx = { session: { id: 'steward', kind: 'steward', providerHistory: [] } };

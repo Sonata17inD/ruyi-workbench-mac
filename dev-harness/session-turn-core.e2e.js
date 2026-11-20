@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 拓扑(全离线、零依赖):
 //   · fake-openai(纯 chat 回声,不发工具)一份,两条路径共用;⑦另用会合 provider 固定被抢占阶段;
 //   · HTTP 路径:子进程起真服务(HOME_HTTP),POST /api/chat/stream;
-//   · 核心路径:本进程 require(app/server.js)(HOME_CORE,require 前已把 RUYI_HOME/WIN_CLAUDE_WORKBENCH_HOME
+//   · 核心路径:本进程 require(app/server.js)(HOME_CORE,require 前已把 RUYI_HOME
 //     指到临时目录),直接调用导出的 runSessionTurn,自带 onEvent sink。
 //   两条路径各用独立 HOME,避免共享 config/会话索引产生写竞态,污染「形状等价」的判读。
 //
@@ -25,7 +25,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  ⑨ engineRoute 显式覆盖:不传时与搬家前等价(走会话推断);显式传 openai 路由时同样跑通同一 provider。
 // 判定行(exact): SESSION-TURN-CORE E2E: ALL PASS
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -46,7 +46,6 @@ const MESSAGE = '同一条消息,两条路径';
 fs.rmSync(HOME_CORE, { recursive: true, force: true });
 fs.mkdirSync(HOME_CORE, { recursive: true });
 process.env.RUYI_HOME = HOME_CORE;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME_CORE;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function health(port) {
@@ -150,9 +149,9 @@ function ledgerRows(home) {
   writeConfig(HOME_HTTP, FAKE_PORT, concurrencyFake.url);
   writeConfig(HOME_CORE, FAKE_PORT, concurrencyFake.url);
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_HTTP, WIN_CLAUDE_WORKBENCH_HOME: HOME_HTTP }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_HTTP } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {

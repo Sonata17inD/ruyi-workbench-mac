@@ -3,7 +3,7 @@
 const { apiFailure, send } = require('./http-protocol.cjs');
 
 function createWorkbenchApiRouter({
-  authorizeRoute, privacyRoutes, ExternalBotHooks, StewardHooks, EventStreamHooks,
+  authorizeRoute, handlePrivacyApiRoutes, handleExternalBotApiRoutes, handleStewardApiRoutes, handleEventStreamApiRoutes,
   handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
   handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
   handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
@@ -12,6 +12,48 @@ function createWorkbenchApiRouter({
   handleMcpApiRoutes, handleDiagnosticsApiRoutes, handleCheckpointApiRoutes, handleSteerApiRoute, handleAudioApiRoutes,
   handleSchedulerApiRoutes, handleAttachmentApiRoutes, handleChatApiRoute, handleToolApiRoutes,
 }) {
+  const domains = new Map();
+  function register(handler, ...segments) {
+    for (const segment of segments) {
+      const handlers = domains.get(segment);
+      if (handlers) handlers.push(handler);
+      else domains.set(segment, [handler]);
+    }
+  }
+
+  register(handlePrivacyApiRoutes, 'privacy');
+  register(handleExternalBotApiRoutes, 'external-bots');
+  register(handleStatusApiRoutes, 'bootstrap', 'status', 'capabilities');
+  register(handlePlaybookApiRoutes, 'playbooks');
+  register(handleWorkspaceApiRoutes, 'workspace', 'pick-folder', 'pick-file');
+  register(handleModelsApiRoute, 'models');
+  register(handleConfigurationApiRoutes, 'config', 'agent-roles', 'agent-workflows');
+  register(handleProviderTestApiRoute, 'provider');
+  register(handleSessionApiRoutes, 'sessions');
+  register(handleMissionsApiRoutes, 'missions');
+  register(handleSkillApiRoutes, 'skills', 'session');
+  register(handleMemoryApiRoutes, 'memory', 'session');
+  register(handleSessionExecutionApiRoutes, 'stop', 'provider', 'agent');
+  register(handleInterventionApiRoutes, '_test', 'missions', 'interventions', 'chat', 'question', 'permission', 'plan');
+  register(handleMissionLedgerApiRoutes, 'todo', 'mission');
+  register(handleAutonomyGrantApiRoutes, 'autonomy');
+  register(handleAgentWorkflowApiRoutes, 'agent-workflow');
+  register(handleUsageApiRoutes, 'usage', 'ops');
+  register(handleAgentRunApiRoutes, 'agent-runs');
+  register(handleCheckpointQueryApiRoutes, 'checkpoints');
+  register(handleLocalSupportApiRoutes, 'help', 'open-path', 'logs', 'file');
+  register(handleMcpApiRoutes, 'mcp', 'migration');
+  register(handleDiagnosticsApiRoutes, 'audit', 'storage', 'metrics');
+  register(handleCheckpointApiRoutes, 'storage', 'checkpoints', 'session');
+  register(handleSteerApiRoute, 'steer');
+  register(handleAudioApiRoutes, 'audio');
+  register(handleStewardApiRoutes, 'steward');
+  register(handleEventStreamApiRoutes, 'events');
+  register(handleSchedulerApiRoutes, 'scheduler');
+  register(handleAttachmentApiRoutes, 'upload');
+  register(handleChatApiRoute, 'chat');
+  register(handleToolApiRoutes, 'tools');
+
   async function handleApi(req, res, pathname) {
     // The HTTP listener enforces the host gate. Apply the route policy before calling any domain handler.
     const authErr = authorizeRoute(req, req.method, pathname);
@@ -22,45 +64,14 @@ function createWorkbenchApiRouter({
       return send(res, apiFailure(code, {}, authErr, 403));
     }
 
-    if (typeof privacyRoutes.handleApiRoutes === 'function' && await privacyRoutes.handleApiRoutes(req, res, pathname)) return;
-    if (typeof ExternalBotHooks.handleApiRoutes === 'function') {
-      const handled = await ExternalBotHooks.handleApiRoutes(req, res, pathname);
-      if (handled || res.writableEnded || res.destroyed) return;
+    const segment = pathname.split('/', 3)[2];
+    const handlers = domains.get(segment);
+    if (handlers) {
+      for (const handle of handlers) {
+        const handled = await handle(req, res, pathname);
+        if (handled === true || res.headersSent || res.writableEnded || res.destroyed) return;
+      }
     }
-
-    await handleStatusApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handlePlaybookApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleWorkspaceApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleModelsApiRoute(req, res, pathname); if (res.writableEnded) return;
-    await handleConfigurationApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleProviderTestApiRoute(req, res, pathname); if (res.writableEnded) return;
-    await handleSessionApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleMissionsApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleSkillApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleMemoryApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleSessionExecutionApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleInterventionApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleMissionLedgerApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleAutonomyGrantApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleAgentWorkflowApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleUsageApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleAgentRunApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleCheckpointQueryApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleLocalSupportApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleMcpApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleDiagnosticsApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleCheckpointApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleSteerApiRoute(req, res, pathname); if (res.writableEnded) return;
-    await handleAudioApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    // 管家域在依赖装配完毕后注册路由。
-    if (typeof StewardHooks.handleApiRoutes === 'function') { await StewardHooks.handleApiRoutes(req, res, pathname); if (res.writableEnded) return; }
-    // 命中信号是 headersSent 而不是 writableEnded:SSE 连接【故意不 end】,一直开着流事件,
-    // writableEnded 永远是 false,只看它会让这条请求继续往下走、最后撞上 404 那行的二次 writeHead。
-    if (typeof EventStreamHooks.handleApiRoutes === 'function') { await EventStreamHooks.handleApiRoutes(req, res, pathname); if (res.headersSent || res.writableEnded) return; }
-    await handleSchedulerApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    await handleAttachmentApiRoutes(req, res, pathname); if (res.writableEnded) return;
-    if (await handleChatApiRoute(req, res, pathname)) return;
-    await handleToolApiRoutes(req, res, pathname); if (res.writableEnded) return;
     return send(res, apiFailure('api.route_not_found', {}, 'Not found', 404));
   }
 

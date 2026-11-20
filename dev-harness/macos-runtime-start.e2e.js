@@ -110,8 +110,7 @@ cp.spawn = function(command, args, options) {
     fs.symlinkSync(process.execPath, path.join(localBin, 'node'));
     child = cp.spawn(path.join(wb, 'start-macos.command'), ['--port', String(port)], {
       cwd: root, detached: true, stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...launchHome, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data,
-        RUYI_NODE_PATH: '', PATH: '/usr/bin:/bin', TMPDIR: root,
+      env: { ...process.env, ...launchHome, RUYI_HOME: data, RUYI_NODE_PATH: '', PATH: '/usr/bin:/bin', TMPDIR: root,
         NODE_OPTIONS: '--require=' + preload },
     });
     child.on('error', error => { output += error.stack; });
@@ -200,8 +199,7 @@ cp.spawn = function(command, args, options) {
     fs.writeFileSync(bundlePreload, `require(${JSON.stringify(preload)}); require('fs').writeFileSync(${JSON.stringify(identityFile)}, JSON.stringify({execPath:process.execPath,cwd:process.cwd(),argv:process.argv}));`);
     bundledChild = cp.spawn(path.join(bundle, 'start-macos.command'), ['--port', String(bundlePort)], {
       cwd: '/', detached: true, stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, ...isolated.env, RUYI_HOME: path.relative(bundle, bundleData), WIN_CLAUDE_WORKBENCH_HOME: bundleData,
-        RUYI_NODE_PATH: '', PATH: '/usr/bin:/bin', TMPDIR: root, NODE_OPTIONS: '--require=' + bundlePreload },
+      env: { ...process.env, ...isolated.env, RUYI_HOME: path.relative(bundle, bundleData), RUYI_NODE_PATH: '', PATH: '/usr/bin:/bin', TMPDIR: root, NODE_OPTIONS: '--require=' + bundlePreload },
     });
     bundledChild.on('error', error => { output += error.stack; });
     for (const stream of [bundledChild.stdout, bundledChild.stderr]) stream.on('data', chunk => { output = (output + chunk).slice(-16000); });

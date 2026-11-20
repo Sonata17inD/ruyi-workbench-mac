@@ -1,6 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readServerSource } = require('./src-reader');
 const { functionBlock, sliceBlock } = require('./lib/source-slice.js');
 const { getFreePort } = require('./free-port.js');
@@ -72,11 +72,6 @@ const cliInterventions = fs.readFileSync(path.join(WB, 'app/backend/intervention
 // S4 子集律插桩:provider 主 gate 仅在 gate==='ask' && !bridge 时 consumeGrant('native');CLI 桥 consumeGrant('cli')。
 ok(/if \(gate === 'ask' && !bridge\) \{\s*\n\s*const grantHit = consumeGrant\(session, tc\.name, args, 'native', workingDir\)/.test(providerTurn), 'S4 provider 主 gate 消耗点(ask+!bridge, native)');
 ok(/const grantHit = consumeGrant\(\{ id: sessionId \}, String\(body\.toolName \|\| ''\), body\.input \|\| \{\}, 'cli', null\)/.test(cliInterventions), 'S4 CLI 桥消耗点(cli, 命中直接 allow)');
-// 117m-A3 重钉（理由）：原文钉死了源码字面 nativeToolGate(config.permissionMode, bridgeTier)。
-// 117m-A1 把闸门签名扩成 (mode, tier, toolName, input)；不把工具名与入参传进去，CLI 桥这一侧的
-// auto 档就还是老口径 —— 同一个「全自动」在两个引擎下行为不一。天花板语义一字未改：
-// 仍是「只有闸门判 ask 才允许授权书降级」。下面三条比旧那一条强：除了钉住复检本身，
-// 还钉住它【吃到了工具名与入参】且 auto 档判 allow 时不得再弹一次窗。
 ok(cliInterventions.includes("const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});"),
   'S4 CLI 桥的闸门判定吃到工具名与入参(与原生主 gate 同口径)');
 // 代码走查 C5：CLI 报的是 Claude 名(Edit/Write/Bash)。修前按原生表查，一律落成 exec —— 「改文件不问」档在 CLI 引擎下不生效、弹窗徽标也错。
@@ -106,7 +101,7 @@ ok(!/\bconsumeGrant\s*\(/.test(subagentSource), 'S5 子代理执行不消耗父�
 // 定位正则放宽到可选第二参；判据本身（体内不触碰 autonomyGrants）一个字不动。
 const saveSessionBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/session-persistence.cjs'), 'utf8'), 'saveSession');
 ok(saveSessionBody.length > 100 && !/autonomyGrants/.test(saveSessionBody), 'S6 saveSession 不落 autonomyGrants(不进会话文件)');
-const normConfigBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/config-schema.cjs'), 'utf8'), 'normalizeConfig');
+const normConfigBody = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/config-schema.cjs'), 'utf8'), 'normalizeConfigFields');
 ok(normConfigBody.length > 100 && !/autonomyGrants/.test(normConfigBody), 'S6 normalizeConfig 不含 autonomyGrants(不进 config)');
 
 // S7 不进 digest/系统提示:任务账本 digest 与系统提示构建体内【无】grant 字段泄漏。
@@ -441,7 +436,7 @@ ok(/guardFileToolPath\(src, ctx, \{ tool: 'archive_unzip', write: false \}\)/.te
   fs.writeFileSync(path.join(WS, 'src', 'a.js'), '// a', 'utf8');
   fs.writeFileSync(path.join(WS, 'src', 'b.js'), '// b', 'utf8');
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'default', defaultWorkspace: WS }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   try {
     console.log('\n── [H] Live HTTP ──');

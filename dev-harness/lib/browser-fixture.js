@@ -2,7 +2,7 @@
 // 128d(48 号文 §1):真浏览器件的公共夹具 —— 起假 provider、起隔离家目录的工作台、起无头 Edge/Chrome、
 // CDP 客户端(单命令看门狗 ＋ readyState 闸 ＋ 事件订阅)、收尸只杀自己的树。
 //
-// 为什么要有它:在它之前,每件浏览器测试各自复制一份 CdpClient/startProvider/killTree(27 份,见
+// 为什么要有它:在它之前,每件浏览器测试各自复制一份 CdpClient/startProvider/killOwnTree(27 份,见
 // process-safety.static 的 CDP_OWNERS)—— 128c 修「socket 关了静默挂死」与「taskkill /T 撞号」就得改 27 处。
 // 新件一律用这里的,不再复制第 28 份。
 //
@@ -14,8 +14,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('../free-port.js');
-const { stopRuyiTestBrowsers } = require('./browser-cleanup');
-const { findBrowserExecutable } = require('./browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./browser-path');
 const { killOwnTree } = require('./kill-own-tree');
 const { aggregate } = require('./fake-openai-provider');
 
@@ -216,13 +215,6 @@ const READY = `(() => {
   return { ready: true };
 })()`;
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 起一整套:假 provider ＋ 工作台(隔离家目录、随机端口)＋ 无头浏览器 ＋ CDP。
 //   opts.prefix     临时根前缀(必须以 ruyi- 开头 —— run-all 的全局收尸按这个认测试浏览器)
@@ -279,9 +271,8 @@ async function startBrowserFixture(opts = {}) {
   };
   fx.close = async ({ keepRoot = false } = {}) => {
     if (fx.cdp) fx.cdp.close();
-    killTree(fx.browser);
-    try { stopRuyiTestBrowsers(profile); } catch { /* best effort */ }
-    killTree(fx.server);
+    killOwnTree(fx.browser);
+    killOwnTree(fx.server);
     if (fx.provider) await new Promise(resolve => fx.provider.close(resolve));
     await sleep(300);
     if (!keepRoot) { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* windows 句柄 */ } }
@@ -291,15 +282,14 @@ async function startBrowserFixture(opts = {}) {
   fx.provider = await startProvider(providerPort, opts.provider);
   let serverArgs = ['app/server.js', 'serve', '--port', String(appPort)];
   if (opts.isolatedKeychain) {
-    const helper = require('./isolated-keychain-fixture').createIsolatedKeychain(root);
-    const entry = path.join(root, 'fixture-server.cjs');
-    fs.writeFileSync(entry, `const app=require(${JSON.stringify(path.join(__dirname, 'server-internals.js'))}).loadServerInternals(['startWorkbenchFromCommandLine','LocalSecretCryptoHooks']);app.LocalSecretCryptoHooks.helperPath=()=>${JSON.stringify(helper)};app.startWorkbenchFromCommandLine().catch(error=>{console.error(error);process.exit(1)});`);
+    const { entry, helper } = require('./isolated-keychain-fixture').createIsolatedKeychainServer(root);
+    fx.keychainHelper = helper;
     serverArgs = [entry, 'serve', '--port', String(appPort)];
   }
   fx.server = cp.spawn(process.execPath, serverArgs, {
     cwd: WB,
-    env: { ...process.env, ...(opts.serverEnv || {}), RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, ...(opts.serverEnv || {}), RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   const up = await waitForHttp(appPort, 'GET', '/health', result => result.status === 200);
   ok(Boolean(up), 'F0 工作台起来了');
@@ -316,16 +306,15 @@ async function startBrowserFixture(opts = {}) {
   if (!executable) throw new Error('browser unavailable');
   const appUrl = `http://127.0.0.1:${appPort}/`;
   fx.browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs, '--hide-scrollbars',
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     // Isolated macOS test profiles must not wait on the user's login keychain.
-    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', `--window-size=${width},${height}`,
     // 130:件自己要的额外开关(麦克风件要 --use-fake-device-for-media-stream ＋ --use-fake-ui-for-media-stream);
     // 放这里而不是各自复制一份 CdpClient —— 那正是本夹具存在的理由。
     ...(Array.isArray(opts.browserArgs) ? opts.browserArgs.map(String) : []),
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   // 129j:失败时把 why 打出来再抛 —— 「CDP target unavailable」这七个字什么都没说,
   // 而这一类红在并行全量里反复出现(129b/129i 各一次,签名一字不差)。
   const found = await waitForTarget(debugPort, appUrl, fx.browser);

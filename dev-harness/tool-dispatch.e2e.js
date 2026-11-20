@@ -23,7 +23,7 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 fs.rmSync(UNIT_DATA, { recursive: true, force: true }); fs.mkdirSync(UNIT_DATA, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = UNIT_DATA;
+process.env.RUYI_HOME = UNIT_DATA;
 const S = require(SERVER);
 
 const REG = S.TOOL_HANDLERS, TIER = S.NATIVE_TOOL_TIER, PACKS = S.NATIVE_TOOL_PACKS;
@@ -45,8 +45,6 @@ for (const n of names) {
 ok(names.length === 119, `L1 Mac 注册表 119 个工具（移除 Windows 专用工具；got ${names.length}）`);
 ok(['threads_search', 'thread_read'].every(name => names.includes(name) && TIER[name] === 'read' && REG[name].paths === null),
   'L1c 两个新增跨线程工具真实入册且只读,沿用无文件路径的声明');
-// 117m-A4 伴随断言(重钉一个数就补一条更强的):这个数必须与 facts.json 里现算的那一份【同源】,
-// 免得下一波只改一处数字就把三处锁哄过去(facts.json 由 facts-generate 从 TOOL_HANDLERS 重算)。
 ok(names.length === require(path.join(__dirname, '..', 'facts.json')).nativeTools,
   `L1b 注册表工具数与 facts.json 同源(${names.length} vs ${require(path.join(__dirname, '..', 'facts.json')).nativeTools})`);
 ok(l1Bad.length === 0, 'L1 每条目 handler/paths 声明齐整' + (l1Bad.length ? ' → ' + l1Bad.join(',') : ''));

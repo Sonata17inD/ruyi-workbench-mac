@@ -189,7 +189,7 @@ async function startService(name, { missing = false, hidden = '', desktop = true
   scenarios.push({ name, missing, hidden, desktop, commandTools });
   port = await getFreePort();
   server = cp.spawn(process.execPath, [path.join(workbench, 'app/server.js'), 'serve', '--port', String(port)], {
-    env: { ...process.env, ...env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_MACOS_AUTOMATION_HELPER: helper },
+    env: { ...process.env, ...env, RUYI_HOME: data, RUYI_MACOS_AUTOMATION_HELPER: helper },
     cwd: workbench, stdio: ['ignore', 'pipe', 'pipe'] });
   server.stdout.on('data', chunk => calls.push({ name: 'service-stdout', scenario: name, text: String(chunk).slice(-4000) }));
   server.stderr.on('data', chunk => calls.push({ name: 'service-stderr', scenario: name, text: String(chunk).slice(-4000) }));

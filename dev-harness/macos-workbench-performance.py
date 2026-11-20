@@ -25,6 +25,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--baseline', default='931f9fa21972d8722ad027ca631877f2623ba462')
 parser.add_argument('--output', required=True)
 parser.add_argument('--runs', type=int, default=3)
+parser.add_argument('--sessions', type=int, default=0, choices=[0, 100, 1000])
 args = parser.parse_args()
 if args.runs < 3:
     parser.error('--runs must be at least 3')
@@ -42,11 +43,20 @@ def measure(app, home):
         'sessionSearchIndexV1': False, 'providers': [], 'recentWorkspaces': [],
         'defaultWorkspace': str(home),
     }))
+    if args.sessions:
+        sessions = data / 'sessions'
+        sessions.mkdir()
+        for index in range(args.sessions):
+            sid = f'bench_{index:05}'
+            head = {'id': sid, 'storageVersion': 2, 'title': f'Thread {index}', 'messageCount': 1,
+                    'createdAt': '2026-01-01T00:00:00.000Z', 'updatedAt': '2026-01-01T00:00:00.000Z'}
+            (sessions / (sid + '.json')).write_text(json.dumps(head))
+            (sessions / (sid + '.messages.ndjson')).write_text('{"role":"user","content":"hello"}\n')
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
         port = sock.getsockname()[1]
     env = {**os.environ, 'HOME': str(home), 'USERPROFILE': str(home),
-           'RUYI_HOME': str(data), 'WIN_CLAUDE_WORKBENCH_HOME': str(data)}
+           'RUYI_HOME': str(data)}
     started = time.perf_counter()
     with (home / 'server.log').open('w') as log:
         child = subprocess.Popen([node, str(app / 'app/server.js'), 'serve', '--port', str(port)],
@@ -71,12 +81,15 @@ def measure(app, home):
                 time.sleep(.01)
             token = json.loads((data / 'runtime.json').read_text())['token']
             c = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
-            def request():
+            def request(verify=False):
                 at = time.perf_counter()
                 c.request('GET', '/api/sessions', headers={'x-wcw-token': token})
-                r = c.getresponse(); r.read()
+                r = c.getresponse(); payload = r.read()
+                if verify:
+                    assert len(json.loads(payload)['sessions']) == args.sessions
                 assert r.status == 200, r.status
                 return (time.perf_counter() - at) * 1000
+            request(verify=True)
             for _ in range(20):
                 request()
             time.sleep(1)
@@ -150,7 +163,8 @@ with tempfile.TemporaryDirectory(prefix='ruyi-paired-performance-') as directory
         'candidateBackendSha256': {str(file.relative_to(current)): hashlib.sha256(file.read_bytes()).hexdigest()
             for file in sorted((current / 'app/backend').glob('*.cjs'))},
         'platform': platform.platform(), 'node': subprocess.check_output([node, '--version']).decode().strip(),
-        'workload': 'isolated empty session list; 20 warmups, 200 authenticated keepalive requests; 5 process-tree RSS samples',
+        'sessionCount': args.sessions,
+        'workload': 'isolated session list; 20 warmups, 200 authenticated keepalive requests; 5 process-tree RSS samples',
         'limitations': ['No model or tool execution; not a full workload performance claim.',
                          'Baseline supervisor compiled from baseline source with identical flags; native leaf helpers and optional Python/MCP installation shared.',
                          'RSS is summed ps snapshots; no physical power or hardware wakeup measurement.'],

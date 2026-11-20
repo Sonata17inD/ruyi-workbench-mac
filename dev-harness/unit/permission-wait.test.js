@@ -14,7 +14,6 @@ const path = require('path');
 const { describe, it } = require('node:test');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-permission-wait-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 delete process.env.WCW_TEST_STEWARD_PERMISSION_WAIT_MS;
 const repo = path.resolve(__dirname, '../..');

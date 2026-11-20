@@ -81,8 +81,6 @@ function createStewardRunnerLifecycle({ sessions, routing, runtime }) {
       const route = normalizeSessionEngineRoute({ engine: 'openai', providerId: explicitId, model: String(cfg.stewardModel || '').trim() || provider.model || '' });
       return route ? { ok: true, route } : { ok: false, error: 'steward.unsupported_engine', engine: explicitId, message: `管家要用的模型服务「${explicitId}」不是 OpenAI 兼容的,请到设置 › 管家里换一个` };
     }
-    // 跟随主端点。CLI 引擎(Claude / Kimi)在本切片不支持:管家回合的事件流与工具协议要另接一套,
-    // 属 116-2。fail-closed 返回稳定信封,而不是悄悄换成别的端点跑起来。
     const route = sessionEngineRouteFromConfig(cfg);
     if (!route || route.engine !== 'openai') {
       const engine = route ? (route.agentCliType || 'claude') : 'none';

@@ -18,14 +18,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // FAKE_REPLY_SEQUENCE（照 steward-runner.e2e.js 的用法：第 N 个流式请求回第 N 条剧本文本）。
 // 后端零改动：本件只调 116 已经有的路由。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -88,7 +87,7 @@ const REPLY_SEQUENCE = [
   JSON.stringify({ say: MD_SAY, why: MD_WHY, acts: [], actions: [] }),
 ];
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 
 function request(port, method, pathname, body, token) {
@@ -125,13 +124,6 @@ async function waitForHttp(port, pathname, predicate, attempts = 120) {
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 class CdpClient {
   constructor(url) { this.url = url; this.nextId = 1; this.pending = new Map(); this.socket = null; this.logs = []; }
@@ -374,12 +366,12 @@ let cdp = null;
 try {
   fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(providerPort)], {
     env: { ...process.env, FAKE_REPLY_SEQUENCE: JSON.stringify(REPLY_SEQUENCE) },
-    windowsHide: true, stdio: 'ignore',
+    stdio: 'ignore',
   });
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, '/health', result => result.status === 200, 300)), 'A1 workbench started'); // 117q:此启动门原吃默认 attempts=120(120×80ms=9.6s)小于本机冷启动实测 4.6-6.3s 且余量过窄,是「FAIL workbench up」假红的根;本文件此助手只此一处调用,仍按同批 12 处一致的编辑形态显式传 300 而不改默认(30 号文 P1-31)
 
@@ -403,11 +395,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A5 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -529,9 +521,6 @@ try {
     return snapshot.acts.indexOf('再看看') >= 0 ? snapshot : null;
   })()`, 600);
   ok(Boolean(settledTurn) && settledTurn.typing === 0, 'C4 回合结束后「···」占位已消失');
-  // 121-K6b 重钉 C5（§2.4 文字预算）：上限 3 → 2。剧本仍然给四枚，屏上只该有「知道了」与
-  // 「再看看」——「改一下」与「第四个」都被 renderActs 那一处 slice 丢掉。
-  // 只数这一回合【自己那三枚】：'知道了' 在别处（首帧的空状态按钮行）也出现，混进来数不清。
   const turnActs = settledTurn ? settledTurn.acts.filter(label => ['再看看', '改一下', '第四个'].includes(label)) : [];
   ok(JSON.stringify(turnActs) === JSON.stringify(['再看看']),
     `C5 一行按钮 ≤2（剧本给了 4 个，屏上只剩「知道了」＋「再看看」，「改一下」「第四个」被丢弃；实测本回合非主动作那几枚 ${JSON.stringify(turnActs)}）`);
@@ -1571,10 +1560,6 @@ try {
     `V4 管家【本人】说的话没有色条、没有卡头、没有来源小头（实测 isThread=${self && self.isThread} / 色条=${self && self.stripe}）`);
   ok(cardRows.filter(row => row.isThread).every(row => row.stripe === true && row.groupLine === false),
     `V4b 一行只有一个锚：有色条的那几行不再画那道组竖线（实测 ${JSON.stringify(cardRows.map(row => [row.isThread, row.stripe, row.groupLine]))}）`);
-  // 117y-S3 重钉（用户第十一轮拍板②「管家的话最好不要用展开的二级菜单了，显示完吧」）：
-  // 原来的 V5／V5b 钉的是「超 8 行默认折叠、点『展开』才看得全」。今天钉相反的事实 ——
-  // 一条【19 行】的回复整段就在那儿，没折、没裁、没有那枚要人再点一次的按钮。
-  // 修前必红：折叠还在时 clamped=true、sayCut=true、sayActs=['…deliverableExpand']。
   ok(LEAD_SAY.split('\n').length >= 12,
     `V5a 夹具这条回复够长（${LEAD_SAY.split('\n').length} 行 ≥ 12，远超那个 8 行的折叠线）——不然「没折叠」这件事验不出什么`);
   ok(Boolean(self) && self.clamped === false && self.sayCut === false
@@ -1597,10 +1582,6 @@ try {
   ok(Boolean(a3) && a3.deliverables === 1 && a3.sources === 1 && a3.sourceShown === false
     && Boolean(a3.head) && a3.head.opens === 1,
     `V7 117s-H 的交付卡与来源小头照旧长在卡里：小头仍在 DOM（它的聚焦通道没动），只是让位给卡头右端的「打开」（实测 交付卡 ${a3 && a3.deliverables} / 小头 ${a3 && a3.sources} / 可见 ${a3 && a3.sourceShown}）`);
-  // 121-K6b **重钉 V8**（34 号文 §2.4「卡头只印 色点 · 任务名 · 五态药丸 · 相对时间 · 一个图标钮」）：
-  // **模型名退出卡头** —— 那是配置不是叙事，它在工作台线程头的 chip 行里有唯一那一处。
-  // 所以「最后动静 · 模型」那一格自此只剩相对时间：既要它还在（信封的 updatedAt 仍在读），
-  // 也要它【不再】带模型名。反向验证：把 fillThreadHead 的 bits 里 facts.model 加回去 → 本条红。
   ok(Boolean(a3.head) && a3.head.name.indexOf('博纳影业怎么看') === 0
     && a3.head.stateAttr === 'running' && a3.head.state === 'mission.state.running'
     && a3.head.meta.length > 0 && a3.head.meta.indexOf(' · ') < 0 && a3.head.meta.indexOf('qwen3.8-flash') < 0,
@@ -2534,11 +2515,10 @@ try {
     for (const line of cdp.logs.slice(-12)) console.log('  ' + line);
   }
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
-  killTree(fake);
+  killOwnTree(browser);
+  killOwnTree(server);
+  killOwnTree(fake);
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ }
   console.log(`\nSTEWARD CONVERSATION E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
   process.exitCode = fail ? 1 : 0;

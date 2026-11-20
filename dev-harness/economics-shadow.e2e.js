@@ -1,10 +1,10 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E: 21-E0 three-layer call ledger shadow (modelCallId → assistantBatchId → toolCallId).
 // Drives a REAL workbench turn against the offline fake provider with a PARALLEL read batch, then
 // asserts the five economics events are persisted to the NDJSON log with a coherent ID chain and
 // without raw query/args leakage. No real model, no network, no HB360 dependency.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -70,8 +70,8 @@ function killTree(child) {
       { name: 'file_read', args: { path: path.join(HOME, 'b.txt') } },
     ];
     fs.writeFileSync(path.join(HOME, 'a.txt'), 'AAA'); fs.writeFileSync(path.join(HOME, 'b.txt'), 'BBB');
-    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_PARALLEL_TOOLS: JSON.stringify(parallel) }, windowsHide: true });
-    const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_PARALLEL_TOOLS: JSON.stringify(parallel) } });
+    const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     children.push(fake, wb);
     let live = null; for (let i = 0; i < 50 && !live; i++) { await sleep(120); live = await health(wbPort); }
     ok(!!live, 'provider workbench starts');

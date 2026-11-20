@@ -19,7 +19,7 @@ function createStewardThreadQueries({
     activeChildren, sessionExecutionSnapshot, sessionPermissionModeOf, StewardHooks,
   } = runtime;
   const {
-    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath, stewardFoldWorkspacePath,
+    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath,
   } = workspaces;
   const {
     deriveStewardThreadState, stewardAsksYouForThread, stewardClipSay, stewardForeignProjection,
@@ -45,7 +45,7 @@ function createStewardThreadQueries({
       if (!meta || sessionMetaIsSteward(meta)) continue;
       index.byId.set(meta.id, meta);
       add(index.missions, sessionMissionId(meta), meta);
-      add(index.workspaces, stewardFoldWorkspacePath(stewardCanonWorkspacePath(meta.cwd)), meta);
+      add(index.workspaces, stewardCanonWorkspacePath(meta.cwd), meta);
       add(index.sources, meta.relatedSessionId, meta);
     }
     return index;
@@ -53,7 +53,7 @@ function createStewardThreadQueries({
   function threadRelatedThreads(head, metas) {
     const index = metas && metas.byId instanceof Map ? metas : threadRelationsIndex(metas);
     const missionId = sessionMissionId(head);
-    const cwd = stewardFoldWorkspacePath(stewardCanonWorkspacePath(head && head.cwd));
+    const cwd = stewardCanonWorkspacePath(head && head.cwd);
     const candidates = new Map();
     const add = (rows, reason) => { for (const meta of rows || []) {
       if (meta.id === head.id) continue;

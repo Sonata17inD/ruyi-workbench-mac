@@ -145,7 +145,7 @@ async function run() {
       fs.writeFileSync(script, 'return await (' + wakePage.toString() + ')(' + JSON.stringify(host.marker) + ');');
       host.child = cp.spawn(path.join(bundle, 'Contents/MacOS/RuyiDesktop'), ['--acceptance-report', host.file,
         '--acceptance-script', script], { cwd: root, env: { ...process.env, ...fixture.env,
-        RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: '', RUYI_NODE_PATH: '/missing/node' }, stdio: 'ignore' });
+        RUYI_HOME: data, RUYI_NODE_PATH: '/missing/node' }, stdio: 'ignore' });
       host.child.on('error', error => { host.error = error; });
       host.before = await until(() => {
         if (host.error) throw host.error;
@@ -171,8 +171,17 @@ async function run() {
     if (!preflight) {
       requireUnlockedConsole();
       console.log('READY: both installed Apps are armed. Put the Mac to sleep and wake it once.');
+      function currentReport(host) {
+        assert.ok(host.child.exitCode === null && host.child.signalCode === null, host.variant + ' exited during power cycle');
+        return json(host.file);
+      }
+      await Promise.all(hosts.map(host => until(() => currentReport(host).sleepEvents > 0,
+        host.variant + ' sleep notification', 300000)));
+      console.log('SLEEP: both Apps received the sleep notification. Wake and unlock the Mac.');
+      await Promise.all(hosts.map(host => until(() => currentReport(host).wakeEvents > 0,
+        host.variant + ' wake notification', 3600000)));
       await Promise.all(hosts.map(host => until(async () => {
-        const current = json(host.file);
+        const current = currentReport(host);
         if (!current.wakeValidated) return false;
         assert.equal(current.simulatedSystemEvents, false);
         assert.ok(current.sleepEvents > 0 && current.wakeEvents > 0);
@@ -186,7 +195,7 @@ async function run() {
         host.after = { sleepEvents: current.sleepEvents, wakeEvents: current.wakeEvents, wakeValidated: current.wakeValidated,
           simulatedSystemEvents: current.simulatedSystemEvents, pageConfirmedSseResume: true };
         return true;
-      }, host.variant + ' system wake and page recovery', 300000)));
+      }, host.variant + ' post-wake health and page recovery', 60000)));
       power = await until(() => powerCycleAfter(Math.floor(armed / 1000) * 1000), 'corresponding macOS power log', 12000);
     }
 

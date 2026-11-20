@@ -6,7 +6,7 @@
   "minimumSystemRuntimeVerified": false,
   "chromiumRevision": "1248",
   "requirements": "ruyi-workbench/packaging/macos/requirements-macos-arm64-cp312-full.lock.txt",
-  "requirementsSha256": "02d01b26456efbb7025ffac0a1af301acb1e008a00cb4cd222cdab93d7daef64",
+  "requirementsSha256": "03b6d3fbf468301efefb158abf98ce893e27e73b44afc8c595339846e0efe3c5",
   "components": [
     {
       "id": "node",
@@ -88,11 +88,6 @@
   ],
   "wheelsPath": "downloads/wheels",
   "wheels": [
-    {
-      "filename": "annotated_doc-0.0.5-py3-none-any.whl",
-      "sha256": "117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101",
-      "url": "https://files.pythonhosted.org/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl"
-    },
     {
       "filename": "annotated_types-0.8.0-py3-none-any.whl",
       "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
@@ -204,11 +199,6 @@
       "url": "https://files.pythonhosted.org/packages/dd/1f/a180b57d9eeabaab77f9d5aa30356898ea749c4795596a8f66d1eb6bef2e/lxml-6.1.3-cp312-cp312-macosx_10_13_universal2.whl"
     },
     {
-      "filename": "markdown_it_py-4.2.0-py3-none-any.whl",
-      "sha256": "9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a",
-      "url": "https://files.pythonhosted.org/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl"
-    },
-    {
       "filename": "matplotlib-3.11.2-cp312-cp312-macosx_11_0_arm64.whl",
       "sha256": "ef31985c4dedb5f1424e1aec6849a47dd37689cb7fa3c20b1b82187f26806261",
       "url": "https://files.pythonhosted.org/packages/a6/c4/7f5f3601ee69baf072c0c7d3ce60c03e0618621c5a56c34a62a460e29d11/matplotlib-3.11.2-cp312-cp312-macosx_11_0_arm64.whl"
@@ -217,11 +207,6 @@
       "filename": "mcp-1.30.0-py3-none-any.whl",
       "sha256": "666edb5009503e1047c9d60346a756f94b261f05cc2625f23d41c728ffc484d0",
       "url": "https://files.pythonhosted.org/packages/f5/f4/e58bc33317c92a0203664daaf00bf6f41166cc0149e5d6870a03f7cd004a/mcp-1.30.0-py3-none-any.whl"
-    },
-    {
-      "filename": "mdurl-0.1.2-py3-none-any.whl",
-      "sha256": "84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8",
-      "url": "https://files.pythonhosted.org/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl"
     },
     {
       "filename": "numpy-2.5.4-cp312-cp312-macosx_14_0_arm64.whl",
@@ -264,11 +249,6 @@
       "url": "https://files.pythonhosted.org/packages/72/4f/572bbbe60a5787ca61a84bad934c3ce19c08c2bc9c0e9781bf0d99cad1a6/playwright-1.64.1-py3-none-macosx_11_0_arm64.whl"
     },
     {
-      "filename": "psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl",
-      "sha256": "1a7b04c10f32cc88ab39cbf606e117fd74721c831c98a27dc04578deb0c16979",
-      "url": "https://files.pythonhosted.org/packages/80/c4/f5af4c1ca8c1eeb2e92ccca14ce8effdeec651d5ab6053c589b074eda6e1/psutil-7.2.2-cp36-abi3-macosx_11_0_arm64.whl"
-    },
-    {
       "filename": "pycparser-3.12-py3-none-any.whl",
       "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e",
       "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl"
@@ -294,11 +274,6 @@
       "url": "https://files.pythonhosted.org/packages/81/12/5347938b1f9a6453f0dbdfcc3e2388a1320ef9b9ec17fbefbc4ab647ea98/pyee-14.0.0-py3-none-any.whl"
     },
     {
-      "filename": "pygments-2.21.0-py3-none-any.whl",
-      "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
-      "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
-    },
-    {
       "filename": "pyjwt-2.15.1-py3-none-any.whl",
       "sha256": "42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193",
       "url": "https://files.pythonhosted.org/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl"
@@ -312,11 +287,6 @@
       "filename": "pypdfium2-5.14.0-py3-none-macosx_13_0_arm64.whl",
       "sha256": "2de384df66ba55fcaab0775f30f28ec1090af3dfa60276a07821efc96d993118",
       "url": "https://files.pythonhosted.org/packages/d1/ea/14673bc9d8b7beeaa1eb46e9951b22543edaf2a4676c586e3b1e032ff6ee/pypdfium2-5.14.0-py3-none-macosx_13_0_arm64.whl"
-    },
-    {
-      "filename": "pyperclip-1.11.0-py3-none-any.whl",
-      "sha256": "299403e9ff44581cb9ba2ffeed69c7aa96a008622ad0c46cb575ca75b5b84273",
-      "url": "https://files.pythonhosted.org/packages/df/80/fc9d01d5ed37ba4c42ca2b55b4339ae6e200b456be3a1aaddf4a9fa99b8c/pyperclip-1.11.0-py3-none-any.whl"
     },
     {
       "filename": "python_dateutil-4.0.0-py3-none-any.whl",
@@ -354,11 +324,6 @@
       "url": "https://files.pythonhosted.org/packages/4a/3c/bf68d44f160b44685fc714f746a954c71d0091b3dc4fd3c8670154b44841/reportlab-5.1.0-py3-none-any.whl"
     },
     {
-      "filename": "rich-15.0.0-py3-none-any.whl",
-      "sha256": "33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb",
-      "url": "https://files.pythonhosted.org/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl"
-    },
-    {
       "filename": "rpds_py-2026.9.1-cp312-cp312-macosx_11_0_arm64.whl",
       "sha256": "e21c1429e205828ea886a2293a4a2c8e01f4c25d9893ca330e97a6cf73f52e7b",
       "url": "https://files.pythonhosted.org/packages/90/81/ac6a0d064982251856ce009c9e1dd51a34110b3c055aa7d1aad18b4899a3/rpds_py-2026.9.1-cp312-cp312-macosx_11_0_arm64.whl"
@@ -369,11 +334,6 @@
       "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl"
     },
     {
-      "filename": "shellingham-1.5.4-py2.py3-none-any.whl",
-      "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
-      "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl"
-    },
-    {
       "filename": "sse_starlette-3.6.0-py3-none-any.whl",
       "sha256": "e4dfa4d237d2712cb2b4d4918eda9b457cd6b44bbecdc838af75de836565bafd",
       "url": "https://files.pythonhosted.org/packages/cf/49/35053078cdfcf639237e8bee6dc6f34f1b3a3cc8d01800a1e213e1660ff6/sse_starlette-3.6.0-py3-none-any.whl"
@@ -382,11 +342,6 @@
       "filename": "starlette-1.10.0-py3-none-any.whl",
       "sha256": "478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4",
       "url": "https://files.pythonhosted.org/packages/88/2e/947cfe02def9371c07cd5bf5b6b61c829e9aecb9904db02a66cfafbc1eec/starlette-1.10.0-py3-none-any.whl"
-    },
-    {
-      "filename": "typer-0.28.0-py3-none-any.whl",
-      "sha256": "afd18929180b706c5e9a239f53c3c8136903553c0c2d460598bbaa924191d4ab",
-      "url": "https://files.pythonhosted.org/packages/19/98/8ef60c7cd773dbab9d276a4c7bff505913a25b61acd8a9ef01ceeb70f554/typer-0.28.0-py3-none-any.whl"
     },
     {
       "filename": "typing_extensions-4.16.0-py3-none-any.whl",

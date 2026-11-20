@@ -1,3 +1,0 @@
-FAIL manual acceptance requires an authorized unlocked desktop and current native backend
-
-MACOS MANUAL RECORD E2E: FAIL (1)

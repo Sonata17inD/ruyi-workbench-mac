@@ -23,7 +23,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     它是那条真实路径的见证者。两支一起看才是证据。
 //
 // 判定行:`MISSION INDEX BOOT RACE E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -101,8 +101,8 @@ const spawnServer = (home, port, config) => {
   fs.mkdirSync(home, { recursive: true });
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config), 'utf8');
   return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home, RUYI_TEST_HOOKS: '1' },
-    windowsHide: true, stdio: 'ignore',
+    cwd: WB, env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home, RUYI_TEST_HOOKS: '1' },
+    stdio: 'ignore',
   });
 };
 

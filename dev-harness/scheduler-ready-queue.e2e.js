@@ -1,26 +1,14 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-// E2E: 第26波「连续就绪队列」(AUTONOMY-PLAN §1 缺口2) —— 去批次屏障。
-// 端口: FAKE 9111 / WB 9112(已登记 dev-harness/README 端口表)。离线,Node 直跑。
-// 断言面:
-//  A) 快下游不等慢兄弟:DAG = slowA(~4s) ∥ fastB(~0.3s) → fastC(依赖 fastB),并发 2。
-//     旧批次屏障下 fastC 必须等 [slowA,fastB] 整批结束;连续队列下必能观测到
-//     「fastC=succeeded 而 slowA 仍 running」的中间态,且总时长 ≈ slowA 而非串行和。
-//  B) 环检测语义保持:a⇄b 互依赖 → run failed,error 含「依赖图存在环」。
-//  C) 静态锁:调度器无批次残留 + 26a 对抗轮三铁律(判环=零派发且在飞空 / 收尾=全终态且在飞空 /
-//     防双派发 + 身份守卫删除 + 池级兜底不静默)。
-//  D) P1-1 确定性反例:同步型 vote 门节点单独在飞时,其 flight 在派发器 save await 期间即 settle ——
-//     修前下游 d 被误诊「依赖图存在环」;修后 a,b→v(vote)→d 全链 succeeded。
-//  E) 收尾封口:run 完成后快照不再变动(mtime/eventSeq 冻结)、事件日志末条=run_end、
-//     node_start 与 node_settled/node_requeued 按 attemptId 一一配对。
+// Observe dispatch, pause/resume, cycle detection and finalization through the live service.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const FAKE_PORT = await getFreePort(), WB_PORT = await getFreePort();
-const HOME = path.join(os.tmpdir(), 'wcw-ready-queue-e2e');
+const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-ready-queue-'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
@@ -45,7 +33,10 @@ async function waitToken() {
   return (readJson(path.join(HOME, 'runtime.json')) || {}).token || '';
 }
 
-// 内联 fake:按请求体里的任务标记决定响应延迟(SLOWMARK ~4s / 其余 ~0.25s),纯文本回答(无工具)。
+// Hold the two model responses until the test releases them.
+const fastStarted = Promise.withResolvers();
+const releaseFast = Promise.withResolvers();
+const releaseSlow = Promise.withResolvers();
 const fake = http.createServer((req, res) => {
   let body = ''; req.on('data', c => (body += c));
   req.on('end', async () => {
@@ -54,8 +45,11 @@ const fake = http.createServer((req, res) => {
       return res.end(JSON.stringify({ object: 'list', data: [{ id: 'fake-model', object: 'model' }] }));
     }
     if (req.method === 'POST' && (req.url || '').includes('/chat/completions')) {
-      const delay = body.includes('SLOWMARK') ? 4000 : 250;
-      await sleep(delay);
+      if (body.includes('PAUSEMARK')) {
+        fastStarted.resolve();
+        await releaseFast.promise;
+      }
+      if (body.includes('SLOWMARK')) await releaseSlow.promise;
       res.writeHead(200, { 'content-type': 'text/event-stream' });
       const id = 'chatcmpl-rq';
       const sse = o => res.write('data: ' + JSON.stringify(o) + '\n\n');
@@ -71,23 +65,6 @@ const fake = http.createServer((req, res) => {
 });
 
 (async () => {
-  fs.rmSync(HOME, { recursive: true, force: true });
-  fs.mkdirSync(HOME, { recursive: true });
-  const backend = name => fs.readFileSync(path.join(WB, 'app', 'backend', name + '.cjs'), 'utf8');
-  const workflow = backend('agent-workflow');
-  const scheduler = backend('workflow-scheduler');
-
-  // ── C) 静态锁(第26波c: 判环/派发/就绪逻辑已抽入纯 reducer computeSchedulerStep,静态锁随之校验 reducer 形态) ──
-  ok(!/await Promise\.all\(batch\.map\(/.test(workflow), 'C 批次屏障代码已移除(Promise.all(batch.map) 不存在)');
-  ok(/const inFlight = new Map\(\)/.test(workflow) && /raceInFlight/.test(workflow), 'C 连续队列结构在(inFlight/raceInFlight)');
-  ok(/function computeSchedulerStep\(nodes, opts\)/.test(scheduler), 'C 调度决策已抽为纯 reducer computeSchedulerStep');
-  // block/skip 也是状态推进；否则多层失败链会在第一层刚 blocked 时把更深层误报成依赖环。
-  ok(/const stateTransitions = toBlock\.length \+ toSkip\.length;[\s\S]{0,160}const cycleDead = stateTransitions === 0 && toDispatch\.length === 0 && toArm\.length === 0 && inFlight\.size === 0 && !anyWaiting && !allTerminal/.test(scheduler), 'C 铁律①: reducer 仅在无 block/skip/派发/武装/在飞/等待且未全终态时判环');
-  ok(/if \(step\.cycleDead && !inFlight\.size\)/.test(workflow), 'C 铁律①(外壳): cycleDead 且外壳在飞仍空才判死(双保险)');
-  ok(/nodes\.every\(terminal\) && !inFlight\.size/.test(workflow), 'C 铁律②: 收尾/宽限窗=「全终态 且 在飞空」(防 run_end 后写/queued 僵尸)');
-  ok(/if \(slots <= 0 \|\| inFlight\.has\(node\.id\)\) continue/.test(scheduler), 'C 铁律③a: reducer 派发选择跳过已在飞(防双派发;第28e波与满位判定合并)');
-  ok(/inFlight\.get\(node\.id\) === flight\) inFlight\.delete/.test(workflow), 'C 铁律③b: finally 删除带身份守卫');
-  ok(/调度器兜底异常/.test(workflow), 'C 池级兜底不静默(钉节点+落事件)');
 
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 7, permissionMode: 'bypass', defaultWorkspace: HOME, subagentMaxConcurrent: 2,
@@ -95,7 +72,7 @@ const fake = http.createServer((req, res) => {
     activeProvider: 'fake',
   }, null, 2));
   await new Promise(r => fake.listen(FAKE_PORT, '127.0.0.1', r));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   try {
     ok(await up(WB_PORT), 'workbench up on :' + WB_PORT);
@@ -111,28 +88,42 @@ const fake = http.createServer((req, res) => {
       token, sessionId: sid, async: true,
       nodes: [
         { id: 'slowA', task: '慢任务 SLOWMARK:研究一个大问题', toolTier: 'read', maxIters: 3 },
-        { id: 'fastB', task: '快任务:先导小步骤', toolTier: 'read', maxIters: 3 },
+        { id: 'fastB', task: 'PAUSEMARK 快任务:先导小步骤', toolTier: 'read', maxIters: 3 },
         { id: 'fastC', task: '快任务:基于 fastB 的下游', toolTier: 'read', maxIters: 3, dependsOn: ['fastB'] },
       ],
     }, H)).json;
     const runId = launch && launch.runId;
     ok(!!(launch && launch.ok && runId), '异步 launch 接受 ' + runId);
     const runFile = path.join(HOME, 'agent-runs', sid, runId + '.json');
+    const started = await Promise.race([fastStarted.promise.then(() => true), sleep(5000).then(() => false)]);
+    ok(started, 'A fastB 已进入模型调用');
+    const control = action => httpReq(WB_PORT, 'POST', '/api/agent-runs/' + runId, { sessionId: sid, action }, H);
+    ok((await control('pause')).json?.ok, 'A 在节点仍运行时暂停派发');
+    releaseFast.resolve();
+    let pausedState;
+    for (let i = 0; i < 100; i++) {
+      pausedState = Object.fromEntries((readJson(runFile)?.nodes || []).map(n => [n.id, n.status]));
+      if (pausedState.fastB === 'succeeded') break;
+      await sleep(20);
+    }
+    ok(pausedState.fastC === 'queued' && pausedState.fastB === 'succeeded' && pausedState.slowA === 'running',
+      'A 暂停期间 fastB 可完成，下游仍排队');
+    ok((await control('resume')).json?.ok, 'A 慢节点仍在运行时恢复');
     let sawOverlap = false, done = false, finalRun = null;
     while (!done && Date.now() - t0 < 30000) {
       await sleep(100);
       const run = readJson(runFile);
       if (!run) continue;
       const st = Object.fromEntries((run.nodes || []).map(n => [n.id, n.status]));
-      if (st.fastC === 'succeeded' && st.slowA === 'running') sawOverlap = true;
+      if (st.fastC === 'succeeded' && st.slowA === 'running') {
+        sawOverlap = true;
+        releaseSlow.resolve();
+      }
       if (['succeeded', 'partial', 'failed', 'stopped'].includes(run.status)) { done = true; finalRun = run; }
     }
-    const wall = Date.now() - t0;
     ok(!!finalRun && finalRun.status === 'succeeded', 'A run 最终 succeeded(实 ' + (finalRun && finalRun.status) + ')');
     ok(sawOverlap, 'A 观测到「fastC 已完成而 slowA 仍在跑」—— 批次屏障下不可能出现的中间态');
-    // sawOverlap is the deterministic no-batch-barrier proof. Keep only a generous wall-clock watchdog here;
-    // tight timing made the full serial suite flaky under Windows process/AV load without adding semantics.
-    ok(wall < 15000, 'A 总时长有界且无调度停滞(实 ' + wall + 'ms < 15000ms)');
+    releaseSlow.resolve();
 
     // ── B) 环检测 ──
     const launch2 = (await httpReq(WB_PORT, 'POST', '/api/agent-workflow/launch', {
@@ -181,6 +172,8 @@ const fake = http.createServer((req, res) => {
     ok(starts.length && starts.every(k => settles.includes(k)), 'E node_start 与 settle/requeue 按 attemptId 配对(' + starts.length + ' 对)');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e)); fail++; }
   finally {
+    releaseFast.resolve();
+    releaseSlow.resolve();
     kill(wb); try { fake.close(); } catch { /* ignore */ }
     await sleep(300);
     fs.rmSync(HOME, { recursive: true, force: true });

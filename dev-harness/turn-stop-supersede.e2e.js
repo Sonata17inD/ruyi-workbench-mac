@@ -140,8 +140,8 @@ async function startWorkbench(name, providerExtra, configExtra = {}) {
   }));
   const port = await getFreePort();
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, windowsHide: true, stdio: 'ignore',
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, WCW_TOOL_HEARTBEAT_MS: '250' },
+    cwd: WB, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, WCW_TOOL_HEARTBEAT_MS: '250' },
   });
   let up = false;
   for (let i = 0; i < 300 && !up; i++) { try { up = (await request(port, 'GET', '/health')).status === 200; } catch { /* not yet */ } if (!up) await sleep(120); }

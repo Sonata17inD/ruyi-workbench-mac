@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (c) 四旅程数据面:单任务(result+checkpoints+acceptance)/ 长任务(cursor+usage)/ 多 Agent(runs digest)/
 //      Quick Ask(kind 显式且不进 /api/missions)。
 //  (d) 静态锁:ROUTE_AUTH 裸路径条目、handler 分支、activeTurn 投影、PoC 引用 mission-state.js 与真实 API。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -82,7 +82,7 @@ function streamOpen(body, token) {
   return state;
 }
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
 }
 
 (async () => {
@@ -228,13 +228,6 @@ function spawnWb() {
     const sessList = (await requestJson(WB_PORT, '/api/sessions', null, token)).json.sessions;
     ok(sessList.some(s => s.id === s3 && s.kind === 'quick_ask'), '(c) Quick Ask:会话 meta kind 显式');
     cards = (await requestJson(WB_PORT, '/api/missions', null, token)).json.missions;
-    // 121-K3(34 号文 §4.2「索引口径」)重钉 —— 本刀合法地把这条断言翻了面,逐对交代:
-    // 修前:只有 mission 会话与「管家关心的」线程有卡片,所以 quick_ask 恒不进 /api/missions。
-    // 修后:进不进索引由 threadVisible 的四条并集说了算(在途 ∪ 今天有动静 ∪ 最近 N 条 ∪ watched),
-    //       s3 是这一秒刚建出来的,「今天有动静」成立,它【应该】在列表里。
-    // 原断言真正要守的东西是括号里那半句 ——「不制造任务收工语义」:进索引【不等于】它变成了一个
-    // 任务。所以重钉成:行在,但它仍然是 quick_ask、没有任务账本(mission 容器)、status 为 none。
-    // 这比原来那条更紧:原来只要它不出现就绿,现在它出现了还得证明自己没被当成任务。
     const cardS3 = cards.find(c => c.sessionId === s3) || null;
     ok(!!cardS3, '(c) 121-K3:Quick Ask 会话【进】/api/missions(索引口径改成 threadVisible 的四条并集)');
     ok(!!cardS3 && cardS3.kind === 'quick_ask' && cardS3.status === 'none' && !(cardS3.mission && cardS3.mission.goal),
@@ -258,9 +251,6 @@ function spawnWb() {
     const ms = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'mission-state.js'), 'utf8');
     ok(/module\.exports = api/.test(ms) && /typeof window !== 'undefined'/.test(ms), 'd mission-state.js 双导出(node + window)');
     ok(/'dispatching', 'running', 'needs_you', 'done', 'stopped', 'quick_ask'/.test(ms), 'd 五态 + 速问 状态集完整');
-    const poc = fs.readFileSync(path.join(ROOT, 'docs', 'mockups', 'vnext-poc.html'), 'utf8');
-    ok(/mission-state\.js/.test(poc) && /\/api\/interventions/.test(poc) && /\/api\/missions/.test(poc), 'd PoC 引用五态纯函数 + 真实 API(不复制逻辑)');
-    ok(/MissionState\.fromCard/.test(poc) && /MissionState\.fromSnapshot/.test(poc), 'd PoC 卡片/快照双适配消费');
 
   } finally {
     kill(wb); await new Promise(r => provider.close(r));

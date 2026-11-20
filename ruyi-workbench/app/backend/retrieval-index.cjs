@@ -129,13 +129,6 @@ function reciprocalRankFusion(rankings, { k = RETRIEVAL_RRF_K, weights = null } 
 
 // 内容指纹:索引条目的失效键之一(另一个是 mtime+size)。截断成 16 位十六进制够用,
 // 这里比对的是「同一条记忆有没有被改过」,不是防篡改。
-function retrievalContentHash(input) {
-  const source = String(input || '');
-  const a = fnv1a32(source);
-  const b = fnv1a32(source.length + '|' + source.slice(-256));
-  return (a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0'));
-}
-
 // 一次性把一批文档变成 {ids, vectors, df, docCount}。语料小(百到千级),每次重算是微秒级,
 // 所以这里不做磁盘索引 —— 会话搜索那边正文提取才是真花钱的地方,索引落盘在那边做。
 function buildRetrievalCorpus(documents) {

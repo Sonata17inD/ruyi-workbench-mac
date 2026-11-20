@@ -337,13 +337,6 @@ describe('[F10] 新键的目录一致性', () => {
     const ph = v => [...String(v).matchAll(/{{\s*([\w.-]+)\s*}}/g)].map(m => m[1]).sort();
     for (const key of Object.keys(zh)) assert.deepEqual(ph(zh[key]), ph(en[key]), 'placeholder mismatch: ' + key);
   });
-  it('docs/i18n 镜像与运行时目录逐字节相同', () => {
-    for (const name of ['zh-CN.json', 'en-US.json']) {
-      const a = fs.readFileSync(path.join(PUBLIC, 'locales', name));
-      const b = fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', name));
-      assert.ok(a.equals(b), name + ' 镜像不一致');
-    }
-  });
   it('文件树新键齐全且英文不夹中文', () => {
     for (const key of ['file.tree.notFound', 'file.tree.notAllowed', 'file.tree.truncated', 'ctx.meter.aria', 'audit.sourceFilterLabel']) {
       assert.equal(typeof zh[key], 'string', key);

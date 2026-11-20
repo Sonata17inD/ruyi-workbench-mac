@@ -45,8 +45,7 @@ final class DesktopService {
     init(root: URL, environment: [String: String]) {
         self.root = root
         let home = environment["HOME"] ?? FileManager.default.homeDirectoryForCurrentUser.path
-        let explicit = [environment["RUYI_HOME"], environment["WIN_CLAUDE_WORKBENCH_HOME"]]
-            .compactMap { $0 }.first { !$0.isEmpty }
+        let explicit = environment["RUYI_HOME"].flatMap { $0.isEmpty ? nil : $0 }
         bundleDataDirectory = Bundle.main.object(forInfoDictionaryKey: "RuyiDataDirectory") as? String
         if let directory = bundleDataDirectory {
             let fallback = URL(fileURLWithPath: home).appendingPathComponent(directory)

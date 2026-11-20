@@ -19,14 +19,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ⑨ 切回经典壳后无残留定时器（抽屉轮询与 avatar 轮询都被清掉）。
 // 与 steward-shell.e2e.js / steward-conversation.e2e.js 同一套 CDP 无头驱动；后端零改动。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -105,7 +104,7 @@ const BULK_GROUP_USED_TEXT_IDS = BULK_USED_TEXT_IDS.filter(id => !BULK_RECENT_TO
 // 真正折进去的：没在「常用」露过面的那些非文本 id（不是抄一份常量，是从「有没有账」推出来的）。
 const BULK_FOLDED_IDS = BULK_NON_TEXT_IDS.filter(id => !BULK_RECENT_TOP5.includes(id));
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 
 function request(port, method, pathname, body, token) {
@@ -157,13 +156,6 @@ function auditRowsIn(dir) {
   return out;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：按用户原话分流。'ask' → 一条 request_user_input（挂成 question 待决）；
 // 其余 → 一段以问句收尾的助手文本。答完之后再问一次就收尾，避免回合永远挂着。
@@ -444,8 +436,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started'); // 117q:此启动门原吃默认 attempts=200(200×80ms=16s)低于 30 号文 P1-31 建议的 300×同款间隔量级,是「FAIL workbench up」假红的根;默认值被本文件下方大量业务断言调用复用,不能整体抬,这里改成显式传 300 只抬这一处(30 号文 P1-31)
 
@@ -521,12 +513,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
-    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A9 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -575,7 +566,6 @@ try {
   if (!openedA) throw new Error('drawer did not open');
   ok(openedA.role === 'dialog' && openedA.labelledby === 'stewardDrawerTitle',
     'B2 抽屉是 role="dialog" + aria-labelledby="stewardDrawerTitle"');
-  // 117l D4 重钉：11 → 13（多了「它在问你」与「更多」；四块折进后者，一块没少、顺序没变）。
   ok(openedA.ordered === true, 'B3 十四个区块的 DOM 顺序 === §2.6 焦点卡的契约顺序');
   ok(openedA.shellDrawer === 'open', 'B4 宽屏下管家壳被标为 drawer=open（对话区收窄，抽屉占右侧 390px 栏）');
   ok(openedA.ariaModal === null, 'B4b 1440px 宽屏是栏式，不加 aria-modal');
@@ -583,12 +573,6 @@ try {
     `B5 线程页签是 tablist，两条兄弟线程各一个 tab（实测 ${openedA.tabRoles}）`);
   ok(openedA.tabs.length === 3 && openedA.tabs[2] === zh['stewardShell.drawer.newThread'],
     `B5b 页签行末尾是「＋ 线程」（实测 ${JSON.stringify(openedA.tabs)}）`);
-  // 117k 重钉（用户第三轮走查④）：事项【容器】的标题现在【就在】行里 —— 116-5b 给 GET /api/missions
-  // 的每一行加了 missionTitle（显式容器＝用户起的名，派生事项＝那条线程的显示名）。本条此前钉的是
-  // 「回落到本线程标题」，那是 116-5b 之前的世界；照那条回落，同一块面板上事项行写整句原话、
-  // 下面的页签写生成名 —— 一块面板三个名字指同一件事（用户走查原话：看不出这是同一件）。
-  // 121-K6b 重钉（34 号文 §2.6）：那个名字搬到卡头的【面包屑】上，且只在多线程任务时出现 ——
-  // 本段的线程 A 恰好有两条兄弟线程（B5 刚数过 tabRoles === 2），所以它该在场。
   ok(openedA.missionTitle === MISSION_TITLE && openedA.crumbHidden === false,
     `B6 卡头面包屑显示【任务容器】的名字（用户起的那个，实测「${openedA.missionTitle}」，hidden=${openedA.crumbHidden}）`);
   // 121-K6b（§7.2／§2.6「没有『今天』统计块」）：费用 pill 整个节点已经不在骨架里了。
@@ -647,17 +631,6 @@ try {
     `B13 验收项来自任务快照（实测 ${JSON.stringify(openedA.acceptance)}）`);
   ok(JSON.stringify(openedA.chipKeys) === JSON.stringify(['permission', 'model', 'engine']),
     `B14 快切 chip 三个：权限／模型／引擎（实测 ${JSON.stringify(openedA.chipKeys)}）`);
-  // 117u-G3 **重钉 B14b**（§11.15.7；用户 2026-09-09「这个也不印默认值吧」）：原判据钉的是
-  // 「权限 chip 初始印着『跟随全局』」—— 那正是这一刀要消灭的病（§11.15.2 病 3：默认值印了等于没印）。
-  // 新判据把同一件事实翻到该在的那一面：跟随全局的这一拍，这一行【不画出来】；而控件本身没被拆
-  // （三枚 chip 仍在 DOM 里、值仍然读得出「跟随全局」——收的是墨量，不是能力）。
-  // 另一侧在下面 C3b 钉：真定过会话级档位之后它必须现身。只钉一侧的话，把判据写成恒假也能绿。
-  //
-  // 117u-G3b 再重钉（主会话裁决，§11.15.8）：G3 第一版把【整行】藏起来，与看板同法。裁决改成
-  // 「本面只收值、不收控件」—— 详情栏这一行是「给这条线程单独定一档」在管家壳里的入口，藏掉整行
-  // 等于把入口收走，而用户要的只是「不印默认值」。所以判据翻成三件同时成立的事：
-  //   ① 这一拍被判成「跟全局一样」（is-default 挂上了）；② 值那半【一个都没画出来】；
-  //   ③ 键那半（＝入口）三个一个不少地【还画着】—— 这一条是新加的，正是它守住「没把能力删掉」。
   const chA = openedA.chipsHidden;
   ok(chA && chA.isDefault === true && chA.painted === true && chA.valuesPainted === 0 && chA.keysPainted === 3
     && openedA.chipValues[0] === zh['stewardShell.chips.followGlobal'],
@@ -672,7 +645,6 @@ try {
     'C1 权限 chip 点开五档菜单');
   const menuText = await cdp.evaluate(`(() => [...document.querySelectorAll('#stewardDrawerChips [data-permission-mode]')]
     .map(node => node.textContent.trim()))()`);
-  // 2026-10 重钉 C1b：全自动（bypass）回到菜单，四档 → 五档，末行仍是「跟随全局」。
   ok(menuText.length === 6 && menuText.slice(0, 5).every(text => text.length > 12)
     && menuText[5] === zh['stewardShell.chips.followGlobal'],
     `C1b 五档各带一句人话，末行是「跟随全局」（实测 ${JSON.stringify(menuText)}）`);
@@ -1036,11 +1008,6 @@ try {
     return snapshot.title === ${JSON.stringify(THREAD_C)} && snapshot.replies.length ? snapshot : null;
   })()`);
   ok(Boolean(onC), 'E2 steward:focus-thread 也能打开抽屉（117h「现在这一件」接同一个口）');
-  // 117l D4 重钉 E3/E3b（用户第四轮走查①）：候选答案【搬进了④「它在问你」卡】。旧断言钉的是
-  // 「它们在 ⑥『你可以说』那一行里」—— 那是 117d 的位置，而用户的原话是「弹出打开线程回答，
-  // 却并没有 2.0 的那种问答框，导致没法正常地回复」：光有一排 chip、没有问题原文也没有输入框。
-  // 现在问题原文＋选项＋回答框在同一张卡里，⑥ 让位（否则一屏两排一模一样的按钮）。
-  // companion（E3c）：⑥ 是【隐藏】不是【被删】—— 没有选项的软问句仍然由它出「好，就这样／先不要」。
   ok(onC && JSON.stringify(onC.askOptions) === JSON.stringify(['React', 'Vue']),
     `E3 候选答案在 ④「它在问你」卡里（实测 ${onC && JSON.stringify(onC.askOptions)}）`);
   ok(onC && onC.askOptionKinds.every(kind => kind === 'question'), 'E3b 这两条的 kind 是 question（走 /api/chat/answer）');
@@ -1050,7 +1017,6 @@ try {
     `E3f ④ 里是【问题原文】而不是一句摘要（实测 ${onC && JSON.stringify(onC.askLines)}）`);
   ok(Boolean(await waitForEval(cdp, `(() => (${DRAWER}).askFocused ? { ok: 1 } : null)()`)),
     'E3g 切到 C 之后焦点也落进问答框');
-  // 117q-B3b 重钉：五态人话键从 stewardShell.drawer.state.* 搬到中性的 mission.state.*（30 号文 §4.4）。
   ok(onC && onC.state === zh['mission.state.needs_you'],
     `E3c 有待决时五态是「需要你」（实测「${onC && onC.state}」）`);
   ok(onC && onC.activityDoing.length > 0 && onC.activityDoing !== zh['stewardShell.drawer.none'],
@@ -1103,9 +1069,6 @@ try {
     `E6b 内容以活回合的【末尾】三句打头，不是开头（实测「${onD && onD.lastSay}」）`);
   ok(Boolean(onD) && onD.lastSay.indexOf('我先看了三个候选') < 0,
     'E6c 第一句被截掉 —— 活回合要看的是最新那几句（落盘原话那一路仍取开头，见 B10）');
-  // 121-K6b 重钉 E6d（34 号文 §2.6／§5）：工具那句话从引文尾巴搬到【当前动作行】—— 引文只放
-  // 它说的话，一句话里不掺一句状态。要钉的两件事一个字没变：说人话、界面上不出现工具名；
-  // companion 再多钉一条：引文里【确实】不再带那句了（不是两处都印）。
   ok(Boolean(onD) && onD.actingHidden === false
     && onD.acting.indexOf(zh['stewardShell.drawer.tool.askYou']) === 0
     && onD.acting.indexOf('request_user_input') < 0,
@@ -1237,11 +1200,6 @@ try {
       focusId: (document.getElementById('stewardSide') || { dataset: {} }).dataset.focusId || '',
     };
   })()`;
-  // 121-K6b 重钉 H1（34 号文 §2.6「其它【在途】」）：小行叠自此只收非收工的线程 —— 收工的那些
-  // 在左栏里，点一下就换成焦点，摆在焦点栏里只是把「此刻该看什么」冲淡。跑到这一段时，本件那四条
-  // 线程的待决都已经在 C/D/E 段答完（全部落到 settled/quiet 两档），所以「零条小行」正是新语义的
-  // 正确结果，而不是渲染没跑：判据因此改成【与服务端行对账】—— 在途几条就该有几条小行。
-  // 反向验证：把 renderNow 里那句 `if (!inFlight(row)) return;` 拔掉 → 四条收工线程全冒出来 → 本条红。
   let oneDrawer = await waitForEval(cdp, `(() => {
     const snapshot = ${NOW_STACK};
     return snapshot && snapshot.drawerParent === 'stewardFocus' ? snapshot : null;
@@ -1433,11 +1391,10 @@ try {
 } finally {
   if (cdp && fail) console.log('CONSOLE ' + cdp.logs.slice(-6).join(' | '));
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) await new Promise(resolve => provider.close(resolve));
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ }
   console.log(`\nSTEWARD DRAWER E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
   process.exitCode = fail ? 1 : 0;

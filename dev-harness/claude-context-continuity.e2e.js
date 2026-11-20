@@ -1,7 +1,7 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -63,7 +63,6 @@ function start(capture) {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
     cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE, WCW_FAKE_STDIN_CAPTURE: capture },
-    windowsHide: true,
   });
   child.stderr.on('data', d => String(d).split(/\r?\n/).forEach(line => line.trim() && console.error('[workbench] ' + line.trim())));
   return child;

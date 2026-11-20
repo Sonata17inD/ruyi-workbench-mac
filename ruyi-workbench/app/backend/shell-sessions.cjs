@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const { StringDecoder } = require('node:string_decoder');
 const { platformShellEnvironment } = require('./mac-launch-policy.cjs');
 function createShellSessions({ ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
-  redact,  safeSessionId, sessionPath }) {
+  backgroundChanged, redact, safeSessionId, sessionPath }) {
 // ===================================================================================================
 // Persistent managed bash sessions (provider engine only).
 // A session = one long-lived bash child whose stdout+stderr stream into a
@@ -405,6 +405,7 @@ async function shellStart(args, config, ctx = {}) {
 
   }
   if (sess.cancelled || shellSessions.get(shellId) !== sess) return { ok: false, code: 'cancelled', error: 'shell 启动已取消' };
+  if (sess.running && mode === 'background' && sess.sessionId) backgroundChanged?.(sess.sessionId);
   return { ok: true, shellId, name, cwd: sess.cwd, mode, shell: 'bash', tty: false, ...(command ? { jobId: sess.jobId, notification: sess.sessionId ? 'session_push' : 'unbound', running: true, timeoutMs, cursor: 0 } : {}) };
 }
 

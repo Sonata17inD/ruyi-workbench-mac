@@ -1,4 +1,5 @@
 'use strict';
+const { clearNativeResume, unavailableAgentRoute, inferSessionEngineRoute } = require('./session-engine-route.cjs');
 const crypto = require('node:crypto');
 const path = require('node:path');
 
@@ -26,6 +27,7 @@ function applySessionMetaPatch(session, patch) {
   if (Object.prototype.hasOwnProperty.call(patch, 'engineRoute')) {
     const route = normalizeSessionEngineRoute(patch.engineRoute);
     if (route) {
+      if (unavailableAgentRoute(inferSessionEngineRoute(session)) && !unavailableAgentRoute(route)) clearNativeResume(session);
       session.engineRoute = route;
       // 显式「仅此任务」跨回合保留，不能在下次用户发消息时又写成新任务的“上次用的”。
       if (patch.engineRouteScope === 'thread') session.engineRouteScope = 'thread';

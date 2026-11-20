@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ④ 权限桥端到端:workbench(permissionMode=default)+ 真 CLI → Bash 触发 permission_request
 //     → /api/permission/decision 批准 → 回合完成且 echo 结果可见
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -31,7 +31,7 @@ if (localModel) {
   for (const key of Object.keys(process.env)) {
     if (/^(?:ANTHROPIC_|OPENAI_|AZURE_|GOOGLE_|GEMINI_|AWS_|KIMI_|CLAUDE_CODE_)/i.test(key)
       || /API[_-]?KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|OAUTH/i.test(key)
-      || /^(?:NODE_OPTIONS|NODE_EXTRA_CA_CERTS|(?:HTTP|HTTPS|ALL|NO)_PROXY|WCW_FAKE_CLAUDE|CLAUDE_CONFIG_DIR|RUYI_HOME|WIN_CLAUDE_WORKBENCH_HOME|XDG_CONFIG_HOME|XDG_DATA_HOME|XDG_CACHE_HOME)$/i.test(key)) delete process.env[key];
+      || /^(?:NODE_OPTIONS|NODE_EXTRA_CA_CERTS|(?:HTTP|HTTPS|ALL|NO)_PROXY|WCW_FAKE_CLAUDE|CLAUDE_CONFIG_DIR|RUYI_HOME|XDG_CONFIG_HOME|XDG_DATA_HOME|XDG_CACHE_HOME)$/i.test(key)) delete process.env[key];
   }
 }
 
@@ -48,7 +48,7 @@ function kill(p) { if (p && p.pid) try { killOwnTree(p); } catch { /* ignore */ 
 
 function spawnCollect(cmd, args, opts = {}) {
   return new Promise(resolve => {
-    const child = cp.spawn(cmd, args, { windowsHide: true, cwd: opts.cwd || os.tmpdir(), env: opts.env || process.env });
+    const child = cp.spawn(cmd, args, { cwd: opts.cwd || os.tmpdir(), env: opts.env || process.env });
     let out = '', err = '';
     child.stdout.on('data', d => { out += d; });
     child.stderr.on('data', d => { err += d; });
@@ -127,8 +127,7 @@ async function runLocalModel(resolved) {
     }
     return messageEvents({ text: 'CLAUDE_LOCAL_OK', model: req.body.model });
   } });
-  const env = { ...process.env, ...isolated.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home,
-    XDG_CONFIG_HOME: path.join(home, 'xdg-config'), XDG_DATA_HOME: path.join(home, 'xdg-data'), XDG_CACHE_HOME: path.join(home, 'xdg-cache'),
+  const env = { ...process.env, ...isolated.env, RUYI_HOME: home, XDG_CONFIG_HOME: path.join(home, 'xdg-config'), XDG_DATA_HOME: path.join(home, 'xdg-data'), XDG_CACHE_HOME: path.join(home, 'xdg-cache'),
     CLAUDE_CONFIG_DIR: path.join(home, '.claude'), ANTHROPIC_BASE_URL: fake.url, ANTHROPIC_API_KEY: 'synthetic-local-only-key',
     DISABLE_AUTOUPDATER: '1', CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1' };
   const until = async (fn, label) => {
@@ -149,7 +148,7 @@ async function runLocalModel(resolved) {
       includeWorkbenchMcp: true, permissionBridge: true, autoImportClaudeCodeMcp: false, enableMcpDropIn: false,
       stewardEnabledV1: false, schedulerEnabledV1: false, desktopMcp: { enabled: false, autodetect: false }, providers: [], externalMcpServers: [] }));
     const port = await getFreePort();
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, ...env, RUYI_HOME: home }, windowsHide: true, stdio: 'ignore' });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, ...env, RUYI_HOME: home }, stdio: 'ignore' });
     if (!await up(port)) throw new Error('isolated workbench did not start');
     const token = (await post(port, '/api/bootstrap', {}))?.token, hdr = { 'x-wcw-token': token };
     const created = await post(port, '/api/sessions', { title: 'local-real-Claude', cwd: project }, hdr), sessionId = created?.session?.id;
@@ -233,7 +232,7 @@ async function runLocalModel(resolved) {
       providers: [], activeProvider: '', model: 'haiku',
     }, null, 2));
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME },
+      cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
     });
     try {
       ok(await up(PORT), '④ workbench 起服(真 CLI 引擎,无 provider)');

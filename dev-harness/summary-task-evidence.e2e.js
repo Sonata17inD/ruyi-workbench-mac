@@ -7,7 +7,6 @@ const { startFakeProvider, textFrames } = require('./lib/fake-openai-provider');
 const { loadServerInternals } = require('./lib/server-internals');
 const taskHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-summary-task-evidence-'));
 process.env.RUYI_HOME = taskHome;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = taskHome;
 const t = createRunner('SUMMARY TASK EVIDENCE');
 const { ok } = t;
 const s = loadServerInternals(['providerSummaryCall', 'estimateHistoryTokens', 'CompactionPlan', 'summaryTaskSourceHistory', 'chunkHistoryByBudget', 'extractSummaryTaskEvidence', 'renderSessionNotesMarkdown', 'extractSessionNotes', 'mergeSessionNotes', 'buildSessionNotesInjectPrompt']);

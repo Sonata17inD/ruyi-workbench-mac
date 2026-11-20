@@ -35,7 +35,6 @@ const CONFIG = {
   externalMcpServers: [{ id: 'fake', label: 'Fake', command: process.execPath, args: [FAKE_MCP], enabled: true, env: { OWN_KEY: 'own-value' } }],
 };
 fs.writeFileSync(path.join(DATA, 'config.json'), JSON.stringify(CONFIG, null, 2));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
 process.env.RUYI_HOME = DATA;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
@@ -114,7 +113,7 @@ test('[E1] --mcp-config 里直挂的桥接服务器:env 块置空工作台凭据
     const keys = [...Object.keys(planted), 'OWN_KEY', 'PATH'].join(',');
     child = cp.spawn(fake.command, fake.args, {
       env: { ...process.env, ...env, FAKE_MCP_ENV_CAPTURE: ENV_CAPTURE, FAKE_MCP_ENV_CAPTURE_KEYS: keys },
-      stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true,
+      stdio: ['pipe', 'pipe', 'ignore'],
     });
     let row = null;
     for (let i = 0; i < 100 && !row; i++) {
@@ -159,8 +158,8 @@ test('[F1] file_list pattern:灾难性回溯的模式约 2 s 内返回(不冻事
   `;
   const t0 = Date.now();
   const r = cp.spawnSync(process.execPath, ['-e', script], {
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: DATA, RUYI_HOME: DATA, HOME: root, USERPROFILE: root },
-    encoding: 'utf8', timeout: 8000, killSignal: 'SIGKILL', windowsHide: true,
+    env: { ...process.env, RUYI_HOME: DATA, HOME: root, USERPROFILE: root },
+    encoding: 'utf8', timeout: 8000, killSignal: 'SIGKILL',
   });
   const wall = Date.now() - t0;
   assert.ok(!r.error && r.status === 0, `file_list child must finish (status ${r.status}, signal ${r.signal}, ${wall} ms): ${String(r.stderr || '').slice(0, 400)}`);

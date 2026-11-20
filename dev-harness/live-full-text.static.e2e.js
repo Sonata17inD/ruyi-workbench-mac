@@ -165,11 +165,6 @@ ok(stopTurnBody.includes('if (!ownsReceipt()) return;')
   && stopTurnBody.indexOf('if (!ownsReceipt()) return;') < stopTurnBody.indexOf("setProc('stopped')")
   && stopTurnBody.includes('receipt?.ok === true && (receipt.stopped === true || receipt.queuedStopped === true)'),
   'E3b 仅当前执行的成功停止回执能显示已停止，迟到回执不改新执行 UI');
-// 128f-⑫ 重钉 2 → 3：第三处是 reloadCurrentSessionAfterAway —— 管家视角里动过当前这条线程（推送来了、中栏不在屏上），
-// 切回工作台那一刻整份重读一次（审计 E：修前要换一次会话才看得见）。它只在「离开期间来过这条线程的推送」时走一次，
-// 不是第二条轮询；反向：去掉那一笔标记（pushLiveTurn 里 currentChangedWhileAway = true）→ action-feedback R7 红。
-// 134 重钉 3 → 4：第四处是 bindLiveEventStream 里 background.completed 的完成回执 —— 后台命令/子代理跑完那一刻
-// 整份重读一次，把台账合并进来的那条 system 消息画上。同样只在推送到达时走一次，不是轮询；未绑定当前线程的直接返回。
 ok(count(experienceCode, /api\(`\/api\/sessions\/\$\{encodeURIComponent\(id\)\}`\)/g) === 4
   && /async function reloadCurrentSessionAfterAway\(\)/.test(experienceCode),
   `E4 只有 openSession、那一拍、切回工作台重读、后台完成回执这四处会去取会话(实测 ${count(experienceCode, /api\(`\/api\/sessions\/\$\{encodeURIComponent\(id\)\}`\)/g)} 处)`);

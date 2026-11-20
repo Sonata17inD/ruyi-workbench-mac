@@ -4,15 +4,14 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const { killOwnTree } = require('./lib/kill-own-tree');
-const { EventEmitter } = require('node:events');
 const { Readable } = require('node:stream');
 const { createAttachmentEnrichment } = require('../ruyi-workbench/app/backend/attachment-enrichment.cjs');
 const { createStewardPreroute } = require('../ruyi-workbench/app/backend/steward-preroute.cjs');
 const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-openai-provider');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-channels-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
-process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
-const app = loadServerInternals(['LocalSecretCryptoHooks', 'readConfig', 'mutateConfig', 'McpStdioClient', 'handleAudioApiRoutes', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'createKimiAcpRpc', 'writeToChild'], { withEval: true });
+process.env.RUYI_HOME = data;
+const app = loadServerInternals(['LocalSecretCryptoHooks', 'readConfig', 'mutateConfig', 'McpStdioClient', 'handleAudioApiRoutes', 'runSessionTurn', 'runStewardTurn', 'createSession', 'saveSession', 'loadSession', 'stewardImplThreadRead', 'stewardPrerouteIndexRows', 'runAgentExternalCompact', 'compactHistoryFromSession', 'AgentLoopHooks', 'PrivacyGateway', 'writeToChild'], { withEval: true });
 const keychainHelper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root);
 app.LocalSecretCryptoHooks.helperPath = () => keychainHelper;
 const t = createRunner('PRIVACY CHANNELS');
@@ -124,16 +123,9 @@ async function main() {
     try { await app.runSessionTurn({ sessionId: session.id, message: 'Summarize fixture facts.', onEvent: event => events.push(event) }); } catch (error) { cliError = error.code || error.message; }
     app.AgentLoopHooks.unregisterAgentLoopHook('privacy-launch-race'); delete process.env.WCW_FAKE_CLAUDE;
     t.ok(hookRan && !fs.existsSync(marker) && (cliError.includes('privacy.engine_not_supported') || JSON.stringify(events).includes('privacy.engine_not_supported')), 'C1 policy is rechecked after asynchronous hooks and before the real CLI spawn');
-    let written = 0;
-    const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stdout.setEncoding = () => {}; child.stderr = new EventEmitter();
-    child.stdin = { writable: true, destroyed: false, writableEnded: false, on() {}, write() { written++; } };
     app.__eval(`activeChildren.set('privacy-write', { child: { stdin: { writable: true, write() { throw new Error('unexpected write'); } } } });`);
     t.ok(app.writeToChild('privacy-write', { type: 'user', message: sentinel }) === false, 'C2 generic CLI input blocks late steering and tool replies');
-    const rpc = app.createKimiAcpRpc(child); let acpBlocked = false;
-    try { await rpc.request('session/prompt', { prompt: sentinel }, 1000); } catch (error) { acpBlocked = /privacy.engine_not_supported/.test(error.message); }
-    rpc.close?.();
     app.__eval("activeChildren.delete('privacy-write');");
-    t.ok(acpBlocked && written === 0, 'C3 Kimi ACP refuses old-process prompt writes before bytes reach stdin');
 
     const summaryCalls = [], summaryText = '## Goal\nSynthetic task\n## Decisions\nNone\n## Open\nNone\n## Current Status\nDone: checked\nIn progress: none\nBlocked: none\nNext step: continue\n## Files\nNone';
     summaryServer = http.createServer(async (req, res) => {

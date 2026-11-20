@@ -26,7 +26,7 @@ function fixture(t) {
   fs.writeFileSync(path.join(image, 'trial-manifest.json'), JSON.stringify(trial));
   return { root, image, trial };
 }
-test('trial integrity binds guides, payload, policy, provenance and the one explicit Applications shortcut', { skip: process.platform === 'win32' }, t => {
+test('trial integrity binds guides, payload, policy, provenance and the one explicit Applications shortcut', t => {
   const { image, trial } = fixture(t);
   assert.equal(verifyTrialDirectory(image).manifest.variant, 'slim');
   fs.writeFileSync(path.join(image, 'INSTALL-CN.txt'), 'changed'); assert.throws(() => verifyTrialDirectory(image), /guide/);
@@ -38,21 +38,21 @@ test('trial integrity binds guides, payload, policy, provenance and the one expl
   assert.throws(() => verifyTrialDirectory(image), /provenance fields/);
   fs.writeFileSync(path.join(image, 'trial-manifest.json'), JSON.stringify({ ...trial, notarized: true })); assert.throws(() => verifyTrialDirectory(image), /policy/);
 });
-test('new-location installation refuses existing directories and dangling links without changing them', { skip: process.platform === 'win32' }, t => {
+test('new-location installation refuses existing directories and dangling links without changing them', t => {
   const { root, image } = fixture(t); const applications = path.join(root, 'Applications'); fs.mkdirSync(applications);
   const destination = path.join(applications, 'Ruyi.app'); fs.mkdirSync(destination); fs.writeFileSync(path.join(destination, 'keep'), 'original');
   assert.throws(() => installTrial(image, applications), /EEXIST/); assert.equal(fs.readFileSync(path.join(destination, 'keep'), 'utf8'), 'original');
   fs.rmSync(destination, { recursive: true }); fs.symlinkSync('missing', destination);
   assert.throws(() => installTrial(image, applications), /EEXIST/); assert.equal(fs.readlinkSync(destination), 'missing');
 });
-test('resource-bearing code targets resolve to the correct nearest app/framework container', { skip: process.platform === 'win32' }, () => {
+test('resource-bearing code targets resolve to the correct nearest app/framework container', () => {
   const app = path.resolve('/tmp/Ruyi.app');
   assert.equal(signatureTarget(app, 'Contents/MacOS/RuyiDesktop'), app);
   assert.equal(signatureTarget(app, 'Contents/Resources/Chrome.app/Contents/MacOS/Chrome'), path.join(app, 'Contents/Resources/Chrome.app'));
   assert.equal(signatureTarget(app, 'Contents/Resources/Foo.framework/Versions/1/Foo'), path.join(app, 'Contents/Resources/Foo.framework'));
   assert.equal(signatureTarget(app, 'Contents/Resources/module.so'), path.join(app, 'Contents/Resources/module.so'));
 });
-test('distribution verification refuses corrupt images, sidecars and provenance before mounting', { skip: process.platform === 'win32' }, t => {
+test('distribution verification refuses corrupt images, sidecars and provenance before mounting', t => {
   const { image, trial } = fixture(t); const name = 'trial.dmg'; fs.writeFileSync(path.join(image, name), 'fake image bytes');
   const hash = sha256(path.join(image, name)); const data = { ...trial, image: name, imageSha256: hash, imageBytes: fs.statSync(path.join(image, name)).size };
   fs.writeFileSync(path.join(image, name + '.sha256'), hash + '  ' + name + '\n'); fs.writeFileSync(path.join(image, 'distribution.json'), JSON.stringify(data));

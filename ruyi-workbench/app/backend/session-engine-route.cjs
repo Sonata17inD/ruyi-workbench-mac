@@ -1,5 +1,5 @@
 'use strict';
-const { normalizeAgentCliType } = require('./agent-cli-types.cjs');
+const { isAgentCliType } = require('./agent-cli-types.cjs');
 
 // Conversation engine/model selection belongs to the session, not to whichever global selector was
 // touched most recently. The global config remains the default for NEW sessions; existing sessions keep
@@ -12,8 +12,8 @@ function normalizeSessionEngineRoute(raw) {
     return providerId ? { engine: 'openai', providerId, model } : null;
   }
   if (raw.engine === 'agent' || raw.engine === 'claude') {
-    // 登记过的 CLI 类型原样保留,其余归 claude(01f normalizeAgentCliType;修前是 `=== 'kimi' ? 'kimi' : 'claude'`)。
-    const agentCliType = normalizeAgentCliType(raw.agentCliType);
+    const agentCliType = typeof raw.agentCliType === 'string' && raw.agentCliType.trim()
+      ? raw.agentCliType.trim().slice(0, 128) : 'claude';
     return { engine: 'agent', agentCliType, model };
   }
   return null;
@@ -44,6 +44,19 @@ function inferSessionEngineRoute(session) {
   return null;
 }
 
+function unavailableAgentRoute(route) {
+  return route?.engine === 'agent' && !isAgentCliType(route.agentCliType);
+}
+
+function clearNativeResume(session) {
+  session.claudeSessionId = null;
+  delete session.claudeSessionModel;
+  delete session.claudeSessionRequestedModel;
+  delete session.claudeSessionCwd;
+  delete session.claudeSessionRouteKey;
+  session.injectedIndexHash = null;
+}
+
 function configForSessionEngineRoute(config, session) {
   const route = inferSessionEngineRoute(session);
   if (!route) return config;
@@ -62,25 +75,6 @@ function configForSessionEngineRoute(config, session) {
 }
 
 function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEvent }) {
-  // ── 123-N2「新线程默认上一次用的引擎」(用户 2026-09-13 真机原话:「现在新开线程会默认开 Kimi
-  // code cli,我希望改成默认上一次用的或者别的方式,不要设定死」)────────────────────────────────
-  //
-  // 病根:createSession 的缺省【只有】 sessionEngineRouteFromConfig(config) 这一条路 —— 全局
-  // activeProvider/agentCliType/model 三项设置。用户在线程头上把引擎切成别的,那个选择只活在
-  // 那一条线程头上,下一条新线程照旧回到全局那一项(用户机器上 agentCliType 是 kimi),这就是
-  // 「写死」。修法不是改全局默认值(那只是把写死换了个值),而是给新线程的缺省【加一层可选来源】。
-  //
-  // 记(rememberLastUsedEngineRoute)与读(newSessionEngineRoute)分两处,共用 config 上的一个字段。
-  // ────────────────────────────────────────────────────────────────────────────────────────
-  // 记:**两个写入点共用这一个函数**,不许各写一遍。
-  //   ① 用户在线程头上换引擎/模型 → PATCH /api/sessions/:id → applySessionMetaPatch;
-  //   ② 用户自己发起的回合 → 10 的 runSessionTurn 且 source === 'http'。
-  // 三条纪律:
-  //   · 只记【用户自己的意思表示】。管家(source 'steward')与将来的调度器(source 'scheduler')
-  //     派出去的回合一概不记 —— 判据在调用点那个 if,不在这里(这里拿到的就是「该记的那一条」);
-  //   · 【与现值不同才落盘】,否则每个回合都要写一次 config.json;权威比对在 mutateConfig 的锁内
-  //     再做一次(锁外那一次只是拿调用方手上的现成副本做便宜短路,可能已经陈旧);
-  //   · 【失败静默】。这是旁路记账 —— 写不进去最多是下一条新线程回落全局,绝不能弄坏回合或 PATCH。
   async function rememberLastUsedEngineRoute(nextRoute, knownConfig) {
     try {
       const clean = normalizeSessionEngineRoute(nextRoute);
@@ -108,6 +102,7 @@ function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEven
     if (route.engine === 'openai') {
       return ((config && config.providers) || []).some(item => item && item.id === route.providerId);
     }
+    if (route.agentCliType !== 'claude') return false;
     const cli = selectedAgentCli({ ...(config || {}), agentCliType: route.agentCliType });
     return Boolean(cli && cli.path);
   }
@@ -129,6 +124,7 @@ function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEven
     if (!config || config.newThreadEngine !== 'last') return fromGlobal;
     const last = normalizeSessionEngineRoute(config.lastUsedEngineRoute);
     if (!last) return fromGlobal;
+    if (unavailableAgentRoute(last)) return last;
     if (lastUsedEngineRouteUsable(last, config)) return last;
     logEvent({
       kind: 'new_thread_engine_fallback',
@@ -145,5 +141,5 @@ function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEven
 
 module.exports = {
   normalizeSessionEngineRoute, sessionEngineRouteFromConfig, inferSessionEngineRoute, configForSessionEngineRoute,
-  createSessionRoutePreferences,
+  createSessionRoutePreferences, clearNativeResume, unavailableAgentRoute,
 };

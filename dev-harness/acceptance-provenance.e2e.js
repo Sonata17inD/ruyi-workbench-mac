@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 反向(本件写作时逐条真做过):把 provenance 恒写 'self' → (a)(c)(d) 红;把「机器检查」的判据换回
 // 「有 check.type 就算」→ (b) 红;拔掉 ETag 里的容器指纹 → (d) 的条件 GET 拿到 304 → 红;
 // 在 13k 里加一处 patchMissionContainer → (f) 单写入口锁红。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -46,7 +46,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 6, version: '1.0.0', permissionMode: 'bypass' }, null, 2));
   const deliverable = path.join(HOME, 'deliverable.md');
   fs.writeFileSync(deliverable, '# 交付物\n');
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
   const H = token => ({ 'x-wcw-token': token });
@@ -290,17 +290,15 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
       'f4 前端零处按 checkType 自己推来源(推导只许在服务端那一份)');
     ok(/acceptanceRecorded/.test(facts) && (drawer.match(/acceptanceUnrecorded/g) || []).length === 2,
       'f4 「未记录验收」两处都在(干到哪那一行 + 空清单),判据取 acceptanceRecorded');
-    // f5:四份 locale 逐字齐备。
+    // f5:两份 locale 逐字齐备。
     const locales = [
-      path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), path.resolve(__dirname, '..', 'docs', 'i18n', 'locales', 'zh-CN.json'),
-      path.join(WB, 'app', 'public', 'locales', 'en-US.json'), path.resolve(__dirname, '..', 'docs', 'i18n', 'locales', 'en-US.json'),
+      path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'),
+      path.join(WB, 'app', 'public', 'locales', 'en-US.json'),
     ].map(file => JSON.parse(fs.readFileSync(file, 'utf8')));
     const keys = ['acceptanceUnrecorded', 'provenanceMachine', 'provenanceHuman', 'provenanceSelf',
       'provenanceSelfCheckNever', 'provenanceSelfCheckFailed', 'provenanceCheckedAt'].map(k => 'stewardShell.drawer.' + k);
     ok(keys.every(key => locales.every(pack => typeof pack[key] === 'string' && pack[key].trim())),
-      'f5 七条新键四份 locale 齐备');
-    ok(keys.every(key => locales[0][key] === locales[1][key] && locales[2][key] === locales[3][key]),
-      'f5 app 与 docs 两份逐字一致');
+      'f5 七条新键两份 locale 齐备');
   } catch (e) { console.log('ERROR ' + (e && e.stack || e.message || e)); fail++; }
   finally {
     for (const c of procs) killp(c);

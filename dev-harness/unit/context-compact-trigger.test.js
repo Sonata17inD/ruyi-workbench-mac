@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const vm = require('vm');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-trigger-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
 const { createAgentAutoCompaction } = require(path.join(app, 'backend', 'agent-auto-compaction.cjs'));
@@ -38,26 +38,10 @@ function agentTrigger(extra = {}) {
     agentConversationContextMeta: srv.agentConversationContextMeta,
     runAgentExternalCompact: async (...args) => { calls.push(args); return { ok: true, beforeTokens: 800000, afterTokens: 3000 }; },
     loadSession: async () => ({ id: 'test', claudeSessionId: '', messages: [] }),
-    kimiSessionStatus: async () => ({ ok: false }),
-    applyKimiStatusToSession: () => {},
     ...extra,
   };
   const run = createAgentAutoCompaction(context);
-  // 架构还债批 4:第三个参数是该 CLI 的适配器(05 AGENT_CLI_ADAPTERS)。用真适配器,只把「原生状态/原生压缩」两项能力
-  // 换成走本沙箱里的桩(与修前直接桩 kimiSessionStatus / applyKimiStatusToSession 的口径相同)。
-  const adapterFor = type => {
-    const real = srv.agentCliAdapter(type);
-    return {
-      ...real,
-      contextStatus: real.contextStatus && {
-        ...real.contextStatus,
-        read: (config, session) => context.kimiSessionStatus(config, session.claudeSessionId, session.claudeSessionModel),
-        apply: (session, status) => context.applyKimiStatusToSession(session, status),
-      },
-      nativeCompact: real.nativeCompact && { ...real.nativeCompact, run: async () => assert.fail('native compaction is not expected in these cases') },
-    };
-  };
-  return { calls, events, run: (session, config, type = 'claude') => run(session, config, adapterFor(type), e => events.push(e)) };
+  return { calls, events, run: (session, config, type = 'claude') => run(session, config, srv.agentCliAdapter(type), e => events.push(e)) };
 }
 
 test('241K/1M with a 128K local summarizer does not compact or mutate the session', async () => {
@@ -143,7 +127,7 @@ test('measured windows from another engine or model never control the active con
   const config = configFor(0);
   for (const usage of [
     { contextEngine: 'openai', contextProviderId: 'local', contextModel: config.model },
-    { contextEngine: 'agent', contextAgentCliType: 'kimi', contextModel: config.model },
+    { contextEngine: 'agent', contextAgentCliType: 'retired-driver', contextModel: config.model },
     { contextEngine: 'agent', contextAgentCliType: 'claude', contextModel: 'other-model' },
   ]) {
     const meta = await srv.agentConversationContextMeta(config, sessionAt(241000, { ...usage, contextWindow: 1000000 }));
@@ -153,21 +137,12 @@ test('measured windows from another engine or model never control the active con
 
 test('override identity isolates engine/provider/model and supports the CLI default route', async () => {
   const config = configFor();
-  assert.equal(srv.configuredConversationWindow(config, 'agent', 'kimi', config.model), 0);
+  assert.equal(srv.configuredConversationWindow(config, 'agent', 'retired-driver', config.model), 0);
   assert.equal(srv.configuredConversationWindow(config, 'openai', 'claude', config.model), 0);
   assert.equal(srv.configuredConversationWindow(config, 'agent', 'claude', 'other-model'), 0);
   config.model = '';
   config.contextWindowOverrides[key('agent', 'claude', '')] = 1000000;
   assert.equal((await srv.agentConversationContextMeta(config, sessionAt(241000))).contextWindow, 1000000);
-});
-
-test('Kimi native status provides usage without replacing an explicit conversation limit', async () => {
-  const config = configFor();
-  config.agentCliType = 'kimi';
-  config.contextWindowOverrides[key('agent', 'kimi', config.model)] = 1000000;
-  const trigger = agentTrigger({ kimiSessionStatus: async () => ({ ok: true, contextTokens: 241000, contextWindow: 262144 }) });
-  assert.equal(await trigger.run(sessionAt(241000), config, 'kimi'), false);
-  assert.equal(trigger.calls.length, 0);
 });
 
 test('provider trigger consumes main-model override, not the summarizer window', async () => {
@@ -200,7 +175,7 @@ test('provider learned safety caps remain authoritative over manual conversation
 });
 
 test('config normalization bounds and validates persisted overrides; Auto zero survives', () => {
-  const a = key('agent', 'claude', 'a'), b = key('openai', 'local', 'b'), c = key('agent', 'kimi', 'c');
+  const a = key('agent', 'claude', 'a'), b = key('openai', 'local', 'b'), c = key('agent', 'retired-driver', 'c');
   const { config } = srv.normalizeConfig({ contextWindowOverrides: {
     [a]: 1, [b]: 3000000, [c]: 0, invalid: 1000000,
     '["wrong","claude","x"]': 1000000, '["agent","claude",42]': 1000000,
@@ -232,6 +207,11 @@ function frontend(config = configFor(), legacy = {}) {
   return { state, ui, api, calls, storage, load };
 }
 
+test('no context limit is shown until status or current-route usage reports it', () => {
+  const f = frontend(configFor(0));
+  assert.equal(f.ui.ctxWindow(), undefined);
+});
+
 test('legacy browser-only 1M is persisted before use and removed only after success', async () => {
   const config = configFor(); config.contextWindowOverrides = {};
   const f = frontend(config, { 'wcw.ctxWindow::ark-code-latest': '1000000' });
@@ -262,7 +242,7 @@ test('manual save captures its route and serializes rapid edits without losing o
   await Promise.all([first, second]);
   assert.equal(f.state.config.contextWindowOverrides[key('agent', 'claude', 'ark-code-latest')], 1000000);
   assert.equal(f.state.config.contextWindowOverrides[key('agent', 'claude', 'other-model')], 128000);
-  f.state.config.agentCliType = 'kimi';
+  f.state.config.agentCliType = 'retired-driver';
   assert.equal(f.ui.ctxWindowManual(), 0);
 });
 
@@ -286,7 +266,7 @@ test('Auto ignores obsolete manual/external usage and rejects status from anothe
   f.state.shownUsage.source = 'native';
   f.state.shownUsage.contextWindowSource = 'manual';
   assert.equal(f.ui.ctxWindow(), 777000);
-  f.state.status.contextWindowResolved.agentCliType = 'kimi';
+  f.state.status.contextWindowResolved.agentCliType = 'retired-driver';
   assert.notEqual(f.ui.ctxWindow(), 777000);
 });
 
@@ -311,4 +291,20 @@ test('send waits for limit persistence; on failure it preserves the draft and at
   assert.equal(f.state.attachments.length, 1);
   assert.equal(runtime.activeTurns.size, 0);
   assert.deepEqual(toasts, [['save failed', 'err']]);
+});
+
+test('retired session driver keeps its draft and cannot start native compaction', async () => {
+  const f = frontend(), draft = { value: 'pending' }, notices = [];
+  f.state.currentSession = { id: 'old-session', messages: [{ role: 'user', content: 'history' }] };
+  f.state.attachments = [];
+  const runtime = f.load('chat-stream-runtime.js', 'createChatStreamRuntime')({
+    state: f.state, $: () => draft, currentEngineMeta: () => ({ agentCliType: 'retired-driver' }),
+    isProviderMode: () => false, agentCliMeta: agentCliRegistry.agentCliMeta,
+    syncContextWindowManual: async () => {}, toast: text => notices.push(text), t: (key, opts) => opts.id,
+  });
+  await runtime.sendPrompt();
+  await runtime.compactContext();
+  assert.deepEqual(notices, ['retired-driver', 'retired-driver']);
+  assert.equal(draft.value, 'pending');
+  assert.equal(runtime.activeTurns.size, 0);
 });

@@ -96,7 +96,7 @@ ok(stable.length < 1900, 'D3 stable 长度 < 1900(稳定层轻量:身份+工具�
 // 145-W3(引擎运行环境说明,intentional snapshot 更新):为什么改——用户要求各引擎的线程都知道自己在如意里、
 // 有什么能力;provider 这一路身份层/运行时身份层早已有,只缺「界面会把 mermaid 画成图」(版本级常量 -> 稳定层)
 // 与「当前权限档含义」(随配置变 -> 易变层),rg 那一格改为说清终端里能否直接敲 rg。三件都从 06 buildEngineEnvBrief
-// 同一张事实表出,Claude/Kimi 的 <ruyi-environment> 用的也是它(那两个变体由 engine-env-brief.static 钉)。
+// 同一张事实表出,Claude 的 <ruyi-environment> 用的也是它(那两个变体由 engine-env-brief.static 钉)。
 ok(stable.includes('```mermaid') && /画成图/.test(stable), 'D3b 145-W3 stable 含 mermaid 成图一句(版本级常量,稳定层)');
 // 2026-10-04(intentional snapshot 更新):五路走查里模型写的图画不出来,最常见的是标签带括号 / 斜杠 / 冒号没加引号、
 // 注释挂在行尾,其次是横向流程图一长条在消息栏里缩得看不清 —— 成图那一句补三条写法建议,让模型一次写对

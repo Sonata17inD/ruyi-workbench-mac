@@ -3,10 +3,9 @@
 // EC-D：主题、界面密度、工作区选择与最近工作区领域。
 import { state } from './state.js';
 import { api } from './net.js';
-import { $, el, toast, visibleFavoriteWorkspaces, stripWrappingQuotes, looksAbsolutePath } from './util.js';   // 两个纯判定住 util.js：顶栏粘贴路径与设置页「添加/默认工作文件夹」共用同一口径
+import { $, el, toast, visibleFavoriteWorkspaces, workspaceKey, stripWrappingQuotes, looksAbsolutePath } from './util.js';   // 两个纯判定住 util.js：顶栏粘贴路径与设置页「添加/默认工作文件夹」共用同一口径
 import { t } from './i18n.js';
 import { icon } from './icons.js';
-import { isMacHost } from './host-bridge.js';
 
 export function createWorkspacePreferencesDomain({
   apiErrText = error => String(error && error.message || error || ''),
@@ -122,22 +121,13 @@ function renderWorkspacePicker() {
   // v2.7.2: 文件面板常用工作区 chips 与顶栏选择器同步刷新(boot/会话切换/工作区变更均经此)。
   renderWorkspaceFavChips();
 }
-// 代码走查 C14:同一个文件夹带不带结尾的「\」、用「\」还是「/」都是同一个(Windows 不分大小写)。修前只比小写,
-// 粘贴一个带结尾斜杠的路径就多出一条重复的常用文件夹。存的时候去掉结尾分隔符(盘符根 C:\ 与 / 保留)。
-const folderKey = p => isMacHost() ? trimFolderPath(p) : String(p || '').trim().replace(/[\\/]+$/, '').replace(/\\/g, '/').toLowerCase();
-function trimFolderPath(p) {
-  const s = isMacHost() ? String(p || '') : String(p || '').trim();
-  const stripped = s.replace(isMacHost() ? /\/+$/ : /[\\/]+$/, '');
-  if (!stripped || /^[A-Za-z]:$/.test(stripped)) return s.slice(0, stripped.length + 1);
-  return stripped;
-}
 // LRU-insert a path at the front of config.recentWorkspaces (≤10, de-duped case-insensitively).
 // Persistence is deliberately owned by setWorkspace, which writes recentWorkspaces + favorite workspaces in
 // one POST. The old two-fire-and-forget-write path could race and resurrect the stale favorite list on restart.
 function pushRecentWorkspace(p) {
   if (!p) return [];
   const prev = Array.isArray(state.config.recentWorkspaces) ? state.config.recentWorkspaces : [];
-  const filtered = prev.filter(w => folderKey(w) !== folderKey(p));
+  const filtered = prev.filter(w => workspaceKey(w) !== workspaceKey(p));
   const next = [p, ...filtered].slice(0, 10);
   state.config.recentWorkspaces = next;
   return next;
@@ -148,24 +138,22 @@ function pushRecentWorkspace(p) {
 let workspaceSelection = 0;
 let workspaceWrites = Promise.resolve();
 async function setWorkspace(dir, { alsoDefault = false } = {}) {
-  dir = trimFolderPath(dir);
+  dir = workspaceKey(dir);
   if (!dir) return;
   const selection = ++workspaceSelection;
   const targetSession = state.currentSession;
   let aliases = new Set();
   let preferredFavorite = null;
-  if (isMacHost()) {
-    try {
-      const resolved = await api('/api/workspace/resolve', { method: 'POST', body: JSON.stringify({ selectedPath: dir }) });
-      if (selection !== workspaceSelection || state.currentSession !== targetSession) return;
-      if (!resolved?.ok || !resolved.path) throw new Error(resolved?.error || t('common.unknown'));
-      dir = resolved.path;
-      aliases = new Set(resolved.aliases || [dir]);
-      preferredFavorite = resolved.favorite || null;
-    } catch (error) {
-      if (selection === workspaceSelection && state.currentSession === targetSession) toast(t('workspace.switch.failed', { reason: apiErrText(error) }), 'err');
-      return;
-    }
+  try {
+    const resolved = await api('/api/workspace/resolve', { method: 'POST', body: JSON.stringify({ selectedPath: dir }) });
+    if (selection !== workspaceSelection || state.currentSession !== targetSession) return;
+    if (!resolved?.ok || !resolved.path) throw new Error(resolved?.error || t('common.unknown'));
+    dir = resolved.path;
+    aliases = new Set(resolved.aliases || [dir]);
+    preferredFavorite = resolved.favorite || null;
+  } catch (error) {
+    if (selection === workspaceSelection && state.currentSession === targetSession) toast(t('workspace.switch.failed', { reason: apiErrText(error) }), 'err');
+    return;
   }
   const commit = async () => {
     if (selection !== workspaceSelection || state.currentSession !== targetSession) return;
@@ -188,14 +176,14 @@ async function setWorkspace(dir, { alsoDefault = false } = {}) {
     const ws = (Array.isArray(state.config.workspaces) ? state.config.workspaces : [])
       .filter(w => w.path === dir || !aliases.has(w.path))
       .map(w => ({ path: w.path, read: w.read !== false, write: w.write !== false, execute: w.execute !== false }));
-    let idx = ws.findIndex(w => folderKey(w.path) === folderKey(dir));
+    let idx = ws.findIndex(w => workspaceKey(w.path) === workspaceKey(dir));
     if (idx < 0) { ws.push({ path: dir, read: true, write: true, execute: true }); idx = ws.length - 1; }
     if (preferredFavorite) ws[idx] = preferredFavorite;
     if (alsoDefault && idx > 0) { const [x] = ws.splice(idx, 1); ws.unshift(x); }
     const defaultWorkspace = alsoDefault ? dir : (ws[0]?.path || state.config.defaultWorkspace || dir);
     state.config.workspaces = ws;
     state.config.defaultWorkspace = defaultWorkspace;
-    await saveConfigPartial({ recentWorkspaces: recent, workspaces: ws, defaultWorkspace });
+    if (!await saveConfigPartial({ recentWorkspaces: recent, workspaces: ws, defaultWorkspace })) return;
     if (selection !== workspaceSelection || state.currentSession !== targetSession) return;
     if (alsoDefault) {
       // 同步设置面板的默认工作区输入框：fillSettings 仅在 boot 与 doctor tab 时被调，
@@ -207,6 +195,7 @@ async function setWorkspace(dir, { alsoDefault = false } = {}) {
     const treeTabActive = document.querySelector('.tool-pane .tool-tabs button[data-tab="files"]')?.classList.contains('active');
     if (treeTabActive) loadFileTree();
     toast(t('workspace.switch.success', { directory: dir }), 'ok');
+    return dir;
   };
   const pending = workspaceWrites.then(commit);
   workspaceWrites = pending.catch(() => {});
@@ -267,8 +256,7 @@ function favoriteList() {
 }
 function workspaceShortName(p) {
   const s = String(p || '');
-  if (isMacHost()) return trimFolderPath(s).split('/').pop() || s;
-  return s ? (s.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || s) : '';
+  return workspaceKey(s).split('/').pop() || s;
 }
 function persistWorkspaces(ws, defaultPath) {
   state.config.workspaces = ws;
@@ -295,7 +283,7 @@ function reorderFavorite(from, to) {
 // 置顶 = 设为最高优先级(同时也是默认工作区)。
 function promoteFavorite(dir) {
   const ws = allFavorites();
-  const idx = ws.findIndex(w => folderKey(w.path) === folderKey(dir));
+  const idx = ws.findIndex(w => workspaceKey(w.path) === workspaceKey(dir));
   if (idx <= 0) return; // 已在首位或不存在
   const [x] = ws.splice(idx, 1); ws.unshift(x);
   persistWorkspaces(ws, x.path);
@@ -344,7 +332,7 @@ function renderFavoritesInto(close) {
       const p = String(w.path || ''); if (!p) return;
       const after = fn => () => { fn(); refresh(); };
       list.append(workspaceRow(p, {
-        current: folderKey(p) === folderKey(cur),
+        current: workspaceKey(p) === workspaceKey(cur),
         onPick: pick,
         actions: [
           { icon: 'up', title: t('workspace.favorites.up'), disabled: i === 0, run: after(() => reorderFavorite(i, i - 1)) },
@@ -359,12 +347,12 @@ function renderFavoritesInto(close) {
 }
 // 「最近用过」:config.recentWorkspaces 里不在常用工作区的那几条(最多 4 条)。选中后 setWorkspace 会顺手把它加进常用。
 function recentOnlyWorkspaces() {
-  const fav = new Set(allFavorites().map(w => folderKey(w.path)));
+  const fav = new Set(allFavorites().map(w => workspaceKey(w.path)));
   const recent = Array.isArray(state.config && state.config.recentWorkspaces) ? state.config.recentWorkspaces : [];
   const seen = new Set();
   const out = [];
   for (const p of recent) {
-    const key = folderKey(p);
+    const key = workspaceKey(p);
     if (!p || fav.has(key) || seen.has(key)) continue;
     seen.add(key);
     out.push(String(p));
@@ -381,7 +369,7 @@ function renderWorkspaceFavChips() {
   if (!ws.length) return;
   ws.forEach(w => {
     const p = String(w.path || ''); if (!p) return;
-    const chip = el('button', 'ws-fav-chip' + (folderKey(p) === folderKey(cur) ? ' current' : ''), workspaceShortName(p));
+    const chip = el('button', 'ws-fav-chip' + (workspaceKey(p) === workspaceKey(cur) ? ' current' : ''), workspaceShortName(p));
     chip.type = 'button'; chip.title = p;
     chip.onclick = () => setWorkspace(p);
     box.append(chip);

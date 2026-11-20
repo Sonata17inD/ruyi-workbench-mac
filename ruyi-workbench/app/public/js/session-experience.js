@@ -928,20 +928,6 @@ function openBulkCleanupModal() {
 }
 
 /* ---------------- message rendering ---------------- */
-let kimiContextRefreshSeq = 0;
-function refreshKimiContextForSession(session) {
-  // `agentCliType` is only the fallback Agent driver. While an OpenAI-compatible Provider is active,
-  // its compacted providerHistory is authoritative; a late Kimi status response must not restore the
-  // pre-compaction numerator over the freshly reloaded Provider usage row.
-  if (!session || isProviderMode() || !agentCliMeta(currentEngineMeta().agentCliType).statusEndpoint || !session.id) return;
-  const sid = session.id;
-  const seq = ++kimiContextRefreshSeq;
-  api(`${agentCliMeta(currentEngineMeta().agentCliType).statusEndpoint}?sessionId=${encodeURIComponent(sid)}`).then(result => {
-    if (seq !== kimiContextRefreshSeq || state.currentSession?.id !== sid || !result?.ok || !result.usage) return;
-    state.shownUsage = result.usage;
-    renderContextMeter(result.usage);
-  }).catch(() => {});
-}
 /* ---------------- 117m-A5：在途回合的临时气泡（用户第六轮走查①「看全文，还是啥也看不到」） ------- */
 // 根因：助手消息在【回合收尾】才落盘，而管家派出去的回合没有任何客户端挂在它的流上。用户真机上那条
 // 线程跑了 15 分钟、53 次工具调用，sessions/<id>.messages.ndjson 只有那条 user 消息一行；经典壳
@@ -1302,6 +1288,7 @@ function reconcileMessageChildren(box, wanted) {
   while (cur) { const next = cur.nextSibling; box.removeChild(cur); cur = next; }
 }
 function renderCurrentSession() {
+  document.dispatchEvent(new Event('ruyi:session-view'));
   const session = state.currentSession;
   state.shownUsage = null;
   $('sessionTitle').textContent = isUntitledTitle(session?.title) ? t('session.untitled') : session.title.trim(); $('sessionTitle').title = $('sessionTitle').textContent; // 121-K8（§13.7 ⑤）：未命名线程的回落不再是 navigation.workbench「工作台」——那是视角名，印在线程标题上等于说「这条线程叫工作台」
@@ -1327,7 +1314,6 @@ function renderCurrentSession() {
     box.replaceChildren(buildEmptyState());
     settleLog();
     renderContextMeter(null);
-    refreshKimiContextForSession(session);
     return;
   }
   // v1.0-S7 / 第77波(perf): render only a count/weight bounded tail so opening a long or payload-heavy
@@ -1375,7 +1361,6 @@ function renderCurrentSession() {
   // 新建的行在文档外画好、刚挂上:布局已被 restoreScrollAnchor 算过,视口附近的代码块当场高亮(懒高亮的回调晚一帧,会闪一下)。
   highlightIn(box, { nearView: true });
   renderContextMeter(latestUsage(session));
-  refreshKimiContextForSession(session);
   // 不只在 openSession 回放：开机语言随后切换、外部回合收尾或离开视角后返回，都会重建消息行。
   // 候选仍在服务端 pending 时，重画完也要把卡恢复；同一 proposalId 已在页面上时恢复器会去重。
   // 自己或别处的回合仍在跑时不画，等最终正文落到这个渲染入口再恢复。

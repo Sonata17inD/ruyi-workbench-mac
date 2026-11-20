@@ -27,7 +27,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 结构:前半真服务(HTTP 面 D/E),后半进程内直调(工具面 A/B/C)—— 与 steward-runner.e2e.js 同款。
 // 端口全部 getFreePort()。判定行:`STEWARD GUARDRAILS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -135,7 +135,7 @@ try {
   /* ══════════════════════ HTTP 阶段 ══════════════════════ */
   console.log('── HTTP 阶段(真服务)──');
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, USERPROFILE: HOME, HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME },
   });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
@@ -472,7 +472,6 @@ await sleep(400);
 
 /* ══════════════════════ 进程内阶段 ══════════════════════ */
 console.log('── 进程内阶段(工具面直调)──');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 // 117z-E2b(债 ④):进程内直调同样把 homedir 指到临时目录 —— 与上面起服的 env 同一道守卫。
 process.env.USERPROFILE = HOME;
@@ -746,21 +745,6 @@ try {
     const SID_QUICK = 'sess_real_quick';
     craftThread(SID_QUICK, { kind: 'quick_ask', title: '这台机器上装了什么', turnSeq: 1, stewardQuick: { schema: 1, askedAt: new Date().toISOString(), question: '装了什么', stewardTurnKey: 't1', closedAt: null } });
     const quick = await call('steward_thread_status', { sessionId: SID_QUICK }, stewardCtx());
-    // 117r-D5 重钉(逐对交代,H3/H4 两条一起):
-    // 原来 H3 断言 `quick.state === 'quick_ask'`、H4 断言 `quick.stateLabel === '速查中'`。
-    // 理由:D5 把五态的第 0 条守卫从「kind 是不是速查」换成「调用方有没有这条线程的事实」——
-    // 「速查」是这条线程【是什么】(kind),不是它【在干什么】(state)。这条夹具线程 turnSeq 1、
-    // 无账本、此刻没在跑 = 跑完了,所以它如实说「已收工」。原来那两条钉的正是本刀要修的症状
-    // (一条三小时前就跑完的速查线程永远只会说「速查中」),不是被误伤的正确行为。
-    // 原断言的【意图】是「速查这个身份只属于带 stewardQuick 的线程,普通会话别想蹭」。这个意图
-    // 一个字没变,只是它现在住在 kind 那一栏而不是 state 那一栏,所以下面用【更强】的方式钉它:
-    //   · H3   :状态如实(跑完就说 done),不再被 kind 短路;
-    //   · H3b  :身份仍然分得开 —— 同一发 thread_status 里,真速查线程的 stateSources.kind 是
-    //            'quick_ask',而 H2 那条普通会话是 'mission'。原来只钉了真速查这一侧,现在两侧
-    //            对照着钉,普通会话哪天又蹭上这个身份照样必红;
-    //   · H4   :人话跟着真状态走(已收工);
-    //   · H4b  :§8.1 第 7 条那条纪律仍然钉在它唯一的产出点上 —— 只要还有人拿到 quick_ask,
-    //            服务端给的人话就必须是「速查中」而不是「速问」。
     ok(quick && quick.state === 'done',
       `H3 跑完的速查线程如实说已收工,不再被 kind 短路(got ${quick && quick.state})`);
     ok(quick && quick.stateSources && quick.stateSources.kind === 'quick_ask'
@@ -821,7 +805,7 @@ try {
     ok(autoSet && /改文件|跑命令/.test(String(autoSet.message || '')),
       `J6 人话写明「它可以在你不在时改文件、跑命令」(§8.6 那段话;got ${autoSet && autoSet.message})`);
     ok(autoSet && autoSet.permissionMode === 'auto', 'J6b 信封带上被拒的档位(界面据此说人话)');
-    const otherConfirm = await call('steward_config_set', { patch: { agentCliType: 'kimi' } }, stewardCtx());
+    const otherConfirm = await call('steward_config_set', { patch: { agentCliType: 'claude' } }, stewardCtx());
     ok(otherConfirm && otherConfirm.error === 'propose_required' && otherConfirm.reason === 'confirm_required',
       `J7 其它 confirm 档键仍走通用口径(两条口径不混;got ${otherConfirm && (otherConfirm.reason || otherConfirm.error)})`);
     // 收紧不需要专门确认(与 13d/13 那两道门同口径)。
@@ -912,9 +896,6 @@ try {
       'I1b 审计事件写清楚当时会话还在不在活回合/收尾窗口里');
     // copy P1-1:前端的 ※ 脚注优先读后端给的人话标签。
     const conv = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'steward-conversation.js'), 'utf8');
-    // 117j copy-P1-1 重钉：中间多了一层 —— 后端标签 > 前端 i18n 表(STEWARD_TOOL_LABEL_KEYS,
-    // 与「行动流水」同一份) > 工具 id。116-3 之前落盘的历史回合没有 label,修前那一路会直接漏出
-    // steward_thread_continue 这种内部标识符。契约的方向没变,只是回落多了一级。
     ok(/tool: toolLabelOf\(row\)/.test(conv)
       && /const key = STEWARD_TOOL_LABEL_KEYS\[String\(\(row && row\.tool\) \|\| ''\)\];/.test(conv),
       'I2 copy P1-1:※ 脚注优先读 label(读不到先查前端人话表,再落回工具 id),不再直接吐 steward_* 内部标识符');

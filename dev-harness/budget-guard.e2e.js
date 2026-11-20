@@ -16,7 +16,7 @@ const { shellTool, echo, delay } = require('./lib/platform-shell-fixture');
 //       dead-long-runner 硬终态杀树 + 配对 tool_result 含预算原因 + 回合继续;
 //       shadow 只记「本应触发」零行为变化;字节轴只计数;零触发路径逐字节不变。
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -24,7 +24,7 @@ const os = require('os');
 const path = require('path');
 
 // 隔离纪律(同 session-notes-inject):require server.js 之前把数据根指向临时目录。
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-106-unit-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-106-unit-'));
 
 const HERE = __dirname;
 const WB = path.resolve(HERE, '..', 'ruyi-workbench');
@@ -63,10 +63,9 @@ async function launchStack(tag, flags, fakeEnv, wbEnv) {
     ...(flags || {}),
   }, null, 2));
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_CAPTURE_DIR: CAP, ...(fakeEnv || {}) },
   });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: EHOME, RUYI_HOME: EHOME, ...(wbEnv || {}) }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: EHOME, ...(wbEnv || {}) } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!' + tag + '] ' + l.trim())));
   let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(250); h = await get(WB_PORT, '/health'); } // 117q:预算 80×250ms=20s 低于 30 号文 P1-31 建议的 300×同款间隔量级,为同批口径统一一并抬高(30 号文 P1-31)
   const readCap = n => { try { return JSON.parse(fs.readFileSync(path.join(CAP, 'req-' + String(n).padStart(3, '0') + '.json'), 'utf8')); } catch { return null; } };

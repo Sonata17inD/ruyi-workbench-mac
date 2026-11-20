@@ -72,7 +72,6 @@ const handlePlaybookApiRoutes = require('./backend/playbook-routes.cjs').createP
 const handleSessionExecutionApiRoutes = require('./backend/session-execution-routes.cjs').createSessionExecutionRoutes({
   safeSessionId, readConfig, loadSession, mutateSession, logEvent, activeChildren, requestSessionExecutionStop, StewardHooks,
   compaction: { runProviderCompactTracked, runAgentExternalCompact, configForSessionEngineRoute, agentCliAdapter },
-  kimi: { kimiSessionStatus, kimiStatusFingerprint, applyKimiStatusToSession, kimiUsageFromStatus },
 });
 
 const handleStatusApiRoutes = require('./backend/status-routes.cjs').createStatusRoutes({
@@ -80,7 +79,7 @@ const handleStatusApiRoutes = require('./backend/status-routes.cjs').createStatu
   identity: { APP_NAME, VERSION, CONFIG_SCHEMA, OVERLAY_ID, dataRootAliases, exePath },
   conversation: { safeSessionId, readSessionRouteHead, configForSessionEngineRoute, activeOpenAiProvider,
     agentConversationContextMeta, configuredConversationWindow, resolveContextWindow, learnedWindowCap },
-  cli: { agentCliAdapter, detectClaudePath, detectKimiPath, AGENT_CLI_TYPES, selectedAgentCli },
+  cli: { agentCliAdapter, detectClaudePath, AGENT_CLI_TYPES, selectedAgentCli },
   desktopMcp: { desktopMcpDetectionPending, mcpConfigFilePath, generateMcpConfig, ensureDesktopMcpWarm,
     detectDesktopMcp, resolveExternalMcpServers },
   tools: { MCP_TOOLS, runtimeToolRequirementsMet, nativeToolDisabledByPolicy, observationRecallEnabled, isStewardToolName },

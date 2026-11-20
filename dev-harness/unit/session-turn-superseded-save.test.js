@@ -5,8 +5,8 @@
 //   [S2] 同样的场景,回合中途存带 dropIfTurnSuperseded:静默丢弃(不抛),盘上仍是回合 2。
 //   [S3] 一次普通的停止(没有更新的回合,turnSeq 相等):带旗子的存照常落盘。
 //   [S4] 引擎层:回合 1 卡在慢工具里,同会话发回合 2 并跑完,回合 1 稍后收尾 —— 回合 2 的 messages 与
-//        providerHistory 都还在(三个引擎共用 02 saveTurnFinalSession,这里走 provider 引擎 09)。
-//   [S5] 结构锁:09/05/05b 三个引擎的收尾存都走 saveTurnFinalSession,被顶替时不派 thread.done、不记任务进度;
+//        providerHistory 都还在(两个引擎共用 02 saveTurnFinalSession,这里走 provider 引擎 09)。
+//   [S5] 结构锁:09/05/05b 两个引擎的收尾存都走 saveTurnFinalSession,被顶替时不派 thread.done、不记任务进度;
 //        09 工具循环里的存盘都带 dropIfTurnSuperseded。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -17,7 +17,6 @@ const http = require('http');
 const { startFakeProvider, textFrames, toolCallFrames, usageFrame } = require('../lib/fake-openai-provider');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-turn-superseded-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const { createSession, loadSession, saveSession, runSessionTurn } = srv;
@@ -111,7 +110,7 @@ test('[S4] 引擎层:过期回合收尾之后,更新回合的消息与 providerH
   }
 });
 
-test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时不派 thread.done', () => {
+test('[S5] 结构锁:两个引擎的收尾存都走回合代数闸,被顶替时不派 thread.done', () => {
   // [S4] 在停止即时生效之后,过期回合多半抢在更新回合收尾之前写完(更新回合的收尾存再把正文写对),引擎层行为
   // 测不出「收尾存有没有过闸」;这里钉结构:收尾那一存是 saveTurnFinalSession(运行时语义由 [S1]–[S3] 钉),
   // thread.done 与任务进度都看它的结果。
@@ -120,7 +119,6 @@ test('[S5] 结构锁:三个引擎的收尾存都走回合代数闸,被顶替时�
   const engines = [
     ['../backend/provider-turn.cjs', 'runOpenAiTurn'],
     ['../backend/agent-cli-turn.cjs', 'runClaudeTurn'],
-    ['../backend/kimi-acp-turn.cjs', 'runKimiAcpTurnPrepared'],
   ];
   for (const [file, fn] of engines) {
     const body = functionBlock(fs.readFileSync(path.join(SRC, file), 'utf8'), fn);

@@ -45,7 +45,6 @@ const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 
 const HOME_A = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-mem-scope-a-'));
 process.env.RUYI_HOME = HOME_A;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME_A;
 const srv = require(path.join(WB, 'app', 'server.js'));
 
 const listMd = dir => (fs.existsSync(dir) ? fs.readdirSync(dir, { recursive: true }).map(String).filter(f => f.endsWith('.md')).map(f => path.join(dir, f)) : []);
@@ -223,8 +222,8 @@ try {
     activeProvider: 'fake',
   }));
   const WP = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, stdio: 'ignore',
-    env: { ...process.env, RUYI_HOME: HOME_H, WIN_CLAUDE_WORKBENCH_HOME: HOME_H, HOME: CLI_HOME, USERPROFILE: CLI_HOME } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: HOME_H, HOME: CLI_HOME, USERPROFILE: CLI_HOME } });
   let TOKEN = '';
   const requestJson = (method, route, payload) => new Promise((resolve, reject) => {
     const data = payload == null ? '' : JSON.stringify(payload);

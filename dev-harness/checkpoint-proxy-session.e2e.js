@@ -41,7 +41,7 @@ async function api(method, route, body) {
       enableMcpDropIn: false, schedulerEnabledV1: false, stewardEnabledV1: false, desktopMcp: { enabled: false, autodetect: false },
       externalMcpServers: [{ id: 'fake', enabled: true, command: process.execPath, args: [path.join(__dirname, 'fake-mcp.js')] }] }));
     port = await getFreePort();
-    const env = { ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data };
+    const env = { ...fixtureChildEnv(), RUYI_HOME: data };
     delete env.WCW_SESSION_ID; // The provider context must work without the CLI environment fallback.
     server = cp.spawn(process.execPath, [path.join(wb, 'app/server.js'), 'serve', '--port', String(port)], { env, cwd: wb, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.on('data', value => diagnostics.push(String(value))); server.stderr.on('data', value => diagnostics.push(String(value)));

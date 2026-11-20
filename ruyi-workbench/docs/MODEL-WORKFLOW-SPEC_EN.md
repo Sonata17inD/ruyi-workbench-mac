@@ -4,7 +4,7 @@
 
 ## 1. Principle
 
-The workbench structures model turns and records their progress and results. Checkpoints cover registered file operations, not arbitrary side effects. Six stages: **plan → execute → check → loop-guard → budget → compact**. This spec primarily describes the provider engine (Chat Completions, Responses API and Anthropic Messages). The Claude Code / Kimi Code Agent CLI paths also depend on each CLI and its adapter; the runtime capability matrix defines the differences.
+The workbench structures model turns and records their progress and results. Checkpoints cover registered file operations, not arbitrary side effects. Six stages: **plan → execute → check → loop-guard → budget → compact**. This spec primarily describes the provider engine (Chat Completions, Responses API and Anthropic Messages). The Claude Code execution path also depends on the CLI and its adapter; the runtime capability matrix defines the differences.
 
 ## 2. Plan (plan mode)
 
@@ -38,7 +38,7 @@ A node may declare `outputSchema` (structural validation) + `gate` (pass conditi
 Eight built-in templates (`BUILTIN_AGENT_WORKFLOWS` in `08-agent-runs.js`): debate-and-judge, implement-review-fix-test, deep-research, design-and-decide, codebase-audit, debug-root-cause, doc-from-scratch, data-insights. Their node tasks are generic and carry no subject; the subject comes from the launch `context`. Ten built-in roles (`BUILTIN_AGENT_ROLES` in `01e-permission-modes.js`): explorer, worker, coder, reviewer, verifier, planner, researcher, critic, synthesizer, analyst; the role prompt goes into the system prompt on both engines (on the Claude engine via `--append-system-prompt`, moved into the first message when the command line is too long). Personal and project templates (`.ruyi/workflows.json`) with the same id override in the order project > personal > built-in; saving rejects dependency cycles and unknown roles.
 
 ### 4.2 Turn-level output contract (planned)
-A unified mechanical completion-statement check for all ordinary turns remains planned. Existing DAG quality gates, delivery envelopes and specific Steward action receipts have their own checks; these do not imply universal turn coverage. See the [Steward 3.x plan](../../docs/optimization-plan/62-steward-3x-iterations.md) for the proposed scope and dependencies.
+A unified mechanical completion-statement check for all ordinary turns remains planned. Existing DAG quality gates, delivery envelopes and specific Steward action receipts have their own checks; these do not imply universal turn coverage.
 
 ## 5. Loop protection (dual detection)
 

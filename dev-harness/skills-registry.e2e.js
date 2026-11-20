@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   (f) Regression: a session with NO skills enabled → provider system has no skill section + tools has no skill_read.
 //   (g) P2-2 source lock: a skill enabled from the original cwd (source=builtin) is NOT injected after a turn runs
 //       in a different cwd where a same-id PROJECT skill shadows it (source mismatch → injection skipped).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 
 const { getFreePort } = require('./free-port.js');
@@ -60,7 +60,7 @@ function writeSkill(baseDir, id, name, desc, body, extraFiles) {
   fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${desc}\n---\n\n# ${name}\n\n${body}\n`);
   for (const [fn, content] of Object.entries(extraFiles || {})) fs.writeFileSync(path.join(dir, fn), content);
 }
-// dataRoot() === WIN_CLAUDE_WORKBENCH_HOME (here HOME) — same convention e2-append-system-prompt relies on
+// dataRoot() === RUYI_HOME (here HOME) — same convention e2-append-system-prompt relies on
 // (it reads config from HOME/config.json). So paths.skills === HOME/skills; user skills live there.
 const USER_SKILLS_DIR = path.join(HOME, 'skills');
 writeSkill(USER_SKILLS_DIR, 'user-only-skill', 'User Only Skill', 'USER_ONLY_MARKER a user-defined skill', 'user body');
@@ -128,7 +128,7 @@ function promptOf(body) {
 let fake = null;
 function startFake(extraEnv) {
   return new Promise(resolve => {
-    fake = cp.spawn(process.execPath, [FAKE, String(FAKE_PORT)], { windowsHide: true, env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, ...extraEnv } });
+    fake = cp.spawn(process.execPath, [FAKE, String(FAKE_PORT)], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, ...extraEnv } });
     fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
     fake.stderr.on('data', d => String(d).trim() && console.log('[fake!] ' + String(d).trim()));
     setTimeout(resolve, 400);
@@ -140,8 +140,8 @@ function stopFake() { return new Promise(resolve => { if (fake && fake.pid) { tr
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   await startFake({}); // plain fake (no tool sequence) for scenarios (a)(b)(c)(f)
-  const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP };
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {

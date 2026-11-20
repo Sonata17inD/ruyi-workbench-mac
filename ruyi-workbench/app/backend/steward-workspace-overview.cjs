@@ -6,23 +6,27 @@ function createStewardWorkspaceOverview({ sessions, workspaces }) {
   const { listSessions, readMissionContainer, sessionDisplayTitle, sessionMetaIsSteward } = sessions;
   const {
     STEWARD_KNOWN_WORKSPACE_LIMITS, STEWARD_WORKSPACE_TABLE_MAX, redact, stewardCanonWorkspacePath,
-    stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardSanitizeText,
+    stewardKnownWorkspaces, stewardSanitizeText,
   } = workspaces;
 
   async function stewardKnownWorkspaceRows(config) {
     const known = stewardKnownWorkspaces(config);
     if (!known.length) return [];
     const metas = await listSessions().catch(() => []);
-    const byPath = new Map(known.map(row => [stewardFoldWorkspacePath(row.path), { ...row, threads: [], lastActive: '' }]));
-    const keys = [...byPath.keys()].sort((a, b) => b.length - a.length);   // 最长前缀优先:子目录归最近的那个根
+    const byPath = new Map(known.map(row => [row.path, { ...row, threads: [], lastActive: '' }]));
     for (const meta of (Array.isArray(metas) ? metas : [])) {
       if (!meta || sessionMetaIsSteward(meta)) continue;
-      const canon = stewardCanonWorkspacePath(meta.cwd);
-      if (!canon) continue;
-      const key = stewardFoldWorkspacePath(canon);
-      const owner = keys.find(k => key === k || key.startsWith(k + path.sep) || key.startsWith(k + '/'));
-      if (!owner) continue;
-      byPath.get(owner).threads.push(meta);
+      let directory = stewardCanonWorkspacePath(meta.cwd);
+      while (directory) {
+        const owner = byPath.get(directory);
+        if (owner) {
+          owner.threads.push(meta);
+          break;
+        }
+        const parent = path.dirname(directory);
+        if (parent === directory) break;
+        directory = parent;
+      }
     }
     const missionTitles = new Map();
     const missionTitleOf = async (missionId, sessionId) => {

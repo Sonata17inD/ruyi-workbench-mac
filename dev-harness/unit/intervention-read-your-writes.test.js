@@ -1,12 +1,4 @@
 'use strict';
-// 02 readInterventions 读自己的写(Windows CI kimi-agent-cli 偶发「permission_request 之后 30 s 无事件」的根因)。
-// registerIntervention 把「待决」这一行【发出去不等】地排进会话写链,而待决事件在排队那一刻就推给了前端;
-// 用户紧接着作答时,13d decideIntervention 从 readInterventions 读账。修前读不等写链:注册行还没落盘就判
-// not_found,作答回 404 unknown or expired request,回合干等。Linux 上 append 快、几乎撞不上;这里把 append
-// 人为放慢,稳定复现。
-//   [W1] 注册之后立刻读:读得到这一条(修前:空);
-//   [W2] 连着注册两条、立刻读:两条都在(修前:一条都没有);
-//   [W3] 读盘撞 EPERM(压实 rename 那一瞬):有界重试后读到,而不是当成空。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -16,7 +8,6 @@ const path = require('path');
 
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-ryw-'));
 process.env.RUYI_HOME = home;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const srv = require(path.join(__dirname, '..', '..', 'ruyi-workbench', 'app', 'server.js'));
 
 const realAppend = fsp.appendFile;

@@ -1,32 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E(第 123 波 N2):新线程的默认引擎【不再写死跟全局】。
-//
-// 用户 2026-09-13 真机原话:「现在新开线程会默认开 Kimi code cli,我希望改成默认上一次用的
-// 或者别的方式,不要设定死。」病根:02 createSession 的缺省只有
-//   inferSessionEngineRoute({messages}) || sessionEngineRouteFromConfig(config)
-// 后者 = 全局 activeProvider / agentCliType / model 三项设置(那台机器上 agentCliType 是 kimi)。
-// 用户在线程头上换的引擎只活在那一条线程头上,下一条新线程照旧回到全局 —— 这就是「写死」。
-//
-// 本件按 API 级跑(不起浏览器),七条判据:
-//   ① 还没有记录 → 新线程跟全局(kimi),零审计事件;
-//   ② 线程头 PATCH engineRoute=X → 下一条新线程是 X(写入点①:applySessionMetaPatch);
-//   ③ 工作台自己发起一回合(source 缺省 'http')跑在 Y 上 → 下一条新线程是 Y(写入点②:
-//      10 runSessionTurn),且【建线程时带显式 engineRoute 本身不记】;
-//   ④ 管家式 source:'steward' 的回合跑在 Z 上 → 下一条新线程【仍是 Y】(后台活动不算用户的
-//      意思表示,记进去等于让管家悄悄改写用户的默认值);
-//   ⑤ newThreadEngine 改 'global' → 回老行为(kimi);
-//   ⑥ 改回 'last' 但把 Y 这个端点删了 → 回落全局,且审计里有 new_thread_engine_fallback;
-//   ⑦ POST /api/sessions 带显式 engineRoute → 以显式为准(压过「上次用的」)。
-//
-// 反向验证(实测,见提交说明):
-//   · 注掉 02 newSessionEngineRoute 里 ③ 那一层(lastUsedEngineRoute 分支)→ ② ③ 红;
-//   · 注掉 10 里 `if (source === 'http')` 这道判据(改成无条件记)→ ④ 红。
-//
-// 判定行:`NEW THREAD ENGINE DEFAULT E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -77,8 +53,8 @@ const PZ = providerEntry('pz', 'Endpoint Z', 'model-z');
 fs.mkdirSync(HOME, { recursive: true });
 fs.writeFileSync(configPath, JSON.stringify({
   configSchema: 7,
-  // 全局 = 那台真机上的形状:activeProvider 空 → 回落 Agent CLI,而 Agent CLI 是 kimi。
-  activeProvider: '', agentCliType: 'kimi', model: '',
+  // 全局 = 那台真机上的形状:activeProvider 空 → 回落 Agent CLI,而 Agent CLI 是 claude。
+  activeProvider: '', agentCliType: 'claude', model: '',
   engineMode: 'interactive', permissionMode: 'default',
   permissionTimeoutMs: 120000, questionTimeoutMs: 120000,
   includeWorkbenchMcp: false, defaultWorkspace: HOME, recentWorkspaces: [],
@@ -154,7 +130,7 @@ let wb = null;
 let wsSeq = 0;
 try {
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
@@ -193,12 +169,12 @@ try {
   // 所以它【不该】留下任何「上次用的」—— 下面 ①0 那条断言正是钉这一点。
   await request('POST', '/api/steward/message', { message: '现在什么情况' }, hdr);
 
-  /* ═════════ ① 还没有记录:新线程跟全局(kimi) ═════════ */
+  /* ═════════ ① 还没有记录:新线程跟全局(claude) ═════════ */
   console.log('── ① 还没有记录 ──');
   {
     ok(lastUsed() === null, `①0 起点零记录(管家自己那一回合不算;got ${JSON.stringify(lastUsed())})`);
     const a = await newThread('A');
-    ok(isAgent(a && a.engineRoute, 'kimi'), `①1 A 跟全局 = Agent CLI kimi(got ${JSON.stringify(a && a.engineRoute)})`);
+    ok(isAgent(a && a.engineRoute, 'claude'), `①1 A 跟全局 = Agent CLI claude(got ${JSON.stringify(a && a.engineRoute)})`);
     ok(fallbackRows().length === 0, `①2 「还没有上一次」不是回落,零 new_thread_engine_fallback(got ${fallbackRows().length})`);
 
     /* ═════════ ② 线程头换引擎 → 下一条新线程跟它 ═════════ */
@@ -210,7 +186,7 @@ try {
     ok(isOpenAi(await waitLastUsed(v => isOpenAi(v, 'px')), 'px'),
       `②2 「上次用的」记成了 X(got ${JSON.stringify(lastUsed())})`);
     const b = await newThread('B');
-    ok(isOpenAi(b && b.engineRoute, 'px'), `②3 B = X,不再是全局的 kimi(got ${JSON.stringify(b && b.engineRoute)})`);
+    ok(isOpenAi(b && b.engineRoute, 'px'), `②3 B = X,不再是全局的 claude(got ${JSON.stringify(b && b.engineRoute)})`);
   }
 
   /* ═════════ ③ 工作台自己发起的一回合 → 下一条新线程跟它 ═════════ */
@@ -255,7 +231,7 @@ try {
     ok(saved.status === 200 && diskConfig().newThreadEngine === 'global',
       `⑤1 配置落盘(status=${saved.status} value=${diskConfig().newThreadEngine})`);
     const e = await newThread('E');
-    ok(isAgent(e && e.engineRoute, 'kimi'), `⑤2 E 回到全局的 kimi(got ${JSON.stringify(e && e.engineRoute)})`);
+    ok(isAgent(e && e.engineRoute, 'claude'), `⑤2 E 回到全局的 claude(got ${JSON.stringify(e && e.engineRoute)})`);
     ok(isOpenAi(lastUsed(), 'py'), `⑤3 记录本身没被抹掉,只是不读它(got ${JSON.stringify(lastUsed())})`);
   }
 
@@ -267,7 +243,7 @@ try {
     ok(saved.status === 200, `⑥1 删掉 Y 这个端点(status=${saved.status})`);
     ok(!(diskConfig().providers || []).some(p => p && p.id === 'py'), '⑥2 config 里确实没有 py 了');
     const f = await newThread('F');
-    ok(isAgent(f && f.engineRoute, 'kimi'),
+    ok(isAgent(f && f.engineRoute, 'claude'),
       `⑥3 F 回落全局(不是拿一个已经不存在的端点开线程;got ${JSON.stringify(f && f.engineRoute)})`);
     const rows = fallbackRows();
     ok(rows.length === before + 1, `⑥4 审计里多出恰好一条 new_thread_engine_fallback(${before} → ${rows.length})`);
@@ -279,7 +255,7 @@ try {
   /* ═════════ ⑦ 显式入参压过一切 ═════════ */
   console.log('── ⑦ POST /api/sessions 带显式 engineRoute ──');
   {
-    // 此刻「上次用的」是不可用的 Y,全局是 kimi —— 两者都不是 X,显式那一份必须赢。
+    // 此刻「上次用的」是不可用的 Y,全局是 claude —— 两者都不是 X,显式那一份必须赢。
     const g = await newThread('G(显式 X)', { engine: 'openai', providerId: 'px', model: 'model-x' });
     ok(isOpenAi(g && g.engineRoute, 'px'), `⑦1 G = 显式给的 X(got ${JSON.stringify(g && g.engineRoute)})`);
     ok(String((g && g.engineRoute && g.engineRoute.model) || '') === 'model-x',
@@ -297,10 +273,10 @@ try {
     const h = await newThread('H(改全局之后)');
     ok(isOpenAi(h && h.engineRoute, 'px'), `⑧3 H = X(got ${JSON.stringify(h && h.engineRoute)})`);
     const back = await request('POST', '/api/config', { activeProvider: '' }, hdr);
-    ok(back.status === 200 && await waitLastUsed(r => isAgent(r, 'kimi')),
-      `⑧4 改回 Claude/Kimi 驱动同样被记住(got ${JSON.stringify(lastUsed())})`);
+    ok(back.status === 200 && await waitLastUsed(r => isAgent(r, 'claude')),
+      `⑧4 改回 Claude 驱动同样被记住(got ${JSON.stringify(lastUsed())})`);
     const i2 = await newThread('I(改回全局之后)');
-    ok(isAgent(i2 && i2.engineRoute, 'kimi'), `⑧5 I 跟着回到 kimi,不再是 X(got ${JSON.stringify(i2 && i2.engineRoute)})`);
+    ok(isAgent(i2 && i2.engineRoute, 'claude'), `⑧5 I 跟着回到 claude,不再是 X(got ${JSON.stringify(i2 && i2.engineRoute)})`);
   }
 } catch (error) {
   console.log('ERROR ' + (error && error.stack || error));

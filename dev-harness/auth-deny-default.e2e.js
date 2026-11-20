@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       token-browser(浏览器须 token;loopback 非浏览器须同源,无需 token),与 sessions/skills 同纪律。
 //   (D) 回归:各鉴权级别语义不变——open(status)/token-browser(sessions,loopback 豁免)/token(agent-runs,始终须 token)。
 // 连接始终打 127.0.0.1:PORT,仅 Host/Origin/token 头手工构造。端口 9126。无需 fake provider。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -38,7 +38,7 @@ function probe(port, method, p, headers, body) {
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, version: '1.0.0', permissionMode: 'bypass' }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(PORT); }

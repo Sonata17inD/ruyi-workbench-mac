@@ -14,7 +14,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-transient-retry-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { providerCallIsTransient, withTransientRetry, abortableDelay, openAiStreamOnce, providerRequestHeaders, providerCompletionUrl } = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const { startFakeProvider, textFrames } = require('../lib/fake-openai-provider');

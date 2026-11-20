@@ -13,7 +13,7 @@
 //   node run.js --after     # 跑所有 seed,与 baseline 对比 diff(无差异=未漂移)
 //
 // 非回归件(无 .e2e.js 后缀):判定 DONE,不 fail(CI 不阻断)。判据见 seeds.json pass_criteria(机械可判)。
-const { killOwnTree } = require('../lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('../lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const HERE = __dirname, DEV = path.join(HERE, '..'), ROOT = path.join(DEV, '..'), WB = path.join(ROOT, 'ruyi-workbench'), SERVER = path.join(WB, 'app', 'server.js');
 const { getFreePorts } = require(path.join(DEV, 'free-port.js'));
@@ -64,8 +64,8 @@ async function runSeedFake(seed) {
   const scriptedEnv = seed.fake_parallel
     ? { FAKE_PARALLEL_TOOLS: JSON.stringify(seed.fake_script || []) }
     : { FAKE_TOOL_SEQUENCE: JSON.stringify(seed.fake_script || []) };
-  const fake = cp.spawn(process.execPath, [path.join(DEV, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), ...scriptedEnv, FAKE_CAPTURE_DIR: CAP }, windowsHide: true });
-  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(DEV, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), ...scriptedEnv, FAKE_CAPTURE_DIR: CAP } });
+  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     let live = null; for (let i = 0; i < 60 && !live; i++) { await sleep(120); live = await health(wbPort); }
     if (!live) throw new Error('workbench 未启动');

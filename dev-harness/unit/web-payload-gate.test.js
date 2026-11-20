@@ -29,7 +29,6 @@ fs.mkdirSync(ws, { recursive: true });
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = dataRootDir;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');

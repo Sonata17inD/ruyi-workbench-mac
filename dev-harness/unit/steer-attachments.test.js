@@ -48,17 +48,13 @@ test('provider 插话将上传图片真正放进模型消息,正文、事件和�
   assert.equal(builder.snapshot()[0].attachments[0].id, 'image1');
 });
 
-test('Claude 即时插话收到原生 image 块;Kimi 同会话后续队列保留图片记录', async t => {
+test('Claude 即时插话收到原生 image 块', async t => {
   const h = backend(t, 'claude');
   const sent = await h.c.steerSessionCore({ sessionId: h.session.id, text: '补图', attachments: [h.attachment] });
   assert.equal(sent.body.injected, true);
   const image = h.writes[0].message.content.find(p => p.type === 'image');
   assert.equal(image.source.media_type, 'image/png'); assert.equal(image.source.data, PNG.toString('base64'));
   assert.equal(h.session.messages[0].attachments.length, 1);
-  const k = backend(t, 'kimi-acp');
-  assert.equal((await k.c.steerSessionCore({ sessionId: k.session.id, attachments: [k.attachment] })).body.ok, true);
-  assert.equal(k.reg.steerQueue[0].attachments[0].id, 'image1');
-  assert.match(k.reg.steerQueue[0].text, /picture.png/);
 });
 
 test('插话附件拒绝路径伪造/缺失记录,失败不排队;文字模型保留附件引用', async t => {
@@ -123,9 +119,9 @@ test('真实 HTTP 回合的下一次 provider 请求包含插话图片,会话保
     providers: [{ id: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'fixture', model: 'fake-model', vision: true }],
   }));
   const child = cp.spawn(process.execPath, [path.join(src, '../server.js'), 'serve', '--port', String(port)], {
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home,
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home,
       APPDATA: path.join(home, 'AppData', 'Roaming'), LOCALAPPDATA: path.join(home, 'AppData', 'Local') },
-    windowsHide: true, stdio: 'ignore',
+    stdio: 'ignore',
   });
   t.after(async () => {
     releaseFirst(); killOwnTree(child);

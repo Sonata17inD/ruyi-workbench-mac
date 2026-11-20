@@ -11,7 +11,6 @@ const t = createRunner('DEEPSEEK SEARCH FETCH');
 const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-deepseek-web-'));
 process.env.RUYI_HOME = root;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'https_proxy', 'all_proxy']) delete process.env[key];
 const s = loadServerInternals(['webSearch', 'webFetch', 'writeConfig', 'readConfig', 'maskSecrets', 'unmaskSecrets', 'normalizeConfig', 'toolCall', 'stewardImplWebSearch', 'stewardImplWebFetch']);
 const seen = [];

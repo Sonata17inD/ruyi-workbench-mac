@@ -21,13 +21,11 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-unit-surface-w2-'));
 const home = path.join(root, 'home');
 fs.mkdirSync(home, { recursive: true });
 process.env.RUYI_HOME = home;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 const { loadServerInternals } = require('../lib/server-internals');
 const REPO = path.resolve(__dirname, '..', '..');
 const PUBLIC_JS = path.join(REPO, 'ruyi-workbench', 'app', 'public', 'js');
-const posix = process.platform !== 'win32';
 
 process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
 
@@ -147,7 +145,7 @@ describe('[T] S6 content types', () => {
   });
 });
 
-describe('[M] S11 secret-bearing files are owner-only', { skip: !posix && 'POSIX 权限位' }, () => {
+describe('[M] S11 secret-bearing files are owner-only', () => {
   it('M1 atomicWriteJson honours opts.mode and leaves the default alone', async () => {
     const { atomicWriteJson } = loadServerInternals(['atomicWriteJson']);
     const a = path.join(root, 'm1-secret.json');
@@ -208,7 +206,7 @@ describe('[I] S10 imported sessions', () => {
     const ws = path.join(root, 'i2', 'ws'); const other = path.join(root, 'i2', 'other'); const outside = path.join(root, 'i2', 'outside'); const evil = path.join(root, 'i2', 'ws-evil');
     for (const d of [path.join(ws, 'sub'), other, outside, evil]) fs.mkdirSync(d, { recursive: true });
     let linked = false;
-    try { fs.symlinkSync(outside, path.join(ws, 'link'), process.platform === 'win32' ? 'junction' : 'dir'); linked = true; } catch { /* 无权限建链接:跳过该条 */ }
+    try { fs.symlinkSync(outside, path.join(ws, 'link'), 'dir'); linked = true; } catch { /* 无权限建链接:跳过该条 */ }
     const config = { defaultWorkspace: ws, workspaces: [{ path: other, read: true, write: true, execute: true }] };
     const route = createSessionRoutes({
       resolveContainmentPath, readConfig: async () => config, envelope: {}, execution: {},

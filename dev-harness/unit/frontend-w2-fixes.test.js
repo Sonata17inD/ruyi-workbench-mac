@@ -24,7 +24,6 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
 const JS = path.join(PUBLIC, 'js');
 const LOCALES = path.join(PUBLIC, 'locales');
-const MIRROR = path.join(ROOT, 'docs', 'i18n', 'locales');
 const load = name => import(pathToFileURL(path.join(JS, name)).href);
 const read = file => fs.readFileSync(file, 'utf8');
 const zh = JSON.parse(read(path.join(LOCALES, 'zh-CN.json')));
@@ -38,7 +37,6 @@ const tEn = translator(en);
 
 // 服务端 waitReasonFor 的真输出（require server.js 前把家目录指到临时目录，与 steward-wait-reason.test.js 同款）。
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w2-fixes-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 process.env.RUYI_HOME = home;
 const { waitReasonFor } = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));
 
@@ -249,11 +247,6 @@ describe('新增文案键：两语言齐全、占位符一致、英文零中文�
       assert.ok(typeof en[key] === 'string' && en[key], `en 缺 ${key}`);
       assert.deepEqual(placeholders(zh[key]), placeholders(en[key]), key + ' 两语言占位符不一致');
       assert.ok(!CJK.test(en[key]), key + ' 的英文含中文');
-    }
-  });
-  it('docs/i18n/locales 两份镜像与 public/locales 逐字节相同', () => {
-    for (const file of ['zh-CN.json', 'en-US.json']) {
-      assert.ok(fs.readFileSync(path.join(LOCALES, file)).equals(fs.readFileSync(path.join(MIRROR, file))), file + ' 镜像漂移');
     }
   });
 });

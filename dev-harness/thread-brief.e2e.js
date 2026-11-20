@@ -1,35 +1,7 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
 'use strict';
-// E2E(第 116 波 116-5a · 27 号文 §11.8「线程自动摘要」):每开一条新线程自动生成一个 ≤24 字的
-// 名字与一句 ≤80 字的概括,写进会话头 threadBrief。
-//
-// 用户证据(2026-09-06 夜截图):线程搜索结果里整条是用户原话「帮我分析一下AMD——按美股超威半导体…」,
-// 一屏放不下三条,看不出哪条是哪件事。
-//
-// 结构:全程进程内(直调 runSessionTurn / listSessions / sessionDisplayTitle)+ 一个假 OpenAI 端点。
-// 那个假端点按【系统提示词里的口令】把「起名字的那一发」与「真回合」分开计数,所以每一条断言里的
-// 调用次数都是可判定的。
-//
-// 覆盖:
-//  (A) 正常路径:首轮之后 threadBrief 落盘(title/gist/at/model/stage 五字段齐)、**只调一次模型**;
-//      session.title 仍是用户原话(红线:brief 绝不改写原话);sessionMeta 带出 brief;
-//      sessionDisplayTitle 用生成的名字。
-//  (B) 第二回合不再调(一条线程只起一次名字)。
-//  (C) 用户改名:titleSource:'user' 落盘,显示名字换成用户起的那个,brief 本身不动。
-//  (D) 模型吐非 JSON:首回合机会性的一发 + 收工那次的三发 = 4 次之后放弃,brief 留空,
-//      **回合照常收工**(红线:摘要绝不阻塞回合)。
-//  (E) 开关关(stewardThreadBriefV1:false):零调用、零字段。
-//  (F) 管家会话不起名(它不是线程)。
-//  (G) 端点解析:配了 stewardProviderId 就用它(模型跟 stewardModel);配了却不在 providers 列表
-//      -> 不生成(fail-closed,不静默换成别的端点)。
-//  (H) 记账:aux 台账里是 note:'thread-brief',**不是** 'steward'(不进管家日费用熔断)。
-//  (I) 解析器 parseThreadBrief:围栏/前后杂字/数组/缺 title/空串。
-//  (J) 落盘时就夹死上限:超长 title/gist 在会话头上已经是 24/80 字。
-//  (K) 116-5b 消费面:事项卡片(看板/抽屉/「现在这一件」读的那一份)带 displayTitle 与 brief、
-//      title 仍是原话;管家的线程搜索结果带 brief、title 仍是原话。
-//
-// 判定行:`THREAD BRIEF E2E: ALL PASS`。
+// 用隔离的模型端点验证线程摘要生成、计费、持久化和展示。
 const http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -89,7 +61,6 @@ fs.mkdirSync(HOME, { recursive: true });
 const writeConfig = extra => fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ ...BASE_CONFIG, ...(extra || {}) }, null, 2), 'utf8');
 writeConfig();
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const { loadServerInternals } = require('./lib/server-internals');
 const { createThreadBriefService } = require('../ruyi-workbench/app/backend/thread-brief.cjs');

@@ -3,7 +3,7 @@
 // surface tool_use('web_search') with a serverSide result (NO local execution) and still answer.
 // Usage: node dev-harness/deepseek-ws-ruyi-live.js <DEEPSEEK_API_KEY> ["query"]
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = require('path').resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePort } = require('./free-port.js');
@@ -27,7 +27,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     activeProvider: 'deepseek',
     searchBackend: { type: 'builtin', baseUrl: '', apiKey: '' },
   }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };

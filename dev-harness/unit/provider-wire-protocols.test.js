@@ -20,7 +20,6 @@ const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-wire-protocols-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');

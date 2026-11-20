@@ -13,7 +13,6 @@ function createEngineEnvBrief({ appName, buildRuntimeIdentityFacts, probeRgAsync
   const memo = new Map();
   function engineBriefFacts({ engine, config, session, rg } = {}) {
     const cfg = config || {};
-    // 登记过的 CLI 类型原样;provider 族归 provider;其余(缺失/野值)归默认 CLI(claude)。修前是 `=== 'kimi'` 三分。
     const kind = isAgentCliType(engine) ? engine : ((engine === 'provider' || engine === 'openai') ? 'provider' : AGENT_CLI_DEFAULT_TYPE);
     const runtime = buildRuntimeIdentityFacts();
     const deskOverride = session && typeof session.desktopTools === 'boolean' ? session.desktopTools : null;
@@ -44,7 +43,6 @@ function createEngineEnvBrief({ appName, buildRuntimeIdentityFacts, probeRgAsync
     if (f.mcp) {
       lines.push(b.mcpIntro({ prefix: RUYI_MCP_CLI_TOOL_PREFIX }));
       lines.push(b.mcpMemory);
-      // Kimi 的原生提问经 ACP 落到如意的提问卡;Claude 交互模式禁了原生 AskUserQuestion(--disallowedTools)。
       lines.push(askNative ? b.askNative : b.mcpAsk + (f.interactive ? b.mcpAskNoNative : ''));
       lines.push(b.mcpToolSearch);
       if (f.orchestrate) lines.push(b.mcpOrchestrate);
@@ -69,7 +67,6 @@ function createEngineEnvBrief({ appName, buildRuntimeIdentityFacts, probeRgAsync
     if (f.stewardOpened) lines.push(b.stewardOpened);
     return lines;
   }
-  // 返回 { text, lines, fingerprint, facts }。claude/kimi 用 text(整段围栏);provider 用 lines(易变层逐行)。
   function buildEngineEnvBrief(opts = {}) {
     const facts = engineBriefFacts(opts);
     const fingerprint = crypto.createHash('sha1').update(JSON.stringify(facts), 'utf8').digest('hex').slice(0, 12);

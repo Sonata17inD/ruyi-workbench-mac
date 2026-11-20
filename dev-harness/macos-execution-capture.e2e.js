@@ -14,7 +14,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rec-'));
 const data = path.join(root, 'data'), work = path.join(root, 'work');
 const env = { ...fixtureChildEnv(), HOME: path.join(root, 'home'), USERPROFILE: path.join(root, 'home'),
   APPDATA: path.join(root, 'appdata'), LOCALAPPDATA: path.join(root, 'localappdata'), TMPDIR: root,
-  RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_DESKTOP_EXECUTION_RECEIPTS: '1' };
+  RUYI_HOME: data, RUYI_DESKTOP_EXECUTION_RECEIPTS: '1' };
 for (const dir of [data, work, env.HOME, env.APPDATA, env.LOCALAPPDATA]) fs.mkdirSync(dir, { recursive: true });
 Object.assign(process.env, env);
 let server, provider, fixture, port, token, output = '';

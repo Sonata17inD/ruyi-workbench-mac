@@ -86,7 +86,7 @@ const asrLedgerRows = () => readNdjson(path.join(HOME, 'usage'), '.jsonl').filte
       configSchema: 13, permissionMode: 'bypass', toolLoadingMode: 'full', autoImportClaudeCodeMcp: false,
       desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false }, providers: [], activeProvider: '', asrProviderId: '', asrModel: '',
     }, null, 2));
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, RUYI_TOOLBOX_HOME: TOOLBOX_HOME }, windowsHide: true });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, RUYI_TOOLBOX_HOME: TOOLBOX_HOME } });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     ok(Boolean(await waitFor(async () => (await reqRaw('GET', '/api/status')).status === 200, 45000)), '0 工作台起来了');
     TOKEN = await getToken();

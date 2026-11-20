@@ -1,5 +1,5 @@
 const {
-  stewardCanonWorkspacePath, stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
+  stewardCanonWorkspacePath, stewardKnownWorkspaces, stewardMatchKnownWorkspace,
   stewardWorkspaceNameOf, stewardValidateCwd, stewardResolveThreadCwd, stewardRecordMissionWorkspace, stewardDeriveThreadCwd,
 } = require('./backend/steward-workspaces.cjs').createStewardWorkspaces({
   dataRoot, dataRootAliases, nowIso, sanitizeFsSegmentName, safeSessionId, mutateConfig, normalizeWorkspacePathString,
@@ -43,7 +43,7 @@ const {
     activeChildren, sessionExecutionSnapshot, sessionPermissionModeOf, StewardHooks,
   },
   workspaces: {
-    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath, stewardFoldWorkspacePath,
+    stewardKnownWorkspaces, stewardWorkspaceNameOf, stewardCanonWorkspacePath,
   },
   policy: {
     deriveStewardThreadState, stewardAsksYouForThread, stewardClipSay, stewardForeignProjection,

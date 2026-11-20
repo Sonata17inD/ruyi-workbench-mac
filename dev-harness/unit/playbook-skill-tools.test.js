@@ -13,7 +13,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-playbook-skill-tools-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
@@ -214,7 +213,7 @@ test('[S3] skill_read 语义不变:没启用的技能读不了(skill_list 只列
 
 test('standalone skill registry respects injected CLI homes, source precedence and source locks', async () => {
   const { createSkillRegistry } = require('../../ruyi-workbench/app/backend/skill-registry.cjs');
-  const base = path.join(root, 'registry-module'), cli = Object.fromEntries(['claude', 'codex', 'kimi'].map(name => [name, path.join(base, name)]));
+  const base = path.join(root, 'registry-module'), cli = Object.fromEntries(['claude', 'codex'].map(name => [name, path.join(base, name)]));
   const user = path.join(base, 'user'), project = path.join(base, 'project');
   const put = (dir, id, body) => { const dest = path.join(dir, id); fs.mkdirSync(dest, { recursive: true }); fs.writeFileSync(path.join(dest, 'SKILL.md'), body); };
   put(path.join(cli.claude, 'skills'), 'external', '---\nname: Injected CLI skill\n---\nbody');

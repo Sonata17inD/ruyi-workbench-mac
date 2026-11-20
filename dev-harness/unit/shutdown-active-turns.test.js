@@ -1,6 +1,6 @@
 'use strict';
 // 走查 2026-10-08(13 cleanupMcp):关服收尾(exit / SIGINT / SIGTERM / uncaughtException)修前只停 MCP、shell、toolbox,
-// activeChildren 里在途的 Claude / Kimi CLI 回合子进程没人管 —— 服务退了它们变孤儿,继续把当前回合跑完。
+// activeChildren 里在途的 Claude CLI 回合子进程没人管 —— 服务退了它们变孤儿,继续把当前回合跑完。
 // 现在收尾逐个走 stopSession(id, 'shutdown')(13 stopAllActiveTurnsSync)。
 //   [S1] 收尾原语:登记表里挂一个真子进程(长睡的 node)→ stopAllActiveTurnsSync 返回 1、登记表清空、子进程被杀;
 //        一项抛错不拦后面的。跨平台(Windows 上 killChildTree 走 PowerShell 那一支)。
@@ -17,7 +17,6 @@ const path = require('path');
 const http = require('http');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-shutdown-turns-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
@@ -34,7 +33,7 @@ const spawned = [];
 after(() => { for (const c of spawned) { try { killOwnTree(c); } catch { /* gone */ } } try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* Windows 句柄迟放 */ } });
 
 test('[S1] stopAllActiveTurnsSync:登记表里每一项都走 stopSession,子进程被杀、登记表清空、一项抛错不拦后面', async () => {
-  const child = cp.spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore', windowsHide: true });
+  const child = cp.spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
   spawned.push(child);
   const exited = new Promise(r => child.once('exit', () => r(true)));
   activeChildren.set('sess_shutdown_a', { child, pid: child.pid, state: 'running', startedAt: Date.now() });
@@ -49,7 +48,7 @@ test('[S1] stopAllActiveTurnsSync:登记表里每一项都走 stopSession,子进
   assert.equal(gone, true, 'CLI 子进程(整棵树)被杀');
 });
 
-test('[S2] 真服务回合在途时收到 SIGTERM → 退出后 CLI 子进程不留孤儿', { skip: process.platform === 'win32' ? 'Windows 上外发 SIGTERM 是无条件终止,走不到收尾' : false }, async () => {
+test('[S2] 真服务回合在途时收到 SIGTERM → 退出后 CLI 子进程不留孤儿', async () => {
   const home = path.join(root, 's2');
   const work = path.join(home, 'work');
   fs.mkdirSync(work, { recursive: true });
@@ -69,8 +68,8 @@ test('[S2] 真服务回合在途时收到 SIGTERM → 退出后 CLI 子进程不
   const port = await getFreePort();
   const wbDir = path.resolve(__dirname, '../../ruyi-workbench');
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: wbDir, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home, HOME: home, USERPROFILE: home, WCW_FAKE_CLAUDE: hangCli },
+    cwd: wbDir, stdio: ['ignore', 'ignore', 'pipe'],
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home, WCW_FAKE_CLAUDE: hangCli },
   });
   spawned.push(wb);
   wb.stderr.on('data', () => {});

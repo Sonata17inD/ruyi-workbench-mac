@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 /*
  * E2E (团队模式 v2 Phase 1+2：共享任务池 propose_task + Agent 邮箱 send_to_agent)。验收 = 设计稿 A5 + B4，逐条断言。
  *
@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/team-pool-mailbox.e2e.js   (ports 9105 fake-openai / 9106 workbench)
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -455,7 +455,7 @@ async function main(sid, token, hdr) {
 
   await new Promise(r => fake.listen(FP, '127.0.0.1', r));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_POOL_GRACE_MS: String(GRACE_MS) },
   });
   try {

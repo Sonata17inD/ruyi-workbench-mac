@@ -13,7 +13,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-media-boundaries-'));
 const home = path.join(root, 'data'), ws = path.join(root, 'workspace');
 fs.mkdirSync(home); fs.mkdirSync(ws);
 process.env.RUYI_HOME = home;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const srv = require('../ruyi-workbench/app/server.js');
 const configBase = { defaultWorkspace: ws, workspaces: [{ path: ws, read: true, write: true, execute: true }], permissionMode: 'bypass',
   includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [],

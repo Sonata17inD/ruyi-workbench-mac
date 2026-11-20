@@ -15,7 +15,7 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 fs.rmSync(UNIT_DATA, { recursive: true, force: true }); fs.mkdirSync(UNIT_DATA, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = UNIT_DATA;
+process.env.RUYI_HOME = UNIT_DATA;
 const S = require(SERVER);
 const dh = (args) => S.toolCall('debug_hypothesis', args, null);
 

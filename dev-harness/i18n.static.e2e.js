@@ -8,7 +8,6 @@ const { readFrontendSrc } = require('./read-frontend-src.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
-const DOCS = path.join(ROOT, 'docs', 'i18n', 'locales');
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 const keys = object => Object.keys(object).sort();
 const placeholders = value => [...String(value).matchAll(/{{\s*([\w.-]+)\s*}}/g)].map(match => match[1]).sort();
@@ -16,42 +15,32 @@ const placeholders = value => [...String(value).matchAll(/{{\s*([\w.-]+)\s*}}/g)
 (async () => {
   const zh = readJson(path.join(PUBLIC, 'locales', 'zh-CN.json'));
   const en = readJson(path.join(PUBLIC, 'locales', 'en-US.json'));
-  const docsZh = readJson(path.join(DOCS, 'zh-CN.json'));
-  const docsEn = readJson(path.join(DOCS, 'en-US.json'));
 
   assert.deepStrictEqual(keys(zh), keys(en), 'zh-CN and en-US must have exactly the same keys');
-  assert.deepStrictEqual(zh, docsZh, 'runtime zh-CN catalog must match the documented source of truth');
-  assert.deepStrictEqual(en, docsEn, 'runtime en-US catalog must match the documented source of truth');
   for (const key of keys(zh)) {
     assert.deepStrictEqual(placeholders(zh[key]), placeholders(en[key]), `placeholder mismatch: ${key}`);
   }
   console.log(`PASS catalogs: ${keys(zh).length} matched keys and placeholder contracts`);
 
-  // 128f-①（用户首启走查连带查出）：interpolate 只认 {{name}}，单花括号 {name} 永远原样上屏 —— 启动故障卡点「重试」
-  // 后状态行写着「已尝试 {n} 次」、智能体角色设置里的旧值写着「已保存：{value}」。四份目录里一条都不许再有。
-  // 唯一放行：说明模板语法本身的那句（playbook 的任务模板就是用 {参数名} 作占位符，是给人看的字面量）。
+  // Only the playbook template help displays literal single-brace placeholders.
   const SINGLE_BRACE = /(^|[^{])\{[A-Za-z_一-鿿][\w.一-鿿-]*\}(?!\})/;
   const LITERAL_BRACES = new Set(['playbook.create.fieldTemplate']);
-  for (const [label, catalog] of [['public zh-CN', zh], ['public en-US', en], ['docs zh-CN', docsZh], ['docs en-US', docsEn]]) {
+  for (const [label, catalog] of [['public zh-CN', zh], ['public en-US', en]]) {
     const bad = Object.keys(catalog).filter(key => !LITERAL_BRACES.has(key) && SINGLE_BRACE.test(String(catalog[key])));
     assert.deepStrictEqual(bad, [], `${label}: single-brace placeholders never interpolate, use {{name}} (found: ${bad.join(', ')})`);
   }
   assert.ok(SINGLE_BRACE.test(zh['playbook.create.fieldTemplate']), 'the literal-brace exemption must still describe a real {…} (else drop it)');
   console.log('PASS placeholders: no single-brace {name} in any catalog (interpolate only fills {{name}})');
 
-  // 117q-B3b（30 号文 §4.4 P0-4）伴随断言：任务五态人话此前抄了四份，其中两套 locale key
-  // （previewShell.state.* 与 stewardShell.drawer.state.*）已经判出不同文案结果（quick_ask/done）。
-  // 合并后四份 locale 都必须只剩中性的 mission.state.* 一套六个键，旧的两个前缀一个字都不许再
-  // 出现——防止哪天又有人抄出第三套。
   const MISSION_STATES = ['dispatching', 'running', 'needs_you', 'done', 'stopped', 'quick_ask'];
-  for (const [label, catalog] of [['public zh-CN', zh], ['public en-US', en], ['docs zh-CN', docsZh], ['docs en-US', docsEn]]) {
-    const staleKeys = Object.keys(catalog).filter(key => key.startsWith('previewShell.state.') || key.startsWith('stewardShell.drawer.state.'));
-    assert.deepStrictEqual(staleKeys, [], `${label} must not resurrect previewShell.state.*/stewardShell.drawer.state.* (found: ${staleKeys.join(',')})`);
+  for (const [label, catalog] of [['public zh-CN', zh], ['public en-US', en]]) {
+    assert.deepStrictEqual(placeholders(catalog['threadCommission.fenceSummary']), ['count'], label);
+    assert.ok(catalog['threadCommission.fenceSummaryPlain']?.trim(), label);
     for (const state of MISSION_STATES) {
       assert.strictEqual(typeof catalog[`mission.state.${state}`], 'string', `${label} must carry mission.state.${state}`);
     }
   }
-  console.log('PASS mission.state.*: all four locales carry the unified five-state copy with zero legacy previewShell.state./stewardShell.drawer.state. keys');
+  console.log('PASS mission.state.*: both catalogs contain every mission state');
 
   const runtimePath = path.join(PUBLIC, 'js', 'i18n.js');
   const runtimeSource = fs.readFileSync(runtimePath, 'utf8')

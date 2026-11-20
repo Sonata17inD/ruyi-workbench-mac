@@ -31,7 +31,6 @@ fs.mkdirSync(path.join(ws, '.claude', 'agents'), { recursive: true });
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = dataRootDir;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const REPO = path.resolve(__dirname, '..', '..');
 const FAKE_CLAUDE = path.join(REPO, 'ruyi-workbench', 'tools', 'fake-claude.js');

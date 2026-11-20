@@ -161,9 +161,9 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   activeProvider: 'fake',
 }));
 const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-  cwd: WB, windowsHide: true, stdio: 'ignore',
+  cwd: WB, stdio: 'ignore',
   // [C] 看门狗阈值压到 1 s(它每 5 s 巡检一次);工具心跳 250 ms 让其它场景的工具等待照常喂狗。
-  env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_TURN_IDLE_MS: '1000', WCW_TOOL_HEARTBEAT_MS: '250' },
+  env: { ...process.env, RUYI_HOME: HOME, WCW_TURN_IDLE_MS: '1000', WCW_TOOL_HEARTBEAT_MS: '250' },
 });
 try {
   let up = false;

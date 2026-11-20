@@ -17,7 +17,7 @@
 //
 // 判定行精确为 `ONBOARD E2E: ALL PASS`（失败打印明细并非零退出）。Port 8997（空闲段，见 dev-harness/README.md）。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -122,8 +122,9 @@ function between(hay, startNeedle, endNeedle) {
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
   // 不预写 config.json —— 验证「全新安装」时服务端生成的小白安全默认。
-  const env = { ...process.env }; delete env.RUYI_HOME; env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env }; env.RUYI_HOME = HOME;
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  const wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {
@@ -142,7 +143,7 @@ function between(hay, startNeedle, endNeedle) {
     ok(c0.permissionBridge === true, '④ 新装 permissionBridge === true（got ' + c0.permissionBridge + '）');
     ok(c0.uiMode === 'simple', '④ 新装 uiMode === simple（got ' + c0.uiMode + '）');
     ok(c0.credentialEncryptionV1 === false && c0.privacyModeV1 === 'off', '④ 新装凭据加密与脱敏默认关闭');
-    if (process.platform === 'win32') {
+    {
       const enabled = await postJson(WB_PORT, '/api/privacy/encryption', { enabled: true }, hdr);
       ok(enabled.status === 200 && enabled.json?.ok === true, '⑤ 显式开启凭据加密后再验收密钥保存');
     }
@@ -161,13 +162,13 @@ function between(hay, startNeedle, endNeedle) {
     ok(sbEcho.status === 200 && sbEcho.json && sbEcho.json.ok === true, '⑤ 掩码回存 POST 被接受');
     // Recover authenticated slots only for exact-value assertions; do not weaken the mask round-trip.
     const rawDisk = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
-    const configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    const configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     try {
       const disk = configReader.recover(rawDisk);
       ok(disk.searchBackend && disk.searchBackend.apiKey === REAL, '⑤ 持久凭据解密后逐字保留真值（掩码回存不覆盖）');
-      if (process.platform === 'win32') {
+      {
         const files = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(HOME, name)));
-        ok(rawDisk.credentialRefsV1?.version === 1 && rawDisk.searchBackend.apiKey === '' && files.every(name => !fs.readFileSync(path.join(HOME, name), 'utf8').includes(REAL)), '⑤ Windows 主配置、备份和凭据库均无搜索密钥明文');
+        ok(rawDisk.credentialRefsV1?.version === 1 && rawDisk.searchBackend.apiKey === '' && files.every(name => !fs.readFileSync(path.join(HOME, name), 'utf8').includes(REAL)), '⑤ Mac 主配置、备份和凭据库均无搜索密钥明文');
       }
     } finally { configReader.close(); }
 
@@ -199,9 +200,9 @@ function between(hay, startNeedle, endNeedle) {
       claudePath: path.join(HOME2, 'no-such-claude.exe'), // 不存在 → existsExecutable 假 → fallback 触发
       activeProvider: '', defaultWorkspace: WS2,
     }, null, 2));
-    const env2 = { ...process.env }; delete env2.RUYI_HOME; env2.WIN_CLAUDE_WORKBENCH_HOME = HOME2;
+    const env2 = { ...process.env }; env2.RUYI_HOME = HOME2;
     delete env2.WCW_FAKE_CLAUDE; // 确保不走假 CLI seam
-    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT2)], { cwd: WB, env: env2, windowsHide: true });
+    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT2)], { cwd: WB, env: env2 });
     wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
     const postStream = (port, payload) => new Promise((resolve, reject) => {
       const data = JSON.stringify(payload);

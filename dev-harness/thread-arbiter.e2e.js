@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ⑩ /api/stop 停掉【还在排队】的回合:出队、不占位、流里是 process/stopped 而不是 error;
 //   ⑪ 三处 wait 形状一致(GET /api/steward/arbiter 的 queue、GET /api/missions 的线程行、
 //      steward_thread_prioritize 的返回),外加「四个展示面都走 06i 的 waitReasonFor」的源码单点锁。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -164,13 +164,11 @@ const queueOf = (frames, sid) => { for (const f of frames) { const hit = f.queue
 
   const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], {
     env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_REPLY_SEQUENCE: JSON.stringify([{ text: '好了。', delayMs: TURN_MS }]) },
-    windowsHide: true,
   });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   const wbs = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(SP)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: HOME2, WIN_CLAUDE_WORKBENCH_HOME: HOME2, WCW_STEWARD_ARBITER_STARVE_MS: String(STARVE_MS) },
-    windowsHide: true,
+    env: { ...process.env, RUYI_HOME: HOME2, WCW_STEWARD_ARBITER_STARVE_MS: String(STARVE_MS) },
   });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   wbs.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbs!] ' + l.trim())));

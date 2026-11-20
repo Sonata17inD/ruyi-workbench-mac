@@ -1,18 +1,5 @@
 'use strict';
 
-// Kimi's official Claude Code setup uses the /coding/ endpoint (including its trailing
-// slash) and requires Claude's internal role aliases to resolve to a Kimi model.  Do
-// not apply this to generic Anthropic-compatible endpoints: their aliases can have
-// vendor-specific meanings.
-function isKimiCodingEndpoint(base) {
-  try {
-    const url = new URL(String(base || '').trim());
-    return url.hostname.toLowerCase() === 'api.kimi.com' && url.pathname.replace(/\/+$/, '') === '/coding';
-  } catch {
-    return false;
-  }
-}
-
 // Third-party Anthropic-compatible endpoint (e.g. a vendor Coding Plan) config → env overrides.
 // Only returns keys the user actually configured in modelsApiBase/modelsApiKey/model — an unconfigured
 // field leaves whatever the OS/shell env already has untouched, so an install with no third-party setup
@@ -26,9 +13,7 @@ function isKimiCodingEndpoint(base) {
 // present at once makes the CLI pick the wrong auth scheme.
 function buildClaudeCliEnv(config) {
   const env = {};
-  // Preserve a trailing slash: Kimi's documented Claude Code endpoint is /coding/.
   const base = String((config && config.modelsApiBase) || '').trim();
-  const kimiCoding = isKimiCodingEndpoint(base);
   if (base) {
     env.ANTHROPIC_BASE_URL = base;
     // A custom endpoint is moot if the CLI is routed to Bedrock/Vertex instead — both ignore
@@ -38,10 +23,7 @@ function buildClaudeCliEnv(config) {
   }
   const key = String((config && config.modelsApiKey) || '').trim();
   if (key) {
-    const configuredMode = ['bearer', 'x-api-key'].includes(config && config.claudeAuthMode) ? config.claudeAuthMode : 'auto';
-    // Kimi documents ANTHROPIC_API_KEY; sending a second auth scheme can make a
-    // newer Claude CLI pick a credential path the proxy does not expect.
-    const mode = kimiCoding && configuredMode === 'auto' ? 'x-api-key' : configuredMode;
+    const mode = ['bearer', 'x-api-key'].includes(config && config.claudeAuthMode) ? config.claudeAuthMode : 'auto';
     if (mode === 'bearer') { env.ANTHROPIC_AUTH_TOKEN = key; env.ANTHROPIC_API_KEY = ''; }
     else if (mode === 'x-api-key') { env.ANTHROPIC_API_KEY = key; env.ANTHROPIC_AUTH_TOKEN = ''; }
     else { env.ANTHROPIC_AUTH_TOKEN = key; env.ANTHROPIC_API_KEY = key; }
@@ -49,17 +31,7 @@ function buildClaudeCliEnv(config) {
   const model = String((config && config.model) || '').trim();
   if (model) {
     env.ANTHROPIC_MODEL = model;
-    if (kimiCoding) {
-      // A native Agent may ask Claude Code for a fast/default family even when the
-      // primary model is overridden.  Route every family to the user's selected
-      // entitled Kimi model instead of falling back to an unavailable Claude id.
-      env.ANTHROPIC_DEFAULT_FABLE_MODEL = model;
-      env.ANTHROPIC_DEFAULT_OPUS_MODEL = model;
-      env.ANTHROPIC_DEFAULT_SONNET_MODEL = model;
-      env.ANTHROPIC_DEFAULT_HAIKU_MODEL = model;
-      env.ANTHROPIC_SMALL_FAST_MODEL = model;
-      env.CLAUDE_CODE_SUBAGENT_MODEL = model;
-    }
+
   }
   return env;
 }

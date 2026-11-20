@@ -1,1 +1,0 @@
-# syntax-gate: 1126 files checked, 0 failed (node v24.15.0)

@@ -23,7 +23,7 @@ const protocol = process.argv.find(arg => arg.startsWith('--protocol='))?.split(
 if (!['chat', 'responses', 'anthropic'].includes(protocol)) throw Error('synthetic_protocol_invalid');
 const f = fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
-app.__eval("detectClaudePath = () => ''; detectKimiPath = () => '';");
+app.__eval("detectClaudePath = () => '';");
 const writeTool = app.TOOL_HANDLERS.file_write;
 const writeFile = writeTool.handler;
 writeTool.handler = (args, context) => {

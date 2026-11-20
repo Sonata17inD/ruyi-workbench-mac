@@ -144,27 +144,6 @@
         "tokens": 131072
       },
       {
-        "match": "k3-256k",
-        "tokens": 262144
-      },
-      {
-        "match": "kimi-k3",
-        "tokens": 1048576
-      },
-      {
-        "exact": true,
-        "match": "k3",
-        "tokens": 1048576
-      },
-      {
-        "match": "kimi",
-        "tokens": 262144
-      },
-      {
-        "match": "moonshot",
-        "tokens": 262144
-      },
-      {
         "match": "minimax-m3",
         "tokens": 1000000
       },
@@ -417,7 +396,7 @@
       "subagent": "10a288244c5a4dc5c4097d8f20717d32f65d72c252a150c86d9e8b8ce5ca5803"
     },
     "ruleSchema": 1,
-    "rulesSha256": "8b6a9b517a64b7c38d863e9b6ac37fe14605f63ae4a9d7bf82995871ef792818"
+    "rulesSha256": "6a641c24ee6e6005c4824d0379d98bccb344d6975fbe3b9c69ccd635d8587f9b"
   },
   "permission": {
     "modes": [
@@ -450,11 +429,11 @@
     ]
   },
   "routing": {
-    "decisionPoints": 171,
+    "decisionPoints": 170,
     "problems": 0,
-    "routeAuthEntries": 157,
-    "routeAuthSha256": "f2950adeeb714549f999786addf038da131cbdc19cc67e84b6a0c71ab3a78146",
-    "runtimeRouteAuthSha256": "6e9fa45d212717407c31afbb1acc744627e78748335c3213118e8536eaf19765",
+    "routeAuthEntries": 156,
+    "routeAuthSha256": "a21cb58e64cb8126df14faf3a3fde60272026c51865da0b1a88978249aef23c2",
+    "runtimeRouteAuthSha256": "f5298662e20fe5ef5002a16fc2a3218ed0a43d2b4437cc44230a714164bc5afc",
     "warnings": 0
   },
   "schema": 1

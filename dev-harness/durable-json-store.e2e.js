@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-durable-json-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const srv = require(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js'));
 
 let failures = 0;

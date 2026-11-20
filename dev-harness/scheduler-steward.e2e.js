@@ -148,7 +148,6 @@ await new Promise(r => provider.listen(PROVIDER_PORT, '127.0.0.1', r));
 fs.mkdirSync(WORK, { recursive: true });
 writeConfig({ schedulerEnabledV1: false });
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

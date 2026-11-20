@@ -24,7 +24,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/agent-deadlock-watchdog.e2e.js   (ports 9097 fake / 9098 workbench)
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -245,7 +245,7 @@ const isTerminal = s => s === 'succeeded' || s === 'failed' || s === 'partial' |
   }));
 
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_RESOURCE_LEASE_TIMEOUT_MS: String(LEASE_TIMEOUT_MS), WCW_AGENT_WORKFLOW_IDLE_MS: String(IDLE_MS), WCW_AGENT_NODE_IDLE_MS: String(IDLE_MS) },
   });
   try {

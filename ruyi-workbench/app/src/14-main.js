@@ -1,5 +1,7 @@
 const handleApi = require('./backend/workbench-api-router.cjs').createWorkbenchApiRouter({
-  authorizeRoute, privacyRoutes: PrivacyCore.configHooks, ExternalBotHooks, StewardHooks, EventStreamHooks,
+  authorizeRoute, handlePrivacyApiRoutes: PrivacyCore.configHooks.handleApiRoutes,
+  handleExternalBotApiRoutes: ExternalBotHooks.handleApiRoutes, handleStewardApiRoutes: StewardHooks.handleApiRoutes,
+  handleEventStreamApiRoutes: EventStreamHooks.handleApiRoutes,
   handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
   handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
   handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
@@ -29,7 +31,7 @@ const { startServerInner, resolveBindHost, stopAllActiveTurnsSync } = createServ
     warmPretenderProjectionIndex, autoResumeInterruptedRuns, migrateLegacyAccMemory },
   config: { readConfig, syncClaudeCliSettings, syncAgentRolesToClaude, autoImportClaudeCodeMcp,
     recordInstallLaunch, syncAgentInstructionImports, syncMcpServersToClaude,
-    syncAgentCliMcpManifests, getCapabilities, generateMcpConfig },
+    getCapabilities, generateMcpConfig },
   probes: { beginBootCliPathProbes, waitForBootCliPathProbes, finishBootCliPathProbes, ensureDesktopMcpWarm },
   runtime: { activeChildren, stopSession, startScheduler, stopScheduler, killAllMcpClients, killAllShellSessions,
     EventStreamHooks, ExternalBotHooks, StewardHooks, ToolboxHooks, platformOpenSpawn, spawnDetachedChecked },
@@ -51,56 +53,38 @@ function startWorkbenchFromCommandLine() {
 }
 
 const createWorkbenchApi = () => ({
-  // 工具分发批(审计 N1/N4/N5/N6/N7/A2/A14/F3/NE-12;走查 W1·F10 的 sweepStaleScriptFiles)的纯函数与钩子,一个键收口 —— unit/tool-dispatch-hardening.test.js 直调(sweepStaleScriptFiles:unit/script-run-cleanup.test.js)。
-  // 2026-10 能力总闸补桥接面:toolDisabledByPolicy / accPolicyHiddenToolNames / dropPolicyDisabledBridgedTools / ACC_POLICY_TOOL_FAMILIES 同住这个键(unit/acc-capability-gates.test.js 直调)。
   dispatchTestHooks: { sweepStaleScriptFiles, validateNativeToolArgs, suggestToolNames, toolFailureResult, nativeToolDisabledByPolicy, toolDisabledByPolicy, accPolicyHiddenToolNames, dropPolicyDisabledBridgedTools, ACC_POLICY_TOOL_FAMILIES, unwrapToolInvokeCall, toolInvokeEnvelopeRepair, toolArgsSkeleton, withToolArgsGuide, toolArgsMissingRequired, normalizeMcpToolResult, attachScreenshotImage, desktopAuditEntriesFromResult, bridgedDesktopLeaseMode, mcpChildExitResult, bridgedServerUnavailableMessage },
-  spawnDetachedChecked, // 分离式外部启动带 'error' 监听的唯一入口(unit/http-input-hardening.test.js 直测 ENOENT 不成 uncaughtException)
-  // 架构还债批 2·A:服务商 HTTP 原语(04h)与两个非流式补全外壳 —— unit/provider-http.test.js 钉请求逐字节形状;
-  // 瞬时错误重试骨架 —— unit/transient-retry.test.js 钉判据、次数、退避序列与「首字节后不重试」。
+  spawnDetachedChecked,
   providerBaseWithV1, providerResponsesBase, providerApiBase, providerCompletionUrl, providerRequestHeaders, providerRawCompletion, providerFixCompletion,
   providerCallIsTransient, abortableDelay, withTransientRetry, openAiStreamOnce,
-  // 58 号批 1:服务商线协议登记表(04i)—— unit/provider-wire-protocols.test.js 钉成员齐全、归一口径与各成员金样。
   PROVIDER_WIRE_PROTOCOLS, normalizeProviderApiStyle, providerWireProtocol,
-  // 131b(52 号文):句尾改错的三个纯函数 — exposed for unit(提示词加固形状／出参合理性／端点解析的失败码)。
   asrFixMessages,
   asrFixSanity,
   resolveAsrFixProvider,
-  // 59 号文:语音词库的纯函数内核(04j 冻结对象,一个键收口)—— unit/voice-lexicon.test.js 直调(文本读写、清洗、挑词、三处出形、原厂表自检)。
-  // 59 号文 §6:从修改里学的纯函数内核(04j 冻结对象,一个键收口;拼音表经它的 HanziPinyin 属性带出)—— unit/voice-learn.test.js 直调。
   McpStdioClient,
-  McpHttpClient, // 49c: 远程 MCP transport(sse/streamable-http) — exposed for e2e 直连契约断言。
-  estimateHistoryTokens, // v0.8-S5: exposed for e2e direct unit testing (parts-aware token estimate v2)
-  // 129a:提示词预算的尺子。管家稳定层/规则层的闸从「字符数」改成「token 估算」——
-  // 字符闸对两种语言的真实成本不等价(2500 字符 ≈ 中文 1660 tok / 英文 695 tok),
-  // 于是英文包被挤得塞不下规则,中文包的「余量」又是假的。静态锁要用同一把尺子,故导出。
+  McpHttpClient,
+  estimateHistoryTokens,
   estimateTextTokens,
-  // 第45波(压缩 v2):摘要内核 + 45a 预算适配/map-reduce 分组 — exposed for e2e(死锁角回归)。
   providerSummaryCall,
   validateStructuredSummary,
   fitHistoryForSummary,
   chunkHistoryByBudget,
   recentTurnsBoundary,
   CompactionPlan,
-  // 126-111a: L1 蒸发与它的两个新原语 — exposed for e2e 白盒契约(开关关时逐字节等价老边界、
-  // 开关开时按 token 预算护住尾部、边界永不落在 tool 上)。
   evaporateHistory,
   evaporateBudgetBoundary,
   historyUnitStarts,
   evaporateBudgetBoundaryEnabled,
-  // 126-111e: 历史内重复读取去重 — exposed for e2e 白盒契约(键零误报/最新一次留全文/幂等)。
   dedupeRepeatedReads,
   fileReadDedupKey,
   historyReadDedupEnabled,
-  // 126-111d: 摘要 prompt 双语 — exposed for e2e(开关判定/语言选择/标题容错)。
   summaryPromptI18nEnabled,
   summaryPromptWithGuidance,
-  // 126-111b/111c: L2 尾部按单元保留 ＋ 重附最近读过的文件 — exposed for e2e 白盒契约。
   reseedTailUnitsEnabled,
   recentFileReads,
   reseedReattachFilesEnabled,
   COMPACT_RESEED_TAIL_MAX_TOKENS,
   resolveCompactionProvider,
-  // 105b: session-notes.md 状态外置 — exposed for e2e 白盒契约(确定性切节/写读回环/显式关闭门)。
   sessionNotesEnabled,
   extractSessionNotes,
   renderSessionNotesMarkdown,
@@ -108,7 +92,6 @@ const createWorkbenchApi = () => ({
   writeSessionNotes,
   readSessionNotes,
   maybeWriteSessionNotes,
-  // 105d: session notes 回注 + 增量合并 — exposed for e2e 白盒契约(开关判定/有界 prompt/解析/合并)。
   sessionNotesInjectEnabled,
   sessionNotesMergeEnabled,
   buildSessionNotesInjectPrompt,
@@ -116,30 +99,23 @@ const createWorkbenchApi = () => ({
   mergeSessionNotes,
   historyStartsWithCompactionSummary,
   appendPromptToLastUserMessage,
-  // 105c: 摘要实体确定性抽检 — exposed for e2e 白盒契约(抽取/检查/开关唯一判定点)。
   summaryEntityCheckEnabled,
   extractSummaryEntities,
   checkSummaryEntities,
-  // 105e: 估算因子分桶 — exposed for e2e 白盒契约(开关唯一判定点/镜像 setter/三桶分类器)。
   estimateBucketsEnabled,
   setEstimateBucketsV1,
   classifyTextForEstimate,
-  // 105f: 摘要单发优先 — exposed for e2e 白盒契约(开关唯一判定点/上限解析/reserve 预算)。
   summarySingleShotEnabled,
   summarySingleShotCap,
   summarySingleShotReserveTokens,
   resolveSummaryCallPolicy,
-  // 105g(4.3 首项): map-reduce 全局事实表 — exposed for e2e 白盒契约(开关唯一判定点/注入消息构建)。
   summaryFactTableEnabled,
   summaryFactTableCap,
   buildSummaryFactTableMessages,
-  // 105h(4.3 第二项): <=4 块顺序 refine — exposed for e2e 白盒契约。
   summaryRefineEnabled,
   buildSummaryRefineMessages,
-  // 105i: map-reduce 有界并发 + fail-fast 取消 — exposed for e2e 白盒契约(上限解析/并发助手)。
   summaryMaxConcurrent,
   mapSummaryWithLimit,
-  // 106 #13a/13a-t: 预算保护基础层 + 长命令时间预算 — exposed for e2e 白盒契约(开关唯一判定点/阈值解析)。
   budgetGuardEnabled,
   budgetGuardTurnTokens,
   budgetGuardWarnRatio,
@@ -149,7 +125,6 @@ const createWorkbenchApi = () => ({
   toolTimeBudgetWarnMs,
   toolTimeBudgetHardMs,
   toolByteBudgetShadowBytes,
-  // 106 #1 G1/G2: 前缀缓存布局开关 — exposed for e2e 白盒契约(开关唯一判定点)。
   volatileTailLayoutEnabled,
   appendOnlyToolSchemasEnabled,
   execResultCacheEnabled,
@@ -158,34 +133,12 @@ const createWorkbenchApi = () => ({
   configuredConversationWindow,
   providerConversationContextWindow,
   agentConversationContextMeta,
-  // 代理模式 v2:信封/取全文/窗口链(e2e 白盒直调)。
   agentNodeContextWindow,
   buildAgentRunEnvelope,
   cutAtSentence,
   singleAgentShorthandNode,
   legacySpawnToOrchestrateArgs,
   waitForAgentRunResults,
-  parseKimiWireCompaction,
-  parseKimiWireAgentEvents,
-  isKimiAcpPlanFilePath,
-  resolveKimiAcpPlanFilePath,
-  kimiAcpSessionRestoreMethods,
-  kimiAcpUnknownSessionError,
-  kimiAcpModeOptionFromActivated,
-  kimiAcpFreshActualForOperation,
-  kimiAcpInferConcreteToolInput,
-  consumeKimiAcpApproval,
-  kimiAcpSuccessfulEnterPlanMode,
-  kimiAcpNativeShellQuote,
-  kimiAcpNativeBashWrapperTexts,
-  kimiAcpNativeBashWrapperCandidate,
-  kimiAcpPermissionToolCall,
-  prepareKimiAcpSpawn,
-  watchKimiWire,
-  kimiSessionStatus,
-  runKimiCompact,
-  // 20-T1/20-C1/20-F1 runtime optimization pure primitives. Exported for offline replay/e2e; the master
-  // shadow switch only measures candidates, while production behavior remains behind strict active flags.
   searchToolCatalog,
   compareToolRetrievalShadow,
   reduceObservationContent,
@@ -193,21 +146,18 @@ const createWorkbenchApi = () => ({
   measureObservationReductionShadow,
   rehydrateObservation,
   classifyRuntimeToolFailure,
-  // 第45波 45b/45d:context-400 判定 + 估算自校准/窗口学习 — exposed for e2e(校准 EMA/只降不升/超窗重试)。
   isContextOverflowError,
   noteEstimateSample,
   estimateFactor,
   noteWindowOvershoot,
   learnedWindowCap,
   calibratedEstimate,
-  // v1.0.2-S2: context-window three-level resolution — exposed for e2e direct units.
   resolveContextWindow,
   providerContextWindow,
   contextWindowFromTable,
   extractContextLength,
   fetchOpenAiModels,
   CONTEXT_WINDOW_FALLBACK,
-  // v2.6.2 压缩标记合并 + token 读数 — exposed for e2e direct units(合并/门槛/滞回/尾零回归)。
   fmtTokensServer,
   openCompactMarker,
   upsertCompactMarker,
@@ -216,7 +166,6 @@ const createWorkbenchApi = () => ({
   pickPython,
   desktopPythonCandidates,
   desktopMcpFromInstalledRoot,
-  // 39 号文:异步孪生与预热闸门 — 单测直接拿它们量「探针不占事件循环」与「预热之后同步那支零探针」。
   detectDesktopMcpAsync,
   pickPythonAsync,
   ensureDesktopMcpWarm,
@@ -225,77 +174,61 @@ const createWorkbenchApi = () => ({
   configureMcpFromTool,
   buildBrowserAutomationHint,
   buildToolCustomizationHint,
-  // v1.1-W2 (T2): MCP drop-in scan — exposed for mcp-config e2e (invalidate cache after fixturing folders).
   invalidateMcpDropInCache,
   collectBridgedTools,
-  adaptiveCatalogForMcp, // 105a: exposed for e2e 直测(observation_recall 目录门)
-  resolveBridge, // v1.4.1: bridged-name prefix-tolerant routing (models that drop the serverId__ prefix)
-  // 第55波 EC-C(55a): MCP 运维闭环 -- 统一读模型 + 健康探针 + 错误归类 + 兼容矩阵 - exposed for e2e 直测。
+  adaptiveCatalogForMcp,
+  resolveBridge,
   MCP_COMPAT_MATRIX,
   classifyMcpError,
   probeMcpConnector,
   buildMcpConnectorInventory,
-  safeUrlForDisplay, // 55a:远程 URL 展示脱敏 - exposed for e2e 直测
-  killChildTree, // 128i:发出去就算的那一支(14 处调用点的旧形状)—— exposed for unit/kill-own-process-tree.test.js [R2]
-  killAllMcpClients, // 55a:e2e 直测探针后清理 spawn 的 fake-mcp 子进程(避免 unref 子进程泄漏)
-  normalizeConfig, CONFIG_MIGRATIONS, // 架构还债批 2 B1:一次性 schema 迁移表(unit/config-migrations.test.js 钉顺序与金样)
-  // 128a:读-改-写整条环 exposed for unit/config-explicit-keys.test.js(真读盘、真写盘,临时 HOME)。
+  safeUrlForDisplay,
+  killChildTree,
+  killAllMcpClients,
+  normalizeConfig, CONFIG_MIGRATIONS,
   readConfig,
   mutateConfig,
   AGENT_CLI_TYPES,
-  normalizeAgentCliType, syncAgentCliMcpManifests, // 架构还债批 4:CLI 类型归一与 MCP 清单同步 —— exposed for unit/agent-cli-registry.test.js
+  normalizeAgentCliType,
   probeAgentCliLauncher,
   prepareAgentCliSpawn,
-  syncMcpServersToKimi,
-  parseAgentCliEvent,
-  AGENT_CLI_ADAPTERS, agentCliAdapter, // 架构还债批 3 A:CLI 适配器 —— exposed for unit/agent-cli-adapters.test.js(方法集同构 + 金样)
+  AGENT_CLI_ADAPTERS, agentCliAdapter,
   providerReasoningEffort,
   applyProviderReasoningEffort,
   buildClaudeCliEnv,
   decodeClaudeCliText,
-  // v1.9 数据管家 — exposed for e2e direct unit assertions(保留策略归一/统计/sweep/归档读取回退)。
   normalizeStoragePolicy,
   collectStorageStats,
   storageSweep,
   readAgentRunEvents, appendAgentRunEvent, flushAgentRunEvents, runSubAgentCore,
-  // 第40波:boot 恢复并发化 + syncRunEventSeq 尾窗化 — exposed for e2e(尾窗/全读回落/池语义直测)。
   syncRunEventSeq,
   autoResumeInterruptedRuns,
   markInterruptedAgentRuns,
-  // 第40波:性能观测面 — exposed for e2e(路径归一化/直方图分桶/趋势节流直测)。
   recordRequestMetric,
   normalizeMetricsPath,
   maybeRecordStorageTrend,
   readStorageTrend,
   buildMetricsPayload,
-  // v1.9 会话存储 v2 + 引擎转录 GC — exposed for e2e(迁移/快路径/撕裂容忍/白名单账本/保留期清理)。
   loadSession,
   createSession,
   updateSessionMeta,
-  sessionMeta, // 116-2a: 侧栏/索引同源的元数据读形(含会话级 permissionMode 与派生 effectivePermissionMode)
-  normalizeSessionEngineRoute,
-  sessionEngineRouteFromConfig,
+  sessionMeta,
   configForSessionEngineRoute,
   saveSession,
   deleteSession,
   listSessions,
-  mutateSession, // 128b:会话读改写原语 —— exposed for unit/session-mutate.test.js
-  sessionObjectIsStale, // 128b
-  runMissionDriver, // 128b:驱动器撤回后收手 —— exposed for unit/session-mutate.test.js [D1]
-  rewindSession, // 107-F7b: exposed for unit(撤回代数闸:撤回之前攥在手里的副本写不回去、之后新读的照常落盘)
-  flushSessionIndexSync, // 107-F9a: exposed for unit(退出时的同步刷写要把「在途」那一批也写进去,不许随被放弃的异步写一起丢)
-  // 第75c波:可重建 Mission/Intervention 索引与无损 journal 压缩原语。
+  mutateSession,
+  sessionObjectIsStale,
+  runMissionDriver,
+  rewindSession,
+  flushSessionIndexSync,
   getPretenderProjectionIndex,
-  warmPretenderProjectionIndex,
   compactInterventionJournal,
   bumpMissionChangeSeq,
   sessionBodyPaths,
-  // 117q-B6(30 号文 P2-10/P2-11):尾窗读原语 + 撕裂尾修复合一 — exposed for e2e 字节级直测
-  // (造真撕裂尾文件、跑修复、断言截断后字节逐字节等于预期;不经 HTTP,直接函数调用可控)。
   readFileTail,
   repairMissionChangeTornTail,
   recordEngineTranscript,
-  claudeProjectsRoot,
   claudeProjectDirKey,
   fenceSafeSlice,
   shrinkFencedSection,
@@ -305,68 +238,54 @@ const createWorkbenchApi = () => ({
   readClaudeProjectAgentRoles,
   saveProjectAgentRoles,
   buildClaudeAgentDefinitions,
-  classifyClaudeSubagentFailure, // cmd8191: 「命令行太长。」→ definitive 签名 — exposed for e2e unit assertions
+  classifyClaudeSubagentFailure,
   parseClaudeTaskNotification,
   nativeClaudeAgentResultInfo,
   BUILTIN_AGENT_ROLES,
   normalizeSession,
-  isUntitledSessionTitle, // 50-fix: 未命名标题判定(双引擎自动命名共用) — exposed for e2e
-  // 第 116 波 116-5a(27 号文 §11.8「线程自动摘要」):线程的名字与一句概括。
-  //   sessionDisplayTitle —— 「这条线程该显示什么名字」的唯一判据(人起的 > 生成的 > 原话),
-  //     服务端一处装配、多处消费,前端不许各算一遍;
-  //   maybeWriteThreadBrief / parseThreadBrief —— exposed for e2e 与单测直测(生成与解析各自可判定)。
+  isUntitledSessionTitle,
   sessionDisplayTitle,
-  // 117j 收尾:会话头的【带瞬时重试】读取。Windows 的 rename 替换会开一个 ENOENT 窗口,
-  // 单发 readFile 会把「正在被原子替换」误判成「不存在」。exposed for unit/session-head-read.test.js。
   readSessionHeadResilient, registerIntervention, transitionInterventionState, readInterventions, makeAttachmentRecord, threadVisible,
   maybeWriteThreadBrief,
   parseThreadBrief,
   detectDanglingTurn,
   bridgedToolTier,
-  bridgedReadPathGate,   // 安全修复(审计 A②):桥接读文件的读边界 —— unit/security-audit-fixes.test.js 直调
+  bridgedReadPathGate,
   cwdWarning,
   defaultConfig,
   DurableJsonStore,
   sanitizeExternalMcpServer,
-  // 启动时把本机 Claude Code(~/.claude.json)的 MCP 自动映射进 Ruyi(e2e 直测:幂等/上限/dismissed 跳过)。
   autoImportClaudeCodeMcp,
-  // 48c: MCP 配置导入器解析器(e2e 直测 TOML/JSON 边角)。
   parseMcpConfigFile,
   scanMcpSources,
-  // v0.8-S6: capability matrix + layered prompt + error枚举 (exposed for e2e + UI).
   getCapabilities,
   invalidateCapabilityCache,
   CAP_UNKNOWN_TTL_MS,
-  // 128f-⑧:unit/session-index-rebuild-race 用。
   buildUsageSummary,
-  forEachUsageRow, readUsageRows, usageLedgerCacheStats,   // 性能批 P1:unit/usage-ledger-cache 直调(新旧两条读账路径差分 + 增量计数)
-  pretenderIndexTestHooks,   // 性能批 P2:unit/pretender-index-incremental 直调(名单比对 / 后台校验 / 延迟落盘的计数)
+  forEachUsageRow, readUsageRows, usageLedgerCacheStats,
+  pretenderIndexTestHooks,
   flushSessionIndex,
   invalidateSessionIndex,
   setSessionIndexRebuildScanHookForTest,
-  // 128f-⑪:unit/permission-wait 用。
   permissionWaitMs,
   stewardMediatedPermissionWaitMs,
   hasPendingPermissionForSession,
   requestNativePermission,
   clearPendingPermissions,
   schedulerAskWaitSessions,
-  // 129f — exposed for e2e:事件总线。「该不该叫」这道门只能在总线上验 —— 经 SSE 验的话
-  // 测的就成了事件流那一层的转发与前端订阅,不是这道门本身(那一层另有 event-stream 的件在钉)。
   RUYI_EVENTS,
   EventStreamHooks,
-  // 128f-⑥:unit/usage-ledger-exit-flush 用。
   appendUsageLedger,
   flushUsageLedgerSync,
-  peekCapabilities, // 108b-fix2:非阻塞能力缓存读取(不触发探测)
+  peekCapabilities,
   buildProviderSystemPrompt,
-  PROMPT_PACK_VERSION, // 52d: 提示词包版本(语义化版本检查)
-  getPromptPack, // 116f: 提示词包选择器(locale 感知) — exposed for 静态锁直读 steward 段的分层预算
-  buildStableSystemPrompt, // 51d C1a:稳定层(prefix-cache 友好)
-  buildRuntimeIdentityFacts, // 108a:运行时身份事实(进程内恒定量,e2e 直测)
-  buildEngineEnvBrief, resolveEngineEnvBrief, probeRgAsync, peekRgProbe, // 145-W3:引擎运行环境说明 + rg 来源探测(静态件直测)
-  buildVolatileParts, // 51d C1a:易变层(C1b 移 user 侧)
-  buildPlaybookIndexSection, // 108b:Playbook 精简索引段(e2e 直测围栏/上限/尾行)
+  PROMPT_PACK_VERSION,
+  getPromptPack,
+  buildStableSystemPrompt,
+  buildRuntimeIdentityFacts,
+  buildEngineEnvBrief, resolveEngineEnvBrief, probeRgAsync, peekRgProbe,
+  buildVolatileParts,
+  buildPlaybookIndexSection,
   buildAgentTeamHint,
   buildClaudeNativeAgentPolicy,
   softwareEngineeringTaskProfile,
@@ -385,58 +304,35 @@ const createWorkbenchApi = () => ({
   listAgentLoopHooks: AgentLoopHooks.listAgentLoopHooks,
   dispatchAgentLoopHooks: AgentLoopHooks.dispatchAgentLoopHooks,
   summarizeAgentLoopToolResult: AgentLoopHooks.summarizeAgentLoopToolResult,
-  // 第116波116a(27号文§11.3): 管家(Steward)引擎侧纯函数与延迟绑定命名空间 — exposed for e2e/单测。
   StewardHooks,
   STEWARD_EVENT_KINDS,
   STEWARD_DIGEST_LIMITS,
   stewardMayAct,
-  // 125-P0/P1:被停下来的目标判据(06i)与失败类别的取话口(13m)—— exposed for 单测
-  //   (unit/steward-inbox-core.test.js 直测两者的真值表与「未知类别」诚实回退)。
   stewardStoppedTarget,
   stewardFailureExplain,
   buildStewardDigestLine,
-  // 第117波117y-S1(27号文§11.18.2): 管家正文的天花板裁剪(句界 + 诚实标记)与它【绝不能被误伤】的
-  // 那个同名邻居 stewardClipSay(总览行/待决一行话的 200 字 + 省略号)—— 两个都 exposed for
-  // unit/steward-core.test.js:一个正测句界裁剪,一个做反向保护断言。
   stewardTrimSayAtSentence,
   stewardClipSay,
   STEWARD_SAY_TARGET,
   STEWARD_SAY_CEILING,
-  // 第116波116-2a(27号文§3.3/§8.6): 线程级权限 — 三层解析纯函数(请求级>会话级>全局)与
-  // 「管家只能收紧」的序表。exposed for 单测(permission-resolve.test.js)与 e2e 直测。
   resolvePermissionMode,
-  // 第117波117m-A1(27号文§3.3/§8.6): 原生引擎权限闸门本体(mode,tier,toolName,input)与「活回合此刻
-  // 的会话级档」只读访问器 — exposed for e2e 直测(auto 档的高风险判据、中途改档立刻生效两条)。
   nativeToolGate,
   liveSessionPermissionMode,
   PERMISSION_MODES_REQUIRING_CONFIRM,
   STEWARD_PERMISSION_RANK,
   stewardPermissionRank,
   stewardMayTightenTo,
-  // 第116波116-pre(27号文§8.12/§11.3): 递话预判纯函数 — exposed for 单测(steward-preroute.test.js)。
   STEWARD_PREROUTE_DEFAULTS,
   prerouteText,
-  // 第116波116h(27号文§3.1 116h 行/§8.10): 等待原因的唯一判定点(等你>等锁>等预算>等并发位)
-  //   与它的两张常量表 — exposed for 单测(steward-wait-reason.test.js)与 e2e 直测形状对账。
   STEWARD_WAIT_REASONS,
   STEWARD_WAIT_LABELS,
   waitReasonFor,
-  // 第117波117l-A1(27号文§11.9 D5/D7/D4): id 人话化、新线程模型分档、「它在问你」三态 —— 三个纯
-  //   函数(只吃入参、无 IO),exposed for 单测(unit/steward-humanize.test.js)与 e2e 直测。
   stewardHumanizeIds,
   stewardThreadEngineRoute,
-  stewardOpenAiFallback,   // 133d:管家线程只走 OpenAI 兼容端点的回落顺序(纯函数,unit/steward-config-tier.test.js 直测)
+  stewardOpenAiFallback,
   stewardAsksYou,
-  // 第117波117q-B5(30号文§3 总表 P2-8): 中和伪造围栏标签 —— 纯函数(只吃入参、无 IO),六个调用点(06d/06e/06/09)
-  //   的单一事实源。exposed for 单测(unit/neutralize-fence-tag.test.js)。
   neutralizeFenceTag,
-  // 第117波117q-B7(30号文§3 总表 P2-16): argsHash 指纹算法 —— 纯函数(只吃入参、无 IO),06f-autonomy-grants.js
-  //   ::consumeGrant 与 09b-replan-ledger.js::recordNodeContinuation 两个调用点的单一事实源。
-  //   exposed for 单测(unit/hash-args.test.js)。
-  // 第116波116c-0(27号文§1/§3.5): 会话回合核心 —— 进程内(不经 HTTP)在任意会话上发起一个完整回合,
-  //   自带 sink;HTTP 的 /api/chat/stream 现在也只是它的一层壳。exposed for e2e 等价性直测与后续切片调用。
   runSessionTurn,
-  // 第116波116b(27号文§11.3): 管家收件箱 — 生命周期 + 归一化/合并/去重纯函数(exposed for 单测/e2e)。
   startStewardInbox,
   stopStewardInbox,
   STEWARD_SOURCE_EVENT_MAP,
@@ -447,30 +343,18 @@ const createWorkbenchApi = () => ({
   stewardMergeInboxEvents,
   stewardEventDedupeKey,
   stewardInboxRowDedupeKeys,
-  // 第116波116c(27号文§3.3/§3.5/§4): 管家工具集 — 06i 纯函数(委托书/五态判据/豁免正则/记忆去重)
-  // exposed for 单测与 e2e 直测;工具实现本身经 StewardHooks 与 TOOL_HANDLERS 触达,不另开导出面。
   STEWARD_EXEMPT_TOOL_PATTERNS,
   stewardToolPermanentlyExempt,
-  // 127 波 2-bis:豁免原因(单点判据,布尔由它派生)/ 精确名出口 / 类别人话表 —— 单测与 e2e 直测。
   stewardExemptReason,
   STEWARD_EXEMPT_NAME_CARVEOUTS,
   STEWARD_EXEMPT_CATEGORY_LABELS,
-  // 127 波 2-quater B1:全部命中 + 底线 + 扫没扫全 / tier 口径单点 / 命令摘录(中和 + 截 300)/ 摘录上游的脱敏,
-  // 以及收件箱消息装配与降级按钮 —— 单测与 e2e 直测(13k 的摘要生产者经 StewardHooks.enrichInboxRows 与
-  // steward_thread_status 触达,不另开导出面:14-main -> 13k 会是一条新边)。
   stewardExemptHits,
   stewardExemptScanInput,
   stewardExemptExcerpt,
   redact,
   stewardInboxMessage,
   stewardDowngradeActions,
-  // 127 波 2-quater B2:代批十道闸的纯判据 / 污染判据(工具名 + 活回合段表)/ riskNote 清洗 / 闸名表与小时上限,
-  // 以及 13q 的确定性回执合并 —— 单测直测(13k 的活回合读取经 steward_decide 真路径触达,不另开导出面)。
   stewardExemptDelegationVerdict,
-  // 129c 污染规则(31 号文红线 4)的两个判定面 —— exposed for e2e:「读过外界内容之后写动作
-  // 降级成提议」只有把这两个直调起来才测得出【判据本身】,否则只能经一次真模型回合间接看结果。
-  // 129e — exposed for e2e:「活回合期间不许换工作目录」这条忙锁,只有把在跑的那一格摆出来才测得到
-  // (起一个真回合再去改,测的就成了回合调度的时序,不是这条闸本身)。
   activeChildren,
   stewardSelfServeAllows,
   stewardTurnTaintedBy,
@@ -482,40 +366,26 @@ const createWorkbenchApi = () => ({
   STEWARD_EXEMPT_DELEGATIONS_PER_HOUR,
   STEWARD_EXEMPT_DELEGATION_TEXT_MAX,
   stewardMergeDelegationReceipts,
-  // 107-S1(46 号文 §5 S1):①②③④ 的四个新纯判据 —— 摘录长度常量(闸 5 绑在它上面)、间接构造、
-  // 删数据的绝对目标、confirm 族的确认清单。单测直测;act 的服务端标签与确认行经 stewardNormalizeAct
-  // 的真路径(管家回合 / 降级按钮)在 e2e 里读。
   STEWARD_EXEMPT_EXCERPT_CHARS,
   stewardActConfirmSpec,
   stewardNormalizeAct,
   stewardActLabel,
   isStewardToolName,
   buildStewardBrief,
-  // 129h:两个纯函数 —— 占位组装与「哪些参数没给值」。导出只为单测直测
-  // (unit/steward-playbook-run.test.js 拿前端那份 assemblePlaybookPrompt 与它逐例对照)。
   stewardAssemblePlaybookPrompt,
   stewardPlaybookMissingInputs,
   STEWARD_BRIEF_LIMITS,
   deriveStewardThreadState,
   stewardThreadStateFromCard,
-  stewardThreadStateFromHead,   // 架构还债批 1 #1:会话头 → 五态证据的唯一适配器(unit/steward-head-adapter.test.js)
-  // 第116波116g(§3.1 事项跨会话升格): 事项级聚合状态的唯一定义(纯函数,unit 穷举真值表)。
+  stewardThreadStateFromHead,
   aggregateMissionState,
-  // 117s-A D1(§11.13 ③):行序的状态秩(纯函数,单测/e2e 直测)。
-  stewardThreadStateRank,
   STEWARD_MEMORY_KINDS,
   stewardTermJaccard,
-  // 第116波116-2e(27号文§3.5「如意设置」行): steward_config_* 的三级分级(allowlist + fail-closed)。
-  //   exposed for 单测 unit/steward-config-tier.test.js —— 它拿 Object.keys(normalizeConfig({}).config)
-  //   遍历默认表的每一个键,要求逐个落到 free/confirm/forbidden 三级之一,不许漏。
   STEWARD_CONFIG_TIERS,
   stewardConfigTierFor,
   STEWARD_QUICK_ANSWER_CHARS,
-  // 117s-H1(27 号文 §11.13.3「交付进箱」): 交付正文的三个预算 —— e2e 直接拿它们断言,
-  //   数字只许有一份(06i 一份、13h 两份),测试不再自带字面量。
   STEWARD_DELIVERABLE_CHARS,
   STEWARD_INBOX_MESSAGE_CHARS,
-  // 第116波116g: 事项容器(02 持久化面)—— e2e 直测反向索引、损坏隔离与四个归属操作的幂等。
   readMissionContainer,
   listMissionContainers,
   createMissionContainer,
@@ -524,14 +394,11 @@ const createWorkbenchApi = () => ({
   missionMergeInto,
   missionSplitThreads,
   MISSION_CONTAINER_MAX_FILES,
-  // 第116波116f(27号文§11.3): 管家回合运行器与到访 — 会话单例常量、回合入口、到访、输出契约解析器
-  // 与两个分叉入口(提示词/预算)。exposed for e2e 直测;09/10/13g 侧一律经 StewardHooks 触达。
   STEWARD_SESSION_ID,
   STEWARD_SESSION_TITLE,
   runStewardTurn,
   stewardResetConversation,
   nativeToolSchema,
-  // 第117波117m-A1: 熔断判据本体 — exposed for e2e 直测(小时窗只节流 trigger!=='user' 的自主回合)。
   stewardCircuitCheck,
   stewardVisit,
   stewardParseReply,
@@ -539,10 +406,7 @@ const createWorkbenchApi = () => ({
   ensureStewardSession,
   buildStewardSystemPrompt,
   stewardContextBudget,
-  // 116-pre(27号文§8.12/§11.3): 递话预判端点的装配层 — exposed for e2e 直测(缓存命中/未命中两路径)。
   stewardPreroute,
-  // 116c: 班组动作核心(从 POST /api/agent-runs/:id 路由零行为抽出)与 108c 自状态装配 — e2e 直测等价性。
-  // 第41波(41a/41b): 表驱动工具注册表 — exposed for e2e(guard 声明化行为锁内省 + 分发行为直测)。
   TOOL_HANDLERS,
   NATIVE_TOOL_TIER,
   NATIVE_TOOL_PACKS,
@@ -559,55 +423,39 @@ const createWorkbenchApi = () => ({
   CONFIG_SCHEMA,
   PERMISSION_MODES,
   ROUTE_AUTH,
-  // v0.9-S2: playbooks — exposed for e2e direct unit testing (normalize / availability / draft-parse).
   normalizePlaybook,
   evalPlaybookAvailability,
-  matchServiceEntry, // 127-⑧:服务入口整体序(可用 > 需配置 > 未知 > 暂无模板)的进程内单测
-  // v0.9-S3 (C3): workspace-by-fingerprint — exposed for e2e direct unit testing of the resolver.
+  matchServiceEntry,
   resolveWorkspace,
-  // PF1: checkpoint GC size-cap cache — exposed for e2e (assert no per-write full sweep + still purges over-cap).
   journalRecord,
   journalGc,
   journalGcProbe,
-  writeHistorySnapshot, // PF1 fix: history snapshots also grow the cap-governed tree — exposed so the e2e can
-                        // assert repeated snapshots move the cache AND auto-trigger a purge (bug: neither happened).
-  // v0.9-S4 (C4): artifacts kind classifier + preview path-safety + summary builder — exposed for e2e units.
+  writeHistorySnapshot,
   kindForPath,
   buildTurnSummary,
-  // v1.5-W1.5 (T3): bridged 写族路径提取 — exposed for e2e 直接单测(args→目标路径+op)。
   collectBridgedWriteTarget,
-  // v1.2-B: 多目标路径提取(move/copy 两条式)+ 机制性防漏审计 — exposed for checkpoint-coverage e2e 直测。
   collectBridgedWriteTargets,
   auditBridgedWriteCoverage,
   BRIDGED_WRITE_PATH_ARGS,
-  // v1.2: 终端命令内联手写 Office 的桥接分发软闸 — exposed for e2e 直接单测。
   bridgedOfficeScriptGate,
   pathWithinRoot,
   pathWithinAnyRoot,
-  // v1.0.2-S3: reveal-in-explorer path guard + spawn-argv builder — exposed for e2e 单测护栏逻辑。
   guardWorkspacePath,
   buildRevealSpawn,
-  // Native code-editor handoff + exact turn baselines — exposed for offline regression tests.
   buildCodeEditorSpawn,
   captureWorkspaceTurnBaseline,
   reconcileWorkspaceTurnBaseline,
-  // v1.4.6-S2/S3: shell-free open-spawn argv builders + native file-tool workspace boundary guard + local
-  // provider detection — exposed for e2e (pure argv / containment assertions).
   buildOpenSpawn,
   buildBrowserOpenSpawn,
   guardFileToolPath,
   providerIsLocal,
-  // 第31波B(L1): autoexec denylist + 路径归一 — exposed for shell-sandbox e2e 直接单测。
   AUTOEXEC_DENYLIST,
-  // v0.9-S9: web_search / web_fetch — SSRF guard + main-text extraction + cache (exposed for e2e direct units).
   ssrfCheck,
   webCachePath,
   readWebCache,
   writeWebCache,
   webFetch,
   webSearch,
-  // v1.1-W1a (T1/T2/T3): fetch error classification + multi-target probe + builtin HTML search — exposed for e2e units.
-  // v1.1-W2 (T1): zero-dep ZIP codec + download dest guard — exposed for tools-v3 e2e direct units.
   crc32,
   zipWrite,
   zipReadCentralDir,
@@ -615,7 +463,6 @@ const createWorkbenchApi = () => ({
   guardDownloadDest,
   probeAny,
   networkAnchors,
-  // Resource-aware DAG scheduler primitives (pure normalization/conflict checks plus lease integration tests).
   normalizeAgentResource,
   normalizeAgentResources,
   remapAgentResources,
@@ -625,7 +472,7 @@ const createWorkbenchApi = () => ({
   releaseResourceLease,
   resourceBlockers,
   parseStructuredAgentOutput,
-  repairJson, // v1.5 (Judge JSON 修复): 零依赖修复器 — exposed for judge-json-repair e2e 直接单测。
+  repairJson,
   validateAgentJsonSchema,
   normalizeAgentGate,
   aggregateAgentVote,
@@ -637,14 +484,12 @@ const createWorkbenchApi = () => ({
   normalizeWorkflowLoop,
   workflowProgressFingerprint,
   evaluateNodeToolEvidence,
-  // R1(13-r1-evidence-graph.md): evidence 索引 + claim 引用校验 - exposed for e2e 直测(四态:verified/unverified/跨工作区/无refs)。
   indexNodeEvidence,
   verifyNodeClaims,
   purgeNodeEvidence,
   runWorkspaceHash,
   buildNodeEvidenceCatalog,
   formatNodeEvidencePrompt,
-  // R4(15-r4-memory-graph.md): 记忆关系边 + 冲突感知检索 - exposed for e2e 直测(propose/confirm/scope隔离/conflict)。
   saveMemory,
   loadMemoryRegistry,
   listWorkbenchMemories,
@@ -686,34 +531,20 @@ const createWorkbenchApi = () => ({
   maskSecrets,
   unmaskSecrets,
   unmaskProviders,
-  // 107-S2:掩码回传的启动向量闸(providers/searchBackend/modelsApiKey 的密钥会去哪几个地址)- exposed for e2e 直测。
   maskedSecretConflicts,
   providerLaunchVectorKey,
-  // Responses strict pairing adapter — exposed for e2e: shallow-copy repair must not mutate persisted history.
   responsesHistoryWithCompleteToolPairs,
   buildResponsesInputItems,
-  // 117q-B1(30 号文 §4.1): 子进程 NDJSON 逐行喂入器 — exposed for unit 直测(chunk 边界切开 CJK 字节不得产生 U+FFFD)。
   createNdjsonLineFeeder,
-  // 第 123 波 M1 §3.2/§3.4:调度器生命周期与假时钟 —— exposed for e2e 直测与 14 的 boot 起停。
   startScheduler,
   stopScheduler,
   schedulerRuntimeSnapshot,
-  // 安全修复(审计 D):定时回合权限档的天花板(= 全局档,永不含 bypass)—— unit/security-permission-ceilings.test.js 直调整张真值表。
   schedulerPermissionModeFor,
-  // 127 波 2-ter S-b:六条路由的处理函数本体 —— exposed for scheduler-steward.e2e.js 在进程内挂一个 http 壳直测
-  //   「HTTP 新建 / PATCH 写不进 workdir、PATCH 保住服务端那一份」(workdir 只在管家开着且真触发过之后才有,
-  //   而那件是进程内夹具;鉴权表是另一件事,由 scheduler-api.e2e.js 经真服务钉着)。
   handleSchedulerApiRoutes,
-  // 第 123 波 M2 §3.5:管家面的两个观测口 —— 定时任务回调/承诺读口的延迟绑定命名空间,
-  //   与「回来摘要」那一支(七类事件 + 承诺三项) exposed for scheduler-steward.e2e.js 的直测。
   stewardVisitDigest,
-  // 性能批(GET /api/missions 聚合装配 + GET /api/agent-runs?view=digest 摘要缓存):unit/poll-path-caches.test.js 直调
-  //   两个装配/列举函数、用 saveAgentRun 验「进程内写即作废」,并读确定性计数器(perfCounters)断言「没重算 / 没重读」。
   buildMissionAggregateRows,
   listAgentRunDigests,
   saveAgentRun,
-  // 会话正文 perf(逐行 sha1 去重 + 增量取不读 provider 正文):unit/session-body-line-cache.test.js 读 perfCounters.sessionBody
-  //   的确定性计数器,并把 sessionMessagesDelta 的字节戳路径与逐条序列化路径逐格比对。
   perfCounters: { missionAggregate: missionAggregateStats, agentRunDigest: AgentRunStore.stats, sessionBody: sessionBodyPerfStats },
   sessionMessagesDelta,
 });

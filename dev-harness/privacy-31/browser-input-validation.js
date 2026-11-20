@@ -7,7 +7,7 @@ const { startBrowserFixture } = require('../lib/browser-fixture');
 const { createCorpus, createMixedCorpus } = require('./synthetic-catalog-corpus');
 const REPO = path.resolve(__dirname, '../..');
 const outputArgument = process.argv.slice(2).find(arg => arg.startsWith('--output='));
-const ARCHIVE = outputArgument ? path.resolve(REPO, outputArgument.slice('--output='.length)) : path.join(REPO, 'ruyi-workbench/dist/privacy31-20261020-ux/validation');
+const ARCHIVE = outputArgument ? path.resolve(REPO, outputArgument.slice('--output='.length)) : fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ruyi-privacy-input-results-'));
 const SERVER = path.join(REPO, 'ruyi-workbench/app/server.js');
 const hash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const sourceHash = hash(SERVER), scriptHash = hash(__filename);
@@ -72,11 +72,10 @@ const thirdCorpus = { cases: [...third.cases, ...third.negatives.map((sample, in
 thirdCorpus.prose = thirdCorpus.cases.map(row => row.sample).join('\n') + '\nPUBLIC count=200 request_id=99887766';
 async function main() {
  try {
-  if (process.platform !== 'win32') throw Error('Windows_DPAPI_required_for_this_opt_in_proof');
   fs.mkdirSync(ARCHIVE, { recursive: true });
   const rows = corpus();
   check(mixedCorpus.cases.every(row=>(row.secrets||[row.secret]).every(secret=>(mixedCorpus.prose||mixedCorpus.sample).includes(secret))), 'every independent mixed entity is actually present in the natural input fixture');
-  fx = await startBrowserFixture({ prefix: 'ruyi-browser-input-proof-', ok: check,
+  fx = await startBrowserFixture({ prefix: 'ruyi-browser-input-proof-', isolatedKeychain: true, ok: check,
     config: { stewardEnabledV1: false, schedulerEnabledV1: false, importAgentInstructions: false, permissionMode: 'acceptEdits', toolLoadingMode: 'full', bridgeExternalToolsToProvider: false, runtimeOptimizationShadowV1: false, contextAutoCompactEnabled: false, memoryAutoProposeEnabled: false, missionAutoContinue: false },
     prepare: async ({ work }) => {
       fs.writeFileSync(path.join(work, 'browser-source.json'), JSON.stringify({ email: TOOL_EMAIL, password: 'SYNTHETIC-TOOL-PASSWORD-ONLY' }));

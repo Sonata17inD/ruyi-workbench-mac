@@ -26,15 +26,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 截图落点：默认在夹具临时目录，设了 RUYI_SHOT_DIR 就落到那里（交付报告要贴那两张）。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -89,13 +88,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：'ask' → 一条 request_user_input（挂成 question 待决）；'hang' → 只开流不收尾；
 // 其余 → 一句短回答。**每一发都把请求体里的 model 记下来**（⑤ 的 F8 判据：切了模型之后
@@ -302,8 +294,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A1 workbench started');
 
@@ -358,11 +350,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1920,1080',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A9 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -754,18 +746,18 @@ try {
   ok(modelsAfter.length > 0 && modelsAfter.every(model => model === MODEL_2),
     `F8 下一回合真的打到新模型上（fake provider 抓到的 model=${JSON.stringify(modelsAfter)}）`);
 
-  // 引擎 chip：agent 引擎的路由形状（{engine:'agent', agentCliType:'kimi'}）也要写得进去、读得回来。
+  // 引擎 chip：agent 引擎的路由形状（{engine:'agent', agentCliType:'claude'}）也要写得进去、读得回来。
   await cdp.evaluate('window.__w1Reset(), true');
   await clickSelector('#threadChips [data-chip="engine"]');
-  await waitForEval(cdp, `(() => document.querySelector('#threadChips .steward-chip-menu [data-engine-key="agent:kimi"]') ? 1 : null)()`, 200);
-  await clickSelector(`#threadChips .steward-chip-menu [data-engine-key="agent:kimi"]`);
+  await waitForEval(cdp, `(() => document.querySelector('#threadChips .steward-chip-menu [data-engine-key="agent:claude"]') ? 1 : null)()`, 200);
+  await clickSelector(`#threadChips .steward-chip-menu [data-engine-key="agent:claude"]`);
   await sleep(600);
   const engineBack = await request(appPort, 'GET', `/api/sessions/${encodeURIComponent(created.D)}`, null, token);
   const engineRoute = engineBack && engineBack.json && (engineBack.json.session || engineBack.json).engineRoute;
   const engineState = await cdp.evaluate(`(() => JSON.stringify((window.state.currentSession || {}).engineRoute || null))()`);
-  ok(Boolean(engineRoute && engineRoute.engine === 'agent' && engineRoute.agentCliType === 'kimi'),
+  ok(Boolean(engineRoute && engineRoute.engine === 'agent' && engineRoute.agentCliType === 'claude'),
     `F9 切引擎也写得进去（agent 路由形状；服务端回读 ${JSON.stringify(engineRoute)}）`);
-  ok(Boolean(engineState && engineState.includes('kimi')),
+  ok(Boolean(engineState && engineState.includes('claude')),
     `F10 切引擎之后组合根手里那份也跟着变（实测 ${engineState}）`);
 
   console.log('SHOTS ' + JSON.stringify(shots));
@@ -775,9 +767,8 @@ try {
 } finally {
   for (const socket of openSockets) { try { socket.end(); } catch { /* ignore */ } }
   if (cdp) cdp.close();
-  killTree(browser);
-  stopRuyiTestBrowsers();
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) await new Promise(resolve => provider.close(resolve));
   await sleep(300);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* windows 句柄 */ }

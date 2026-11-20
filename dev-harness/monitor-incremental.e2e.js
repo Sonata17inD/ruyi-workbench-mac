@@ -5,7 +5,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // [H] Live:digest 轻量视图字段、events afterSeq 补播(幂等重放)+ limit/hasMore + 坏行免疫 + 鉴权 403 + 跨会话空、
 //     【验收锁】增量模式传输字节 ≤ 全量模式 20%(忠实模拟客户端算法 N tick)、run.metrics 干预计数、ops 指标端点、单 run GET live 叠加。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readFrontendSrc } = require('./read-frontend-src.js'); // 2.2 门修复:845bb8c 拆域后前端增量缓存逻辑搬到 js/ 域文件,单读 app.js 9 条 S 锁恒红
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
@@ -117,7 +117,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   configSchema: 7, permissionMode: 'bypass', defaultWorkspace: WS,
   providers: [{ id: 'dummy', label: 'Dummy', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1/v1', apiKey: 'k', model: 'm', models: [{ id: 'm', label: 'm' }] }], activeProvider: 'dummy',
 }, null, 2));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
 wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
 (async () => {
   try {

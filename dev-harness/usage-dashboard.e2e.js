@@ -31,7 +31,7 @@ const src = readFrontendSrc();
 const app = fs.readFileSync(path.join(PUB, 'app.js'), 'utf8');
 const usageDomain = fs.readFileSync(path.join(PUB, 'js', 'usage-dashboard.js'), 'utf8');
 const navigation = fs.readFileSync(path.join(PUB, 'js', 'navigation-controls.js'), 'utf8');
-const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
+const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
 
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };

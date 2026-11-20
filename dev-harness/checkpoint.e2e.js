@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      resurrected with identical content.
 //  (e) POST rollback with NO UI token → 403.
 // Token手法 copied from search-robust; direct tool calls carry sessionId so they journal under the session.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -62,7 +62,7 @@ function writeConfig(home, fakePort) {
 }
 // Spawn a fake-openai bound to a specific FAKE_TOOL_SEQUENCE, run one chat turn, then kill the fake.
 function spawnFake(seq) {
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) } });
   fake.stdout.on('data', () => {});
   return fake;
 }
@@ -87,7 +87,7 @@ async function waitFakeDown() { for (let i = 0; i < 50; i++) { if (!await fakeRe
 fs.promises.rename=async function(from,to){if(path.basename(String(to))==='ruyi-rename-failure.txt'&&path.join(fs.realpathSync(path.dirname(String(to))),path.basename(String(to)))===${JSON.stringify(renameTarget)}&&!fs.existsSync(${JSON.stringify(renameObserved)})){
 fs.writeFileSync(${JSON.stringify(renameObserved)},'reached rename');throw Object.assign(new Error('fixture rename failure'),{code:'EACCES'});}
 return original.call(this,from,to);};\n`);
-  const wb = cp.spawn(process.execPath, ['--require', renameFault, 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['--require', renameFault, 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
 
@@ -207,7 +207,7 @@ return original.call(this,from,to);};\n`);
     ok(fs.existsSync(renameObserved), '(f) failure occurred at rename rather than at the path guard');
     const retry = (await tool(WB_PORT, token, 'file_move', { from: mvFrom, to: mvTo, sessionId: sid })).result;
     ok(retry && retry.ok && !fs.existsSync(mvFrom) && fs.readFileSync(mvTo, 'utf8') === 'move-me-content', '(f) retry after rolled-back failure succeeds without data loss');
-    if (process.platform !== 'win32' && process.getuid() !== 0) {
+    if (process.getuid() !== 0) {
       const locked = path.join(HOME, 'readonly-parent'); fs.mkdirSync(locked); fs.chmodSync(locked, 0o555);
       const source = path.join(HOME, 'mkdir-src.txt'); fs.writeFileSync(source, 'preserved');
       const destination = path.join(locked, 'new-directory', 'mkdir-target.txt');

@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       offer 门生效 + 稳定信封(invalid_ref)经 HTTP 链路回传 + 配对铁律
 //       (真实 rawRef 回读成功见 observation-recall-realhistory.e2e.js)
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -25,7 +25,6 @@ const crypto = require('crypto');
 
 // 隔离纪律:require server.js 之前把数据根指向临时目录(快照会写 <data>/checkpoints)。
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w105a-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 
 const HERE = __dirname;
@@ -140,7 +139,7 @@ function writeCfg(flags) {
     const child = cp.spawnSync(process.execPath, ['-e',
       `const srv=require(${JSON.stringify(path.join(WB, 'app', 'server.js'))});` +
       `srv.rehydrateObservation(${JSON.stringify(SID)},${JSON.stringify(rawRef)}).then(r=>{console.log(JSON.stringify({ok:r.ok,len:r.content&&r.content.length}));});`],
-      { env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, encoding: 'utf8', timeout: 30000 });
+      { env: { ...process.env, RUYI_HOME: HOME }, encoding: 'utf8', timeout: 30000 });
     let out = null; try { out = JSON.parse(String(child.stdout || '').trim().split('\n').pop()); } catch { /* ignore */ }
     ok(out && out.ok === true && out.len === BIG.length, 'R1 子进程(模拟重启后)rehydrate 成功且长度一致');
   }
@@ -164,12 +163,11 @@ function writeCfg(flags) {
       runtimeObservationRecallV1: true,
     }, null, 2));
     const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-      windowsHide: true,
       env: { ...process.env, FAKE_NO_USAGE: '1', FAKE_TOOL_SEQUENCE: JSON.stringify([
         { name: 'observation_recall', args: { rawRef: 'not-a-ref' } },
       ]) },
     });
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: EHOME, RUYI_HOME: EHOME }, windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: EHOME } });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     try {
       let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await get(WB_PORT, '/health'); } // 117q:预算 40×150ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)

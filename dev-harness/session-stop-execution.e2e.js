@@ -39,8 +39,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const start = async () => {
     token = '';
     server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-      cwd: WB, windowsHide: true, stdio: 'ignore',
-      env: { ...process.env, ...isolated.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home },
+      cwd: WB, stdio: 'ignore',
+      env: { ...process.env, ...isolated.env, RUYI_HOME: home },
     });
     // A restart can answer health before replacing its predecessor's runtime file.
     await until(async () => {

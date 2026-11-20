@@ -2,12 +2,12 @@
   "schema": 1,
   "generatedBy": "dev-harness/durable-state-inventory.js",
   "scope": "workbench-managed JSON, JSONL/NDJSON and ownership sidecars plus consumed external state",
-  "count": 71,
+  "count": 67,
   "lifecycleCounts": {
     "dedicated-exemption": 23,
-    "external-exemption": 9,
+    "external-exemption": 6,
     "regenerable-exemption": 7,
-    "shared-lifecycle": 32
+    "shared-lifecycle": 31
   },
   "entries": [
     {
@@ -263,34 +263,6 @@
       "exemptionReason": "small shared-atomic ownership sidecar"
     },
     {
-      "id": "kimi-mcp",
-      "pattern": "~/.kimi-code/mcp.json",
-      "owner": "../backend/cli-mcp-sync.cjs",
-      "anchor": "'mcp.json'",
-      "schema": "external object",
-      "writePrimitive": "atomicWriteJson after merge",
-      "corruption": "missing/blank file treated as empty; invalid JSON / non-object root / unreadable (EBUSY, EPERM) file is left untouched and the sync skipped (BOM stripped before parsing)",
-      "capacity": "managed IDs only",
-      "cache": "none",
-      "recovery": "Kimi retains built-ins",
-      "lifecycle": "external-exemption",
-      "exemptionReason": "externally owned merge target; sidecar proves server ownership"
-    },
-    {
-      "id": "kimi-mcp-sidecar",
-      "pattern": "<data>/kimi-mcp-sync.json",
-      "owner": "../backend/cli-mcp-sync.cjs",
-      "anchor": "'kimi-mcp-sync.json'",
-      "schema": "object / implicit v1",
-      "writePrimitive": "atomicWriteJson",
-      "corruption": "missing means no managed IDs",
-      "capacity": "one record",
-      "cache": "none",
-      "recovery": "recreated on next sync",
-      "lifecycle": "shared-lifecycle",
-      "exemptionReason": "small shared-atomic ownership sidecar"
-    },
-    {
       "id": "generated-mcp",
       "pattern": "<data>/generated/workbench.mcp[.<session>].json",
       "owner": "../backend/mcp-manifests.cjs",
@@ -473,34 +445,6 @@
       "exemptionReason": "compressed binary is not a JSON-file lifecycle"
     },
     {
-      "id": "kimi-session-index",
-      "pattern": "<kimi-home>/session_index.jsonl",
-      "owner": "../backend/kimi-wire.cjs",
-      "anchor": "'session_index.jsonl'",
-      "schema": "external JSONL",
-      "writePrimitive": "Kimi-owned append",
-      "corruption": "adapter skips invalid rows",
-      "capacity": "Kimi-owned",
-      "cache": "short-lived lookup",
-      "recovery": "Kimi rebuild",
-      "lifecycle": "external-exemption",
-      "exemptionReason": "read-only external engine state"
-    },
-    {
-      "id": "kimi-wire",
-      "pattern": "<kimi-session>/agents/*/wire.jsonl",
-      "owner": "../backend/kimi-wire.cjs",
-      "anchor": "'wire.jsonl'",
-      "schema": "external JSONL",
-      "writePrimitive": "Kimi-owned append",
-      "corruption": "adapter tolerates incomplete stream",
-      "capacity": "Kimi-owned",
-      "cache": "tail cursor",
-      "recovery": "Kimi session replay",
-      "lifecycle": "external-exemption",
-      "exemptionReason": "read-only external engine state"
-    },
-    {
       "id": "storage-trend",
       "pattern": "<data>/storage-trend.json",
       "owner": "../backend/runtime-metrics.cjs",
@@ -656,7 +600,7 @@
     },
     {
       "id": "migration-backups",
-      "pattern": "<file>.bak-ruyi-migrate-<ts> beside ~/.claude.json / ~/.kimi-code/mcp.json / ~/.codex/config.toml / <data>/config.json / generated mcp",
+      "pattern": "<file>.bak-ruyi-migrate-<ts> beside ~/.claude.json / ~/.codex/config.toml / <data>/config.json / generated mcp",
       "owner": "../backend/migration-center.cjs",
       "anchor": "'.bak-ruyi-migrate-'",
       "schema": "verbatim copy of the file before the migration edited it",
@@ -673,7 +617,7 @@
       "pattern": "<data>/skills/<id>/.ruyi-import.json",
       "owner": "../backend/skill-registry.cjs",
       "anchor": "'.ruyi-import.json'",
-      "schema": "object / schema 1 {source,sourcePath,plugin,importedAt,sourceTreeHash,copyTreeHash} (W8: skill copied from Claude Code / Codex / Kimi / a Claude Code plugin)",
+      "schema": "object / schema 1 {source,sourcePath,plugin,importedAt,sourceTreeHash,copyTreeHash} (W8: skill copied from Claude Code / Codex / a Claude Code plugin)",
       "writePrimitive": "fsp.writeFile into the staging dir before the whole dir is renamed into place (13u migrationCopyOneSkill)",
       "corruption": "unreadable / >16 KB / unknown source = no record: the skill stays a plain user skill (no \"copied from\" label) and the migration center reports that id as conflict (never overwritten)",
       "capacity": "one per copied skill",

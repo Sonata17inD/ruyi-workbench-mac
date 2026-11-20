@@ -50,7 +50,7 @@ function streamChat(port, body, token) {
     providers: [{ id: 'nomodel', label: '没模型的服务商', type: 'openai-compat', baseUrl: 'http://127.0.0.1:9', apiKey: 'k', model: '' }],
     activeProvider: 'nomodel',
   }));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, stdio: 'ignore', env: { ...process.env, RUYI_HOME: home } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, stdio: 'ignore', env: { ...process.env, RUYI_HOME: home } });
   try {
     let healthy = false;
     for (let i = 0; i < 300 && !healthy; i++) { await sleep(120); try { healthy = (await request(port, 'GET', '/health')).status === 200; } catch { /* 还没起来 */ } }

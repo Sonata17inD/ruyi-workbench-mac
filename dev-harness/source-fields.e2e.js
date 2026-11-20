@@ -5,7 +5,7 @@
 //   (B) claude mode (WCW_FAKE_CLAUDE -> workbench's own tools/fake-claude.js, activeProvider empty) —
 //       assert the persisted assistant message carries engine==='claude'.
 // Fully offline. Mirrors the postStream/getJson skeleton from openai-engine.e2e.js.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -71,14 +71,13 @@ function kill(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore *
   const providerFileA = path.join(HOME_A, 'provider-a.txt'), providerFileB = path.join(HOME_A, 'provider-b.txt');
   fs.writeFileSync(providerFileA, 'A'); fs.writeFileSync(providerFileB, 'B');
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_PARALLEL_TOOLS: JSON.stringify([
       { name: 'file_read', args: { path: providerFileA } },
       { name: 'file_read', args: { path: providerFileB } },
     ]) },
   });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wbA = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_A)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_A }, windowsHide: true });
+  const wbA = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_A)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_A } });
   wbA.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbA!] ' + l.trim())));
   try {
     const h = await waitHealth(WB_PORT_A);
@@ -109,7 +108,7 @@ function kill(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore *
     configSchema: 4, version: '1.0.0', permissionMode: 'bypass', activeProvider: '', model: 'claude-test-model',
   }, null, 2));
   ok(fs.existsSync(FAKE_CLAUDE), '[claude] fake-claude.js exists at ' + FAKE_CLAUDE);
-  const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_B)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_B, WCW_FAKE_CLAUDE: FAKE_CLAUDE }, windowsHide: true });
+  const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_B)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_B, WCW_FAKE_CLAUDE: FAKE_CLAUDE } });
   wbB.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbB!] ' + l.trim())));
   try {
     const h = await waitHealth(WB_PORT_B);

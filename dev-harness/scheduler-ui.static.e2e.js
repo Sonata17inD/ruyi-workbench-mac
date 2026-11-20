@@ -6,11 +6,11 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // ① 零 innerHTML —— 设置页的定时任务块、安静卡、口袋三个文件里一处 innerHTML／
 //    insertAdjacentHTML／document.write 都不许有（表单是 index.html 里的静态 DOM，列表行
 //    全部 createElement + textContent）。
-// ② i18n 四文件齐全 —— 本波新加的每一个键在 public/ 与 docs/ 的中英四份里都在，占位符逐字相同；
+// ② i18n 四文件齐全 —— 本波新加的每一个键在 应用中英词典里都在，占位符逐字相同；
 //    并且**前端真的用到的每一个 t(...) 键**都在目录里（漏一个 = 界面上印出一个 key 字符串）。
 // ③ 无「路径 ＋ 复制」反模式（28 号 §2 / 27 号 §8.1）—— 定时任务这一面不出现 clipboard／
 //    「复制路径」一类东西；产出线程只有一枚「打开这条线程」，它在如意里打开。
-// ④ describe 键对账 —— 06j 的 SCHEDULER_DESCRIBE_KEYS / SCHEDULER_DOW_KEYS 与四份 locale
+// ④ describe 键对账 —— 06j 的 SCHEDULER_DESCRIBE_KEYS / SCHEDULER_DOW_KEYS 与两份 locale
 //    【逐字】对上。纯函数那边加一个键而 locale 漏一个，界面上就会印出键名本身。
 // ⑤ 徽标值域对账（J10／J11 的静态半边）—— 前端那两张表必须盖住 06j 的 SCHEDULER_FIRE_MODES
 //    与 SCHEDULER_OUTCOMES 【全集】：少一个值，那一次触发就会印成 undefined 或退成别的字。
@@ -26,7 +26,6 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const APP = path.join(ROOT, 'ruyi-workbench', 'app');
 const PUBLIC = path.join(APP, 'public');
-const DOCS = path.join(ROOT, 'docs', 'i18n', 'locales');
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail++; console.log('FAIL ' + label); } };
@@ -40,8 +39,6 @@ const html = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8');
 const catalogs = {
   'public zh-CN': JSON.parse(fs.readFileSync(path.join(PUBLIC, 'locales', 'zh-CN.json'), 'utf8')),
   'public en-US': JSON.parse(fs.readFileSync(path.join(PUBLIC, 'locales', 'en-US.json'), 'utf8')),
-  'docs zh-CN': JSON.parse(fs.readFileSync(path.join(DOCS, 'zh-CN.json'), 'utf8')),
-  'docs en-US': JSON.parse(fs.readFileSync(path.join(DOCS, 'en-US.json'), 'utf8')),
 };
 const placeholders = value => [...String(value).matchAll(/{{\s*([\w.-]+)\s*}}/g)].map(m => m[1]).sort();
 // 扫「代码里有没有 X」一律先把注释去掉 —— 本文件第一版就栽在这上面：三处命中全是注释里写着

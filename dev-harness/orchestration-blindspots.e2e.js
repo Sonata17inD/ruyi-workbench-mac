@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/orchestration-blindspots.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -140,7 +140,7 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
   // ───────────────── S3: 双引擎 tier 等价 ─────────────────
   console.log('── S3: 双引擎 tier 等价 ──');
   const { createModelSelection } = require('../ruyi-workbench/app/backend/model-selection.cjs');
-  fs.writeFileSync(path.join(HOME, 'proxy-models-cache.json'), JSON.stringify({ models: [{ id: 'kimi-k2' }] }));
+  fs.writeFileSync(path.join(HOME, 'proxy-models-cache.json'), JSON.stringify({ models: [{ id: 'fixture-proxy-model' }] }));
   const tier = createModelSelection({ paths: { data: HOME } });
   const prov = { id: 'p1', model: 'qwen-max', models: [{ id: 'qwen-max' }, { id: 'qwen-turbo' }, { id: 'glm-4' }] };
   const cfgT = { agentAutoModelTiering: true, extraModels: [], knownModels: [] };
@@ -150,7 +150,7 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
   ok(tier.tierModelForNode('exec', 'openai', cfgT, prov) === 'qwen-max', 'S3 openai exec → strong 池成员(qwen-max)');
   ok(tier.tierModelForNode('read', 'openai', cfgT, prov) === 'qwen-turbo', 'S3 openai read → fast 池成员(qwen-turbo)');
   ok(tier.tierModelForNode('edit', 'openai', cfgT, prov) === 'glm-4', 'S3 openai edit → balanced 池成员(glm-4)');
-  const provDirty = { id: 'p2', model: 'opus', models: [{ id: 'opus' }, { id: 'kimi-k2' }, { id: 'qwen-turbo' }] };
+  const provDirty = { id: 'p2', model: 'opus', models: [{ id: 'opus' }, { id: 'fixture-proxy-model' }, { id: 'qwen-turbo' }] };
   for (const t of ['read', 'edit', 'exec']) {
     const got = tier.tierModelForNode(t, 'openai', cfgT, provDirty);
     ok(got === 'qwen-turbo', `S3 openai ${t} tier 绝不跨引擎(别名/缓存被排除, got ${got})`);
@@ -192,7 +192,7 @@ async function waitFor(label, fn, tries = 120, gap = 250) {
     activeProvider: 'fake',
   }));
   await new Promise(r => fake.listen(FP, '127.0.0.1', r));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     ok(await up(WP), 'workbench starts');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));

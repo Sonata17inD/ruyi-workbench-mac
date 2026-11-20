@@ -1,10 +1,10 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E: 21-E3 action-argument model view. Drives a REAL workbench turn against the offline fake provider:
 //   file_write with a 5000-char content → NEXT request body must carry the compact envelope (not the raw
 //   payload), while the persisted provider history keeps the ORIGINAL arguments (zero evidence loss).
 //   Switch off → the request body keeps the raw payload byte-for-byte (zero behavior change).
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -68,8 +68,8 @@ async function runCase(modelViewOn) {
     activeProvider: 'fake',
   }, null, 2));
   const captureDir = path.join(HOME, 'capture'); fs.mkdirSync(captureDir, { recursive: true });
-  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_SEQUENCE: JSON.stringify(sequence), FAKE_CAPTURE_DIR: captureDir }, windowsHide: true });
-  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_SEQUENCE: JSON.stringify(sequence), FAKE_CAPTURE_DIR: captureDir } });
+  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   let live = null; for (let i = 0; i < 50 && !live; i++) { await sleep(120); live = await health(wbPort); }
   await postStream(wbPort, { message: 'Write the report file then reply.' });
   await sleep(500);

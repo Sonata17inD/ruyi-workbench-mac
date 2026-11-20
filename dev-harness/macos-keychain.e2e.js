@@ -37,9 +37,6 @@ let disposable;
       try { await S.LocalSecretCrypto.run('unprotect', bytes, aad); t.fail(code + ' should reject'); }
       catch (error) { t.ok(error.code === 'local_crypto.' + code, code + ' rejects without fallback'); }
     }
-    const W = loadServerInternals(['LocalSecretCrypto'], { testPlatform: 'win32' });
-    try { await W.LocalSecretCrypto.run('unprotect', sealed, entropy); t.fail('Windows should reject a Mac envelope'); }
-    catch (error) { t.ok(error.code === 'local_crypto.provider_mismatch', 'Windows rejects Keychain records before invoking DPAPI'); }
     async function api(route, body) {
       const req = Readable.from([Buffer.from(JSON.stringify(body || {}))]); req.method = body ? 'POST' : 'GET'; req.headers = {};
       let status, result;

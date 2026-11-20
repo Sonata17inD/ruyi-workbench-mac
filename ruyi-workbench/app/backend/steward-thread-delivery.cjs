@@ -54,20 +54,6 @@ function createStewardThreadDelivery({
     return { categories, floor: verdict.hits.some(hit => hit.floor === true), commandExcerpt };
   }
 
-  // 127 波 2-quater B2(45 号文 §2-quater.2 闸 2 / 闸 8):代批要的两件【活回合】事实,从活回合登记表上现读。
-  // 为什么住 13k 而不是 13l:activeChildren 与 logEvent 都在 04,13k→04 是既有边、13l→04 不是(13l 今天一个 04
-  // 符号都不引用)—— 与 B1 把 stewardExemptPendingSummary 放在这里是同一个理由,零新增依赖边。
-  //   mode  —— 活回合此刻的实效档位:09 在 runOpenAiTurn 里挂到登记表上的 effectivePermissionMode(与闸门
-  //            gateWithLiveMode 读同一个函数)。没有活回合 / 登记表上没有这个函数(Claude CLI、Kimi)/ 调用抛错
-  //            → 空串,闸 2 据此拦下(判不出档位就不代批)。**不读会话头** —— 那正是要堵的错位。
-  //   taint —— 06i stewardTurnTaint 在活回合段表上判(a),再叠会话级粘性污染位(b)。判不出一律算污染(c):
-  //            没有活回合 'no_live_turn';登记表没有 liveSegments(Kimi 的就没有)'no_live_segments'。
-  //            粘性位优先读活回合里那一份会话对象(10 的 emit 写的就是它,比盘上新),盘上的会话头兜底。
-  //            10 只在读外部内容的那条工具调用【结果回来】时置位 —— 这条待决自己(还没执行、没有结果)不会把自己算进去。
-  // 审计 E:非代批的待决判 mayAct 也要看【活回合此刻的实效档】—— 定时任务(请求级 autonomy.permissionMode)与
-  // 交办卡的请求级收紧只活在回合里,不在会话头上。只读档位,不碰污染判定(那是代批十道闸的事)。
-  // 09 的登记表挂 effectivePermissionMode();Claude CLI 的登记表只有 spawn 时的解析档 permissionMode(05);
-  // 都没有(Kimi、无活回合、调用抛错)→ 空串,由调用方决定怎么兜底。
   function stewardLiveTurnPermissionMode(liveSessionId) {
     const liveReg = activeChildren.get(String(liveSessionId || '')) || null;
     if (!liveReg) return '';

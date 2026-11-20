@@ -15,14 +15,13 @@
 //      budget 两个 axis 的人话不同;标签里的尖括号被中和
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-preroute.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
+// RUYI_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-wait-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
@@ -110,9 +109,6 @@ for (const [label, thread, ctx] of [
   ok(Object.keys(lock).sort().join(',') === 'blockedBy,label,reason', '④ lock 的键恰好是 {reason,label,blockedBy}');
   const slot = all[3];
   ok(Object.keys(slot).sort().join(',') === 'ahead,label,reason', '④ slot 的键恰好是 {reason,label,ahead}');
-  // W2-F5(语义变更,逐条说明):原断言钉死「needs_you / budget 的键恰好是 {reason,label}」。前端要按 reason 本地化(英文界面不再印
-  // 服务端中文 label),needs_you 得带 pending、budget 得带 axis/spent/limit,否则前端只能去解析中文句子 —— 所以这两条的键集
-  // 各多了结构化字段(label 一个字没动,下面 ⑥ 逐字钉住)。「形状不随原因偷偷长键」的意图保留:键集仍是固定的、逐原因钉死。
   ok(Object.keys(all[0]).sort().join(',') === 'label,pending,reason',
     '④ needs_you 的键恰好是 {reason,label,pending}(W2-F5 新增 pending)');
   ok(Object.keys(all[2]).sort().join(',') === 'axis,label,limit,reason,spent',

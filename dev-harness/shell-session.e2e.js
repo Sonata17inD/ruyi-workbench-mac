@@ -19,7 +19,7 @@ const { shellTool, echo: shellEcho, cwdCommand } = require('./lib/platform-shell
 //      shell_start／powershell_run／script_run 缺省 cwd 却起在家目录。经 /api/tools 带 sessionId(进程内分发,
 //      ctx.session 是那条会话):不传 cwd → 会话 cwd(≠ defaultWorkspace ≠ 家目录);传 cwd → 就用它;
 //      会话 cwd 落在 execute:false 的工作区里 → 照样拒,且没有起 shell。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -34,7 +34,7 @@ const SESS_CWD = path.join(HOME, 'sess-cwd');
 const OTHER = path.join(HOME, 'explicit-cwd');
 const DENY = path.join(HOME, 'no-exec');
 // 比路径:realpath.native 展开 8.3 短名再小写;输出里只认「整行就是一个盘符路径」的行(PowerShell 的 PS 提示行不算)。
-const canon = p => { let value; try { value = fs.realpathSync.native(String(p)); } catch { value = path.resolve(String(p || '')); } value = value.replace(/[\\/]+$/, ''); return process.platform === 'win32' ? value.toLowerCase() : value; };
+const canon = p => { let value; try { value = fs.realpathSync.native(String(p)); } catch { value = path.resolve(String(p || '')); } value = value.replace(/[\\/]+$/, ''); return value; };
 const printsDir = (out, dir) => String(out || '').split(/\r?\n/).some(l => { const t = l.trim(); return path.isAbsolute(t) && canon(t) === canon(dir); });
 const outHead = out => JSON.stringify(String(out || '').trim().slice(0, 200));
 
@@ -98,9 +98,9 @@ function postStream(port, payload) {
       { name: 'shell_start', args: { shellId: 's1' } },
       { name: 'shell_send', args: { shellId: 's1', input: cwdCommand } },
     ]);
-    const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq }, windowsHide: true });
+    const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq } });
     fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     procs.push(fake, wb);
 

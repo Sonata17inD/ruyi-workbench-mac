@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  ④ 116-2a: PATCH /api/sessions/:id {permissionMode:'plan'} on ONE session, with the GLOBAL mode still
 //     'default' → that session's edit-tier call is BLOCKED outright (no permission_request, no 6s wait,
 //     no file). Proves the session level beats the global default in the real gate, not just in a getter.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -49,7 +49,7 @@ async function waitFakeUp() { for (let i = 0; i < 50; i++) { if (await fakeReach
 async function waitFakeDown() { for (let i = 0; i < 50; i++) { if (!await fakeReachable()) return true; await sleep(100); } return false; }
 // A fake-openai that calls a single named tool with args on the first tools-turn, then echoes.
 function spawnFake(toolName, toolArgs) {
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: toolName, FAKE_TOOL_ARGS: JSON.stringify(toolArgs || {}) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: toolName, FAKE_TOOL_ARGS: JSON.stringify(toolArgs || {}) } });
   fake.stdout.on('data', () => {});
   return fake;
 }
@@ -65,7 +65,7 @@ function writeConfig(home, fakePort, allowRules) {
 // Start the workbench, run a body, then stop it — so we can restart with different config between scenarios.
 async function withWb(allowRules, fn) {
   writeConfig(HOME, FAKE_PORT, allowRules);
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(WB_PORT); }
   try { await fn(!!h); } finally { killp(wb); await sleep(400); }

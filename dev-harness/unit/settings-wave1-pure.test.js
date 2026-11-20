@@ -50,15 +50,15 @@ test('[R2] 表单读回时的首尾空白不让内置角色被误判成「改过
 
 test('[P] 工作文件夹的绝对路径判据(与顶栏粘贴路径同一份)', async () => {
   const { looksAbsolutePath, stripWrappingQuotes } = await loadJs('util.js');
-  for (const ok of ['C:\\Users\\me\\proj', 'c:/work', '\\\\server\\share\\dir', '/home/me/proj', '"C:\\Users\\me\\proj"', '“D:\\a”', " 'C:\\x' "]) {
-    assert.equal(looksAbsolutePath(ok), true, `${ok} 应当算绝对路径`);
+  for (const ok of ['/', '/Users/me/proj', '"/Volumes/Work Files"', '“/tmp/a”']) {
+    assert.equal(looksAbsolutePath(ok), true, ok);
   }
-  for (const bad of ['', '   ', 'abc', 'relative\\dir', './x', '..\\x', 'proj/sub', 'C:', 'C:proj']) {
-    assert.equal(looksAbsolutePath(bad), false, `${JSON.stringify(bad)} 不该算绝对路径`);
+  for (const bad of ['', '   ', 'abc', './x', '../x', 'proj/sub', 'C:/work']) {
+    assert.equal(looksAbsolutePath(bad), false, bad);
   }
-  assert.equal(stripWrappingQuotes('"C:\\a b"'), 'C:\\a b');
-  assert.equal(stripWrappingQuotes('""C:\\x""'), 'C:\\x');
-  assert.equal(stripWrappingQuotes('C:\\a"b'), 'C:\\a"b', '只剥成对且在首尾的引号');
+  assert.equal(stripWrappingQuotes('"/tmp/a b"'), '/tmp/a b');
+  assert.equal(stripWrappingQuotes('"/tmp/name "'), '/tmp/name ');
+  assert.equal(stripWrappingQuotes('/tmp/a"b'), '/tmp/a"b');
 });
 
 test('[E] apiErrText 对「信封化的字符串错误」给人话,不给 [object Object]', async () => {

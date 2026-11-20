@@ -25,8 +25,7 @@ let runtime;
     const entry = path.join(root, 'mcp-entry.js');
     fs.writeFileSync(entry, `const S=require(${JSON.stringify(path.resolve(__dirname, 'lib/server-internals'))}).loadServerInternals(['startMcp','ProcessRuntimeHooks']);S.ProcessRuntimeHooks.helperPath=()=>${JSON.stringify(helper)};S.startMcp().catch(e=>{console.error(e.message);process.exitCode=1});`);
     client = new S.McpStdioClient({ id: 'capability-fixture', command: process.execPath, args: [entry],
-      env: { ...fixtureChildEnv(), RUYI_HOME: childData, WIN_CLAUDE_WORKBENCH_HOME: childData,
-        RUYI_MACOS_AUTOMATION_HELPER:path.join(root,'missing-capture-helper') } });
+      env: { ...fixtureChildEnv(), RUYI_HOME: childData, RUYI_MACOS_AUTOMATION_HELPER:path.join(root,'missing-capture-helper') } });
     await client.start();
     let names = client.listTools().map(tool => tool.name);
     if (!names.includes('shell_run') || !names.includes('git_status')) {

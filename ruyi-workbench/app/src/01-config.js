@@ -1,12 +1,12 @@
 const { createConfigSchema, BROWSER_AUTOMATION_MODES } = require('./backend/config-schema.cjs');
 const { THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX } = require('./backend/config-defaults.cjs');
-const ConfigWorkspaces = require('./backend/config-workspaces.cjs').createWorkspaceConfig({ platform: process.platform });
+const ConfigWorkspaces = require('./backend/config-workspaces.cjs').createWorkspaceConfig();
 const { normalizeWorkspacePathString } = ConfigWorkspaces;
 const {
   defaultConfig, normalizeConfig, CONFIG_MIGRATIONS, configValueEquals, prepareConfigWrite,
 } = createConfigSchema({
   CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, sanitizeProvider, PrivacyCore, workspaces: ConfigWorkspaces,
-  detectClaudePath: () => detectClaudePath(), detectKimiPath: () => detectKimiPath(),
+  detectClaudePath: () => detectClaudePath(),
 });
 
 // 本进程落进 sessions 目录【本层】的原子写次数(会话头、会话索引、搜索索引……)。13e 投影索引据此区分
@@ -51,7 +51,7 @@ const {
 } = require('./backend/config-store.cjs').createConfigStore({
   paths, ensureDirs, safeJsonParse, atomicWriteJson: (...args) => atomicWriteJson(...args),
   normalizeConfig, prepareConfigWrite, privacyHooks: PrivacyCore.configHooks, logEvent,
-  detectClaudePath: () => detectClaudePath(), detectKimiPath: () => detectKimiPath(),
+  detectClaudePath: () => detectClaudePath(),
   waitForConfigCliProbes: () => AgentCliDiscovery.waitForConfigCliProbes(),
   onWritten: status => RUYI_EVENTS.emit('config.written', status),
 });
@@ -73,38 +73,30 @@ const { externalServerJs, bundledNodeExe, commandForSelfMcp, mcpConfigFilePath, 
   paths, runtime: RUNTIME, hostFile: cliEntryFile, externalRoot, ensureDirs, readConfig, resolveExternalMcpServers,
   ensureDesktopMcpWarm: config => ensureDesktopMcpWarm(config), atomicWriteJson, process,
 });
-const { syncMcpServersToClaude, syncAgentCliMcpManifests, syncMcpServersToKimi } =
-  require('./backend/cli-mcp-sync.cjs').createCliMcpSync({
-    paths, ensureDirs, generateMcpConfig, resolveExternalMcpServers, existsExecutableAsync,
-    DesktopShell, getAgentCliHost: () => AGENT_CLI_HOST, atomicWriteJson, logEvent,
-  });
-const { autoImportClaudeCodeMcp, agentMcpImportSources, kimiMcpManagedIds, classifyAgentMcpCandidate } =
+const { syncMcpServersToClaude } = require('./backend/cli-mcp-sync.cjs').createCliMcpSync({
+  resolveExternalMcpServers, existsExecutableAsync, DesktopShell, logEvent,
+});
+const { autoImportClaudeCodeMcp, agentMcpImportSources, classifyAgentMcpCandidate } =
   require('./backend/cli-mcp-import.cjs').createCliMcpImport({
     paths, agentCliHomes, findRuyiPackageRootFor, mutateConfig, logEvent,
   });
 
 const cliDiscoveryProbes = { spawnProbeSync, spawnProbeAsync };
 const AgentCliDiscovery = require('./backend/agent-cli-discovery.cjs').createAgentCliDiscovery({
-  probes: cliDiscoveryProbes, bundledNodeExe, process,
+  probes: cliDiscoveryProbes, process,
 });
 const {
   detectClaudePathUncached, detectClaudePathUncachedAsync, claudeProbeCandidates,
-  detectAgentCliPathUncachedAsync, agentCliInstallCandidates, resolveKimiNpmEntry,
   probeAgentCliLauncher, probeAgentCliLauncherVerdictAsync, agentCliProbeVerdict,
   agentCliLauncherOk, agentCliLauncherUsable, invalidateClaudePathCache, invalidateAgentCliPathCaches,
   beginBootCliPathProbes, finishBootCliPathProbes, waitForBootCliPathProbes,
 } = AgentCliDiscovery;
 function detectClaudePath() { return AgentCliDiscovery.detectClaudePath(); }
-function detectAgentCliPath(type) { return AgentCliDiscovery.detectAgentCliPath(type); }
 
 const AGENT_CLI_HOST = Object.freeze({
   detectClaudePath: () => detectClaudePath(),
-  detectFromInstallCandidates: type => detectAgentCliPath(type),
-  resolveKimiNpmEntry: command => resolveKimiNpmEntry(command),
   bundledNodeExe: () => bundledNodeExe(),
-  syncMcpServersToKimi: config => syncMcpServersToKimi(config),
 });
-function detectKimiPath() { return detectAgentCliPath('kimi'); }
 const { selectedAgentCli, prepareAgentCliSpawn } =
   require('./backend/agent-cli-discovery.cjs').createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST });
 

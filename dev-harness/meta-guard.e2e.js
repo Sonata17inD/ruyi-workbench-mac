@@ -123,7 +123,7 @@ const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/pr
 }
 
 // ── G) 两引擎能力对称(117w-T2):【结论先行】必须两条路都拿得到。117v-V3 只把它接到 provider 引擎的
-//        稳定层(06 buildStableSystemPrompt 的 !identityOnly 分支),Claude/Kimi CLI 那一路当时漏了 ——
+//        稳定层(06 buildStableSystemPrompt 的 !identityOnly 分支),Claude CLI 那一路当时漏了 ——
 //        用户给管家单配 openai 端点、全局主端点仍是 claude-cli 时,管家开的线程全在洞里。
 //        钉的是【两条路都拿得到这条规则】这个事实,不是某一行的写法:文本可以润色、注入位置可以再挪,
 //        但「只有一份文本 + 两个引擎各注入一次」这两条一破就红。──
@@ -137,7 +137,7 @@ const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/pr
   const promptOwners = src + '\n' + fs.readdirSync(backend).filter(name => name.endsWith('.cjs')).map(name => fs.readFileSync(path.join(backend, name), 'utf8')).join('\n');
   const definitions = (promptOwners.match(/^\s{2}answerShape:/gm) || []).length;
   ok(definitions === 2, 'G answerShape 在提示词包里恰好两份定义(中文包 + 英文包;实 ' + definitions + ')');
-  // ② Claude/Kimi CLI 那一路(runClaudeTurn)注入它,且是拼进 --append-system-prompt 的那一段。
+  // ② Claude CLI 那一路(runClaudeTurn)注入它,且是拼进 --append-system-prompt 的那一段。
   //    检查 runClaudeTurn 的 appendSys 装配块，确保匹配的是实际注入。
   const apStart = claudeRegion.indexOf("let appendSys = '';");
   // 架构还债批 3 A:装配块的收尾一行改为问 CLI 适配器(adapter.appendSystemPromptFlag = '--append-system-prompt'),锚跟着换。
@@ -148,7 +148,7 @@ const openaiRegion = functionBlock(fs.readFileSync(path.join(WB, 'app/backend/pr
   // answerShape 字样的注释,松判据会假绿)。
   const appendCode = appendBlock.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
   ok(/appendSys \+=[^\n]*answerShape/.test(appendCode),
-    'G Claude/Kimi CLI 引擎(runClaudeTurn)注入结论先行 ← 修 117v-V3 漏的那一路');
+    'G Claude CLI 引擎(runClaudeTurn)注入结论先行 ← 修 117v-V3 漏的那一路');
   ok(/append-system-prompt/.test(claudeRegion),
     'G CLI 侧走 --append-system-prompt 的 appendSys(与四层工具协议同一段,不另开信道)');
   // ③ 它落在【无条件前缀】里 —— 即排在 sectionLimit 计算之前。所有降级都从尾部切,前缀不会被静默剪掉;

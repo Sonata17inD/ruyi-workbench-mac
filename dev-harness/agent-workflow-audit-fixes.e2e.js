@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (D) orchestrate_agents' `workflowId`+`context` — documented in the tool schema but never resolved by
 //      either in-turn dispatch path, so a model-issued `{workflowId, context}` call (no inline `nodes`)
 //      always failed with "nodes 必须是非空数组". Also proves `context` actually reaches the node's prompt.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -43,8 +43,8 @@ async function up(port, p = '/health') { // 117q:预算 50×120ms=6s 小于本�
   // Default config: NO subagentMaxPerTurn/agentWorkflowMaxNodes override — relies entirely on
   // defaultConfig()'s own generous v1.4.4 defaults (this is the exact regression BUG7 describes).
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'bypass', defaultWorkspace: HOME, providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${FP}`, apiKey: 'k', model: 'fake-model' }], activeProvider: 'fake' }));
-  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(script) }, windowsHide: true });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(script) } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     ok(await up(FP, '/v1/models') && await up(WP), 'fake provider and workbench start');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));
@@ -103,7 +103,7 @@ async function up(port, p = '/health') { // 117q:预算 50×120ms=6s 小于本�
     const loopScript = { parent: [{ name: 'orchestrate_agents', args: { nodes: loopNodes } }], parentText: '循环工作流已提交。', subText: good };
     fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'bypass', defaultWorkspace: HOME, providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${FP}`, apiKey: 'k', model: 'fake-model' }], activeProvider: 'fake' }));
     kill(fake); await sleep(200);
-    const fake2 = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(loopScript) }, windowsHide: true });
+    const fake2 = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(loopScript) } });
     ok(await up(FP, '/v1/models'), 'fake provider restarted for loop scenario');
     const events = await stream(WP, { sessionId: sidC, message: 'run loop workflow', cwd: HOME }, hdr);
     const loopEvts = events.filter(e => e.type === 'agent_workflow' && e.state === 'node_loop');
@@ -125,7 +125,7 @@ async function up(port, p = '/health') { // 117q:预算 50×120ms=6s 小于本�
       subText: '未命中上下文标记的默认回复。',
       subTextByTask: { [CONTEXT_MARKER]: good },
     };
-    const fake3 = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(ctxScript) }, windowsHide: true });
+    const fake3 = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_SUBAGENT_SCRIPT: JSON.stringify(ctxScript) } });
     ok(await up(FP, '/v1/models'), 'fake provider restarted for workflowId+context scenario');
     const ctxEvents = await stream(WP, { sessionId: sidD, message: 'run context workflow', cwd: HOME }, hdr);
     // 代理模式 v2:回合内 orchestrate 的 tool_result 是交付信封(nodes[].summary/structuredResult),不再是整份 results。

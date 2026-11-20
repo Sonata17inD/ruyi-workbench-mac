@@ -1,24 +1,24 @@
 {
   "schema": 1,
-  "_comment": "门面数字单一事实源(第46波46f)。由 dev-harness/facts-generate.js 机械生成,facts.static.e2e.js 重算比对。改数字请跑生成器,不要手改本文件。每字段注明测量轴。",
+  "_comment": "由 dev-harness/facts-generate.js 生成，facts.static.e2e.js 校验。",
   "_axes": {
-    "nativeTools": "TOOL_HANDLERS 派发注册表键数(经 toolCall 可达全集;含按需注册件)。README「39 常驻+3 按需」是【常驻轴】旧口径,与本轴不同 —— 文档刷新时以本数为准重述。",
+    "nativeTools": "TOOL_HANDLERS 注册的工具数，含按需注册项。",
     "accTools": "ACC 活注册表 list_tools 数(venv 探针;CI acc-smoke 对账)。",
     "e2eCount": "dev-harness/*.e2e.js 总件数(含 live 跳过件)。",
     "defaultPort": "00-boot.js DEFAULT_PORT 常量(默认监听端口;文档与实现各写各的防漂移)。",
-    "tokenBootstrap": "浏览器获取 UI token 的方式(47c S1):api-bootstrap = POST /api/bootstrap 握手,HTML 不再明文下发 token。",
+    "tokenBootstrap": "浏览器通过 POST /api/bootstrap 取得 UI token。",
     "liveProbes": "run-all.js SKIP 集中真 live probe 件数(需真实外部依赖;每条文件名须含 live 或在白名单)。"
   },
-  "generatedAt": "2026-11-18T11:31:57.682Z",
+  "generatedAt": "2026-11-19T15:38:07.527Z",
   "workbenchVersion": "3.0.1",
   "accVersion": "1.9.1",
   "nativeTools": 119,
   "accTools": 93,
-  "e2eCount": 602,
-  "e2eLiveSkipped": 14,
+  "e2eCount": 595,
+  "e2eLiveSkipped": 13,
   "unitSuites": 344,
   "accSmokes": 40,
   "defaultPort": 8765,
   "tokenBootstrap": "api-bootstrap",
-  "liveProbes": 14
+  "liveProbes": 13
 }

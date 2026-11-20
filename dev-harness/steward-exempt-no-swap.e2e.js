@@ -2,28 +2,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 const { shellTool, writeFile, echo } = require('./lib/platform-shell-fixture');
 (async () => {
 'use strict';
-// E2E(127 波 2-quater B1 · 45 号文 §2-quater.2/§2-quater.4):零放权的三件事 —— 真夹具。
-//
-// ① 堵「批 A、跑 B」(判据 ①):管家替用户放行一条权限时,payload 里的 updatedInput / scope 一律被剥掉。
-//    修前 13l stewardImplDecide 把 payload 原样交给 decideIntervention,原生回合拿到 decision.updatedInput
-//    就 `args = decision.updatedInput` 直接执行,不再过豁免判据 —— 而豁免判据看的是待决里存的【原 input】。
-//    会话头档位(auto)与回合实效档位(请求级 default)错位时,待决里是一条无害命令,管家就能「批准它」而实际跑
-//    另一条。本件用真服务 + 真原生回合 + 真 PowerShell 复现这个错位,管家从【三条】真实入口各批一次:
-//      (H-act)     用户按下管家给的按钮 —— POST /api/steward/act(13q stewardRunAct);
-//      (H-tool)    管家回合里模型直调 steward_decide 工具(/api/steward/message → 13g 门控壳);
-//      (H-actions) 管家回合的结构化 actions(13p stewardExecuteActions)。
-//    每一次都带 updatedInput:{command:<写 swapped 标记文件 # git push --force>} + scope:'session',
-//    判据看磁盘:原命令的标记文件在、替换命令的标记文件不在;再在决定层互证一次 —— 核心层落盘的决定指纹
-//    必须等于纯 {action:'allow'} 载荷的指纹(scope 只有 Kimi 桥读,原生回合执行层看不出它有没有被剥)。
-//    (H-ctl) 对照组:【用户自己】经 /api/permission/decision 放行并带 updatedInput —— 替换命令真的跑了。
-//    没有这条对照组,「swapped 标记不在」也可能只是消费者根本不认 updatedInput(判据就成了画上去的门)。
-// ③ 摘录可见(判据 ③):进程内,豁免命中的权限待决经 StewardHooks.enrichInboxRows 挂 exempt,
-//    stewardInboxMessage 画 <exempt-command untrusted> 围栏,凭据已脱敏、闭合标记被中和;非豁免行零新增字段;
-//    steward_thread_status.pending[] 同挂。
-// ④ 死按钮(判据 ④):豁免命中的提议降级成「去线程里看」(open_thread),不再画「允许」。
-//
-// 端口全部 getFreePort()。判定行:`STEWARD EXEMPT NO-SWAP E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -161,7 +140,7 @@ let wb = null;
 let T = '';
 try {
   console.log('── (H) 真服务 + 真原生回合:管家从三条入口各批一次,带 updatedInput ──');
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let up = null; for (let i = 0; i < 200 && !up; i++) { await sleep(150); up = await health(WB_PORT); }
@@ -206,10 +185,6 @@ try {
       bareFingerprint: seen ? bareAllowFingerprint(T, seen.requestId) : '',
     };
   }
-  // 决定层的证据(与执行层的标记文件互证):核心层把「交给运行时的那份决定载荷」的指纹落在待决旁路账上
-  // (13d interventionDecisionFingerprint = sha256(按键排序的 {missionId, interventionId, payload}))。
-  // 载荷里只剩 {action:'allow'} 时指纹就等于下面这个值;带着 updatedInput 或 scope 进核心,指纹就不一样。
-  // native 回合不读 scope(只有 Kimi 桥读),所以 scope 被剥掉这件事在执行层看不见,只能在这一层证。
   function bareAllowFingerprint(missionId, interventionId) {
     return require('crypto').createHash('sha256')
       .update(JSON.stringify({ interventionId, missionId, payload: { action: 'allow' } }), 'utf8').digest('hex');
@@ -281,7 +256,6 @@ try {
 
 /* ══════════════════════ (P) 进程内:摘录可见 + 死按钮 ══════════════════════ */
 console.log('── (P) 进程内:收件箱摘录 / thread_status / 降级按钮 ──');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 process.env.USERPROFILE = HOME;
 process.env.HOME = HOME;

@@ -67,13 +67,11 @@ const children = [];
 children.push(cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], {
   env: { ...process.env, FAKE_OPENAI_PORT: fakePort, FAKE_TOOL_SEQUENCE: sequence },
   stdio: 'inherit',
-  windowsHide: true,
 }));
 children.push(cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', workbenchPort], {
   cwd: WB,
   env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
   stdio: 'inherit',
-  windowsHide: true,
 }));
 
 console.log(`[question-ui] open http://127.0.0.1:${workbenchPort}/`);

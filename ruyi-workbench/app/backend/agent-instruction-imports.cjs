@@ -5,7 +5,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { memoryProposalLooksSensitive } = require('./memory-sensitivity.cjs');
 
-const AGENT_INSTRUCTION_NATIVE_CLI = Object.freeze({ 'claude-md': 'claude', 'kimi-agents': 'kimi' });
+const AGENT_INSTRUCTION_NATIVE_CLI = Object.freeze({ 'claude-md': 'claude' });
 function agentInstructionSourceKeyOf(id) {
   const m = /^agentmd-([a-z]+-[a-z]+)-\d+$/.exec(String(id || ''));
   return m ? m[1] : '';
@@ -20,21 +20,6 @@ function filterMemoryForNativeCli(entries, cliType) {
 
 function createAgentInstructionImports({ paths, DurableJsonStore, agentCliHomes, tildePath, nowIso, logEvent, atomicWriteJson,
   store: { memoryGlobalDir, deleteMemory, fmVal }, summaryCap: CORE_MEMORY_SUMMARY_CAP }) {
-  // ============================================================================
-  // W2 迁移中心 · 指令文件 → 核心记忆。本机其它 Agent CLI 的【全局】指令文件导成工作台全局记忆
-  // (core:true、type convention),换到如意的用户不必把「我的规矩」再说一遍。
-  //   · 来源:agentInstructionSources();每个来源取第一个非空文件(Codex 的 AGENTS.override.md 优先于
-  //     AGENTS.md,与 Codex 自己的读取次序一致)。Kimi Code 的全局指令位置取自它自己的二进制里的读取逻辑
-  //     ($KIMI_CODE_HOME/AGENTS.md,缺省 ~/.kimi-code/AGENTS.md)。
-  //   · 拆分:核心胶囊每轮只放每条的摘要(≤520 字),所以按标题/段落把全文切成 ≤480 字的块,一块一条;每个来源
-  //     最多 12 块进核心(约 6K 字,不挤占用户自己的核心席位),余下合成一条 core:false 的「其余部分」,并在
-  //     第 12 条的摘要末尾注明去哪读。
-  //   · 同步:sidecar <data>/memory/.agent-instructions-import-v1.json 记来源哈希与我们写下的每条文件哈希。
-  //     来源变了:我们写的条目一字未动 → 自动重导;用户改过(文件哈希变了)→ 不覆盖,只标 sourceChanged。
-  //     用户删掉任何一条(或在迁移中心点「移除」)→ 记 dismissed,不再自动导回(显式「导入」才解除)。
-  //   · 去重:CLI 原生会读的那份(claude-md ↔ Claude Code、kimi-agents ↔ Kimi Code)在该 CLI 的回合不注入
-  //     (filterMemoryForNativeCli,05 调用);provider 引擎照常注入。
-  // ============================================================================
   const AGENT_INSTRUCTION_IMPORT_SCHEMA = 1;
   const AGENT_INSTRUCTION_MAX_BYTES = 200 * 1024;
   const AGENT_INSTRUCTION_CORE_PARTS = 12;
@@ -47,7 +32,6 @@ function createAgentInstructionImports({ paths, DurableJsonStore, agentCliHomes,
     return [
       { key: 'claude-md', tool: 'claude-code', label: 'Claude Code', nativeCli: 'claude', files: [path.join(homes.claude, 'CLAUDE.md')] },
       { key: 'codex-agents', tool: 'codex', label: 'Codex', nativeCli: '', files: [path.join(homes.codex, 'AGENTS.override.md'), path.join(homes.codex, 'AGENTS.md')] },
-      { key: 'kimi-agents', tool: 'kimi', label: 'Kimi Code', nativeCli: 'kimi', files: [path.join(homes.kimi, 'AGENTS.md')] },
       // Gemini 不在用户点名的三家里(派单:可选):只列出、不在启动期自动导入;用户在迁移中心点「导入」才进核心记忆。
       { key: 'gemini-md', tool: 'gemini', label: 'Gemini CLI', nativeCli: '', autoImport: false, files: [path.join(homes.gemini, 'GEMINI.md')] },
     ];

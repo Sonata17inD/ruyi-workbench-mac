@@ -10,7 +10,6 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-act-attempt-'));
 process.env.RUYI_HOME = root;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 

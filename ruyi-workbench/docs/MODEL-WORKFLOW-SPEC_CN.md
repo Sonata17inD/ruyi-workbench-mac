@@ -4,7 +4,7 @@
 
 ## 1. 总则
 
-工作台对模型回合施加结构化约束，记录过程与结果；检查点只覆盖已登记的文件操作，不保证任意副作用可撤销。六个环节：**规划 → 执行 → 检查 → 循环保护 → 预算 → 压缩**。本规范主要描述 provider 引擎（Chat Completions、Responses API、Anthropic Messages）的机制；Claude Code / Kimi Code 的 Agent CLI 路径还受各 CLI 自身能力与适配器约束，差异以运行时能力矩阵为准。
+工作台对模型回合施加结构化约束，记录过程与结果；检查点只覆盖已登记的文件操作，不保证任意副作用可撤销。六个环节：**规划 → 执行 → 检查 → 循环保护 → 预算 → 压缩**。本规范主要描述 provider 引擎（Chat Completions、Responses API、Anthropic Messages）的机制；Claude Code 的执行路径还受 CLI 自身能力与适配器约束，差异以运行时能力矩阵为准。
 
 ## 2. 规划（plan mode）
 
@@ -38,7 +38,7 @@
 内置 8 套模板（`08-agent-runs.js` 的 `BUILTIN_AGENT_WORKFLOWS`）：debate-and-judge、implement-review-fix-test、deep-research、design-and-decide、codebase-audit、debug-root-cause、doc-from-scratch、data-insights。节点任务是通用写法，不含主题，主题来自启动时的 `context`。内置 10 种角色（`01e-permission-modes.js` 的 `BUILTIN_AGENT_ROLES`）：explorer、worker、coder、reviewer、verifier、planner、researcher、critic、synthesizer、analyst；角色提示词在两种引擎下都进系统提示（Claude 引擎经 `--append-system-prompt`，命令行超长时改进首条消息）。个人模板与项目模板（`.ruyi/workflows.json`）同 id 时按 项目 > 个人 > 内置 覆盖；保存时拒绝环形依赖与不存在的角色。
 
 ### 4.2 回合级输出契约（规划中）
-面向所有普通回合的统一「完成声明：做了什么/没做什么/验证方式」机械校验仍属规划项。现有 DAG 质量门、交付信封和管家特定动作的回执契约已有各自校验，不能据此推定普通回合已全覆盖。后续管家范围与依赖见 [62 号方案](../../docs/optimization-plan/62-steward-3x-iterations.md)。
+面向所有普通回合的统一「完成声明：做了什么/没做什么/验证方式」机械校验仍属规划项。现有 DAG 质量门、交付信封和管家特定动作的回执契约已有各自校验，不能据此推定普通回合已全覆盖。
 
 ## 5. 循环保护（双判定）
 

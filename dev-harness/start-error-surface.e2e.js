@@ -24,7 +24,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  * 全离线,端口全部用 getFreePort() 动态取(不占用 8700-9199 登记带)。
  * 判定行:`START ERROR SURFACE E2E: ALL PASS`。
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const net = require('net');
@@ -74,7 +74,7 @@ function seedHome(home) {
 
 function spawnWorkbench(home, port, extraEnv = {}) {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, ...extraEnv }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: home, ...extraEnv },
   });
   child.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   child.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));

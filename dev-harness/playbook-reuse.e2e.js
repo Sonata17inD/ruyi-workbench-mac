@@ -6,7 +6,7 @@ const { loadServerInternals } = require('./lib/server-internals');
 const { startFakeProvider, toolCallFrames } = require('./lib/fake-openai-provider');
 const t = createRunner('PLAYBOOK REUSE'); const { ok } = t;
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-playbook-reuse-'));
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 let fake, holdDraft = false, releaseDraft, unknown = false;
 const correction = '金额使用万元，保留两位小数，按本次材料重新求和；标题固定为预算汇总。';
 (async () => {

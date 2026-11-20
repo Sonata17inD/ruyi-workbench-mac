@@ -1487,11 +1487,6 @@ const NATIVE_TOOL_SCHEMAS = [
       properties: { id: { type: 'string', minLength: 1, description: '定时任务 id。' }, basis: { type: 'object', description: '可选。依据(事件 seq/记忆 id)' } },
     },
   },
-  // 代理模式 v2(2026-09-24):模型侧只有 orchestrate_agents 一个启动入口(旧 spawn_agent 已并入 —— 单代理写顶层
-  // 简写 {task, role?, toolTier?, background?} 即视为单节点;仍调 spawn_agent 的旧模型由运行时翻译成单节点并附提示)。
-  // 三种引擎一致:provider 回合内直跑;Claude/Kimi 经 MCP 子进程回环 /api/agent-workflow/launch。父会话【只】收
-  // 交付信封(runId/status/每节点 summary+artifacts/usage/more),全文按需用 agent_result 取;background:true 立即回执,
-  // 完成信封经后台任务账本恰好投递一次。子代理自身拿不到这三个工具(禁嵌套:07 buildOpenAiTools noAgentTools)。
   {
     name: 'orchestrate_agents',
     description: "Delegate isolated sub-agents: task (single), nodes (DAG), workflowId + context (template), or followup (new task referencing a terminal node). background:true returns runId immediately, survives this turn, and delivers one bounded envelope. wait_agents collects envelopes; agent_result reads full output. poolPolicy defaults off; manual proposals require approval and originating-turn budget. Reliability guidance: minSuccessfulToolCalls>=1 for evidence; nullable unknown fields; all_settled for tolerant fan-in. vote inputs need verdict/confidence; deterministic gates do not execute task text. The runtime emits workflow heartbeats, asks a node still running after 30 min to wrap up, and stops only that node if it then makes no progress or passes 60 min in total (a node that keeps producing is not cut off by the stall check; the total time limit still applies). Sub-agents cannot launch further sub-agents.",
@@ -1587,12 +1582,6 @@ const NATIVE_TOOL_SCHEMAS = [
   },
 ];
 
-// C2(61 号文):只发给模型服务商引擎普通会话主回合的原生工具。【不进】MCP_TOOLS —— 那张表同时是 Claude / Kimi CLI 的
-// MCP tools/list、/api/status 工具清单、代理目录(11 adaptiveCatalogForMcp)的来源,放进去就得在四个 offer 面各加一道门;
-// 不放进去,这些面天然看不见它(同 skill_read 的发放方式)。发放:07 buildOpenAiTools 的 opts.scratchpadEnabled(09 主回合
-// 对非管家会话传;管家会话与 08 子代理不传)。schema 仍住 13f(原生 schema 的唯一住处,unit/tool-metadata-consistency [M4]
-// 按缩进扫本文件),07 nativeToolSchema 也认这张表 —— 入参校验与别的原生工具同一道闸。
-// 限额数字与 02 SESSION_SCRATCHPAD_LIMITS 一致(session-scratchpad.e2e 钉着)。
 const PROVIDER_SESSION_TOOL_SCHEMAS = [
   {
     name: 'thread_title_update',

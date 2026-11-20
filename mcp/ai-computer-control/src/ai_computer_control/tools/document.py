@@ -1,16 +1,4 @@
-"""Document reading and editing tools (Word, Excel, PDF).
-
-v1.7 「Office 体系 2.0」: write_document / write_excel were v0.x 老工具, never wired into the design-token
-system. On a 中文 Windows box that produced docx/xlsx with ZERO explicit font declarations, so Word/Excel
-fell back to per-level defaults (拉丁 Calibri / 中文 宋体 混排, 标题各回落各的 —— 用户真机实测「字体都不对，
-中文大小不一」). Root cause for Word: python-docx's `font.name` only writes the ascii/hAnsi rFonts slots;
-the CJK glyph run is governed by the SEPARATE `w:eastAsia` rFonts attribute, which python-docx never
-touches — so 中文 always falls back. Fix (this module): inject explicit fonts at the *styles.xml* level
-(Normal / Title / Heading 1-3), writing all three rFonts links (ascii / hAnsi / **eastAsia**) to the
-token font, plus a size ladder and heading colour, via a hand-written lxml `_set_style_font`. No run is
-left 裸奔 — every paragraph inherits a fully-specified style. write_excel gets the same treatment (每格
-落笔即带 token Font + 数字格式启发式), so 「不跑 beautify 也不难看」.
-"""
+"""Word, Excel and PDF document tools."""
 
 import os
 import re
@@ -58,7 +46,7 @@ def read_document(path: str, max_chars: int = _READ_DEFAULT_CHARS, offset: int =
         「## Slide N: 标题」+ 文字 + 表格 + 备注。加密/损坏文件 -> error;扫描件 PDF(无文字层) -> ok 且 note 建议 OCR。
         已弃用分支附带 'deprecated'/'successor' 字段。
     """
-    from ai_computer_control.tools.office_read import describe_read_error
+    from ai_computer_control.utils.office_reader import describe_read_error
 
     ext = os.path.splitext(path)[1].lower()
 
@@ -156,7 +144,7 @@ def _iter_block_items(parent_elm, doc):
 
 def _read_docx(path: str) -> dict:
     from docx import Document
-    from ai_computer_control.tools.office_read import ole_password_hint
+    from ai_computer_control.utils.office_reader import ole_password_hint
 
     hint = ole_password_hint(path)
     if hint:
@@ -238,7 +226,7 @@ def _read_pptx(path: str) -> dict:
         from pptx import Presentation
     except Exception:
         return {"error": "读 .pptx 需要 python-pptx。离线包已含,可运行 installer 重装;或 pip install python-pptx"}
-    from ai_computer_control.tools.office_read import ole_password_hint
+    from ai_computer_control.utils.office_reader import ole_password_hint
 
     hint = ole_password_hint(path)
     if hint:
@@ -373,14 +361,7 @@ def _read_pdf(path: str) -> dict:
 
 
 # =============================================================================================
-# Word 字体纪律 helpers (v1.7 「Office 体系 2.0」)
-#
-# The生死线: python-docx sets ascii/hAnsi rFonts via Font.name but NEVER w:eastAsia, so on 中文
-# Windows every CJK run falls back to the theme's minor-EA font (宋体). We hand-write the whole
-# w:rPr/w:rFonts (ascii + hAnsi + eastAsia all = token font) at the STYLE level in styles.xml, plus
-# the size / colour / bold, via lxml directly on `style.element.get_or_add_rPr()`. Applying this to
-# Normal / Title / Heading 1-3 means every paragraph that uses a built-in style inherits a fully
-# specified font — no run is ever 裸奔 (font-declaration-free) again.
+# Set w:eastAsia explicitly alongside ascii and hAnsi so CJK runs inherit the same style.
 # =============================================================================================
 
 # Size ladder (pt) —用户拍板: Normal 11 / H3 14 / H2 16 / H1 20 / Title 28.
@@ -1471,13 +1452,7 @@ def _resolve_cjk_font():
 
         {"name": <registered font name>, "warning": <optional str>}
 
-    Preference chain (first that works wins):
-      1. C:\\Windows\\Fonts\\msyh.ttc   (Microsoft YaHei, TTFont subfontIndex=0; msyhbd.ttc as bold)
-      2. C:\\Windows\\Fonts\\simsun.ttc (SimSun,          TTFont subfontIndex=0)
-      2b. (non-Windows) Noto Sans CJK / WenQuanYi; installed macOS TrueType faces
-      3. reportlab built-in UnicodeCIDFont('STSong-Light') — zero external files
-         (the CID font is resolved by the PDF *reader*, with an explicit warning)
-      4. Helvetica (Latin only, extreme fallback) + a warning that Chinese may not show
+    Prefer an embeddable Mac CJK font. Report explicitly when only a viewer font is available.
 
     The chosen face is also registered as a font FAMILY (bold -> real bold face when one exists, else the
     same face) so '<b>' / '<i>' in table headers and **bold** never fall back to Helvetica-Bold and drop
@@ -1498,7 +1473,6 @@ def _resolve_cjk_font():
         except Exception:
             pass
 
-    # 1 & 2: TrueType collections shipped with Windows (then Linux/macOS CJK faces).
     for font_name, ttc_path, bold_path in _pdf_font_candidates():
         if os.path.exists(ttc_path):
             try:

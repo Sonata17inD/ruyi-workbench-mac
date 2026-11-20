@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   [C] 45c 分类器(claude 子代理 over_window → retry:true;definitive 不再含 context)
 //   [D] 通用压缩模型窗口隔离:本地小模型负责摘要时,上下文面板仍跟随后续对话模型且写入路由身份
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -22,8 +22,8 @@ const http = require('http');
 
 // 隔离纪律:require server.js 之前先把数据根指向临时目录 —— 校准存储(45d)会写
 // <data>/context-calibration.json,直写默认根 = 污染用户真实数据(本测试曾因此翻车;
-// 且本机 WIN_CLAUDE_WORKBENCH_HOME 系统级指向真实根,必须【无条件】覆盖,不能 || 兜底)。
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w45-unit-'));
+// 且本机 RUYI_HOME 系统级指向真实根,必须【无条件】覆盖,不能 || 兜底)。
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w45-unit-'));
 
 const HERE = __dirname;
 const WB = path.resolve(HERE, '..', 'ruyi-workbench');
@@ -41,10 +41,10 @@ async function up(port) { // 117q:预算 60×150ms=9s 小于本机冷启动实�
   for (let i = 0; i < 300; i++) { if (await get(port, '/health')) return true; await sleep(150); } return false; }
 async function tokenFor(port) { return (await post(port, '/api/bootstrap', {}))?.token; }
 function isolatedEnv(home) {
-  return { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home, HOME: home, USERPROFILE: home,
-    CLAUDE_CONFIG_DIR: path.join(home, '.claude'), KIMI_CODE_HOME: path.join(home, '.kimi') };
+  return { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home,
+    CLAUDE_CONFIG_DIR: path.join(home, '.claude') };
 }
-function fakeUp(port, env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(port)], { env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env }, windowsHide: true }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; }
+function fakeUp(port, env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(port)], { env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env } }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; }
 const user = (content, extra) => ({ role: 'user', content, ...(extra || {}) });
 const asst = content => ({ role: 'assistant', content });
 
@@ -183,7 +183,7 @@ const asst = content => ({ role: 'assistant', content });
       activeProvider: 'main-prov', compactProviderId: 'local-compact', compactModel: 'local-small',
     }, null, 2));
     const fake = fakeUp(FAKE, {});
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: isolatedEnv(HOME), windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: isolatedEnv(HOME) });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
     try {
       ok(await up(PORT), 'D workbench up');
@@ -237,7 +237,7 @@ const asst = content => ({ role: 'assistant', content });
       activeProvider: 'b-prov',
     }, null, 2));
     const fake = fakeUp(FAKE, { FAKE_CONTEXT_400_ONCE: '1' });
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: isolatedEnv(HOME), windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: isolatedEnv(HOME) });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
     try {
       ok(await up(PORT), 'B workbench up');

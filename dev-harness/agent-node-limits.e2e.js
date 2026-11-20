@@ -91,7 +91,7 @@ async function boot(fake, env) {
     activeProvider: 'fake',
   }));
   const port = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, ...env } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: home, ...env } });
   if (!(await waitFor(() => get(port, '/health'), 100, 150))) throw new Error('workbench did not start');
   const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port, path: '/' }, res => { let body = ''; res.on('data', c => { body += c; }); res.on('end', () => resolve(body)); }));
   const token = (html.match(/name="wcw-token"\s+content="([a-f0-9]+)"/) || [])[1];

@@ -142,6 +142,50 @@ function mcpCallToolParams(name, args, options) {
   return params;
 }
 
+function takePending(client, id) {
+  const entry = client._pending.get(id);
+  if (entry) {
+    client._pending.delete(id);
+    entry.cleanup();
+  }
+  return entry;
+}
+
+function receiveReply(client, message) {
+  const entry = takePending(client, message.id);
+  if (!entry) return;
+  if (message.error) entry.reject(new Error(message.error.message || 'mcp error'));
+  else entry.resolve(message.result);
+}
+
+function failPending(client, error) {
+  for (const id of client._pending.keys()) takePending(client, id).reject(error);
+}
+
+function requestWithReply(client, method, timeoutMs, signal, send) {
+  return new Promise((resolve, reject) => {
+    const id = client._nextId++;
+    function cancel(kind) {
+      if (!takePending(client, id)) return;
+      const aborted = kind === 'abort';
+      if (method === 'tools/call') {
+        client._notify('notifications/cancelled', { requestId: id, reason: aborted ? 'user_steer' : 'timeout' });
+      }
+      reject(mcpBridgeError(`mcp ${method} ${aborted ? 'aborted by user steer' : 'timed out'}`, kind));
+    }
+    const onAbort = () => cancel('abort');
+    const timer = setTimeout(() => cancel('timeout'), Math.max(1000, timeoutMs));
+    client._pending.set(id, { resolve, reject, cleanup() {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+    } });
+    if (signal?.aborted) return onAbort();
+    signal?.addEventListener('abort', onAbort, { once: true });
+    const fail = error => takePending(client, id)?.reject(error);
+    try { send(id, fail); } catch (error) { fail(error); }
+  });
+}
+
 class McpStdioClient {
   constructor({ id, command, args, cwd, env, startupTimeoutMs, toolTimeoutMs, enabledTools, disabledTools }) {
     this.id = id;
@@ -163,56 +207,23 @@ class McpStdioClient {
     this._discarding = false;    // 超长行:丢弃到下一个换行
     this._lineMax = MCP_STDIO_LINE_MAX_CHARS;
     this._nextId = 1;
-    this._pending = new Map();   // rpc id -> { resolve, timer }
+    this._pending = new Map();
     this._stderr = '';
   }
 
   // Send one JSON-RPC request and await its result (by id). Rejects on timeout/child death.
-  _rpc(method, params, timeoutMs = 8000, options = {}) {
-    return new Promise((resolve, reject) => {
-      if (method === 'tools/call') {
-        const refusal = DesktopExecutionHooks.callRefusal(this, params?.name, params?.arguments, options);
-        if (refusal) return reject(Object.assign(new Error(refusal.error), { code: refusal.code }));
-      }
-      if (this.dead || !this.child || !this.child.stdin || !this.child.stdin.writable) {
-        return reject(new Error('mcp client not running'));
-      }
-      const id = this._nextId++;
-      const signal = options && options.signal;
-      let abortHandler = null;
-      const cleanup = () => {
-        clearTimeout(timer);
-        if (signal && abortHandler) signal.removeEventListener('abort', abortHandler);
-      };
-      const timer = setTimeout(() => {
-        this._pending.delete(id);
-        // 47b 桥 cancel 契约:tools/call 超时先按 MCP 标准发 notifications/cancelled(对端若实现协作式取消
-        // 可收手);真正的兜底是 callTool catch 里的 kill 进程树(ACC 侧不响应取消也不留僵尸执行)。
-        if (method === 'tools/call') { try { this._notify('notifications/cancelled', { requestId: id, reason: 'timeout' }); } catch { /* best-effort */ } }
-        cleanup();
-        reject(mcpBridgeError(`mcp ${method} timed out`, 'timeout'));
-      }, Math.max(1000, timeoutMs));
-      abortHandler = () => {
-        if (!this._pending.has(id)) return;
-        this._pending.delete(id);
-        if (method === 'tools/call') { try { this._notify('notifications/cancelled', { requestId: id, reason: 'user_steer' }); } catch { /* best-effort */ } }
-        cleanup();
-        reject(mcpBridgeError(`mcp ${method} aborted by user steer`, 'abort'));
-      };
-      this._pending.set(id, { resolve, reject, timer, cleanup });
-      if (signal) {
-        signal.addEventListener('abort', abortHandler, { once: true });
-        if (signal.aborted) { abortHandler(); return; }
-      }
-      try {
-        const packet = { jsonrpc: '2.0', id, method, params: params || {} };
-        const safePacket = options.executionCheck ? copyOrdinaryJsonData(packet) : packet;
-        const encoded = JSON.stringify(safePacket);
-        if (options.executionCheck) options.executionCheck(safePacket);
-        this.child.stdin.write(encoded + '\n', 'utf8');
-      } catch (e) {
-        cleanup(); this._pending.delete(id); reject(e);
-      }
+  async _rpc(method, params, timeoutMs = 8000, options = {}) {
+    if (method === 'tools/call') {
+      const refusal = DesktopExecutionHooks.callRefusal(this, params?.name, params?.arguments, options);
+      if (refusal) throw Object.assign(new Error(refusal.error), { code: refusal.code });
+    }
+    if (this.dead || !this.child?.stdin?.writable) throw new Error('mcp client not running');
+    return requestWithReply(this, method, timeoutMs, options?.signal, id => {
+      const packet = { jsonrpc: '2.0', id, method, params: params || {} };
+      const safePacket = options.executionCheck ? copyOrdinaryJsonData(packet) : packet;
+      const encoded = JSON.stringify(safePacket);
+      if (options.executionCheck) options.executionCheck(safePacket);
+      this.child.stdin.write(encoded + '\n', 'utf8');
     });
   }
   // Fire-and-forget notification (no id, no response expected).
@@ -230,16 +241,7 @@ class McpStdioClient {
       try { this.child.stdin.write(JSON.stringify(mcpServerRequestReply(msg)) + '\n', 'utf8'); } catch { /* ignore */ }
       return;
     }
-    const p = this._pending.get(msg.id);
-    if (!p) return;
-    if (p.cleanup) p.cleanup(); else clearTimeout(p.timer);
-    this._pending.delete(msg.id);
-    if (msg.error) p.reject(new Error(msg.error.message || 'mcp error'));
-    else p.resolve(msg.result);
-  }
-  _failAllPending(err) {
-    for (const [, p] of this._pending) { if (p.cleanup) p.cleanup(); else clearTimeout(p.timer); try { p.reject(err); } catch { /* settled */ } }
-    this._pending.clear();
+    receiveReply(this, msg);
   }
   // 按行切 stdout。只在【新到的块】里找换行(修前每块都从整串头上重找,几十 MB 的一行是平方级);
   // 超过 _lineMax 的行整行丢弃到下一个换行,并按行首的 "id" 把那一次调用如实拒掉,不在行中间切。
@@ -264,12 +266,8 @@ class McpStdioClient {
       this._bufParts = []; this._bufLen = 0;
       this._discarding = true;
       const m = /^\s*\{[^{]*?"id"\s*:\s*(\d+)/.exec(head);   // 只认顶层 id(它前面不能再有别的 {)
-      const p = m ? this._pending.get(Number(m[1])) : null;
-      if (p) {
-        this._pending.delete(Number(m[1]));
-        if (p.cleanup) p.cleanup(); else clearTimeout(p.timer);
-        p.reject(new Error(`mcp response too large (> ${Math.round(this._lineMax / 1048576)}MB single line)`));
-      }
+      if (m) takePending(this, Number(m[1]))?.reject(
+        new Error(`mcp response too large (> ${Math.round(this._lineMax / 1048576)}MB single line)`));
     }
   }
 
@@ -298,13 +296,13 @@ class McpStdioClient {
     // Don't let the live MCP child keep the event loop from exiting on a clean shutdown; we reap it
     // explicitly via killAllMcpClients()/killChildTree on exit.
     try { child.unref(); } catch { /* ignore */ }
-    child.on('error', e => { this.dead = true; this._failAllPending(new Error('mcp child error: ' + (e && e.message))); });
+    child.on('error', e => { this.dead = true; failPending(this, new Error('mcp child error: ' + (e && e.message))); });
     child.on('exit', (code, signal) => {
       this.dead = true;
       // 审计 A14:带上退出码/信号与 stderr 末尾,callTool 据此给模型可行动的说明(修前只有裸的「mcp child exited」)。
       const err = new Error(`mcp child exited (code ${code == null ? 'null' : code}${signal ? `, signal ${signal}` : ''})`);
       err.mcpChildExit = { code: code == null ? null : code, signal: signal || null, stderrTail: String(this._stderrTail || '').slice(-400).trim() };
-      this._failAllPending(err);
+      failPending(this, err);
     });
     // EPIPE on stdin must not crash the process.
     if (child.stdin) child.stdin.on('error', () => { /* ignore broken pipe */ });
@@ -376,7 +374,7 @@ class McpStdioClient {
 
   kill() {
     this.dead = true;
-    this._failAllPending(new Error('mcp client killed'));
+    failPending(this, new Error('mcp client killed'));
     if (this.child) this.lastCleanup = killChildTree(this.child);
     try { if (this.child && this.child.stdin) this.child.stdin.end(); } catch { /* ignore */ }
     this.child = null;
@@ -415,17 +413,12 @@ class McpHttpClient {
     this.started = false;
     this.tools = [];
     this._nextId = 1;
-    this._pending = new Map();     // rpc id -> { resolve, reject, timer }
+    this._pending = new Map();
     this._sessionId = null;
     this._sseReq = null;           // legacy-sse GET stream (http.ClientRequest)
     this._ssePostUrl = null;       // legacy-sse endpoint uri
     this._sseBuf = '';
     this._toolsStale = false;      // tools/list_changed 通知标记
-  }
-
-  _failAllPending(err) {
-    for (const [, p] of this._pending) { if (p.cleanup) p.cleanup(); else clearTimeout(p.timer); try { p.reject(err); } catch { /* settled */ } }
-    this._pending.clear();
   }
 
   _baseHeaders(extra) {
@@ -540,41 +533,15 @@ class McpHttpClient {
   }
 
   // legacy-SSE round trip: POST to the endpoint uri (202 ack), the result arrives on the GET stream.
-  _rpcSse(method, params, timeoutMs, options = {}) {
-    return new Promise((resolve, reject) => {
-      if (this.dead || !this._ssePostUrl) return reject(new Error('mcp sse: 事件流未就绪'));
-      const id = this._nextId++;
-      const signal = options && options.signal;
-      let abortHandler = null;
-      const cleanup = () => {
-        clearTimeout(timer);
-        if (signal && abortHandler) signal.removeEventListener('abort', abortHandler);
-      };
-      const timer = setTimeout(() => {
-        this._pending.delete(id);
-        if (method === 'tools/call') { try { this._notify('notifications/cancelled', { requestId: id, reason: 'timeout' }); } catch { /* best-effort */ } }
-        cleanup();
-        reject(mcpBridgeError(`mcp ${method} timed out`, 'timeout'));
-      }, Math.max(1000, timeoutMs));
-      abortHandler = () => {
-        if (!this._pending.has(id)) return;
-        this._pending.delete(id);
-        if (method === 'tools/call') { try { this._notify('notifications/cancelled', { requestId: id, reason: 'user_steer' }); } catch { /* best-effort */ } }
-        cleanup();
-        reject(mcpBridgeError(`mcp ${method} aborted by user steer`, 'abort'));
-      };
-      this._pending.set(id, { resolve, reject, timer, cleanup });
-      if (signal) {
-        signal.addEventListener('abort', abortHandler, { once: true });
-        if (signal.aborted) { abortHandler(); return; }
-      }
+  async _rpcSse(method, params, timeoutMs, options = {}) {
+    if (this.dead || !this._ssePostUrl) throw new Error('mcp sse: 事件流未就绪');
+    return requestWithReply(this, method, timeoutMs, options?.signal, (id, fail) => {
       this._request('POST', this._ssePostUrl, { jsonrpc: '2.0', id, method, params: params || {} }, timeoutMs, null, options)
         .then(resp => {
-          if (resp.error || (resp.status && resp.status >= 400)) {
-            cleanup(); this._pending.delete(id);
-            reject(mcpBridgeError('mcp sse post: ' + (resp.error || ('HTTP ' + resp.status)), resp.why));
+          if (resp.error || resp.status >= 400) {
+            fail(mcpBridgeError('mcp sse post: ' + (resp.error || ('HTTP ' + resp.status)), resp.why));
           }
-        });
+        }, fail);
     });
   }
 
@@ -629,12 +596,7 @@ class McpHttpClient {
             return;
           }
           if (msgObj.id != null) {
-            const p = this._pending.get(msgObj.id);
-            if (p) {
-              if (p.cleanup) p.cleanup(); else clearTimeout(p.timer); this._pending.delete(msgObj.id);
-              if (msgObj.error) p.reject(new Error(msgObj.error.message || 'mcp error'));
-              else p.resolve(msgObj.result);
-            }
+            receiveReply(this, msgObj);
           } else if (msgObj.method === 'notifications/tools/list_changed') {
             this._toolsStale = true; // 03 §4.2:响应 tools/list_changed —— 下次 listTools 前重列
           }
@@ -651,14 +613,14 @@ class McpHttpClient {
             const dm = line.match(/^data:\s?(.*)$/); if (dm) { evtData.push(dm[1]); continue; }
           }
         });
-        res.on('end', () => { this.dead = true; this._failAllPending(new Error('mcp sse: 事件流断开')); });
-        res.on('error', e => { this.dead = true; this._failAllPending(new Error('mcp sse: ' + (e && e.message))); });
+        res.on('end', () => { this.dead = true; failPending(this, new Error('mcp sse: 事件流断开')); });
+        res.on('error', e => { this.dead = true; failPending(this, new Error('mcp sse: ' + (e && e.message))); });
       });
       req.on('error', e => {
         clearTimeout(openTimer);
         reject(new Error('mcp sse connect: ' + (e && e.message)));   // 已 open 时是空操作
         // 已建立的流中途断(ECONNRESET 等):与 res 'error' 同一收尾,挂着的调用立刻失败,下次调用重建。
-        if (opened) { this.dead = true; this._failAllPending(new Error('mcp sse: ' + (e && e.message))); }
+        if (opened) { this.dead = true; failPending(this, new Error('mcp sse: ' + (e && e.message))); }
       });
       this._sseReq = req; // Own the connection while waiting for headers too.
       req.end();
@@ -732,7 +694,7 @@ class McpHttpClient {
 
   kill() {
     this.dead = true;
-    this._failAllPending(new Error('mcp client killed'));
+    failPending(this, new Error('mcp client killed'));
     try { if (this._sseReq) this._sseReq.destroy(new Error('mcp client killed')); } catch { /* ignore */ }
     this._sseReq = null;
   }

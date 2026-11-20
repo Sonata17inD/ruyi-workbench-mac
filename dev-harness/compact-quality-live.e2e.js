@@ -18,7 +18,7 @@ const path = require('path');
 
 // 隔离:只读真实 config 拿凭据;校准存储等写面仍指向临时根。
 const REAL_HOME = require('./lib/real-data-root.js').realDataRoot();
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w45-quality-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w45-quality-'));
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const srv = require(path.join(WB, 'app', 'server.js'));

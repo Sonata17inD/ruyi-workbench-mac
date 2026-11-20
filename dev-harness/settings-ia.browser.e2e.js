@@ -32,12 +32,12 @@ const SIMPLE_TABS = PRO_TABS;
 (async () => {
   let fx = null, configReader = null;
   try {
-    fx = await startBrowserFixture({
+    fx = await startBrowserFixture({ isolatedKeychain: true,
       ok,
       prefix: 'ruyi-settings-ia-',
       width: 1440,
       height: 900,
-      config: { uiMode: 'pro', credentialEncryptionV1: process.platform === 'win32' },
+      config: { uiMode: 'pro', credentialEncryptionV1: true },
       prepare: async f => {
         const saved = await f.request('POST', '/api/config', {
           activeProvider: 'fake',
@@ -72,7 +72,7 @@ const SIMPLE_TABS = PRO_TABS;
       if (!(await waitConfig(serverPred))) return false;
       return Boolean(await settled(clientPred || String(serverPred)));
     };
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(fx.home);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(fx.home, fx.keychainHelper);
     const diskConfig = () => configReader.recover(JSON.parse(fs.readFileSync(path.join(fx.home, 'config.json'), 'utf8')));
     const provider = (c, id) => ((c && c.providers) || []).find(p => p && p.id === id) || {};
     // 选中一枚下拉的某个值并派发 change（值不存在就回 false —— 「能选」本身也是被量的事）。
@@ -131,12 +131,12 @@ const SIMPLE_TABS = PRO_TABS;
     ok(await pickSaved('#cfgMainModel', 'qwen-turbo', c => c.activeProvider === 'qwen' && qwenModel(c) === 'qwen-turbo',
       "c => ((c.providers || []).find(p => p && p.id === 'qwen') || {}).model === 'qwen-turbo'"),
       'S2b 主模型的模型选 qwen-turbo → providers[qwen].model 落盘');
-    const cliOptions = await ev(`[...document.getElementById('cfgMainProvider').options].map(o => o.textContent)`);
-    ok(cliOptions.filter(text => /Claude Code|Kimi Code/.test(text)).length === 2, `S2c 两个命令行引擎在主模型下拉里各是一项（引擎三处合一处；实见 ${JSON.stringify(cliOptions)}）`);
-    ok(await pickSaved('#cfgMainProvider', '~cli:kimi', c => c.activeProvider === '' && c.agentCliType === 'kimi', "c => c.agentCliType === 'kimi'"),
-      'S2d 选 Kimi Code → 一次写 activeProvider:"" ＋ agentCliType:kimi');
-    ok(/Kimi Code/.test(await ev(`(document.getElementById('agentCliCurrentHint') || {}).textContent || ''`)),
-      'S2e Agent CLI 页顶上那句跟着说「这里是 Kimi Code 的设置」');
+    const cliOptions = await ev(`[...document.getElementById('cfgMainProvider').options].filter(o => o.value.startsWith(String.fromCharCode(31) + 'cli:')).map(o => o.textContent)`);
+    ok(cliOptions.length === 1 && /Claude Code/.test(cliOptions[0]), 'S2c 主模型下拉列出已注册的原生 CLI');
+    ok(await pickSaved('#cfgMainProvider', '~cli:claude', c => c.activeProvider === '' && c.agentCliType === 'claude', "c => c.agentCliType === 'claude'"),
+      'S2d 选 Claude Code 同时保存主引擎与 CLI 类型');
+    ok(/Claude Code/.test(await ev(`(document.getElementById('agentCliCurrentHint') || {}).textContent || ''`)),
+      'S2e 设置页显示当前 CLI');
     ok(await pickSaved('#cfgMainProvider', 'qwen', c => c.activeProvider === 'qwen' && qwenModel(c) === 'qwen-turbo', "c => c.activeProvider === 'qwen'"),
       'S2f 换回 Qwen（它的缺省模型仍是刚才选的 qwen-turbo）');
     ok(await pickSaved('#cfgNewThreadEngine', 'global', c => c.newThreadEngine === 'global', "c => c.newThreadEngine === 'global'"), 'S2g 新线程默认引擎即存');
@@ -179,10 +179,10 @@ const SIMPLE_TABS = PRO_TABS;
     };
     const s2p = await optionIs('#cfgMainModel', '不指定（用清单第一个）');
     ok(s2p === true, `S2p 主模型选的是服务商：留空那一项说「不指定（用清单第一个）」（${s2p}）`);
-    const s2q = (await pickSaved('#cfgMainProvider', '~cli:kimi', c => c.activeProvider === '' && c.agentCliType === 'kimi', "c => c.agentCliType === 'kimi'"))
-      && await optionIs('#cfgMainModel', 'Kimi Code 自带的默认模型');
+    const s2q = (await pickSaved('#cfgMainProvider', '~cli:claude', c => c.activeProvider === '' && c.agentCliType === 'claude', "c => c.agentCliType === 'claude'"))
+      && await optionIs('#cfgMainModel', 'Claude Code 自带的默认模型');
     ok(s2q === true && await pickSaved('#cfgMainProvider', 'qwen', c => c.activeProvider === 'qwen' && qwenModel(c) === 'qwen-turbo', "c => c.activeProvider === 'qwen'"),
-      `S2q 主模型选的是命令行引擎：留空那一项说「Kimi Code 自带的默认模型」，换回 Qwen 不丢它的模型（${s2q}）`);
+      `S2q 主模型选的是命令行引擎：留空那一项说「Claude Code 自带的默认模型」，换回 Qwen 不丢它的模型（${s2q}）`);
     const s2r = [await optionIs('#cfgStewardModel', '用这家服务商的默认模型'), await optionIs('#cfgCompactModel', '用这家服务商的默认模型')];
     ok(s2r.every(r => r === true), `S2r 管家、压缩两行选了服务商：留空那一项说「用这家服务商的默认模型」（${JSON.stringify(s2r)}）`);
     const s2s = (await pickSaved('#cfgStewardProviderId', '', c => c.stewardProviderId === '' && c.stewardModel === '', "c => c.stewardProviderId === ''"))
@@ -251,7 +251,7 @@ const SIMPLE_TABS = PRO_TABS;
     ok(qwen.reasoningEffort === 'medium' && qwen.model === 'qwen-turbo',
       `S5j 编辑期间的外部改动、以及「模型分配」主模型那一行写的 qwen-turbo 都在（qwen.reasoningEffort=${qwen.reasoningEffort} model=${qwen.model}）`);
     ok(fake.apiKey === 'k' && qwen.apiKey === 'k2', 'S5k 密钥没被掩码或空值冲掉');
-    if (process.platform === 'win32') {
+    {
       const rawDisk = JSON.parse(fs.readFileSync(path.join(fx.home, 'config.json'), 'utf8'));
       const physicalFiles = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(fx.home, name)));
       // 短夹具值不能对子串搜 k;只比 JSON 字符串值,避免把普通键名或密文中的字母当作泄露。
@@ -259,7 +259,7 @@ const SIMPLE_TABS = PRO_TABS;
         : value && typeof value === 'object' ? Object.values(value).some(hasPlainKey) : false;
       ok(rawDisk.credentialRefsV1?.version === 1 && provider(rawDisk, 'fake').apiKey === '' && provider(rawDisk, 'qwen').apiKey === ''
         && physicalFiles.every(name => !hasPlainKey(JSON.parse(fs.readFileSync(path.join(fx.home, name), 'utf8')))),
-      'S5k1 Windows 主配置、备份和凭据库使用密文引用,无精确密钥明文');
+      'S5k1 Mac 主配置、备份和凭据库使用密文引用,无精确密钥明文');
     }
     ok(Boolean(await fx.waitForEval(`(() => { const b = document.getElementById('saveConfigBtn'); const tab = document.querySelector('#settingsTabs button[data-stab="providers"]'); return b && b.disabled && document.getElementById('providersSaveBar').dataset.dirty === 'false' && !tab.dataset.dirty ? 1 : null; })()`, 100)),
       'S5l 保存之后保存条回到干净、小圆点消失');
@@ -291,8 +291,6 @@ const SIMPLE_TABS = PRO_TABS;
     ok(await visible('#cfgOpenaiMaxToolIterations') && await visible('#settingsSecWorkflow') && await visible('#cfgUsageBudgetMonthly'),
       'S7e 用量与限额：工具调用上限、工作流、月度预算简易档都看得见');
     await switchTab('security');
-    // 命令行引擎那一段只对 Claude Code 显示（data-agent-cli-only，S2d 把命令行引擎切成了 Kimi）—— 这里只钉「简易档不再额外藏它」：
-    // 它若不显示，唯一的原因只能是按引擎显隐的 .hidden。
     ok(await visible('#cfgStewardDefaultPermission')
       && await ev(`(() => { const n = document.getElementById('settingsSecCliPermission'); return Boolean(n) && (n.offsetParent !== null || n.classList.contains('hidden')); })()`),
       'S7f 权限与安全：全局默认权限简易档够得着；命令行引擎那一段不再被简易档藏（只按命令行引擎显隐）');

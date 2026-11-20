@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ② 前端（provider-settings.js saveSettings）：providersDraft 没被 config 播种过就不上传 providers 键
 //      （providersDraftSeeded），服务端 {...current, ...body} 因此保留现值。这里用源码锚锁住。
 // 判定行：`CONFIG PROVIDERS GUARD E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -26,7 +26,7 @@ const providers = [
   { id: 'fake-a', label: 'A', type: 'openai-compat', baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'sk-real-key-A', model: 'm-a', models: [{ id: 'm-a', label: 'm-a' }] },
   { id: 'fake-b', label: 'B', type: 'openai-compat', baseUrl: 'http://127.0.0.1:9/v1', apiKey: 'sk-real-key-B', model: 'm-b', models: [{ id: 'm-b', label: 'm-b' }] },
 ];
-fs.writeFileSync(CONFIG, JSON.stringify({ configSchema: 7, credentialEncryptionV1: process.platform === 'win32', activeProvider: 'fake-a', engineMode: 'interactive', providers, locale: 'zh-CN' }, null, 2));
+fs.writeFileSync(CONFIG, JSON.stringify({ configSchema: 7, credentialEncryptionV1: true, activeProvider: 'fake-a', engineMode: 'interactive', providers, locale: 'zh-CN' }, null, 2));
 
 let TOKEN = '';
 function getToken() {
@@ -58,11 +58,12 @@ const readDisk = () => configReader ? configReader.recover(JSON.parse(fs.readFil
 
 let wb = null;
 try {
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true, stdio: 'ignore' });
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, stdio: 'ignore' });
   ok(await waitForHttp(), 'A0 workbench listening');
   TOKEN = await getToken();
-  configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
-  ok(process.platform !== 'win32' || !!JSON.parse(fs.readFileSync(CONFIG, 'utf8')).credentialRefsV1, '81-P1 persistence assertions use encrypted config references on Windows');
+  configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
+  ok(!!JSON.parse(fs.readFileSync(CONFIG, 'utf8')).credentialRefsV1, 'stored configuration uses encrypted references');
   ok(!!TOKEN, 'A0b got UI token (POST /api/config is token-level)');
 
   // ① 部分 patch 不带 providers → 现值原样保留（合并语义）。

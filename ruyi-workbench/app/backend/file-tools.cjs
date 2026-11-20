@@ -926,9 +926,8 @@ const FILE_TOOL_HANDLERS = {
         // 调用方在 pattern(正则或 glob)/ root 里显式点名的目录不剪(`^dist/`、root=…/build)。
         allowDirs: explicitAllowDirs(root, cls.kind === 'regex' ? explicitSegmentsOfRegex(args.pattern) : cls.kind === 'glob' ? explicitSegmentsOfGlob(args.pattern) : []),
       });
-      respellWalkPaths(walked, walkRoot, root);   // 第三波(复核 #6):回给模型的绝对路径保持调用方的写法(映射盘 / 别名不换成 UNC / 真身)
       // F12:信封只带相对路径(root 已在顶层);absolute:true 才补绝对 path。
-      const resp = { ok: true, root, files: walkEnvelopeEntries(walked, args.absolute === true) };
+      const resp = { ok: true, root, files: walkEnvelopeEntries(walked, args.absolute === true, root) };
       if (walked.truncated) { resp.truncated = true; resp.hint = walkTruncationHint(walked, 'file_list'); }
       if (walked.prunedDirs && recursive) { resp.prunedDirs = walked.prunedDirs; resp.prunedHint = prunedDirsHint('file_list'); }
       if (walked.depthLimited && recursive) { resp.depthLimited = true; resp.depthCutDirs = walked.depthCutDirs; resp.depthHint = walkDepthHint(walked, 'file_list'); }
@@ -968,10 +967,10 @@ const FILE_TOOL_HANDLERS = {
         for (const m of matches) {
           if (isSensitiveDataPath(m && m.path)) continue;
           if (ids.size && m && m.path && await isSensitiveHardlinkAlias(m.path, ids)) continue;
+          if (walkRoot !== root && m?.relativePath) m.path = path.join(root, m.relativePath);
           kept.push(m);
         }
         matches = kept;
-        respellWalkPaths(matches, walkRoot, root);   // 第三波(复核 #6):敏感名单与硬链接判据已按 realpath 判完,回给模型的 path 换回调用方的写法
       }
       const resp = { ok: true, root, matches };
       if (meta.engine) resp.engine = meta.engine;
@@ -1033,12 +1032,10 @@ const FILE_TOOL_HANDLERS = {
         emitDirs: false, accept: rel => globRe.test(rel), ignoreDirs: args.ignoreDirs, includeIgnored: args.includeIgnored === true,
         allowDirs: explicitAllowDirs(walkRoot, explicitSegmentsOfGlob(pattern)),   // `dist/**/*.js` 点名了 dist → 不剪
       });
-      respellWalkPaths(all, walkRoot, root);   // 第三波(复核 #6)
-      const matched = all.filter(f => f.type === 'file').map(f => ({ path: f.path, relativePath: f.relativePath, mtime: f.mtimeMs || 0 }));
-      matched.sort((a, b) => b.mtime - a.mtime);
+      const matched = all.sort((a, b) => (b.mtimeMs || 0) - (a.mtimeMs || 0));
       const truncated = matched.length > maxResults || all.truncated === true;
       // F12:相对路径 + 整数毫秒 mtime(修前是 1790785004440.1304 这种浮点);absolute:true 补绝对 path。
-      const resp = { ok: true, root, files: matched.slice(0, maxResults).map(m => (args.absolute === true ? { relativePath: m.relativePath, path: m.path, mtime: m.mtime } : { relativePath: m.relativePath, mtime: m.mtime })), truncated };
+      const resp = { ok: true, root, files: matched.slice(0, maxResults).map(m => (args.absolute === true ? { relativePath: m.relativePath, path: path.join(root, m.relativePath), mtime: m.mtimeMs || 0 } : { relativePath: m.relativePath, mtime: m.mtimeMs || 0 })), truncated };
       if (all.truncated) resp.hint = walkTruncationHint(all, 'glob') + ' (newest-first ordering only covers the files visited)';
       else if (matched.length > maxResults) resp.hint = 'glob: ' + matched.length + ' files matched, showing the newest ' + maxResults + '; raise maxResults or narrow the pattern/root';
       if (all.prunedDirs) { resp.prunedDirs = all.prunedDirs; resp.prunedHint = prunedDirsHint('glob'); }
@@ -1059,8 +1056,7 @@ const FILE_TOOL_HANDLERS = {
       // F2/F12:广度优先 + 共用忽略清单 —— 顶层条目永远先于任何子目录内容列出(修前 DFS 先到先得,
       // 本仓库上 300 个名额全被 .claude/worktrees 吃掉);信封只带相对路径。
       const walked = await walkFiles(walkRoot, { signal: ctx && ctx.signal, recursive: true, maxFiles: Number(args.maxFiles) >= 1 ? args.maxFiles : 300, maxDepth: args.maxDepth != null ? Number(args.maxDepth) : 4, bfs: true, ignoreDirs: args.ignoreDirs, includeIgnored: args.includeIgnored === true, allowDirs: explicitAllowDirs(walkRoot, []) });
-      respellWalkPaths(walked, walkRoot, root);   // 第三波(复核 #6)
-      const resp = { ok: true, root, files: walkEnvelopeEntries(walked, args.absolute === true) };
+      const resp = { ok: true, root, files: walkEnvelopeEntries(walked, args.absolute === true, root) };
       if (walked.truncated) { resp.truncated = true; resp.hint = walkTruncationHint(walked, 'project_snapshot') + ' (entries are listed breadth-first: every top-level entry comes before deeper ones)'; }
       if (walked.prunedDirs) { resp.prunedDirs = walked.prunedDirs; resp.prunedHint = prunedDirsHint('project_snapshot'); }
       if (walked.depthLimited) { resp.depthLimited = true; resp.depthCutDirs = walked.depthCutDirs; resp.depthHint = walkDepthHint(walked, 'project_snapshot'); }

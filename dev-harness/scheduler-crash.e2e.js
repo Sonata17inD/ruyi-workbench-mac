@@ -21,7 +21,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 载荷一律用 reminder:四个崩溃点在 reminder 分支上全都可达(见 13s schedulerFireOnce),
 // 于是本件不需要任何模型端点 —— 崩溃时序本身就够难量了,不该再叠一个 provider 的不确定性。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -101,7 +101,6 @@ function spawnWb(port, crashAt) {
       WCW_SCHEDULER_TICK_MS: String(TICK_MS),
       ...(crashAt ? { WCW_SCHEDULER_CRASH_AT: crashAt } : {}),
     },
-    windowsHide: true,
   });
   child.exitInfo = { code: null, done: false };
   child.on('exit', code => { child.exitInfo.code = code; child.exitInfo.done = true; });
@@ -178,7 +177,7 @@ async function recoveryWorker() {
 }
 function coldWorker(data, command) {
   const result = cp.spawnSync(process.execPath, [__filename, '--recovery-worker'], {
-    env: { ...process.env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, HOME: data, USERPROFILE: data, WCW_SCHEDULER_CLOCK_FILE: CLOCK },
+    env: { ...process.env, RUYI_HOME: data, HOME: data, USERPROFILE: data, WCW_SCHEDULER_CLOCK_FILE: CLOCK },
     input: JSON.stringify(command), encoding: 'utf8', timeout: 10000, maxBuffer: 262144,
   });
   if (['settle-crash', 'overlap-crash', 'skip-crash', 'skip-overlap'].includes(command.op)) {

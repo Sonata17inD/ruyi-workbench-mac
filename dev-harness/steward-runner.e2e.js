@@ -30,7 +30,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (J) CLI 引擎主端点 -> steward.unsupported_engine。
 //
 // 端口全部 getFreePort() 动态取。判定行:`STEWARD RUNNER E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -121,7 +121,6 @@ const REPLY_SEQUENCE = [
 
 const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(PROVIDER_PORT)], {
   env: { ...process.env, FAKE_REPLY_SEQUENCE: JSON.stringify(REPLY_SEQUENCE), FAKE_CAPTURE_DIR: CAPTURE },
-  windowsHide: true,
 });
 fake.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
 await sleep(600);
@@ -174,7 +173,7 @@ try {
   /* ═════════ (A) 开关关 ═════════ */
   console.log('── (A) 开关关 ──');
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   let up = null;
@@ -224,13 +223,6 @@ try {
     const bodies = files.map(f => { try { return JSON.parse(fs.readFileSync(path.join(CAPTURE, f), 'utf8')); } catch { return null; } }).filter(Boolean);
     const stewardBody = bodies.find(b => Array.isArray(b.tools) && b.tools.length && b.tools.every(t => String(t.function && t.function.name).startsWith('steward_')));
     ok(!!stewardBody, 'B7 工具面:管家回合的请求体里只有 steward_* 工具(零文件/shell/桌面/联网/元工具)');
-    // 116-2a 重钉:17 → 18(新增 steward_thread_permission);116-2b 重钉:18 → 19(新增 steward_thread_note);
-    // 116g 重钉:19 → 20(新增 steward_missions);116h 重钉:20 → 21(新增 steward_thread_prioritize,27 号文 §3.1 116h 行)。
-    // 117m-A4 重钉:26 → 27(新增 steward_thread_stop)。伴随一条更强的:请求体里【真的】有那个工具名 ——
-    // 只钉个数的话,「加了一个别的工具、漏了 thread_stop」也会绿。
-    // 123-M2 重钉:27 -> 33(六件定时任务 steward_schedule_*)。
-    // 129b 重钉:33 -> 36(三张只读清单);129d 重钉:36 -> 40(眼睛四件);129e 重钉:40 -> 41(改线程工作目录);129f 重钉:41 -> 42(主动叫人)。
-    // 67 adds one bounded bot-setup tool; the normal tool surface remains steward-only.
     ok(stewardBody && stewardBody.tools.length === 43, `B7b 管家回合拿到全部 43 个 steward_*(按需装载对管家强制 full;got ${stewardBody && stewardBody.tools.length})`);
     ok(stewardBody && stewardBody.tools.some(t => String(t.function && t.function.name) === 'steward_bot_setup'),
       'B7d 67:真实 provider 工具面包含本机机器人准备工具');
@@ -299,14 +291,6 @@ try {
   /* ═════════ (H) 熔断 ═════════ */
   console.log('── (H) 熔断 ──');
   {
-    // 117m-A1 重钉(用户第六轮走查⑦「这个熔断也不对吧」):H1/H2 原来钉的是【用户消息也被小时窗挡】
-    // —— 那正是用户真机上撞到的 bug(日志里两条 steward_circuit{circuit:'turns_per_hour',trigger:'user'}
-    // 就是他那两句「还在正常运转吗」),同一个函数下面几行的 no_progress 却写着「用户消息永远优先」。
-    // 小时窗从此只节流 trigger !== 'user' 的自主回合,H1/H2 按新纪律重钉,并补三条【更强】的伴随断言:
-    //   · H1b:放行不是「假装放行」—— 模型真的被调了(capture +1);
-    //   · H2b(进程内 H-3):真正该被挡的 inbox 回合仍被挡、且【确实没调模型】(原 H2 的强度搬到那里,
-    //     它验的是真正的节流路径,比在用户路径上验更有意义);
-    //   · H3b:停机这条熔断对用户回合仍然成立(state 带 circuit 的能力仍被真值证明,而且是原先没测过的分支)。
     const capturedBefore = countFiles(CAPTURE);
     writeConfig({ stewardMaxTurnsPerHour: 1 });
     const res = await request('POST', '/api/steward/message', { message: '再看一眼' });
@@ -341,7 +325,6 @@ await sleep(400);
 
 /* ═════════════════════ 进程内阶段 ═════════════════════ */
 console.log('── 进程内阶段(单进程运行时,时序可判定)──');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 const readDecisions = () => { try { return fs.readFileSync(decisionsFile, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)); } catch { return []; } };
@@ -490,8 +473,6 @@ try {
     writeConfig({ stewardAutoActions: { retry: true, resume: null, relay: false, newThread: true, answer: false } });
     const events = [{ inboxSeq: 20, kind: 'failed', sessionId: FIXED_THREAD, missionId: FIXED_THREAD, seq: 20, at: new Date().toISOString(), payload: { summary: '又失败了' }, count: 1 }];
     const r = await srv.runStewardTurn({ trigger: 'inbox', events });
-    // 116-2b 重钉:自理动作(确定性处置)排在【模型 actions 之前】,故不能再按下标 0 取模型那条。
-    // 断言本意一字未改 —— 找的仍是「模型提的 thread_continue 被自理清单 relay 那道闸挡下」这一条。
     const executed = (r.actions || []).find(a => a && a.result && a.result.reason === 'self_serve_off');
     ok(executed && executed.tool === 'steward_thread_continue' && executed.result && executed.result.error === 'propose_required' && executed.result.reason === 'self_serve_off',
       `D11 自理清单里 relay 未勾选 -> 无人值守回合的递话只提议(got ${executed && executed.result && executed.result.error})`);

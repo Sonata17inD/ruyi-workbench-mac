@@ -32,15 +32,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 判定行：`RAIL POCKET BROWSER E2E: ALL PASS`
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -84,13 +83,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(100);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 // 一句话就收的 provider（本件不测回合，只需要一个能起得来的端点）。
@@ -266,11 +258,11 @@ function writeConfig(home, extra) {
 
 async function launchBrowser(executable, debugPort, profile, appUrl) {
   return cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1920,1080',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
 }
 
 const appPort = await getFreePort();
@@ -305,8 +297,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started');
   let token = '';
@@ -696,8 +688,8 @@ try {
   /* ═════════ I 118a 向导多一步「管家用哪个模型」（全新 HOME）═════════ */
   wizardServer = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wizardPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: wizardHome, WIN_CLAUDE_WORKBENCH_HOME: wizardHome, HOME: wizardHome, USERPROFILE: wizardHome },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: wizardHome, HOME: wizardHome, USERPROFILE: wizardHome },
+    stdio: 'ignore',
   });
   // 全新 HOME 首启会跑 detectDesktopMcp 那几发 python 探针（§13.10 的产品债），门放到 30 s。
   ok(Boolean(await waitForHttp(wizardPort, 'GET', '/health', r => r.status === 200, undefined, 300)), 'I1 全新 HOME 的 workbench 起来了');
@@ -829,12 +821,11 @@ try {
 } finally {
   if (cdp) cdp.close();
   if (wizardCdp) wizardCdp.close();
-  killTree(browser);
-  killTree(wizardBrowser);
-  killTree(server);
-  killTree(wizardServer);
+  killOwnTree(browser);
+  killOwnTree(wizardBrowser);
+  killOwnTree(server);
+  killOwnTree(wizardServer);
   if (provider) await new Promise(resolve => provider.close(resolve));
-  try { stopRuyiTestBrowsers(); } catch { /* best effort */ }
 }
 
 console.log(fail === 0 ? 'RAIL POCKET BROWSER E2E: ALL PASS' : `RAIL POCKET BROWSER E2E: FAIL (${fail})`);

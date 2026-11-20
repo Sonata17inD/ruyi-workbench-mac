@@ -85,8 +85,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     for (const scenario of scenarios) {
       const data = path.join(root, scenario); fs.mkdirSync(data);
       const browserCache = scenario === 'prepared' ? cache : path.join(data, 'absent-cache');
-      const env = { ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data,
-        PYTHONPATH: path.join(acc, 'src'), WCW_DATA_DIR: path.join(data, 'acc'), ACC_TOOLSETS: 'office,browser,filesystem',
+      const env = { ...fixtureChildEnv(), RUYI_HOME: data, PYTHONPATH: path.join(acc, 'src'), WCW_DATA_DIR: path.join(data, 'acc'), ACC_TOOLSETS: 'office,browser,filesystem',
         PLAYWRIGHT_BROWSERS_PATH: browserCache, WCW_TEST_NO_NET_ANCHORS: '1', PYTHONUTF8: '1' };
       fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({
         configSchema: 7, version: '3.0.1', providers: [], autoImportClaudeCodeMcp: false,

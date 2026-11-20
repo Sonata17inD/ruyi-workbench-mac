@@ -25,7 +25,7 @@ test('missing helper, symbolic target and failed/malformed/timeout results fail 
   S.MigrationTrashHooks.helperPath = () => path.join(root, 'missing');
   assert.equal((await S.migrationSendToRecycleBin(target)).error, 'trash-helper-unavailable');
   S.MigrationTrashHooks.helperPath = () => process.execPath;
-  const link = path.join(root, 'alias'); fs.symlinkSync(target, link, process.platform === 'win32' ? 'junction' : 'dir');
+  const link = path.join(root, 'alias'); fs.symlinkSync(target, link, 'dir');
   assert.equal((await S.migrationSendToRecycleBin(link)).error, 'invalid-trash-target');
   for (const result of [{ ok: false, timedOut: true, stdout: '{}' }, { ok: true, stdout: 'bad' },
     { ok: true, stdout: JSON.stringify({ ok: true, trashedPath: '/missing' }) }]) {
@@ -52,7 +52,7 @@ test('physical App aliases cannot bypass references or running registry entries'
   fs.writeFileSync(path.join(wb, 'app/server.js'), '// fixture');
   fs.writeFileSync(path.join(wb, 'package.json'), JSON.stringify({ name: 'ruyi-workbench', version: 'fixture' }));
   fs.writeFileSync(path.join(app, 'Contents/Info.plist'), 'fixture'); fs.writeFileSync(path.join(app, 'Contents/MacOS/RuyiDesktop'), 'fixture');
-  const alias = path.join(root, 'parent-alias'); fs.symlinkSync(root, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const alias = path.join(root, 'parent-alias'); fs.symlinkSync(root, alias, 'dir');
   const aliasWb = path.join(alias, 'Aliased.app/Contents/Resources/workbench');
   fs.writeFileSync(path.join(process.env.RUYI_HOME, 'config.json'), JSON.stringify({ configSchema: 14, providers: [], includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false,
     desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [{ id: 'retained', command: path.join(app, 'Contents/MacOS/RuyiDesktop') }] }));

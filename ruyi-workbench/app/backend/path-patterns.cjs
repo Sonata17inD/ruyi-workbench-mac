@@ -29,7 +29,12 @@ function globToRegExp(glob) {
     let from = open + 1;
     for (const c of [...commas, close]) { parts.push(pat.slice(from, c)); from = c + 1; }
     const out = [];
-    for (const part of parts) for (const e of expand(head + part + tail, depth + 1)) { if (out.length < 64) out.push(e); }
+    for (const part of parts) {
+      for (const value of expand(head + part + tail, depth + 1)) {
+        out.push(value);
+        if (out.length === 64) return out;
+      }
+    }
     return out;
   };
   const compile = g => {
@@ -83,12 +88,13 @@ function globToRegExp(glob) {
       const s = String(str == null ? '' : str);
       let cur = new Uint8Array(m + 1);
       let curIn = new Uint8Array(m + 1);   // 'dirs' 记号的段内态:已经吃进了一个目录段的若干字符,等它的分隔符
+      let next = new Uint8Array(m + 1), nextIn = new Uint8Array(m + 1);
       close(cur, 0);
       for (let k = 0; k < s.length; k += 1) {
         const ch = s[k];
         const lo = ch.toLowerCase();
-        const next = new Uint8Array(m + 1);
-        const nextIn = new Uint8Array(m + 1);
+        next.fill(0);
+        nextIn.fill(0);
         let any = false;
         for (let i = 0; i < m; i += 1) {
           const tk = toks[i];
@@ -107,8 +113,9 @@ function globToRegExp(glob) {
           if (to >= 0) { close(next, to); any = true; }
         }
         if (!any) return false;
-        cur = next;
-        curIn = nextIn;
+        const previous = cur, previousIn = curIn;
+        cur = next; curIn = nextIn;
+        next = previous; nextIn = previousIn;
       }
       return cur[m] === 1;
     };
@@ -142,27 +149,17 @@ function levenshtein(a, b, cap = 500) {
   return prev[n];
 }
 
-// 2026-10 走查(R2):glob 的 pattern 是【相对 root】的。模型常写 `./src/*.js`(前导 ./ 或 .\\ 让整条配不上任何东西)或把绝对路径当 pattern
-// (`C:\\ws\\src\\*.js`)—— 修前都是静默 ok:true + 空表。这里:剥掉前导 ./ 与 .\\;绝对路径落在 root 之内的改成相对 root 的写法,
-// 在 root 之外的不匹配任何东西并明说。返回 { pattern, note, outside }(note 非空 = 做过改写/有话要说)。纯函数(只用 path)。
 function normalizeGlobPatternForRoot(raw, root) {
-  let p = String(raw == null ? '' : raw);
-  const notes = [];
-  if (/^\.[\\/]+/.test(p)) { p = p.replace(/^(?:\.[\\/]+)+/, ''); notes.push('the leading "./" was ignored (patterns are relative to root)'); }
-  const winAbs = /^(?:[A-Za-z]:[\\/]|\\\\)/.test(p);
-  if (winAbs || path.isAbsolute(p)) {
-    const base = path.resolve(String(root || '.'));
-    // 跨平台:Windows 形绝对路径在非 Windows 宿主上 path.resolve 不认,用 win32 解析;宿主形的用宿主 path。
-    const useWin = winAbs && !path.isAbsolute(p);
-    const rel = useWin ? path.win32.relative(path.win32.resolve(base), path.win32.resolve(p)) : path.relative(base, path.resolve(p));
-    if (rel && !/^\.\.(?:[\\/]|$)/.test(rel) && !path.isAbsolute(rel) && !path.win32.isAbsolute(rel)) {
-      p = rel.replace(/\\/g, '/');
-      notes.push('the absolute pattern lies inside root and was applied relative to it');
-    } else {
-      return { pattern: p, outside: true, note: 'the pattern is an absolute path outside root, so it matches nothing; use a pattern relative to root, or set root to that directory' };
-    }
+  const pattern = String(raw ?? '');
+  if (pattern.startsWith('./')) {
+    return { pattern: pattern.replace(/^(?:\.\/+)+/, ''), outside: false, note: 'the leading "./" was ignored (patterns are relative to root)' };
   }
-  return { pattern: p, outside: false, note: notes.join('; ') };
+  if (!path.isAbsolute(pattern)) return { pattern, outside: false, note: '' };
+  const relative = path.relative(root || '.', pattern);
+  if (relative && relative !== '..' && !relative.startsWith('../')) {
+    return { pattern: relative, outside: false, note: 'the absolute pattern lies inside root and was applied relative to it' };
+  }
+  return { pattern, outside: true, note: 'the pattern is an absolute path outside root, so it matches nothing; use a pattern relative to root, or set root to that directory' };
 }
 
 // v0.8-S1: image/binary suffixes that file_read refuses (routes user to the vision channel instead).
@@ -188,35 +185,32 @@ function explicitSegmentsOfRegex(src) {
     .split('/').map(x => x.trim()).filter(x => /^[\w.-]+$/.test(x));
 }
 function buildIgnoreMatcher(opts = {}) {
-  const fold = s => (String(s));
   const base = opts.includeIgnored === true ? HARD_IGNORE_DIRS : (opts.browse === true ? BROWSE_IGNORE_DIRS : DEFAULT_IGNORE_DIRS);
   const extra = Array.isArray(opts.ignoreDirs) ? opts.ignoreDirs : [];
-  const allow = new Set((Array.isArray(opts.allowDirs) ? opts.allowDirs : []).map(x => fold(String(x || '').trim())).filter(Boolean));
-  const hard = new Set(HARD_IGNORE_DIRS.map(fold));
+  const allow = new Set((Array.isArray(opts.allowDirs) ? opts.allowDirs : []).map(x => String(x || '').trim()).filter(Boolean));
+  const hard = new Set(HARD_IGNORE_DIRS);
   const names = new Set();
   const paths = new Set();
   const norm1 = raw => String(raw || '').trim().replace(/\\/g, '/').replace(/^\.?\/+/, '').replace(/\/+$/, '');
   for (const raw of base) {
     const s = norm1(raw);
     if (!s) continue;
-    const f = fold(s);
-    if (s.includes('/')) { if (!s.split('/').every(seg => allow.has(fold(seg)))) paths.add(f); }
-    else if (hard.has(f) || !allow.has(f)) names.add(f);
+    if (s.includes('/')) { if (!s.split('/').every(seg => allow.has(seg))) paths.add(s); }
+    else if (hard.has(s) || !allow.has(s)) names.add(s);
   }
   for (const raw of extra) {
     const s = norm1(raw);
     if (!s) continue;
-    (s.includes('/') ? paths : names).add(fold(s));
+    (s.includes('/') ? paths : names).add(s);
   }
   const dotnet = opts.includeIgnored !== true && opts.browse !== true && !(allow.has('bin') || allow.has('obj'));
   // dirEntries:该目录的 Dirent 列表(判 .NET 用);relSlash:相对遍历根、以 '/' 分隔的路径。
   return {
     dotnet, names, paths,
     pruneName(name, relSlash, dotnetDir) {
-      const n = fold(name);
-      if (names.has(n)) return true;
-      if (dotnetDir && (n === 'bin' || n === 'obj')) return true;
-      return paths.size > 0 && paths.has(fold(relSlash));
+      if (names.has(name)) return true;
+      if (dotnetDir && (name === 'bin' || name === 'obj')) return true;
+      return paths.has(relSlash);
     },
   };
 }
@@ -241,10 +235,7 @@ function classifyListPattern(raw, root) {
   let compiles = true;
   try { new RegExp(p, 'i'); } catch { compiles = false; }
   // `.*` / `.?` 在能编译时按正则理解(`src/.*` 是正则);编译不过的(以 `*` 开头,如 `*.*`)只可能是 glob。
-  // 绝对路径(`C:\\ws\\src\\*.js` / `/ws/src/*.js`)带 `*` 只可能是 glob:正则是拿【相对】路径去配的,绝对路径当正则什么也配不上;
-  // 而 Windows 形绝对路径满是反斜杠,下面的「不含正则专属字符」判据会把它挡在 glob 之外(Windows CI 实测 file_list 空表)。
-  const absLike = path.win32.isAbsolute(p) || path.isAbsolute(p);
-  const globish = p.includes('*') && (absLike || (!/[\^$()|\\+{}[\]]/.test(p) && (!compiles || !/\.[*?]/.test(p))));
+  const globish = p.includes('*') && (path.isAbsolute(p) || (!/[\^$()|\\+{}[\]]/.test(p) && (!compiles || !/\.[*?]/.test(p))));
   if (globish) {
     // 前导 ./、落在 root 里的绝对路径 → 相对 root 的写法;root 之外的绝对路径什么也配不上(明说)。
     const gp = normalizeGlobPatternForRoot(p, root);

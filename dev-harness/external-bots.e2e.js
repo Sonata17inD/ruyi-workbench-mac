@@ -35,7 +35,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const until = async fn => { for (let i = 0; i < 200; i++) { const result = await fn(); if (result) return result; await sleep(30); } throw new Error('fixture timeout'); };
   const start = async () => {
     server = cp.spawn(process.execPath, ['--require', preload, 'app/server.js', 'serve', '--port', String(port)], {
-      cwd: WB, windowsHide: true, stdio: 'ignore', env: { ...process.env, ...isolated.env, ...FAKE_BOT_ENV, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home },
+      cwd: WB, stdio: 'ignore', env: { ...process.env, ...isolated.env, ...FAKE_BOT_ENV, RUYI_HOME: home },
     });
     await until(async () => { try { return (await raw('GET', '/health')).status === 200; } catch { return false; } });
     token = await until(() => { try { return JSON.parse(fs.readFileSync(path.join(home, 'runtime.json'), 'utf8')).token; } catch { return false; } });

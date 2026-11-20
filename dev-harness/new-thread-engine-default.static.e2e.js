@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 require('./lib/self-isolate-home.js');
-// 静态锁(第 123 波 N2):「新线程默认引擎」这一项在设置面上【真的存在】,而且四份 locale 齐。
+// 静态锁(第 123 波 N2):「新线程默认引擎」这一项在设置面上【真的存在】,而且两份 locale 齐。
 //
 // 为什么单独一件而不是并进 ia.e2e:ia 那件要起服务(主序),这几条判据全是读文件,进 `--fast`
 // 秒级就能兜住「HTML 加了控件却忘了回填/保存」与「加了 data-i18n 键却漏了某一份 locale」
@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js');
 //   ① #cfgNewThreadEngine 这枚 select 在设置面里,且恰好两个 option(last / global);
 //   ② 前端两侧都接上了:回填(fillSettings 读 c.newThreadEngine)与保存(patch 里带这个键);
 //   ③ 说明行走 textContent(零 innerHTML);
-//   ④ 四份 locale(public / docs × zh-CN / en-US)逐份带齐五个键,且 lastIs 带 {{p1}} 占位符。
+//   ④ 两份 locale(zh-CN / en-US)逐份带齐五个键,且 lastIs 带 {{p1}} 占位符。
 //
 // 反向验证(实测,见提交说明):① 把 index.html 里那枚 select 的 id 改一个字母 → ①③ 红;
 // ② 从 public/locales/en-US.json 删掉 settings.newThreadEngine.lastIs → ④ 红。
@@ -21,7 +21,6 @@ const { readFrontendSrc } = require('./read-frontend-src.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
-const DOCS = path.join(ROOT, 'docs', 'i18n', 'locales');
 
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
@@ -72,7 +71,7 @@ ok(/\$\('newThreadEngineHint'\)[\s\S]{0,120}\.textContent\s*=/.test(appjs),
   '③ 说明行走 textContent(零 innerHTML)');
 ok(/lastUsedEngineRoute/.test(appjs), '③ 说明行读的是 config.lastUsedEngineRoute');
 
-// ── ④ 四份 locale ────────────────────────────────────────────────────────────────────
+// ── ④ 两份 locale ────────────────────────────────────────────────────────────────────
 const KEYS = [
   'settings.newThreadEngine',
   'settings.newThreadEngine.last',
@@ -83,8 +82,6 @@ const KEYS = [
 const catalogs = [
   ['public zh-CN', path.join(PUBLIC, 'locales', 'zh-CN.json')],
   ['public en-US', path.join(PUBLIC, 'locales', 'en-US.json')],
-  ['docs zh-CN', path.join(DOCS, 'zh-CN.json')],
-  ['docs en-US', path.join(DOCS, 'en-US.json')],
 ];
 for (const [label, file] of catalogs) {
   const catalog = JSON.parse(fs.readFileSync(file, 'utf8'));

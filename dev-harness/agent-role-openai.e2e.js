@@ -1,6 +1,6 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+require('./lib/self-isolate-home.js');
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -28,8 +28,8 @@ function stream(body){return new Promise((resolve,reject)=>{const raw=JSON.strin
     agentRoleOverrides:[{id:'locked-worker',label:'Locked Worker',description:'Restricted worker',prompt:'LOCKED_ROLE_MARKER',toolTier:'exec',models:{openai:'fake-model',claude:'inherit'},openaiTools:['file_read'],mcpServers:[],permissionMode:'bypass',budgets:{openai:3,claude:5}}]
   },null,2));
   const script=JSON.stringify({parent:[{name:'orchestrate_agents',args:{nodes:[{id:'locked',task:'try forbidden write',role:'locked-worker'}]}}],sub:[{name:'file_write',args:{path:forbidden,content:'bad'}}],subText:'restricted role done',parentText:'role workflow done'});
-  const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js'),String(FAKE_PORT)],{env:{...process.env,FAKE_OPENAI_PORT:String(FAKE_PORT),FAKE_SUBAGENT_SCRIPT:script,FAKE_CAPTURE_DIR:CAP},windowsHide:true});
-  const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WB_PORT)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME},windowsHide:true});
+  const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js'),String(FAKE_PORT)],{env:{...process.env,FAKE_OPENAI_PORT:String(FAKE_PORT),FAKE_SUBAGENT_SCRIPT:script,FAKE_CAPTURE_DIR:CAP}});
+  const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WB_PORT)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME}});
   try{
     let up=null;for(let i=0;i<40&&!up;i++){await sleep(150);up=await health(WB_PORT);}ok(!!up,'OpenAI role test server starts');
     const events=await stream({message:'run role workflow',cwd:HOME});

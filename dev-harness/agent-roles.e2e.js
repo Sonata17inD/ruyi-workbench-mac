@@ -1,7 +1,7 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -15,7 +15,7 @@ const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
 const HOME = path.join(os.tmpdir(), 'ruyi-agent-roles-e2e');
 const PROJECT = path.join(HOME, 'project');
-const ZH = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
+const ZH = JSON.parse(fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
 process.env.RUYI_HOME = path.join(HOME, 'unit-data');
 const {
   normalizeConfig, getAgentRoleLibrary, saveProjectAgentRoles,
@@ -68,12 +68,9 @@ function stream(port, body) { return new Promise((resolve, reject) => { const ra
     'string-valued Claude task-notification is parsed into a completed native child result');
   ok(/run_in_background:false/.test(buildClaudeNativeAgentPolicy()) && /TaskOutput/.test(buildClaudeNativeAgentPolicy()),
     'Claude turns require foreground native Agents and include a TaskOutput recovery rule');
-  const claudeEnv = buildClaudeCliEnv({ modelsApiBase: 'https://api.kimi.com/coding/', modelsApiKey: 'test-key', claudeAuthMode: 'auto', model: 'k3' });
-  ok(claudeEnv.ANTHROPIC_BASE_URL === 'https://api.kimi.com/coding/' && claudeEnv.ANTHROPIC_API_KEY === 'test-key' && !claudeEnv.ANTHROPIC_AUTH_TOKEN && claudeEnv.CLAUDE_CODE_SUBAGENT_MODEL === 'k3' && claudeEnv.ANTHROPIC_DEFAULT_SONNET_MODEL === 'k3',
-    'Kimi Claude CLI settings preserve its documented endpoint and map native role aliases to the selected model');
   const arkEnv = buildClaudeCliEnv({ modelsApiBase: 'https://ark.cn-beijing.volces.com/api/coding', modelsApiKey: 'ark-test-key', claudeAuthMode: 'bearer', model: 'ark-code-latest' });
   ok(arkEnv.ANTHROPIC_BASE_URL === 'https://ark.cn-beijing.volces.com/api/coding' && arkEnv.ANTHROPIC_AUTH_TOKEN === 'ark-test-key' && !arkEnv.ANTHROPIC_API_KEY && arkEnv.ANTHROPIC_MODEL === 'ark-code-latest' && !arkEnv.CLAUDE_CODE_SUBAGENT_MODEL,
-    'Ark Coding Plan retains its Bearer authentication and does not inherit Kimi-only model aliases');
+    'Ark Coding Plan retains its Bearer authentication without overriding the subagent model');
   ok(decodeClaudeCliText(Buffer.from([0xC7, 0xEB, 0xC7, 0xF3, 0xCA, 0xA7, 0xB0, 0xDC])) === '请求失败',
     'a GB18030 Claude CLI diagnostic is decoded instead of being stored as mojibake');
 
@@ -84,7 +81,7 @@ function stream(port, body) { return new Promise((resolve, reject) => { const ra
     agentRoleOverrides: [{ id: 'security-checker', label: 'Security Checker', description: 'Checks security', prompt: 'SECRET_ROLE_PROMPT', claudeModel: 'sonnet', claudeTools: ['Read', 'Grep'], mcpServers: ['win-claude-workbench'], permissionMode: 'dontAsk', maxTurns: 7 }],
   }, null, 2));
   const port = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: DATA, WCW_FAKE_CLAUDE: path.join(WB, 'tools', 'fake-claude.js'), WCW_FAKE_ARGV_CAPTURE: capture, WCW_FAKE_SCENARIO: 'agents' }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: DATA, WCW_FAKE_CLAUDE: path.join(WB, 'tools', 'fake-claude.js'), WCW_FAKE_ARGV_CAPTURE: capture, WCW_FAKE_SCENARIO: 'agents' } });
   try {
     let up = null; for (let i=0;i<40 && !up;i++){await sleep(150);up=await health(port);} ok(!!up, 'Claude role test server starts');
     const events = await stream(port, { message: 'run agents', cwd: PROJECT });
@@ -123,7 +120,6 @@ function stream(port, body) { return new Promise((resolve, reject) => { const ra
       WCW_FAKE_SCENARIO: 'agents-background',
       WCW_FAKE_CONTINUATION_CAPTURE: continuationCapture,
     },
-    windowsHide: true,
   });
   try {
     let up = null; for (let i=0;i<40 && !up;i++){await sleep(150);up=await health(backgroundPort);} ok(!!up, 'Claude background-Agent lifecycle server starts');

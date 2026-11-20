@@ -13,7 +13,6 @@ const path = require('path');
 const { startFakeProvider, textFrames, usageFrame } = require('../lib/fake-openai-provider');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-summary-stop-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { providerSummaryCall } = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));

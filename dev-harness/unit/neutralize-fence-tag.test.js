@@ -20,14 +20,13 @@
 //      不再各自手写 `.replace(/<(\/?)…/gi, ...)` 字面量
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-wait-reason.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
+// RUYI_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-neutralize-fence-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');

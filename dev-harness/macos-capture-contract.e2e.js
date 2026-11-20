@@ -117,7 +117,7 @@ function reply(file,result) { fake(file,'console.log('+JSON.stringify(JSON.strin
     reply(fakeHelper,ready);
     client = new S.McpStdioClient({id:'fixture',command:process.execPath,
       args:[path.resolve(__dirname,'../ruyi-workbench/app/server.js'),'mcp'],
-      env:{...fixtureChildEnv(),RUYI_HOME:childData,WIN_CLAUDE_WORKBENCH_HOME:childData,RUYI_MACOS_AUTOMATION_HELPER:fakeHelper}});
+      env:{...fixtureChildEnv(),RUYI_HOME:childData,RUYI_MACOS_AUTOMATION_HELPER:fakeHelper}});
     await client.start();
     t.ok(client.listTools().some(tool=>tool.name==='desktop_screenshot'), 'real native MCP tools/list advertises ready capture');
     reply(fakeHelper,{...ready,ready:false,authorization:'denied'});

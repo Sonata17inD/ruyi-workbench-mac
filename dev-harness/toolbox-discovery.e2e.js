@@ -112,7 +112,7 @@ function writeConfig(extra) {
 }
 function spawnWB() {
   // WCW_TEST_TOOLBOX_HEALTH_DEADLINE_MS:I3 的健康超时不必真等 20 秒;8 秒仍远够正常组件(两层 node 冷启动)答上 /health。
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, RUYI_TOOLBOX_HOME: TOOLBOX_HOME, WCW_TEST_TOOLBOX_HEALTH_DEADLINE_MS: '8000' }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, RUYI_TOOLBOX_HOME: TOOLBOX_HOME, WCW_TEST_TOOLBOX_HEALTH_DEADLINE_MS: '8000' } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   return wb;
 }
@@ -393,7 +393,7 @@ const envFiles = () => fs.readdirSync(FAKE_DIR).filter(f => /^env-\d+\.json$/.te
     await new Promise(r => stranger.close(r)); stranger = null;
 
     /* ── E 已经有人起好了 ── */
-    manual = cp.spawn(process.execPath, [path.join(FAKE_DIR, 'service.js')], { cwd: FAKE_DIR, env: { ...process.env, FAKE_ASR_PORT: String(P1) }, windowsHide: true, stdio: 'ignore' });
+    manual = cp.spawn(process.execPath, [path.join(FAKE_DIR, 'service.js')], { cwd: FAKE_DIR, env: { ...process.env, FAKE_ASR_PORT: String(P1) }, stdio: 'ignore' });
     await waitFor(async () => health(P1), 8000);
     const before = envFiles().length;
     wb = await bootWB();

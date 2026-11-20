@@ -14,7 +14,6 @@ const vm = require('vm');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-text-decode-unit-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');

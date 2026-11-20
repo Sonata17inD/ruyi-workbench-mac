@@ -14,7 +14,7 @@ process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 
 //     * the fake server (no server-side web_search here) answers with plain text — no tool invoked.
 // Run: node dev-harness/responses-websearch-fake.e2e.js
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = require('path').resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePorts } = require('./free-port.js');
@@ -122,7 +122,7 @@ async function runPhase(serverWebSearch, label) {
     activeProvider: 'fake-resp',
     searchBackend: { type: 'builtin', baseUrl: '', apiKey: '' },
   }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   wbs.push(wb);
   try {

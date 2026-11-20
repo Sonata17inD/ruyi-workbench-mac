@@ -73,10 +73,6 @@ for (const [name, source] of [['steward-conversation.js', conversationCode], ['s
   const imports = [...source.matchAll(/^import .* from '([^']+)';$/gm)].map(match => match[1]);
   ok(imports.every(spec => spec.startsWith('./')), `A2 ${name} 的 import 全部是本域内相对路径（零第三方库）`);
 }
-// 117n-M1 重钉：el()/button() 搬进 steward-chips.js 集中定义（六个消费方零本地重复）之后，
-// conversation.js 自己不再直接调 .createElement——但它仍然只经从 chips.js import 的共享
-// el()/button() 生成节点，createElement 本体仍可在 chips.js 里查证。原判据只证明「某处调过
-// createElement」；新判据在此之上再加一条正面证据（零本地重复定义），是更强而不是更弱的版本。
 ok(/textContent/.test(conversation)
   && /createElement\(/.test(chips)
   && !/function el\(tag, className, text\) \{/.test(conversation)
@@ -102,8 +98,6 @@ ok(!/\bd:\s*'/.test(composerCode) && !/createElementNS/.test(composerCode)
 
 // ─── B 按钮行契约：≤3 且主动作唯一 ───────────────────────────────────────────────
 const mod = await import(pathToFileURL(path.join(PUBLIC, 'js', 'steward-conversation.js')).href);
-// 121-K6b 重钉：3 → 2（34 号文 §2.4 文字预算「按钮 ≤2（主动作金色）」）。收的是**渲染层**
-// 那一处 slice —— 提示词层与后端照旧可以给三枚，多的那一枚在 renderActs 里被切掉。
 ok(mod.STEWARD_ACTS_MAX === 2, `B1 STEWARD_ACTS_MAX === 2（§2.4 文字预算；实测 ${mod.STEWARD_ACTS_MAX}）`);
 ok(/const list = \(Array\.isArray\(acts\) \? acts : \[\]\)\.slice\(0, STEWARD_ACTS_MAX\);/.test(conversation),
   'B2 渲染 acts 时按 STEWARD_ACTS_MAX 截断（一行按钮永远 ≤3）');
@@ -220,10 +214,6 @@ ok(undoCode.length > 500 && rewindAt > 0 && !undoCode.includes("api('/api/stop'"
   && undoCode.includes('guardExecution: true, expectedExecution: undoRef.execution')
   && undoCode.includes("hasOwnProperty.call(undoRef, 'execution')"),
   'E2 撤回只发一次guarded rewind，携原execution；旧身份缺失不猜目标，不另发stop');
-// 117d 第 0 步重钉（语义收紧，不是放宽）：后端补出了显式字段 undoRef.rewindTargetTurnSeq
-// （= 被递那一回合的 seq，与 09-workflow 的 plannedTurnSeq 同口径）。2026-10 工具走查再收紧：只认这个显式锚点，
-// 删掉「undoRef.turnSeq + 1」回落 —— 答提问那一支交回的 undoRef 两样都没有，回落成 0 + 1 = 把整条线程删光。
-// 没有锚点（kind:'none' / 缺字段）就不给撤回按钮，连 stop 也不发。
 ok(/targetTurnSeq: target, rollbackFiles: true/.test(conversation)
   && /function handOffRewindTarget\(undoRef\)/.test(conversation)
   && /undoRef\.kind === 'none'/.test(conversation)
@@ -288,11 +278,6 @@ ok(/\.steward-typing/.test(css) && !/spinner|rotate\(/.test(css),
 const count = (source, pattern) => (source.match(pattern) || []).length;
 ok(count(conversation, /setInterval\(/g) === 1 && count(conversation, /clearInterval\(/g) === 1,
   'I1 steward-conversation.js 恰好一处 setInterval（撤回倒计时）与一处 clearInterval');
-// 121-K6b **重钉 I2**（原判据「零 setTimeout」）：立账本那一发要【回读 ＋ 有界重试】——
-// 管家开线程之后立刻就给它派了第一回合，我们这一发落盘时那个回合往往还没进 activeChildren，
-// 于是 13-http-router 的 C4 同步够不着它，回合收尾的 saveSession 把账本整份盖回去
-// （实测：同一件 e2e 两跑一红一绿）。收紧而不是放宽：钉「**恰好一处**，且它就在
-// ensureAcceptanceLedger 里，次数与间隔都是模块级常量」——想再加第二个临时计时器就必须先改这一条。
 ok(count(conversation, /setTimeout\(/g) === 1
   && /const ACCEPTANCE_LEDGER_TRIES = \d+;/.test(conversation)
   && /const ACCEPTANCE_LEDGER_RETRY_MS = \d+;/.test(conversation)
@@ -333,11 +318,6 @@ ok(importNamesFrom(conversation, 'net.js').includes('authHeaders')
   && count(conversation, /\bfetch\(/g) === 1
   && count(composer, /\bfetch\(/g) === 0,
   'J2 唯一的直调 fetch 是 /api/steward/message 的 NDJSON 流（api() 吃不下流），鉴权头复用 net.js');
-// 33 号文 §4 重钉 J3（反向验证过）：读流骨架搬进了 net.js 的 readNdjsonStream，本模块不再自己写
-// getReader/TextDecoder —— 所以这条锁改成钉【骨架只有一份 + 本模块真的用它】：
-//   · 本模块零 getReader／零 TextDecoder 字面量（自己再抄一份立刻红）；
-//   · net.js 里那份骨架带 decoder + 按 /\r?\n/ 切 + 留残行的三件事都在（搬走的是同一套，不是重写的另一套）；
-//   · 本模块确实把 res.body 交给了它。
 const netSrc = read('js/net.js');
 ok(!/getReader|TextDecoder/.test(conversation)
   && /const reader = body\.getReader\(\);/.test(netSrc) && /new TextDecoder\(\)/.test(netSrc)
@@ -716,14 +696,6 @@ ok(/openClassicWindow = null,/.test(conversation)
   && !/from '\.\/steward-drawer\.js'/.test(conversation) && !/from '\.\/steward-classic-window\.js'/.test(conversation),
   'P11 「看全文」＝注入的 openClassicWindow（与抽屉同一个入口），缺席时回落既有的 steward:open-thread；'
   + '本模块不 import 抽屉/视窗模块（不长出第二条切壳通道）');
-// 117v-V1 ⑨ 重钉（用户第十轮走查⑨「管家的回复看全文是打开 2.0，看英伟达分析全文是打开线程」）：
-// 原判据钉的是「共用抽屉那一个键」。同一屏上还有第二枚「看…全文」（管家写的 open_thread act，
-// 点下去打开线程），两个去处共用一个泛泛的词，用户只能靠猜 —— 所以交付卡这一枚改用自己的键，
-// 词里必须写清去处，且必须与抽屉那一枚的词【不同】。
-// 121-K8（§2.10.4）：去处的说法从「2.0」改成【视角名】——「2.0 视窗」是禁用词（那是壳的版本号，
-// 不是用户看得懂的地名），一台两视之后那个去处就叫「工作台」。判据本身没变：仍然是
-// 「这一枚有自己的键 ＋ 词里点名去处 ＋ 与抽屉那一枚不同 ＋ 兜底句引的是它现在的词」。
-// 锚在 deliverableActs 的函数体里：整文件匹配的话，把这一处按钮整个删掉也照样绿。
 const deliverableActsRule = conversationCode.slice(conversationCode.indexOf('function deliverableActs'),
   conversationCode.indexOf('function attachDeliverable'));
 const FULL_KEY = 'stewardShell.chat.deliverableFull';
@@ -800,9 +772,6 @@ ok(JSON.stringify(mod.stewardAgoParts('2026-09-09T11:59:40.000Z', agoNow)) === J
 ok(mod.stewardAgoParts('2026-09-10T12:00:00.000Z', agoNow) === null
   && mod.stewardAgoParts('', agoNow) === null && mod.stewardAgoParts(null, agoNow) === null,
   'Q4b 时间在未来、或根本没有时间戳时回 null（调用方据此整段不说，不猜一个「刚刚」出来）');
-// 121-K1 重钉：elapsedLabel 从 preview-task-sheet.js 搬进叶子 thread-facts.js（那个文件随交办台
-// 退役整文件删除）。判据【收紧】：既不许从新家 import 那一支，也不许 import 任何已被删掉的
-// preview-* 模块（后者是纪律 13「搬符号必 grep 引用点」的机械保证 —— 一个死 import 就是白屏）。
 ok(/new Intl\.RelativeTimeFormat\(/.test(conversationCode)
   && !/\belapsedLabel\b/.test(conversationCode)
   && !/from '\.\/preview-[a-z-]+\.js'/.test(conversation),
@@ -816,11 +785,6 @@ ok(/--thread-hue-1:/.test(cssCode) && /--thread-hue-4:/.test(cssCode)
   'Q5 四色是一组【色相角 + 共用饱和度/明度】的自定义属性，颜色由一条 hsl() 算出来（27 号文 §11.13.1「同明度同饱和度只换色相」）');
 ok((cssCode.match(/hsl\(/g) || []).length === 1,
   `Q5b 整层【只有一处】构造颜色：换四色只需改令牌，不必改任何一条元素规则（实测 ${(cssCode.match(/hsl\(/g) || []).length} 处）`);
-// 117u-G1 重钉：色号映射从「点名某一副面」（.steward-msg-ruyi.is-thread[...] ／ .steward-channel[...]）
-// 挪到【属性本身】上，好让抽屉与看板写同一个 data-thread-hue 就拿到同一个色，不必再往名单里加面。
-// 原判据钉的是那一条选择器长什么样；新判据钉的是两件更强的事实：① 那条规则不带任何面前缀
-// （行首即 `[data-thread-hue="N"]`）；② 全层【恰好一条】—— 谁想再给某一副面开一份专用映射，
-// 这一条立刻转红。反向验证：把 `.steward-channel` 那三条加回去，hits 变 2，本条即红。
 for (const hue of [2, 3, 4]) {
   const mapping = new RegExp(`\\[data-thread-hue="${hue}"\\] \\{ --thread-hue: var\\(--thread-hue-${hue}\\); \\}`, 'g');
   const hits = (cssCode.match(mapping) || []).length;
@@ -1027,18 +991,15 @@ ok(/function settleRow\(actsRow, text, glyph\) \{/.test(conversationCode)
     `Y9 本模块取的每一枚字形都在【全仓唯一那张】词汇表里（实测取了 ${JSON.stringify(usedGlyphs)}，icons.js 共 ${names.length} 枚，未知 ${JSON.stringify(unknownGlyphs)}），本文件一条 SVG path、一次 createElementNS 都没有（F5a 的「不留孤本」）`);
 }
 {
-  const DOCS_LOCALES = path.join(ROOT, 'docs', 'i18n', 'locales');
   const catalogs = [
     ['app/zh-CN', zh], ['app/en-US', en],
-    ['docs/zh-CN', JSON.parse(fs.readFileSync(path.join(DOCS_LOCALES, 'zh-CN.json'), 'utf8'))],
-    ['docs/en-US', JSON.parse(fs.readFileSync(path.join(DOCS_LOCALES, 'en-US.json'), 'utf8'))],
   ];
   const undoKeys = ['undo', 'undoCountdown', 'switchTarget', 'undone', 'undoneFilesKept']
     .map(name => 'stewardShell.chat.' + name);
   const holes = catalogs.flatMap(([name, cat]) => undoKeys
     .filter(key => typeof cat[key] !== 'string').map(key => `${name}:${key}`));
   ok(holes.length === 0,
-    `Y10 三态用到的 ${undoKeys.length} 个键在【四份】目录里都齐（app 与 docs 各中英；缺: ${holes.join(',') || '无'}）`);
+    `Y10 三态用到的 ${undoKeys.length} 个键在两份语言包里都齐（缺: ${holes.join(',') || '无'}）`);
 }
 ok(count(conversation, /stewardShell\.chat\.undoCountdown/g) === 1
   && /face\.title = t\('stewardShell\.chat\.undoCountdown', \{ seconds: left \}\);/.test(conversationCode),

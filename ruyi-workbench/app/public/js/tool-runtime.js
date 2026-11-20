@@ -27,14 +27,10 @@ function savePlanDecision(planId, decision, note) {
   try { localStorage.setItem(PLAN_DECISION_PREFIX + planId, JSON.stringify({ decision, note: note || '', ts: Date.now() })); }
   catch { /* ignore */ }
 }
-// F1c 去重守卫:同一个 planId 的 plan 事件重放不再叠卡;但新的 planId(第二次计划)永不被挡(见 handlePlanEvent 入口)。
-  // 判据查【活 DOM】而不是页面级 Set:计划等待批准时切会话再切回,mountActiveTurn 会按事件全量重放、重建实时壳,
-  // 旧壳已脱离文档 —— 修前页面级 renderedPlanIds 仍记着这个 planId,重放的 plan 事件直接 return,批准/修改意见/放弃
-  // 三枚按钮全没了,回合卡在等批准。只认「现在还在屏上」的那张卡;Kimi 只读快照卡不算(它与真批准卡可同 id)。
   function livePlanCard(planId) {
     if (!planId) return null;
     return [...document.querySelectorAll('.plan-card[data-plan-id]')]
-      .find(node => node.dataset.planId === String(planId) && !node.classList.contains('kimi-plan-snapshot')) || null;
+      .find(node => node.dataset.planId === String(planId)) || null;
   }
   const MARKDOWN_SYNC_MAX_CHARS = 48_000;
 
@@ -49,79 +45,6 @@ function savePlanDecision(planId, decision, note) {
     } else {
       body.textContent = value;
     }
-  }
-
-  function kimiPlanSnapshotStatus(status) {
-    return status === 'removed' ? 'removed' : 'snapshot';
-  }
-
-  function updateKimiPlanSnapshotCard(card, evt) {
-    const status = evt.status === 'removed' ? 'removed' : 'active';
-    const state = kimiPlanSnapshotStatus(status);
-    card.dataset.status = status;
-    card.dataset.source = String(evt.source || 'kimi-acp');
-    card.classList.toggle('kimi-plan-snapshot-removed', status === 'removed');
-    const pill = card.querySelector('.kimi-plan-snapshot-status');
-    if (pill) {
-      pill.className = `narrative-state-pill kimi-plan-snapshot-status state-${state}`;
-      pill.textContent = t(`narrative.status.${state}`);
-    }
-    if (Object.prototype.hasOwnProperty.call(evt, 'markdown')) {
-      const body = card.querySelector('.plan-card-body');
-      if (body) setPlanMarkdownBody(body, evt.markdown || '');
-    }
-    if (Object.prototype.hasOwnProperty.call(evt, 'path')) {
-      const path = String(evt.path || '').slice(0, 2000);
-      let pathNote = card.querySelector('.kimi-plan-snapshot-path');
-      if (path) {
-        if (!pathNote) {
-          pathNote = el('div', 'narrative-state-note kimi-plan-snapshot-path');
-          card.appendChild(pathNote);
-        }
-        pathNote.textContent = t('plan.kimiSnapshot.path', { path });
-      } else if (pathNote) {
-        pathNote.remove();
-      }
-    }
-  }
-
-  function buildKimiPlanSnapshotCard(evt) {
-    const card = el('div', 'plan-card narrative-plan kimi-plan-snapshot');
-    card.dataset.planId = String(evt.planId || '');
-    card.dataset.readOnly = 'true';
-    const head = el('div', 'plan-card-head');
-    head.append(
-      el('span', '', t('plan.kimiSnapshot.heading')),
-      el('span', 'narrative-state-pill kimi-plan-snapshot-status'),
-    );
-    card.appendChild(head);
-    card.appendChild(el('div', 'plan-card-body'));
-    updateKimiPlanSnapshotCard(card, evt);
-    return card;
-  }
-
-  function findKimiPlanSnapshotCard(host, planId) {
-    if (!host || typeof host.querySelectorAll !== 'function') return null;
-    return [...host.querySelectorAll('.kimi-plan-snapshot[data-plan-id]')]
-      .find(card => card.dataset.planId === planId) || null;
-  }
-
-  // Kimi ACP plan/update is informational native plan state, not Ruyi's waiter-backed plan decision flow.
-  // Keep one card per planId and update it in place so repeated ACP updates do not stack cards or create a
-  // composer wait hint. The actual ExitPlanMode ask_user event still enters the classic path below.
-  function handleKimiPlanSnapshotEvent(evt, main, live) {
-    const planId = String(evt.planId || '');
-    if (!planId) return;
-    const host = main || $('messages');
-    let card = findKimiPlanSnapshotCard(host, planId);
-    if (!card) {
-      if (live) sealLiveTextSegment(live, evt.markdown || '');
-      card = buildKimiPlanSnapshotCard({ ...evt, planId });
-      host.appendChild(card);
-    } else {
-      updateKimiPlanSnapshotCard(card, evt);
-    }
-    maybeScrollToBottom();
   }
 
 // 计划决策后收起的人话结果文案(F1a)。
@@ -200,10 +123,6 @@ function buildPlanCard(planId, markdown) {
 // turn resumes (approve) or ends (reject). After a decision the card collapses to a one-line result (F1a),
 // and the decision is persisted by planId (F1d) so a session reload re-renders it collapsed.
 function handlePlanEvent(evt, main, live) {
-  if (evt && evt.type === 'kimi_plan_snapshot') {
-    handleKimiPlanSnapshotEvent(evt, main, live);
-    return;
-  }
   const planId = evt.planId || '';
   // F1c 去重守卫:同一 planId 的重放不叠卡(新 planId —— 第二次计划 —— 不受影响,继续渲染)。查活 DOM,见 livePlanCard。
   if (planId && livePlanCard(planId)) return;
@@ -252,13 +171,11 @@ function handlePlanEvent(evt, main, live) {
   maybeScrollToBottom();
 }
 
-// 停止 / 失败收尾时,把【这一回合壳里】还没决定的经典计划卡标成已失效(禁用按钮),并清掉「AI 在等你批准计划」提示。
-// root = 本回合的实时壳(缺省整页);已决的、Kimi 只读快照卡不动。返回标了几张。
 function expirePendingPlanCards(root) {
   const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
   let count = 0;
   for (const card of scope.querySelectorAll('.plan-card[data-plan-id]')) {
-    if (card.classList.contains('decided') || card.classList.contains('kimi-plan-snapshot')) continue;
+    if (card.classList.contains('decided')) continue;
     if (typeof card.__expire !== 'function') continue;
     card.__expire();
     count += 1;
@@ -350,20 +267,16 @@ async function runTool(name, body) {
 /* 第59波：变更中心实现已拆入 ./js/artifact-changes.js。 */
 
 // Shell sessions remain available to the model/runtime, but no longer have a manual execution panel.
-async function newShellSession() { return null; }
-function updateShellPolling() { /* no user-facing shell panel */ }
 
 /* ---------------- config / status ---------------- */
 /* EC-D：技能与记忆实现已拆入 ./js/skills-memory.js。 */
   return Object.freeze({
     appendToolOutput,
     handlePlanEvent,
-    newShellSession,
     expirePendingPlanCards,
     pushRawEvent,
     renderRawEventSnapshot,
     resolveClassicPlanIntervention,
     runTool,
-    updateShellPolling,
   });
 }

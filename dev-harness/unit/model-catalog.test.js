@@ -57,10 +57,9 @@ test('changing provider rebuilds options and keeps follow/default semantics', ()
   assert.deepEqual(ids(node), ['', 'b-model']); assert.equal(node.value, '');
 });
 
-test('Claude and Kimi discoveries stay separate and detached controls are released', () => {
+test('Claude discoveries update attached controls only', () => {
   const c = catalog(), node = select();
   c.bindModelSelect(node, { models: () => c.agentModels('claude'), value: '' });
-  c.publishAgentModels('kimi', [{ id: 'kimi-model' }]);
   assert.deepEqual(ids(node), ['']);
   c.publishAgentModels('claude', [{ id: 'claude-model' }]);
   assert.deepEqual(ids(node), ['', 'claude-model']);

@@ -7,7 +7,6 @@ const { createRunner } = require('./lib/harness');
 const { startFakeProvider, textFrames } = require('./lib/fake-openai-provider');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-final-mail-'));
 process.env.RUYI_HOME = root;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const { loadServerInternals } = require('./lib/server-internals');
 const I = loadServerInternals(['runSubAgentCore', 'runAgentWorkflow', 'ownAgentMessageReceipt', 'nodeDeliveryEligibility', 'buildAgentRunEnvelope', 'settleWaitEnvelopes', 'EventStreamHooks', 'activeAgentRuns', 'readAgentRunRecord', 'writeBackgroundJobRows', 'defaultConfig', 'agentRunActionCommand']);
 const t = createRunner('AGENT FINAL MAILBOX');

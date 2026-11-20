@@ -57,20 +57,6 @@ const chipsMod = await import(pathToFileURL(path.join(PUBLIC, 'js', 'steward-chi
 
 // ─── A 区块顺序即契约 ────────────────────────────────────────────────────────────
 const BLOCKS = mod.STEWARD_DRAWER_BLOCK_IDS;
-// 117l D4 **重钉 A1/A2**（用户第四轮走查①③；语义是「多了两块、四块换了位置」，不是放宽）。
-// 旧断言钉的是 117d 立的十一块常驻清单。用户第四轮走查推翻了它的两条前提：
-//   ① 「线程里的提问出来时…并没有 2.0 的那种问答框，导致没法正常地回复」→ ③ 之下必须多一张
-//      「它在问你」卡（stewardDrawerAsk）；
-//   ③ 「线程页内容还是太多太杂了」→ 接力／三问／验收项／现场四块折进默认收起的
-//      <details id="stewardDrawerMore">。
-// 所以清单从 11 变 13（多的两项是「问答卡」与「更多」这个容器本身）。
-// 121-K6b（34 号文 §2.6「焦点卡」）：13 → 14，且【顺序变了】——
-//   · 卡头排到最前、元信息一行紧随其后（§2.6「卡头 → 元信息一行 → 按五态一段 → 动作行」；
-//     原来是「事项行 → 页签 → 线程头」，把任务名摆在线程名前面当第一眼信息，那是浮层时代
-//     「先说这是哪一件」的排法，常驻焦点栏里第一眼该是【这条线程】）；
-//   · 多的那一项是排队那一段（stewardDrawerQueue：在等什么 ＋ 插队 ＋ 并发上限）。
-// companion（A2b）：被折进「更多」的那四块【一块没少、顺序没变】—— 这条修法是「换个地方放」，
-// 不是「删掉」，静态锁必须能把「顺手删了一块」和「折起来了」分开。
 ok(Array.isArray(BLOCKS) && BLOCKS.length === 14 && Object.isFrozen(BLOCKS),
   `A1 导出的区块顺序表是冻结的 14 项（实测 ${BLOCKS && BLOCKS.length}）`);
 ok(JSON.stringify(BLOCKS) === JSON.stringify([
@@ -124,10 +110,6 @@ for (const [name, source] of [['steward-drawer.js', drawerCode], ['steward-chips
   const imports = [...source.matchAll(/^import .*from '([^']+)';$/gm)].map(match => match[1]);
   ok(imports.every(spec => spec.startsWith('./')), `B2 ${name} 的 import 全是本域内相对路径（零第三方库）`);
 }
-// 117n-M1 重钉：el()/clear() 搬进 steward-chips.js 集中定义（六个消费方零本地重复）之后，
-// drawer.js 自己不再直接调 .createElement——但它仍然只经从 chips.js import 的共享 el()/clear()
-// 生成节点，createElement 本体仍可在 chips.js 里查证。原判据只证明「某处调过 createElement」；
-// 新判据在此之上再加一条正面证据（零本地重复定义），是更强而不是更弱的版本。
 ok(/textContent/.test(drawer)
   && /createElement\(/.test(chips)
   && !/function el\(tag, className, text\) \{/.test(drawerCode)
@@ -201,16 +183,6 @@ ok(/import \{ describeTurnActivity \} from '\.\/turn-activity\.js';/.test(drawer
   'E2 三问 import 自 turn-activity.js');
 ok(/import '\.\/mission-state\.js';/.test(drawer) && /globalThis\.MissionState/.test(drawer),
   'E3 五态经 mission-state.js（UMD，import 后读 globalThis）');
-// 117n-M1 重钉：drawer.js 的 chips import 那一行加了 doc/byId/el/clear（DOM 基础件去重，见 B3
-// companion）。原判据只钉 createQuickSwitchChips 这一个名字；新判据仍然要求它在场，且明确写出
-// 完整的四个新增名字——比原来更精确，不是放宽。
-// 117u-G3 **重钉 E4**（§11.15.7；用户「这个也不印默认值吧」）：这条 import 又多了一个名字
-// chipsWorthPrinting —— 详情栏这一行自此与看板同一份判据（跟全局一样就不印）。判据比原来更紧：
-// 除照旧逐字钉住 import 的六个名字与 createQuickSwitchChips 在场，另加两条【抄第二份就立刻红】的：
-// 抽屉剥了注释之后零 resolveEngineRoute(（不自己算生效路由）、零 engineRoute 字面量（不自己认字段）。
-// 33 号文 §4 **再重钉 E4**：那次收编（回车发送的守卫进 chips.js）让这条 import 又多了一个名字
-// bindEnterToSubmit。与 A3c 一样改成按名字集合判定：锁要钉的是「chips 与那条判据都是同一份、抽屉
-// 零第二套回落规则」，不是「那一行长什么样」。（反向验证过：把 bindEnterToSubmit 从名字表里去掉立刻真红。）
 const drawerChipsNames = read('js/steward-drawer.js').split(String.fromCharCode(10))
   .filter(line => line.startsWith('import {') && line.includes("from './steward-chips.js';"))
   .flatMap(line => line.slice(line.indexOf('{') + 1, line.indexOf('}')).split(','))
@@ -229,9 +201,6 @@ ok(['createQuickSwitchChips', 'doc', 'byId', 'el', 'clear', 'chipsWorthPrinting'
   const inner = body ? body[1] : '';
   const setAt = inner.indexOf('chips.setSession(session)');
   const askAt = inner.indexOf('chipsWorthPrinting(');
-  // 117u-G3b 重钉：判据的答案怎么用，两面【有意不同】——看板整条不印（信息），详情栏只收值、
-  // 留控件（入口）。所以这里不再钉 `host.hidden = !…` 那个字面量，改钉两件事：判据在这个函数体里
-  // 被问到了，且答案落在 classList 上而不是把控件摘掉（`hidden` 与 `remove(`/`clear(` 都算摘）。
   const toggles = /host\.classList\.toggle\('is-default', !chipsWorthPrinting\(/.test(inner);
   const tearsDown = /host\.hidden\s*=/.test(inner) || /host\.remove\(/.test(inner) || /clear\(host\)/.test(inner);
   ok(Boolean(body) && setAt >= 0 && askAt > setAt && toggles && !tearsDown,
@@ -266,8 +235,6 @@ ok(!/permissionMode/.test(drawerCode),
 ok(/method: 'PATCH'/.test(chipsCode) && count(chipsCode, /method: 'PATCH'/g) === 1
   && /async function patchSession\(patch\)/.test(chips),
   'E7 chip 模块里也只有一处 PATCH（权限与引擎路由同端点同形状，不许各写一条）');
-// 2026-10 重钉 E8：bypass（全自动）回到界面成第五档，二次确认档随之成 auto＋bypass —— 与 01-config 的
-// PERMISSION_MODES／PERMISSION_MODES_REQUIRING_CONFIRM 同口径（后者本来就列着 bypass）。
 ok(JSON.stringify(chipsMod.STEWARD_PERMISSION_MODES) === JSON.stringify(['default', 'acceptEdits', 'plan', 'auto', 'bypass'])
   && JSON.stringify(chipsMod.STEWARD_PERMISSION_CONFIRM_MODES) === JSON.stringify(['auto', 'bypass'])
   && chipsMod.permissionConfirmSpec('auto').listKeys === chipsMod.STEWARD_CONFIRM_KEYS
@@ -289,34 +256,6 @@ const routes = [...new Set([
   ...[...`${drawerCode}\n${chipsCode}`.matchAll(/'(\/api\/[a-z/-]+)[^']*'/g)].map(match => match[1]),
   ...[...`${drawerCode}\n${chipsCode}`.matchAll(/`(\/api\/[a-z/-]+)\$\{/g)].map(match => match[1]),
 ])].sort();
-// 117l D2 **重钉 F1/F2/F4**（用户第四轮走查①⑥；语义是收紧：路由面从两条收成一条）。
-// 旧断言钉的是「抽屉自己在 /api/steer 与 /api/chat/stream 之间二选一」（F4 逐字钉了 isLive() 那道
-// 判据，F1 的白名单里因此有这两条，F2 钉了那一处直调 fetch）。真机 10:32:34 证明这个二选一是错的：
-// 线程挂在 request_user_input 上等答案时【不 live】，于是走 /api/chat/stream 开新回合，
-// 09-workflow:1343 的 `activeChildren.has → stopSession('superseded')` 把用户还没回答的那道提问
-// 连回合一起杀了（turn_kill reason:superseded，§11.9.2 ①⑥）。117l 把通道判定收进服务端单点
-// （13h 的 stewardRelayChannelFor：answer > permission > steer > turn），抽屉只剩一个口子。
-// 所以白名单加 /api/steward/relay、去掉 /api/steer 与 /api/chat/stream；F2 从「恰好一处 fetch」
-// 收紧成「零处 fetch」（不再需要读流，也就不再需要 authHeaders）。
-// 117x-M2 **再重钉 F1**（27 号文 §11.17）：白名单多一条【只读】的 /api/usage/summary —— 模型选择器
-// 的「常用置顶」由账本按模型的真实用量派生（M1 给这个既有端点补的第六个维度 byModel），
-// 不是浏览器本地的猜测。它仍然是「后端零新增面」：没有新路由、没有新写口，chip 只在【第一次打开
-// 模型菜单】时 GET 一次（模块级缓存，三个宿主共用），F3 的「零直调 fetch」与 C2 的「零计时器」一个字没松。
-// 33 号文 §4 **重钉 F1**（抽屉 /api/missions 改经看板 rows）：白名单去掉【裸的】/api/missions ——
-// 那张 200 行的列表不再由抽屉自己拉（它现在只读看板取回来的那一批），抽屉这一面只剩带 id 的
-// /api/missions/（任务快照）。语义是收紧而不是放宽：这条路由一旦从抽屉里再长出来（自己发一次
-// 列表请求），收集到的路由集就与白名单不再相等，本条当场红。
-// 121-K5 **再重钉 F1**（34 号文 §3.1）：白名单多一条 /api/config —— chips 的模型菜单里新增了
-// 【显式的】「设为新任务默认」。它是这一刀的要害：修前 2.0 顶栏切一次模型会顺带 POST /api/config
-// 改全局默认（两种语义同屏，33 号文 §0），现在切模型恒为 PATCH /api/sessions/:id，只有点那一项
-// 才写 /api/config。所以这条白名单项对应的不是「多了一条写路」，而是「那条写路从隐式变显式」。
-// E6 那条「chipsCode 里 method:'PATCH' 恰好一处」仍然钉着会话级写口的唯一性。
-// 121-K6b **再重钉 F1**（34 号文 §2.6 排队那一段）：白名单多一条
-// /api/steward/arbiter/prioritize —— 「插队」。它是 116h 就立好的既有路由（看板行上那枚
-// prioritize 走的就是它），焦点栏只是多了一个调用点，**后端零新增面**这件事一个字没松；
-// 语义也刻意仍然做窄（只有还在排队的那一条能被提到队首，不在队列里如实说一句）。
-// 「并发上限」那一枚【不在这张名单里】，因为它一个请求都不发：它把光标送到左栏栏头那个既有
-// 输入框（全仓唯一一处并发上限控件），写值仍然只有看板那一条 saveConfigPartial。
 const ALLOWED = [
   '/api/agent-runs/', '/api/chat/answer', '/api/config', '/api/interventions',
   '/api/missions/', '/api/permission/decision', '/api/session/rewind',
@@ -387,9 +326,6 @@ for (const prefix of ['stewardShell.drawer.', 'stewardShell.chips.', 'stewardShe
   ok(zhKeys.length > 0 && JSON.stringify(zhKeys) === JSON.stringify(enKeys),
     `H1 ${prefix}* 中英键对称（${zhKeys.length} 条）`);
 }
-// 117q-B3b 重钉（理由：30 号文 §4.4 P0-4——五态人话原来抄了四份，两套 locale key 已判出不同文案
-// 结果。六个五态键从抽屉专属的 stewardShell.drawer.state.* 搬到中性的 mission.state.*，与看板、
-// 交办台三个壳共用同一组键；不是被删掉，所以模板键扫描要跟着认 mission. 前缀，不能只认 stewardShell.）。
 const usedKeys = [...new Set([
   ...[...`${drawer}\n${chips}`.matchAll(/'(stewardShell\.[a-zA-Z0-9_.]+)'/g)].map(match => match[1]),
   ...[...`${drawer}
@@ -481,20 +417,10 @@ ok(/const streaming = Boolean\(liveTail\) && Boolean\(tailText\);/.test(drawer)
 // （实测：E6 直接说「它还没说过话」）。服务端只在真有活回合时下发 liveTail，那才是权威判据。
 ok(!/Boolean\(liveTail\) && isLive\(\)/.test(drawer),
   'J3d 「在不在跑」只看 liveTail 在不在，不叠 isLive()');
-// 121-K6b **重钉 J4**（34 号文 §2.6／§5）：工具人话从「它正在说」的引文尾巴搬到【当前动作行】
-// （`工具 · 第 N 次调用 · N 秒前有输出`）—— 引文只放它说的话，一句话里不掺一句状态。
-// 要钉的事实一个字没变：**界面上永远不出现工具名**，表外一律落到「用一个工具」。
 ok(/parts\.push\(threadToolLabel\(tool\)\);/.test(drawer)
   && /function threadToolLabel\(tool\) \{[\s\S]{0,200}return key \? t\(key\) : t\('stewardShell\.drawer\.tool\.other'\);/.test(drawer)
   && !/usingTool/.test(drawer),
   'J4 工具说人话（铁律：界面上永远不出现工具名），表外落到「用一个工具」；这句话住在当前动作行，不在引文里');
-// 117m-A2 **重钉 J5**（用户第六轮走查⑤⑥；语义是「一类放开成四类」，不是放宽）。
-// 旧断言里那一条 `asksYouFrom({ pending: { type: 'permission' } }) === null` 钉住的正是本波要修的
-// bug 本身：真机 sess_8bb0dd55d35045b0 的 14 条待决全是 permission（最后一条 02:34:57 请求、
-// 02:36:57 被 timeout 拒掉），于是抽屉一张问答卡都不出 —— 右上说「需要你 1」，点进去什么都没有。
-// 现在四类待决（question > permission > plan > pool，与服务端 06i 逐字同序）都出卡；
-// 三条 companion（J5a/J5a2/J5a3）比旧断言更强：它们钉住形状、钉住「人话只有服务端一个来源」、
-// 也钉住四类之外的 replan 仍然回 null（不是把闸门整个拆掉）。
 ok(typeof mod.asksYouFrom === 'function'
   && mod.asksYouFrom({ pending: { id: 'p1', type: 'question', questions: [{ question: '用哪个？' }] } }).kind === 'question'
   && mod.asksYouFrom({ rowAsksYou: { kind: 'soft', text: '要接着做吗？' } }).texts[0] === '要接着做吗？'
@@ -528,9 +454,6 @@ ok(/if \(section\) section\.hidden = askOptionReplies\(\)\.length > 0;/.test(dra
   'J6 ④ 已经把选项摆出来时 ⑦「你可以说」整块隐藏（不出现两排一样的按钮）');
 ok(/function askOptionReplies\(\) \{[\s\S]{0,320}return quickRepliesFor\(\{ pending: pendingForThread, t \}\)/.test(drawer),
   'J6b 选项按钮复用 quickRepliesFor（与 ⑦ 同一份判据，不另写一遍「取 label || value」）');
-// 121-K6b **重钉 J7**（§13.7 登记 ⑨）：焦点栏常驻之后，换焦点的触发者多数不是用户（管家递话、
-// 推送来帧、syncNow 的自动挑选），把光标从用户正在打字的地方抢走就是把键位丢掉。
-// 「闸落之后才移焦」这半句一个字没松，只是外面多了一道「用户没在打字」的门。
 ok(/if \(sessionId === id && drawerReadGeneration === openGeneration\) \{ loading = false; renderAll\(\); if \(wantFocus\) focusAsk\(\); \}/.test(drawer)
   && /function userIsTyping\(\)/.test(drawer)
   && /return active\.isContentEditable === true;/.test(drawer)
@@ -540,22 +463,12 @@ ok(/if \(sessionId === id && drawerReadGeneration === openGeneration\) \{ loadin
 // Windows CI 实测：慢机器上抽屉晚开，把左栏直达设置·行动流水的焦点拽到抽屉标题上（rail-pocket B7c 复现）。
 ok(/function focusInOtherDialog\(\) \{[\s\S]{0,260}active\.closest\('\[role="dialog"\]\[aria-modal="true"\]'\)[\s\S]{0,120}!dialog\.closest\('#stewardDrawer'\)/.test(drawer),
   'J7d 焦点在别的模态弹层里（不是抽屉自己）时，自动打开抽屉不移焦');
-// 117m-A2 **重钉 J7b**（语义是「焦点从只认输入框放到第一个可操作控件」，不是放宽）。
-// 旧断言逐字钉着 `if (!section || section.hidden || !input` —— permission／plan／pool 的卡片
-// 【没有】输入框（renderAsk 把自由输入整块隐藏了：那三类是按一下的事）。只认输入框的话，
-// 从「N 条等你」直达跳过来会一个焦点都不落，人照样不知道该点哪儿。
-// companion（J7c）比旧断言更强：它同时钉住「没有输入框时落到第一枚按钮」与「把卡片滚进视野」。
 ok(/function focusAsk\(\) \{[\s\S]{0,160}if \(!section \|\| section\.hidden\) return false;/.test(drawer),
   'J7b 卡片没出现时不抢焦点');
 ok(/const target = \(input && !\(answer && answer\.hidden\)\)/.test(drawer)
   && /\.querySelector\('\.steward-drawer-reply'\)/.test(drawer)
   && /section\.scrollIntoView\(\{ block: 'nearest' \}\)/.test(drawer),
   'J7c companion：焦点落在【第一个可操作控件】上（有输入框就是它，没有就是第一枚按钮），并把卡片滚进视野');
-// 121-K6b **重钉 J8**（33 号文第 11 项／§5「最后动静统一用 stewardAgoLabel」）：锚点仍然是
-// updatedAt（那一半没变，判据收进 lastTouchLabel 一处），换掉的是【人话来源】——
-// 原来借 elapsedLabel 出一个时长「3m 20s」当「多久以前」用，抽屉里因此有两种时间写法。
-// 现在与卡头那一句是同一处实现、同一句「3 分钟前」。反向：把 lastTouchLabel() 换回
-// elapsedLabel(touched, new Date()) → 本条红。
 ok(/t\('stewardShell\.drawer\.settledSince', \{ elapsed: ago \}\)/.test(drawer)
   && /const ago = lastTouchLabel\(\);/.test(drawer)
   && /const touched = String\(\(missionRow && missionRow\.updatedAt\) \|\| \(session && session\.updatedAt\) \|\| ''\);/.test(drawer)
@@ -566,13 +479,6 @@ ok(typeof zh['stewardShell.drawer.settled'] === 'undefined' && typeof en['stewar
   'J8b 旧键 stewardShell.drawer.settled 已随最后一个引用一起删掉（零引用键不留在目录里）');
 // 看板行那枚 pill（117l D4）：只读行上的 asksYou，点击 = 打开抽屉。
 const board = read('js/steward-board.js');
-// 117m-A2 **重钉 J9**（语义是「一句话变四句」，不是放宽）：旧断言逐字钉着 `t('stewardShell.board.asksYou')`
-// 这一句写死的文案，于是 permission／plan／pool 三类只能顶着「它在问你」出现 —— 用户看不出
-// 点进去要干什么。现在文案由 asksYou.kind 决定（表在 STEWARD_BOARD_ASKS_YOU_KEYS），
-// 并额外钉住「看板里没有第二处写死的那句话」（比旧断言更强）。
-// 121-K4：左栏是两视角共用的那一份，所以「点它」在两视角里是两件事 —— 管家视角仍然是把抽屉
-// 开到这一条（问答卡在那儿），工作台视角是 openSession（中栏换成这条线程）。两条都经 openRow
-// 这【一个】入口，本模块没有第二条打开路径。文案由 kind 决定这件事一个字没变。
 ok(/if \(row\.asksYou && typeof row\.asksYou === 'object' && String\(row\.asksYou\.kind \|\| ''\)\) \{/.test(board)
   && /pill\.onclick = \(\) => openRow\(sessionId\);/.test(board)
   && /if \(isStewardMode\(\)\) return openThread\(id\);/.test(board)
@@ -680,13 +586,6 @@ ok(typeof conversationMod.stewardThreadHueFor === 'function'
   && /let stewardHueSeq = 0;/.test(conversationSrc)
   && !/stewardThreadHue\(stewardThreadHues\.size\)/.test(conversationSrc),
   'M1 色号登记表在模块级、键是 missionId（同一任务两条线程同色、空 id 回 0），发号器是计数器不是 Map.size');
-// 117v-V2 **重钉 M2 的第一个合取项**（语义没变，被一次合法改动挪走了）：⑤「它刚说」的取段判据
-// 也从 steward-conversation.js 拿（stewardDeliverableText），于是同一行 import 多了第四个名字。
-// 旧断言逐字钉着三个名字的列表 —— 那是「色号只问一次、不自己算」这件事的【伴生字面量】，不是它
-// 本身；钉字面量的代价就是这种：合法复用把名单加长一个，锁当场红，整条 e2e 闸卡死。
-// 现在改成钉三件事实：① 三个名字都还是从这个模块 import 的（一个都没被本地重写）；
-// ② 色号在本文件只问一次；③ 本文件零本地登记表、零 stewardThreadHue()、零颜色字面量。
-// Only the two page-local stop-request maps are exempted. Any additional map still fails this hue-registry lock.
 const drawerHueCode = ['stewardStopRequests', 'stewardStopReceipts'].reduce((source, name) => {
   const declaration = constBlock(source, name);
   return declaration === 'const ' + name + ' = new Map();' ? source.replace(declaration, '') : source;

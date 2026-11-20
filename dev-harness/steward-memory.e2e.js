@@ -21,7 +21,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (F) 开关关:六条路由全部 409 steward.disabled,且不建目录。
 //
 // 端口用 getFreePort()。判定行:`STEWARD MEMORY E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -49,7 +49,6 @@ function writeConfig(patch) {
 }
 writeConfig({});
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 
@@ -161,7 +160,7 @@ try {
   /* ═════════ (C) 面板六路由(真 HTTP)═════════ */
   console.log('── (C) 面板六路由 ──');
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   let token = '';

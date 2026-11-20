@@ -15,14 +15,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // CDP 无头驱动；轮询断言用 addScriptToEvaluateOnNewDocument 包住 setInterval/clearInterval，
 // 直接看「30000ms／5000ms 的活计时器还在不在」。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -36,7 +35,7 @@ const ok = (condition, label) => {
   else { fail += 1; console.log('FAIL ' + label); }
 };
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 
 function request(port, pathname) {
@@ -69,13 +68,6 @@ async function waitForHttp(port, pathname, predicate, attempts = 200) {
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 class CdpClient {
   constructor(url) { this.url = url; this.nextId = 1; this.pending = new Map(); this.socket = null; }
@@ -209,8 +201,7 @@ let cdp = null;
 try {
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true,
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
     stdio: 'ignore',
   });
   const healthy = await waitForHttp(appPort, '/health', result => result.status === 200, 300); // 117q:此启动门原吃默认 attempts=200(200×60ms=12s)余量对本机冷启动实测 4.6-6.3s 偏窄,是「FAIL workbench up」假红的根;本文件此助手只此一处调用,仍按同批 12 处一致的编辑形态显式传 300 而不改默认(30 号文 P1-31)
@@ -221,11 +212,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A4 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -454,10 +445,9 @@ try {
   fail += 1;
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ }
   console.log(`\nSTEWARD SHELL E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
   process.exitCode = fail ? 1 : 0;

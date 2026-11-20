@@ -31,17 +31,18 @@ async function recoverSessionBodyState(id, bp) {
   bodies.sessionBodyPerfStats.stateRecoveries++;
   return state;
 }
-const SESSION_HEAD_TRANSIENT = new Set(['ENOENT', 'EPERM', 'EBUSY', 'EACCES']);
-async function readSessionHeadResilient(id) {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return safeJsonParse(await fsp.readFile(sessionPath(id), 'utf8'), null);
-    } catch (error) {
-      const code = String((error && error.code) || '');
-      if (!SESSION_HEAD_TRANSIENT.has(code) || attempt >= bodies.SESSION_HEAD_READ_RETRIES) return null;
-      await new Promise(resolve => setTimeout(resolve, 5 + attempt * 10));
-    }
+// A same-directory rename publishes each head atomically on macOS.
+async function readSessionHeadText(id) {
+  try {
+    return await fsp.readFile(sessionPath(id), 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
   }
+}
+async function readSessionHeadResilient(id) {
+  const text = await readSessionHeadText(id);
+  return text === null ? null : safeJsonParse(text, null);
 }
 // 「这条会话走哪条引擎路由」的只读取法:GET /api/status?sessionId= 与 GET /api/models?sessionId= 用。
 // 两条路由都是 auth:'open'(跨站页面也能让浏览器发出来),修前它们调 loadSession —— 装载会补默认字段回写、
@@ -52,17 +53,31 @@ async function readSessionRouteHead(id) {
   const head = await readSessionHeadResilient(id);
   return head && typeof head === 'object' && !Array.isArray(head) ? head : null;
 }
-// 正文截断同款有界重试(文件系统短暂拒绝访问的 EPERM/EBUSY)。仍失败就如实返回 false:
-// 调用方据此不交出 bodiesOk:true —— 否则下次快路径会接在没截掉的残留后面 append,把新行焊进
-// 半行(整条会话随后被判损坏隔离),或让旧的未提交尾巴留在真消息前面、下次截断反而截掉真消息。
+// Skills, memory and mission edits can arrive while a turn is running. CLI todos
+// are also written through the loopback API. All of these fields live in the head.
+async function reconcileTurnMetadata(session, { includeTodos = false } = {}) {
+  let head;
+  try {
+    head = await readSessionHeadResilient(session.id);
+  } catch (error) {
+    logEvent({ kind: 'turn_metadata_read_failed', sessionId: session.id, code: error.code });
+    return;
+  }
+  if (!head) return;
+  if (includeTodos && Array.isArray(head.todos)) session.todos = head.todos;
+  for (const key of ['skills', 'memories', 'memoryExclusions']) {
+    if (Array.isArray(head[key])) session[key] = head[key];
+  }
+  if (typeof head.memoriesExplicit === 'boolean') session.memoriesExplicit = head.memoriesExplicit;
+  mergeMissionBeforeSave(session, head);
+}
+// A failed repair must force a full rewrite on the next save.
 async function truncateSessionBody(file, len) {
-  for (let attempt = 0; ; attempt++) {
-    try { await fsp.truncate(file, len); return true; }
-    catch (error) {
-      const code = String((error && error.code) || '');
-      if (code === 'ENOENT' || !SESSION_HEAD_TRANSIENT.has(code) || attempt >= bodies.SESSION_HEAD_READ_RETRIES) return false;
-      await new Promise(resolve => setTimeout(resolve, 5 + attempt * 10));
-    }
+  try {
+    await fsp.truncate(file, len);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -125,16 +140,8 @@ async function readSessionBodiesOmittingProvider(id, parsed, bp, writeSeqAtRead)
 async function loadSession(id, reloadDepth = 0, staleRetry = 0, view = null) {
   if (safeSessionId(id) === null) return null; // 不合形的 id 就是「没有这个会话」(sessionPath 会拒绝拼路径)
   const writeSeqAtRead = sessionDiskWriteSeqOf(id);
-  let raw;
-  // hunt2-P3:头读撞上瞬时锁(EBUSY/EPERM/EACCES)先有界重试,别把「一时读不到」答成「会话不存在」。
-  for (let attempt = 0; ; attempt++) {
-    try { raw = await fsp.readFile(sessionPath(id), 'utf8'); break; }
-    catch (error) {
-      const code = String((error && error.code) || '');
-      if (code === 'ENOENT' || !bodies.SESSION_BODY_READ_TRANSIENT.has(code) || attempt >= bodies.SESSION_HEAD_READ_RETRIES) return null;
-      await new Promise(resolve => setTimeout(resolve, 5 + attempt * 10));
-    }
-  }
+  const raw = await readSessionHeadText(id);
+  if (raw === null) return null;
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -756,6 +763,6 @@ async function saveSession(session, opts) {
   return session;
 }
 
-return { invalidateReads: bumpSessionDiskWriteSeq, loadSession, saveSession, readSessionHeadResilient, readSessionRouteHead, sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER };
+return { invalidateReads: bumpSessionDiskWriteSeq, loadSession, saveSession, reconcileTurnMetadata, readSessionHeadResilient, readSessionRouteHead, sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER };
 }
 module.exports = { createSessionPersistence };

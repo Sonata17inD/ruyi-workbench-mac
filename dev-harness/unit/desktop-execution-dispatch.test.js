@@ -4,7 +4,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-dispatch-unit-'));
 for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TMPDIR']) { process.env[key] = path.join(root, key); fs.mkdirSync(process.env[key]); }
-process.env.RUYI_HOME = path.join(root, 'data'); process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
+process.env.RUYI_HOME = path.join(root, 'data');
 const { McpStdioClient, mcpCallToolParams, DesktopExecutionRuntime } = require('../lib/server-internals').loadServerInternals(['McpStdioClient', 'mcpCallToolParams', 'DesktopExecutionRuntime']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 function fixture() {

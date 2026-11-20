@@ -28,15 +28,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 夹具与 event-stream-client.browser.e2e.js 同一套（temp HOME ＋ 假 OpenAI 兼容 provider ＋
 // 无头 Edge/Chrome 的 CDP）。判定行：`FOCUS RAIL BROWSER E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -85,13 +84,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(100);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 // ── 并行 Node SSE 客户端：【服务端时刻】的唯一来源（与 K2b 那一件逐字同源的读法）──────────
@@ -381,8 +373,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started');
   let token = '';
@@ -428,11 +420,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1920,1080',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A7 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -784,10 +776,9 @@ try {
 } finally {
   if (cdp) cdp.close();
   if (stream) stream.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) await new Promise(resolve => provider.close(resolve));
-  try { stopRuyiTestBrowsers(); } catch { /* best effort */ }
 }
 
 console.log(fail === 0 ? 'FOCUS RAIL BROWSER E2E: ALL PASS' : `FOCUS RAIL BROWSER E2E: FAIL (${fail})`);

@@ -12,8 +12,7 @@ const read = rel => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 // 函数、或构建器挪回别的模块,切片就带进无关代码或切空。它本来就经 14-main 导出,现在直接取产物里的那一个;
 // 断言与期望值一字未改。
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-turn-narrative-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.WIN_CLAUDE_WORKBENCH_HOME || home;
-process.env.RUYI_HOME = process.env.RUYI_HOME || home;
+process.env.RUYI_HOME = home;
 const { createTurnSegmentBuilder } = require(path.join(ROOT, 'ruyi-workbench', 'app', 'backend', 'turn-segments.cjs'));
 const claude = read('ruyi-workbench/app/backend/agent-cli-turn.cjs');
 const provider = read('ruyi-workbench/app/backend/provider-turn.cjs');

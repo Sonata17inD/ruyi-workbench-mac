@@ -83,8 +83,7 @@ async function waitFor(fn, tries = 60, gap = 150) {
   const start = async extraEnv => {
     port = await getFreePort();
     const env = { ...process.env, HOME, USERPROFILE: HOME, RUYI_HOME: HOME, ...(extraEnv || {}) };
-    delete env.WIN_CLAUDE_WORKBENCH_HOME;
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env, windowsHide: true });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
     const token = await waitFor(async () => { const r = await req(port, 'GET', '/'); const m = (r.raw || '').match(/name="wcw-token"\s+content="([a-f0-9]+)"/); return m && m[1]; }, 80, 200);
     if (!token) throw new Error('workbench did not start');

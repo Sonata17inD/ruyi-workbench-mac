@@ -11,7 +11,7 @@ function createAgentWorkflowRoutes({
   delivery: { EventStreamHooks, waitForAgentRunResults, resolveWaitAgentsMs, settleWaitEnvelopes, agentRunResultSlice,
     deliverAgentRunEnvelope, buildAgentRunEnvelope },
 }) {
-  // 代理模式 v2:MCP 子进程(Claude/Kimi)的 wait_agents / agent_result 回环。鉴权同 launch(body.token = 进程 token,
+  // 代理模式 v2:MCP 子进程(Claude)的 wait_agents / agent_result 回环。鉴权同 launch(body.token = 进程 token,
   // 01b 登记为 body-token),handler 内另接受 UI 头 token(管理面/测试直调)。终态信封在此登记已读 —— 这次返回就是
   // 投递,后续回合不再重复注入;活回合在跑就登记在它的内存会话上(回合结束落盘),否则读-改-存一次。
   async function agentWorkflowLoopbackRoute(req, res, kind) {
@@ -27,7 +27,7 @@ function createAgentWorkflowRoutes({
       await mutateSession(sessionId, fresh => { for (const id of runIds) EventStreamHooks.markAgentEnvelopeDelivered(fresh, id); }, { writer: 'agent_envelope_delivered' }).catch(() => {});
     };
     if (kind === 'wait') {
-      const out = await waitForAgentRunResults(sessionId, body.runIds, resolveWaitAgentsMs(body.timeoutMs), null, () => { if (liveReg) liveReg.lastEventAt = Date.now(); });   // 等待窗内 Claude/Kimi 父回合的看门狗不算空闲(MCP 子进程里的 wait_agents 期间 CLI 没有任何输出)
+      const out = await waitForAgentRunResults(sessionId, body.runIds, resolveWaitAgentsMs(body.timeoutMs), null, () => { if (liveReg) liveReg.lastEventAt = Date.now(); });   // 等待窗内 Claude 父回合的看门狗不算空闲(MCP 子进程里的 wait_agents 期间 CLI 没有任何输出)
       // 与 provider 回合同一套结算(settleWaitEnvelopes):通知先到 → 短回执;wait 先到 → 登记已读。
       if (liveReg && liveReg.session) settleWaitEnvelopes(liveReg.session, out);
       else {
@@ -62,12 +62,6 @@ function createAgentWorkflowRoutes({
       const provider = resolveProvider(config, body.providerId)
         || activeOpenAiProvider(config)
         || (config.providers || []).find(p => p && p.baseUrl && (p.model || (p.models && p.models.length)));
-      // A direct UI/MCP launch has no active parent registry. In a Claude-only installation, defaulting such
-      // a launch to OpenAI manufactured an unusable route with provider=null and failed before the fake/real
-      // Claude child could start. Choose from actual availability when no live parent turn exists.
-      // 2026-10:只有活着的 Claude / provider 父回合才决定默认引擎。Kimi Code 父回合(reg.kind 'kimi-acp')修前被一律当成
-      // 'openai',没配 provider 时路由成 provider=null,节点一启动就抛 Cannot read properties of null —— 节点引擎只有
-      // openai / claude 两种,Kimi 父回合与「没有父回合」一样按实际可用的引擎挑。
       const parentEngine = reg && reg.kind === 'claude' ? 'claude'
         : (reg && reg.kind === 'openai' ? 'openai' : (provider ? 'openai' : 'claude'));
       const parentModel = parentEngine === 'claude'
@@ -80,7 +74,7 @@ function createAgentWorkflowRoutes({
       if (!provider && !claudeCliUsable) {
         // 61-C6:说清 Claude CLI 找的是哪(修前探测对不存在的 claude.cmd 也判可用,走不到这里;现在走得到,就要说得清)。
         const where = claudeCli ? `找过 ${claudeCli},不可用` : '没有配置 claudePath,PATH 里也找不到 claude';
-        return send(res, json({ ok: false, error: `Agent DAG 需要至少配置一个 OpenAI 兼容 Provider，或安装并配置 Claude CLI(${where})（Kimi Code 不能作为工作流节点的引擎）` }, 400));
+        return send(res, json({ ok: false, error: `Agent DAG 需要至少配置一个 OpenAI 兼容 Provider，或安装并配置 Claude CLI(${where})` }, 400));
       }
       // 2026-10:工作流按【这条线程】的生效权限档跑 —— 修前直接取全局 config.permissionMode,线程在自己的权限 chip 上收紧过也照
       // 全局放。有活着的父回合就用它起回合时解析出的档(请求级 > 会话级 > 全局,05/09 登记在 reg.permissionMode),否则按
@@ -103,7 +97,7 @@ function createAgentWorkflowRoutes({
       // 追加整份「Agent 工作流已结束」助手消息(那条会被 syncProviderHistoryFromDisplay 抄进模型上下文)。
       const completion = run => deliverAgentRunEnvelope(session.id, run);
       const background = body.async === true || body.background === true;
-      // 只有 Claude/Kimi 的 MCP 子进程回环(envelope:true)替模型发起的 background:true 才算「模型起的」:跑完才会唤醒主会话。
+      // 只有 Claude 的 MCP 子进程回环(envelope:true)替模型发起的 background:true 才算「模型起的」:跑完才会唤醒主会话。
       // 面板 / HTTP 的 async:true 是用户点的,信封照常进账本、随下一回合送达,但不替模型起回合。
       const launchedByModel = body.envelope === true && body.background === true;
       if (background) {
@@ -140,7 +134,7 @@ function createAgentWorkflowRoutes({
       if (completedRun && !activeChildren.has(session.id)) await completion(completedRun).catch(() => {});
       return send(res, json(result));
     }
-    // 代理模式 v2:MCP 子进程(Claude/Kimi)的 wait_agents / agent_result 回环(实现见 agentWorkflowLoopbackRoute)。
+    // 代理模式 v2:MCP 子进程(Claude)的 wait_agents / agent_result 回环(实现见 agentWorkflowLoopbackRoute)。
     if (req.method === 'POST' && pathname === '/api/agent-workflow/wait') return agentWorkflowLoopbackRoute(req, res, 'wait');
     if (req.method === 'POST' && pathname === '/api/agent-workflow/result') return agentWorkflowLoopbackRoute(req, res, 'result');
   }

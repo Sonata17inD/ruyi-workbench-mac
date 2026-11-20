@@ -16,7 +16,6 @@ const cp = require('child_process');
 
 const haveGit = (() => { try { return cp.spawnSync('git', ['--version']).status === 0; } catch { return false; } })();
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-git-shape-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'data');
 process.env.RUYI_HOME = path.join(root, 'data');
 Object.assign(process.env, { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@example.com', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@example.com' });
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
@@ -171,7 +170,7 @@ test('[G8] git_commit 超时:说「被终止」+ timedOut,不是 hookRejected;�
   assert.ok(took < 12000, `超时后应及时返回(耗时 ${took}ms)`);
 });
 
-test('[G8] 钩子起的整棵进程树随超时一并结束(不留孤儿)', { skip: !haveGit ? '本机没有 git' : process.platform === 'win32' ? 'sh 子进程号不是 Windows 进程号' : false }, async () => {
+test('[G8] 钩子起的整棵进程树随超时一并结束(不留孤儿)', { skip: !haveGit ? '本机没有 git' : false }, async () => {
   const repo = mkRepo('g8b');
   const pidFile = path.join(repo, 'hook-sleep.pid');
   // 孙进程:后台 sleep(它的 stdout/stderr 仍连着 git 的管道),脚本 wait 它

@@ -18,7 +18,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (f) FAKE_PLAN_AFTER_READ=1 + FAKE_TOOL_SEQUENCE=[file_read, file_write]: the read executes before the
 //        final PLAN:, approval then unlocks the write, and no plan-refused result appears.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -69,7 +69,7 @@ function writeConfig(fakePort) {
   }, null, 2));
 }
 function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore */ } } }
-function spawnFake(env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env }, windowsHide: true }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
+function spawnFake(env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env } }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
 function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: '/v1/models', timeout: 800 }, resp => { resp.resume(); res(true); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); }); }
 
 (async () => {
@@ -84,7 +84,7 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
   const xTxt = path.join(HOME, 'x.txt');   // approve scenario target
   const seqX = JSON.stringify([{ name: 'file_write', args: { path: xTxt, content: 'approved-write' } }]);
   let fake = spawnFake({ FAKE_PLAN_FIRST: '1', FAKE_PLAN_REQUIRE_APPROVAL_CONTEXT: '1', FAKE_TOOL_SEQUENCE: seqX });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 

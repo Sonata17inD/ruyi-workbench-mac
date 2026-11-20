@@ -15,7 +15,7 @@ const { migrationTomlReplace } = require('./migration-toml.cjs');
 function createMigrationCenter({
   paths, nowIso, logEvent, VERSION, SKILL_ID_RE, process, MigrationTrashHooks,
   packages: { externalRoot, findRuyiPackageRootFor, ruyiPackageInfo, samePathKey, readInstallRegistry, writeInstallRegistry },
-  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig, kimiMcpManagedIds },
+  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig },
   skills: { agentCliHomes, tildePath, SkillRegistry, syncAgentInstructionImports },
 }) {
   const MIGRATION_LOG_SCHEMA = 1;
@@ -105,10 +105,8 @@ function createMigrationCenter({
     const ctx = { cache: new Map(), currentRoot, currentKey: samePathKey(currentRoot) };
     const homes = agentCliHomes();
     const items = [];
-    // ① JSON 形的 MCP 声明:~/.claude.json(含 projects.<路径>.mcpServers)、Kimi 的 mcp.json、如意自己生成的 workbench.mcp*.json
     const jsonFiles = [
       { file: homes.claudeJson, owner: 'claude-code' },
-      { file: path.join(homes.kimi, 'mcp.json'), owner: 'kimi' },
     ];
     try {
       for (const f of await fsp.readdir(paths.generated)) {
@@ -150,8 +148,6 @@ function createMigrationCenter({
         }
       }
     }
-    // ③ 如意自己的配置:externalMcpServers 可改写/移除;desktopMcp / claudePath / kimiPath 只报告(设置页那一份表单会把
-    //    它们整字段存回去,这里改了会被下一次「保存设置」盖掉 —— 所以交给用户在设置里改)。
     for (const s of (Array.isArray(config.externalMcpServers) ? config.externalMcpServers : [])) {
       if (!s || !s.id) continue;
       const item = migrationServerItem(ctx, { file: paths.config, kind: 'ruyi-config', owner: 'ruyi', container: ['externalMcpServers'], serverId: s.id }, s);
@@ -161,7 +157,7 @@ function createMigrationCenter({
       const dm = config.desktopMcp || {};
       const item = migrationServerItem(ctx, { file: paths.config, kind: 'ruyi-config', owner: 'ruyi', container: [], serverId: 'desktopMcp', entryLabel: 'desktopMcp' }, { command: dm.command, args: dm.args, cwd: dm.cwd });
       if (item) items.push({ ...item, action: 'manual', changes: item.changes.map(c => ({ ...c, to: null })), note: 'settings' });
-      for (const key of ['claudePath', 'kimiPath']) {
+      for (const key of ['claudePath']) {
         const it = migrationServerItem(ctx, { file: paths.config, kind: 'ruyi-config', owner: 'ruyi', container: [], serverId: key, entryLabel: key }, { command: config[key] });
         if (it) items.push({ ...it, action: 'manual', changes: it.changes.map(c => ({ ...c, to: null })), note: 'settings' });
       }
@@ -247,7 +243,6 @@ function createMigrationCenter({
     return path.basename(String(raw.command || '')) + (Array.isArray(raw.args) && raw.args.length ? ' +' + raw.args.length : '');
   }
   async function migrationScanMcp(config) {
-    const managedKimi = await kimiMcpManagedIds();
     const view = { externalMcpServers: Array.isArray(config.externalMcpServers) ? config.externalMcpServers : [], dismissedMcpIds: Array.isArray(config.dismissedMcpIds) ? config.dismissedMcpIds : [] };
     const sources = [];
     const servers = [];
@@ -257,7 +252,7 @@ function createMigrationCenter({
       sources.push({ origin: src.origin, label: src.label, file: src.file, displayFile: tildePath(src.file), exists: !missing,
         error: parsed.error && !missing && !/未找到 mcpServers/.test(parsed.error) ? parsed.error : '' });
       for (const raw of parsed.servers) {
-        const v = classifyAgentMcpCandidate(raw, src.origin, view, managedKimi);
+        const v = classifyAgentMcpCandidate(raw, src.origin, view);
         const existing = view.externalMcpServers.find(s => s && s.id === raw.id);
         servers.push({ key: src.origin + ':' + raw.id, origin: src.origin, label: src.label, id: raw.id, summary: migrationMcpSummary(raw),
           status: v.status, reason: v.reason, importedOrigin: existing ? String(existing.origin || 'ruyi') : '' });
@@ -293,7 +288,6 @@ function createMigrationCenter({
     const homes = agentCliHomes();
     const out = [];
     for (const d of await SkillRegistry.claudePluginSkillDirs()) out.push({ source: 'claude-plugin', plugin: d.plugin, baseDir: d.skillsDir });
-    out.push({ source: 'kimi', plugin: '', baseDir: path.join(homes.kimi, 'skills') });
     out.push({ source: 'codex', plugin: '', baseDir: path.join(homes.codex, 'skills') });
     out.push({ source: 'claude-code', plugin: '', baseDir: path.join(homes.claude, 'skills') });
     return out;
@@ -584,7 +578,6 @@ function createMigrationCenter({
   async function migrationImportMcp(list) {
     const want = (Array.isArray(list) ? list : []).map(x => ({ origin: String(x && x.origin || ''), id: String(x && x.id || '') })).filter(x => x.origin && x.id).slice(0, 20);
     if (!want.length) return { ok: true, added: [], skipped: [] };
-    const managedKimi = await kimiMcpManagedIds();
     const sources = new Map(agentMcpImportSources().map(s => [s.origin, s]));
     const r = await mutateConfig(async current => {
       const list2 = Array.isArray(current.externalMcpServers) ? current.externalMcpServers.slice() : [];
@@ -595,7 +588,7 @@ function createMigrationCenter({
         const raw = parseMcpConfigFile(src.file).servers.find(s => s.id === w.id);
         if (!raw) { skipped.push({ ...w, reason: 'not-found' }); continue; }
         // 显式导入:dismissed 不拦(用户改主意了),其余判据与自动导入相同。
-        const v = classifyAgentMcpCandidate(raw, w.origin, { externalMcpServers: list2, dismissedMcpIds: [] }, managedKimi);
+        const v = classifyAgentMcpCandidate(raw, w.origin, { externalMcpServers: list2, dismissedMcpIds: [] });
         if (v.status !== 'importable') { skipped.push({ ...w, reason: v.status === 'imported' ? 'already-imported' : v.reason }); continue; }
         if (list2.length >= 10) { skipped.push({ ...w, reason: 'limit' }); continue; }
         const srv = sanitizeExternalMcpServer({ ...raw, origin: w.origin });

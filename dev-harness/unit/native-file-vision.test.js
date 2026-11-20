@@ -12,7 +12,6 @@ const ws = path.join(root, 'workspace');
 const home = path.join(root, 'data');
 fs.mkdirSync(ws); fs.mkdirSync(home);
 process.env.RUYI_HOME = home;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 if (process.env.RUYI_NATIVE_READ_TEST_PYTHON) process.env.RUYI_BUNDLED_PYTHON = process.env.RUYI_NATIVE_READ_TEST_PYTHON;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
@@ -27,9 +26,9 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config));
 const ctx = () => ({ config, workingDir: ws, session: { id: 'visiontest', cwd: ws }, signal: null });
 const read = args => srv.toolCall('file_read', args, ctx());
 const py = process.env.RUYI_BUNDLED_PYTHON || 'python';
-const available = cp.spawnSync(py, ['-I', '-c', 'import zipfile'], { windowsHide: true }).status === 0;
-const pillowAvailable = available && cp.spawnSync(py, ['-I', '-c', 'import PIL'], { windowsHide: true }).status === 0;
-const pdfAvailable = available && cp.spawnSync(py, ['-I', '-c', 'import pdfplumber, reportlab, PIL'], { windowsHide: true }).status === 0;
+const available = cp.spawnSync(py, ['-I', '-c', 'import zipfile'], {}).status === 0;
+const pillowAvailable = available && cp.spawnSync(py, ['-I', '-c', 'import PIL'], {}).status === 0;
+const pdfAvailable = available && cp.spawnSync(py, ['-I', '-c', 'import pdfplumber, reportlab, PIL'], {}).status === 0;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 
 if (available) {
@@ -47,7 +46,7 @@ parts={
 for name, entries in parts.items():
  with zipfile.ZipFile(os.path.join(d,name),'w',zipfile.ZIP_DEFLATED) as z:
   for n, data in entries.items(): z.writestr(n,data)
-`, ws, png.toString('base64')], { encoding: 'utf8', windowsHide: true });
+`, ws, png.toString('base64')], { encoding: 'utf8' });
   assert.equal(fixtures.status, 0, fixtures.stderr);
 }
 
@@ -118,7 +117,7 @@ for i in range(3):
  c.drawImage(ImageReader(io.BytesIO(base64.b64decode(sys.argv[2]))),20,20,200,200)
  c.showPage()
 c.save()
-`, path.join(ws, 'pages.pdf'), png.toString('base64')], { windowsHide: true, encoding: 'utf8' });
+`, path.join(ws, 'pages.pdf'), png.toString('base64')], { encoding: 'utf8' });
   assert.equal(made.status, 0, made.stderr);
   const r = await read({ path: 'pages.pdf' });
   assert.equal(r.ok, true, JSON.stringify(r));
@@ -139,7 +138,7 @@ import sys,os
 from PIL import Image
 im=Image.new('RGB',(32,32),'red')
 for ext in ['bmp','tiff','ico']: im.save(os.path.join(sys.argv[1],'convert.'+ext))
-`, ws], { windowsHide: true, encoding: 'utf8' });
+`, ws], { encoding: 'utf8' });
   assert.equal(made.status, 0, made.stderr);
   for (const ext of ['bmp', 'tiff', 'ico']) {
     const r = await read({ path: 'convert.' + ext });
@@ -164,7 +163,7 @@ test('actual native image result encodes as Responses input_image and Anthropic 
 
 test('native MCP returns real image content blocks, with base64 stripped from JSON text', async () => {
   const client = new srv.McpStdioClient({ id: 'native', command: process.execPath, args: [path.join(app, 'server.js'), 'mcp'],
-    env: { RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home }, cwd: ws });
+    env: { RUYI_HOME: home }, cwd: ws });
   try {
     await client.start();
     const r = await client._rpc('tools/call', { name: 'file_read', arguments: { path: path.join(ws, 'pic.png') } }, 10000);

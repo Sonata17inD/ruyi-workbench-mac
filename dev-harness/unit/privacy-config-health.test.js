@@ -6,7 +6,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { loadServerInternals } = require('../lib/server-internals');
 function setup(t, initial) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-health-'));
-  process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+  process.env.RUYI_HOME = root;
   const file = path.join(root, 'config.json');
   if (initial !== undefined) fs.writeFileSync(file, typeof initial === 'string' ? initial : JSON.stringify(initial));
   const app = loadServerInternals(['readConfig', 'mutateConfig', 'PrivacyGateway', 'PrivacyCore'], { withEval: true });
@@ -42,7 +42,7 @@ test('restoring an older off backup persists an unconfirmed policy across proces
   fs.writeFileSync(file + '.prev', JSON.stringify(off)); fs.writeFileSync(file, '{"broken":');
   const recovered = await app.readConfig(); assert.equal(recovered.privacyModeV1, 'off'); assert.equal(recovered.privacyPolicyRecoveryRequiredV1, true);
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).privacyPolicyRecoveryRequiredV1, true); await blocked(app);
-  process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+  process.env.RUYI_HOME = root;
   const restart = loadServerInternals(['readConfig', 'PrivacyGateway']); await restart.readConfig(); assert.equal(restart.PrivacyGateway.recoveryRequired(), true);
 });
 test('lost config in a used installation is distinct from a fresh installation', async t => {

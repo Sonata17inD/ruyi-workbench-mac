@@ -19,7 +19,6 @@ const { pathToFileURL } = require('node:url');
 const ROOT = path.resolve(__dirname, '..', '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
 const LOCALES = path.join(PUBLIC, 'locales');
-const MIRROR = path.join(ROOT, 'docs', 'i18n', 'locales');
 const load = name => import(pathToFileURL(path.join(PUBLIC, 'js', name)).href);
 const read = file => fs.readFileSync(file, 'utf8');
 const zh = JSON.parse(read(path.join(LOCALES, 'zh-CN.json')));
@@ -71,15 +70,13 @@ describe('M4 stewardAskText：「等你放行」按界面语言拼', () => {
 
 describe('M4 子代理进度 noteCode ＋ 新词条', () => {
   it('服务端子代理进度事件在各自实现中带有 noteCode', () => {
-    const need = { 'backend/subagent-runner.cjs': ['init', 'streaming'], 'backend/claude-subagent.cjs': ['generating'],
-      'backend/kimi-wire.cjs': ['kimiRunning', 'kimiRunningFor', 'kimiPaused'] };
+    const need = { 'backend/subagent-runner.cjs': ['init', 'streaming'], 'backend/claude-subagent.cjs': ['generating'] };
     for (const [file, codes] of Object.entries(need)) {
       const text = read(path.join(ROOT, 'ruyi-workbench', 'app', file));
-      for (const code of codes) assert.ok(text.includes(`noteCode: '${code}'`) || (code === 'kimiPaused' && text.includes("'kimiPaused'")), `${file} 缺 noteCode ${code}`);
+      for (const code of codes) assert.ok(text.includes(`noteCode: '${code}'`), `${file} 缺 noteCode ${code}`);
     }
   });
-  const KEYS = ['chat.subagent.note.init', 'chat.subagent.note.streaming', 'chat.subagent.note.generating', 'chat.subagent.note.kimiRunning',
-    'chat.subagent.note.kimiRunningFor', 'chat.subagent.note.kimiPaused', 'chat.subagent.note.kimiPausedWaiting',
+  const KEYS = ['chat.subagent.note.init', 'chat.subagent.note.streaming', 'chat.subagent.note.generating',
     'stewardShell.askYou.permission', 'stewardShell.askYou.permissionTarget'];
   it('两语言齐全、占位符一致、英文零中文', () => {
     for (const key of KEYS) {
@@ -88,9 +85,6 @@ describe('M4 子代理进度 noteCode ＋ 新词条', () => {
       assert.deepEqual(placeholders(en[key]), placeholders(zh[key]), `${key} 占位符不一致`);
       assert.ok(!CJK.test(en[key]), `${key} 英文里有中文`);
     }
-  });
-  it('docs/i18n 镜像逐字节相同', () => {
-    for (const lang of ['zh-CN', 'en-US']) assert.equal(read(path.join(MIRROR, `${lang}.json`)), read(path.join(LOCALES, `${lang}.json`)), `${lang} 镜像不同步`);
   });
 });
 

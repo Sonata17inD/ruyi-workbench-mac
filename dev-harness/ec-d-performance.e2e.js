@@ -10,14 +10,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  * CDP is used instead of --dump-dom so the gate can observe app boot completion, force layout,
  * wait for painted frames, and measure repeated interactions in the real browser process.
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const STARTUP_BUDGET_MS = 1500;
@@ -31,7 +30,7 @@ const ok = (condition, label) => {
   else { fail += 1; console.log('FAIL ' + label); }
 };
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 function request(port, pathname, method = 'GET') {
   return new Promise(resolve => {
@@ -55,13 +54,6 @@ async function waitFor(port, pathname, predicate, attempts = 100) {
     await sleep(50);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 function percentile(values, ratio) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -296,8 +288,7 @@ const TOOL_VIEW_MEASURE = `(async () => {
 
   const server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home },
-    windowsHide: true,
+    env: { ...process.env, RUYI_HOME: home },
   });
   let browser = null;
   let cdp = null;
@@ -313,10 +304,8 @@ const TOOL_VIEW_MEASURE = `(async () => {
 
     const appUrl = `http://127.0.0.1:${appPort}/`;
     const browserArgs = [
-      '--headless=new',
-      '--disable-gpu',
-      '--no-first-run',
-      '--no-default-browser-check',
+      ...headlessBrowserArgs,
+
       '--disable-extensions',
       '--disable-sync',
       '--disable-background-networking',
@@ -325,9 +314,8 @@ const TOOL_VIEW_MEASURE = `(async () => {
       '--remote-debugging-port=' + debugPort,
       '--user-data-dir=' + profile,
     ];
-    if (/msedge\.exe$/i.test(executable)) browserArgs.push('--edge-skip-compat-layer-relaunch');
     browserArgs.push('about:blank');
-    browser = cp.spawn(executable, browserArgs, { windowsHide: true, stdio: 'ignore' });
+    browser = cp.spawn(executable, browserArgs, { stdio: 'ignore' });
 
     const target = await waitForTarget(debugPort, 'about:blank');
     ok(Boolean(target), 'CDP page target available');
@@ -400,10 +388,9 @@ const TOOL_VIEW_MEASURE = `(async () => {
     fail += 1;
   } finally {
     if (cdp) cdp.close();
-    killTree(browser);
-    killTree(server);
+    killOwnTree(browser);
+    killOwnTree(server);
     await sleep(300);
-    stopRuyiTestBrowsers(profile);
     try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock; harmless */ }
     console.log('\nEC-D PERFORMANCE E2E: ' + (fail ? `FAIL (${fail})` : 'ALL PASS'));
     process.exitCode = fail ? 1 : 0;

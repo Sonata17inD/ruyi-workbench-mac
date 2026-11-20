@@ -9,7 +9,7 @@
 //   [C] agents/*.md:有 frontmatter,name = 文件名、description 非空(Claude Code 靠它决定何时委派);tools 若写,只许
 //       Claude Code 内建工具名或工作台真实注册过的 mcp__ruyi__ 工具。
 //   [D] skills/<id>/SKILL.md 有 name 与 description、目录名合法;commands/*.md 有 description。
-//   [E] 插件目录里每个文件都进了覆盖包载荷(build-overlay PAYLOAD_FILES)—— 修前只登记了技能与命令,覆盖包用户重跑
+//   [E] 插件目录里每个文件都进了Mac 包载荷(runtime-files.json)—— 修前只登记了技能与命令,Mac 包用户重跑
 //       安装脚本时装的还是那份坏清单。
 //   [F] 前端点选命令:内置命令两种引擎都插展开后的模板(Claude Code 里只有 /offline-toolkit:<id>,裸 /<id> 解析不了);
 //       用户命令在 Agent CLI 下仍插 /name。
@@ -21,14 +21,13 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-offline-plugin-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 process.env.RUYI_HOME = home;
 
 const REPO = path.resolve(__dirname, '..', '..');
 const WB = path.join(REPO, 'ruyi-workbench');
 const MARKET = path.join(WB, 'resources', 'plugins', 'ruyi-offline');
 const srv = require(path.join(WB, 'app', 'server.js'));
-const overlay = require(path.join(WB, 'tools', 'macos-runtime-files.js'));
+const runtimeFiles = require(path.join(WB, 'tools', 'macos-runtime-files.js'));
 
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 // 只认本插件用到的 YAML 子集:--- 包住的若干行,key: value 单行标量,或 key: 后跟缩进的 "- item" 列表。
@@ -128,12 +127,12 @@ test('[D] 技能与命令的 frontmatter 齐全', () => {
   }
 });
 
-test('[E] 插件目录里的每个文件都在覆盖包载荷里', () => {
-  const payload = new Set(overlay.filesFor('workbench'));
+test('[E] 插件目录里的每个文件都在Mac 包载荷里', () => {
+  const payload = new Set(runtimeFiles.filesFor('workbench'));
   const files = walk(MARKET).map(f => path.relative(WB, f).split(path.sep).join('/'));
   assert.ok(files.length >= 30, `插件目录可遍历(实得 ${files.length} 个文件)`);
   const missing = files.filter(f => !payload.has(f));
-  assert.deepEqual(missing, [], '这些文件没登记进 build-overlay PAYLOAD_FILES,覆盖包会漏发');
+  assert.deepEqual(missing, [], '这些文件没登记进 runtime-files.json,Mac 包会漏发');
 });
 
 test('[F] 点选命令:内置命令两种引擎都插模板,用户命令在 Agent CLI 下插 /name', async () => {
@@ -144,64 +143,8 @@ test('[F] 点选命令:内置命令两种引擎都插模板,用户命令在 Agen
   assert.equal(commandInsertionText(builtin, true, ''), builtin.prompt, 'Provider:插模板');
   const user = { kind: 'command', source: 'user', id: 'my-cmd', insert: '/my-cmd', prompt: 'my template' };
   assert.equal(commandInsertionText(user, false, 'claude'), '/my-cmd', 'Claude Code:~/.claude/commands 的命令仍交给 CLI 展开');
-  assert.equal(commandInsertionText(user, false, 'kimi'), 'my template', 'Kimi Code 不认 ~/.claude/commands:插模板(agent-cli-registry claudeUserCommands:false)');
+  assert.equal(commandInsertionText(user, false, 'retired-driver'), 'my template', '不可用引擎不展开 Claude 命令');
   assert.equal(commandInsertionText(user, true, ''), 'my template', 'Provider:插模板');
-});
-
-// [G] 安装脚本把 MCP 配置 JSON 原样交给 claude。修前 `& $ClaudePath mcp add-json ruyi $serverJson`:Windows PowerShell 5.1
-// 不转义内嵌双引号、又按引号个数决定要不要给参数加引号,claude 收到的是 {command:C:\...},登记失败只剩一行 warning。
-// 这里把脚本里那两个函数原样切出来,在真的 powershell.exe(5.1)里对 node 跑一遍,比对收到的 argv。
-test('[G] 安装脚本经 Invoke-NativeExact 把 JSON 原样交给原生程序(Windows PowerShell 5.1)', { skip: process.platform !== 'win32' && '需要 Windows PowerShell' }, () => {
-  const cp = require('child_process');
-  const { bracedBlock } = require('../lib/source-slice.js');
-  const ps1 = fs.readFileSync(path.join(WB, 'resources', 'scripts', 'install-workbench.ps1'), 'utf8');
-  assert.ok(!/&\s*\$ClaudePath\s+mcp\s+add-json/.test(ps1), 'mcp add-json 不再经 & 直接传 JSON');
-  assert.ok(ps1.includes("Invoke-NativeExact $ClaudePath @('mcp', 'add-json', 'ruyi', $serverJson, '-s', $Scope)"), 'mcp add-json 走 Invoke-NativeExact');
-  const fns = ['function ConvertTo-CommandLineToken', 'function Invoke-NativeExact', 'function Find-Claude'].map(marker => {
-    const block = bracedBlock(ps1, marker);
-    assert.ok(block, `切得出 ${marker}`);
-    return block;
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-native-args-'));
-  try {
-    const value = { command: 'C:\\Program Files\\Ruyi\\runtime\\node\\node.exe', args: ['C:\\dir with space\\', 'say "hi"', ''], env: { A: 'b\\' } };
-    const want = ['mcp', 'add-json', 'ruyi', JSON.stringify(value), '-s', 'user'];
-    // 生单 token 的边角(只走 exe:cmd.exe 本来就传不了换行):末尾反斜杠、反斜杠后紧跟换行(修前 (\\+)$ 会在换行前多翻倍)、引号、空串。
-    const tokens = ['plain', 'with space', 'trail\\', 'x\\\n', 'a"b', 'C:\\Program Files\\', ''];
-    const q = s => "'" + String(s).replace(/'/g, "''") + "'";
-    fs.writeFileSync(path.join(dir, 'value.json'), want[3]);
-    fs.writeFileSync(path.join(dir, 'tokens.json'), JSON.stringify(tokens));
-    const echo = path.join(dir, 'echo.js');
-    fs.writeFileSync(echo, "require('fs').writeFileSync(process.env.RUYI_ARGV_OUT, JSON.stringify(process.argv.slice(2)))");
-    // npm 全局安装的形状:同一目录里 claude.cmd 与 claude.ps1 并存(PowerShell 默认先挑 .ps1,Process.Start 起不了它)。
-    const shimDir = path.join(dir, 'shims');
-    fs.mkdirSync(shimDir);
-    fs.writeFileSync(path.join(shimDir, 'claude.cmd'), `@"${process.execPath}" "${echo}" %*\r\n`);
-    fs.writeFileSync(path.join(shimDir, 'claude.ps1'), `& "${process.execPath}" "${echo}" @args\r\n`);
-    const out = n => path.join(dir, `argv${n}.json`);
-    fs.writeFileSync(path.join(dir, 'run.ps1'), [
-      ...fns,
-      `$json = Get-Content -Raw -LiteralPath ${q(path.join(dir, 'value.json'))}`,
-      // PS 5.1 的 ConvertFrom-Json 把 JSON 数组当成一个对象整体吐出,foreach 才展开成逐项。
-      `$toks = @(); foreach ($t in (Get-Content -Raw -LiteralPath ${q(path.join(dir, 'tokens.json'))} | ConvertFrom-Json)) { $toks += [string]$t }`,
-      `$env:PATH = ${q(shimDir)} + ';' + $env:PATH`,
-      `$found = Find-Claude ''`,
-      `Set-Content -LiteralPath ${q(out('found'))} -Value $found -Encoding ascii`,
-      `$env:RUYI_ARGV_OUT = ${q(out(1))}; $c1 = Invoke-NativeExact ${q(process.execPath)} @(${q(echo)}, 'mcp', 'add-json', 'ruyi', $json, '-s', 'user')`,
-      `$env:RUYI_ARGV_OUT = ${q(out(2))}; $c2 = Invoke-NativeExact $found @('mcp', 'add-json', 'ruyi', $json, '-s', 'user')`,
-      `$env:RUYI_ARGV_OUT = ${q(out(3))}; $c3 = Invoke-NativeExact ${q(process.execPath)} (@(${q(echo)}) + $toks)`,
-      `exit ($c1 + $c2 + $c3)`,
-    ].join('\r\n'));
-    const r = cp.spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(dir, 'run.ps1')],
-      { encoding: 'utf8', timeout: 60000, windowsHide: true, env: { ...process.env } });
-    assert.equal(r.status, 0, `powershell 退出码 0(stderr: ${r.stderr})`);
-    assert.ok(/claude\.cmd$/i.test(fs.readFileSync(out('found'), 'utf8').trim()), 'Find-Claude 挑 claude.cmd,不挑 Process.Start 起不了的 claude.ps1');
-    assert.deepEqual(JSON.parse(fs.readFileSync(out(1), 'utf8')), want, '直启 exe:原生程序收到的 argv 与脚本给的逐项相同(含空格、引号、末尾反斜杠、空串)');
-    assert.deepEqual(JSON.parse(fs.readFileSync(out(2), 'utf8')), want, '经 claude.cmd 垫片(cmd.exe 再解析一遍)argv 仍逐项相同');
-    assert.deepEqual(JSON.parse(fs.readFileSync(out(3), 'utf8')), tokens, '单 token 边角逐项相同(含反斜杠后紧跟换行)');
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
 });
 
 test.after(() => { try { fs.rmSync(home, { recursive: true, force: true }); } catch { /* 临时目录 */ } });

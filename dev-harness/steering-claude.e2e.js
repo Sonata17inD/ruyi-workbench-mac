@@ -16,7 +16,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/steering-claude.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -101,22 +101,8 @@ async function getToken(port) {
   ok(app.includes('r.injected') && app.includes("t('toast.steerInjected')") && app.includes("t('toast.steerQueued')"), 'S7 前端 toast 区分即时/下步生效(50c i18n:toast.steerInjected/Queued)');
   ok(!app.includes("isClaudeNode ? t('workflow.steerDeferred')"), 'S8 工作台 Claude 节点不再显示延迟插话');
   ok(zh.includes('"workflow.steer"') && en.includes('"workflow.steer"'), 'S9 i18n 双语通用 steer 键同交');
-  // 116-2b 重钉锚点:插话判定整段零行为抽出成 steerSessionCore(13b,路由体只剩 body 解析与两种应答
-  // 形态的翻译),故顺序锁改从核心函数开头切片。判据本意一字未改 —— 仍是「kimi-acp → claude →
-  // 通用 fallthrough」这条分派顺序,只是它现在住在核心里。
   const steerCoreSrc = functionBlock(steerRouteSrc, 'steerSessionCore');
-  ok(steerCoreSrc.indexOf("reg.kind === 'kimi-acp'") > 0
-    && steerCoreSrc.indexOf("reg.kind === 'kimi-acp'") < steerCoreSrc.indexOf("reg.kind === 'claude'")
-    && steerCoreSrc.indexOf("reg.kind === 'claude'") < steerCoreSrc.indexOf("steerRefusal('engineUnsupported')"),
-  'S10 Kimi ACP/Claude 分派均先于通用 fallthrough(不再一刀切)');
-  // ── 124 真机 bug（用户 2026-09-15：「回合结束后新发送东西，却显示插话且插话失败」）────────
-  // 三层各钉一条。根因是第三条：**发送门的信念会过期，而且没有自纠正。**
-  //
-  // ① 拒绝理由要有稳定码。修前全是遗留字符串，00-boot 的 normalizeApiErrorPayload 一律派兜底码
-  //    api.request_failed，前端 apiErrText 码优先 → 屏幕上只剩「请求失败。」。服务端说的
-  //    「当前 Kimi 回合正在收尾，请作为下一条消息发送」把该怎么做都写了，却被吞掉。
-  ok(steerRouteSrc.includes("noLiveTurn: { code: 'steer.no_live_turn'") && steerRouteSrc.includes("kimiSettling: { code: 'steer.kimi_settling'"),
-    'S31 插话拒绝理由有稳定码表 STEER_REFUSAL（no_live_turn / kimi_settling 两条至少在）');
+  ok(steerRouteSrc.includes("noLiveTurn: { code: 'steer.no_live_turn'"), 'S31 已结束回合有独立的插话错误码');
   ok(steerCoreSrc.length > 200 && !/error: '[^']+' \} \};/.test(steerCoreSrc),
     'S32 steerSessionCore 里不再有遗留字符串错误（每一处拒绝都走 steerRefusal，否则真原因会被归一抹平）');
   // ② 服务端权威：回合已经结束时，前端不许把用户的话卡在框里 —— 当新回合发出去。
@@ -223,9 +209,9 @@ async function getToken(port) {
     defaultWorkspace: HOME,
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${FP}`, apiKey: 'k', model: 'fake-model' }],
   }));
-  const fakeProvider = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_CAPTURE_DIR: CAPS }, windowsHide: true });
+  const fakeProvider = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_CAPTURE_DIR: CAPS } });
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_SCENARIO: 'steer', WCW_FAKE_STEER_CAPTURE: STEER_CAPTURE, WCW_FAKE_SLOW_MS: '3000' },
   });
   try {

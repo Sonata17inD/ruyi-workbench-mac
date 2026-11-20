@@ -1,4 +1,4 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E (v1.4.1): 桥接工具「前缀容错路由」。部分 provider 模型(实测 qwen)会丢掉 `<serverId>__` 前缀,
 // 直接调裸名 `excel_read` —— 旧代码命不中 bridgedRoute → 内建兜底报「Unknown tool: excel_read」。
 // resolveBridge 宽容解析:精确前缀优先 / 内建名不被遮蔽 / 裸名唯一命中桥接则路由 / 歧义不猜。
@@ -6,7 +6,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // (A) 纯单元(无 spawn、无 python,恒跑):resolveBridge 五情形。
 // (B) 真 ACC Python 经生产桥接处理合成模型发出的裸名 diagnostics，并回报实际 ACC 版本。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const REPO = path.resolve(__dirname, '../mcp/ai-computer-control');
@@ -46,7 +46,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(resolveBridge(route, '') === null && resolveBridge(null, 'x') === null, '(A⑤) 空输入安全 → null');
   // ⑥ 连带风险防回潮:前缀容错让主循环可能以【裸名】调 journalBridgedWrite(tc.name)。快照表按去前缀名查,
   //    裸名必须照样命中,否则裸名写操作不进检查点=不可撤销(信任层漏洞)。
-  const abs = process.platform === 'win32' ? 'C:\\tmp\\x.xlsx' : '/tmp/x.xlsx';
+  const abs = '/tmp/x.xlsx';
   const bareTargets = collectBridgedWriteTargets('write_excel', { path: abs });        // 裸名
   const prefTargets = collectBridgedWriteTargets('ai_computer_control__write_excel', { path: abs }); // 前缀名
   ok(bareTargets.length === 1 && bareTargets[0].path === abs, '(A⑥) 裸名 write_excel 仍进快照表(检查点不漏)');
@@ -86,8 +86,8 @@ function postStream(port, payload) {
     externalMcpServers: [{ id: 'acc', label: 'Desktop', command: python, args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO, env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' }, enabled: true }],
     bridgeExternalToolsToProvider: true,
   }, null, 2));
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: 'diagnostics', FAKE_TOOL_ARGS: '{}' }, windowsHide: true });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home } });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_NAME: 'diagnostics', FAKE_TOOL_ARGS: '{}' } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(WB_PORT); }

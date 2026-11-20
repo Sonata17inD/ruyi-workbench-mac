@@ -94,7 +94,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${PROVIDER_PORT}`, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
 }, null, 2), 'utf8');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

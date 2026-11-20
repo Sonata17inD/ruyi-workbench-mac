@@ -1,12 +1,5 @@
 #!/usr/bin/env node
-// facts.json 生成器(第46波46f · D1 门面数字单一事实源起步)。
-//
-// 痛点(05 方案 D1):README/marketing/文档里工具数 39/40/43、ACC 99/100 五口径并存,全靠人肉同步。
-// 本脚本把【可机械计算】的门面数字收敛到 repo 根 facts.json —— 每处都标注测量轴(同一对象不同
-// 数轴各有合法数字,口径混乱的根因是轴不分)。facts.static.e2e.js 重算比对,漂移即红。
-// 营销文档同步刷新列发版检查单(本文不自动改文档 —— 第一步先让"真数"有一个可查的地方)。
-//
-// 用法: node dev-harness/facts-generate.js   # 重算并覆写 facts.json(accTools 无 venv 时保留旧值)
+// Regenerate the project facts from the runtime registries and test inventory.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -51,7 +44,7 @@ function probeAccTools() {
   if (!fs.existsSync(venvPy)) return null;
   const r = cp.spawnSync(venvPy, ['-X', 'utf8', '-c',
     "import sys; sys.path.insert(0, r'mcp/ai-computer-control/src'); import ai_computer_control.server as s; print(len(s.mcp._tool_manager.list_tools()))"],
-    { cwd: ROOT, encoding: 'utf8', timeout: 120000, windowsHide: true });
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const n = parseInt(String(r.stdout || '').trim().split(/\r?\n/).pop(), 10);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
@@ -64,13 +57,13 @@ if (accLive == null) console.log('# 注意: 本机无 ACC venv,accTools 保留�
 
 const facts = {
   schema: 1,
-  _comment: '门面数字单一事实源(第46波46f)。由 dev-harness/facts-generate.js 机械生成,facts.static.e2e.js 重算比对。改数字请跑生成器,不要手改本文件。每字段注明测量轴。',
+  _comment: '由 dev-harness/facts-generate.js 生成，facts.static.e2e.js 校验。',
   _axes: {
-    nativeTools: 'TOOL_HANDLERS 派发注册表键数(经 toolCall 可达全集;含按需注册件)。README「39 常驻+3 按需」是【常驻轴】旧口径,与本轴不同 —— 文档刷新时以本数为准重述。',
+    nativeTools: 'TOOL_HANDLERS 注册的工具数，含按需注册项。',
     accTools: 'ACC 活注册表 list_tools 数(venv 探针;CI acc-smoke 对账)。',
     e2eCount: 'dev-harness/*.e2e.js 总件数(含 live 跳过件)。',
     defaultPort: '00-boot.js DEFAULT_PORT 常量(默认监听端口;文档与实现各写各的防漂移)。',
-    tokenBootstrap: '浏览器获取 UI token 的方式(47c S1):api-bootstrap = POST /api/bootstrap 握手,HTML 不再明文下发 token。',
+    tokenBootstrap: '浏览器通过 POST /api/bootstrap 取得 UI token。',
     liveProbes: 'run-all.js SKIP 集中真 live probe 件数(需真实外部依赖;每条文件名须含 live 或在白名单)。',
   },
   generatedAt: new Date().toISOString(),

@@ -1,4 +1,5 @@
 'use strict';
+const { clearNativeResume } = require('./session-engine-route.cjs');
 
 const { resolveCompactionProvider, lastSessionContextTokens } = require('./compaction-routing.cjs');
 const { l1SufficientTokens } = require('./compaction-kernel.cjs');
@@ -96,18 +97,13 @@ function createSessionCompaction({
           trigger,
           createdAt: nowIso(),
         };
-        fresh.claudeSessionId = null;
-        delete fresh.claudeSessionModel;
-        delete fresh.claudeSessionRequestedModel;
-        delete fresh.claudeSessionCwd;
-        delete fresh.claudeSessionRouteKey;
-        fresh.injectedIndexHash = null;
+        clearNativeResume(fresh);
         const marker = upsertCompactMarker(fresh, {
           kind: 'external', label: `${resolved.provider.label || resolved.provider.id} / ${resolved.model} 压缩上下文`, reseeded: true,
           beforeTokens, afterTokens, note: '下一轮将基于摘要重建原生 Agent 会话。',
         });
         if (marker) marker.usage = { usage: {}, contextTokens: afterTokens, ...contextMeta, source: 'external-compact' };
-        fresh.autoCompactWatermark = afterTokens; // 与 provider/kimi 路径同款滞回水位
+        fresh.autoCompactWatermark = afterTokens;
         return undefined;
       }, { writer: 'agent_external_compact', expectGen: baseGen });
     } catch (error) {

@@ -50,7 +50,7 @@ function alive(pid) {
     };
     const bundled = readInfo('RuyiBundledWorkbench', true) === 'true';
     const workbenchRoot = bundled ? path.join(bundle, 'Contents', 'Resources', 'workbench') : readInfo('RuyiWorkbenchRoot');
-    ok(readInfo('LSMinimumSystemVersion') === '14.0', 'App declares macOS14 target, subject to actual minimum-system acceptance');
+    ok(readInfo('LSMinimumSystemVersion') === '14.0', 'App declares the macOS 14.0 deployment target');
     const documentsUsage = readInfo('NSDocumentsFolderUsageDescription');
     ok(documentsUsage.includes('工作台程序文件') && documentsUsage.includes('工作区'), 'App explains Documents access for program files and selected workspaces');
     ok(cp.spawnSync('/usr/bin/codesign', ['--verify', '--strict', bundle]).status === 0, 'App signature verifies');
@@ -193,7 +193,7 @@ return { previewLoaded: await preview };`);
     fs.copyFileSync(path.join(data, 'config.json'), path.join(legacy, 'config.json'));
     fs.writeFileSync(path.join(legacy, 'migration-marker.txt'), 'existing-data');
     const legacyApp = launch('legacy', ['--acceptance-auto-quit'], {
-      ...legacyFixture.env, RUYI_HOME: '', WIN_CLAUDE_WORKBENCH_HOME: '', RUYI_NODE_PATH: process.execPath,
+      ...legacyFixture.env, RUYI_HOME: '', RUYI_NODE_PATH: process.execPath,
     });
     await until(() => legacyApp.child.exitCode !== null);
     ok(readReport(legacyApp.report)?.state === 'ready' && fs.existsSync(path.join(next, 'runtime.json'))
@@ -204,7 +204,7 @@ return { previewLoaded: await preview };`);
     fs.mkdirSync(linkedData);
     fs.copyFileSync(path.join(data, 'config.json'), path.join(linkedData, 'config.json'));
     fs.symlinkSync(linkedData, path.join(linkedFixture.home, '.win-claude-workbench'));
-    const linkedEnv = { ...linkedFixture.env, RUYI_HOME: '', WIN_CLAUDE_WORKBENCH_HOME: '', RUYI_NODE_PATH: process.execPath };
+    const linkedEnv = { ...linkedFixture.env, RUYI_HOME: '', RUYI_NODE_PATH: process.execPath };
     const linked = launch('linked', [], linkedEnv);
     const linkedReady = await until(() => readReport(linked.report)?.state === 'ready' && readReport(linked.report));
     const explicitAlias = launch('linked-alias', [], { ...linkedEnv, RUYI_HOME: linkedData });

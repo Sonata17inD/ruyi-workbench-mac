@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // E2E (O3 hb360): 产物类任务完成前自检。fake-openai 跑 file_write -> 声明完成 -> O3 注入自检 user ->
 // 自检轮再次回复完成 -> selfCheckDone 阻断无限循环 -> 回合结束。断言 self_check 事件触发 + 文件真写入。
 // 离线: fake-openai + workbench, 无外网。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const { getFreePort } = require('./free-port.js');
@@ -38,8 +38,8 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 const children = [];
 // sequence: 第 1 轮 emit file_write; 之后 fall through 到 echo(回 file_write 结果, finish stop = 声明完成)
 const seq = [{ name: 'file_write', args: { path: REPORT, content: 'ANALYSIS_DONE' } }];
-const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) }, windowsHide: true });
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) } });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
 children.push(fake, wb);
 try {
   let h = null; for (let i = 0; i < 50 && !h; i++) { await sleep(120); h = await health(WB_PORT); }

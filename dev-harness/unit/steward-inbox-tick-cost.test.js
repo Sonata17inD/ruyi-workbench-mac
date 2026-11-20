@@ -151,8 +151,8 @@ function reference() {
 
 function runChild() {
   const res = cp.spawnSync(process.execPath, [childScript, SERVER, HOME, String(SESSION_COUNT), String(PENDING_EVERY)], {
-    encoding: 'utf8', windowsHide: true, maxBuffer: 64 * 1024 * 1024, timeout: 240000,
-    env: { ...process.env, ...fixtureChildEnv(), WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
+    encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, timeout: 240000,
+    env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
   });
   assert.equal(res.status, 0, 'child 退出码 ' + res.status + '\n' + res.stderr);
   const line = String(res.stdout).split('\n').find(l => l.startsWith('RESULT '));

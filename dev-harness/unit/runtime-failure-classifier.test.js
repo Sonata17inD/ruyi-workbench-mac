@@ -15,7 +15,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-f1-classifier-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { classifyRuntimeToolFailure } = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 

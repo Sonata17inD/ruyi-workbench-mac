@@ -18,7 +18,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cfg-migrations-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { functionBlock } = require('../lib/source-slice');
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
@@ -126,7 +125,7 @@ test('[A] 迁移表按版本升序、每个版本恰好一条、不超过 CONFIG
 
 test('[B] normalizeConfig 里不再有散落的 schema 阶梯,迁移只从一个点进', () => {
   const src = fs.readFileSync(path.join(app, 'backend', 'config-schema.cjs'), 'utf8');
-  const body = functionBlock(src, 'normalizeConfig');
+  const body = functionBlock(src, 'normalizeConfigFields');
   assert.ok(body.length > 100, '找不到 normalizeConfig');
   const ladders = body.match(/incomingConfigSchema\s*<\s*\d+/g) || [];
   assert.deepEqual(ladders, [], '一次性迁移请登记进 CONFIG_MIGRATIONS,不要在函数体里写 incomingConfigSchema < N');

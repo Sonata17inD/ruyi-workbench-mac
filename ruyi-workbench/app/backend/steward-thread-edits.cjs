@@ -372,18 +372,6 @@ function createStewardThreadEdits({
     };
   }
 
-  // 15b) steward_thread_note —— 既有线程的【插话补充】(116-2b,§3.5 委派行末句)。
-  //
-  // 为什么是插话而不是递话:§8.12 定的是「既有线程的递话走原话直递,管家如有补充以插话追加,不阻塞
-  // 线程启动」。递话(thread_continue)会【起一个新回合】,补充却必须落在【正在跑的那个回合】里 ——
-  // 它是给线程补上下文,不是给它派新活。所以走的是 /api/steer 背后的同一条注入通道(116-2b 把它零行为
-  // 抽成了 13b 的 steerSessionCore),而不是第二条注入路径:引擎分流(openai 队列 / Claude stdin /
-  // Kimi ACP 跟随)、队列上限、提问挂起时拒绝、持久呈现进会话正文,一条纪律都不用重写。
-  //
-  // 三条自己的收紧:①≤600 字;②尖括号中和(stewardSanitizeText,与总览行同一函数);③服务端加
-  // 「（管家补充）」前缀 —— 用户在 2.0 视窗里看到的插话必须能一眼分清是谁说的。
-  // 没有在途回合(或该回合不接受插话)时一律 steward.no_active_turn:模型看到这个信封就该改用
-  // steward_thread_continue,而不是轮询重试。
   async function stewardImplThreadNote(args, ctx, config) {
     const sessionId = safeSessionId(args.sessionId);
     if (!sessionId) return stewardFail('not_found', 'invalid sessionId');

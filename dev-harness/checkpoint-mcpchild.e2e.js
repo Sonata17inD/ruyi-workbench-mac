@@ -10,7 +10,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  Part 2: a BARE mcp child (NO WCW_SESSION_ID) file_write still succeeds, but adds NO new journal entry
 //    (no session context → journaling gracefully no-ops; the tool runs regardless).
 // 手法 copied from todo-loopback (mcp child driver) + search-robust (token scrape).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -32,7 +32,7 @@ function postJson(port, p, payload) {
 }
 // Drive a `node app/server.js mcp` child over stdio JSON-RPC. `env` is merged over the process env.
 function mcpChild(env) {
-  const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, ...env }, windowsHide: true });
+  const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, ...env } });
   child.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[mcp!] ' + l.trim())));
   const pending = new Map(); let buf = '', idc = 0;
   child.stdout.on('data', d => { buf += d; let nl; while ((nl = buf.indexOf('\n')) >= 0) { const line = buf.slice(0, nl); buf = buf.slice(nl + 1); if (!line.trim()) continue; try { const m = JSON.parse(line); if (m.id !== undefined && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } } catch { /* ignore */ } } });
@@ -47,7 +47,7 @@ function parseCall(call) { const t = (call.result && call.result.content && call
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 6, version: '1.0.0', permissionMode: 'bypass' }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   const kids = [wb];
   try {
@@ -64,7 +64,7 @@ function parseCall(call) { const t = (call.result && call.result.content && call
 
     // ---- Part 1: MCP child WITH the session env → file_write journals into the shared checkpoints dir ----
     const target = path.join(HOME, 'child-made.txt');
-    const mc = mcpChild({ WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_SESSION_ID: sid, WCW_PORT: String(WB_PORT), WCW_HOST: '127.0.0.1', WCW_TOKEN: token });
+    const mc = mcpChild({ RUYI_HOME: HOME, WCW_SESSION_ID: sid, WCW_PORT: String(WB_PORT), WCW_HOST: '127.0.0.1', WCW_TOKEN: token });
     kids.push(mc.child);
     const init = await mc.rpc('initialize', { protocolVersion: '2024-11-05' });
     ok(init.result && init.result.serverInfo && init.result.serverInfo.name === 'ruyi', 'child: initialize ok');
@@ -85,7 +85,7 @@ function parseCall(call) { const t = (call.result && call.result.content && call
 
     // ---- Part 2: BARE MCP child (no WCW_SESSION_ID) → file_write succeeds but adds NO journal entry ----
     const bareTarget = path.join(HOME, 'bare-made.txt');
-    const bare = mcpChild({ WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_SESSION_ID: '', WCW_PORT: '', WCW_HOST: '', WCW_TOKEN: '' });
+    const bare = mcpChild({ RUYI_HOME: HOME, WCW_SESSION_ID: '', WCW_PORT: '', WCW_HOST: '', WCW_TOKEN: '' });
     kids.push(bare.child);
     await bare.rpc('initialize', { protocolVersion: '2024-11-05' });
     const call2 = await bare.rpc('tools/call', { name: 'file_write', arguments: { path: bareTarget, content: 'bare child write' } });

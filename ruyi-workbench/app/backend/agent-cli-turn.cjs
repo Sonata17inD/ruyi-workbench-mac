@@ -1,4 +1,5 @@
 'use strict';
+const { clearNativeResume } = require('./session-engine-route.cjs');
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
@@ -34,8 +35,8 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
   } = prompts;
   const {
     buildTurnSummary, bumpMissionChangeSeq, captureWorkspaceTurnBaseline, createTurnSegmentBuilder,
-    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine, loadSession,
-    mergeMissionBeforeSave, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
+    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine,
+    reconcileTurnMetadata, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
   } = storage;
 
   async function runClaudeTurn({
@@ -70,22 +71,14 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     let workspaceTurnBaseline = _workspaceBaseline;
     const promptTaskContext = buildPromptTaskContext(message, session);
     const slashCommand = String(message || '').trim().startsWith('/');
-    const kimiNativeSlashCommand = adapter.slashCommandVerbatim && slashCommand;   // 名字沿用(ACP 上下文键同名);语义 = 斜杠命令原样首块
     const currentClaudeModel = String(config.model || '');
     const currentResumeRouteKey = claudeResumeRouteKey(config);
     let resumeResetReason = '';
-    // Kimi exposes authoritative context usage through its local Server API. Check it before each turn so
-    // Ruyi's configured threshold is proactive and visible. An explicitly-selected universal compaction
-    // model applies the same preflight to Claude/Kimi and creates a summary reseed boundary when needed.
     if (!_resumeRecoveryAttempt) await maybeAutoCompactAgentSession(session, config, adapter, onEvent).catch(() => false);
     // Proactive compatibility gate. This catches the two common deterministic failures without paying
     // for a doomed CLI spawn: (1) cwd changed, so Claude will search a different projects/<cwd> bucket;
     // (2) model/vendor route changed, so the old native branch is no longer a safe continuation target.
     if (!_resumeRecoveryAttempt && config.autoResumeClaudeSessions && session.claudeSessionId) {
-      // 续接闸比的是「绑定那一刻【请求】的模型」(claudeSessionRequestedModel),不是 CLI 回报的实际模型。Kimi 在
-      // config.model 为空(用「默认模型」)时,05b 会把 claudeSessionModel 改写成 Kimi 报回的实际模型(状态面板/上下文窗口要用),
-      // 拿它和空的 currentClaudeModel 比永远不等 → 每回合判「模型变了」、把原生会话重置。没有这个字段(绑定于修前的老会话 /
-      // Claude 引擎老数据)才退回 claudeSessionModel 与最近成功回合的模型。
       const boundModel = typeof session.claudeSessionRequestedModel === 'string'
         ? session.claudeSessionRequestedModel
         : (typeof session.claudeSessionModel === 'string'
@@ -97,12 +90,7 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
       else if (boundModel !== null && boundModel !== currentClaudeModel) resumeResetReason = 'model-changed';
       else if (session.claudeSessionRouteKey && session.claudeSessionRouteKey !== currentResumeRouteKey) resumeResetReason = 'endpoint-changed';
       if (resumeResetReason) {
-        session.claudeSessionId = null;
-        delete session.claudeSessionModel;
-        delete session.claudeSessionRequestedModel;
-        delete session.claudeSessionCwd;
-        delete session.claudeSessionRouteKey;
-        session.injectedIndexHash = null;
+        clearNativeResume(session);
         logEvent({ kind: 'claude_resume_reset', sessionId: session.id, reason: resumeResetReason });
         onEvent({ type: 'resume_recovery', reason: resumeResetReason, automatic: true });
       }
@@ -121,9 +109,7 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     const crossEngineGap = lastAssistantEngine(session.messages) === 'openai';
     const recoverySource = crossEngineGap ? claudeProviderTailSince(session.messages) : session.messages;
     const agentRecoverySummary = String(session.agentRecoverySummary || '').trim();
-    const recoveryHistory = kimiNativeSlashCommand
-      ? ''
-      : (typeof _recoveryHistoryOverride === 'string'
+    const recoveryHistory = (typeof _recoveryHistoryOverride === 'string'
         ? _recoveryHistoryOverride
         : (agentRecoverySummary
           ? `[Ruyi 已压缩的前文摘要；请把它作为此前会话的权威连续性上下文]\n${agentRecoverySummary}`
@@ -151,7 +137,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
         // 「这条用户消息从哪来」(同 09 runOpenAiTurn 的 messageMeta):管家递话 origin:'steward'、后台代理唤醒 origin:'agent_wake'。
         ...(messageMeta && typeof messageMeta === 'object' ? { meta: messageMeta } : {}),
       });
-      // 122-§2.4:起跑这一存做落盘前合并(同 09 起跑那一存的头注)—— claude/kimi 两路都从这里起跑。
       assertSessionExecutionOwner(session.id, executionOwner);
       await saveSession(session, { mergeMissionFromDisk: true, executionOwner });
       await AgentLoopHooks.dispatchAgentLoopHooks('onTurnStart', {
@@ -209,8 +194,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
       config, // 113a: 召回层开关的唯一数据源；不传则 06d 会自己再读一次配置文件
       { cliType: agentCliType }, // 本 CLI 原生会读的导入条目在核心预算之前摘掉(下面 filterMemoryForNativeCli 保留作兜底)
     ).catch(() => ({ entries: [], coreEntries: [], status: { mode: 'unavailable', enabled: true, checked: false, candidateCount: 0, matchCount: 0, projectMatches: 0, globalMatches: 0, excludedCount: 0, coreActiveCount: 0 } }));
-    // 本条消息的记忆检索结果:回执,稍后(记忆段)再把相关记忆索引接在它后面 —— 都随每条消息变化,所以走每回合信封(turnMemoryEnvelope),
-    // 不进按 hash 去重的稳定索引(#10)。用 let 并沿用这个名字,是因为 kimi-prompt-parts 把下面那段信封装配抽出来单独执行,只认这个变量。
     let memoryTurnCheck = buildMemoryCheckPrompt(memoryPreflight.status, config);
     // (就是原来跟在 append 块后面的 --resume / --add-dir / extraClaudeArgs,内容不变,仅提前收集、最后统一 push。)
     const tailArgs = [];
@@ -273,9 +256,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
       // buildStableSystemPrompt;全仓 identityOnly=true 只有 06:997 与 10:1263 两个 provider 侧摘要调用,
       // capabilities.e2e 的身份泄漏守卫查的也是 provider 侧那条 system 首段,与本行无关。
       appendSys += `\n${getPromptPack(config && config.locale).answerShape}`;
-      // 145-W3:request_user_input(交互模式禁原生 AskUserQuestion)与「按需找工具 tool_search → tool_invoke_*」
-      // 两句已并进上面的 <ruyi-environment>(Kimi 版改用原生 AskUserQuestion,经 ACP 落到如意提问卡)。
-      // 管家会话不拿那段,两句照旧给它。
       if (!envBrief && interactive && config.includeWorkbenchMcp) {
         appendSys += `${appendSys ? '\n\n' : ''}When you need information or a choice from the user, call ${RUYI_MCP_CLI_TOOL_PREFIX}request_user_input. Do not use the native AskUserQuestion tool in this workbench.`;
       }
@@ -334,8 +314,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
       // v2 跨会话记忆: 已启用记忆的紧凑索引。第35波 P2 起与技能索引同走 stdin 一次性注入(原文,不中和);
       // P3-2 的 fits-or-drop 契约由段内构建自带截断(MEMORY_INDEX_CAP)替代,不再有命令行预算丢弃面。
       try {
-        // W2 迁移中心:CLI 自己原生会读的全局指令文件(Claude Code 读 ~/.claude/CLAUDE.md、Kimi Code 读
-        // ~/.kimi-code/AGENTS.md)导成的记忆,在【那个】CLI 的回合里不再注入一遍(去重;provider 引擎照常有)。
         const memEntries = filterMemoryForNativeCli([...(memoryPreflight.coreEntries || []), ...(memoryPreflight.entries || [])], agentCliType);
         // R4-S1:真实主回合必须把 confirmed contradicts 传进索引构建；此前只有纯函数 e2e 显式传 map，
         // 线上 Claude 注入漏传，导致关系已确认但提示里看不到冲突标记。
@@ -407,52 +385,22 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     const currentUserEnvelope = `<current_user_message>\n${basePrompt}\n</current_user_message>`;
     // 回执 + 相关记忆索引(memoryTurnCheck)都是「本条消息」的检索结果,放在 current_user_message 前面、与它同一个信封;斜杠命令回合不拼(命令必须占首 token)。
     const turnMemoryEnvelope = !slashCommand && memoryTurnCheck ? memoryTurnCheck + '\n\n' + currentUserEnvelope : currentUserEnvelope;
-    // 代理模式 v2:Claude/Kimi 没有 providerHistory 可在迭代边界注入 —— 后台代理的交付信封在下一回合开头拼进 prompt,
-    // 同一张已读表(11 drainAgentEnvelopesText),只投递一次;斜杠命令回合不拼。
     const agentDeliveries = (!slashCommand && EventStreamHooks.drainAgentEnvelopesText) ? EventStreamHooks.drainAgentEnvelopesText(session) : '';
     const assembledPrompt = (recoveryHistory || indexInjection || agentDeliveries || (!slashCommand && memoryTurnCheck))
       ? [recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope].filter(Boolean).join('\n\n')
       : basePrompt;
-    // Kimi ACP native slash commands must be the first content block exactly as entered. The separate
-    // attachments field lets the ACP adapter retain file references/degrade safely without prefixing the
-    // slash with Ruyi recovery, history, memory, or index context.
-    const fullPrompt = kimiNativeSlashCommand ? String(message == null ? '' : message) : assembledPrompt;
-
-    // 自有传输层的 CLI(Kimi = ACP stdio,见 05b)从这里接管本回合;fake 缝仍走下面的 spawn 骨架。
-    if (adapter.runPreparedTurn && !fakeClaude) {
-      const additionalDirectories = [];
-      for (let i = 0; i < tailArgs.length - 1; i++) {
-        if (tailArgs[i] === '--add-dir') additionalDirectories.push(tailArgs[++i]);
-      }
-      return adapter.runPreparedTurn({
-        executionOwner,
-        session, message, attachments, onEvent, config, cliDriver, agentCliLabel, claude, workingDir, fullPrompt,
-        additionalDirectories, turnStartedAt, turnSegments, activeTraceId, currentClaudeModel,
-        currentResumeRouteKey, historyRecoveryInjected, indexInjection, indexPayloadHash, memoryPreflight,
-        resumeResetReason, promptTaskContext, workspaceTurnBaseline, agentRecoverySummary, kimiNativeSlashCommand,
-      });
-    }
+    const fullPrompt = assembledPrompt;
 
     const agentsBudget = 6000;
     const claudeAgentLibrary = await adapter.buildAgentDefinitions(workingDir, config, agentsBudget);
     if (Object.keys(claudeAgentLibrary.definitions).length) args.push('--agents', JSON.stringify(claudeAgentLibrary.definitions));
     args.push(...tailArgs);
-    // The prompt goes over stdin (interactive envelope / adapter.promptViaStdin below). Kimi branched into ACP above.
 
-    // 子进程环境由适配器给(Claude:effectiveAnthropicEnv 叠第三方端点/模型 + MAX_THINKING_TOKENS;Kimi:process.env)。
     const env = adapter.buildEnv(config, { RUYI_HOME: paths.data }); // 数据根交给 CLI/MCP 子进程(3.0 起只写 RUYI_HOME)
     if (fakeClaude && interactive) env.WCW_FAKE_INTERACTIVE = '1';
     // Let the bridge child outlive the server's auto-deny so the timeouts don't race.
     env.WCW_PERMISSION_TIMEOUT_MS = String(permissionWaitMs(session.id, config, session));   // 128f-⑪:与服务端那一侧同一个数(定时／管家盯着的线程更长)
-    // hunt2-engines#9:回环凭据(WCW_SESSION_ID / PORT / HOST / TOKEN)不再放进 CLI 进程自己的环境 —— 放进去,模型经 CLI
-    // 的 Bash 起的每个子进程都会继承 WCW_TOKEN,一句 `env` 就能拿到如意的接口令牌再回调本机接口。真正要用它们的只有
-    // 如意的 MCP 子进程,generateSessionMcpConfig 已经把这四项写进 --mcp-config 里那个 server 的 env 块(每会话一份)。
-    // 从外层环境继承来的同名变量(例如如意自己被别的如意回合拉起)也一并删掉,理由相同。超时那一项不是凭据,
-    // 且会话 MCP 配置里没有它,留在进程环境里给 MCP 子进程继承。
-    // Kimi 这一路(05b runKimiAcpTurnPrepared)暂不照做:Kimi 只从全局 ~/.kimi-code/mcp.json 读 MCP 声明、没有按回合的
-    // --mcp-config,回合级回环字段只能靠 Kimi 进程环境继承给 MCP 子进程(见 01 syncMcpServersToKimi 头注)。
     for (const key of ['WCW_SESSION_ID', 'WCW_PORT', 'WCW_HOST', 'WCW_TOKEN']) delete env[key];
-    if (adapter.beforeSpawn) await adapter.beforeSpawn(config, onEvent);
 
     const spawn = fakeClaude ? { command: process.execPath, args: [fakeClaude, ...args], opts: {} }
       : adapter.prepareSpawn(claude, args);
@@ -499,7 +447,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     RUYI_EVENTS.emit('thread.state', { sessionId: session.id });
     // 121-K2a:回合此刻起是「在跑」(§6.3 指标 a)
     onEvent({ type: 'process', state: 'running', pid: child.pid, interactive });
-    const stopSideChannelWatch = adapter.watchSideChannel(session, reg.onEvent);
 
     // Watchdog: if the child goes idle for too long (e.g. never emits `result`, or blocks on an
     // unanswered prompt), end the turn so the HTTP stream and process can't hang forever.
@@ -826,7 +773,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     });
     clearInterval(watchdog);
     clearInterval(nativeAgentProgressTimer);
-    stopSideChannelWatch();
     stdoutFeeder.flush();
     stderrCapture.append(decodeClaudeCliText(null, stderrDecodeStream));   // hunt2-engines#8:冲出流尾的残字节
     stderrText = stderrCapture.toString();
@@ -862,12 +808,7 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     const resumeTranscriptMissing = resumeActive && exit.code !== 0 && !wasStopped
       && !assistantText.trim() && toolCalls.length === 0 && adapter.isResumeMissingError(stderrTrimmed);
     if (resumeTranscriptMissing && !_resumeRecoveryAttempt) {
-      session.claudeSessionId = null;
-      delete session.claudeSessionModel;
-      delete session.claudeSessionRequestedModel;
-      delete session.claudeSessionCwd;
-      delete session.claudeSessionRouteKey;
-      session.injectedIndexHash = null;
+      clearNativeResume(session);
       await saveSession(session, { executionOwner });
       logEvent({ kind: 'claude_resume_retry', sessionId: session.id, reason: 'transcript-missing' });
       downstreamEvent({ type: 'resume_recovery', reason: 'transcript-missing', automatic: true, traceId: activeTraceId });
@@ -880,11 +821,6 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
     // 第35波 P2: 进程根本没启动(spawn error 或 cmd 拒绝执行)→ prompt 未送达,原生 transcript 不含本轮注入的索引
     // → 清注入 hash,下轮(同内容也会)重注。abort/watchdog 杀不在此列:prompt 已写入 stdin,transcript 已含索引。
     if (exit.code === -1 && exit.error) session.injectedIndexHash = null;
-    // 回合后向 CLI 取权威用量(Kimi:stream-json 结果帧没有用量,见适配器),拿到就替换流内用量。
-    if (adapter.syncPostTurnUsage) {
-      const postTurnUsage = await adapter.syncPostTurnUsage(session, config, onEvent).catch(() => null);
-      if (postTurnUsage) usage = postTurnUsage;
-    }
     const finalText = assistantText.trim() || stdoutNoise.trim() || (stderrTrimmed ? `${agentCliLabel} CLI wrote only stderr:\n${redact(stderrTrimmed)}` : '');
     // v0.8-S3/S4a: turn_summary from the CLI turn's tool records + this turn's checkpoint journal. Workbench
     // file_* tools (run in the MCP child) checkpointed their `before` to dataRoot/checkpoints/<sid>/ — read
@@ -932,21 +868,7 @@ function createAgentCliTurn({ cli, runtime, execution, prompts, storage }) {
       session.title = message.replace(/\s+/g, ' ').trim().slice(0, 60) || 'Session';
     }
     session.summary = (finalText.replace(/\s+/g, ' ').trim().slice(0, 160)) || session.summary || '';
-    // v0.8-S3 cross-process reconcile: todo_write in the MCP child looped back to /api/todo, which wrote
-    // session.todos to DISK. Our in-memory `session` predates that write; re-read the persisted todos before
-    // the final save so we don't clobber them (the child never writes session files itself — double-write
-    // race avoided; only serve-process saveSession is authoritative for everything else).
-    // P2-3: same cross-process reconcile applies to session.skills — a mid-turn POST /api/session/skills wrote
-    // the new enable set to DISK; re-read both before the final save so the turn's stale in-memory copy doesn't
-    // clobber a skill toggle the user made while this turn was running (identical pattern to todos above).
-    // P2-3(记忆): 同理回读 session.memories + memoriesExplicit —— 否则回合边缘窗口(reg 未注册/已删时)用户「全部停用」
-    // 会被本回合陈旧内存副本回滚,下一回合默认策略又自动全启,直接违背用户意图。memoriesExplicit 仅当磁盘为 boolean 才覆盖。
-    // 第72波: mission 一并回读 —— claude 引擎的 mission_update 经 MCP 子进程 loopback POST /api/mission 落【磁盘】
-    // (12-tool-dispatch),本回合内存副本是旧的;不回读则收尾 save 把 loopback 的里程碑更新与结果章整份盖回
-    // (与 todos 完全同型,此前 mission 不在回读清单是漏项)。
-    // 122-§2.4:mission 这一项改走三引擎共用的 mergeMissionBeforeSave —— 原地的「磁盘有就整份换」是它的
-    // ①③两支,新增的是②「同一本账本、磁盘更新时把本回合内存增量重放上去」(09 那一路必需)与 kind 接回。
-    try { const onDisk = await loadSession(session.id); if (onDisk && Array.isArray(onDisk.todos)) session.todos = onDisk.todos; if (onDisk && Array.isArray(onDisk.skills)) session.skills = onDisk.skills; if (onDisk && Array.isArray(onDisk.memories)) session.memories = onDisk.memories; if (onDisk && typeof onDisk.memoriesExplicit === 'boolean') session.memoriesExplicit = onDisk.memoriesExplicit; if (onDisk && Array.isArray(onDisk.memoryExclusions)) session.memoryExclusions = onDisk.memoryExclusions; mergeMissionBeforeSave(session, onDisk); } catch { /* keep in-memory */ }
+    await reconcileTurnMetadata(session, { includeTodos: true });
     if (session.__missionFinalizeHow) {
       const how = session.__missionFinalizeHow; delete session.__missionFinalizeHow;
       try { if (await finalizeMissionAfterTurn(session, how)) onEvent({ type: 'mission', mission: session.mission }); } catch { /* 盖章失败不阻断回合 */ }

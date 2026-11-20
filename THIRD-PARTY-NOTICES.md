@@ -101,14 +101,12 @@ ACC 是独立打包的桌面控制 MCP。其运行时依赖在 `mcp/ai-computer-
 
 | 依赖 | 典型许可 | 用途 |
 |---|---|---|
-| mcp[cli] | MIT | MCP 协议实现 |
+| mcp | MIT | MCP 协议实现 |
 | Pillow | MIT-CMU(HPND) | 图像处理 |
-| psutil | BSD-3-Clause | 进程/系统信息 |
 | playwright | Apache-2.0 | 浏览器自动化(顶层 import 已守护降级) |
 | python-docx | MIT | Word 读写 |
 | openpyxl | MIT | Excel 读写 |
 | pdfplumber | MIT | PDF 文本抽取 |
-| pyperclip | BSD-3-Clause | 剪贴板 |
 | reportlab | BSD(见上游 LICENSE) | PDF 导出(`write_pdf`,可选降级) |
 | opencv-python-headless | Apache-2.0(wrapper;OpenCV 本体 Apache-2.0) | 多尺度模板匹配(可选降级) |
 | numpy | BSD-3-Clause | 数值计算 |

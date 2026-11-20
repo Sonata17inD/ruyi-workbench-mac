@@ -45,7 +45,7 @@ function setup(t, seed = initial(true)) {
     const mod = new Module(SERVER, module); mod.filename = SERVER;
     mod.paths = Module._nodeModulePaths(path.dirname(SERVER));
     const source = fs.readFileSync(CANDIDATE, 'utf8');
-    const probeStubs = 'detectClaudePath=()=>"";detectKimiPath=()=>"";detectAgentCliPath=()=>"";'
+    const probeStubs = 'detectClaudePath=()=>"";'
       + 'desktopMcpDetectionPending=()=>true;probeRgAsync=async()=>null;';
     const syntheticHealth = 'async()=>({health:{},manifest:{}})';
     const statusComposition = "const handleStatusApiRoutes = require('./backend/status-routes.cjs')";

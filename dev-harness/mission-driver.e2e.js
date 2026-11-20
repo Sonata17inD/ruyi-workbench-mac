@@ -14,7 +14,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  I) hunt2-steward ⑤:重启清扫 —— 盘上留着 until-done 账本(上一个进程的驱动器已不在)→ 重启后降成 supervised,
 //     线程不再永远「在跑」。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -113,7 +113,7 @@ const fake = http.createServer((rq, rs) => {
     activeProvider: 'fake',
   }, null, 2));
   await new Promise(r => fake.listen(FAKE_PORT, '127.0.0.1', r));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   let wb2 = null;
   try {
@@ -217,7 +217,7 @@ const fake = http.createServer((rq, rs) => {
       if (!alive) break;
       await sleep(100);
     }
-    wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wb2.stdout.on('data', () => {}); wb2.stderr.on('data', () => {});
     ok(await up(), 'I 重启后 workbench up');
     const orphan = (readJson(sessionPath(s8.id)) || {}).mission || {};

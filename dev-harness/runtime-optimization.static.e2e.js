@@ -45,8 +45,6 @@ ok(/runtimeSummarySingleShotV1: true/.test(src), 'S runtimeSummarySingleShotV1 d
 ok(/'runtimeEstimateBucketsV1', 'runtimeSummarySingleShotV1', 'runtimeSummaryFactTableV1'/.test(src), 'S runtimeSummarySingleShotV1 入严格布尔 sanitize 表(105e 邻接不动;105g 顺排其后)');
 ok(/function summarySingleShotEnabled\(config\)/.test(src), 'S summarySingleShotEnabled 唯一判定点存在');
 ok(/summarySingleShotMaxTokensV1: 32768/.test(src) && /Math\.min\(131072, Math\.max\(8192, Math\.round\(n\)\)\) : 32768/.test(src), 'S 单发上限默认 32768 且 sanitize 钳位 [8192,131072](无无限档)');
-// 126-111d 重钉签名:reserve 的预算里含「摘要 prompt 有多长」,而 prompt 从此分中英两份 ——
-// 它必须知道这次用的是哪一份,否则英文那份的长度会按中文的算(估算偏差直接进单发预算)。
 ok(/function summarySingleShotCap\(config, provider, model\)/.test(summarySource) && /function summarySingleShotReserveTokens\(config\)/.test(summarySource), 'S 105f 上限解析(provider/model/style 覆盖) + reserve 预算助手存在(126-111d 起带 config)');
 ok(isDeepStrictEqual(rules.summary.singleShotReserve, { systemTokens: 1200, expectedOutputTokens: 6144, calibrationMarginTokens: 2048 })
   && isDeepStrictEqual(rules.summary.singleShotCap, { default: 32768, min: 8192, max: 131072 }),
@@ -306,9 +304,8 @@ ok(/SUMMARY_PROMPT_EN = CONTEXT_GOVERNANCE_RULES\.summary\.promptEn \|\| SUMMARY
   // Exercise the public validator rather than locking the shared heading helper's source shape.
   const fs = require('fs'), os = require('os'), path = require('path');
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-static-summary-headings-'));
-  const previous = { RUYI_HOME: process.env.RUYI_HOME, WIN_CLAUDE_WORKBENCH_HOME: process.env.WIN_CLAUDE_WORKBENCH_HOME };
+  const previous = { RUYI_HOME: process.env.RUYI_HOME };
   process.env.RUYI_HOME = home;
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
   try {
     const srv = require('../ruyi-workbench/app/server.js');
     const valid = '## Goal\nDeliver the task.\n## Decisions\nUse the agreed method.\n## Open\nNone\n## Current Status\nDone: checked; In progress: none; Blocked: none; Next step: deliver.\n## Files\nNone';

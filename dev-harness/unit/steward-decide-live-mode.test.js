@@ -16,7 +16,6 @@ fs.writeFileSync(path.join(root, 'config.json'), JSON.stringify({
   configSchema: 7, permissionMode: 'auto', defaultWorkspace: WORK, recentWorkspaces: [],
   stewardEnabledV1: true, stewardPollMs: 120000, includeWorkbenchMcp: false,
 }, null, 2));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const { createSession, registerIntervention, readInterventions, activeChildren } = srv;

@@ -30,7 +30,7 @@ function heartbeat(file) {
   try {
     if (process.platform !== 'darwin') { console.log('SKIP native supervisor requires macOS'); return; }
     if (!fs.existsSync(helper)) throw new Error('Build the macOS helper before running this test');
-    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient', 'killKimiAcpTerminal', 'cleanupKimiAcpTerminals', 'handleKimiAcpTerminalRequest']);
+    const S = loadServerInternals(['ProcessRuntime', 'ProcessRuntimeHooks', 'DesktopShell', 'McpStdioClient']);
     runtime = S.ProcessRuntime;
     const capability = runtime.helperCapability();
     t.ok(capability.ready && capability.installed && capability.protocolVersion === 3 && Object.isFrozen(capability),
@@ -212,28 +212,6 @@ function heartbeat(file) {
       const incompleteHandle = await runtime.start({ executable: process.execPath, env: fixtureChildEnv(), owner: { kind: 'incomplete-test' } });
       handles.push(incompleteHandle);
       await runtime.completion(incompleteHandle);
-      const incompleteChild = runtime.child(incompleteHandle);
-      for (const initiallyExited of [true, false]) {
-        const terminal = { child: incompleteChild, exited: initiallyExited };
-        terminal.waitPromise = Promise.resolve().then(() => { terminal.exited = true; });
-        let rejected = false;
-        try { await S.killKimiAcpTerminal(terminal); } catch (error) { rejected = /not been confirmed/.test(error.message); }
-        t.ok(rejected, 'Kimi terminal close cannot report successful incomplete cleanup, exited=' + initiallyExited);
-      }
-      const retainedTerminal = { id: 'retry', sessionId: 'fixture', child: incompleteChild, exited: true, released: false };
-      const releaseContext = { reg: { nativeSessionId: 'fixture', kimiAcpTerminals: new Map([['retry', retainedTerminal]]) } };
-      let refusedReleases = 0;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try { await S.handleKimiAcpTerminalRequest('terminal/release', { sessionId: 'fixture', terminalId: 'retry' }, releaseContext); }
-        catch (error) { if (/not been confirmed/.test(error.message)) refusedReleases++; }
-      }
-      t.ok(refusedReleases === 2 && releaseContext.reg.kimiAcpTerminals.has('retry') && !retainedTerminal.released,
-        'failed terminal release retains ownership for retry');
-      const cleanupEvents = [];
-      const cleanupReg = { kimiAcpTerminals: new Map([['incomplete', { child: incompleteChild, exited: true }]]), onEvent: event => cleanupEvents.push(event) };
-      const collected = await S.cleanupKimiAcpTerminals(cleanupReg);
-      t.ok(collected.unconfirmed === 1 && cleanupReg.kimiAcpCleanupIncomplete === 1 && cleanupEvents.length === 1,
-        'background Kimi terminal cleanup records failure without rejecting owner teardown');
       const toolbox = require('../ruyi-workbench/app/backend/toolbox-services.cjs').createToolboxServices({
         ProcessRuntime: runtime, killChildTree: child => runtime.stop(child),
         logEvent() {}, safeJsonParse: JSON.parse,

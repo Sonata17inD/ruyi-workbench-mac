@@ -7,7 +7,6 @@ const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const taskHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-goal-evolution-'));
 process.env.RUYI_HOME = taskHome;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = taskHome;
 const t = createRunner('GOAL EVOLUTION');
 const { ok } = t;
 const s = loadServerInternals(['CompactionPlan', 'compactionTaskText', 'historyStartsWithCompactionSummary', 'sessionMeta', 'createSession', 'saveSession', 'rewindSession', 'listSessions', 'safeSessionId', 'getPromptPack', 'stewardThreadDigestRows', 'stewardOverviewBlock', 'stewardImplThreadsSearch', 'stewardImplThreadRead', 'mergeSessionNotes', 'renderSessionNotesMarkdown', 'buildSessionNotesInjectPrompt', 'CONTEXT_GOVERNANCE_RULES', 'SUMMARY_PROMPT', 'SUMMARY_PROMPT_EN']);

@@ -1,25 +1,11 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 'use strict';
-// E2E(第122波 §2.6):导入 → 同步回路的来源标记。
-//
-// 用户触发(34 号文 §13.17,真机 ~/.claude.json 被夹具污染第三次):
-//   ① 某个 MCP 出现在 ~/.claude.json → Ruyi 启动 autoImportClaudeCodeMcp 把它拉进数据根 config;
-//   ② 用户在 Claude Code 里把它删掉;
-//   ③ 下次启动 Ruyi 的 syncMcpServersToClaude 又 `claude mcp add-json` 把它写回去 —— 删不掉。
-// 期望:从 Claude Code 导入的条目【不再同步回 Claude Code】;只有用户在 Ruyi 里显式 upsert 过的
-//   才算 Ruyi 所有、才同步。Kimi 同步不变(它不是来源,且有 sidecar 所有权表可干净撤回)。
-//
-// 判据(号文 §2.6):夹具家 .claude.json 放 X;config.claudePath 指向一个把 argv 追加写进日志文件的
-//   假 claude(Windows 下 .cmd);启动 → config 里 X.origin==='claude-code';再启动 → 日志里【没有】
-//   `mcp add-json X`;对 X 做一次 upsert → 第三次启动日志里【有】。
-//   外加 A0:同一次启动里,一个【不是】从 Claude Code 来的连接器(Y,直接写在 config 里)必须照常同步 ——
-//   否则「跳过」可能是把整条同步弄坏了，而不是按来源跳过。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
-const HOME = path.join(os.tmpdir(), 'wcw-mcp-import-origin-e2e');
+const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-mcp-import-origin-'));
 const WB_PORT = 8733;                     // 本件固定端口(端口审计:跨文件零撞车)
 const LOG = path.join(HOME, 'claude-argv.log');
 
@@ -49,7 +35,7 @@ function addJsonSeen(id) { return new RegExp('mcp\\|add-json\\|' + id + '\\|').t
 
 function spawnWb() {
   return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
   });
 }
@@ -66,18 +52,9 @@ async function bootOnce(oldToken) {
 }
 
 (async () => {
-  fs.rmSync(HOME, { recursive: true, force: true });
-  fs.mkdirSync(HOME, { recursive: true });
-  // 假 claude:把前三个 argv(`mcp add-json <id>`)追加进日志,再 exit 0。
-  // 只取前三个是刻意的:第四个实参是整段 JSON,里面的引号在 .cmd 的 `set "X=…"` 里会把引号配对弄坏。
-  // 判据只需要「有没有对某个 id 发过 add-json」,前三个就够。`|` 在 cmd 里是管道,必须 ^ 转义。
-  const fakeClaude = path.join(HOME, process.platform === 'win32' ? 'claude.cmd' : 'claude');
-  if (process.platform === 'win32') {
-    fs.writeFileSync(fakeClaude, '@echo off\r\n' + `>>"${LOG}" echo %1^|%2^|%3^|\r\n` + 'exit /b 0\r\n', 'utf8');
-  } else {
-    fs.writeFileSync(fakeClaude, '#!' + process.execPath + '\n'
-      + 'require("fs").appendFileSync(' + JSON.stringify(LOG) + ', process.argv.slice(2, 5).join("|") + "|\\n");\n', { mode: 0o755 });
-  }
+  const fakeClaude = path.join(HOME, 'claude');
+  fs.writeFileSync(fakeClaude, '#!' + process.execPath + '\n'
+    + 'require("fs").appendFileSync(' + JSON.stringify(LOG) + ', process.argv.slice(2, 5).join("|") + "|\\n");\n', { mode: 0o755 });
   // 夹具家的 .claude.json:X 是「Claude Code 那边注册的」,启动时会被 autoImportClaudeCodeMcp 拉进来。
   fs.writeFileSync(path.join(HOME, '.claude.json'), JSON.stringify({
     mcpServers: { 'origin-x': { command: 'node', args: ['-e', 'process.exit(0)'], env: {} } },
@@ -132,29 +109,6 @@ async function bootOnce(oldToken) {
     ok(r.up, '第四次启动（显式再导入后）:workbench up');
     ok(addJsonSeen('origin-x'), `第四次启动:X 恢复同步，日志里有 mcp add-json origin-x（日志：${JSON.stringify(logText().trim().slice(0, 300))}）`);
 
-    // ── 形状锁 ──
-    const readBackend = name => fs.readFileSync(path.join(WB, 'app/backend', name + '.cjs'), 'utf8');
-    const secrets = readBackend('config-secrets');
-    const importSource = readBackend('cli-mcp-import');
-    const syncSource = readBackend('cli-mcp-sync');
-    // W2 迁移中心:自动导入扩到 Codex / Kimi 两家后,放行的 origin 多了 codex / kimi 两个值(仍是白名单,其它丢弃)。
-    ok(/const origin = String\(raw\.origin \|\| ''\)\.trim\(\);/.test(secrets)
-      && /if \(origin === 'claude-code' \|\| origin === 'ruyi'\) out\.origin = origin;/.test(secrets)
-      && /else if \(origin === 'codex' \|\| origin === 'kimi'\) out\.origin = origin;/.test(secrets),
-    's sanitizeExternalMcpServer 只放行白名单 origin 值(claude-code/ruyi/codex/kimi)，其它丢弃（缺省不补字段＝存量视为 ruyi）');
-    // W2:打标从字面 'claude-code' 改成按来源 src.origin(claude-code 仍是第一个来源,A 段实测它打的是 claude-code)。
-    ok(/sanitizeExternalMcpServer\(\{ \.\.\.raw, origin: src\.origin \}\)/.test(importSource) && /\{ origin: 'claude-code', label: 'Claude Code', file: homes\.claudeJson \}/.test(importSource),
-      's autoImportClaudeCodeMcp 给新导入条目按来源打 origin(~/.claude.json 来的是 claude-code)');
-    ok(/if \(fromClaudeCode\.has\(String\(s\.id\)\)\) \{ skippedIds\.push/.test(syncSource),
-      's syncMcpServersToClaude 跳过 claude-code 来源');
-    ok(/delete clean\.origin;/.test(readBackend('mcp-connector-settings')), 's /api/mcp upsert 落盘时清掉 origin（用户接管）');
-    // W2:Kimi 现在也是来源 —— Kimi 同步只多了一件事:从 Kimi 导进来的(origin kimi)不写回、不接管;其余逐字不变。
-    const { functionBlock } = require('./lib/source-slice');
-    const kimi = functionBlock(syncSource, 'syncMcpServersToKimiNow');
-    const kimiOrigins = kimi.match(/origin/g) || [];
-    ok(kimi.length > 200 && /if \(item && item\.origin === 'kimi'\) delete generatedServers\[String\(item\.id\)\];/.test(kimi)
-      && !/origin === 'claude-code'/.test(kimi) && !/origin === 'codex'/.test(kimi),
-      's Kimi 同步只跳过 kimi 来源(从 Kimi 导进来的不写回),claude-code 来源照常同步(' + kimiOrigins.length + ' 处 origin)');
   } finally {
     kill(wb);
     await sleep(300);

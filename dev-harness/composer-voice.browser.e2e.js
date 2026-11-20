@@ -29,11 +29,9 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // asr-config-ui.static ⑥ 红并点名本件；㈢ 回填改成追加到末尾 → ① 光标处断言红。
 // 判定行：`COMPOSER VOICE BROWSER E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
-const { findBrowserExecutable } = require('./lib/browser-path');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const appPort = await getFreePort();
@@ -88,7 +86,7 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
 }
 function killTree(child) {
   if (!child || !child.pid) return;
-  try { if (process.platform === 'win32') killOwnTree(child); else child.kill('SIGKILL'); }
+  try { child.kill('SIGKILL'); }
   catch { /* already exited */ }
 }
 
@@ -187,8 +185,8 @@ fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({
 
 const spawnWb = () => cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
   cwd: WB,
-  env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-  windowsHide: true, stdio: 'ignore',
+  env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+  stdio: 'ignore',
 });
 
 const ZH = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
@@ -333,7 +331,7 @@ const GEOMETRY = (micSel, inputSel, sendSel, boxSel) => `(() => {
 let provider = null, server = null, browser = null, cdp = null;
 const cdpExceptions = [];
 try {
-  provider = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(providerPort)], { windowsHide: true, env: { ...process.env }, stdio: 'ignore' });
+  provider = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(providerPort)], { env: { ...process.env }, stdio: 'ignore' });
   ok(Boolean(await waitForHttp(providerPort, 'GET', '/v1/models', r => r.status === 200)), 'A0 fake-openai（聊天＋ASR 桩）已起');
   server = spawnWb();
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', r => r.status === 200)), 'A0b workbench started');
@@ -342,14 +340,13 @@ try {
   if (!executable) throw new Error('browser unavailable');
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     // Match browser-fixture's isolated macOS profile policy, including while the screen is locked.
-    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1280,900',
     '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A2 CDP target found');
   if (!target) throw new Error('no CDP target');
@@ -784,7 +781,6 @@ try {
   killTree(server);
   killTree(provider);
   await sleep(300);
-  try { stopRuyiTestBrowsers(profile); } catch { /* ignore */ }
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }
   process.exit(fail === 0 ? 0 : 1);
 }

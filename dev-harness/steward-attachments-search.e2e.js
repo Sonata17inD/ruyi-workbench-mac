@@ -11,7 +11,6 @@ const t = createRunner('STEWARD ATTACHMENTS SEARCH');
 const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-attachments-'));
 process.env.RUYI_HOME = root;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const s = loadServerInternals(['readConfig', 'writeConfig', 'createSession', 'loadSession', 'saveSession', 'makeAttachmentRecord', 'stewardRunAct', 'stewardImplThreadContinue', 'stewardRelayChannelFor', 'runSessionTurn', 'searchSessionsByContent', 'stewardImplThreadsSearch', 'stewardLaunchPending', 'stewardContinueAttachments']);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const act = (sid, message, attachments) => ({ kind: 'tool', tool: 'steward_thread_continue', args: { sessionId: sid, message, attachments } });

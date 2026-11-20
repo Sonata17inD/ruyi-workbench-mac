@@ -7,19 +7,6 @@ const { pathWithinRoot, sameFileIdentity } = require('./path-containment.cjs');
 function createWorkspaceWriteProtection({
   agentCliHomes, externalRoot, mcpDropInDirs, toolboxComponentsDir, isSensitiveDataPath, sensitiveDataRoots,
 }) {
-  // 安全审计 #1/#8(数据根里会被【自动加载 / 执行 / 信任】的状态):dataRoot 是文件工具的写根,isSensitiveDataPath
-  // 只挡了「读出来会泄密」的那一批。下面这批读是无害的(或本来就要能读:检查点内容、个人工作流模板),但【写】进去
-  // 就等于在下一回合 / 下一次启动时让工作台替模型执行它:
-  //   mcp/*/ruyi-mcp.json      —— scanMcpDropIns 不经审批就合并进 MCP 清单,每回合按里面的 command 起进程;
-  //   agent-workflows/         —— 个人 DAG 模板(角色、工具、权限档位),一键运行;
-  //   checkpoints/             —— 回滚按 index.json 里的 path 把 .gz 内容写回任意位置(#8);
-  //   scheduler/               —— 定时任务(payload + autonomy)到点无人值守开回合;
-  //   steward/ missions/       —— 管家收件箱/记忆/决策与事项容器,管家据此自动派活;
-  //   migrations/              —— 迁移日志,撤销时按日志改写 ~/.claude.json / Kimi / Codex 配置;
-  //   overlay-tool/            —— Manage-Overlay.ps1 等覆盖更新脚本,工作台直接执行;
-  //   以及数据根顶层的几份状态文件(安装登记表记着别的包的启动位置、CLI 配置同步的所有权侧车等)。
-  // 只拦【写】(guardFileToolPath write:true),读照旧 —— 不影响 file_read 检查点内容 / 工作流模板。uploads/、webcache/、
-  // skills/、playbooks/、agent-worktrees/ 与会话自己放进数据根的普通文件不在此列(用户产物与写代理的隔离工作树)。
   const WRITE_PROTECTED_DATA_DIRS = Object.freeze(['mcp', 'agent-workflows', 'checkpoints', 'scheduler', 'steward', 'missions', 'migrations', 'overlay-tool', 'desktop']);
   const WRITE_PROTECTED_DATA_FILES = Object.freeze(['install-registry.json', 'claude-settings-sync.json', 'kimi-mcp-sync.json', 'engine-transcripts.json', 'context-calibration.json', 'proxy-models-cache.json', 'storage-trend.json', 'last-start-error.json']);
   function isWriteProtectedDataPath(p) {
@@ -34,10 +21,6 @@ function createWorkspaceWriteProtection({
     }
     return false;
   }
-  // 安全审计 #1:数据根之外、同样会被【不经审批自动加载成可执行启动配置】的位置,按真实路径比(env 可改的那几处
-  // 不能靠文件名正则):ruyi-toolbox 组件登记目录(04 scanToolboxComponents 按登记文件起服务进程,RUYI_TOOLBOX_HOME
-  // 可改位置)、发行包 mcp/ 整棵(随包 drop-in 的清单与它要起的代码,同 scanMcpDropIns)、Kimi Code 的 mcp.json(KIMI_CODE_HOME
-  // 可改位置)。缺省位置的文件名形状另由 AUTOEXEC_DENYLIST 的正则兜住,任何工作区里的同名路径也一并拦。
   function isAutoLoadedLaunchConfigPath(p, targetStat) {
     if (!p) return false;
     try {
@@ -81,11 +64,6 @@ function createWorkspaceWriteProtection({
     return false;
   }
 
-  // 安全走查 S4(续):必须落在【用户真实家目录】下才算的持久化落点 —— 这批文件名(.bashrc / .profile / AGENTS.md / .gitconfig …)在工作区里
-  // 是普通工程文件(dotfiles 仓库、项目自己的 AGENTS.md),按「任何位置的同名路径」拦会误伤;只有挂在家目录根(或 ~/.claude/ 之类的
-  // 固定子目录)下才是 shell / git / agent CLI 自己会读的那一份。家目录取 os.homedir() 与 USERPROFILE / HOME 三者(Windows 上可能不同),
-  // 外加各自的 realpath(家目录是联接 / 重定向盘时 abs 与 real 拼法不同);agent CLI 的家目录取 agentCliHomes()(认 CODEX_HOME / KIMI_CODE_HOME)。
-  // 返回 [{ p: 归一化(小写、/ 分隔、去尾点)路径, dir: 是否整棵子树 }]。每次现算(家目录随环境变量变,测试里会改),realpath 按输入缓存。
   const _homeRealCache = new Map();
   function homeRealpathSync(h) {
     if (_homeRealCache.has(h)) return _homeRealCache.get(h);
@@ -103,11 +81,11 @@ function createWorkspaceWriteProtection({
   ]);
   const USER_HOME_PERSISTENCE_DIRS = Object.freeze([
     '.claude/agents', '.claude/commands', '.claude/skills',   // 子代理 / 斜杠命令 / 技能:启动即载入的提示词与权限声明
-    '.codex', '.kimi', '.kimi-code',                           // Codex / Kimi Code 的全局配置与指令(config.toml、AGENTS.md、mcp.json …)
+    '.codex', '.kimi', '.kimi-code',
   ]);
   function userHomePersistenceTargets() {
     const homes = new Set();
-    for (const h of [os.homedir(), process.env.USERPROFILE, process.env.HOME]) {
+    for (const h of [os.homedir(), process.env.HOME]) {
       if (typeof h !== 'string' || !h.trim()) continue;
       try { homes.add(path.resolve(h.trim())); } catch { /* skip */ }
       const real = homeRealpathSync(h.trim());
@@ -121,7 +99,7 @@ function createWorkspaceWriteProtection({
     }
     try {
       const cli = agentCliHomes();
-      add(cli.codex, true); add(cli.kimi, true);   // CODEX_HOME / KIMI_CODE_HOME 改了位置:按真实路径拦
+      add(cli.codex, true);
       add(path.join(cli.claude, 'CLAUDE.md'), false);
     } catch { /* 取不到:只剩上面的家目录相对表 */ }
     return out;

@@ -18,63 +18,6 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
-const cp = require('child_process');
-const { sliceBlock } = require('../lib/source-slice');
-
-test('离线包只携带独立回调网关并能用随包 Node 运行帮助', { skip: process.platform !== 'win32' }, () => {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-package-gateway-'));
-  try {
-    const wb = path.join(scratch, 'source'), stage = path.join(scratch, 'stage');
-    fs.mkdirSync(path.join(wb, 'tools'), { recursive: true }); fs.mkdirSync(stage);
-    const gateway = path.resolve(__dirname, '../../ruyi-workbench/tools/external-bot-gateway.js');
-    fs.copyFileSync(gateway, path.join(wb, 'tools/external-bot-gateway.js'));
-    fs.writeFileSync(path.join(wb, 'tools/developer-only.js'), 'must not ship');
-    const packager = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/tools/package-offline.ps1'), 'utf8');
-    const copy = sliceBlock(packager, '# Optional callback gateway', '# Optional vendor payloads');
-    assert.ok(copy.length > 100, 'slice contains the actual production packaging statements');
-    const script = '$ErrorActionPreference="Stop"\n$ProgressPreference="SilentlyContinue"\n$root=$env:RUYI_TEST_PACKAGE_SOURCE\n$stage=$env:RUYI_TEST_PACKAGE_STAGE\n' + copy;
-    const stageGateway = () => cp.execFileSync('powershell.exe', ['-NoProfile', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], {
-      env: { ...process.env, RUYI_TEST_PACKAGE_SOURCE: wb, RUYI_TEST_PACKAGE_STAGE: stage }, windowsHide: true, stdio: 'pipe',
-    });
-    stageGateway();
-    assert.deepEqual(fs.readdirSync(path.join(stage, 'tools')), ['external-bot-gateway.js']);
-    assert.equal(fs.readFileSync(path.join(stage, 'tools/external-bot-gateway.js'), 'utf8'), fs.readFileSync(gateway, 'utf8'));
-    fs.mkdirSync(path.join(stage, 'runtime/node'), { recursive: true });
-    fs.copyFileSync(process.execPath, path.join(stage, 'runtime/node/node.exe'));
-    const help = cp.execFileSync(path.join(stage, 'runtime/node/node.exe'), ['tools/external-bot-gateway.js', '--help'], { cwd: stage, encoding: 'utf8', windowsHide: true });
-    assert.match(help, /--upstream http:\/\/127\.0\.0\.1:8765/);
-    fs.unlinkSync(path.join(wb, 'tools/external-bot-gateway.js'));
-    assert.throws(stageGateway, 'packaging fails instead of silently omitting a missing gateway input');
-  } finally { fs.rmSync(scratch, { recursive: true, force: true }); }
-});
-
-test('离线打包在依赖、EXE 或桌面编译失败时拒绝旧产物', { skip: process.platform !== 'win32' }, () => {
-  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-package-fail-'));
-  try {
-    for (const failure of ['dependencies', 'exe', 'desktop']) {
-      const wb = path.join(scratch, failure);
-      for (const d of ['tools', 'app', 'dist', 'desktop', 'bin', 'node_modules/.bin']) fs.mkdirSync(path.join(wb, d), { recursive: true });
-      fs.copyFileSync(path.resolve(__dirname, '../../ruyi-workbench/tools/package-offline.ps1'), path.join(wb, 'tools/package-offline.ps1'));
-      fs.writeFileSync(path.join(wb, 'app/build.js'), 'process.exit(0)');
-      fs.writeFileSync(path.join(wb, 'dist/Ruyi.exe'), 'OLD EXE MUST NOT SHIP');
-      fs.writeFileSync(path.join(wb, 'RuyiDesktop.exe'), 'OLD DESKTOP MUST NOT SHIP');
-      fs.writeFileSync(path.join(wb, 'desktop/build-desktop.ps1'), 'exit 19');
-      if (failure !== 'dependencies') fs.writeFileSync(path.join(wb, 'node_modules/.bin/pkg.cmd'), '@exit /b 0\r\n');
-      for (const name of ['npm', 'npx', 'powershell']) fs.writeFileSync(path.join(wb, 'bin', name + '.cmd'), '@exit /b 19\r\n');
-      const env = { ...process.env };
-      const pathKey = Object.keys(env).find(k => k.toLowerCase() === 'path') || 'PATH';
-      env[pathKey] = path.join(wb, 'bin') + path.delimiter + env[pathKey];
-      const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(wb, 'tools/package-offline.ps1'), '-Variant', 'failure-test'];
-      if (failure === 'desktop') args.push('-SkipExeBuild');
-      const result = cp.spawnSync(path.join(process.env.SystemRoot, 'System32/WindowsPowerShell/v1.0/powershell.exe'), args, { cwd: wb, env, encoding: 'utf8', timeout: 30000, windowsHide: true });
-      assert.ifError(result.error);
-      assert.notEqual(result.status, 0, failure + ' must stop packaging');
-      assert.match(result.stdout + result.stderr, failure === 'dependencies' ? /dependencies failed/ : failure === 'exe' ? /Ruyi.exe build failed/ : /Desktop shell build failed/);
-      assert.equal(fs.existsSync(path.join(wb, 'dist/Ruyi-failure-test.zip')), false, failure + ' must not emit an archive');
-      assert.equal(fs.existsSync(path.join(wb, 'dist/Ruyi-failure-test/RuyiDesktop.exe')), false, 'old desktop must not be copied');
-    }
-  } finally { fs.rmSync(scratch, { recursive: true, force: true, maxRetries: 4, retryDelay: 200 }); }
-});
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-audit-w4-'));
 const home = path.join(root, 'home');
@@ -84,7 +27,6 @@ for (const d of [home, data, ws, path.join(data, 'sessions')]) fs.mkdirSync(d, {
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = data;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
 for (const k of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_PROXY', 'all_proxy', 'WCW_PORT']) delete process.env[k];
 
 const { loadServerInternals } = require('../lib/server-internals');

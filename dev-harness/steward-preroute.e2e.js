@@ -17,7 +17,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      目录的文件集合(路径+字节数),跑完 (B)(D) 的全部请求后再快照一次,前后必须完全一致。
 //
 // 端口全部 getFreePort() 动态取。判定行:`STEWARD PREROUTE E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -77,7 +77,7 @@ function writeConfig(stewardOn) {
 
 function spawnWb() {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
   });
   child.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   return child;

@@ -23,7 +23,7 @@ import { apiErrText } from './net.js';   // 走查 S-05：失败回执取人话�
 import { getLocale } from './i18n.js';
 import { chatProviders } from './util.js';   // 纯函数:只做语音的服务商不进引擎菜单
 // Agent CLI 的品牌名与「有哪几个 CLI」只问这一张登记表（ENGINEERING-SPEC §11.1；与 provider-settings.js 同源）。
-import { AGENT_CLI_IDS, agentCliMeta, normalizeAgentCliType } from './agent-cli-registry.js';
+import { AGENT_CLI_IDS, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
 // 33 号文 §4（M3-a）：确认类知识（§8.6 那五条文案键 + 「哪一档要二次确认」的判据数据）的
 // 【唯一登记表】住在危险操作确认的共用件 js/confirm-panel.js。本模块只从那边取，再 re-export
 // 维持 117d 起的公开面（settings 与经典壳仍从本模块 import 同名导出，拿到的是同一个数组对象）。
@@ -168,7 +168,7 @@ export function resolveEngineRoute(session, config) {
     return { engine: 'openai', providerId: String(raw.providerId), model: String(raw.model || '') };
   }
   if (raw && (raw.engine === 'agent' || raw.engine === 'claude')) {
-    return { engine: 'agent', agentCliType: normalizeAgentCliType(raw.agentCliType), model: String(raw.model || '') };
+    return { engine: 'agent', agentCliType: storedAgentCliType(raw.agentCliType), model: String(raw.model || '') };
   }
   const cfg = config && typeof config === 'object' ? config : {};
   const providerId = String(cfg.activeProvider || '').trim();
@@ -176,7 +176,7 @@ export function resolveEngineRoute(session, config) {
     const provider = (cfg.providers || []).find(item => item && item.id === providerId) || null;
     return { engine: 'openai', providerId, model: String((provider && provider.model) || '') };
   }
-  return { engine: 'agent', agentCliType: normalizeAgentCliType(cfg.agentCliType), model: String(cfg.model || '') };
+  return { engine: 'agent', agentCliType: storedAgentCliType(cfg.agentCliType), model: String(cfg.model || '') };
 }
 
 // 117u-G3（27 号文 §11.15.7；用户 2026-09-09「这个也不印默认值吧」）：这条会话的权限与模型
@@ -753,6 +753,7 @@ export function createQuickSwitchChips({
         .map(model => ({ id: String(model && model.id || ''), label: String((model && (model.label || model.id)) || ''), group, groupLabel }))
         .filter(model => model.id && !hidden.has(model.id));
     }
+    if (!knownAgentCliMeta(route.agentCliType)) return [];
     const models = agentModels(route.agentCliType, state?.status?.models || []);
     const group = 'agent:' + route.agentCliType;
     const groupLabel = agentCliMeta(route.agentCliType).label;
@@ -1022,7 +1023,7 @@ export function createQuickSwitchChips({
         const provider = (config().providers || []).find(item => item && item.id === route.providerId) || null;
         return String((provider && (provider.label || provider.id)) || route.providerId);
       }
-      return agentCliMeta(route.agentCliType).label;
+      return knownAgentCliMeta(route.agentCliType)?.label || t('engine.unavailable', { id: route.agentCliType });
     }
     return route.model || t('stewardShell.chips.modelDefault');
   }

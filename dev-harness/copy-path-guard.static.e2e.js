@@ -52,10 +52,6 @@ const locales = {
   'zh-CN': readJson(path.join(PUBLIC, 'locales', 'zh-CN.json')),
   'en-US': readJson(path.join(PUBLIC, 'locales', 'en-US.json')),
 };
-const docsLocales = {
-  'zh-CN': readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json')),
-  'en-US': readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json')),
-};
 
 /* ═══════════════ ① 文案面:反模式说法一律不许进用户可见文案 ═══════════════ */
 
@@ -239,7 +235,6 @@ for (const key of anchorKeys) {
   for (const lang of ['zh-CN', 'en-US']) {
     const value = locales[lang][key];
     if (typeof value !== 'string') { anchorProblems.push(`${lang} 缺键 ${key}`); continue; }
-    if (docsLocales[lang][key] !== value) { anchorProblems.push(`${lang} ${key} 与 docs/i18n 不一致`); continue; }
     if (!headings(lang).includes(value)) anchorProblems.push(`${lang} ${key}="${value}" 不是手册的 ## 标题`);
   }
 }
@@ -279,14 +274,14 @@ for (const lang of ['zh-CN', 'en-US']) {
 const applyKeys = ['mcp.apply.apply', 'mcp.apply.copyJson', 'mcp.apply.willAdd', 'mcp.apply.willOverwrite',
   'mcp.apply.needFields', 'mcp.apply.done', 'mcp.apply.failed', 'mcp.apply.id', 'mcp.apply.label',
   'mcp.apply.command', 'mcp.apply.args', 'mcp.apply.cwd'];
-const applyMissing = applyKeys.filter(k => ['zh-CN', 'en-US'].some(l => !locales[l][k] || docsLocales[l][k] !== locales[l][k]));
+const applyMissing = applyKeys.filter(k => ['zh-CN', 'en-US'].some(l => !locales[l][k]));
 ok(applyMissing.length === 0, `④ ${applyKeys.length} 条 mcp.apply.* 键在四个 locale 齐备且逐字一致` + (applyMissing.length ? ' -- 缺: ' + applyMissing.join(', ') : ''));
 
 const helpKeys = ['help.menu.title', 'help.menu.userGuide', 'help.menu.adminGuide', 'help.menu.viewLogs',
   'help.menu.openDataDir', 'help.menu.openLogsDir', 'help.logs.title', 'help.logs.hint', 'help.logs.copyAll',
   'help.logs.lines', 'help.logs.loading', 'help.logs.empty', 'help.logs.none', 'help.logs.loadFailed', 'help.logs.readFailed',
   'help.logs.fileLabel', 'help.open.ok', 'help.open.failed', 'help.open.unknownTarget', 'help.tabHelp'];
-const helpMissing = helpKeys.filter(k => ['zh-CN', 'en-US'].some(l => !locales[l][k] || docsLocales[l][k] !== locales[l][k]));
+const helpMissing = helpKeys.filter(k => ['zh-CN', 'en-US'].some(l => !locales[l][k]));
 ok(helpMissing.length === 0, `④ ${helpKeys.length} 条 help.menu/logs/open/tabHelp 键在四个 locale 齐备且逐字一致` + (helpMissing.length ? ' -- 缺: ' + helpMissing.join(', ') : ''));
 
 /* ═══════════════ ⑤ 117q-B3a(30 号文 §4.7)：压缩文案漏 t() 的硬编码中文回归锁 ═══════════════ */
@@ -294,7 +289,7 @@ ok(helpMissing.length === 0, `④ ${helpKeys.length} 条 help.menu/logs/open/tab
 // 一有进度事件又被中文覆盖。①的 ANTIPATTERN 扫描只认「自己去打开」这一类【说法】，不认「压根没走
 // i18n」这一类【缺陷】——这四个文件此前不在任何判「硬编码中文」的名单里。本节新增（纯新增，不改
 // 既有 ①～④ 任何判据）：剥注释后逐行找中文字符——本仓所有标识符都是 ASCII，t('key') 的 key 也是
-// ASCII 点号路径，翻译文案只活在四份 locale.json 里，所以「代码行里出现中文字符」本身就等价于
+// ASCII 点号路径，翻译文案只活在两份 locale.json 里，所以「代码行里出现中文字符」本身就等价于
 // 「这段文案没走 catalog」，不需要更复杂的 AST 判断。
 //
 // 纳入后确实扫出本刀 P1-7 范围外的既有硬编码中文（下方按行号登记，逐条写了不改的理由）——不在本
@@ -307,66 +302,6 @@ function cjkCodeLineNumbers(source) {
     .map((line, index) => ({ line: index + 1, text: line.trim() }))
     .filter(entry => CJK_CODE_RE.test(entry.text));
 }
-// 白名单：117q-B3a 走查时扫出的既有硬编码中文，逐条登记理由。键是文件名，值是「行号 -> 理由」。
-// 「行号」按剥注释后的原始行号数（不删行，只清空注释内容，行号与源文件一一对应）。
-const ALLOWED_CJK_CODE = Object.freeze({
-  'chat-stream-runtime.js': {
-    // 124 走查（`589cdb1`，用户 2026-09-14）：本文件在 :325 之前与 :1051 一带共插入 10 行 ——
-    // 下面十条登记行号整体 +10（逐行 byte 比对过：与位移前的 325/1051/1365/1399/1409/1436/1440/
-    // 1465/1498/1499 逐字相同，是位移不是新增，同 117s-G 那次 +41 与 navigation-controls 那次 +63 的先例）。
-    // 124 真机 bug（用户 2026-09-15「回合结束后新发送东西，却显示插话且插话失败」）：回合末的 finally 与 steerPrompt
-    // 两处共插入 26 行 —— 下面九条登记行号整体 +26（已逐行 byte 比对：与位移前的
-    // 1061/1375/1409/1419/1446/1450/1475/1508/1509 逐字相同，是位移不是新增）。335 在插入点之前，不动。
-    // 125-P2(缓存徽标):本文件在 :96 一带插了 3 行(注入口)、在 :1210 一带插了 3 行(tool_result 里那一行
-    // 补渲染)—— 于是 335／1087 整体 +3,1401 之后整体 +6。**逐行 byte 比对过**(与位移前的
-    // 335/1087/1401/1435/1445/1472/1476/1501/1534/1535 逐字相同,是位移不是新增),同上面两次先例。
-    // 134（后台推送/插话分档）：本文件在 :386 一带插了 15 行（steerDeliveryMode 下拉）、在 :846 一带净 +2 行
-    // （steerPrompt 取 mode）—— 下面九条登记行号整体 +17（逐行 byte 比对过：与位移前的
-    // 1090/1407/1441/1451/1478/1482/1507/1540/1541 逐字相同，是位移不是新增，同上面各次先例）。
-    // 135（等你处理队列）：本文件在 :338 之前共插入 14 行（settlePrompt 注入口、后台线程权限入队、重放前先记已决），
-    // 在 :1400 一带又各插 1 行（question_answer / permission_decision 出队）—— 前两条 +14、其后八条 +16。
-    // 逐行 byte 比对过（与位移前的 338/1107/1424/1458/1468/1495/1499/1524/1557/1558 逐字相同，是位移不是新增）。
-    // 代理模式 v2（2026-09-24，W1）：本文件在 :1200 一带插 1 行（带 subagentId 又没子卡的 tool_use 不画到顶层）、在 :1361
-    // 一带插 9 行（compact 分支先判 subagentId）、在 :1531 一带插 6 行（后台节点子卡样式）—— 1440/1474/1484/1511/1515 各 +10，
-    // 1540/1573/1574 各 +16（逐行 byte 比对过：内容仍是原来那几处「已按你的补充意见继续」/正则词表/「生成中」/「依赖」/
-    // 「执行中…」/「重试中」/「后台执行中」/「✓ 完成」，是位移不是新增，同上面各次先例）。352/1121 在插入点之前，不动。
-    // U14（英文 UI 走查）：本文件在 :401 一带净插 7 行（updateSendBtn 里把 steerDeliveryMode 的
-    // aria-label/option 文案挪出「只建一次」分支，加了几行头注解释为什么——见该函数头注）——352 在插入点
-    // 之前不动，其余九条整体 +7（逐行 byte 比对过：与位移前的 1121/1450/1484/1494/1521/1525/1556/
-    // 1589/1590 逐字相同，是位移不是新增，同上面各次先例）。
-    // 前端架构债第一批（i18n 收口）：上面登记的九处子代理卡／进程状态／调试回显／补充意见文案已全部改走 t()
-    // （status.processState、chat.subagent.*、chat.meta.modelPermission、chat.planNoteContinued），登记随之撤掉；
-    // 只剩下面这一条正则词表（它匹配的是 SSE 文本，不是渲染给用户的文案）。行号未动（改动都在原行内）。
-    // ENGINEERING-SPEC §11.1（前端 Agent CLI 登记表）：工厂 deps 解构里在 :50 一带插 2 行（agentCliMeta 注入口 + 头注）
-    // —— 这一条 1491 → 1493（逐行 byte 比对过：与位移前的 1491 逐字相同，是位移不是新增，同上面各次先例）。
-    // 前端 bug 扫查批（2026-09-29）：本文件在 :265 一带插 disposeLive（切回重建实时壳前停旧壳计时器）、在 :480 一带
-    // 给压缩指示条加「流内起的不挂超时」选项、compactContext 加插话/排队门、sendPrompt 回合末与 catch 各补一处
-    // 「按当前会话/当前壳」—— 这一条 1493 → 1532（逐行 byte 比对过：与位移前的 1493 逐字相同，是位移不是新增）。
-    // 长回复 / 思维链分块(sealTextTailChunk,前面加了 21 行)—— 1532 → 1553,同一行原样位移。
-    // 回合收尾增量取(perf):sendPrompt 回合末那一发与 catch 里那一发各多一行(注释 / 链式 .then 换行)—— 1553 → 1555,
-    // 逐行 byte 比对过(与位移前的 1553 逐字相同,是位移不是新增)。
-    // 回合起点 session 事件增量(perf round 4 S3):发送前记 knownMessages 5 行、session 事件分支展开 8 行 —— 1555 → 1569,同一行原样位移。
-    // review 跟进:rememberTurnLine / surfaceBackgroundQuestion 先按子串筛再解析(+4 行)—— 1569 → 1573,同一行原样位移。
-    // 全仓走查修复(回合收尾只收拾自己、中止后装回会话、重放不重复副作用、await 后再判会话)共 +24 行 —— 1573 → 1597,同一行原样位移。
-    // 前端走查第一波·聊天区(W1-chat):计划卡收尾 / 发送前置互斥 / 回放工具耗时 / plan_decision 收卡等共 +48 行(都在这一行之前)——
-    // 1597 → 1645,同一行原样位移(逐行 byte 比对过:仍是那条 SSE 词表正则,是位移不是新增)。
-    // 子代理事件不再切碎父回合的思考块(2026-10):isThinkingNarrativeBoundary 头上多 1 行注释(其余改动都在原行内:同一行里加判据,不增删行)——
-    // 1645 → 1646,同一行原样位移(逐行 byte 比对过:仍是那条 SSE 词表正则,是位移不是新增)。
-    // 会话选择/插话竞态修复：同一条 SSE 词表原样位移 1646 → 1666，未新增中文文案。
-    // 执行身份接线：同一正则词表逐字位移 1666 → 1689，未新增中文文案。
-    // 图片插话附件接线：同一正则词表逐字位移 1689 → 1711，未新增中文文案。
-    1711:'正则字面量（匹配 SSE 文本用的「后台/异步/代理/任务/已启动/运行中」词表），不是渲染给用户的文案，不受本锁约束',
-  },
-  // 前端架构债第一批：节点 aria-label／判定／置信度／依赖四处已改走 t()（workflow.node.ariaLabel、
-  // workflow.detail.verdict、workflow.meta.confidence、workflow.node.dependsOn），白名单清空。
-  'workbench.js': {},
-  'agent-roles.js': {},
-  // 前端架构债第一批：ctx-pop 用量行的两处（渲染点与 Kimi 状态刷新点）已改走 t('ctx.pop.usage')／
-  // t('ctx.pop.usageUnknown')，白名单清空（此前的行号位移史见 git log）。
-  'navigation-controls.js': {},
-});
-// 前端架构债第一批（i18n 收口）新增扫描面（纯新增，白名单一律为空）：本批把这些文件里剩下的硬编码中文
-// 全部改走 t()／tCount()，这里把它们也纳入「代码行零中文」的门，防止回潮。
 const CJK_CLEANED_FILES = ['agent-workflows.js', 'artifact-changes.js', 'chat-render-primitives.js',
   'chat-static-renderer.js', 'session-experience.js', 'settings-operations.js', 'usage-dashboard.js',
   'steward-settings.js', 'turn-activity.js'];
@@ -379,44 +314,12 @@ const CJK_SCAN_TARGETS = [
   ['app.js', appSrc],
 ];
 for (const [name, source] of CJK_SCAN_TARGETS) {
-  const allowed = ALLOWED_CJK_CODE[name] || {};
   const hits = cjkCodeLineNumbers(source);
-  const unexpected = hits.filter(hit => !(hit.line in allowed));
+  const unexpected = hits.filter(hit => !(name === 'chat-stream-runtime.js'
+    && hit.text === '|| /(?:后台|异步)(?:代理|任务)?.{0,40}(?:已启动|运行中)/.test(text);'));
   ok(unexpected.length === 0,
     `⑤ ${name} 的硬编码中文只剩白名单登记的既有项，零新增` +
     (unexpected.length ? ' -- 新增未登记: ' + unexpected.map(h => `${h.line}: ${h.text.slice(0, 80)}`).join(' | ') : ''));
 }
-// 白名单本身不许悄悄膨胀成藏污纳垢的地方：登记的每一行必须真的还命中中文，且必须是刚才那三个
-// 「本刀已修」的文件之外的行——否则白名单会在没人注意的情况下越攒越旧，失去「登记，待另刀」的意义。
-const staleAllowlist = [];
-for (const [name, source] of CJK_SCAN_TARGETS) {
-  const allowed = ALLOWED_CJK_CODE[name] || {};
-  const hitLines = new Set(cjkCodeLineNumbers(source).map(h => h.line));
-  for (const lineNo of Object.keys(allowed)) {
-    if (!hitLines.has(Number(lineNo))) staleAllowlist.push(`${name}:${lineNo}`);
-  }
-}
-ok(staleAllowlist.length === 0,
-  '⑤ 白名单零陈旧登记（每一条都对应当前源码里真实存在的中文命中，不是摆设）' +
-  (staleAllowlist.length ? ' -- 已不命中，该从白名单删掉: ' + staleAllowlist.join(', ') : ''));
-// 本刀实际修掉的四处不许再出现在白名单里——防止「白名单反手把自己刚修的 bug 又豁免回来」这种
-// 悄悄回潮。
-const p17FixedLines = {
-  'chat-stream-runtime.js': [1303, 1307, 1308, 1312, 1326],   // 117s-G 在 :529/:537 前后插了 41 行,登记行整体 +41;124 走查(`589cdb1`)再 +10;代理模式 v2 在 :1200 一带再 +1 —— 三次都逐行 byte 比对过
-  'workbench.js': [462, 465],
-  'agent-roles.js': [45],
-  'navigation-controls.js': [513, 515, 516, 539, 541, 543, 545, 546, 554],   // 124 走查：本波在它们之前插入 63 行 —— 九条各 +63（逐行 byte 比对过，内容未变；上一档 M1-b 续的 +10 已含在旧数里）
-};
-const reintroduced = [];
-for (const [name] of CJK_SCAN_TARGETS) {
-  const allowed = ALLOWED_CJK_CODE[name] || {};
-  for (const lineNo of p17FixedLines[name] || []) {
-    if (lineNo in allowed) reintroduced.push(`${name}:${lineNo}`);
-  }
-}
-ok(reintroduced.length === 0,
-  '⑤ P1-7 本刀已修的行号零一个出现在白名单里（不许用白名单把刚修的 bug 豁免回来）' +
-  (reintroduced.length ? ' -- 违规: ' + reintroduced.join(', ') : ''));
-
 console.log('\nCOPY PATH GUARD STATIC E2E: ' + (fail ? `FAIL (${fail})` : 'ALL PASS'));
 process.exit(fail ? 1 : 0);

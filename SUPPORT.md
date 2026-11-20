@@ -6,8 +6,8 @@
 
 请使用本仓库的 GitHub Issues。提交前先搜索已有问题；如果是使用问题，请在标题前加 `[Question]`，并说明：
 
-- Ruyi 版本、Windows 版本和 Node.js 版本；
-- 使用的引擎类型（provider 的 Chat Completions／Responses／Anthropic Messages 协议，或 Claude Code／Kimi Code CLI，不要提供密钥）；
+- Ruyi 版本、macOS 版本、Full 或 Slim 变体（从源码启动时请附 Node.js 版本）；
+- 使用的引擎类型（provider 的 Chat Completions／Responses／Anthropic Messages 协议，或 Claude Code CLI，不要提供密钥）；
 - 可安全公开的复现步骤、预期结果与实际结果；
 - 已脱敏的错误信息、日志片段或截图。
 
@@ -19,7 +19,7 @@
 
 ### 贡献支持
 
-准备提交 Pull Request 前，请阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。其中定义了本项目必须保持的离线可用、clean-room、Windows 兼容及 e2e 回归约束。
+准备提交 Pull Request 前，请阅读 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。其中定义了本项目必须保持的离线可用、clean-room、macOS 兼容及 e2e 回归约束。
 
 ---
 
@@ -29,8 +29,8 @@
 
 Use this repository's GitHub Issues. Search existing issues first; for a usage question, prefix the title with `[Question]` and include:
 
-- the Ruyi, Windows, and Node.js versions;
-- the engine type (provider protocol: Chat Completions, Responses or Anthropic Messages; or Claude Code / Kimi Code CLI—never the key itself);
+- the Ruyi and macOS versions, Full or Slim variant, and Node.js version for a source checkout;
+- the engine type (provider protocol: Chat Completions, Responses or Anthropic Messages; or Claude Code CLI—never the key itself);
 - safely shareable reproduction steps, expected behavior, and actual behavior; and
 - sanitized errors, log excerpts, or screenshots.
 
@@ -42,4 +42,4 @@ For a feature proposal, explain the workflow, target users, and acceptable alter
 
 ### Contribution support
 
-Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a Pull Request. It defines the project's required offline-first, clean-room, Windows-compatibility, and e2e-regression constraints.
+Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a Pull Request. It defines the project's required offline-first, clean-room, macOS compatibility, and e2e-regression constraints.

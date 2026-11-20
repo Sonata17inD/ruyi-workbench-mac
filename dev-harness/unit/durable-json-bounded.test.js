@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-durable-bound-'));
 for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TMPDIR']) process.env[key] = path.join(root, key);
-process.env.RUYI_HOME = path.join(root, 'data'); process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
+process.env.RUYI_HOME = path.join(root, 'data');
 const { loadServerInternals } = require('../lib/server-internals');
 const { DurableJsonStore, atomicWriteJson } = loadServerInternals(['DurableJsonStore', 'atomicWriteJson']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -13,7 +13,7 @@ function store(extra = {}) {
   const file = path.join(root, 'state-' + (++sequence) + '.json');
   return { file, store: DurableJsonStore.create({ id: 'bounded-evidence', file, schemaVersion: 1, cache: false,
     strictRead: true, quarantine: false, maxBytes: 256, canonicalRead: true,
-    ownedRegular: process.platform !== 'win32', mode: 0o600,
+    ownedRegular: true, mode: 0o600,
     defaultValue: () => ({ schema: 1, entries: [] }), validate: value => Array.isArray(value.entries), ...extra }) };
 }
 async function refuseBoth(item, code) {
@@ -27,7 +27,7 @@ test('bounded strict private file roundtrips using the shared store and exact ca
   await item.store.write({ schema: 1, entries: ['private-你好'] });
   assert.deepEqual(await item.store.read(), item.store.readSync());
   assert.equal(fs.readFileSync(item.file, 'utf8'), JSON.stringify({ schema: 1, entries: ['private-你好'] }, null, 2));
-  if (process.platform !== 'win32') assert.equal(fs.statSync(item.file).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(item.file).mode & 0o777, 0o600);
 });
 test('read/write capacity refuses while preserving the previously committed state', async () => {
   const item=store(); await item.store.write({ schema: 1, entries: ['committed'] });
@@ -47,13 +47,13 @@ test('invalid UTF-8 is rejected before JSON parsing can replace damaged bytes', 
   const item=store(); fs.writeFileSync(item.file,Buffer.from([123,34,120,34,58,34,255,34,125]),{mode:0o600});
   await refuseBoth(item,'EDURABLE_ENCODING');
 });
-test('symlinks, hardlinks and nonprivate leaf permissions are refused', { skip:process.platform==='win32' }, async () => {
+test('symlinks, hardlinks and nonprivate leaf permissions are refused', async () => {
   const source=store(); await source.store.write({schema:1,entries:[]});
   const link=store(); fs.symlinkSync(source.file,link.file); await refuseBoth(link);
   fs.unlinkSync(link.file); fs.linkSync(source.file,link.file); await refuseBoth(link,'EDURABLE_OWNER');
   fs.unlinkSync(link.file); fs.chmodSync(source.file,0o644); await refuseBoth(source,'EDURABLE_OWNER');
 });
-test('non-regular files are refused without a blocking read', { skip:process.platform==='win32' }, async () => {
+test('non-regular files are refused without a blocking read', async () => {
   const item=store(); fs.mkdirSync(item.file,{mode:0o700}); await refuseBoth(item,'EDURABLE_CAPACITY');
 });
 test('invalid byte bounds cannot accidentally enable an unbounded owned reader', () => {
@@ -91,7 +91,7 @@ test('ordinary-JSON storage refuses getters and own serialization functions with
   await assert.rejects(item.store.write({schema:1,entries:[],toJSON(){invoked++;return {};}}));
   assert.equal(invoked,0);assert.equal(fs.existsSync(item.file),false);
 });
-test('FIFO leaves are rejected by both APIs under an independent process deadline', {skip:process.platform==='win32'}, () => {
+test('FIFO leaves are rejected by both APIs under an independent process deadline', () => {
   const {spawnSync}=require('node:child_process'); const item=store();
   const fifo=spawnSync('/usr/bin/mkfifo',[item.file],{encoding:'utf8',timeout:2000});assert.equal(fifo.status,0,fifo.stderr);
   const script=`
@@ -118,7 +118,7 @@ test('bounded queued write publishes its fixed enqueue bytes even if a mutable l
   assert.ok(fs.statSync(item.file).size<=256);
 });
 
-test('owned writes always create private regular files even without an explicit mode', {skip:process.platform==='win32'}, async () => {
+test('owned writes always create private regular files even without an explicit mode', async () => {
   const item=store({mode:undefined});await item.store.write({schema:1,entries:[]});
   assert.equal(fs.statSync(item.file).mode&0o777,0o600);await item.store.read();
   assert.throws(()=>store({mode:0o644}));

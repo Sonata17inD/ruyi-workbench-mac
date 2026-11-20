@@ -28,7 +28,7 @@ Node 按非空 `RUYI_NODE_PATH`、`runtime/node/bin/node`、`~/.local/bin/node`�
 
 “登录时启动”读取实际 SMAppService 状态，仅在点击该菜单时注册或注销。需要批准时打开系统登录项设置，回到 App 后刷新状态。
 
-关窗、隐藏、最小化和睡眠会通知页面取消采集，迟到的麦克风授权结果也会释放轨道。唤醒时复验原服务 PID、runtime 与健康身份，保持当前文档和草稿，事件流携带原游标重新连接。当前主机已完成一次短时Software Sleep/DarkWake恢复、醒后SSE验证，以及临时登录项注册后注销。详见[实机证据](../../MACOS-PORTING/evidence/P4/lifecycle/physical-system/README.md)。
+关窗、隐藏、最小化和睡眠会通知页面取消采集，迟到的麦克风授权结果也会释放轨道。唤醒时复验原服务 PID、runtime 与健康身份，保持当前文档和草稿，事件流携带原游标重新连接。当前主机已完成一次短时Software Sleep/DarkWake恢复、醒后SSE验证，以及临时登录项注册后注销。详见[实机证据](../../docs/mac-native/physical-wake.json)。
 
 开发 App 从构建目录读取源码。源码位于文稿目录时，Finder 入口需要该 App 的文稿访问权限。失败页提供系统设置恢复路径。新ad-hoc构建可能重新触发文稿或麦克风授权，本地验收应复用同一冻结开发包；正式签名身份的权限稳定性归P4-04/P6复验。
 
@@ -55,4 +55,4 @@ RUYI_DESKTOP_TEST_APP="$PWD/ruyi-workbench/dist/Ruyi.app" node dev-harness/macos
 
 系统交互桥、通知、麦克风与完整 MCP/CLI 子树生命周期分别归 P4-02 至 P4-04。当前合成音源和隔离进程树已验证，真实系统权限和物理采集边界见对应证据。后续修改继续运行完整工作台宿主回归及独立复核。
 
-`--acceptance-microphone-deadline`需同时指定报告才启用物理验收专用观察与独立两秒停止保护。物理探针仅允许一次成功采集，核验音轨释放、原生停止完成及有效PCM不超过三秒，并记录最终采集指示状态。音频仅留隔离目录，转写使用本机环回假端点。当前主机物理麦克风和用户辅助原生拖放均已通过独立复核。[物理验收](../../MACOS-PORTING/evidence/P4/media/physical/reporting-delay/README.md) [原生拖放](../../MACOS-PORTING/evidence/P4/bridge/native-drop/README.md)
+`--acceptance-microphone-deadline`需同时指定报告才启用物理验收专用观察与独立两秒停止保护。物理探针仅允许一次成功采集，核验音轨释放、原生停止完成及有效PCM不超过三秒，并记录最终采集指示状态。音频仅留隔离目录，转写使用本机环回假端点。验收结果应记录所测制品和系统权限状态。

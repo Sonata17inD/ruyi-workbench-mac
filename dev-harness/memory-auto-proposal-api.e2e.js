@@ -1,7 +1,6 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 // R4-S3 real HTTP path: successful provider turn -> quiet model judge -> user decision, with cooldown.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -28,12 +27,12 @@ const { getFreePort } = require('./free-port.js');
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${fakePort}`, apiKey: 'test', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
   }, null, 2));
 
-  const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: root, USERPROFILE: root, HOME: root };
+  const env = { ...process.env, RUYI_HOME: root, USERPROFILE: root, HOME: root };
   const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(fakePort)], {
-    windowsHide: true, env: { ...env, FAKE_OPENAI_PORT: String(fakePort), FAKE_DRAFT_JSON: proposalJson, FAKE_REPLY_TEXT: reply },
+    env: { ...env, FAKE_OPENAI_PORT: String(fakePort), FAKE_DRAFT_JSON: proposalJson, FAKE_REPLY_TEXT: reply },
   });
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(workbenchPort)], {
-    cwd: path.resolve(__dirname, '..', 'ruyi-workbench'), windowsHide: true, env,
+    cwd: path.resolve(__dirname, '..', 'ruyi-workbench'), env,
   });
   let failures = 0;
   const ok = (condition, label) => {
@@ -60,8 +59,7 @@ const { getFreePort } = require('./free-port.js');
   const stop = child => {
     if (!child || !child.pid) return;
     try {
-      if (process.platform === 'win32') killOwnTree(child);
-      else child.kill('SIGKILL');
+      child.kill('SIGKILL');
     } catch { /* already exited */ }
   };
   try {

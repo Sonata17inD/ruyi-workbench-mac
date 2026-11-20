@@ -14,7 +14,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 末行判定固定为 `GIT E2E: ALL PASS`(任何失败打印明细并以非零码退出)。finally 清临时 HOME/仓库。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -47,11 +47,11 @@ function callTool(port, token, name, args) {
 
 // Run git in a dir, synchronously, ignoring failures (used for repo setup). Returns stdout string.
 function git(cwd, args) {
-  try { return cp.execFileSync('git', args, { cwd, windowsHide: true, timeout: 15000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); }
+  try { return cp.execFileSync('git', args, { cwd, timeout: 15000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }); }
   catch { return ''; }
 }
 function gitAvailable() {
-  try { const r = cp.spawnSync('git', ['--version'], { stdio: 'ignore', windowsHide: true, timeout: 3000 }); return !r.error && r.status === 0; }
+  try { const r = cp.spawnSync('git', ['--version'], { stdio: 'ignore', timeout: 3000 }); return !r.error && r.status === 0; }
   catch { return false; }
 }
 
@@ -131,8 +131,8 @@ function gitAvailable() {
     // 另一个没登记的目录用来验围栏(⑤b)。
     fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, version: '1.0.0', permissionMode: 'bypass',
       workspaces: [{ path: REPO, read: true, write: true, execute: true }, { path: OUTSIDE, read: true, write: true, execute: true }] }, null, 2));
-    const env = { ...process.env }; delete env.RUYI_HOME; env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+    const env = { ...process.env }; env.RUYI_HOME = HOME;
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(WB_PORT); }

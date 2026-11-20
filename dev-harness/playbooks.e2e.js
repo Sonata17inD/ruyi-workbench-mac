@@ -1,6 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port.js');
 // E2E for v0.9-S2 (C2 / §7.8): Playbooks. Backend-testable slices only; the empty-state card grid + form
 // modal are verified via the preview self-check (see delivery notes), not headless DOM here.
@@ -128,9 +128,9 @@ const DRAFT_JSON = JSON.stringify({
   fs.mkdirSync(HOME, { recursive: true });
   seedConfig(HOME);
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR, FAKE_DRAFT_JSON: DRAFT_JSON } });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR, FAKE_DRAFT_JSON: DRAFT_JSON } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {
@@ -452,7 +452,7 @@ const DRAFT_JSON = JSON.stringify({
     fs.mkdirSync(HOME2, { recursive: true });
     fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify({ configSchema: 6, version: '1.0.0', permissionMode: 'bypass', activeProvider: '' }, null, 2));
     const WB2_PORT = await getFreePort();
-    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB2_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME2, WCW_TEST_NO_NET_ANCHORS: '1' }, windowsHide: true });
+    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB2_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2, WCW_TEST_NO_NET_ANCHORS: '1' } });
     wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
     try {
       let h2 = null; for (let i = 0; i < 200 && !h2; i++) { await sleep(150); h2 = await health(WB2_PORT); }

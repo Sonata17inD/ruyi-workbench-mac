@@ -65,7 +65,7 @@ async function start(mode) {
   fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify(config));
   port = await getFreePort(); token = '';
   server = cp.spawn(process.execPath, [targetServer, 'serve', '--port', String(port)], {
-    cwd: workbench, env: { ...process.env, ...env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'] });
+    cwd: workbench, env: { ...process.env, ...env, RUYI_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'] });
   let spawnError; server.on('error', error => { spawnError = error; }); server.stdout.resume(); server.stderr.resume();
   const birth = tree(server)[0];
   await until(async () => {

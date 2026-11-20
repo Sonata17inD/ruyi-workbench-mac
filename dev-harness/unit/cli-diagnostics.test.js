@@ -19,7 +19,7 @@ test('doctor severity and argument parsing retain their CLI contract', () => {
 test('actual doctor exits with JSON by default and localized human output on request', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-doctor-'));
   try {
-    const env = { ...process.env, HOME: root, USERPROFILE: root, RUYI_HOME: path.join(root, 'data'), WIN_CLAUDE_WORKBENCH_HOME: path.join(root, 'data') };
+    const env = { ...process.env, HOME: root, USERPROFILE: root, RUYI_HOME: path.join(root, 'data') };
     const entry = path.resolve(__dirname, '../../ruyi-workbench/app/server.js');
     const plain = cp.spawnSync(process.execPath, [entry, 'doctor'], { env, encoding: 'utf8', timeout: 20000 });
     assert.equal(plain.status, 0, plain.stderr);

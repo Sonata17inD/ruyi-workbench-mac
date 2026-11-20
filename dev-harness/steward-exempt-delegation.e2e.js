@@ -34,7 +34,7 @@ const { shellTool, echo, writeFile } = require('./lib/platform-shell-fixture');
 //       ⑤ 本实例第 7 次 → hourly_cap(第 6 次是回执那一条)。
 //
 // 端口全部 getFreePort()。判定行:`STEWARD EXEMPT DELEGATION E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -167,7 +167,7 @@ async function startInstance(tag, patch) {
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${PROVIDER_PORT}`, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
     ...patch,
   }, null, 2), 'utf8');
-  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   proc.stdout.on('data', () => {});
   proc.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log(`[wb-${tag}!] ` + l.trim())));
   const inst = { tag, HOME, WORK, PORT, proc, TOKEN: '', sessionsDir: path.join(HOME, 'sessions') };
@@ -260,9 +260,8 @@ function mkWorkDir(inst, name) {
 // powershell_run 不传 cwd 时跑在服务进程的家目录里(夹具的自隔离 HOME),不是会话的工作文件夹 —— 显式带上。
 // cwd 这个字符串也会被豁免判据摊平扫到(全文多几十字,仍远低于 1000;不含任何删除目标形状)。
 let currentWork = '';
-const removeCommand = name => process.platform === 'win32' ? 'Remove-Item .\\' + name + ' -Recurse' : 'rm -rf ./' + name;
+const removeCommand = name => 'rm -rf ./' + name;
 function nativeCommand(command) {
-  if (process.platform === 'win32') return command;
   const relative = /^Remove-Item \.\\([a-z0-9]+) -Recurse$/i.exec(command);
   if (relative) return removeCommand(relative[1]);
   // Risk probes remain harmless comments on both shells, even if a gate regresses.
@@ -476,7 +475,7 @@ try {
   //(stewardExemptDelegationRecord 只在十道闸全过之后才记),下面 D95 的「恰好 6 次」前提不受影响。
   // 危险词一律写在 PowerShell 注释里(与 D20 同一条回归机纪律):闸门被摘掉时真跑的也只是前半句 Write-Output。
   {
-    const longPrefix = process.platform === 'win32' ? 'Write-Output g4 # Remove-Item .\\tmp -Recurse ' : echo('g4') + ' # rm -rf ./tmp ';
+    const longPrefix = echo('g4') + ' # rm -rf ./tmp ';
     const LONG = longPrefix + 'x'.repeat(927 - longPrefix.length);
     const cmds = [
       "Write-Output g1 # Remove-Item .\\tmp -Recurse; & ('shut' + 'down') /s /t 0",

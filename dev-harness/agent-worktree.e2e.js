@@ -11,7 +11,7 @@ process.env.RUYI_HOME = path.join(root, 'data');
 const { createAgentWorktree, finalizeAgentWorktree, applyAgentWorktree } = require('../ruyi-workbench/app/server.js');
 const repo = path.join(root, 'repo');
 fs.mkdirSync(repo, { recursive: true });
-function git(args, cwd = repo) { return cp.execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true }).trim(); }
+function git(args, cwd = repo) { return cp.execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim(); }
 let failures = 0;
 function ok(condition, label) { if (condition) console.log('PASS ' + label); else { failures += 1; console.error('FAIL ' + label); } }
 

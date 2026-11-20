@@ -1,23 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 'use strict';
-// E2E(第122波 §2.4):mission start 与首回合的写口竞争。
-//
-// 用户触发:管家开线程后立刻派第一回合,再 POST /api/mission {action:'start'}。
-// 病根:/api/mission 落盘后只在 activeChildren.get(sessionId) 命中时才把 mission 同步进活回合内存(C4);
-//   09-workflow 从「路由把会话读进内存」到「activeChildren.set(reg)」之间隔着 providerHistory 同步、
-//   配对/参数自愈、turnSeq 落盘、onTurnStart 钩子与 captureWorkspaceTurnBaseline —— 落在这一段里的 start
-//   已经写进磁盘却谁也同步不进回合内存,回合收尾 saveSession(内存 session)把整本账本盖回「没有」。
-// 修法:回合收尾落盘前做落盘前合并(02 的 mergeMissionBeforeSave,三个引擎共用)。
-//
-// 判据(§2.4):`POST /api/chat/stream` 之后 0／50／200 ms 三个时点各发一次 start,回合结束后
-//   `GET /api/sessions/:id` 的 mission.milestones 非空、startedTurnSeq 与 start 那一刻 API 自己回的
-//   那个值逐字相等(账本被原样保住,不是被另一本顶掉)、kind 仍是 'mission';每时点 5 轮全绿。
-//
-// 为什么用 provider 引擎而不是 fake-claude 的 WCW_FAKE_SLOW_MS:05-claude-engine 与 05b-kimi-bridge 的
-// 收尾【本来就】回读磁盘 mission(它们的 mission_update 走 MCP 子进程 loopback 落盘),这条竞态在那两路
-// 天然不成立,拿它们测只会永远绿。真正漏的是 09(provider 引擎 in-process 改内存、收尾整份覆盖),
-// 所以这里用一个「慢回合」的 fake provider 把窗口撑开。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { readServerSource } = require('./src-reader');
 const { functionBlock } = require('./lib/source-slice');
@@ -106,7 +89,7 @@ const MISSION_INPUT = {
   }), 'utf8');
 
   const provider = await startProvider();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
 
   try {
@@ -144,7 +127,7 @@ const MISSION_INPUT = {
 
     // ── 钉点(静态):上面那五组是【时序】判据 —— 竞态窗口在快机器上只有几十毫秒宽,窗口没被命中时它们
     //    也会绿。故把修法的形状另外钉死一遍,防「窗口漂了 → 断言从此永远绿」这种假绿。
-    const owners = ['mission-lifecycle.cjs', 'session-persistence.cjs', 'provider-turn.cjs', 'agent-cli-turn.cjs', 'kimi-acp-turn.cjs'];
+    const owners = ['mission-lifecycle.cjs', 'session-persistence.cjs', 'provider-turn.cjs', 'agent-cli-turn.cjs'];
     const src = [readServerSource(), ...owners.map(name => fs.readFileSync(path.join(WB, 'app/backend', name), 'utf8'))].join('\n');
     ok(/function mergeMissionBeforeSave\(session, onDisk\)/.test(src), 's 02 落盘前合并是【一个共用函数】(三引擎同一份语义)');
     ok(/if \(!disk\) return false;/.test(src) && /if \(diskSeq <= memSeq\) return false;/.test(src)
@@ -157,9 +140,7 @@ const MISSION_INPUT = {
     ok(['runClaudeTurn', 'runOpenAiTurn'].every(name => {
       const turn = functionBlock(src, name);
       return turn && (turn.match(/await saveSession\(session, \{ mergeMissionFromDisk: true, executionOwner \}\);/g) || []).length === 1;
-    }), 's 09／05 两处【起跑存】都带落盘前合并和执行所有者(claude 与 kimi 共用 05 那一处)');
-    ok((src.match(/mergeMissionBeforeSave\(session, onDisk\);/g) || []).length === 3,
-      's 09／05／05b 三处【收尾存】前都调同一个合并函数');
+    }), 's 09／05 两处【起跑存】都带落盘前合并和执行所有者(claude  CLI)');
   } finally {
     kill(wb); await new Promise(r => provider.close(r));
     await sleep(200);

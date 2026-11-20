@@ -30,7 +30,7 @@ try {
     configSchema: 10, permissionMode: 'default', defaultWorkspace: WS, recentWorkspaces: [WS], includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, killOnDisconnect: false,
   }, null, 2));
   const port = await getFreePort();
-  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(port)], { cwd: WB_DIR, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(port)], { cwd: WB_DIR, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   const httpJson = (method, route, body, headers) => new Promise((resolve, reject) => {
     const data = body == null ? '' : JSON.stringify(body);

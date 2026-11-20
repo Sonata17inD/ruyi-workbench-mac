@@ -40,7 +40,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   desktopMcp: { enabled: true, command: process.execPath, args: [fakeAcc], cwd: '', autodetect: false },
 }));
 const WP = await getFreePort();
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, stdio: 'ignore', env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, HOME, USERPROFILE: HOME } });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, stdio: 'ignore', env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
 const get = (p, headers) => new Promise(resolve => {
   http.get({ host: '127.0.0.1', port: WP, path: p, headers: headers || {}, timeout: 20000 }, res => { let b = ''; res.on('data', c => (b += c)); res.on('end', () => resolve({ status: res.statusCode, body: b })); }).on('error', () => resolve({ status: 0, body: '' }));
 });

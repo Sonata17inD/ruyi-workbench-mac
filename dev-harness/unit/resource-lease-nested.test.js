@@ -15,7 +15,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-lease-nested-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 let leaseSeq = 0;
 const srv = require('../../ruyi-workbench/app/backend/resource-leases.cjs').createResourceLeases({

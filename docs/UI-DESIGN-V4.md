@@ -1,10 +1,6 @@
 # UI-DESIGN-V4 · 现代毛玻璃质感(定稿)
 
-> 状态:**定稿**(2026-07-22,第50波)。本文是如意工作台第四代视觉语言的设计基线,token 值与
-> `ruyi-workbench/app/public/css/tokens.css` 与 `css/themes/color-schemes.css` 一致；
-> `styles.css` 仅保留按级联顺序导入各层的兼容清单(设计稿生命周期见 docs/README.md)。
-> 原型:`docs/mockups/v4-glass-home.html` / `v4-glass-workbench.html`(双主题,经所有者两轮质感评审:
-> 第 2 轮"深色要更高级"迭代值已回写上述 token / 主题层)。
+> 双主题的实际色值见 `ruyi-workbench/app/public/css/tokens.css` 和 `css/themes/color-schemes.css`。
 
 ## 1. 总体语言:从"纯色平铺"到"分层磨砂"
 
@@ -74,15 +70,6 @@
   焦点环青花外发光(`--ring`/`--glow-accent`)。
 - `.num` 仪表数字推广到用量/指标。
 
-## 7. 本轮清障(第50波)
+## 7. 主题验证
 
-- 删除零引用令牌:`--density-scale`、`--gold-soft`(两主题)、`--sp-7`(`--sp-8` 有 1 处活引用,保留)。
-- 4 处硬编码 `#fff` token 化(×3 → `--accent-ink`;iframe 预览底 → `--panel`)。
-- 鎏金:暗 `#f2c14e` → 香槟 `#dcba75`;亮 `#a97b1e` → `#a8822f`(mockup 第 2 轮值)。
-- 亮主题 `--accent`/`--link` `#2350a8` → `#2050c8`。
-
-## 8. 守护(第50波 Step 3 落地)
-
-- theme.e2e:令牌键集对称 + WCAG 红线 + 玻璃令牌族点名锁(本稿 §2 表即断言源)。
-- 视觉回归门:headless `--screenshot` 双主题截图对比(dom-screenshot.e2e)。
-- "新组件两主题对称"写入贡献指南。
+`theme.e2e.js` 检查双主题的令牌键和文字对比度，`dom-screenshot.e2e.js` 检查实际渲染。

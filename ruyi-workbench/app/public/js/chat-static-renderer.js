@@ -99,21 +99,20 @@ export function createChatStaticRenderer(deps = {}) {
     return bubble;
   }
   function narrativePlanCard(segment) {
-    const kimiSnapshot = segment && segment.readOnly === true && segment.source === 'kimi-acp';
-    const card = el('div', `plan-card narrative-plan${kimiSnapshot ? ' kimi-plan-snapshot' : ''}`);
-    if (kimiSnapshot) {
+    const snapshot = segment && segment.readOnly === true;
+    const card = el('div', `plan-card narrative-plan${snapshot ? ' plan-snapshot' : ''}`);
+    if (snapshot) {
       card.dataset.planId = String(segment.planId || '');
       card.dataset.readOnly = 'true';
-      card.dataset.source = 'kimi-acp';
       card.dataset.status = segment.status === 'removed' ? 'removed' : 'snapshot';
-      card.classList.toggle('kimi-plan-snapshot-removed', segment.status === 'removed');
+      card.classList.toggle('plan-snapshot-removed', segment.status === 'removed');
     }
     const head = el('div', 'plan-card-head');
-    const status = kimiSnapshot
+    const status = snapshot
       ? (segment.status === 'removed' ? 'removed' : 'snapshot')
       : segment.status;
     head.append(
-      el('span', '', kimiSnapshot ? t('plan.kimiSnapshot.heading') : t('chat.planSegment')),
+      el('span', '', snapshot ? t('plan.snapshot.heading') : t('chat.planSegment')),
       narrativeStatePill(status),
     );
     card.append(head);
@@ -123,8 +122,8 @@ export function createChatStaticRenderer(deps = {}) {
       body.innerHTML = renderMarkdown(markdown); highlightIn(body);
     } else { body.classList.add('plain'); body.textContent = markdown; }
     card.append(body);
-    if (kimiSnapshot && segment.path) {
-      card.append(el('div', 'narrative-state-note kimi-plan-snapshot-path', t('plan.kimiSnapshot.path', { path: String(segment.path).slice(0, 2000) })));
+    if (snapshot && segment.path) {
+      card.append(el('div', 'narrative-state-note plan-snapshot-path', t('plan.snapshot.path', { path: String(segment.path).slice(0, 2000) })));
     } else if (segment.note) card.append(el('div', 'narrative-state-note', segment.note));
     return card;
   }
@@ -208,7 +207,7 @@ export function createChatStaticRenderer(deps = {}) {
     const key = turn ? `narrative.reason.turn.${turn[1]}`
       : raw === 'session ended' ? 'narrative.reason.sessionEnded'
       : raw === 'Ruyi turn cancelled' ? 'narrative.reason.turn.cancelled'
-      : /^Kimi cancelled the /.test(raw) ? 'narrative.reason.kimiCancelled' : '';
+      : '';
     if (!key) return raw;
     const text = t(key);
     return text && text !== key && text !== `[${key}]` ? text : raw;
@@ -348,7 +347,7 @@ export function createChatStaticRenderer(deps = {}) {
     const narrative = el('div', 'turn-narrative');
     const toolIndex = [];
     const renderedNative = new Set();
-    const kimiPlanCards = new Map();
+    const planCards = new Map();
     for (let i = 0; i < segments.length;) {
       const segment = segments[i];
       if (segment.type === 'tool') {
@@ -399,16 +398,16 @@ export function createChatStaticRenderer(deps = {}) {
       else if (segment.type === 'steer') narrative.append(buildNarrativeSteerSegment(segment.text, segment.attachments || [])); // 刷新后插话与附件同源。
       else if (segment.type === 'thinking') narrative.append(thinkingPanel(segment.text || '').d);
       else if (segment.type === 'plan') {
-        const isKimiSnapshot = segment.readOnly === true && segment.source === 'kimi-acp';
+        const isSnapshot = segment.readOnly === true;
         const planId = String(segment.planId || '');
-        const previous = isKimiSnapshot && planId ? kimiPlanCards.get(planId) : null;
+        const previous = isSnapshot && planId ? planCards.get(planId) : null;
         // A removal/update may carry only planId + status. Merge it with the last snapshot so static replay
         // preserves the same markdown/path that live rendering retained when those fields were omitted.
         const normalizedSegment = previous ? { ...previous.segment, ...segment } : segment;
         const card = narrativePlanCard(normalizedSegment);
         if (previous) previous.card.replaceWith(card);
         else narrative.append(card);
-        if (isKimiSnapshot && planId) kimiPlanCards.set(planId, { card, segment: normalizedSegment });
+        if (isSnapshot && planId) planCards.set(planId, { card, segment: normalizedSegment });
       }
       else if (segment.type === 'question') narrative.append(narrativeQuestionCard(segment));
       else if (segment.type === 'workflow') narrative.append(narrativeWorkflowCard(segment, tools)); // 代理模式 v2:工作流卡 + 信封摘要

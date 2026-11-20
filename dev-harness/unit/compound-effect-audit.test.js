@@ -5,7 +5,6 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-effect-unit-'));
 for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA']) process.env[key] = path.join(root, key);
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 const { loadServerInternals } = require('../lib/server-internals');
 const { projectBridgedIrreversible: project, buildTurnSummary: summary } = require('../../ruyi-workbench/app/backend/turn-summary.cjs');
 const { foldTurnSummaries: fold, boundToolResultForDisplay: bound } = loadServerInternals(['foldTurnSummaries', 'boundToolResultForDisplay']);

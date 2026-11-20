@@ -1,19 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Unit: 117x-M2 —— 模型选择器（27 号文 §11.17）。用户原话「这个模型选择做的也很一般」：
-// 真机是一个 30 余项的扁平裸列表，无搜索、无分组，直接印原始 id，还混着 audio-realtime／image／
-// ocr／livetranslate 这些与文本任务无关的端点。
-//
-// 这一份钉的是【事实】，不是某一行的写法：
-//   ① 「看起来不是文本模型」是【折叠】不是【隐藏】—— 收起来时那些行仍在 DOM 里、点了照样能选；
-//   ①b 已经在「常用」里露过面的那一行，折叠区【不重复印第二份】，折叠标题的计数也不算它
-//      （§11.17.8 裁决：常用赢，按 (provider, model) 去重）；
-//   ② 搜索能命中折叠区里的项（并把折叠区自动展开）—— 不许有「看不见也摸不着」的东西；
-//   ③ 「常用」没有用量时【整段不出现】，有用量时按最近一次使用倒序、最多 5 条、只收最近 30 天；
-//   ④ 副行没有用量就【不出】（不显示「0 回合」——那是把「不知道」说成「零」）；
-//   ⑤ 那张 id 子串表全仓【只有一处】定义。
-// 为了让①②④这种「DOM 里在不在」的事实真被走到，本文件用一个极小的假 DOM 驱动【真的】工厂
-// （createQuickSwitchChips → toggleMenu → buildModelMenu），不是去读源码字符串。
+// 通过模型菜单的 DOM 验证搜索、分组与最近使用记录。
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
@@ -129,7 +116,7 @@ const MODELS = [
   { id: 'gpt-x-nano' },
   { id: 'deepthink-r2' },
   { id: 'qwen3.5-max' },
-  { id: 'kimi-k3-256k' },
+  { id: 'fixture-unused-model' },
   { id: 'glm-5-air' },
   { id: 'omni-audio-preview' },
   { id: 'qwen3.5-livetranslate-flash-realtime-2026-05-19' },
@@ -148,7 +135,7 @@ const USAGE = [
   { model: 'gpt-x-pro', provider: 'p1', engine: 'openai', turns: 12, lastAt: ago(1) },
   { model: 'deepthink-r2', provider: 'p1', engine: 'openai', turns: 7, lastAt: ago(5) },
   { model: 'qwen3.5-max', provider: 'p1', engine: 'openai', turns: 2, lastAt: ago(9) },
-  { model: 'kimi-k3-256k', provider: 'p1', engine: 'openai', turns: 1, lastAt: ago(12) },
+  { model: 'fixture-unused-model', provider: 'p1', engine: 'openai', turns: 1, lastAt: ago(12) },
   { model: 'omni-audio-preview', provider: 'p1', engine: 'openai', turns: 4, lastAt: ago(2) },
   { model: 'glm-5-air', provider: 'p1', engine: 'openai', turns: 9, lastAt: ago(400) },
   { model: 'gpt-x-nano', provider: 'p1', engine: 'openai', turns: 6, lastAt: '' },
@@ -312,7 +299,7 @@ async function scenario({ tag, usage = USAGE, models = MODELS, sessionModel = 'g
   // ── ④ 副行：没有用量就不出，不许说「0 回合」 ───────────────────────────────────
   {
     const s = await scenario({ tag: 'subline' });
-    const never = rowOf(s.menu, 'kimi-k3-256k');
+    const never = rowOf(s.menu, 'fixture-unused-model');
     const unused = rowOf(s.menu, 'bge-rerank-v3');
     ok(hintOf(unused) === null, '④ 从没用过的模型【没有副行】（不是印一句「共 0 回合」）');
     ok(!unused.textContent.includes('0'), `④ 那一行里连个「0」都不该出现（实测「${unused.textContent}」）`);

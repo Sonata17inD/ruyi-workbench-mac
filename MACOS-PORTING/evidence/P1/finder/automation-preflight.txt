@@ -1,1 +1,0 @@
-{"target": "com.apple.finder", "askUserIfNeeded": false, "status": -1744}

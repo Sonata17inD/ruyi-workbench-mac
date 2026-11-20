@@ -28,15 +28,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 那是另一刀的账,不该混在一次措辞清理里。)
 // 判定行:`CLASSIC WINDOW LIVE STEER E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -87,13 +86,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // ── fake provider ────────────────────────────────────────────────────────────────────────────
 // 管家线程:结构化契约 JSON。线程回合:
@@ -326,8 +318,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started');
 
@@ -346,11 +338,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A4 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -637,13 +629,12 @@ try {
 } finally {
   if (cdp && fail) console.log('CONSOLE ' + cdp.logs.slice(-8).join(' | '));
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   hold8Released = true;
   if (hold8Release) hold8Release();   // 中途红了没走到放行那一步时，别让 provider.close 等一个挂着的响应
   if (provider) await new Promise(resolve => provider.close(resolve));
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   if (keepRootForEvidence) console.log('H8-DIAG fixture kept for evidence: ' + root);
   else { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ } }
   console.log(`\nCLASSIC WINDOW LIVE STEER E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);

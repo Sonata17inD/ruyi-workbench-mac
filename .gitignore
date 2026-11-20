@@ -16,10 +16,8 @@ offline_wheels/
 /mcp/ai-computer-control/build/
 /mcp/ai-computer-control/build_offline/
 
-# Tooling / local state(云端会话钩子与共享设置入库,其余本地状态照旧忽略)
-.claude/*
-!.claude/settings.json
-!.claude/hooks/
+# Local development agent settings
+/.claude/
 
 # Local campaign drafts and generated marketing assets
 /docs/marketing/
@@ -45,11 +43,6 @@ Thumbs.db
 # 是【运行数据】不是源码,而且含真实会话与本机配置。此前它一直以未跟踪状态挂在 git status 里,
 # 每次收工都要人肉确认一遍「这不是漏提交」,列进来省掉这道噪音。
 /.ruyi-runtime/
-
-# Desktop shell build outputs (source in ruyi-workbench/desktop/)
-/.tmp-csc-probe/
-/ruyi-workbench/RuyiDesktop.exe
-/ruyi-workbench/WebView2Loader.dll
 
 # bench-voice 的合成音频与假设产物(不进 git;README 说明如何重造)
 dev-harness/bench-voice/wav/

@@ -117,7 +117,7 @@ test('[P2] https 目标经 CONNECT 隧道:代理只看到 host:443,TLS 端到端
   const env = Object.assign({}, process.env, { RUYI_HOME: path.join(root, 'child-home'), HTTPS_PROXY: proxy.url, NODE_EXTRA_CA_CERTS: pki.certPath, WCW_TEST_NO_NET_ANCHORS: '1' });
   for (const k of PROXY_VARS) if (k !== 'HTTPS_PROXY') delete env[k];
   const out = await new Promise((resolve, reject) => {
-    const c = cp.spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    const c = cp.spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let so = '', se = '';
     c.stdout.on('data', d => { so += d; }); c.stderr.on('data', d => { se += d; });
     c.on('close', () => resolve({ so, se }));
@@ -307,7 +307,7 @@ test('[P9] https://<IP 字面量> 经 CONNECT 隧道:证书按该 IP 校验,握�
   const env = Object.assign({}, process.env, { RUYI_HOME: path.join(root, 'child-home-ip'), HTTPS_PROXY: proxy.url, NODE_EXTRA_CA_CERTS: pki.certPath, WCW_TEST_NO_NET_ANCHORS: '1' });
   for (const k of PROXY_VARS) if (k !== 'HTTPS_PROXY') delete env[k];
   const out = await new Promise((resolve, reject) => {
-    const c = cp.spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    const c = cp.spawn(process.execPath, ['-e', script], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let so = '', se = '';
     c.stdout.on('data', d => { so += d; }); c.stderr.on('data', d => { se += d; });
     c.on('close', () => resolve({ so, se }));

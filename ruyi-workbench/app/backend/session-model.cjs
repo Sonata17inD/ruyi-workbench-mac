@@ -100,9 +100,6 @@ function normalizeSession(raw) {
 // missing/invalid; id defaults to t1..tN when absent. Non-array input yields an empty list.
 const TODO_MAX_ITEMS = 50;
 const TODO_MAX_TEXT = 200;
-// 状态同义词:模型多半带着 Claude Code TodoWrite 的习惯(status:'completed'、字段名 content),也常写成
-// in-progress / DONE。修前这些一律落成 pending、文本落成空串 —— 计划条永远 0/N,「没做完就续」也跟着误判。
-// 三个引擎(provider 闭包 / Kimi 桥 / 回环 /api/todo)都经这里,所以在数据层认一次就全覆盖。
 function canonicalTodoStatus(raw) {
   const v = String(raw == null ? '' : raw).trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (v === 'done' || v === 'completed' || v === 'complete' || v === 'finished' || v === 'success' || v === 'succeeded') return 'done';

@@ -35,7 +35,7 @@ function collect() {
     }
   };
   for (const s of SCOPES) walk(path.join(ROOT, s.dir), s.depth);
-  return out.sort();
+  return [...new Set(out)].sort();
 }
 
 const files = collect();
@@ -50,7 +50,6 @@ for (const f of files) {
     isFrontendModule ? ['--check', '--input-type=module'] : ['--check', f],
     {
       encoding: 'utf8',
-      windowsHide: true,
       input: isFrontendModule ? fs.readFileSync(f) : undefined,
     },
   );

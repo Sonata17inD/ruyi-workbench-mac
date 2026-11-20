@@ -1,4 +1,35 @@
 'use strict';
+const { stripUrlUserinfo } = require('./provider-config.cjs');
+// Retry another configured endpoint only on a pre-stream transport or eligible HTTP failure.
+function providerEndpoints(provider, wire, preferredBases) {
+  const endpoints = new Map();
+  for (const raw of [provider.baseUrl, ...(Array.isArray(provider.extraBaseUrls) ? provider.extraBaseUrls : [])]) {
+    const url = wire.completionUrl(raw);
+    if (url && !endpoints.has(url)) endpoints.set(url, stripUrlUserinfo(wire.endpointBase(raw)));
+  }
+  return async function sendToEndpoint(send, switched) {
+    const preferred = preferredBases.get(provider.id);
+    const urls = [...endpoints.keys()];
+    const index = preferred ? urls.findIndex(url => endpoints.get(url) === preferred) : -1;
+    if (index > 0) urls.unshift(...urls.splice(index, 1));
+    let last, previous, reason;
+    for (const url of urls) {
+      const base = endpoints.get(url);
+      if (last) switched({ providerId: provider.id, from: previous, to: base, reason });
+      last = await send(url);
+      reason = last.transportError ? last.transportReason || 'connect'
+        : last.httpError && last.failoverStatus ? 'http_' + last.failoverStatus : '';
+      if (!reason) {
+        if (!last.httpError) preferredBases.set(provider.id, base);
+        return last;
+      }
+      previous = base;
+    }
+    if (!last) return { httpError: 'no endpoint available', text: '', reasoning: '', toolCalls: [] };
+    return last.httpError ? last : { ...last, httpError: last.transportError };
+  };
+}
+
 // 把【本次请求带出去的凭据】(provider.apiKey 与 extraHeaders 的各个值)在文本里按字面抹掉。redact() 的模式表认的是常见形态
 // (sk- / Bearer / 「key: 值」标签…),服务商把 key 回显成别的形态(zk9.xxx、前面是「key=」而不是标签)时它抹不掉 —— 「测试连接」把
 // 服务商报文的前 300 字原样回给界面,所以先按字面抹、再过 redact()。短于 6 个字符的值不抹(免得把「k」「1」之类处处替换);
@@ -212,4 +243,4 @@ async function withTransientRetry({ attempt, classify, maxRetries, backoffMs, si
 
 return { PROVIDER_LAN_HOST_SUFFIXES, ProviderHttpHooks, abortableDelay, providerApiBase, providerBaseIsLocalOrLan, providerBaseWithV1, providerCallIsTransient, providerCompletionUrl, providerPostJsonOnce, providerRequestHeaders, providerResponsesBase, providerSseAsCompletion, withTransientRetry };
 }
-module.exports = { createProviderHttp, providerScrubSecrets, providerRetryAfterMs, providerThrownErrorText };
+module.exports = { providerEndpoints, createProviderHttp, providerScrubSecrets, providerRetryAfterMs, providerThrownErrorText };

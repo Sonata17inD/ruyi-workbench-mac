@@ -31,7 +31,7 @@ const t = createRunner('TOOL AUDIT R2 DEV');
 const { ok } = t;
 const ROOT = path.resolve(__dirname, '..');
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2dev-'));
-process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2dev-ws-'));
 const hasGit = (() => { try { cp.execFileSync('git', ['--version'], { stdio: 'ignore' }); return true; } catch { return false; } })();
 const git = (cwd, ...a) => cp.execFileSync('git', a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
@@ -300,12 +300,10 @@ try {
 
     fs.mkdirSync(path.join(repo, '.git', 'hooks'), { recursive: true });
     fs.writeFileSync(path.join(repo, '.git', 'hooks', 'pre-commit'), '#!/bin/sh\necho "lint failed: bad style" >&2\nexit 1\n', { mode: 0o755 });
-    if (process.platform !== 'win32') {
+    {
       const hook = await call('git_commit', { cwd: repo, message: 'x', paths: ['f1.txt'] });
       ok(hook.ok === false && /pre-commit 钩子拒绝/.test(String(hook.error)) && /lint failed/.test(String(hook.detail || '')), `G3 钩子拒绝 → 明说并带钩子输出(got ${hook.error} / ${String(hook.detail).slice(0, 40)})`);
       ok(hook.stagedCount === 1 && hook.staged.includes('f1.txt'), `G6 提交失败后列出仍在暂存区的文件(got ${JSON.stringify(hook.staged)})`);
-    } else {
-      console.log('SKIP G3/G6 (sh pre-commit hook needs a POSIX shell)');
     }
   } else {
     console.log('SKIP (G) git not installed');

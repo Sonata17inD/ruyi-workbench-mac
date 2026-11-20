@@ -1,11 +1,4 @@
 'use strict';
-// 走查 W1 #1/#7 与补充 A/B:工作台往【用户自己的】CLI 配置里同步时不得丢用户的东西。真源码、临时 HOME / KIMI_CODE_HOME、零网络。
-//   [K] Kimi 的 mcp.json(syncMcpServersToKimi):
-//       K1 带尾逗号的坏 JSON / 根不是对象 / 读不动(这里用「它是个目录」造 EISDIR,Windows 上 EBUSY/EPERM 同属「非 ENOENT 的读错误」)
-//          → 整次同步跳过,mcp.json 原样、所有权旁账也不写;
-//       K2 带 UTF-8 BOM 的合法 JSON(Windows 记事本保存)→ 先剥 BOM 再解析,用户条目保留;
-//       K3 文件不存在 / 全空白 → 视为「空」,新建 / 合并。
-//   [C] ~/.claude/settings.json(syncClaudeCliSettings):同三类情形(启动即调,所以「仅仅启动工作台」就会丢 permissions/env/hooks)。
 //   [T] 如意没设思考预算时,只删【自己写过的】MAX_THINKING_TOKENS(sidecar 记权属),用户手写的值留着。
 //   [A] syncAgentRolesToClaude 只覆盖带标记的自家文件:同名的用户文件不动、老版本(无标记)写出且没改过的升级成带标记、
 //       其余无标记的保守跳过;用户删掉标记行 = 接管,不再被覆盖。
@@ -18,75 +11,19 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-user-sync-safety-'));
 const home = path.join(root, 'home');
 const data = path.join(root, 'data');
-const kimiHome = path.join(root, 'kimi-home');
 const work = path.join(root, 'work');
-for (const d of [home, data, kimiHome, work]) fs.mkdirSync(d, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+for (const d of [home, data, work]) fs.mkdirSync(d, { recursive: true });
 process.env.RUYI_HOME = data;
 process.env.HOME = home;
 process.env.USERPROFILE = home;
-process.env.KIMI_CODE_HOME = kimiHome;
 fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({ configSchema: 7, version: '1.4.0', autoImportClaudeCodeMcp: false, activeProvider: '' }, null, 2));
 const { loadServerInternals } = require('../lib/server-internals');
-const internals = loadServerInternals(['syncClaudeCliSettings', 'syncMcpServersToKimi', 'syncAgentRolesToClaude', 'normalizeConfig', 'RUYI_AGENT_FILE_MARKER']);
-const { syncClaudeCliSettings, syncMcpServersToKimi, syncAgentRolesToClaude, normalizeConfig, RUYI_AGENT_FILE_MARKER } = internals;
+const internals = loadServerInternals(['syncClaudeCliSettings', 'syncAgentRolesToClaude', 'normalizeConfig', 'RUYI_AGENT_FILE_MARKER']);
+const { syncClaudeCliSettings, syncAgentRolesToClaude, normalizeConfig, RUYI_AGENT_FILE_MARKER } = internals;
 
 const BOM = '\uFEFF';
 const rd = file => fs.readFileSync(file, 'utf8');
 const rmrf = file => fs.rmSync(file, { recursive: true, force: true });
-
-// ───────────── [K] Kimi mcp.json ─────────────
-const kimiTarget = path.join(kimiHome, 'mcp.json');
-const kimiSidecar = path.join(data, 'kimi-mcp-sync.json');
-const kimiConfig = normalizeConfig({ includeWorkbenchMcp: true, mcpCommandMode: 'node', desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [] }).config;
-const kimiReset = () => { rmrf(kimiTarget); rmrf(kimiSidecar); };
-
-test('[K1] 带尾逗号的坏 JSON:mcp.json 与旁账都不动', async () => {
-  kimiReset();
-  const bad = '{\n  "mcpServers": {\n    "my-own": { "command": "node", "args": ["x.js"] },\n  }\n}\n';   // 尾逗号 = 非法 JSON
-  fs.writeFileSync(kimiTarget, bad);
-  await syncMcpServersToKimi(kimiConfig);
-  assert.equal(rd(kimiTarget), bad, '用户的 mcp.json 原样(修前被当成 {} 整份覆盖,「my-own」丢光)');
-  assert.equal(fs.existsSync(kimiSidecar), false, '没写进去就不记所有权旁账');
-});
-
-test('[K1] 根不是对象(数组 / 字面量)与读不动(是个目录)同样跳过', async () => {
-  for (const content of ['[1, 2, 3]', '"just a string"', 'null']) {
-    kimiReset();
-    fs.writeFileSync(kimiTarget, content);
-    await syncMcpServersToKimi(kimiConfig);
-    assert.equal(rd(kimiTarget), content, `根为 ${content}:原样`);
-    assert.equal(fs.existsSync(kimiSidecar), false);
-  }
-  kimiReset();
-  fs.mkdirSync(kimiTarget);   // readFile 抛 EISDIR:不是 ENOENT,不能当「空」
-  await syncMcpServersToKimi(kimiConfig);
-  assert.ok(fs.statSync(kimiTarget).isDirectory(), '读错误:没去覆盖它');
-  assert.equal(fs.existsSync(kimiSidecar), false);
-  rmrf(kimiTarget);
-});
-
-test('[K2] 带 BOM 的合法 mcp.json:用户条目保留,如意条目并进去', async () => {
-  kimiReset();
-  fs.writeFileSync(kimiTarget, BOM + JSON.stringify({ mcpServers: { 'my-own': { command: 'node', args: ['x.js'] } }, theme: 'dark' }, null, 2));
-  await syncMcpServersToKimi(kimiConfig);
-  const out = JSON.parse(rd(kimiTarget));
-  assert.deepEqual(out.mcpServers['my-own'], { command: 'node', args: ['x.js'] }, '用户自己的条目还在(修前 BOM 让 JSON.parse 失败 → 整份重写)');
-  assert.equal(out.theme, 'dark', '用户的其它顶层键也在');
-  assert.ok(out.mcpServers.ruyi, '如意自己的条目合并进去了');
-  assert.ok(fs.existsSync(kimiSidecar), '写了就记旁账');
-});
-
-test('[K3] 文件不存在与全空白都当「空」:照常新建 / 合并', async () => {
-  kimiReset();
-  await syncMcpServersToKimi(kimiConfig);
-  assert.ok(JSON.parse(rd(kimiTarget)).mcpServers.ruyi, '不存在 → 新建');
-  kimiReset();
-  fs.writeFileSync(kimiTarget, '  \r\n\r\n');
-  await syncMcpServersToKimi(kimiConfig);
-  assert.ok(JSON.parse(rd(kimiTarget)).mcpServers.ruyi, '全空白 → 合并');
-  kimiReset();
-});
 
 // ───────────── [C] ~/.claude/settings.json ─────────────
 const claudeDir = path.join(home, '.claude');

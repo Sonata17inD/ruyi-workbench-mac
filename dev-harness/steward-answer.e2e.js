@@ -129,7 +129,6 @@ function writeConfig(patch) {
 writeConfig({});
 
 process.env.RUYI_HOME = HOME;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 const srv = require(SERVER);
 
 // ── 小工具 ────────────────────────────────────────────────────────────────────────────────

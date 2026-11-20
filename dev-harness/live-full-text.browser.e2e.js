@@ -40,14 +40,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 原地保留:零行被摘下再挂回(修前 replaceChildren 把每一行都摘下,引擎整份重排;2000 条消息的会话上 100 行要 0.3–0.4 s),
 // 行对象不变、展开着的折叠块仍展开。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -76,7 +75,7 @@ const GROW_ROUNDS = 14;
 const GROW_LINE = i => `\n第 ${i + 1} 段过程记录:${'它还在一行行地往下说,页面就这样一拍一拍地变长。'.repeat(33)}`;
 const SHORT_WAIT = 150;         // 「该发生的当拍就该发生」的等待上限(150×40ms = 6s):失败时不许把活回合的窗口耗光
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 
 function request(port, method, pathname, body, token) {
@@ -106,13 +105,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(80);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 // 确定性 provider:第一轮先流一段正文再要一次 file_read(read 档,自动放行);第二轮流第二段正文、
@@ -306,8 +298,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started'); // 117q:此启动门原吃默认 attempts=200(200×80ms=16s)低于 30 号文 P1-31 建议的 300×同款间隔量级,是「FAIL workbench up」假红的根;默认值被本文件下方的业务断言调用复用,不能整体抬,这里改成显式传 300 只抬这一处(30 号文 P1-31)
   let token = '';
@@ -328,11 +320,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A5 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -618,11 +610,10 @@ try {
 } finally {
   if (cdp && fail) console.log('CONSOLE ' + cdp.logs.slice(-6).join(' | '));
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) await new Promise(resolve => provider.close(resolve));
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ }
   console.log(`\nLIVE FULL TEXT BROWSER E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
   process.exitCode = fail ? 1 : 0;

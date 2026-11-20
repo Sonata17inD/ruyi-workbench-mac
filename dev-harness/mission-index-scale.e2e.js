@@ -2,7 +2,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 (async () => {
 'use strict';
 // E2E(第75c波):可重建 Mission/Intervention 物化索引、revision cursor、ETag、压缩与规模门。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -121,7 +121,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 
 // 同步起子进程 >50 ms(带栈)。门红的时候把它们打出来,下一次红就能分清「事件循环被占住」还是「盘上慢」。不影响判据。
 const BLOCKING_TRACE = path.join(HOME, 'blocking-trace.ndjson');
 const wbSpawnedAt = Date.now();
-const wb = cp.spawn(process.execPath, ['--require', path.join(__dirname, 'lib', 'trace-blocking.js'), 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1', TRACE_BLOCKING_OUT: BLOCKING_TRACE }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['--require', path.join(__dirname, 'lib', 'trace-blocking.js'), 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1', TRACE_BLOCKING_OUT: BLOCKING_TRACE } });
 const dumpBlockingTrace = (label, fromMs, toMs) => {
   let rows = [];
   try { rows = fs.readFileSync(BLOCKING_TRACE, 'utf8').trim().split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)); } catch { rows = []; }

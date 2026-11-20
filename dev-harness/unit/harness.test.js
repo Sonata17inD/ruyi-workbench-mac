@@ -11,7 +11,7 @@ const LIB = path.join(__dirname, '..', 'lib', 'harness.js');
 
 function runScript(body) {
   const src = `const { createRunner } = require(${JSON.stringify(LIB)});\n${body}`;
-  const r = cp.spawnSync(process.execPath, ['-e', src], { encoding: 'utf8', windowsHide: true, timeout: 30000 });
+  const r = cp.spawnSync(process.execPath, ['-e', src], { encoding: 'utf8', timeout: 30000 });
   return { status: r.status, stdout: r.stdout, stderr: r.stderr, lines: String(r.stdout).split(/\r?\n/) };
 }
 

@@ -13,7 +13,7 @@ const { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('STEWARD MULTISTEP LIVE'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-multistep-live-'));
 const home = path.join(root, 'home'), work = path.join(root, 'work'); fs.mkdirSync(home); fs.mkdirSync(work);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ providers: [provider], activeProvider: provider.id, stewardProviderId: provider.id, stewardModel: provider.model,
   includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, stewardEnabledV1: true, permissionMode: 'acceptEdits', subagentMaxPerTurn: 4, defaultWorkspace: work, workspaces: [{ path: work }] }));
 const s = loadServerInternals(['runStewardTurn', 'listSessions', 'listAgentRuns', 'stewardLaunchPending', 'loadSession']);

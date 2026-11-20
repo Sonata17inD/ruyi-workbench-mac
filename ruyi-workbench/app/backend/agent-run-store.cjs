@@ -312,7 +312,7 @@ async function saveAgentRun(run) {
       if (n >= AGENT_RUN_PERSIST_PAUSE_AFTER) {
         const live = getLiveRun(run.id);
         if (live && !live.paused && !live.stopRequested) {
-          live.paused = true; live.run.pauseRequestedAt = nowIso();   // 对抗轮修: 与 API pause 同字段(live.run,非 runtime)
+          live.paused = true; live.wakeScheduler?.(); live.run.pauseRequestedAt = nowIso();   // 对抗轮修: 与 API pause 同字段(live.run,非 runtime)
           appendAgentRunEvent(run, { type: 'run_paused', data: { reason: 'persistence_degraded', consecutiveFailures: n } });
         }
       }

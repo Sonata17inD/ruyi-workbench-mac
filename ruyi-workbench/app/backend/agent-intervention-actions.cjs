@@ -99,7 +99,8 @@ function createAgentInterventionActions({
       item.status = 'materialized'; item.decidedBy = String(command.decidedBy || 'user'); item.decidedAt = nowIso(); item.resultNodeId = mat.node.id;
       bumpRunIntervention(live.run, 'pool_approve');
       appendAgentRunEvent(live.run, { type: 'run_pool', data: { action: 'materialized', poolId: interventionId, by: String(command.decidedBy || 'user'), nodeId: mat.node.id } });
-      try { live.poolGraceArmed = true; } catch {}
+      live.poolGraceArmed = true;
+      live.wakeScheduler?.();
       if (live.inPoolGrace && Array.isArray(live.resumeWaiters)) {
         const waiters = live.resumeWaiters.splice(0);
         for (const wake of waiters) wake();

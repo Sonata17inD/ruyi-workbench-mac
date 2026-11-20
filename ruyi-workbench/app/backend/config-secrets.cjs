@@ -369,10 +369,6 @@ function restoreExternalMcpServersSecrets(incomingList, currentList, urlRestores
     ? restoreExternalMcpServerSecrets(mcpEntry, byId.get(mcpEntryIdKey(mcpEntry)) || null, restores)
     : mcpEntry));
 }
-// 最后一道闸(sanitizeExternalMcpServer 每次读、写配置都过):仍是掩码的 env／headers 值、仍带脱敏标记的 arg
-// 都不是真值 —— 能还原的上面已经还原了,走到这里还剩下的一律清空。写 externalMcpServers 的每一个口子
-// (POST /api/config、steward_config_set、mcp_configure、import-folder、import-config/apply、Claude Code 自动导入)
-// 与 drop-in 运行时合并都经 sanitize,所以掩码到不了磁盘、.mcp.json、Claude／Kimi 同步产物和 MCP 子进程的 env。
 function mcpSecretValueOrCleared(value) {
   return value.startsWith(KEY_MASK_PREFIX) ? '' : value;
 }
@@ -555,9 +551,7 @@ function sanitizeExternalMcpCommon(raw) {
   // 视为 'ruyi'(照旧同步回 Claude Code),行为与修前逐字节一致。谁在读:syncMcpServersToClaude 跳过
   // 'claude-code'(那是从 Claude Code 导进来的,不能再同步回去把用户删掉的条目复活)。
   const origin = String(raw.origin || '').trim();
-  if (origin === 'claude-code' || origin === 'ruyi') out.origin = origin;
-  // W2 迁移中心:自动导入扩到 Codex / Kimi Code 两家,来源标记同一用途(反向同步据此不外溢、不回写)。
-  else if (origin === 'codex' || origin === 'kimi') out.origin = origin;
+  if (origin) out.origin = origin.slice(0, 64);
   return out;
 }
 

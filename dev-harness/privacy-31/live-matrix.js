@@ -29,7 +29,7 @@ async function main() {
     const root = path.resolve(option('restart'));
     if (path.dirname(root) !== path.resolve(os.tmpdir()) || !path.basename(root).startsWith('ruyi-live-matrix-')) throw Error('restart_scope_refused');
     // This internal child mode must never fall back to the caller's real data root.
-    process.env.RUYI_HOME = path.join(root, 'data'); process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'data');
+    process.env.RUYI_HOME = path.join(root, 'data');
     delete process.env.RUYI_TEST_SERVER_JS;
     const app = require('../lib/server-internals').loadServerInternals(['readConfig', 'PrivacyGateway', 'providerRawCompletion']);
     const cfg = await app.readConfig(), saved = JSON.parse(fs.readFileSync(path.join(root, 'restart.json'), 'utf8'));
@@ -51,7 +51,7 @@ async function main() {
   if (!selected?.apiKey || !selected?.baseUrl || !selected?.model) throw Error('configured_deepseek_endpoint_unavailable');
   require('../lib/self-isolate-home');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-live-matrix-')), data = path.join(root, 'data'), work = path.join(root, 'work');
-  fs.mkdirSync(data); fs.mkdirSync(work); process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  fs.mkdirSync(data); fs.mkdirSync(work); process.env.RUYI_HOME = data;
   delete process.env.RUYI_TEST_SERVER_JS;
   const sourceFile = path.resolve(__dirname, '../../ruyi-workbench/app/server.js');
   const sha256 = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -339,7 +339,7 @@ async function main() {
     });
     await runCase('source-views-search-profile-diff', async () => {
       const repo = path.join(work, 'diff-fixture'); fs.mkdirSync(repo);
-      const git = argv => cp.execFileSync('git', argv, { cwd: repo, windowsHide: true, stdio: 'pipe', timeout: 15000 });
+      const git = argv => cp.execFileSync('git', argv, { cwd: repo, stdio: 'pipe', timeout: 15000 });
       git(['init', '-q']);
       fs.writeFileSync(path.join(repo, 'contact.json'), JSON.stringify({ email: values.email, patientCode: values.field, publicValue: 1 }) + '\n');
       git(['add', 'contact.json']); git(['-c', 'user.email=fixture@example.test', '-c', 'user.name=PrivacyFixture', 'commit', '-qm', 'synthetic baseline']);
@@ -432,7 +432,7 @@ else result={};process.stdout.write(JSON.stringify({jsonrpc:'2.0',id:m.id,result
       await app.PrivacyGateway.run('restart-acceptance', cfg, async () => { ref = (await app.PrivacyGateway.toolResult({ email: values.email })).email; });
       fs.writeFileSync(path.join(root, 'restart.json'), JSON.stringify({ email: values.email, ref }));
       await new Promise((resolve, reject) => {
-        const child = cp.spawn(process.execPath, [__filename, '--live', '--restart=' + root], { env: { ...process.env }, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = cp.spawn(process.execPath, [__filename, '--live', '--restart=' + root], { env: { ...process.env }, stdio: ['ignore', 'pipe', 'pipe'] });
         restartChildren.add(child);
         let output = ''; child.stdout.on('data', part => output += part); child.stderr.resume();
         let expired = false, killTimer;

@@ -5,7 +5,7 @@ const { createRunner } = require('./lib/harness');
 const { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('STEWARD SETTINGS SCOPE'); const { ok } = t;
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-settings-scope-'));
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, defaultWorkspace: home,
   activeProvider: 'fake', providers: [{ id: 'fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1', apiKey: 'fixture-secret', model: 'base' }], newThreadEngine: 'last', lastUsedEngineRoute: { engine: 'openai', providerId: 'fake', model: 'base' } }));
 const s = loadServerInternals(['readConfig', 'ConfigPatchHooks', 'mutateConfig', 'createSession', 'loadSession', 'saveSession', 'updateSessionMeta', 'stewardDecisionsRead', 'StewardDecisions', 'activeChildren'], { withEval: true });

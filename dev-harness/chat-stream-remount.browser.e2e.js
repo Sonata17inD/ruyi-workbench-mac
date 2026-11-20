@@ -79,7 +79,7 @@ window.__mk = async function (opts = {}) {
     api: async u => (u.startsWith('/api/sessions/') ? { session: state.currentSession }
       : u === '/api/stop' ? { ok: true, stopped: true } : { ok: true }),
     apiErrText: e => String((e && e.message) || e),
-    agentCliMeta: () => ({ id: 'claude', nativeCompact: 'slash-command', alwaysInteractive: false }),
+    agentCliMeta: () => ({ id: 'claude' }),
     appendToolOutput() {}, authHeaders: () => ({}), autoGrow() {}, cliMissingCard: () => el('div'),
     compactNarrativeProcessRuns() {}, createTurnActivity: ta.createTurnActivity, describeTurnActivity: ta.describeTurnActivity,
     currentEngineMeta: () => ({ agentCliType: 'claude', engine: 'claude' }), currentWorkspace: () => '', engineLabel: () => 'x',

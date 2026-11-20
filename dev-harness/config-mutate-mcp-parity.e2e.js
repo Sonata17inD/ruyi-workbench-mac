@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 /*
  * E2E (117n-M2): 配置写口收敛(mutateConfig)+ MCP 连接器判据合一(mutateMcpConnector)。
  *
@@ -29,12 +29,12 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/config-mutate-mcp-parity.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
+const { createIsolatedKeychainServer } = require('./lib/isolated-keychain-fixture');
 const FAKE_MCP = path.join(__dirname, 'fake-mcp.js');
 const HOME = path.join(os.tmpdir(), 'ruyi-117n-m2-tool');
 const HOME2 = path.join(os.tmpdir(), 'ruyi-117n-m2-conc');
@@ -93,7 +93,7 @@ async function waitForAudit(home, kind, id, tries = 40) {
 
 const baseConfig = extra => ({
   configSchema: 7, version: '2.0.1', permissionMode: 'bypass',
-  credentialEncryptionV1: process.platform === 'win32',
+  credentialEncryptionV1: true,
   // 管家/线程摘要与本件无关,显式关掉避免背景写盘干扰配置比对。
   stewardEnabledV1: false, stewardThreadBriefV1: false,
   // autoImportClaudeCodeMcp 会读【真实】~/.claude.json 污染 temp-HOME,必须关。
@@ -115,9 +115,10 @@ const baseConfig = extra => ({
     ],
     dismissedMcpIds: ['tool-c'],
   }), null, 2));
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
   process.env.RUYI_HOME = HOME;
-  const srv = require(SERVER);
+  const keychain = createIsolatedKeychainServer(HOME);
+  const srv = require('./lib/server-internals').loadServerInternals(['readConfig', 'configureMcpFromTool', 'maskSecrets', 'safeMcpInventory', 'LocalSecretCryptoHooks']);
+  srv.LocalSecretCryptoHooks.helperPath = () => keychain.helper;
   const cfgTool = () => srv.configureMcpFromTool;
 
   console.log('── T 段: 工具面 mcp_configure 的副作用与护栏 ──');
@@ -172,7 +173,7 @@ const baseConfig = extra => ({
   const diskS = async () => ((await srv.readConfig()).externalMcpServers || []).find(s => s && s.id === 'tool-s') || null;
   const realS = JSON.stringify(await diskS());
   ok(realS.includes(T12_GH) && realS.includes(T12_ARG), 'T12b 81-P1: 持久化凭据能从运行时逐字恢复');
-  ok(process.platform !== 'win32' || !plainT12(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8')), 'T12b2 81-P1: 配置磁盘副本不含明文密钥或参数');
+  ok(!plainT12(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8')), 'T12b2 81-P1: 配置磁盘副本不含明文密钥或参数');
   const inv = srv.safeMcpInventory(await srv.readConfig()).find(e => e.id === 'tool-s');
   ok(inv && inv.args[2] === '«redacted»' && !plainT12(JSON.stringify(inv)), 'T12c mcp_list(safeMcpInventory)args 显示脱敏、零明文');
   const maskedS = srv.maskSecrets(await srv.readConfig()).externalMcpServers.find(s => s.id === 'tool-s');
@@ -180,7 +181,7 @@ const baseConfig = extra => ({
   const afterS1 = await diskS();
   ok(rS1 && rS1.ok === true && afterS1 && afterS1.label === 'S relabeled'
     && JSON.stringify({ ...afterS1, label: 'S' }) === realS, 'T12d 掩码原样 upsert 回来(只改 label)-> 真值逐字节还原');
-  const rS2 = await cfgTool()({ operation: 'upsert', id: 'tool-s', server: { ...maskedS, command: path.join(HOME, 'other-launcher.exe') } });
+  const rS2 = await cfgTool()({ operation: 'upsert', id: 'tool-s', server: { ...maskedS, command: path.join(HOME, 'other-launcher') } });
   const afterS2 = await diskS();
   const textS2 = fs.readFileSync(path.join(HOME, 'config.json'), 'utf8');
   ok(rS2 && rS2.ok === true && afterS2 && afterS2.env.GITHUB_TOKEN === '' && afterS2.args[2] === '' && !plainT12(textS2) && !textS2.includes('••••') && !textS2.includes('«redacted»'),
@@ -196,7 +197,8 @@ const baseConfig = extra => ({
     enableMcpDropIn: false, externalMcpServers: conc,
   }), null, 2));
   let WP = await getFreePort();
-  const spawnWb = () => cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2, WIN_CLAUDE_WORKBENCH_HOME: HOME2 }, windowsHide: true });
+  const httpKeychain = createIsolatedKeychainServer(HOME2);
+  const spawnWb = () => cp.spawn(process.execPath, [httpKeychain.entry, 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2 } });
   let wb = null, started = false;
   for (let attempt = 0; attempt < 3 && !started; attempt++) {
     wb = spawnWb();

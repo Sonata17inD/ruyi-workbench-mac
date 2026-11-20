@@ -15,10 +15,10 @@ const HOME = path.join(os.tmpdir(), 'wcw-ssrf-hardening-e2e');
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
-  // Isolate dataRoot before require (server.js resolves WIN_CLAUDE_WORKBENCH_HOME at load).
+  // Isolate dataRoot before require (server.js resolves RUYI_HOME at load).
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+  process.env.RUYI_HOME = HOME;
   const mod = require(path.join(WB, 'app', 'backend', 'network-policy.cjs'));
 
   const blocked = u => mod.ssrfCheck(u).allowed === false;

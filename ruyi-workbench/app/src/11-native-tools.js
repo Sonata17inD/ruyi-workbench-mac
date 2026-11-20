@@ -27,6 +27,7 @@ EventStreamHooks.recentBackgroundAgentJobSessions = BackgroundJobs.recentBackgro
 
 const ShellSessions = require('./backend/shell-sessions.cjs').createShellSessions({
   ProcessRuntime, killChildTree, nowIso, persistBackgroundJob,
+  backgroundChanged: sessionId => RUYI_EVENTS.emit('background.changed', { sessionId }),
   redact,  safeSessionId, sessionPath,
 });
 const { shellStart, shellVisibleTo, shellSend, shellPoll, shellKill, shellList,

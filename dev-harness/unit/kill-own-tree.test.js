@@ -36,14 +36,13 @@ test('[P2] 快照解析', () => {
 
 const alive = pid => { const t = snapshotProcessTable(); return Boolean(t && t.some(r => r.pid === pid)); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const liveTreeSkip = process.platform === 'win32' ? false
-  : process.platform === 'darwin' ? (snapshotProcessTable() ? false : 'build macOS process helper before live cleanup tests') : true;
+const liveTreeSkip = process.platform === 'darwin' ? (snapshotProcessTable() ? false : 'build macOS process helper before live cleanup tests') : true;
 
 // 根是一个 node,它再 spawn 一个长跑的 node(孙子),把孙子的 pid 打到 stdout。
 async function rootWithGrandchild(detached) {
-  const opts = detached ? "{stdio:'ignore',detached:true,windowsHide:true}" : "{stdio:'ignore',windowsHide:true}";
+  const opts = detached ? "{stdio:'ignore',detached:true}" : "{stdio:'ignore'}";
   const script = `const c=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>process.exit(0),60000);setInterval(()=>{},1000)'],${opts});console.log(c.pid);setTimeout(()=>process.exit(0),60000);setInterval(()=>{},1000);`;
-  const root = cp.spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+  const root = cp.spawn(process.execPath, ['-e', script], { stdio: ['ignore', 'pipe', 'ignore'] });
   const grandPid = await new Promise((resolve, reject) => {
     let buf = '';
     const timer = setTimeout(() => { killOwnTree(root); reject(new Error('grandchild pid not reported')); }, 10000);
@@ -78,7 +77,7 @@ test('[R1b] 真进程:普通(非 detached)孙子随根一起走(libuv job),收�
 });
 
 test('[R2] 根已退出 ⇒ 不碰', async () => {
-  const root = cp.spawn(process.execPath, ['-e', '0'], { stdio: 'ignore', windowsHide: true });
+  const root = cp.spawn(process.execPath, ['-e', '0'], { stdio: 'ignore' });
   await new Promise(r => root.once('exit', r));
   const res = killOwnTree(root);
   assert.equal(res.skipped, 'root-exited');

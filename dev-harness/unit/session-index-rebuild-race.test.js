@@ -13,7 +13,6 @@ const path = require('path');
 const { describe, it } = require('node:test');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-index-rebuild-race-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));

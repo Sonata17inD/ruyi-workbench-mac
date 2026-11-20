@@ -174,13 +174,12 @@ function walkDepthHint(files, tool) {
 // F12:file_list / glob / project_snapshot 的信封。每条只带相对路径(root 在顶层只出现一次,模型自己拼);
 // 修前每条同时带绝对 path 与 relativePath,默认 500 条约 100KB,自己就超过 60K 的模型侧上限被拦腰截断。
 // 目录不带 size(恒为 0 的噪声)。absolute:true 才补回绝对 path(前端文件树用)。
-function walkEnvelopeEntries(files, absolute, extra) {
+function walkEnvelopeEntries(files, absolute, root) {
   return files.map(f => {
     const e = { relativePath: f.relativePath };
-    if (absolute) e.path = f.path;
+    if (absolute) e.path = path.join(root, f.relativePath);
     e.type = f.type;
     if (f.type !== 'directory') e.size = f.size;
-    if (extra) Object.assign(e, extra(f));
     return e;
   });
 }

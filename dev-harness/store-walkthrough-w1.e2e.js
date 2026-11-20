@@ -2,7 +2,6 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib 头注)
 // 走查 W1(存储/路由一批)的 HTTP 层回归件。真服务、临时家、全离线。
-//   [K] #4  GET /api/kimi/status:只是「打开看一眼」—— 不把会话顶到列表最上面(updatedAt 不动)、状态没变就不写盘、变了才写;
 //   [F] #9  任何响应都带 X-Frame-Options: DENY 与 Content-Security-Policy: frame-ancestors 'none'(防被嵌入);
 //   [H] #11 /health 带 app 字段(freeStalePort 的工作台识别口径,见 unit/health-looks-like-workbench);
 //   [R] #10 项目级 agent-roles / workflows 的 cwd 不存在或是文件 → 400 人话(不再 500 + ENOTDIR 原文),正常目录照存;
@@ -20,7 +19,6 @@ const t = createRunner('STORE WALKTHROUGH W1');
 const { ok } = t;
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-store-w1-'));
-const KIMI_HOME = path.join(HOME, '.kimi');
 const OPEN_LOG = path.join(HOME, 'open-count.log');
 const APP_NAME = '如意 Ruyi';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -85,7 +83,7 @@ const MB = 1024 * 1024;
 function seed() {
   fs.mkdirSync(path.join(HOME, 'sessions'), { recursive: true });
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
-    configSchema: 6, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, agentCliType: 'kimi',
+    configSchema: 6, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false,
   }, null, 2));
   // ≤ 2MB(1.7MB):特殊行跨在 1MB 接缝上 —— 修前头段尾巴是半行、尾段又无条件丢第一行,这条消息两边都不要。
   const small = buildMessages([{ start: MB - 1500, marker: 'zzseamalpha' }], () => 1700000);
@@ -95,13 +93,9 @@ function seed() {
   writeSession('sess-seam-small', '无关标题甲', small.text);
   writeSession('sess-seam-big', '无关标题乙', big.text);
   for (let i = 0; i < 8; i++) writeSession('sess-sf-' + i, '无关标题' + i, rowLine('user', '单飞夹具 zzsingleflight' + i) + rowLine('assistant', 'ok'));
-  // Kimi 原生会话:wire 里只有一条 token 计数。
-  fs.mkdirSync(path.join(KIMI_HOME, 's1', 'agents', 'main'), { recursive: true });
-  fs.writeFileSync(path.join(KIMI_HOME, 'session_index.jsonl'), JSON.stringify({ sessionId: 'native-w1', sessionDir: path.join(KIMI_HOME, 's1') }) + '\n');
-  fs.writeFileSync(wireFile, JSON.stringify({ type: 'token_counting.measured', tokens: 1234 }) + '\n');
+
 }
 const fixture = {};
-const wireFile = path.join(KIMI_HOME, 's1', 'agents', 'main', 'wire.jsonl');
 
 (async () => {
   let server = null;
@@ -110,11 +104,11 @@ const wireFile = path.join(KIMI_HOME, 's1', 'agents', 'main', 'wire.jsonl');
     const PORT = await getFreePort();
     server = cp.spawn(process.execPath, [path.join(WB, 'app', 'server.js')], {
       env: {
-        ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, HOME, USERPROFILE: HOME, PORT: String(PORT), WCW_NO_BROWSER: '1',
-        CLAUDE_CONFIG_DIR: path.join(HOME, '.claude'), KIMI_CODE_HOME: KIMI_HOME,
+        ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, PORT: String(PORT), WCW_NO_BROWSER: '1',
+        CLAUDE_CONFIG_DIR: path.join(HOME, '.claude'),
         RUYI_OPEN_LOG: OPEN_LOG, NODE_OPTIONS: `--require ${JSON.stringify(path.join(__dirname, 'lib', 'count-fsp-open-preload.js'))}`,
       },
-      cwd: WB, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: WB, stdio: ['ignore', 'pipe', 'pipe'],
     });
     server.stdout.on('data', () => {}); server.stderr.on('data', () => {});
     ok(await waitUp(PORT), 'P0 服务起来了');
@@ -157,42 +151,6 @@ const wireFile = path.join(KIMI_HOME, 's1', 'agents', 'main', 'wire.jsonl');
     ok(goodRoles.status === 200 && goodRoles.json && goodRoles.json.ok === true && fs.existsSync(path.join(goodDir, '.ruyi', 'agents.json')), 'R6 正常目录照存(.ruyi/agents.json 落盘)');
     const globalRoles = await request(PORT, 'POST', '/api/agent-roles', { token, body: { scope: 'global', roles: [] } });
     ok(globalRoles.status === 200, 'R7 全局作用域不受影响');
-
-    // ── [K] #4 Kimi 状态:只读、不顶列表 ──────────────────────────────────────────────────────
-    const OLD = '2026-09-28T08:00:00.000Z';
-    const mk = async title => (await request(PORT, 'POST', '/api/sessions', { token, body: { title, messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'ok' }] } })).json.session;
-    const kOld = await mk('OLD kimi session');
-    await sleep(1100);
-    const kNew = await mk('newer session');
-    const headFile = path.join(HOME, 'sessions', kOld.id + '.json');
-    const head = JSON.parse(fs.readFileSync(headFile, 'utf8'));
-    head.claudeSessionId = 'native-w1'; head.updatedAt = OLD;
-    fs.writeFileSync(headFile, JSON.stringify(head, null, 2));
-    await request(PORT, 'GET', '/api/sessions', { token });   // 让列表索引读到这份头(刷索引)
-    const orderOf = async () => (await request(PORT, 'GET', '/api/sessions', { token })).json.sessions.map(s => s.id);
-    const idsBefore = await orderOf();
-    const s1 = await request(PORT, 'GET', '/api/kimi/status?sessionId=' + kOld.id, { token });
-    ok(s1.status === 200 && s1.json && s1.json.ok === true && s1.json.contextTokens === 1234, `K1 状态读到(contextTokens 1234;实得 ${s1.status} ${s1.json && s1.json.contextTokens})`);
-    ok(s1.json && s1.json.usage && s1.json.usage.contextTokens === 1234, 'K2 响应里带 usage');
-    await sleep(500);
-    const afterHead = JSON.parse(fs.readFileSync(headFile, 'utf8'));
-    ok(afterHead.updatedAt === OLD, `K3 updatedAt 没被刷新(修前被顶成当前时间;实得 ${afterHead.updatedAt})`);
-    ok(afterHead.kimiContextStatus && afterHead.kimiContextStatus.contextTokens === 1234, 'K4 状态确实落盘了(首次有变化)');
-    const idsAfter = await orderOf();
-    ok(JSON.stringify(idsAfter) === JSON.stringify(idsBefore) && idsAfter[0] === kNew.id, 'K5 会话列表顺序不变,旧会话没被顶到最上面');
-    const bytes1 = fs.readFileSync(headFile, 'utf8');
-    const mtime1 = fs.statSync(headFile).mtimeMs;
-    await sleep(60);
-    const s2 = await request(PORT, 'GET', '/api/kimi/status?sessionId=' + kOld.id, { token });
-    await sleep(300);
-    ok(s2.status === 200 && s2.json.contextTokens === 1234, 'K6 第二次读状态照常');
-    ok(fs.readFileSync(headFile, 'utf8') === bytes1 && fs.statSync(headFile).mtimeMs === mtime1, 'K7 状态没变 → 不写盘(头文件字节与 mtime 都不变)');
-    fs.appendFileSync(wireFile, JSON.stringify({ type: 'token_counting.measured', tokens: 2222 }) + '\n');
-    const s3 = await request(PORT, 'GET', '/api/kimi/status?sessionId=' + kOld.id, { token });
-    await sleep(500);
-    const head3 = JSON.parse(fs.readFileSync(headFile, 'utf8'));
-    ok(s3.json.contextTokens === 2222 && head3.kimiContextStatus.contextTokens === 2222, 'K8 状态变了 → 才写盘');
-    ok(head3.updatedAt === OLD, 'K9 变了也不推 updatedAt(只读状态不是会话活动)');
 
     // ── [S] #12 会话搜索 ─────────────────────────────────────────────────────────────────────
     ok(fixture.small.size > MB && fixture.small.size <= 2 * MB && fixture.small.spans.zzseamalpha[0] < MB && fixture.small.spans.zzseamalpha[1] > MB, `S0a 夹具:≤2MB 文件的特殊行跨 1MB 接缝(${fixture.small.size} 字节)`);

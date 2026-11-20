@@ -25,7 +25,6 @@ const { ok } = t;
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-surface-w2-'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const posix = process.platform !== 'win32';
 
 const children = [];
 function mkHome(name, config = {}) {
@@ -37,8 +36,8 @@ function mkHome(name, config = {}) {
 }
 function spawnWb(home, args, extraEnv = {}) {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', ...args], {
-    cwd: WB, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home, WCW_NO_BROWSER: '1', ...extraEnv },
+    cwd: WB, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home, WCW_NO_BROWSER: '1', ...extraEnv },
   });
   child.out = '';
   child.stdout.on('data', d => { child.out += d; });
@@ -166,15 +165,13 @@ const alive = pid => { try { process.kill(pid, 0); return true; } catch { return
     ok(Array.isArray(plainMsgs) && plainMsgs.length === 0, 'I10 普通新建会话没有 meta.imported 标记可言(零消息)');
 
     // [M] 权限位
-    if (posix) {
+    {
       const saved = await lo(portA, 'POST', '/api/config', { token, body: { theme: 'light' } });
       ok(saved.status === 200, `M0 POST /api/config 成功(${saved.status})`);
       const mode = f => fs.statSync(f).mode & 0o777;
       ok(mode(path.join(A.home, 'config.json')) === 0o600, `M1 config.json 是 0600(实得 ${mode(path.join(A.home, 'config.json')).toString(8)})`);
       ok(fs.existsSync(path.join(A.home, 'config.json.prev')) && mode(path.join(A.home, 'config.json.prev')) === 0o600, 'M2 config.json.prev 是 0600');
       ok(mode(path.join(A.home, 'runtime.json')) === 0o600, `M3 runtime.json 是 0600(实得 ${mode(path.join(A.home, 'runtime.json')).toString(8)})`);
-    } else {
-      ok(true, 'M* Windows 上权限位无意义,跳过(继承用户目录 ACL)');
     }
 
     /* ═══ [H] 非回环 --host 不带 --allow-remote:拒绝启动 ═══ */

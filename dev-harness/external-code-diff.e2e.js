@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 'use strict';
 // Native code-editor diff + turn workspace baseline. Offline and desktop-safe: the route runs with a
 // test-only capture seam, so no real IDE window is opened.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -129,15 +129,15 @@ try {
 
   // Git optimization must preserve a pre-existing dirty working-tree value, not compare the turn against
   // HEAD and accidentally include the user's older edit in this turn's diff.
-  const gitAvailable = cp.spawnSync('git', ['--version'], { windowsHide: true, stdio: 'ignore' }).status === 0;
+  const gitAvailable = cp.spawnSync('git', ['--version'], { stdio: 'ignore' }).status === 0;
   if (gitAvailable) {
     const gitWs = path.join(HOME, 'git-work');
     fs.mkdirSync(gitWs, { recursive: true });
     const gitFile = path.join(gitWs, 'dirty.js');
     fs.writeFileSync(gitFile, 'const value = 0;\n', 'utf8');
-    cp.execFileSync('git', ['init', '-q'], { cwd: gitWs, windowsHide: true });
-    cp.execFileSync('git', ['add', '--', 'dirty.js'], { cwd: gitWs, windowsHide: true });
-    cp.execFileSync('git', ['-c', 'user.name=Ruyi Test', '-c', 'user.email=ruyi@example.invalid', 'commit', '-qm', 'base'], { cwd: gitWs, windowsHide: true });
+    cp.execFileSync('git', ['init', '-q'], { cwd: gitWs });
+    cp.execFileSync('git', ['add', '--', 'dirty.js'], { cwd: gitWs });
+    cp.execFileSync('git', ['-c', 'user.name=Ruyi Test', '-c', 'user.email=ruyi@example.invalid', 'commit', '-qm', 'base'], { cwd: gitWs });
     fs.writeFileSync(gitFile, 'const value = 1; // user change before turn\n', 'utf8');
     const gitBaseline = await srv.captureWorkspaceTurnBaseline(gitWs);
     fs.writeFileSync(gitFile, 'const value = 2; // changed in turn\n', 'utf8');
@@ -161,7 +161,7 @@ try {
   fs.writeFileSync(path.join(routeHome, 'config.json'), JSON.stringify({ configSchema: 9, permissionMode: 'bypass', defaultWorkspace: routeWs }, null, 2));
   const port = await getFreePort();
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: routeHome, RUYI_TEST_HOOKS: '1', RUYI_TEST_CODE_EDITOR: process.execPath,
       RUYI_TEST_EXTERNAL_EDITOR_CAPTURE: capturePath },
   });

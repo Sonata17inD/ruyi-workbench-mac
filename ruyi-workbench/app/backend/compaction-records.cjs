@@ -51,12 +51,6 @@ function createCompactionRecords({ estimateContentTokens, fmtTokensServer, appen
     return null;
   }
 
-  // 追加(或并入)一条压缩标记并返回该消息行(调用方可在返回值上继续挂 usage 等附加字段)。
-  // 文案永远由 compactMeta 全量派生重建,历史标记(无 meta 的旧格式行)只会被当作闭环处理,不会被误改。
-  //   o = { kind, label, evaporated?, reseeded?, saved?, beforeTokens?, afterTokens,
-  //         approx?(默认true→'约'), accuracy?(默认'估算', 显式传空串则省略括注), note?(最新一次覆盖) }
-  // beforeTokens 仅在【新建】行时生效(压缩集起点的估算值);并入已有行时保留首见起点,不回改。
-  // saved 省略时由 beforeTokens-afterTokens 推导(kimi 等实测路径只带前后实测值的调用形态)。
   function upsertCompactMarker(session, o) {
     const afterTokens = Math.max(0, Math.round(Number(o.afterTokens) || 0));
     const savedExplicit = o.saved == null ? NaN : Math.max(0, Number(o.saved) || 0);

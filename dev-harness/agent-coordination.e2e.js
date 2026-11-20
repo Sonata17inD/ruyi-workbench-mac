@@ -45,8 +45,8 @@ async function main() {
     };
     fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(config));
     proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-      cwd: path.resolve(__dirname, '../ruyi-workbench'), windowsHide: true,
-      env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, WCW_POOL_GRACE_MS: '2000' },
+      cwd: path.resolve(__dirname, '../ruyi-workbench'),
+      env: { ...process.env, RUYI_HOME: home, WCW_POOL_GRACE_MS: '2000' },
     });
     const base = `http://127.0.0.1:${port}`;
     for (let i = 0; i < 150; i++) { try { if ((await fetch(base + '/health')).ok) break; } catch {} await wait(100); }

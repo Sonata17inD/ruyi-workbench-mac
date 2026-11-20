@@ -36,7 +36,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   f) a follow-up ordinary turn still answers (compaction didn't break the engine)
 //   g) module.exports estimateHistoryTokens direct unit: pure-CJK ≈ len/1.5 (±10%); a tool_calls
 //      assistant msg counts its arguments length
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -135,7 +135,6 @@ function postStream(port, payload) {
   }
 
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env,
       // 第45波:本件测的是压缩【机制】(L1 蒸发/配对铁律/快照),不是估算校准 —— fake 的 usage 是
       // 玩具数(11/18 tokens),45d 会把 factor 学到 0.5 下限 → 校准后估算减半 → 预算永不跨越。
@@ -148,7 +147,7 @@ function postStream(port, payload) {
     ]) },
   });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 

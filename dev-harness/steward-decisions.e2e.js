@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 夹具直接写 NDJSON(决策日志是 append-only 纯文本,这是最确定的造数方式;写入侧的真实性由
 // steward-tools / steward-memory 等件覆盖)。端口用 getFreePort()。
 // 判定行:`STEWARD DECISIONS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -106,7 +106,7 @@ try {
   /* ═════════ 起服务 ═════════ */
   writeConfig({});
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true, stdio: 'ignore',
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, stdio: 'ignore',
   });
   let token = '';
   for (let i = 0; i < 300 && !token; i++) { // 117q:预算 100×120ms=12s 余量对本机冷启动实测 4.6-6.3s 偏窄,是「FAIL workbench up」假红的根(30 号文 P1-31)
@@ -188,7 +188,7 @@ try {
   fs.copyFileSync(path.join(HOME, 'config.json'), path.join(emptyHome, 'config.json'));
   const OFF_PORT = await getFreePort();
   const off = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(OFF_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: emptyHome, WIN_CLAUDE_WORKBENCH_HOME: emptyHome }, windowsHide: true, stdio: 'ignore',
+    cwd: WB, env: { ...process.env, RUYI_HOME: emptyHome }, stdio: 'ignore',
   });
   let offToken = '';
   for (let i = 0; i < 100 && !offToken; i++) {

@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/agent-workflow-claude-transient-repro.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -56,7 +56,7 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   // proving the dual-engine DAG no longer needs an OpenAI-compatible Provider just to retry a transient blip.
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'bypass', defaultWorkspace: HOME, subagentMaxConcurrent: 4, agentWorkflowMaxNodes: 32 }));
 
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: fakeClaude, WCW_FAKE_TRANSIENT_COUNTER: counterFile }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: fakeClaude, WCW_FAKE_TRANSIENT_COUNTER: counterFile } });
   try {
     ok(await up(WP), 'workbench starts');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));

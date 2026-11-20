@@ -61,7 +61,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     { id: 'beta', label: 'Beta 没配密钥', type: 'openai-compat', baseUrl: URL_SENTINEL, apiKey: '', models: [] },
   ],
 }, null, 2), 'utf8');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

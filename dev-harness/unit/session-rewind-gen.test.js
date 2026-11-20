@@ -59,7 +59,6 @@ const path = require('path');
 const { describe, it } = require('node:test');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-rewind-gen-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
@@ -235,8 +234,8 @@ describe('撤回代数闸(107-F7b)', () => {
     // 子进程往同一个会话头 rename 在 Windows 上 8 次重试全是 EPERM(本件第一轮实测)。断言一条没改。
     const child = await new Promise(resolve => {
       const proc = cp.spawn(process.execPath, [__filename], {
-        windowsHide: true, timeout: 60000,
-        env: { ...process.env, RUYI_F7B_CHILD: id, RUYI_HOME: root, WIN_CLAUDE_WORKBENCH_HOME: root },
+        timeout: 60000,
+        env: { ...process.env, RUYI_F7B_CHILD: id, RUYI_HOME: root },
       });
       let stdout = '', stderr = '';
       proc.stdout.on('data', d => { stdout += d; });

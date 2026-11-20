@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (e) subagentMaxPerTurn:0 → 三个代理工具都不在 buildOpenAiTools 产物里;直接调 /api/tools/spawn_agent 得
 //      「已并入 orchestrate_agents」的清晰拒绝;/api/tools/orchestrate_agents 得 context-free 拒绝。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -85,7 +85,7 @@ function writeConfig(fakePort, subagentMaxPerTurn, permissionMode, subagentMaxCo
   }, null, 2));
 }
 function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore */ } } }
-function spawnFake(env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env }, windowsHide: true }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
+function spawnFake(env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env } }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
 function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: '/v1/models', timeout: 800 }, resp => { resp.resume(); res(true); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); }); }
 
 (async () => {
@@ -104,7 +104,7 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
     parentText: '父回合:子任务已交办完成。',
   });
   let fake = spawnFake({ FAKE_SUBAGENT_SCRIPT: scriptA });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 
@@ -462,7 +462,7 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
     writeConfig(FAKE_PORT, 0); // disable the feature
     const scriptE = JSON.stringify({ parent: [{ text: '无子代理可用。' }], sub: [], subText: 'n/a' });
     const fakeE = spawnFake({ FAKE_SUBAGENT_SCRIPT: scriptE, FAKE_CAPTURE_DIR: path.join(HOME, 'cap-e') });
-    const wbE = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const wbE = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wbE.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     procs.push(fakeE, wbE);
     let hE = null; for (let i = 0; i < 40 && !hE; i++) { await sleep(150); hE = await health(WB_PORT); }
@@ -500,7 +500,7 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
     recoveryRun.nodes[0].status = 'running'; recoveryRun.nodes[0].completedAt = null;
     recoveryRun.nodes[2].status = 'queued'; recoveryRun.nodes[2].completedAt = null;
     fs.writeFileSync(recoveryFile, JSON.stringify(recoveryRun, null, 2));
-    const wbR = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const wbR = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     procs.push(wbR);
     // ad-hoc agent runs are persisted too, so this boot reconciles more run snapshots than the legacy test.
     // Keep the health window aligned with the suite's other restart-heavy cases instead of assuming a 6s disk.

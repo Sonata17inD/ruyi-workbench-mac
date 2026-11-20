@@ -44,7 +44,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const configure = value => request('POST', '/api/external-bots/connections', { op:'upsert', connection: value, controlConfirmed: true });
   const start = async () => {
     server = cp.spawn(process.execPath, ['--require', path.join(__dirname,'lib/external-channel-delivery-preload.js'), '--require', faults, 'app/server.js', 'serve', '--port', String(port)], {
-      cwd: WB, windowsHide:true, stdio:'ignore', env:{ ...process.env, ...isolated.env, ...FAKE_BOT_ENV, RUYI_BOT_TEST_F_APP:'synthetic-app-secret', RUYI_FAKE_EXTERNAL_API_PORT:String(apiPort), RUYI_HOME:home, WIN_CLAUDE_WORKBENCH_HOME:home },
+      cwd: WB, stdio:'ignore', env:{ ...process.env, ...isolated.env, ...FAKE_BOT_ENV, RUYI_BOT_TEST_F_APP:'synthetic-app-secret', RUYI_FAKE_EXTERNAL_API_PORT:String(apiPort), RUYI_HOME:home },
     });
     await until(async()=>{try{return(await request('GET','/health',undefined,{},false)).status===200;}catch{return false;}},'server');
     token=await until(()=>{try{const runtime=JSON.parse(fs.readFileSync(path.join(home,'runtime.json'),'utf8'));return runtime.pid===server.pid&&runtime.token;}catch{return false;}},'current process token');

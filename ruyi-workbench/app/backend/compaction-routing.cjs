@@ -1,6 +1,5 @@
 'use strict';
 
-const { normalizeAgentCliType } = require('./agent-cli-types.cjs');
 
 // Resolve the universal compaction selector. Empty selection follows the active engine/provider; an
 // explicit selection clones the configured provider with the chosen model so summary calls, accounting,
@@ -38,7 +37,7 @@ function configuredConversationWindow(config, engine, routeId, model) {
 }
 
 
-function createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway, agentCliContextWindowProbes }) {
+function createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway }) {
   function compactHistoryFromSession(session) {
     const out = [];
     for (const message of (session && Array.isArray(session.messages) ? session.messages : [])) {
@@ -89,12 +88,6 @@ function createCompactionRouting({ resolveContextWindow, providerContextWindow, 
     const manualModel = String(config && config.model || '').trim();
     let contextWindow = configuredConversationWindow(config, 'agent', agentCliType, manualModel);
     let contextWindowSource = contextWindow ? 'manual' : '';
-    // Query a native model-discovery probe when the selected CLI has one.
-    const probeWindow = agentCliContextWindowProbes[normalizeAgentCliType(agentCliType)];
-    if (!contextWindow && probeWindow) {
-      try { contextWindow = await probeWindow(config, model); } catch { /* fall through to name table */ }
-      if (contextWindow > 0) contextWindowSource = 'probe';
-    }
     if (!contextWindow) {
       const messages = session && Array.isArray(session.messages) ? session.messages : [];
       for (let i = messages.length - 1; i >= 0; i--) {

@@ -7,6 +7,7 @@
 #endif
 
 static NSMutableDictionary *counts;
+static NSMutableDictionary *pointerCountsByPID;
 static NSWindow *primary;
 static NSWindow *cover;
 static NSPanel *floating;
@@ -87,6 +88,13 @@ static void ChangeClipboard(void) {
     }
     if (key)
         counts[key] = @([counts[key] integerValue] + 1);
+    if (pointerCountsByPID && event.CGEvent && (event.type == NSEventTypeLeftMouseDown ||
+        event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeScrollWheel)) {
+        NSString *pid = [@(CGEventGetIntegerValueField(event.CGEvent, kCGEventSourceUnixProcessID)) stringValue];
+        NSMutableDictionary *row = pointerCountsByPID[pid];
+        if (!row) pointerCountsByPID[pid] = row = [NSMutableDictionary dictionary];
+        row[key] = @([row[key] integerValue] + 1);
+    }
 #ifdef RUYI_MANUAL_FIXTURE
     if (event.CGEvent && CGEventGetIntegerValueField(event.CGEvent, kCGEventSourceUserData) == 0x525559493550LL) {
         manualPointerTick++; manualPointerType = CGEventGetType(event.CGEvent);
@@ -215,7 +223,7 @@ static void Report(NSString *event) {
         @"id" : @(primary.windowNumber),
         @"title" : primary.title,
         @"text" : editor.string ?: @"",
-        @"counts" : counts,
+        @"counts" : counts, @"pointerCountsByPID": pointerCountsByPID ?: @{},
 #ifdef RUYI_MANUAL_FIXTURE
         @"inputSource":SourceID(), @"marked":@(editor.hasMarkedText),
         @"manualPointerTick":@(manualPointerTick), @"manualPointerType":@(manualPointerType),
@@ -374,6 +382,7 @@ int main(int argc, const char *argv[]) {
         __attribute__((objc_precise_lifetime)) InputDelegate *delegate = [InputDelegate new];
         NSApp.delegate = delegate;
         counts = [NSMutableDictionary dictionary];
+        if (getenv("RUYI_P5_POINTER_COUNTS")) pointerCountsByPID = [NSMutableDictionary dictionary];
         NSMenu *menu = [NSMenu new];
         NSMenuItem *editItem = [NSMenuItem new];
         [menu addItem:editItem];

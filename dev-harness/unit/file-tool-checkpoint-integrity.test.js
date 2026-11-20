@@ -37,7 +37,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-file-tool-integrity-'))
 const home = path.join(root, 'home');
 const dataRootDir = path.join(home, '.ruyi-workbench');
 fs.mkdirSync(dataRootDir, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.RUYI_HOME = dataRootDir;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
@@ -210,7 +209,6 @@ describe('hunt2 · 写族文件工具与检查点完整性', () => {
 
     // git 读失败(超时 / 超输出上限的同类):用只让 cat-file 失败的 git 垫片冒充。修前这条被记成 create,
     // 回滚时直接删掉用户改过的文件。垫片是 sh 脚本,只在非 Windows 跑。
-    if (process.platform === 'win32') return;
     const realGit = cp.execFileSync('sh', ['-c', 'command -v git']).toString().trim();
     const shim = path.join(root, 'gitshim');
     fs.mkdirSync(shim, { recursive: true });
@@ -327,30 +325,19 @@ describe('hunt2 · 写族文件工具与检查点完整性', () => {
     assert.equal(again.op, 'skip');
   });
 
-  it('#11 持久 shell:跨 chunk 的汉字按流解码', async (t) => {
-    if (process.platform === 'win32') { t.skip('需要假 powershell.exe(非 Windows 才能用脚本冒充)'); return; }
-    const bin = path.join(root, 'fakebin');
-    fs.mkdirSync(bin, { recursive: true });
-    // 「中文」的 UTF-8 字节 e4 b8 ad e6 96 87,故意在 e4 b8 | ad 处切成两次写。
-    fs.writeFileSync(path.join(bin, 'powershell.exe'), "#!/bin/sh\nprintf '\\344\\270'\nsleep 0.3\nprintf '\\255\\346\\226\\207'\n", { mode: 0o755 });
-    const oldPath = process.env.PATH;
-    process.env.PATH = bin + path.delimiter + oldPath;
+  it('#11 持久 shell:跨 chunk 的汉字按流解码', async () => {
     const ws = freshWs();
     const ctx = ctxFor(ws, 'sess_hunt2_shell', 1);
-    try {
-      const shellArgs = process.platform === 'darwin'
-        ? { language: 'bash', command: "'" + path.join(bin, 'powershell.exe').replace(/'/g, "'\\''") + "'" }
-        : { language: 'powershell', command: 'Write-Output 中文' };
-      const s = await srv.toolCall('shell_start', { ...shellArgs, cwd: ws }, ctx);
-      assert.equal(s.ok, true, JSON.stringify(s));
-      let poll;
-      for (let i = 0; i < 100; i++) {
-        poll = await srv.toolCall('shell_poll', { shellId: s.shellId }, ctx);
-        if (!poll.running) break;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      assert.equal(poll.output, '中文');
-    } finally { process.env.PATH = oldPath; }
+    const command = "printf '\\344\\270'; sleep 0.3; printf '\\255\\346\\226\\207'";
+    const started = await srv.toolCall('shell_start', { language: 'bash', command, cwd: ws }, ctx);
+    assert.equal(started.ok, true, JSON.stringify(started));
+    let poll;
+    for (let i = 0; i < 100; i++) {
+      poll = await srv.toolCall('shell_poll', { shellId: started.shellId }, ctx);
+      if (!poll.running) break;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    assert.equal(poll.output, '中文');
   });
 
   it('#12 撤回之后,被截掉回合的后台任务回执不复活', async () => {

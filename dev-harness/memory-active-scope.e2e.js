@@ -11,7 +11,7 @@ const { createMemoryTools } = require('../ruyi-workbench/app/backend/memory-tool
 const t = createRunner('MEMORY ACTIVE SCOPE'), { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-memory-active-'));
 const home = path.join(root, 'home'), work = path.join(root, 'work'); fs.mkdirSync(home); fs.mkdirSync(work);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 const s = loadServerInternals(['saveMemory', 'createSession', 'saveSession', 'listWorkbenchMemories', 'readWorkbenchMemory',
   'readMemoryItem', 'loadMemoryRegistry', 'projectKeyForCwd', 'proposeMemoryRelation', 'confirmMemoryRelation', 'deleteMemoryRelation', 'activeChildren',
   'runSessionTurn', 'loadSession', 'startServer', 'MemoryStore', 'MemorySelection', 'MemoryRecall', 'MemoryRelations', 'readConfig', 'safeSessionId', 'SKILL_ID_RE'], { withEval: true });
@@ -140,7 +140,7 @@ function pausedMemoryTools(storeMethod) {
     const httpRead = () => fetch(`http://127.0.0.1:${runtime.port}/api/tools/workbench_memory_read`, { method: 'POST',
       headers: { 'content-type': 'application/json', 'x-wcw-token': runtime.token }, body: JSON.stringify({ sessionId: bridge.id, turnSeq: 7, id: 'old' }) }).then(r=>r.json());
     ok((await httpRead()).result?.ok === true, 'HTTP read uses live selection over a disabled disk copy');
-    mcp = cp.spawn(process.execPath, [path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'mcp'], { windowsHide: true,
+    mcp = cp.spawn(process.execPath, [path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'mcp'], {
       env: { ...process.env, WCW_SESSION_ID: bridge.id, WCW_PORT: String(runtime.port), WCW_HOST: '127.0.0.1', WCW_TOKEN: runtime.token } });
     mcp.stdin.on('error', () => {}); let buffer = ''; const pending = new Map();
     mcp.stdout.on('data', bytes => { buffer += bytes.toString(); let end;

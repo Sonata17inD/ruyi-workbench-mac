@@ -80,8 +80,7 @@ _MEMORY_LOCK = threading.Lock()
 
 def _save(store: dict) -> None:
     path = _store_path()
-    # Per-process temp name: Claude Code and Kimi each spawn their own ACC on the same data dir, and a
-    # shared fixed name lets two writers interleave on one file (the in-process lock cannot see the other).
+    # Multiple ACC processes can share a data directory.
     tmp = "%s.%d.tmp" % (path, os.getpid())
     try:
         with open(tmp, "w", encoding="utf-8") as f:

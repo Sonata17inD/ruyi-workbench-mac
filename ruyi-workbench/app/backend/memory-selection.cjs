@@ -134,16 +134,6 @@ function createMemorySelection({ store, prompts, recall, relations, readConfig }
     return eligible;
   }
 
-  // resolveMemoryPreflight:每条用户消息的工作台记忆预检。默认模式只扫描 global + 当前项目的元数据并取 Top-3；
-  // 显式模式沿用固定选择，显式空数组表示本会话关闭。无匹配也返回 checked=true 的状态供提示/UI 展示。
-  // {id,scope} 锁定:scope 不匹配(启用时 project、现只剩 global 同 id)→ 跳过;文件消失(幽灵)→ 跳过。P3-3:project
-  // 条目再按 projectKey 锁定,换 cwd 失配 → 跳过并经 onSourceMismatch(id,was,now) 通知一次。
-  // 113a: 第五个参数 config 是可选的 —— 三个真实调用点（Claude 引擎/Provider 引擎/工作流节点）手里都已经有
-  // config，直接传进来比在这里多读一次配置文件便宜（readConfig 无缓存）。缺省时自己读，
-  // 旧调用方与测试（workbench-memory-core.e2e.js 直接调本函数）无需改动。
-  // hunt2-mcp:第六个参数 options.cliType —— 本回合跑的是哪个原生 CLI('claude' / 'kimi';provider 引擎不传)。
-  // 那个 CLI 自己会读的导入条目(agentmd-claude-md-* 之类)在【算核心预算之前】就摘掉:修前摘在调用点、预算之后,
-  // 重复条目先把核心名额占满、又被丢弃,用户自己的核心记忆反倒被挤出去。
   async function resolveMemoryPreflight(session, cwd, query, onSourceMismatch, config = null, options = {}) {
     let registry = [];
     try { registry = await loadMemoryRegistry(cwd); } catch {

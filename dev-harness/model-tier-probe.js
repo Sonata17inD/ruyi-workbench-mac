@@ -16,7 +16,7 @@
 //
 // 每场景记录:tool_use 序列、tool_result 错误数、error 事件数、最终文本达标、耗时、usage 累计。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -59,7 +59,7 @@ async function withServer(tag, setup, fn) {
     providers: [{ id: 'deepseek', label: 'DeepSeek', type: 'openai-compat', baseUrl: BASE, apiKey: KEY, model: MODEL, models: [{ id: MODEL, label: MODEL }], reasoning: true }],
     activeProvider: 'deepseek',
   }, null, 2));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(PORT); }
     if (!h) throw new Error('workbench 未能启动');

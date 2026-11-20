@@ -21,7 +21,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   I 开关   —— schedulerEnabledV1:false 的另一份数据根:六条路由仍在,但一律 409 scheduler.disabled。
 //
 // 载荷一律 reminder:本件量的是 API 面,不该把模型端点的不确定性叠进来。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -67,7 +67,6 @@ function spawnWb(home, port, extraEnv) {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
     cwd: WB,
     env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home, WCW_SCHEDULER_TICK_MS: String(TICK_MS), ...(extraEnv || {}) },
-    windowsHide: true,
   });
   child.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   return child;

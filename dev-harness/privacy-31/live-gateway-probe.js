@@ -14,7 +14,7 @@ async function main() {
     serverWebSearch: false, anthropicThinking: 'off', reasoning: false };
   require('../lib/self-isolate-home');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-live-gateway-')), data = path.join(root, 'data'), work = path.join(root, 'work');
-  fs.mkdirSync(data); fs.mkdirSync(work); process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  fs.mkdirSync(data); fs.mkdirSync(work); process.env.RUYI_HOME = data;
   const app = require('../lib/server-internals').loadServerInternals(['runSessionTurn', 'createSession', 'mutateConfig', 'providerWireProtocol']);
   const wire = app.providerWireProtocol(provider), target = new URL(wire.completionUrl(provider.baseUrl));
   if (target.protocol !== 'https:' && !(target.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname))) throw Error('endpoint_transport_refused');

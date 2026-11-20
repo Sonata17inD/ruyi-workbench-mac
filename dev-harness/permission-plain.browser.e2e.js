@@ -48,7 +48,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
         }
         if (/跑个命令/.test(String(lastUser && lastUser.content || ''))) {
           const last = ctx.messages[ctx.messages.length - 1];
-          if (!last || last.role !== 'tool') { ctx.toolCall(shellTool, { command: (process.platform === 'win32' ? 'Get-Date' : 'date') }); return; }
+          if (!last || last.role !== 'tool') { ctx.toolCall(shellTool, { command: ('date') }); return; }
           ctx.text('好了。'); ctx.stop(); return;
         }
         if (!ctx.answered) { ctx.toolCall('file_write', { path: path.join(workDir, 'report.md'), content: '# 周报\n本周完成三件事\n下周计划\n' }); return; }

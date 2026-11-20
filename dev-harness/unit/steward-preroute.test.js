@@ -17,14 +17,14 @@
 //   ⑫ 128h-J03:「继续那个」—— 纯指代按焦点定位;没有焦点只问最近的两条;并列时焦点来裁
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-core.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
+// RUYI_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-preroute-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const srv = require(path.join(app, 'server.js'));

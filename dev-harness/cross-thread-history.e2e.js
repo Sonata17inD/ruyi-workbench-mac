@@ -9,7 +9,7 @@ const t = createRunner('CROSS THREAD HISTORY'), { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cross-history-'));
 const home = path.join(root, 'data'), ws = path.join(root, 'work');
 fs.mkdirSync(home); fs.mkdirSync(ws);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1';
 const srv = require('../ruyi-workbench/app/server.js');
 let fake, historyId;
@@ -22,7 +22,7 @@ const writeConfig = patch => { config = { ...configBase, ...config, ...patch }; 
 const call = (name, args, session) => srv.toolCall(name, args, { session });
 async function mcp(sessionId) {
   const child = cp.spawn(process.execPath, [path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'mcp'], {
-    env: { ...process.env, WCW_SESSION_ID: sessionId }, windowsHide: true });
+    env: { ...process.env, WCW_SESSION_ID: sessionId } });
   const pending = new Map(); let buffer = '';
   child.stdin.on('error', () => {});
   child.stdout.on('data', bytes => {

@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     events.ndjson: seq 严格单调,含 run_created/node_start/run_interrupted/run_resumed/node_settled/run_end。
 //  D) 崩溃注入·杀点2(node_start 后、0 个工具完成前强杀):resume 不注入【断点续跑】,run 照常完成。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readServerSource } = require('./src-reader');
 const { readFrontendSrc } = require('./read-frontend-src.js'); // 2.2 门修复:845bb8c 拆域后 persistenceDegraded 横幅搬到 js/agent-workflows.js
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
@@ -42,12 +42,12 @@ function httpReq(port, method, p, body, headers = {}) {
 async function up(port) { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.6-6.3s 且余量过窄,是「FAIL workbench up」假红的根(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { try { const r = await httpReq(port, 'GET', '/health'); if (r.status === 200) return true; } catch { /* not yet */ } await sleep(150); } return false; }
 function spawnWb() {
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   return wb;
 }
 function spawnFake(env) {
-  const fk = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env }, windowsHide: true });
+  const fk = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env } });
   fk.stdout.on('data', () => {}); fk.stderr.on('data', () => {});
   return fk;
 }

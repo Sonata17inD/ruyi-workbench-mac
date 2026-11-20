@@ -14,7 +14,7 @@
 //  P2 #8 saveSession/writeConfigAtomic 唯一 tmp 名(pid+随机),不再固定 '.tmp' 被并发写者互踩成 .corrupt。 —— 源(B)
 //  P2 #9 DAG 节点透传 sub.degraded → node.degraded(激活前端「降级完成」渲染,残缺结果不再当干净成功)。 —— 源(B)
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readServerSource } = require('./src-reader');
 const fs = require('fs');
 const path = require('path');
@@ -231,7 +231,7 @@ const BROWSER ={ origin: 'http://evil.example', 'sec-fetch-site': 'cross-site', 
   const fake401 = http.createServer((rq, rs) => { rs.writeHead(401, { 'content-type': 'application/json' }); rs.end('{"error":{"message":"invalid api key"}}'); });
   await new Promise(r => fake401.listen(FAKE401_PORT, '127.0.0.1', r));
 
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   const wbLog = [];
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push(l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && wbLog.push('[!] ' + l.trim())));

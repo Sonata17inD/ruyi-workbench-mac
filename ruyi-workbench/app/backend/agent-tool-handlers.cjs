@@ -5,7 +5,7 @@ function createAgentToolHandlers({
 }) {
 
   // 代理模式 v2:四个代理工具在 provider 回合内由 runOpenAiTurn 特判(需要活闭包);这里只处理【无回合上下文】的
-  // 两种来路 —— Claude/Kimi 的一次性 MCP 子进程(回环 serve 进程的 /api/agent-workflow/*)与直接的 /api/tools 调用(拒绝)。
+  // 两种来路 —— Claude 的一次性 MCP 子进程(回环 serve 进程的 /api/agent-workflow/*)与直接的 /api/tools 调用(拒绝)。
   function agentToolLoopback(route, payload) {
     const port = process.env.WCW_PORT, host = process.env.WCW_HOST || '127.0.0.1';
     const token = process.env.WCW_TOKEN, sessionId = process.env.WCW_SESSION_ID || '';
@@ -28,7 +28,7 @@ function createAgentToolHandlers({
           if (r && typeof r === 'object') r.note = 'spawn_agent 已并入 orchestrate_agents(本次已按单节点代理执行)。下次请直接调用 orchestrate_agents({task, role?, background?})。' + (r.note ? ' ' + r.note : '');
           return r;
         }
-        return { ok: false, error: 'spawn_agent 已并入 orchestrate_agents;请改用 orchestrate_agents({task, role?, toolTier?, background?})(仅在 provider 对话回合或 Claude/Kimi 工作台会话中可用)', replacedBy: 'orchestrate_agents' };
+        return { ok: false, error: 'spawn_agent 已并入 orchestrate_agents;请改用 orchestrate_agents({task, role?, toolTier?, background?})(仅在 provider 对话回合或 Claude 工作台会话中可用)', replacedBy: 'orchestrate_agents' };
     } },
     orchestrate_agents: { paths: null, guardNote: "MCP 子进程 loopback /api/agent-workflow/launch(envelope:true;background→async);无会话上下文拒绝", handler: async (args, ctx) => {
         if (RUNTIME.isMcpChild) {
@@ -49,14 +49,14 @@ function createAgentToolHandlers({
           const a = args && typeof args === 'object' ? args : {};
           return agentToolLoopback('/api/agent-workflow/wait', { runIds: a.runIds, timeoutMs: a.timeoutMs });
         }
-        return { ok: false, error: 'wait_agents 仅在 provider 对话回合或 Claude/Kimi 工作台会话中可用(收集后台代理信封)' };
+        return { ok: false, error: 'wait_agents 仅在 provider 对话回合或 Claude 工作台会话中可用(收集后台代理信封)' };
     } },
     agent_result: { paths: null, guardNote: "MCP 子进程 loopback /api/agent-workflow/result;无回合上下文拒绝(provider 回合特判在 runOpenAiTurn)", handler: async (args, ctx) => {
         if (RUNTIME.isMcpChild) {
           const a = args && typeof args === 'object' ? args : {};
           return agentToolLoopback('/api/agent-workflow/result', { runId: a.runId, nodeId: a.nodeId, maxChars: a.maxChars, offset: a.offset });
         }
-        return { ok: false, error: 'agent_result 仅在 provider 对话回合或 Claude/Kimi 工作台会话中可用(按需读取代理产出全文)' };
+        return { ok: false, error: 'agent_result 仅在 provider 对话回合或 Claude 工作台会话中可用(按需读取代理产出全文)' };
     } },
   };
 

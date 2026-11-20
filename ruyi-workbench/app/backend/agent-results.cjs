@@ -98,11 +98,6 @@ async function waitForAgentRunResults(sessionId, rawRunIds, timeoutMs, signal, o
   const timeoutNote = timedOut ? `等待窗(${Math.round(waitMs / 1000)} 秒)已到,仍有代理在后台运行,没有被中止。可以先做别的工作,完成通知会自动送达;或再调 wait_agents(timeoutMs 最大 ${Math.round(waitAgentsMaxMs() / 1000)} 秒)继续等。` : '';
   return { ok: true, settled, timedOut, waitMs, ...(cancelled ? { cancelled: true } : {}), ...(messageReady ? { messageReady: true, note: '收到代理参考消息，已结束本次等待；运行状态未改变，消息将在下次模型调用前投递。' } : timeoutNote ? { note: timeoutNote } : {}), ...(notFound.length ? { notFound } : {}), runs };
 }
-// wait_agents 的结算 —— 同一份信封在【两种先后顺序】下都只送达一次(wave137 集成期竞态):
-//  ① wait 先取走(run 在 wait 期间才结束)→ 登记已读,之后的迭代边界 / 回合开头不再注入完成通知;
-//  ② 迭代边界的 drainBackgroundJobs(或 Claude/Kimi 的 drainAgentEnvelopesText)已把信封作「代理完成通知」注入,
-//     随后模型才调 wait_agents → 只回短回执(runId/status/节点状态 + 指引),不再带 summary/artifacts。
-// 只看终态且非 live 的条目;运行中的照常返回(还没有信封可言)。agent_result 不在此列:它取的是全文切片,不是信封。
 function settleWaitEnvelopes(session, out) {
   if (!session || !out || !Array.isArray(out.runs)) return out;
   out.runs = out.runs.map(env => {

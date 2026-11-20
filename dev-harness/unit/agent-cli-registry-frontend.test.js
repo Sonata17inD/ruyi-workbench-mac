@@ -1,17 +1,4 @@
 'use strict';
-// ENGINEERING-SPEC §11.1 末行:前端对「哪一个 Agent CLI」的知识收进一张登记表 public/js/agent-cli-registry.js。
-// 修前六个 public/js 文件里约 32 处按 `agentCliType === 'kimi'` / 两份 AGENT_CLI_LABELS 分叉;现在调用点只问登记表,
-// 加第三个 CLI = 在表里加一行。
-//
-// 判据:
-//   [K] 登记表的键集合与服务端 01 AGENT_CLI_TYPES 的键集合逐项相同(顺序也同);两边共有的事实(品牌名、路径键、
-//       探测路径键)逐字相同 —— 服务端状态接口里的 detected* 键、config 的 *Path 键就是前端读的那几个。
-//   [F] 每一行字段齐全、类型对、id 等于键、整张表与每一行都冻结;派生量(AGENT_CLI_IDS、思考强度并集)与表一致。
-//   [H] 小工具的归一化口径:不认识的值(缺省、旧数据、非字符串、原型链上的名字)一律归到缺省 CLI。
-//   [G] 结构锁:除登记表本身,public/app.js 与 public/js/*.js 里不再有把 agentCliType 与字面量比较的代码,
-//       不再有第二份 AGENT_CLI_LABELS 表,也不再和非引擎族的 CLI id 字面量(如 'kimi')做相等比较。
-//       'claude' 例外:它同时是历史「引擎族」取值(engine === 'claude' 表示 Agent CLI 族 vs 'openai' 族),那类比较不是按 CLI 分叉。
-// 真源码、临时 HOME、零网络。
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -19,7 +6,6 @@ const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cli-registry-fe-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
@@ -37,12 +23,7 @@ const FIELDS = {
   pathKey: 'string',
   detectedKey: 'string',
   thinkingEfforts: 'array',
-  settingsThinkingEfforts: 'array|null',
   compactDefaultLabelKey: 'string',
-  nativeCompact: 'string',
-  statusEndpoint: 'string',
-  alwaysInteractive: 'boolean',
-  legacyUsageSources: 'array',
   claudeUserCommands: 'boolean',
 };
 // 引擎族取值(不是 CLI 分叉):'claude' = Agent CLI 族的历史名,'openai' = 服务商族。
@@ -82,18 +63,11 @@ test('[F] every row carries the full field set with the right types', async () =
     for (const [field, type] of Object.entries(FIELDS)) {
       const value = row[field], where = `${id}.${field}`;
       if (type === 'array') assertStringArray(value, where);
-      else if (type === 'array|null') { if (value !== null) assertStringArray(value, where); }
       else assert.equal(typeof value, type, where);
     }
     assert.equal(row.id, id, `${id}.id equals its key`);
     assert.ok(row.label && row.avatarLetter.length === 1 && row.eventTag, `${id} label/avatar/eventTag non-empty`);
     assert.ok(row.thinkingEfforts.includes(''), `${id} thinking efforts keep the default ('') option`);
-    if (row.settingsThinkingEfforts) {
-      assert.ok(row.settingsThinkingEfforts.includes(''), `${id} settings efforts keep the default option`);
-      for (const value of row.settingsThinkingEfforts) assert.ok(registry.AGENT_CLI_THINKING_EFFORT_VALUES.includes(value), `${id} settings effort ${value} is a known value`);
-    }
-    assert.ok(['slash-command', 'server-api'].includes(row.nativeCompact), `${id}.nativeCompact is a known mode`);
-    assert.ok(row.statusEndpoint === '' || row.statusEndpoint.startsWith('/api/'), `${id}.statusEndpoint is '' or an /api route`);
     assert.match(row.compactDefaultLabelKey, /^ctx\.compact\.default[A-Z]\w*$/, `${id}.compactDefaultLabelKey`);
   }
   // 缺省名的 i18n 键在两份 public 语言包里都有值。
@@ -117,7 +91,7 @@ test('[H] helpers normalize unknown values to the default CLI', async () => {
     assert.equal(agentCliMeta(id), AGENT_CLI_REGISTRY[id]);
     assert.equal(knownAgentCliMeta(id), AGENT_CLI_REGISTRY[id]);
   }
-  for (const bad of [undefined, null, '', 'nope', 'toString', '__proto__', 'constructor', 5, {}, ['kimi']]) {
+  for (const bad of [undefined, null, '', 'nope', 'toString', '__proto__', 'constructor', 5, {}, ['unknown-cli']]) {
     assert.equal(isAgentCliId(bad), false, `isAgentCliId(${String(bad)})`);
     assert.equal(normalizeAgentCliType(bad), AGENT_CLI_DEFAULT_ID, `normalize(${String(bad)})`);
     assert.equal(agentCliMeta(bad), AGENT_CLI_REGISTRY[AGENT_CLI_DEFAULT_ID], `meta(${String(bad)})`);
@@ -150,12 +124,4 @@ test('[G] no public/js file other than the registry branches on an agentCliType 
     });
   }
   assert.deepEqual(hits, [], 'per-CLI knowledge belongs in js/agent-cli-registry.js');
-  // 判据自检:这组正则确实认得修前的写法(防止锁对任何输入恒绿)。
-  const before = [
-    "return { engine: 'agent', agentCliType: raw.agentCliType === 'kimi' ? 'kimi' : 'claude', model };",
-    "if (!isProviderMode() && currentEngineMeta().agentCliType !== 'kimi' && !state.config?.compactProviderId) {",
-    "const AGENT_CLI_LABELS = { claude: 'Claude Code', kimi: 'Kimi Code' };",
-    "const pathKey = type === 'kimi' ? 'kimiPath' : 'claudePath';",
-  ];
-  for (const line of before) assert.ok(patterns.some(([re]) => re.test(line)), `lock recognizes: ${line}`);
 });

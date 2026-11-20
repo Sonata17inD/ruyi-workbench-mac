@@ -1,6 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port.js');
 // E2E (v1.1-W2 T1): tool suite v3 — the five new built-in tools (file_move / file_copy / archive_zip /
 // archive_unzip / http_download) + their trust-layer wiring (checkpoint journal + rollback).
@@ -65,7 +65,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   // WCW_TEST_ALLOW_LOOPBACK=1 lets http_download's SSRF-guarded fetch reach the 127.0.0.1 fake server for the
   // happy-path/over-size cases. It exempts 127.x ONLY — the SSRF-refusal case (h) still uses foo.internal /
   // localhost, which stay blocked even with the flag on, so the guard is still genuinely exercised.
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_TEST_ALLOW_LOOPBACK: '1' }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WCW_TEST_ALLOW_LOOPBACK: '1' } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {

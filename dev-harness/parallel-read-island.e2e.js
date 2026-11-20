@@ -1,4 +1,4 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E (N9 只读岛): 真工作台回合 + 离线假 provider。批里混进 todo_write / 编辑时,只读调用也能并发:
 //  A [read, read, todo_write, read]        -> strategy=parallel, 宽度 3(todo_write 是中性调用,不把批拆成串行)
 //  B [read, read, edit f1, read f1]        -> 岛 = 前两个读(宽度 2);编辑之后的读【不】入岛,必须读到编辑后的内容
@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  E [read ×3]                             -> 纯只读批照旧 parallel, 宽度 3
 // 每例都核:全部工具执行完成、落盘 toolCalls 的顺序 = 模型发出的顺序。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -71,8 +71,8 @@ async function runCase(label, buildBatch) {
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${fakePort}`, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
     activeProvider: 'fake',
   }, null, 2));
-  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_PARALLEL_TOOLS: JSON.stringify(parallel) }, windowsHide: true, stdio: 'ignore' });
-  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true, stdio: 'ignore' });
+  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_PARALLEL_TOOLS: JSON.stringify(parallel) }, stdio: 'ignore' });
+  const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, stdio: 'ignore' });
   let live = null; for (let i = 0; i < 80 && !live; i++) { await sleep(120); live = await health(wbPort); }
   const events = await postStream(wbPort, { message: 'Do the requested tool calls and reply.' });
   await sleep(500);

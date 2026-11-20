@@ -83,7 +83,7 @@ function durable(label) {
 async function startService(label) {
   port = await getFreePort(); token = '';
   server = cp.spawn(process.execPath, [path.join(workbench, 'app/server.js'), 'serve', '--port', String(port)], {
-    env: { ...process.env, ...env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_MACOS_AUTOMATION_HELPER: helper },
+    env: { ...process.env, ...env, RUYI_HOME: data, RUYI_MACOS_AUTOMATION_HELPER: helper },
     cwd: workbench, stdio: ['ignore', 'pipe', 'pipe'] });
   server.on('error', error => { failure ||= error; });
   for (const [channel, pipe] of [['stdout', server.stdout], ['stderr', server.stderr]]) {

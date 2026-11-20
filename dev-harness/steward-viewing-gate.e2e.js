@@ -138,8 +138,8 @@ async function waitAck(stream) {
       providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
     }), 'utf8');
     server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
-      cwd: WB, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-      windowsHide: true, stdio: 'ignore',
+      cwd: WB, env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+      stdio: 'ignore',
     });
     ok(Boolean(await waitFor(async () => { const r = await request(appPort, 'GET', '/health'); return r && r.status === 200; }, 30000)), 'A0 workbench started');
     const token = await waitFor(() => { try { return JSON.parse(fs.readFileSync(path.join(home, 'runtime.json'), 'utf8')).token || ''; } catch { return ''; } }, 8000);

@@ -73,7 +73,7 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
   PORT = await getFreePort();
 
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-    cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
@@ -257,7 +257,7 @@ async function up() { // 117q:预算 60×150ms=9s 小于本机冷启动实测 4.
       && authSrc.includes("{ m: 'GET', p: '/api/logs/tail', auth: 'token' }"),
       '⑦ 两条路由都在 ROUTE_AUTH 表里登记为 token 级');
   } finally {
-    try { wb.kill(); } catch { /* already gone */ }
+    if (wb.kill()) await require('node:events').once(wb, 'exit');
   }
 
   console.log('\nHELP MENU E2E: ' + (fail ? `FAIL (${fail})` : 'ALL PASS'));

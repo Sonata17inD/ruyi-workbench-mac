@@ -17,7 +17,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-agent-mode-v2-static-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
@@ -43,8 +42,6 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(!sub.some(n => ['orchestrate_agents', 'wait_agents', 'agent_result'].includes(n)), '① noAgentTools(子回合)→ 三个代理工具都不 offer(禁嵌套)');
   const catalog = src('../backend/tool-catalog.cjs');
   const tiers = src('../backend/native-tool-tiers.cjs');
-  // 137 集成重钉:spawn_agent 的兼容口(旧模型调它 → 翻译成单节点 orchestrate)仍在 TOOL_HANDLERS 里,而 tool-dispatch L4
-  // 的安全不变量要求「每个注册工具都有 tier 与 pack 声明」—— 缺声明会让兼容口落到默认低档。「不 offer」由上面 ① 第一条钉。
   ok(/spawn_agent: 'exec'/.test(tiers) && /agent_result: 'read'/.test(tiers) && /agent_result: 'agents'/.test(catalog),
     '① 原生工具档位表把 spawn_agent 保留为 exec、agent_result 定为 read 并归入 agents 包');
   ok(!/if \(t\.name === 'spawn_agent'\) return false;/.test(src('../backend/mcp-server.cjs')), '① MCP tools/list 无需过滤 spawn_agent');
@@ -105,7 +102,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
   ok(!/function markDeliveredEnvelopes\(/.test(s09), '③ 09 旧的单向登记 markDeliveredEnvelopes 已被结算函数取代');
   ok(/const prefix = job\.kind === 'agent'/.test(jobs) && /\[代理完成通知；以下是交付信封/.test(jobs), '③ 后台账本 drainBackgroundJobs 对代理 job 用信封口径');
   const s05 = src('../backend/agent-cli-turn.cjs');
-  ok(/EventStreamHooks\.drainAgentEnvelopesText\(session\)/.test(s05) && /\[recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope\]/.test(s05), '③ 05 Claude/Kimi 下一回合开头拼入未读信封(同一张已读表)');
+  ok(/EventStreamHooks\.drainAgentEnvelopesText\(session\)/.test(s05) && /\[recoveryHistory, indexInjection, agentDeliveries, turnMemoryEnvelope\]/.test(s05), '③ 05 Claude 下一回合开头拼入未读信封(同一张已读表)');
   ok(/const completion = run => deliverAgentRunEnvelope\(session\.id, run\);/.test(workflowRoutes) && !/appendAgentWorkflowSummaryToSession\(session\.id, run, \{ title/.test(workflowRoutes), '③ launch 完成投递信封(不追加整份助手摘要消息)');
 }
 

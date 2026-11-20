@@ -65,15 +65,6 @@ function createPrivacyCore({ cryptoApi = require('node:crypto'), ruleCatalog = r
     const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
     return '10X98765432'[weights.reduce((sum, weight, i) => sum + weight * Number(value[i]), 0) % 11] === value[17];
   }
-  function luhn(value) {
-    const digits = value.replace(/[ -]/g, '');
-    if (!/^\d{13,19}$/.test(digits) || /^(\d)\1+$/.test(digits)) return false;
-    let sum = 0, twice = false;
-    for (let i = digits.length - 1; i >= 0; i--, twice = !twice) {
-      let n = Number(digits[i]); if (twice) { n *= 2; if (n > 9) n -= 9; } sum += n;
-    }
-    return sum % 10 === 0;
-  }
   function createDetector(options = {}) {
     // Custom regex source is schema-checked here; execution is supplied by the isolated worker adapter.
     if (own(options, 'patterns')) fail('regex_worker_required');

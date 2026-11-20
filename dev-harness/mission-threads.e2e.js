@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (J) 管家会话不可 attach(400 invalid_target)。
 //
 // 端口:getFreePort() 动态取(run-all 端口审计口径)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path'), crypto = require('crypto');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -36,7 +36,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 // 纯函数对账用:在【测试进程】里独立 require 一份产物(自己的临时数据根,绝不碰被测服务的 HOME)。
 // 这样 aggregateState 的期望值来自「五态判据 + 聚合纯函数」两个导出件,而不是把服务端答案抄一遍。
 const PURE_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-mission-threads-pure-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = PURE_HOME;
+process.env.RUYI_HOME = PURE_HOME;
 const srv = require(path.join(WB, 'app', 'server.js'));
 const { aggregateMissionState, stewardThreadStateFromCard } = srv;
 
@@ -77,7 +77,7 @@ function writeConfig() {
 }
 function spawnWb() {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
   });
   child.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   return child;

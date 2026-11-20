@@ -21,7 +21,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 夹具:temp HOME + 假 OpenAI 兼容 provider(同 event-stream.e2e.js 那一套),不开浏览器。
 // 判定行:`STEWARD PRESENCE GATE E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -77,13 +77,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // ── 在场连接。只要连上就算在场;close() 即「离开壳」(13r 按连接生死记在场)。──────────
 function openPresence(port, token, lens, sessionId) {
@@ -255,8 +248,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', r => r.status === 200, undefined, 300)), 'A0 workbench started');
   let token = '';
@@ -404,7 +397,7 @@ try {
     'S6 四个消费面各自带 typeof 守卫(钩子未填充时 fail-open,不反噬)');
 } finally {
   try { if (seat) seat.close(); } catch { /* ignore */ }
-  killTree(server);
+  killOwnTree(server);
   try { if (provider) provider.close(); } catch { /* ignore */ }
   await sleep(300);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }

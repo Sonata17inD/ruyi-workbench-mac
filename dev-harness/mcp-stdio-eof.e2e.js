@@ -63,7 +63,7 @@ async function scenario(inFlight) {
     enableMcpDropIn: false, desktopMcp: { enabled: false, autodetect: false }, providers: [],
     externalMcpServers: [{ id: 'review', command: process.execPath, args: [bridge], env: { MCP_EOF_FIXTURE: root } }] }));
   const child = cp.spawn(process.execPath, ['--require', observer, server, 'mcp'], { cwd: root,
-    env: { ...process.env, ...fixture.env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, MCP_EOF_FIXTURE: root }, stdio: ['pipe', 'pipe', 'pipe'] });
+    env: { ...process.env, ...fixture.env, RUYI_HOME: data, MCP_EOF_FIXTURE: root }, stdio: ['pipe', 'pipe', 'pipe'] });
   const replies = new Map();
   let buffer = '', diagnostic = '', completed = false;
   child.stdin.on('error', () => {});

@@ -14,14 +14,13 @@
 //   ③ stewardAsksYou:三态与优先级(question > 活回合 > soft),末段截取与 300 字上限
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-wait-reason.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
+// RUYI_HOME 覆盖到临时目录;PASS/FAIL 逐条打印,process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-humanize-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');

@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 不是引擎。这样也让「正文里有什么」完全可控(脱敏断言需要一个确定的假密钥)。
 
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -58,8 +58,8 @@ function post(port, route, body, headers = {}) {
 async function up(port) { // 117q:预算 80×150ms=12s 余量对本机冷启动实测 4.6-6.3s 偏窄,抬到 30 号文 P1-31 建议的量级(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { const r = await get(port, '/health'); if (r.json) return true; await sleep(150); } return false; }
 function isolatedEnv(home) {
-  return { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home,
-    CLAUDE_CONFIG_DIR: path.join(home, '.claude'), KIMI_CODE_HOME: path.join(home, '.kimi') };
+  return { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home,
+    CLAUDE_CONFIG_DIR: path.join(home, '.claude') };
 }
 
 // ── 夹具:直接写会话文件 ────────────────────────────────────────────────────────────────────
@@ -137,11 +137,11 @@ fs.writeFileSync(path.join(HOME_OFF, 'config.json'), JSON.stringify({
 }, null, 2));
 
 const server = cp.spawn(process.execPath, [path.join(WB, 'app', 'server.js')],
-  { env: { ...isolatedEnv(HOME), PORT: String(PORT), WCW_NO_BROWSER: '1' }, cwd: WB, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  { env: { ...isolatedEnv(HOME), PORT: String(PORT), WCW_NO_BROWSER: '1' }, cwd: WB, stdio: ['ignore', 'pipe', 'pipe'] });
 server.stdout.on('data', () => {});
 server.stderr.on('data', () => {});
 const serverOff = cp.spawn(process.execPath, [path.join(WB, 'app', 'server.js')],
-  { env: { ...isolatedEnv(HOME_OFF), PORT: String(PORT_OFF), WCW_NO_BROWSER: '1' }, cwd: WB, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  { env: { ...isolatedEnv(HOME_OFF), PORT: String(PORT_OFF), WCW_NO_BROWSER: '1' }, cwd: WB, stdio: ['ignore', 'pipe', 'pipe'] });
 serverOff.stdout.on('data', () => {});
 serverOff.stderr.on('data', () => {});
 

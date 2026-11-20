@@ -21,7 +21,6 @@ const { pathToFileURL } = require('node:url');
 const ROOT = path.resolve(__dirname, '..', '..');
 const JS = path.join(ROOT, 'ruyi-workbench', 'app', 'public', 'js');
 const LOCALES = path.join(ROOT, 'ruyi-workbench', 'app', 'public', 'locales');
-const MIRROR = path.join(ROOT, 'docs', 'i18n', 'locales');
 const load = name => import(pathToFileURL(path.join(JS, name)).href);
 const read = file => fs.readFileSync(file, 'utf8');
 
@@ -144,10 +143,5 @@ describe('新增文案键：两语言齐全、占位符一致、镜像逐字节�
       assert.ok(en['chat.background.' + status], 'en-US 缺 chat.background.' + status);
     }
     assert.ok(zh['chat.background.finished'] && en['chat.background.finished']);
-  });
-  it('docs/i18n/locales 两份镜像与 public/locales 逐字节相同', () => {
-    for (const file of ['zh-CN.json', 'en-US.json']) {
-      assert.ok(fs.readFileSync(path.join(LOCALES, file)).equals(fs.readFileSync(path.join(MIRROR, file))), file + ' 镜像漂移');
-    }
   });
 });

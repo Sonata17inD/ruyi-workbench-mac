@@ -29,15 +29,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 拉满(120 s)的话 D 组恒真、形同虚设;设成 5 s 的话 C 组量不出连接与断连的差别。
 // 判定行:`EVENT STREAM CLIENT BROWSER E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -95,13 +94,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(100);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 // ── 并行 Node SSE 客户端:【服务端时刻】的唯一来源 ────────────────────────────────
@@ -351,8 +343,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started');
   let token = '';
@@ -381,12 +373,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
-    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A6 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -715,9 +706,8 @@ try {
 } finally {
   try { stream && stream.close(); } catch { /* ignore */ }
   try { cdp && cdp.close(); } catch { /* ignore */ }
-  killTree(browser);
-  try { await stopRuyiTestBrowsers(profile); } catch { /* ignore */ }
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   try { provider && provider.close(); } catch { /* ignore */ }
   await sleep(300);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }

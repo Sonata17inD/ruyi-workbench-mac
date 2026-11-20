@@ -5,7 +5,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // End-to-end contract for request_user_input on both engines:
 //   Claude native compatibility event -> text user envelope -> confirmed delivery
 //   OpenAI-compatible function call -> awaited UI answer -> role:tool result -> continuation
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -170,7 +170,6 @@ function startProvider(captures) {
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
     cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_SCENARIO: 'ask' },
-    windowsHide: true,
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[workbench] ' + String(d).trim()));
   try {

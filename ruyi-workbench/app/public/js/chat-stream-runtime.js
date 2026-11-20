@@ -1,20 +1,5 @@
 'use strict';
 
-export function applyToolUseUpdate(card, evt, deps = {}) {
-  if (!card || !evt) return;
-  const { humanizeToolName, safeStringify, toolArgSummary } = deps;
-  if (evt.name) {
-    card.name = evt.name;
-    if (card.nameEl) card.nameEl.textContent = evt.name;
-    if (card.verbEl) card.verbEl.textContent = humanizeToolName(evt.name);
-  }
-  if (evt.input && typeof evt.input === 'object') {
-    if (card.inp) card.inp.textContent = safeStringify(evt.input);
-    const arg = toolArgSummary(evt.input);
-    if (card.argEl) { card.argEl.textContent = arg; card.argEl.title = arg || ''; }
-  }
-}
-
 const THINKING_NARRATIVE_BOUNDARY_TYPES = new Set([
   'assistant_delta',
   'tool_use',
@@ -22,7 +7,6 @@ const THINKING_NARRATIVE_BOUNDARY_TYPES = new Set([
   'ask_user',
   'permission_request',
   'plan',
-  'kimi_plan_snapshot',
   'plan_note',
   'turn_summary',
   'result',
@@ -653,6 +637,11 @@ export function createChatStreamRuntime(deps = {}) {
   // streaming turn — the indicator clears when that turn ends, via setStreaming(false) → endCompactIndicator).
   // Provider mode: POST /api/provider/compact (server makes one non-streaming summary call and collapses
   // providerHistory), then reload the session and show the before/after estimate.
+  function unavailableSessionDriver() {
+    if (isProviderMode()) return '';
+    const id = currentEngineMeta().agentCliType;
+    return id && agentCliMeta(id).id !== id ? id : '';
+  }
   async function compactContext() {
     if (compactState.active) return; // F3⑥ 进行中再点=忽略
     if (state.streaming) { toast(t("toast.compactWaitTurn"), ''); return; }
@@ -661,7 +650,9 @@ export function createChatStreamRuntime(deps = {}) {
     // 117s-G 同一判据:别处起的回合在跑(插话/回答)或排队中/等批准 —— 这时压缩既不能当新回合发
     // (sendPrompt 会把 '/compact' 当插话递进去),也不该去动正在用的上下文。说一句,不开指示条。
     if (sessionAcceptsSteer(sid) || relayBlockNote(sid)) { toast(relayBlockNote(sid) || t("toast.compactWaitTurn"), ''); return; }
-    if (!isProviderMode() && agentCliMeta(currentEngineMeta().agentCliType).nativeCompact === 'slash-command' && !state.config?.compactProviderId) {
+    const unavailable = unavailableSessionDriver();
+    if (unavailable) { toast(t('engine.unavailable', { id: unavailable }), 'err'); return; }
+    if (!isProviderMode() && !state.config?.compactProviderId) {
       // Claude 模式:/compact 是流式回合。开指示,sendPrompt 走完流后 setStreaming(false) 会调 endCompactIndicator。
       // sendPrompt 也可能根本没起回合就返回(同步窗口失败、await 期间被判成插话/排队)——那时 setStreaming 不会再来收,
       // 这里兜底:本次开的指示条还挂着就收掉。
@@ -742,6 +733,8 @@ export function createChatStreamRuntime(deps = {}) {
       }
     } finally { sendPreflight = false; }
 
+    const unavailable = unavailableSessionDriver();
+    if (unavailable) { toast(t('engine.unavailable', { id: unavailable }), 'err'); return; }
     const turnSessionId = state.currentSession.id;
     // Slash-command/override turns (for example /compact) must neither consume nor inherit the visible toggle.
     const agentTeam = composerDraft != null && agentTeamTurnEnabled && agentTeamAvailable();
@@ -790,7 +783,7 @@ export function createChatStreamRuntime(deps = {}) {
     const turnMeta = currentEngineMeta();
     const turnState = { abort: turnAbort, startedAt: Date.now(), initialTurnSeq: Number(state.currentSession?.turnSeq) || 0, message, optimisticUserRow, eventLines: [], eventHead: 0, eventChars: 0, answeredQuestions: new Set(), live, main,
       engine: turnEngine, agentCliType: agentCliMeta(turnMeta.agentCliType).id,
-      claudeInteractive: turnEngine !== 'claude' || agentCliMeta(turnMeta.agentCliType).alwaysInteractive || state.config.engineMode === 'interactive' };
+      claudeInteractive: turnEngine !== 'claude' || state.config.engineMode === 'interactive' };
     // 手上已有前 N 条(服务端给过戳)就告诉服务端,回合起点那条 session 事件只回尾巴;knownPrefix 是拼接用的那一个数组。
     if (state.currentSession?.id === turnSessionId) {
       turnState.knownMessages = knownMessagesFor(state.currentSession);
@@ -926,12 +919,6 @@ export function createChatStreamRuntime(deps = {}) {
     }
   }
 
-  // v0.8-S7 steering (§4 A3) + Agent CLI adapters. Called when the composer sends WHILE a turn streams.
-  // Provider injects at an iteration boundary, Claude interactive writes stdin immediately, and Kimi ACP
-  // queues a same-session follow-up prompt (the current ACP revision has no native mid-prompt steer method).
-  // On success clears the input, toasts (按 r.injected 区分即时/下步生效), and optimistically renders the user's
-  // interjection in the message flow with a muted 「插话」 badge. The server also emits a `steered` event when it
-  // actually injects the text — steeredSeen dedups that echo against this optimistic render (by text within a short time window).
   const steeredSeen = []; // [{text, ts}] recently rendered locally, for `steered`-event dedup(不限时,逐条 splice;cap 50)
 
   // v1.9.0: 插话队列可视化——在客户端维护一份「已发送但尚未被模型消费」的待注入列表。
@@ -1425,11 +1412,6 @@ export function createChatStreamRuntime(deps = {}) {
         maybeScrollToBottom(); // EC-D 56: 工具卡入列也走粘性跟随(用户要"页面跟着滚动",上滑阅读时不打扰)
         break;
       }
-      case 'tool_use_update': {
-        const card = live.toolCards.get(evt.id);
-        applyToolUseUpdate(card, evt, { humanizeToolName, safeStringify, toolArgSummary });
-        break;
-      }
       case 'tool_progress': {
         // 112b: 长工具心跳。此前整族落进 default 被丢弃 —— 一条十分钟的命令在卡片上只有一个本地秒表
         // 在走,时间预算的软警告/硬终态用户完全看不到。这里把服务端的权威计时与预算状态画上去。
@@ -1597,7 +1579,7 @@ export function createChatStreamRuntime(deps = {}) {
         if (phase === 'started') {
           if (!compactState.active) beginCompactIndicator({ stream: streamSessionId || state.currentSession?.id || 'stream' });
           const label = $('compactIndicator')?.querySelector('span:last-child');
-          if (label) label.textContent = evt.mode === 'kimi-native' ? t('chat.compactStartedKimi') : t('chat.compactStartedGeneric');
+          if (label) label.textContent = t('chat.compactStartedGeneric');
         } else if (phase === 'running' || phase === 'applied') {
           const label = $('compactIndicator')?.querySelector('span:last-child');
           if (label) label.textContent = phase === 'applied'
@@ -1614,7 +1596,7 @@ export function createChatStreamRuntime(deps = {}) {
             const meta = currentEngineMeta() || {};
             const routeUsage = meta.engine === 'openai' || meta.providerId
               ? { contextEngine: 'openai', contextProviderId: String(meta.providerId || ''), contextModel: String(meta.model || '') }
-              : { contextEngine: 'agent', contextAgentCliType: agentCliMeta(meta.agentCliType).id, contextModel: String(meta.model || '') };
+              : { contextEngine: 'agent', contextAgentCliType: (meta.agentCliType || agentCliMeta().id), contextModel: String(meta.model || '') };
             renderContextMeter({ ...previous, ...routeUsage, contextTokens: Number(evt.afterTokens), contextWindow: Number(evt.contextWindow) || previous.contextWindow });
           }
           endCompactIndicator();
@@ -1663,11 +1645,6 @@ export function createChatStreamRuntime(deps = {}) {
         // v0.9-S5 (真流程 plan mode): the model proposed an execution plan and the turn is paused. Render an
         // in-flow plan card (assistant-bubble variant) with the plan markdown + 批准执行 / 修改意见 / 放弃; the
         // decision POSTs to /api/plan/decision and the turn resumes (or ends). Composer hints while pending.
-        handlePlanEvent(evt, live && live.narrative ? live.narrative : main, live);
-        break;
-      case 'kimi_plan_snapshot':
-        // Kimi ACP plan updates are read-only native snapshots. ExitPlanMode remains the separate ask_user
-        // event above/below and must keep the classic plan option IDs and answer flow.
         handlePlanEvent(evt, live && live.narrative ? live.narrative : main, live);
         break;
       case 'plan_note':

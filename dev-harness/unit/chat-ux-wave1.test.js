@@ -134,20 +134,13 @@ describe('新增文案键与镜像', () => {
   ];
   const read = rel => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 
-  it('zh-CN / en-US 以及 docs/i18n 镜像四份都有这些键、且非空', () => {
-    for (const rel of ['ruyi-workbench/app/public/locales/zh-CN.json', 'ruyi-workbench/app/public/locales/en-US.json', 'docs/i18n/locales/zh-CN.json', 'docs/i18n/locales/en-US.json']) {
+  it('zh-CN / en-US 两种语言都有这些键、且非空', () => {
+    for (const rel of ['ruyi-workbench/app/public/locales/zh-CN.json', 'ruyi-workbench/app/public/locales/en-US.json']) {
       const catalog = read(rel);
       for (const key of KEYS) assert.ok(typeof catalog[key] === 'string' && catalog[key].trim(), `${rel} 缺 ${key}`);
     }
   });
 
-  it('docs/i18n 镜像与应用内目录逐字节相同', () => {
-    for (const name of ['zh-CN.json', 'en-US.json']) {
-      const a = fs.readFileSync(path.join(PUBLIC, 'locales', name));
-      const b = fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', name));
-      assert.ok(a.equals(b), `${name} 镜像不一致`);
-    }
-  });
 
   it('两种语言的占位符集合一致(这些键都不带占位符)', () => {
     for (const key of KEYS) {

@@ -13,7 +13,6 @@ const fsp = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-iv-persist-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { mapInterventionTransitionFailure } = require('../../ruyi-workbench/app/backend/intervention-decisions.cjs');
 const srv = require('../../ruyi-workbench/app/backend/intervention-journal.cjs').createInterventionJournal({

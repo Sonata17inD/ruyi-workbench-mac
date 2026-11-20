@@ -14,7 +14,7 @@
 | `desktop-macos/` | AppKit／WKWebView 宿主、离线构建与内测说明 |
 | `resources/` | 内置 Playbook、Claude Code 离线插件市场 `plugins/ruyi-offline`（`offline-toolkit` 技能集）、安装与启动脚本 |
 | `config/` | 配置示例与出厂默认值 |
-| `docs/` | 用户手册、管理员手册、架构、离线部署、源码审阅、技能目录 |
+| `docs/` | 用户手册、管理员手册、架构、离线部署、技能目录 |
 | `tools/` | Mac 原生构建、离线打包和开发工具 |
 | `start-macos.command` | 从源码启动工作台 |
 
@@ -42,11 +42,9 @@ Apple Silicon 离线包装分 Full 和 Slim。Full 随附独立 Python、ACC、�
 - 用户手册：[中文](docs/manuals/USER-GUIDE_CN.md) · [English](docs/manuals/USER-GUIDE_EN.md)
 - 管理员手册（部署、引擎、安全边界、计费、回归）：[中文](docs/manuals/ADMIN-GUIDE_CN.md) · [English](docs/manuals/ADMIN-GUIDE_EN.md)
 - 架构说明：[中文](docs/ARCHITECTURE_CN.md) · [English](docs/ARCHITECTURE_EN.md)
-- 离线部署：[中文](docs/OFFLINE_DEPLOYMENT_CN.md) · [English](docs/OFFLINE_DEPLOYMENT_EN.md)
-- 早期外部材料阅读记录（历史）：[中文](docs/SOURCE_REVIEW_CN.md) · [English](docs/SOURCE_REVIEW_EN.md)
+- 离线部署：[中文](docs/MACOS-RELEASE_CN.md) · [English](docs/MACOS-RELEASE_EN.md)
 - 技能与一键任务目录：[中文](docs/SKILLS-CATALOG_CN.md)
 - 工作流模型规范：[中文](docs/MODEL-WORKFLOW-SPEC_CN.md) · [English](docs/MODEL-WORKFLOW-SPEC_EN.md)
-- 后续管家 3.x 迭代（方案，不代表已交付）：[62 号计划](../docs/optimization-plan/62-steward-3x-iterations.md)
 
 ## 品牌与兼容标识
 

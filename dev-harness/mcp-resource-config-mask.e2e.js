@@ -39,8 +39,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
 (async () => {
   const child = cp.spawn(process.execPath, [SERVER, 'mcp'], {
     cwd: path.join(ROOT, 'ruyi-workbench', 'app'),
-    env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME },
-    windowsHide: true,
+    env: { ...process.env, RUYI_HOME: HOME },
   });
   child.stdin.on('error', () => { /* 收尸后迟到的写入 */ });
   let buf = '';

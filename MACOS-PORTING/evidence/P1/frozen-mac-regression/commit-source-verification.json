@@ -1,8 +1,0 @@
-{
-  "candidateCommit": "a8374a243679a673e2e3363f4c9bb4037ff291a9",
-  "verifiedTrackedFiles": 206,
-  "locallyBuiltBinaryHashesAlsoVerified": [
-    "ruyi-workbench/runtime/macos/ruyi-process-helper"
-  ],
-  "sourceMatchesFrozenTests": true
-}

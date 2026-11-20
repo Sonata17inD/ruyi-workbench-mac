@@ -24,7 +24,7 @@ function createOwnedServerStartup({
     const roots = [paths.data];
     const defaults = defaultDataRoots();
     const old = lstatOrNull(defaults.legacy);
-    const migrate = isDirectServeInvocation() && !process.env.RUYI_HOME && !process.env.WIN_CLAUDE_WORKBENCH_HOME
+    const migrate = isDirectServeInvocation() && !process.env.RUYI_HOME
       && !lstatOrNull(defaults.next) && old && old.isDirectory() && !old.isSymbolicLink();
     if (migrate) roots.push(defaults.legacy, defaults.next);
     const ownership = await ServerOwnership.acquire(roots); // Refusal must not touch the owner's files.
@@ -38,16 +38,13 @@ function createOwnedServerStartup({
           const from = paths.data;
           const to = migration.to;
           for (const key of Object.keys(paths)) paths[key] = path.join(to, path.relative(from, paths[key]));
-          if (process.platform === 'darwin') await ownership.confirmRoot(to, migration.from);
+          await ownership.confirmRoot(to, migration.from);
         }
       }
       // Initialize execution recovery under the OS gate, before any engine/client or startup recovery.
       await DesktopExecutionHooks.initialize(ownership);
       const result = await startServerInner(opts, bindHost, migration);
       await ownership.releaseStartup();
-      // Kernel-only endpoints are held through every exit-time flush and released by the OS.
-      // Portable socket cleanup is last, after the inner startup registered its synchronous flushes.
-      if (ownership.portable) process.once('exit', () => { void ownership.release(); });
       return result;
     } catch (error) {
       const kind = error && START_ERROR_KINDS.includes(error.ruyiStartErrorKind) ? error.ruyiStartErrorKind : 'startup-failed';
@@ -76,7 +73,7 @@ function createServerStartup({
     warmPretenderProjectionIndex, autoResumeInterruptedRuns, migrateLegacyAccMemory },
   config: { readConfig, syncClaudeCliSettings, syncAgentRolesToClaude, autoImportClaudeCodeMcp,
     recordInstallLaunch, syncAgentInstructionImports, syncMcpServersToClaude,
-    syncAgentCliMcpManifests, getCapabilities, generateMcpConfig },
+    getCapabilities, generateMcpConfig },
   probes: { beginBootCliPathProbes, waitForBootCliPathProbes, finishBootCliPathProbes, ensureDesktopMcpWarm },
   runtime: { activeChildren, stopSession, startScheduler, stopScheduler, killAllMcpClients, killAllShellSessions,
     EventStreamHooks, ExternalBotHooks, StewardHooks, ToolboxHooks, platformOpenSpawn, spawnDetachedChecked },
@@ -130,10 +127,6 @@ function createServerStartup({
     throw error;
   }
 
-  // 走查 2026-10-08:关服收尾(下面 startServerInner 里的 cleanupMcp)修前只停 MCP / shell / toolbox,activeChildren 里在途的
-  // Claude / Kimi CLI 回合子进程没人管 —— uncaughtException / SIGTERM 退出之后它们变孤儿,继续把当前回合跑完(改文件、花钱)
-  // 却再没人收结果。现在逐个走既有的 stopSession(id, 'shutdown'):整棵树交给 killChildTree(发出去就算,不等它)、原生引擎在途的
-  // fetch 一并 abort、挂起的权限 / 提问 / 计划一并清。全程同步、best-effort:'exit' 事件里只能做同步事,一项抛了不拦后面的。
   function stopAllActiveTurnsSync(reason = 'shutdown') {
     let stopped = 0;
     for (const id of [...activeChildren.keys()]) {
@@ -188,20 +181,6 @@ function createServerStartup({
     // v1.4.3: sync settings, agent roles, and MCP servers to Claude CLI's own config on startup
     await syncClaudeCliSettings(config);
     await syncAgentRolesToClaude(config.defaultWorkspace || os.homedir(), config);
-    // 122-§2.5:syncMcpServersToClaude／syncMcpServersToKimi／getCapabilities 三处 fire-and-forget
-    // 与 MCP 配置预热【整体挪到 listen 之后】(见下方 setImmediate 段)。
-    // 病根:它们虽然是 fire-and-forget,函数体在【第一个 await 之前】仍是同步跑的 ——
-    // syncMcpServersToClaude 的同步前缀是 resolveExternalMcpServers → detectDesktopMcp → pickPython,
-    // 三个候选各一发 spawnSync。本机实测(全新 HOME、TEMP 指向全新目录,即磁盘缓存冷):
-    // python 那一发 1983 ms,整个 boot 到 listen 3.2-3.3 s,其中这一发就占了三分之二。
-    // 磁盘缓存(eb93c02)只救第二个进程,第一个进程冷启动照样要付。
-    // 把本机 Claude Code 注册的 MCP(~/.claude.json mcpServers)自动映射进 Ruyi(逆向于上面的 sync)。
-    // 它只读 ~/.claude.json、写回配置,不碰探针,故留在 listen 之前(config 要在 listen 后的段里用最新引用)。
-    // 122-§2.5 顺序变化:sync 挪后之后,本次 boot 的 import 反而排在 sync 之前 —— 原注释里
-    // "在 syncMcpServersToClaude 之后跑" 的收益(拿到 Claude 最新全量)本就被那条注释自己标为可接受的竞态
-    // ("最坏下次 boot 补齐");而 §2.6 之后从 Claude 导进来的条目一律带 origin:'claude-code' 且不再同步回去,
-    // 这个先后已经不改变任何结果。
-    // 失败仅审计不阻断 boot;返回的 config 是写回后的最新引用,避免后续 generateMcpConfig 用陈旧 config。
     {
       const imp = await autoImportClaudeCodeMcp(config).catch(() => null);
       if (imp && imp.config) config = imp.config;
@@ -242,23 +221,6 @@ function createServerStartup({
     config = await readConfig();
     logEvent({ kind: 'server_start', port, launchMode: RUNTIME.launchMode, version: VERSION });
     if (typeof ExternalBotHooks.start === 'function') ExternalBotHooks.start();
-    // 122-§2.5:启动探针一律排在 listen 之后的 setImmediate 里(挪家详情见上面 autoImport 前那段注释)。
-    //   · syncMcpServersToClaude / syncMcpServersToKimi:同步前缀 resolveExternalMcpServers → detectDesktopMcp
-    //     → pickPython(三候选各一发 spawnSync,冷缓存实测 ~2 s);
-    //   · getCapabilities:能力矩阵预热(网络锚点 + 桌面 MCP + 二进制探测,首次可达 10s+);
-    //   · generateMcpConfig:同一份桌面探测的预热,顺带把生成的配置路径打到控制台(原来就在 listen 之后,
-    //     一并收进本段,让「boot 之后还要做什么」只有这一处)。
-    // 为什么是 setImmediate + 一小段起跑延迟,而不是紧跟 listen 直接调:
-    //   detectDesktopMcp → pickPython 是【同步】spawnSync(本刀不改它的签名,已登记),它跑起来会把事件循环
-    //   整个占住 —— 只 setImmediate 的话,check 阶段一进去就阻塞 2 s,此刻还没被解析完的 /health 仍要等到
-    //   探针结束才答(实测:只 setImmediate,/health 仍 3.1 s)。故再推迟 BOOT_PROBE_WARMUP_MS,把「listen 之后
-    //   最初那一两个请求(/health、首屏 GET /)」让出去。
-    //   【39 号文之后】上面这段「探针开跑之后那 2 s 里到达的请求照样要等」已经不成立:预热改走
-    //   ensureDesktopMcpWarm()(execFile 异步),整段不再占事件循环;起跑延迟保留,理由从「别阻塞」
-    //   变成「首屏那一两个请求优先」。下面这条历史记录留着,是为了说明这段延迟当初为什么长这样。
-    //   【诚实标注·旧】这只解决「起跑那一刻」:探针开跑之后那 2 s 里到达的请求照样要等。要彻底,得把
-    //   detectDesktopMcp/pickPython 改成 async spawn —— 36 号文 §2.5 已把它登记为本刀不做的后续项。
-    // /api/status 里 generateMcpConfig/detectDesktopMcp 也仍是同步路径 —— 首个请求最多付一次探针,这是接受的。
     const BOOT_PROBE_WARMUP_MS = 500;
     setTimeout(() => setImmediate(() => {
       // 第123波 M1(37 号文 §3.2「启动恢复」):调度器起在这一段的【最前面】,不在 listen 之后的
@@ -281,7 +243,6 @@ function createServerStartup({
       if (typeof ToolboxHooks.reconcile === 'function') void ToolboxHooks.reconcile().catch(() => {});
       void ensureDesktopMcpWarm(config).then(() => {
         void syncMcpServersToClaude(config).catch(() => {});
-        void syncAgentCliMcpManifests(config).catch(() => {});   // 选中的 CLI 若从用户配置读 MCP(Kimi),推一次(01)
         // G1: 预热能力矩阵。首个用户回合或子代理调用 getCapabilities 时命中 60s 缓存,冷启动不再吃满探测耗时。
         void getCapabilities(config).catch(() => {});
         void generateMcpConfig(config.mcpCommandMode).then(p => { console.log(`MCP config: ${p}`); }).catch(() => {});

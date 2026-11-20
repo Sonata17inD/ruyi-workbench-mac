@@ -17,7 +17,6 @@ import { preserveListFocus } from './util.js';
 
 const POLL_BUSY_MS = 3000;
 const POLL_IDLE_MS = 10000;
-const COUNTS_POLL_MS = 10000;
 const MIN_GAP_MS = 1000;
 const OUTPUT_POLL_MS = 2000;
 
@@ -68,9 +67,10 @@ export function createBackgroundTray({
   let structureSig = '';
   const rowCells = new Map();      // id -> { time, progress }
   const openOutputs = new Map();   // shellId -> { pre, timer }
-  let pollTimer = null, countsTimer = null, kickTimer = null, ticker = null;
+  let pollTimer = null, kickTimer = null, ticker = null;
+  let connected = false;
   let lastFetchAt = 0, fetching = false;
-  let railCounts = {};
+  let railCounts = {}, countsGeneration = 0, refreshPending = false;
   let started = false;
   let lastSuccessAt = 0, stale = false;
 
@@ -80,7 +80,8 @@ export function createBackgroundTray({
 
   // ── 数据 ─────────────────────────────────────────────────────────────────────────
   async function refresh() {
-    if (fetching || !api) return;
+    if (!api) return;
+    if (fetching) { refreshPending = true; return; }
     const sid = String(currentSessionId() || '');
     if (sid !== sessionId) { sessionId = sid; items = []; expanded = false; closeAllOutputs(); structureSig = ''; lastSuccessAt = 0; stale = false; }
     if (!sid || !visible() || shellMode() !== 'classic') { render(); schedule(); return; }
@@ -94,24 +95,39 @@ export function createBackgroundTray({
     } catch {
       if (String(currentSessionId() || '') === sid) stale = true;
     }
-    finally { fetching = false; render(); schedule(); }
+    finally {
+      fetching = false;
+      if (visible()) render();
+      schedule();
+      if (refreshPending) { refreshPending = false; kick(); }
+    }
   }
   function schedule() {
     clearTimeout(pollTimer);
-    pollTimer = setTimeout(refresh, items.length ? POLL_BUSY_MS : POLL_IDLE_MS);
+    clearInterval(ticker);
+    if (!started || !visible()) return;
+    if (items.length && shellMode() === 'classic') {
+      ticker = setInterval(render, 1000);
+      pollTimer = setTimeout(refresh, POLL_BUSY_MS);
+    } else if (!connected) {
+      pollTimer = setTimeout(kick, POLL_IDLE_MS);
+    }
   }
   function kick() {
-    clearTimeout(kickTimer);
+    if (!started || !visible()) return;
+    if (kickTimer) return;
     const wait = Math.max(200, MIN_GAP_MS - (now() - lastFetchAt));
-    kickTimer = setTimeout(() => { refresh(); refreshCounts(); }, wait);
+    kickTimer = setTimeout(() => { kickTimer = null; refresh(); refreshCounts(); }, wait);
   }
   async function refreshCounts() {
     if (!api || !visible()) return;
+    const generation = ++countsGeneration;
     try {
       const res = await api('/api/sessions/background-counts');
+      if (generation !== countsGeneration) return;
       railCounts = (res && res.counts && typeof res.counts === 'object') ? res.counts : {};
     } catch { /* ignore */ }
-    paintRail();
+    if (visible()) paintRail();
   }
 
   // ── 左栏标记 ─────────────────────────────────────────────────────────────────────
@@ -205,7 +221,7 @@ export function createBackgroundTray({
     rowEl.appendChild(pre);
     btn.textContent = t('bgTray.action.hideOutput'); btn.setAttribute('aria-expanded', 'true');
     loadOutput(item.shellId, pre);
-    const timer = setInterval(() => { if (!pre.isConnected) { clearInterval(timer); openOutputs.delete(item.shellId); return; } loadOutput(item.shellId, pre); }, OUTPUT_POLL_MS);
+    const timer = setInterval(() => { if (!visible()) return; if (!pre.isConnected) { clearInterval(timer); openOutputs.delete(item.shellId); return; } loadOutput(item.shellId, pre); }, OUTPUT_POLL_MS);
     openOutputs.set(item.shellId, { pre, timer });
   }
 
@@ -320,33 +336,50 @@ export function createBackgroundTray({
     started = true;
     refresh();
     refreshCounts();
-    countsTimer = setInterval(refreshCounts, COUNTS_POLL_MS);
-    // 页面在后台时不拉(见 refresh);切回前台立刻对一次,不等下一拍(真机:最多要等 10 s 才露面)。
-    try { doc().addEventListener('visibilitychange', () => { if (visible()) kick(); }); } catch { /* ignore */ }
-    // 1 s 一拍：已跑时长走表、换了线程立刻换内容、左栏重画后补标记。
-    ticker = setInterval(() => {
-      if (String(currentSessionId() || '') !== sessionId) { kick(); }
-      render();
-      paintRail();
-    }, 1000);
+    doc().addEventListener('visibilitychange', visibilityChanged);
+    doc().addEventListener('ruyi:session-view', sessionChanged);
+    doc().addEventListener('ruyi:rail-rendered', railRendered);
+  }
+  function sessionChanged() {
+    if (String(currentSessionId() || '') !== sessionId) {
+      closeAllOutputs();
+      kick();
+    }
+  }
+  function railRendered() {
+    if (visible() && Object.keys(railCounts).length) paintRail();
+  }
+  function visibilityChanged() {
+    if (visible()) kick();
+    else {
+      clearTimeout(kickTimer); kickTimer = null;
+      clearTimeout(pollTimer);
+      clearInterval(ticker);
+      closeAllOutputs();
+      structureSig = '';
+    }
   }
   function bindEventStream(eventStream) {
     if (!eventStream || typeof eventStream.on !== 'function') return false;
-    for (const name of ['thread.live', 'thread.state', 'background.completed']) {
-      try {
-        eventStream.on(name, data => {
-          const sid = String((data && data.sessionId) || '');
-          // 当前线程的推送 → 刷列表；别的线程的只影响左栏计数，交给 kick 里那一发 refreshCounts。
-          if (!sid || sid === sessionId || name !== 'thread.live') kick();
-        });
-      } catch { /* 推送是旁路 */ }
-    }
+    connected = eventStream.isConnected?.() === true;
+    eventStream.on('connection', event => {
+      connected = event.connected;
+      kick();
+    });
+    eventStream.on('background.changed', kick);
+    eventStream.on('background.completed', kick);
     return true;
   }
 
   return Object.freeze({
     start, refresh, kick, bindEventStream,
     items: () => items.slice(),
-    _stopForTests: () => { clearTimeout(pollTimer); clearTimeout(kickTimer); clearInterval(countsTimer); clearInterval(ticker); closeAllOutputs(); },
+    _stopForTests: () => {
+      started = false;
+      doc().removeEventListener('visibilitychange', visibilityChanged);
+      doc().removeEventListener('ruyi:session-view', sessionChanged);
+      doc().removeEventListener('ruyi:rail-rendered', railRendered);
+      clearTimeout(pollTimer); clearTimeout(kickTimer); clearInterval(ticker); closeAllOutputs();
+    },
   });
 }

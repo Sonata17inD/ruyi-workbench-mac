@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 /*
  * E2E (第48波48c): MCP 配置导入器 v1 -- 从 Claude Code .mcp.json / Codex config.toml 导入(03 §4.1)。
  *
@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/mcp-import-config.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -122,9 +122,10 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
   // ── H 段: HTTP 全路径 ──
   console.log('── H 段: HTTP scan/apply ──');
   const WP = await getFreePort();
-  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 7, version: '2.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [{ id: 'existing', label: '已有', command: 'old.exe', args: [], env: {}, cwd: '', enabled: true }] }));
+  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: true, configSchema: 7, version: '2.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [{ id: 'existing', label: '已有', command: 'old.exe', args: [], env: {}, cwd: '', enabled: true }] }));
   let configReader = null;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  const wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     ok(await up(WP), 'workbench up');
     const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port: WP, path: '/' }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve(b)); }));
@@ -156,7 +157,7 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
     ok(ap.json.added.includes('imported-stdio') && ap.json.added.includes('imported-sse'), 'H7 apply 写 stdio + sse(49c 远程已落地)');
     ok(ap.json.skipped.some(s => s.id === 'imported-bad'), 'H7b apply 跳过缺 url 的远程条目');
     // 验证写回 config
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     const rawCfg = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
     const cfg = configReader.recover(rawCfg);
     const ids = (cfg.externalMcpServers || []).map(s => s.id);
@@ -164,11 +165,11 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
     const sseCfg = (cfg.externalMcpServers || []).find(s => s.id === 'imported-sse');
     ok(!!sseCfg && sseCfg.transport === 'sse' && sseCfg.url === 'http://x', 'H8b 远程条目落盘形状(transport/url)');
     ok(!!sseCfg && sseCfg.headers && sseCfg.headers.Authorization === 'Bearer ${MCP_SECRET_VAR}', 'H8c 持久 headers 解密后逐字保留 ${VAR} 引用(未展开密钥)');
-    if (process.platform === 'win32') {
+    {
       const physicalFiles = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(HOME, name)));
       ok(rawCfg.credentialRefsV1?.version === 1 && rawCfg.externalMcpServers.find(s => s.id === 'imported-sse')?.headers === ''
         && physicalFiles.every(name => { const text = fs.readFileSync(path.join(HOME, name), 'utf8'); return !text.includes('Bearer ${MCP_SECRET_VAR}') && !text.includes('should-not-bake-in'); }),
-      'H8d Windows 主配置、备份和凭据库无 header 引用明文或展开的密钥');
+      'H8d Mac 主配置、备份和凭据库无 header 引用明文或展开的密钥');
     }
 
     // apply id 撞名 -> 更新(非追加)

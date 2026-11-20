@@ -6,7 +6,7 @@
 //   [Z] #17 memoryRelevanceMaxV1=0 就是 0(修前 `Number(limit) || 8` 实际等于 8)。
 //   [H] check 行如实:零命中的 preference/convention 默认规则补位不算「额外匹配」。
 //   [S] #16 supersedes 的运行时效果:取代者在场就不重复注入旧版本、否则降权 + 标「[已被 X 取代]」;维护建议带「停用」。
-//   [I] #6  provider 引擎的索引行不带路径、按 id 用 workbench_memory_read 读(Claude/Kimi 仍带路径用 Read)。
+//   [I] #6  provider 引擎的索引行不带路径、按 id 用 workbench_memory_read 读(Claude 仍带路径用 Read)。
 // 反向验证:RUYI_TEST_SERVER_JS 指到修前 server.js 时本件应当红(见提交说明里的实测)。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,7 +15,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-memory-precision-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 process.env.HOME = path.join(root, 'home');
 process.env.USERPROFILE = process.env.HOME;
@@ -312,7 +311,7 @@ test('[I1] provider 引擎:索引行不带绝对路径,按 [id](scope) 用 workb
   assert.ok(!en.includes('/fake/project/i-one.md'));
 });
 
-test('[I2] Claude/Kimi 原生 CLI:索引行仍带绝对路径,用 CLI 自己的 Read', () => {
+test('[I2] Claude 原生 CLI:索引行仍带绝对路径,用 CLI 自己的 Read', () => {
   const entries = [E('project', 'convention', 'i-one', '约定一', '约定一的描述', { coreStatus: 'library' })];
   const sec = S.buildMemoryPromptSection(entries, 'claude', {}, null);
   assert.ok(sec.includes('[i-one](/fake/project/i-one.md):约定一的描述'));

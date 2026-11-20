@@ -794,7 +794,6 @@
         "THREAD_INDEX_RECENT_MIN",
         "ToolboxRegistry",
         "accMemoryImportStore",
-        "agentCliInstallCandidates",
         "agentCliLauncherOk",
         "agentCliLauncherUsable",
         "agentCliProbeVerdict",
@@ -824,14 +823,11 @@
         "desktopMcpDetectionPending",
         "desktopMcpFromInstalledRoot",
         "desktopPythonCandidates",
-        "detectAgentCliPath",
-        "detectAgentCliPathUncachedAsync",
         "detectClaudePath",
         "detectClaudePathUncached",
         "detectClaudePathUncachedAsync",
         "detectDesktopMcp",
         "detectDesktopMcpAsync",
-        "detectKimiPath",
         "discoverModels",
         "effectiveAnthropicEnv",
         "enabledToolboxComponents",
@@ -854,7 +850,6 @@
         "isEquivalentDesktopAccServer",
         "isLoopbackAddress",
         "isLoopbackBindHost",
-        "kimiMcpManagedIds",
         "legacyAccMemoryMigrationComplete",
         "mcpConfigFilePath",
         "mcpDropInDirs",
@@ -882,7 +877,6 @@
         "recordInstallLaunch",
         "requestIsLoopback",
         "resolveExternalMcpServers",
-        "resolveKimiNpmEntry",
         "resolveNodeModel",
         "safeSessionId",
         "saveProjectAgentRoles",
@@ -894,11 +888,9 @@
         "setProxyModelsCache",
         "staticBase",
         "sweepStaleScriptFiles",
-        "syncAgentCliMcpManifests",
         "syncAgentRolesToClaude",
         "syncClaudeCliSettings",
         "syncMcpServersToClaude",
-        "syncMcpServersToKimi",
         "tierModelForNode",
         "tokenMatches",
         "tokenOk",
@@ -1436,10 +1428,8 @@
         "MissionChanges",
         "MissionStore",
         "ProviderHistory",
-        "SESSION_BODY_READ_TRANSIENT",
         "SESSION_BRIEF_GIST_CHARS",
         "SESSION_BRIEF_TITLE_CHARS",
-        "SESSION_HEAD_READ_RETRIES",
         "SESSION_INDEX_FILE",
         "SESSION_LOAD_OMIT_PROVIDER",
         "SESSION_SCRATCHPAD_LIMITS",
@@ -1578,6 +1568,7 @@
         "readSessionScratchpad",
         "readUsageRows",
         "rebaseStaleSessionBody",
+        "reconcileTurnMetadata",
         "reconcileWorkspaceTurnBaseline",
         "recordMissionBudgetTrippedChange",
         "recordMissionCheckResult",
@@ -2200,7 +2191,6 @@
       "file": "04-permission-runtime.js",
       "layer": "foundation",
       "provides": [
-        "AGENT_CLI_CONTEXT_WINDOW_PROBES",
         "AgentLoopHooks",
         "MCP_COMPAT_MATRIX",
         "McpHttpClient",
@@ -2224,7 +2214,6 @@
         "createInterventionDecisions",
         "createMcpTransports",
         "decideInterventionCommand",
-        "discoverKimiModels",
         "driverAutoSessions",
         "extendUserQuestion",
         "formatQuestionGuidance",
@@ -2236,8 +2225,6 @@
         "invalidateMcpRuntime",
         "isClaudeResumeMissingError",
         "killAllMcpClients",
-        "kimiContextWindow",
-        "kimiModelList",
         "lastSuccessfulClaudeModel",
         "makeAttachmentRecord",
         "mcpCallToolParams",
@@ -2251,10 +2238,8 @@
         "normalizeQuestionAnswer",
         "normalizeQuestionContext",
         "normalizeUserQuestions",
-        "parseAgentCliEvent",
         "parseClaudeEvent",
         "parseClaudeTaskNotification",
-        "parseKimiStreamJsonEvent",
         "permissionWaitMs",
         "probeDesktopExecutionReceipts",
         "probeMcpConnector",
@@ -2473,13 +2458,6 @@
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "prepareAgentCliSpawn",
           "kinds": [
             "read"
           ]
@@ -3378,6 +3356,7 @@
       "provides": [
         "AGENT_CLI_ADAPTERS",
         "agentCliAdapter",
+        "maybeAutoCompactAgentSession",
         "runClaudeTurn"
       ],
       "requires": [
@@ -3593,13 +3572,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "syncMcpServersToKimi",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "writeToChild",
           "kinds": [
             "read"
@@ -3705,7 +3677,7 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "mergeMissionBeforeSave",
+          "symbol": "reconcileTurnMetadata",
           "kinds": [
             "read"
           ]
@@ -3817,13 +3789,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "discoverKimiModels",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "formatQuestionGuidance",
           "kinds": [
             "read"
@@ -3859,20 +3824,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "kimiContextWindow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "kimiModelList",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "lastSuccessfulClaudeModel",
           "kinds": [
             "read"
@@ -3888,13 +3839,6 @@
         {
           "provider": "04-permission-runtime.js",
           "symbol": "parseClaudeEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "parseKimiStreamJsonEvent",
           "kinds": [
             "read"
           ]
@@ -3953,69 +3897,6 @@
           "symbol": "resolveEnabledSkillEntries",
           "kinds": [
             "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "applyKimiStatusToSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiSessionStatus",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiUsageFromStatus",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "maybeAutoCompactAgentSession",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "runKimiAcpTurnPrepared",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "runKimiCompact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "syncKimiSessionUsage",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "syncKimiTurnPreferences",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "watchKimiWire",
-          "kinds": [
-            "call"
           ]
         },
         {
@@ -4206,426 +4087,6 @@
           "kinds": [
             "call"
           ]
-        }
-      ]
-    },
-    {
-      "file": "05b-kimi-bridge.js",
-      "layer": "engine",
-      "provides": [
-        "KIMI_ACP_SEARCH_BLOCKED_ENV_RE",
-        "KimiAcpFiles",
-        "KimiAcpInterventions",
-        "KimiAcpTerminals",
-        "applyKimiStatusToSession",
-        "buildKimiAcpPromptParts",
-        "classifyKimiAcpReadonlySearch",
-        "cleanupKimiAcpTerminals",
-        "consumeKimiAcpApproval",
-        "createAcpRpc",
-        "createKimiAcpInterventions",
-        "createKimiAcpRpc",
-        "ensureKimiAcpOperationPermission",
-        "handleKimiAcpPermissionRequest",
-        "handleKimiAcpTerminalRequest",
-        "isKimiAcpPlanFilePath",
-        "killKimiAcpTerminal",
-        "kimiAcpFreshActualForOperation",
-        "kimiAcpInferConcreteToolInput",
-        "kimiAcpModeOptionFromActivated",
-        "kimiAcpNativeBashWrapperCandidate",
-        "kimiAcpNativeBashWrapperTexts",
-        "kimiAcpNativeShellQuote",
-        "kimiAcpPermissionToolCall",
-        "kimiAcpSamePath",
-        "kimiAcpSessionRestoreMethods",
-        "kimiAcpSuccessfulEnterPlanMode",
-        "kimiAcpUnknownSessionError",
-        "kimiSessionStatus",
-        "kimiStatusFingerprint",
-        "kimiUsageFromStatus",
-        "maybeAutoCompactAgentSession",
-        "parseKimiWireAgentEvents",
-        "parseKimiWireCompaction",
-        "prepareKimiAcpSpawn",
-        "resolveKimiAcpPlanFilePath",
-        "runKimiAcpTurnPrepared",
-        "runKimiCompact",
-        "syncKimiSessionUsage",
-        "syncKimiTurnPreferences",
-        "watchKimiWire"
-      ],
-      "requires": [
-        {
-          "provider": "00-boot.js",
-          "symbol": "appRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "dataRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "externalRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "isSensitiveDataPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "logEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "makeId",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "nowIso",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "paths",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "pathWithinRoot",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "RUYI_EVENTS",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "00-boot.js",
-          "symbol": "spawnDetachedChecked",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "agentCliLauncherUsable",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "prepareAgentCliSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "readConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "RUNTIME",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "selectedAgentCli",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncMcpServersToKimi",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "killChildTree",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01h-process-runtime.js",
-          "symbol": "ProcessRuntime",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01o-execution-state.js",
-          "symbol": "activeChildren",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "bumpMissionChangeSeq",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "captureWorkspaceTurnBaseline",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "finalizeMissionAfterTurn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "isUntitledSessionTitle",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "journalReadIndex",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "loadSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "mergeMissionBeforeSave",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "mutateSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "normalizeTodoItems",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "reconcileWorkspaceTurnBaseline",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "saveSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
-          "symbol": "saveTurnFinalSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "buildOpenSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "cwdWarning",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "fileAllowedRoots",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardFileToolPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "guardWorkspaceExecute",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "realpathForContainment",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03-bridge-guard.js",
-          "symbol": "workspaceWriteRoots",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "03a-privacy-gateway.js",
-          "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "AgentLoopHooks",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "assertSessionExecutionOwner",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "clearPendingPermissions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "clearPendingPlans",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "clearPendingQuestions",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "hasPendingPermissionForSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "kimiContextWindow",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "permissionWaitMs",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "registerSessionExecutionChild",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "requestUserQuestion",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "runAutomaticInterventionDecision",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "stopSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "07-autonomy.js",
-          "symbol": "requestNativePermission",
-          "kinds": [
-            "call"
-          ]
         },
         {
           "provider": "10-context-governance.js",
@@ -4637,20 +4098,6 @@
         {
           "provider": "10-context-governance.js",
           "symbol": "runAgentExternalCompact",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "10-context-governance.js",
-          "symbol": "upsertCompactMarker",
-          "kinds": [
-            "call"
-          ]
-        },
-        {
-          "provider": "12-tool-dispatch.js",
-          "symbol": "toolCall",
           "kinds": [
             "call"
           ]
@@ -5691,13 +5138,6 @@
         {
           "provider": "01-config.js",
           "symbol": "mutateConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncAgentCliMcpManifests",
           "kinds": [
             "read"
           ]
@@ -7284,13 +6724,6 @@
         },
         {
           "provider": "02-session-store.js",
-          "symbol": "mergeMissionBeforeSave",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02-session-store.js",
           "symbol": "mutateSession",
           "kinds": [
             "read"
@@ -7334,6 +6767,13 @@
         {
           "provider": "02-session-store.js",
           "symbol": "readSessionScratchpad",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "02-session-store.js",
+          "symbol": "reconcileTurnMetadata",
           "kinds": [
             "read"
           ]
@@ -8702,13 +8142,6 @@
         {
           "provider": "03a-privacy-gateway.js",
           "symbol": "PrivacyGateway",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
-          "symbol": "AGENT_CLI_CONTEXT_WINDOW_PROBES",
           "kinds": [
             "read"
           ]
@@ -11030,13 +10463,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "detectKimiPath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "ensureDesktopMcpWarm",
           "kinds": [
             "read"
@@ -11507,34 +10933,6 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "applyKimiStatusToSession",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiSessionStatus",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiStatusFingerprint",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiUsageFromStatus",
           "kinds": [
             "read"
           ]
@@ -12176,13 +11574,6 @@
         {
           "provider": "01-config.js",
           "symbol": "generateMcpConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "kimiMcpManagedIds",
           "kinds": [
             "read"
           ]
@@ -14207,7 +13598,6 @@
         "stewardExemptDelegatedLog",
         "stewardExemptLiveTurn",
         "stewardExemptPendingSummary",
-        "stewardFoldWorkspacePath",
         "stewardImplQuickAsk",
         "stewardImplThreadContinue",
         "stewardImplThreadNew",
@@ -17083,13 +16473,6 @@
         {
           "provider": "13k-steward-threads.js",
           "symbol": "stewardCanonWorkspacePath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "13k-steward-threads.js",
-          "symbol": "stewardFoldWorkspacePath",
           "kinds": [
             "read"
           ]
@@ -20385,13 +19768,6 @@
         },
         {
           "provider": "01-config.js",
-          "symbol": "syncAgentCliMcpManifests",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
           "symbol": "syncAgentRolesToClaude",
           "kinds": [
             "read"
@@ -20407,13 +19783,6 @@
         {
           "provider": "01-config.js",
           "symbol": "syncMcpServersToClaude",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "01-config.js",
-          "symbol": "syncMcpServersToKimi",
           "kinds": [
             "read"
           ]
@@ -21210,20 +20579,6 @@
           ]
         },
         {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "normalizeSessionEngineRoute",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "02e-session-engine-route.js",
-          "symbol": "sessionEngineRouteFromConfig",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
           "provider": "02f-turn-effect-kinds.js",
           "symbol": "toolInvokeEnvelopeRepair",
           "kinds": [
@@ -21442,13 +20797,6 @@
         },
         {
           "provider": "04-permission-runtime.js",
-          "symbol": "parseAgentCliEvent",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "04-permission-runtime.js",
           "symbol": "parseClaudeTaskNotification",
           "kinds": [
             "read"
@@ -21660,139 +21008,6 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "consumeKimiAcpApproval",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "isKimiAcpPlanFilePath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpFreshActualForOperation",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpInferConcreteToolInput",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpModeOptionFromActivated",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpNativeBashWrapperCandidate",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpNativeBashWrapperTexts",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpNativeShellQuote",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpPermissionToolCall",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpSessionRestoreMethods",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpSuccessfulEnterPlanMode",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiAcpUnknownSessionError",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "kimiSessionStatus",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "parseKimiWireAgentEvents",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "parseKimiWireCompaction",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "prepareKimiAcpSpawn",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "resolveKimiAcpPlanFilePath",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "runKimiCompact",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "05b-kimi-bridge.js",
-          "symbol": "watchKimiWire",
           "kinds": [
             "read"
           ]
@@ -22681,13 +21896,6 @@
         },
         {
           "provider": "06i-steward-core.js",
-          "symbol": "stewardThreadStateRank",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06i-steward-core.js",
           "symbol": "stewardToolPermanentlyExempt",
           "kinds": [
             "read"
@@ -22731,13 +21939,6 @@
         {
           "provider": "06v-operational-services.js",
           "symbol": "claudeProjectDirKey",
-          "kinds": [
-            "read"
-          ]
-        },
-        {
-          "provider": "06v-operational-services.js",
-          "symbol": "claudeProjectsRoot",
           "kinds": [
             "read"
           ]

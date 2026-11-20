@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105-total-gate-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105-total-gate-'));
 const HERE = __dirname;
 const ROOT = path.resolve(HERE, '..');
 const srv = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));

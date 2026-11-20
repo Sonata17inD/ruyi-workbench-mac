@@ -17,25 +17,23 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
         continue;
       }
       const legacy = pathModule.join(real, ...missing);
-      if (process.platform === 'darwin') {
-        // getcwd resolves stored directory-entry casing and APFS firmlinks, unlike realpath.
-        // Verify its output against the same filesystem object before using it as a lock key.
-        const result = require('child_process').spawnSync('/bin/pwd', ['-P'], {
-          cwd: real, encoding: 'utf8', timeout: 2000, maxBuffer: 16384,
-        });
-        const primary = String(result.stdout || '').replace(/\n$/, '');
-        if (result.error || result.status !== 0 || !pathModule.isAbsolute(primary)) {
-          throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '无法确认数据目录的真实路径。 / Cannot resolve data directory identity.');
-        }
-        const [originalStat, primaryStat] = await Promise.all([
-          fsModule.promises.stat(real, { bigint: true }),
-          fsModule.promises.stat(primary, { bigint: true }),
-        ]);
-        if (originalStat.dev !== primaryStat.dev || originalStat.ino !== primaryStat.ino) {
-          throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '数据目录身份发生变化，请重新启动。 / Data directory identity changed.');
-        }
-        real = primary;
+      // getcwd resolves stored directory-entry casing and APFS firmlinks, unlike realpath.
+      // Verify its output against the same filesystem object before using it as a lock key.
+      const result = require('child_process').spawnSync('/bin/pwd', ['-P'], {
+        cwd: real, encoding: 'utf8', timeout: 2000, maxBuffer: 16384,
+      });
+      const primary = String(result.stdout || '').replace(/\n$/, '');
+      if (result.error || result.status !== 0 || !pathModule.isAbsolute(primary)) {
+        throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '无法确认数据目录的真实路径。 / Cannot resolve data directory identity.');
       }
+      const [originalStat, primaryStat] = await Promise.all([
+        fsModule.promises.stat(real, { bigint: true }),
+        fsModule.promises.stat(primary, { bigint: true }),
+      ]);
+      if (originalStat.dev !== primaryStat.dev || originalStat.ino !== primaryStat.ino) {
+        throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '数据目录身份发生变化，请重新启动。 / Data directory identity changed.');
+      }
+      real = primary;
       const joined = pathModule.join(real, ...missing);
       return { canonical: joined, legacy, missing: missing.length > 0 };
     }
@@ -44,7 +42,7 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
   function endpointFor(canonical, platform = process.platform) {
     if (platform !== 'darwin') throw ownershipError('PLATFORM_UNSUPPORTED', 'Ruyi requires macOS.');
     const digest = cryptoModule.createHash('sha256').update(canonical).digest('hex');
-    const uid = typeof process.getuid === 'function' ? process.getuid() : 'unknown';
+    const uid = process.getuid();
     return pathModule.posix.join('/private/tmp', 'ruyi-serve-v1-' + uid, digest.slice(0, 32) + '.lock');
   }
   function legacyEndpointFor(canonical) {
@@ -57,11 +55,6 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
   }
   function ownershipError(code, message) {
     return Object.assign(new Error(message), { code, ruyiStartErrorKind: 'data-dir-owned' });
-  }
-  async function bind(canonical, legacyCanonicals) {
-    if (process.platform === 'darwin') return bindMac(canonical, legacyCanonicals);
-    const endpoint = endpointFor(canonical);
-    return bindSocket(canonical, endpoint);
   }
   async function bindSocket(canonical, endpoint) {
     const server = netModule.createServer(socket => { socket.on('error', () => {}); socket.destroy(); });
@@ -258,8 +251,12 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
     }
   }
   async function acquire(roots) {
-    const startupFds = [];
-    const closeStartup = () => { for (const fd of startupFds.splice(0)) fsModule.closeSync(fd); };
+    let startupFd;
+    const closeStartup = () => {
+      if (startupFd === undefined) return;
+      fsModule.closeSync(startupFd);
+      startupFd = undefined;
+    };
     const handles = [];
     const identities = new Map();
     const rootAliases = new Map();
@@ -276,16 +273,24 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
     try {
       // Every Mac startup respects this gate, including roots that appeared during another
       // startup's recursive mkdir. Missing names have no stable filesystem spelling yet.
-      if (process.platform === 'darwin') startupFds.push(await acquireMacStartupLock());
+      startupFd = await acquireMacStartupLock();
       const resolved = await Promise.all(roots.map(resolveRoot));
-      for (let index = 0; index < roots.length; index++) rootAliases.set(pathModule.resolve(roots[index]), resolved[index].canonical);
-      canonical = [...new Set(resolved.map(root => root.canonical))].sort();
-      for (const root of canonical) {
-        identities.set(root, resolved.some(item => item.canonical === root && !item.missing)
-          ? await fsModule.promises.stat(root, { bigint: true }) : null);
+      const groups = new Map();
+      for (const [index, item] of resolved.entries()) {
+        rootAliases.set(pathModule.resolve(roots[index]), item.canonical);
+        let group = groups.get(item.canonical);
+        if (!group) {
+          group = { existing: false, legacy: new Set() };
+          groups.set(item.canonical, group);
+        }
+        if (!item.missing) group.existing = true;
+        group.legacy.add(item.legacy);
       }
+      canonical = [...groups.keys()].sort();
       for (const root of canonical) {
-        handles.push(await bind(root, resolved.filter(item => item.canonical === root).map(item => item.legacy)));
+        const group = groups.get(root);
+        identities.set(root, group.existing ? await fsModule.promises.stat(root, { bigint: true }) : null);
+        handles.push(await bindMac(root, group.legacy));
       }
       if (!canonical.every(rootMatches)) throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '取得启动锁时数据目录发生变化。 / Data directory changed during ownership acquisition.');
       // Old releases have no kernel file gate. A live or uncertain PID blocks recovery.
@@ -298,7 +303,6 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
     let releasePromise;
     return Object.freeze({
       roots: Object.freeze(canonical),
-      portable: handles.some(handle => handle.endpoint.endsWith('.sock')),
       isHeld() { return !releasePromise && handles.length > 0 && handles.every(handle => handle.isHeld()); },
       isRootCurrent(root) { return !releasePromise && handles.every(handle => handle.isHeld()) && rootMatches(root); },
       async confirmRoot(root, migratedFrom) {
@@ -310,7 +314,7 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
           throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '初始化的数据目录不属于当前服务。 / Initialized root is not owned.');
         }
         if (!identities.get(resolved.canonical)) {
-          if (process.platform !== 'darwin' || !startupFds.length) throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '创建目录的启动锁已经释放。 / Root creation startup gate is no longer held.');
+          if (startupFd === undefined) throw ownershipError('DATA_ROOT_OWNER_UNKNOWN', '创建目录的启动锁已经释放。 / Root creation startup gate is no longer held.');
           const actual = await fsModule.promises.stat(resolved.canonical, { bigint: true });
           if (migratedFrom !== undefined) {
             // Migration can leave a legacy junction pointing at the destination. Use the
@@ -328,7 +332,7 @@ const ServerOwnership = ((netModule, fsModule, pathModule, osModule, cryptoModul
         }
       },
       async releaseStartup() {
-        if (!startupFds.length) return;
+        if (startupFd === undefined) return;
         // A confirmed rename may intentionally leave no legacy junction. Only source roots
         // whose original inode was verified at the destination may be omitted here.
         const retained = roots.filter(root => !retiredRoots.has(rootAliases.get(pathModule.resolve(root))));

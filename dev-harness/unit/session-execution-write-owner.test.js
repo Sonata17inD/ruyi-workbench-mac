@@ -11,7 +11,6 @@ const { loadServerInternals } = require('../lib/server-internals');
 // product exports; no production server or real model starts. Saves and reads use the production disk store.
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-execution-write-owner-'));
 process.env.RUYI_HOME = home;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
 const internals = loadServerInternals([
   'createSession', 'saveSession', 'loadSession', 'runSessionTurn',
   'recordSessionExecutionOwner', 'turnSettlers', 'sessionWriteChains', 'saveTurnFinalSession',

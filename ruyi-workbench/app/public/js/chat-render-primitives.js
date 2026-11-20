@@ -341,14 +341,14 @@ export function createChatRenderPrimitives(deps = {}) {
   function highlightIn(container, opts) {
     if (!container || typeof container.querySelectorAll !== 'function') return;
     if (opts && opts.nearView) { highlightNearView(container); return; }
-    // 109a: 在同一趟里分流 mermaid 围栏: `pre > code.language-mermaid` 不进 hljs,交给懒加载的
-    // 图表运行时;vendor/mermaid.min.js 缺失或渲染失败时它把原代码块留在原地并补一行提示。
-    // 异步且不阻塞高亮;失败已在运行时内部收敛,这里只兜住 promise 防未处理拒绝。
-    try { Promise.resolve(renderMermaidBlocks(container, { t, toast })).catch(() => {}); } catch { /* ignore */ }
-    if (typeof hljs === 'undefined') return;
-    const blocks = Array.from(container.querySelectorAll('pre code'))
-      .filter(block => !block.dataset.hl && !(block.classList && block.classList.contains('language-mermaid')));
-    if (!blocks.length) return;
+    const blocks = [];
+    let hasDiagram = false;
+    for (const block of container.querySelectorAll('pre code')) {
+      if (block.classList.contains('language-mermaid')) hasDiagram = true;
+      else if (!block.dataset.hl) blocks.push(block);
+    }
+    if (hasDiagram) void renderMermaidBlocks(container, { t, toast }).catch(() => {});
+    if (!blocks.length || typeof hljs === 'undefined') return;
     if (container.isConnected === false && typeof IntersectionObserver === 'function') { lazyHighlight(blocks); return; }
     const totalChars = blocks.reduce((sum, block) => sum + Math.min(16_001, block.textContent.length), 0);
     if (blocks.length <= 6 && totalChars <= 32_000) { blocks.forEach(highlightCodeBlock); return; }
@@ -824,72 +824,6 @@ export function createChatRenderPrimitives(deps = {}) {
     return line;
   }
   /* ---------------- context-window meter (client-only; fed by per-turn usage) ---------------- */
-  // v1.3-FE1:fmtTokens 已搬入 ./js/util.js(纯格式化,顶部 import 取回);此处 ctx-meter 族仍用同名调用。
-  // Best-effort context limit by model name — LAST-RESORT fallback only (server's contextWindowResolved is
-  // preferred, see ctxWindow). v1.0.2 返修三:此前 deepseek 一律 65536 —— 电量表分母恒为 64K,deepseek-v4(1M)
-  // 被当 64K,「12K/64K·18%」而非真实「12K/1M·1%」,正是用户看到的 65.5k。此处只作服务端
-  // 状态不可用时的最后兜底，具体窗口与服务端 MODEL_CONTEXT_TABLE 保持同序。
-  function ctxWindowGuess(model) {
-    const m = String(model || '').toLowerCase();
-    if (/k3-256k/.test(m)) return 262144;          // k3 的 256K 变体先于 1M 的 k3 命中
-    if (/kimi-k3|(^|[\/-])k3$/.test(m)) return 1048576;
-    if (/haiku/.test(m)) return 200000;
-    if (/opus-5|opus-4|sonnet-5|sonnet-4|fable|mythos/.test(m)) return 1000000;
-    if (/deepseek-v4/.test(m)) return 1000000;   // deepseek-v4 = 1M(此前被并入 65536)
-    if (/deepseek/.test(m)) return 131072;        // 其余 deepseek(v3/chat/reasoner)= 128K
-    if (/mimo-v2\.5-pro(?:$|[^a-z0-9])/.test(m) || /(?:^|\/)mimo-v2\.5$/.test(m)) return 1000000;
-    if (/kimi|moonshot/.test(m)) return 262144;
-    if (/qwen3\.8|qwen3\.7/.test(m)) return 1000000;
-    if (/qwen3\.6-max/.test(m)) return 262144;
-    if (/qwen3\.6-(plus|flash)/.test(m)) return 1000000;
-    if (/qwen3\.6/.test(m)) return 262144;
-    if (/qwen3\.5-omni/.test(m)) return 65536;
-    if (/qwen3\.5-(plus|flash)/.test(m)) return 1000000;
-    if (/qwen3\.5/.test(m)) return 32768;
-    if (/qwen3-coder-plus/.test(m)) return 1000000;
-    if (/qwen3-coder-next|qwen3-max|qwen3(?:$|[^.0-9])/.test(m)) return 262144;
-    if (/qwen-plus-2025-01-25/.test(m)) return 131072;
-    if (/qwen-plus|qwen-flash/.test(m)) return 1000000;
-    if (/qwen-turbo/.test(m)) return 131072;
-    if (/qwen-max/.test(m)) return 32768;
-    if (/qwen-long/.test(m)) return 10000000;
-    if (/qwen|qwq/.test(m)) return 131072;
-    if (/glm-5\.3|glm-5\.2/.test(m)) return 1000000;
-    if (/glm-5\.1|glm-5-turbo|glm-5|glm-4\.7|glm-4\.6/.test(m)) return 202752;
-    if (/glm-4-long/.test(m)) return 1000000;
-    if (/glm-4\.5|glm-4/.test(m)) return 131072;
-    if (/glm/.test(m)) return 131072;
-    if (/minimax-m3/.test(m)) return 1000000;
-    if (/minimax-m2\.7|minimax-m2\.5/.test(m)) return 196608;
-    if (/gemma4|minicpm5|whiskyakm/.test(m)) return 131072;
-    if (/gemini/.test(m)) return 1048576;
-    if (/grok/.test(m)) return 500000;
-    if (/llama-4-scout/.test(m)) return 10000000;
-    if (/llama/.test(m)) return 131072;
-    if (/mistral/.test(m)) return 131072;
-    if (/doubao/.test(m)) return 131072;
-    if (/hunyuan/.test(m)) return 1000000;
-    if (/ernie/.test(m)) return 131072;
-    if (/step-5/.test(m)) return 1000000;
-    if (/step/.test(m)) return 131072;
-    if (/yi-large|yi-medium/.test(m)) return 32000;
-    if (/gpt-6/.test(m)) return 1050000;
-    if (/gpt-5\.6/.test(m)) return 1050000;
-    if (/gpt-5\.5/.test(m)) return 1050000;
-    if (/gpt-5\.4-pro/.test(m)) return 1050000;
-    if (/gpt-5\.4-(mini|nano)/.test(m)) return 400000;
-    if (/gpt-5\.4/.test(m)) return 1050000;
-    if (/gpt-5\.2-chat-latest/.test(m)) return 128000;
-    if (/gpt-5\.2/.test(m)) return 400000;
-    if (/gpt-5\.1-chat-latest/.test(m)) return 128000;
-    if (/gpt-5\.1/.test(m)) return 400000;
-    if (/gpt-5-chat-latest/.test(m)) return 128000;
-    if (/(^|\/)gpt-5(?:$|[^.0-9])/.test(m)) return 400000;
-    if (/gpt-4o|gpt-4\.1/.test(m)) return 128000;
-    if (/o3|o4/.test(m)) return 200000;
-    if (/claude/.test(m)) return 200000;
-    return 1000000; // 未知模型默认 1M（用户 2026-09-22 拍板，与服务端 CONTEXT_WINDOW_FALLBACK 同步）
-  }
   // Persist manual limits by engine/provider/model so the meter and server-side auto-compaction agree.
   // Read old localStorage settings until they are migrated successfully, before sending the next turn.
   function ctxWindowKey(model) { const m = String(model || currentModelId() || '').trim(); return m ? 'wcw.ctxWindow::' + m : 'wcw.ctxWindow'; }
@@ -947,7 +881,7 @@ export function createChatRenderPrimitives(deps = {}) {
     if (meta.engine === 'openai' || meta.providerId || (typeof isProviderMode === 'function' && isProviderMode())) {
       return { engine: 'openai', providerId: String(meta.providerId || state.config?.activeProvider || ''), model };
     }
-    return { engine: 'agent', agentCliType: agentCliMeta(meta.agentCliType || state.config?.agentCliType).id, model };
+    return { engine: 'agent', agentCliType: meta.agentCliType || state.config?.agentCliType || agentCliMeta().id, model };
   }
   function sameContextModel(a, b) {
     const left = String(a || '').trim().toLowerCase(), right = String(b || '').trim().toLowerCase();
@@ -969,34 +903,16 @@ export function createChatRenderPrimitives(deps = {}) {
         && String(usage.contextAgentCliType || '') === route.agentCliType
         && sameContextModel(usage.contextModel, route.model);
     }
-    if (route.engine === 'agent' && agentCliMeta(route.agentCliType).legacyUsageSources.includes(String(usage.source || ''))) {
-      return sameContextModel(usage.model, route.model);
-    }
     // Backward compatibility for sessions written before route-tagged usage existed. New rows are always
     // tagged, so they take the strict branches above and cannot leak across an engine/model switch.
     return !usage.contextEngine;
   }
-  // A usage row may outlive an engine/model switch. Only let a window tagged for the route that will
-  // consume the NEXT prompt control the denominator. Legacy Kimi rows are identifiable by source/model;
-  // legacy provider compact rows are intentionally rejected because they did not record a provider id.
   function usageWindowForCurrentRoute() {
     const usage = state.shownUsage;
-    if (usage?.contextWindowSource === 'manual' || usage?.source === 'external-compact') return null;
-    const value = Number(usage && usage.contextWindow);
+    if (!usage?.contextEngine || usage.contextWindowSource === 'manual' || usage.source === 'external-compact') return null;
+    const value = Number(usage.contextWindow);
     if (!Number.isFinite(value) || value <= 0 || !usageMatchesCurrentRoute(usage)) return null;
-    const route = currentContextRoute();
-    if (usage.contextEngine === 'openai') {
-      if (route.engine !== 'openai' || String(usage.contextProviderId || '') !== route.providerId || !sameContextModel(usage.contextModel, route.model)) return null;
-      return { value, source: 'usage' };
-    }
-    if (usage.contextEngine === 'agent') {
-      if (route.engine !== 'agent' || String(usage.contextAgentCliType || '') !== route.agentCliType || !sameContextModel(usage.contextModel, route.model)) return null;
-      return { value, source: 'usage' };
-    }
-    if (route.engine === 'agent' && agentCliMeta(route.agentCliType).legacyUsageSources.includes(String(usage.source || '')) && sameContextModel(usage.model, route.model)) {
-      return { value, source: 'usage' };
-    }
-    return null;
+    return { value, source: 'usage' };
   }
   function statusWindowForCurrentRoute() {
     const route = currentContextRoute();
@@ -1011,19 +927,19 @@ export function createChatRenderPrimitives(deps = {}) {
   function automaticContextWindow() {
     // Provider status is recomputed from the current persisted provider/model and may include a learned
     // cap, so it wins there. Agent-reported native usage wins over a name-based status estimate.
-    return (isProviderMode() ? statusWindowForCurrentRoute() || usageWindowForCurrentRoute() : usageWindowForCurrentRoute() || statusWindowForCurrentRoute())
-      || { value: ctxWindowGuess(currentModelId()), source: 'guess' };
+    return (isProviderMode() ? statusWindowForCurrentRoute() || usageWindowForCurrentRoute() : usageWindowForCurrentRoute() || statusWindowForCurrentRoute());
   }
   function ctxWindow() {
     const o = ctxWindowManual();
     const cap = Number(state.status?.contextWindowResolved?.learnedCap);
     if (o > 0 && isProviderMode() && statusWindowForCurrentRoute() && cap > 0) return Math.min(o, cap);
-    return o > 0 ? o : automaticContextWindow().value;
+    return o > 0 ? o : automaticContextWindow()?.value;
   }
   // 当前上限读数的来源人话标签(供电量表 tooltip + 弹层)。「按名称推测」= 端点未报告真实上限、只能按模型名猜,可能不准。
   function ctxWindowSourceLabel() {
     if (ctxWindowManual() > 0) return t('ctx.sourceLabel.manual');
     const resolved = automaticContextWindow();
+    if (!resolved) return t('ctx.sourceLabel.unreported');
     if (resolved.source === 'usage' || resolved.source === 'probe') return t('ctx.sourceLabel.probe');
     if (resolved.source === 'manual') return t('ctx.sourceLabel.settingsFixed');
     return t('ctx.sourceLabel.guessed');
@@ -1056,10 +972,10 @@ export function createChatRenderPrimitives(deps = {}) {
       box._ctxShownN = null;
       const win = ctxWindow();
       const fill = box.querySelector('.batt-fill');
-      if (fill) fill.setAttribute('width', '17.80');
+      if (fill) fill.setAttribute('width', win ? '17.80' : '0');
       // 体验走查 #12：普通模式不给「— / 1M · 未开始」这种读数，说一句人话；数字留在悬停提示里。
       const plain = ctxPlainMode();
-      box.querySelector('.ctx-text').textContent = plain ? t('ctx.plain.empty') : `— / ${fmtTokens(win)} · ${t('ctx.noUsage')}`;
+      box.querySelector('.ctx-text').textContent = plain ? (win ? t('ctx.plain.empty') : t('ctx.sourceLabel.unreported')) : `— / ${fmtTokens(win)} · ${t('ctx.noUsage')}`;
       box.classList.remove('hidden', 'warn', 'crit');
       box.title = `${plain ? t('ctx.plain.hint') + '\n' : ''}${t('ctx.noUsageHint')}\n${t('ctx.tooltip.srcAuto', { src: ctxWindowSourceLabel() })}`;
       return;
@@ -1070,7 +986,7 @@ export function createChatRenderPrimitives(deps = {}) {
     // meter's popover, so hiding low usage also made context occupancy and compaction disappear.
     // Battery drains as context fills: fill width = remaining capacity (1 - pct) of the 17.8px interior.
     const fill = box.querySelector('.batt-fill');
-    if (fill) fill.setAttribute('width', (Math.max(0, Math.min(1, 1 - pct)) * 17.8).toFixed(2));
+    if (fill) fill.setAttribute('width', win ? (Math.max(0, Math.min(1, 1 - pct)) * 17.8).toFixed(2) : '0');
     // v1.0.2 返修三跟进:上限若被【手动锁定】(localStorage 覆盖),在读数后标一个 🔒 —— 否则用户看不出上限是
     // 手动固定的,一次误点 128K 预设就永久盖过自动探测(deepseek-v4-pro 真机撞出:显示 131k 而非 1M,查明是
     // 早先手动设过 128K)。有锁时提示可点「自动」解锁。
@@ -1082,7 +998,11 @@ export function createChatRenderPrimitives(deps = {}) {
     const estMark = u.estimated === true;
     const plain = ctxPlainMode();
     const paint = shownN => {
-      const p = win > 0 ? shownN / win : 0;
+      if (!win) {
+        txt.textContent = t('ctx.usedOnly', { used: fmtTokens(Math.round(shownN)) });
+        return;
+      }
+      const p = shownN / win;
       txt.textContent = plain
         ? t('ctx.plain.used', { pct: Math.min(100, Math.round(p * 100)) })
         : `${estMark ? '≈' : ''}${fmtTokens(Math.round(shownN))} / ${fmtTokens(win)}${locked ? ' 🔒' : ''} · ${Math.round(p * 100)}%`;
@@ -1111,7 +1031,7 @@ export function createChatRenderPrimitives(deps = {}) {
     const srcHint = locked
       ? t('ctx.tooltip.locked', { win: win.toLocaleString(uiLocale) })
       : t('ctx.tooltip.srcAuto', { src: srcLabel }) + (srcLabel === t('ctx.sourceLabel.guessed') ? ' ' + t('ctx.tooltip.srcGuessed') : '');
-    box.title = (plain ? t('ctx.plain.hint') + '\n' : '') + t('ctx.tooltip.summary', { n: n.toLocaleString(uiLocale), win: win.toLocaleString(uiLocale) }) + '\n' +
+    box.title = (plain ? t('ctx.plain.hint') + '\n' : '') + t('ctx.tooltip.summary', { n: n.toLocaleString(uiLocale), win: win?.toLocaleString(uiLocale) || '—' }) + '\n' +
       t('ctx.tooltip.usageLine', { input: g.input_tokens || 0, cacheRead: g.cache_read_input_tokens || 0, cacheWrite: g.cache_creation_input_tokens || 0, output: g.output_tokens || 0 }) + '\n' + srcHint;
     box.classList.remove('hidden');
   }

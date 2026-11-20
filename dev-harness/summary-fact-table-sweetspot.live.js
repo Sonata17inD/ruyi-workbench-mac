@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105g-sweetspot-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105g-sweetspot-'));
 const ROOT = path.resolve(__dirname, '..');
 const srv = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));
 const providerConfigPath = process.env.RUYI_FACT_GATE_CONFIG || path.join(require('./lib/real-data-root.js').defaultDataRootIn(os.homedir()), 'config.json');
@@ -136,7 +136,7 @@ function aggregate(rows) {
     aggregates: aggregate(rows),
     rows,
   };
-  const out = process.env.RUYI_FACT_GATE_OUT || path.join(ROOT, 'docs', 'optimization-plan', '105g-fact-sweetspot-report.json');
+  const out = process.env.RUYI_FACT_GATE_OUT || path.join(require('node:os').tmpdir(), '105g-fact-sweetspot-report.json');
   fs.writeFileSync(out, JSON.stringify(report, null, 2) + '\n', 'utf8');
   console.log('SWEETSPOT_REPORT ' + JSON.stringify(report));
 })().catch(error => { console.error(error && error.stack || error); process.exitCode = 1; });

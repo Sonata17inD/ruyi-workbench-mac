@@ -195,9 +195,6 @@ async function toolCall(name, args = {}, ctx = null) {
       try { policyConfig = await readConfig(); } catch { policyConfig = null; }
     }
     if (policyConfig) {
-      // 会话级桌面覆盖:ctx 带 session 就用它;MCP 子进程(ctx 为空)里只为两个原生桌面工具按 WCW_SESSION_ID 装会话头
-      // (与 invokeAdaptiveMcpTool 同一个 policySessionFor),其余工具不多一次 IO。修前这里一律 null:Claude / Kimi CLI 经如意
-      // MCP 调 desktop_screenshot 时,这条线程的 desktopTools:false 不起作用。
       const policySession = (ctx && ctx.session) || (NATIVE_DESKTOP_TOOL_NAMES.has(name) ? await policySessionFor(ctx) : null);
       const disabled = nativeToolDisabledByPolicy(name, policyConfig, policySession ? sessionDesktopToolsOf(policySession) : null);
       if (disabled) return toolDisabledResult(name, disabled);

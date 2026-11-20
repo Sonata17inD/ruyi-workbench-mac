@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      b7/b8 残留 pending 叙事段清理:permission(pending+paused)/plan/question 段 -> cancelled + note 且落盘持久;
 //      已终态段(allowed)不动。
 //  (s) 静态锁:02 清理器+竞态守卫+pool 分流、08 中断结算+对账、09 注册+收尾结算、13d 审批结算+四源统一。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -116,7 +116,7 @@ function startProvider() {
 
 function spawnWb() {
   return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, WCW_POOL_GRACE_MS: String(GRACE_MS) }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, WCW_POOL_GRACE_MS: String(GRACE_MS) },
   });
 }
 const mkRun = (sid, runId, status, poolItems) => ({

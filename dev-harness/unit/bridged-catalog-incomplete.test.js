@@ -12,7 +12,6 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-catalog-incomplete-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 process.env.WCW_BRIDGED_ENTRY_START_TIMEOUT_MS = '250';

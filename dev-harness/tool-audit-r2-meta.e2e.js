@@ -31,7 +31,7 @@ const SERVER = path.join(ROOT, 'ruyi-workbench', 'app', 'server.js');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2meta-'));
-process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2meta-ws-'));
 fs.writeFileSync(path.join(WS, 'a.txt'), 'hello a\n');
 const PROVIDER = (baseUrl) => ({ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] });
@@ -236,7 +236,7 @@ try {
   });
   fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify(baseConfig([PROVIDER(fakeProvider.url)], 'fake'), null, 2));
   const wbPort = await getFreePort();
-  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: path.join(ROOT, 'ruyi-workbench'), env: { ...process.env, RUYI_HOME: HOME2, WIN_CLAUDE_WORKBENCH_HOME: HOME2 }, windowsHide: true });
+  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(wbPort)], { cwd: path.join(ROOT, 'ruyi-workbench'), env: { ...process.env, RUYI_HOME: HOME2 } });
   const httpJson = (method, route, body, headers) => new Promise((resolve, reject) => {
     const data = body == null ? '' : JSON.stringify(body);
     const r = http.request({ host: '127.0.0.1', port: wbPort, path: route, method, timeout: 60000, headers: { ...(headers || {}), ...(data ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(data) } : {}) } }, res => {

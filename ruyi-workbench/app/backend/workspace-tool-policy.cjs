@@ -48,19 +48,6 @@ function createWorkspaceToolPolicy({ policy, config }) {
     }
     return null;
   }
-  // v2.7 (workspace permissions): exec gate. A configured workspace with execute === false denies the exec-tier
-  // command/shell tools (shell_run / script_run / shell_*) when their effective cwd resolves inside it.
-  // Backward compatible: no workspace entries, or every entry execute:true, leaves behavior unchanged (exec
-  // tools are NOT otherwise contained by the workspace boundary). Only consults the per-workspace execute flag;
-  // sensitive/autoexec path checks remain the file guard's responsibility.
-  // 107-S0(46 号文 §1.5 ②):执行类工具的【有效工作目录】单点解析,闸与执行共用。修前闸在这里按「显式 cwd → 会话
-  // cwd → defaultWorkspace → 家目录」判,而 shell_start／shell_run／script_run 缺省 cwd 时直接起在家目录 ——
-  // 闸判一个目录、命令跑在另一个:模型以为在线程工作夹里,相对路径实际落在家目录(45 号文 §9.6.4 真模型实测),
-  // 授权书「cwd 须在 grantRoot 内」也因为不传 cwd 就被绕开。现在 guardWorkspaceExecute 把解析结果随 ok 一并
-  // 交回(cwd 字段),三个工具只用交回的这一个值,不各自再推一遍。
-  // ctx.workingDir 排在会话 cwd 前:原生回合把它注入 ctx(09 runOpenAiTurn:请求级 cwd,缺省会话 cwd),提示词里的
-  // 「工作目录」、文件工具根(12 resolveFileToolRoot)、资源租约(06g)用的都是它;没有它的调用方(Kimi 桥、
-  // /api/tools 直调、MCP 子进程)逐字节同修前的判法。
   function resolveExecCwd(cwd, ctx, config) {
     const session = ctx && ctx.session ? ctx.session : null;
     const base = (ctx && ctx.workingDir) || (session && session.cwd) || (config && config.defaultWorkspace) || os.homedir();

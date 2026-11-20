@@ -1,29 +1,6 @@
 require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(服务启动会同步 MCP 到 CLI 全局配置,见 lib 头注)
 (async () => {
 'use strict';
-// E2E(2026-10 能力总闸补桥接面):设置页「能力总闸」承诺「关掉之后,对应的工具在所有线程里既不提供给模型、也不会执行」。
-// 修前 allowCommandTools / allowDesktopTools(+ 会话级 desktopTools)只拦两张原生名单,内置桌面 MCP(ACC,serverId
-// 'ai-computer-control')的 run_command / screenshot / mouse_click / batch_actions 照常提供、照常执行。
-//
-// 真服务 + 脚本化假 provider + fake-mcp.js 的 FAKE_MCP_ACC_POLICY 模式(与 ACC 同名的 run_command / screenshot /
-// mouse_click / batch_actions / read_document)。同一个 fake 同时挂成两份:desktopMcp(= 内置桌面 MCP,前缀
-// ai_computer_control__)与外部连接器 ext-mcp(前缀 ext_mcp__)—— 是否真被调到看 FAKE_MCP_CALL_CAPTURE。
-//   [A] 全局 allowCommandTools:false / allowDesktopTools:true,full 模式:
-//       A1 工具面(provider 请求的 tools)里没有 ACC 的 run_command / batch_actions,有 screenshot 与外部的同名 run_command;
-//       A2 list_tools 目录同上;A3 直调 / A4 经 tool_invoke_exec 调 run_command → tool-disabled、没执行;
-//       A5 batch_actions(转调器,命令闸关也关)→ tool-disabled;A6 screenshot、A7 名单外的 read_document、A8 外部 MCP 的
-//       同名 run_command 照常执行;A9 会话级 desktopTools:false(全局 true)→ screenshot 被拒,原因点名「this session」;
-//       A10 全局 workbench.mcp.json(Kimi 的 mcp.json 由它合并)里 ACC 条目按全局闸带 ACC_HIDE_TOOLS。
-//   [B] 全局 allowCommandTools:true / allowDesktopTools:false,auto 模式:
-//       B1 screenshot、B2 tool_invoke_exec{mouse_click}、B3 batch_actions → tool-disabled;B4 run_command 照常;
-//       B5 tool_search 搜不到、B6 tool_load 按名拉不进被关的 ACC 工具(steward-guardrails R5 的真回合版);
-//       B7 会话级 desktopTools:true(全局 false)→ screenshot 放行;
-//       B8-B11 MCP 子进程(Claude / Kimi CLI 经如意 MCP 的代理路径,ctx 为空):按 WCW_SESSION_ID 取会话覆盖 ——
-//       没覆盖的会话代理调 screenshot 被拒、目录里也没有;覆盖 true 的会话放行、目录里有。
-//   [C] Claude CLI 直挂面(full 模式,假 CLI 读 --mcp-config 并以 CLI 全名问权限桥):
-//       C1 ACC 条目带 ACC_HIDE_TOOLS(命令族 + 转调器 + 这条线程 desktopTools:false 带来的桌面族,不含名单外工具),
-//       外部条目不带;C2 权限桥对 mcp__ai-computer-control__run_command / screenshot 直接拒(不弹窗),
-//       read_document 与外部 MCP 的 run_command 照常弹窗。
 const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
@@ -77,8 +54,8 @@ const readToken = home => { try { return JSON.parse(fs.readFileSync(path.join(ho
 
 function mcpSession(home, extraEnv) {
   const child = cp.spawn(process.execPath, [SERVER, 'mcp'], {
-    cwd: WB, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, ...extraEnv },
+    cwd: WB, stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, RUYI_HOME: home, ...extraEnv },
   });
   let buf = ''; const pending = new Map();
   child.stdout.on('data', chunk => {
@@ -147,8 +124,8 @@ async function withProviderServer(configExtra, body) {
   const fakeEnv = { FAKE_MCP_ACC_POLICY: '1', FAKE_MCP_CALL_CAPTURE: capture, FAKE_MCP_SERVER_TAG: 'acc' };
   const WP = await getFreePort();
   const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true, stdio: 'ignore',
-    env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, ...fakeEnv },
+    cwd: WB, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: HOME, ...fakeEnv },
   });
   const children = [];
   try {
@@ -221,8 +198,6 @@ try {
     ok(/tool-disabled/.test(a9.toolText) && /this session/.test(a9.toolText) && callCount('acc', 'screenshot') === before,
       `A9 全局开 + 会话 desktopTools:false → screenshot 被拒且点名本会话(got ${a9.toolText.slice(0, 160)})`);
 
-    // A10 全局的 workbench.mcp.json(Kimi 的 mcp.json 由它合并而来;也是 /api/status 给出的 mcpConfigPath):ACC 条目按全局闸带
-    //     ACC_HIDE_TOOLS(这里只有命令族 + 转调器),外部条目不带。
     const st = await status();
     const mcpFile = (st.json && st.json.mcpConfigPath) || path.join(HOME, 'generated', 'workbench.mcp.json');
     let globalServers = null;
@@ -338,8 +313,8 @@ const ask = (env, toolName, input) => new Promise(resolve => {
     }, null, 2));
     const PORT = await getFreePort();
     const wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true, stdio: 'ignore',
-      env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLI },
+      cwd: WB, stdio: 'ignore',
+      env: { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLI },
     });
     try {
       let up = false;

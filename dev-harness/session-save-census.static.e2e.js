@@ -25,12 +25,10 @@ const CENSUS = {
   '../backend/session-meta-updates.cjs': 2, // 元数据立即／延后提交，使用撤回代数闸与有界重放。
   '../backend/mission-control.cjs': 1, // 控制动作提交，撤回时仅重放账本。
   '../backend/agent-cli-turn.cjs': 3,      // runClaudeTurn 自存(收尾那一存改走 02 saveTurnFinalSession)
-  '../backend/kimi-acp-turn.cjs': 2, // Kimi 回合自存，收尾走 saveTurnFinalSession。
   '../backend/mission-driver.cjs': 6,    // 驱动器自存(拿着聊天流那份对象;撤回后由 sessionObjectIsStale 收手);hunt2-steward ⑤ 收手时降 supervised 那一存同属回合自存(仍归本回合、不陈旧才存)
   '../backend/agent-steering.cjs': 1,           // steer 排空(回合自存)
   '../backend/provider-turn.cjs': 12,          // +1 persistToolHistory: live turn intent/result barriers, requirePersisted and executionOwner; runOpenAiTurn 自存(收尾走 02 saveTurnFinalSession);新增协调图执行前/信封后两处也是回合自存，均带 turnSaveOpts 的 executionOwner + dropIfTurnSuperseded，迟到回归证明不盖新回合
   '../backend/session-compaction.cjs': 1, // maybeAutoCompact(回合自存,L1 / L2 / L2 失败保 L1 三个出口并成一处);两个手动压缩已改走 mutateSession
-  // session-execution-routes.cjs 0:Kimi 状态 GET 回写用量走 mutateSession + keepUpdatedAt,见下面 ② 的 kimi/status 一行。
   '../backend/session-steering.cjs': 1, // 插话路由往活回合那份对象里追加(回合自存)
   '../backend/desktop-execution-runtime.cjs': 1, // 主回合自存：保存实际会话对象，严格落盘并重读验证后确认桌面结果交付；沿用executionOwner/turn/gen闸。
   '../backend/intervention-routes.cjs': 1,// 权限暂停计时器的纯重写
@@ -68,11 +66,9 @@ const sites = [
   ['skill-routes.cjs setSessionSkillsCore', fnBody('../backend/skill-routes.cjs', 'async function setSessionSkillsCore('), false],
   ['memory-routes.cjs 线程记忆设置路由', routeBlock('../backend/memory-routes.cjs', routeMarker('session/memories'), 60), false],
   ['mission-ledger-routes.cjs todo 回写路由', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('todo'), 25), false],
-  ['session-execution-routes.cjs Kimi 状态读数回写路由', routeBlock('../backend/session-execution-routes.cjs', routeMarker('kimi/status'), 30), false],
   ['mission-ledger-routes.cjs 任务账本路由(check／start／update)', routeBlock('../backend/mission-ledger-routes.cjs', routeMarker('mission'), 110), true],
   ['session-compaction.cjs runProviderCompact', fnBody('../backend/session-compaction.cjs', 'async function runProviderCompact('), true],
   ['session-compaction.cjs runAgentExternalCompact', fnBody('../backend/session-compaction.cjs', 'async function runAgentExternalCompact('), true],
-  ['kimi-native-operations.cjs runKimiCompact', fnBody('../backend/kimi-native-operations.cjs', 'async function runKimiCompact('), false],
   ['steward-conversation-replies.cjs stewardStampReply', fnBody('../backend/steward-conversation-replies.cjs', 'async function stewardStampReply('), false],
   ['steward-conversation-visits.cjs stewardArchiveConversation', fnBody('../backend/steward-conversation-visits.cjs', 'async function stewardArchiveConversation('), true],
   ['mission-control.cjs missionControlCommand', fnBody('../backend/mission-control.cjs', 'async function missionControlCommand('), false],
@@ -103,9 +99,9 @@ const drawer = fs.readFileSync(path.join(SRC, '..', 'public', 'js', 'steward-dra
 const codes = ['session.rewind_superseded', 'session.rewound_during_write', 'session.history_changed_during_compact'];
 ok(codes.every(c => app.includes(`'${c}':`) && drawer.includes(`'${c}':`)), '⑤ 工作台与管家抽屉都给这三个码配了人话键');
 const keys = ['error.api.rewindSuperseded', 'error.api.rewoundDuringWrite', 'error.api.historyChangedDuringCompact'];
-const localeFiles = ['ruyi-workbench/app/public/locales/zh-CN.json', 'ruyi-workbench/app/public/locales/en-US.json', 'docs/i18n/locales/zh-CN.json', 'docs/i18n/locales/en-US.json']
+const localeFiles = ['ruyi-workbench/app/public/locales/zh-CN.json', 'ruyi-workbench/app/public/locales/en-US.json']
   .map(r => JSON.parse(fs.readFileSync(path.join(__dirname, '..', r), 'utf8')));
-ok(localeFiles.every(l => keys.every(k => typeof l[k] === 'string' && l[k].length > 8)), '⑤ 四份 locale 都有这三句人话');
+ok(localeFiles.every(l => keys.every(k => typeof l[k] === 'string' && l[k].length > 8)), '⑤ 两份 locale 都有这三句人话');
 
 console.log(`SESSION SAVE CENSUS STATIC E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
 process.exit(fail ? 1 : 0);

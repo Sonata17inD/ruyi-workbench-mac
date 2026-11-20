@@ -108,13 +108,14 @@ function createAgentLoopHooks({ makeId: makeIdFn, logEvent: logEventFn, redact: 
 
   async function dispatchAgentLoopHooks(phase, context) {
     if (!AGENT_LOOP_HOOK_PHASE_SET.has(phase)) throw new Error(`未知 agent loop hook 阶段: ${phase}`);
+    const hooks = [...AGENT_LOOP_HOOKS.values()].filter(hook => hook.handlers[phase]);
+    if (!hooks.length) return { phase, invoked: 0, failed: 0 };
     const snapshot = immutableAgentLoopHookContext({ phase, ...(context || {}) });
     let invoked = 0, failed = 0;
     // Snapshot the registry at phase entry: a hook may register/unregister another hook, but that mutation
     // only affects the next phase dispatch and can never extend/reorder the current iteration.
-    for (const hook of [...AGENT_LOOP_HOOKS.values()]) {
+    for (const hook of hooks) {
       const handler = hook.handlers[phase];
-      if (!handler) continue;
       invoked += 1;
       try {
         await runAgentLoopHookWithTimeout(handler, snapshot, hook.timeoutMs, hook.id, phase);

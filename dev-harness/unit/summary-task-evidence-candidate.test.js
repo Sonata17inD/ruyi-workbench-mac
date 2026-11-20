@@ -6,7 +6,6 @@ const os = require('os');
 const path = require('path');
 const taskHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-candidate-section-'));
 process.env.RUYI_HOME = taskHome;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = taskHome;
 after(() => fs.rmSync(taskHome, { recursive: true, force: true }));
 const { loadServerInternals } = require('../lib/server-internals');
 const s = loadServerInternals(['summarySectionLocations', 'extractSessionNotes', 'summaryTaskSourceHistory', 'extractSummaryTaskEvidence']);

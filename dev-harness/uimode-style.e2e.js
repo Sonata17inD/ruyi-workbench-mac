@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   C) /api/status carries the errorClasses table top-level (the error-humanization UI's source of truth),
 //      with the expected keys + {zh,next} shape.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -101,7 +101,7 @@ const SHORT_INSTR = '回答尽量简短，直接给结果，不解释过程除�
     const css = require('./read-frontend-css.js').readFrontendCss();
     const html = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
     const appjs = require('./read-frontend-src.js').readFrontendSrc();
-    const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
+    const zh = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
 
     // ── (S1) 设置弹窗【不】按 uiMode 收敛（2026-10 设置补全；修前 §1.2 在简易模式藏四枚页签，迁移中心、扩展组件、MCP
     //         对出厂默认的简易模式用户全部不可达）。简易模式只管对话区与右栏，设置里的每一枚页签都在。
@@ -161,9 +161,9 @@ const SHORT_INSTR = '回答尽量简短，直接给结果，不解释过程除�
   fs.mkdirSync(HOME, { recursive: true });
   seedConfig(HOME); // starts detailed / pro (defaults expand from schema-6 seed)
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR } });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {

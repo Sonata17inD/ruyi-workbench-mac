@@ -28,7 +28,7 @@ const { providerSummaryCall, fitHistoryForSummary, chunkHistoryByBudget,
 const { createCompactionRouting, resolveCompactionProvider, lastSessionContextTokens,
   contextWindowOverrideKey, configuredConversationWindow } = require('./backend/compaction-routing.cjs');
 const { compactHistoryFromSession, providerConversationContextWindow, agentNodeContextWindow, agentConversationContextMeta } =
-  createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway, agentCliContextWindowProbes: AGENT_CLI_CONTEXT_WINDOW_PROBES });
+  createCompactionRouting({ resolveContextWindow, providerContextWindow, PrivacyGateway });
 const { createCompactionRecords, COMPACT_MARKER_MIN_SAVED_TOKENS } = require('./backend/compaction-records.cjs');
 const { recordCompactUsage, openCompactMarker, upsertCompactMarker } = createCompactionRecords({
   estimateContentTokens, fmtTokensServer, appendUsageLedger, nowIso,

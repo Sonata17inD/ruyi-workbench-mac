@@ -22,7 +22,7 @@ let fx; const ids = {};
       prepare: async fixture => {
         fx = fixture;
         await fixture.request('POST', '/api/steward/visit', {});
-        process.env.RUYI_HOME = fixture.home; process.env.WIN_CLAUDE_WORKBENCH_HOME = fixture.home;
+        process.env.RUYI_HOME = fixture.home;
         const s = loadServerInternals(['createSession', 'saveSession', 'createMissionContainer']);
         const m1 = (await s.createMissionContainer({ title: '季度事项' })).mission;
         const m2 = (await s.createMissionContainer({ title: '季度事项' })).mission;

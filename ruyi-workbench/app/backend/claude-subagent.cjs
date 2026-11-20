@@ -230,11 +230,8 @@ function createClaudeSubagent({ runtime, cli, turn }) {
         return delivered;
       };
       try { child.stdin.write(JSON.stringify(buildUserEnvelope((roleBriefInTask ? roleBrief + '\n\n' : '') + String(taskForAttempt || ''))) + '\n', 'utf8'); } catch { /* ignore */ }
-      // Polling is intentionally local to this child attempt. It supports both a user steering a live node and
-      // the scheduler's automatic wrap-up instruction; queued messages are consumed in order and acknowledged
-      // through the same subagent_steered event as Provider nodes.
-      const steerTimer = setInterval(drainSteers, 250);
-      if (steerTimer && steerTimer.unref) steerTimer.unref();
+      ctrl?.signal.addEventListener('steer', drainSteers);
+      drainSteers(); // The node may have queued messages before the child was ready.
       let stderrText = '';
       child.stderr.on('data', chunk => { stderrText += decodeClaudeCliText(chunk); lastEventAt = Date.now(); });
 
@@ -286,7 +283,7 @@ function createClaudeSubagent({ runtime, cli, turn }) {
       const stdoutFeeder = createNdjsonLineFeeder(consumeLine);
       child.stdout.on('data', chunk => { stdoutFeeder.push(chunk); });
       let settled = false;
-      const finish = exitCode => { if (settled) return; settled = true; clearInterval(watchdog); clearInterval(steerTimer); closeStdin(); stdoutFeeder.flush(); currentChild = null; resolve({ exitCode, stderrText, assistantText, toolCallCount, resultOk, resultText, gotResult, resultUsage, resultCostUsd, msgBillInMax, msgBillOutMax }); };
+      const finish = exitCode => { if (settled) return; settled = true; clearInterval(watchdog); ctrl?.signal.removeEventListener('steer', drainSteers); closeStdin(); stdoutFeeder.flush(); currentChild = null; resolve({ exitCode, stderrText, assistantText, toolCallCount, resultOk, resultText, gotResult, resultUsage, resultCostUsd, msgBillInMax, msgBillOutMax }); };
       child.on('error', () => finish(-1));
       child.on('close', code => finish(code == null ? -1 : code));
     });

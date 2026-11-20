@@ -212,6 +212,7 @@ export function createStewardBoard({
   // 也是「把等你的行排到最前」的判据 —— 两处都读它，不再数第二遍，也不新开第二个计数源。
   let needsYouIds = [];
   const chipsBySession = new Map(); // sessionId -> chips 控件（每行一份实例，读同一份数据）
+  let railSessionMetadata = new Map();
   const sessionCache = new Map();   // sessionId -> 会话（chip 补齐或 PATCH 回来的那一份）
 
   // 117n-M1：el/clear 从 steward-chips.js import（六个消费方零本地重复定义）。
@@ -890,13 +891,13 @@ export function createStewardBoard({
   function sessionForRow(row) {
     const id = String(row.sessionId || '');
     if (sessionCache.has(id)) return sessionCache.get(id);
-    const metas = (state && Array.isArray(state.sessions)) ? state.sessions : [];
-    return metas.find(meta => meta && String(meta.id) === id) || { id, title: row.title || '' };
+    return railSessionMetadata.get(id) || { id, title: row.title || '' };
   }
   // 这一行的 chip 喂当前会话（chip 就地重画自己的字），并回答「这一拍印不印」。新建行与复用行都走这里。
   function railRowChips(row, chipHost) {
-    chipsFor(String(row.sessionId || '')).setSession(sessionForRow(row));
-    return chipsWorthPrinting(sessionForRow(row), (state && state.config) || {}, chipHost);
+    const session = sessionForRow(row);
+    chipsFor(String(row.sessionId || '')).setSession(session);
+    return chipsWorthPrinting(session, (state && state.config) || {}, chipHost);
   }
 
   // F5a：动作 = 图标 ＋ 原来那句人话（不做纯图标 —— 停止／回退这类动作不该让人靠猜）。
@@ -1422,6 +1423,7 @@ export function createStewardBoard({
     return true;
   }
   function renderRail() {
+    railSessionMetadata = new Map((state?.sessions || []).filter(Boolean).map(meta => [String(meta.id), meta]));
     renderBoardReadHealth();
     renderStatusLine();
     renderArbiterFacts();
@@ -1479,6 +1481,7 @@ export function createStewardBoard({
     }
     reconcileRailChildren(host, [...sections.values()].map(entry => entry.section));
     railFocusRestore(host, focusSnap);
+    host.ownerDocument.dispatchEvent(new Event('ruyi:rail-rendered'));
     railUnits = units;
     railSections = sections;
     railUnitBySession.clear();

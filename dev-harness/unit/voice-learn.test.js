@@ -193,8 +193,8 @@ test('[L6] 落库:攒次数、先验、大模型判', () => {
   assert.equal(u.pending.zorbit.kind, 'typed');
   const k = L.apply(u, one('让佐比特跑一下', '让Zorbit跑一下'), null, at(1));
   assert.deepEqual(k.learned.map(x => [x.term, x.heard, x.src]), [['Zorbit', '佐比特', 'learned']]);
-  // 原厂表里有的词(Kimi)不进打字路:原厂表本来就会在它被听错时提示
-  assert.deepEqual(L.apply(learnState(), L.extract({ sentences: [], final: '帮我问下 Kimi 这个问题' }), null, at(0)).state.pending, {});
+  // 原厂表里有的词(Claude)不进打字路:原厂表本来就会在它被听错时提示
+  assert.deepEqual(L.apply(learnState(), L.extract({ sentences: [], final: '帮我问下 Claude 这个问题' }), null, at(0)).state.pending, {});
   // 打字路:三条不同的消息里见过才收(src:typed);一条消息里出现两次只算一次
   let w = learnState();
   for (let i = 0; i < 2; i += 1) w = L.apply(w, L.extract({ sentences: [], final: '看下 FooBar 和 FooBar 的日志' + i }), null, at(i)).state;

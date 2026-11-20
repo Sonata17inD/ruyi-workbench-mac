@@ -89,8 +89,6 @@ function createProviderPrompt({
     if (config && config.outputStyle === 'concise') {
       lines.push(pack.styleConcise);
     }
-    // [如意环境层] - 145-W3:与 Claude/Kimi 的 <ruyi-environment> 同一张事实表(buildEngineEnvBrief)。
-    // provider 这边只补身份层/工具协议层没说过的:当前权限档的含义、request_user_input 会弹提问卡、管家代开。
     lines.push(...buildEngineEnvBrief({
       engine: 'provider', config, session: envContext && envContext.session, offeredNames,
       rg: { shell: caps && caps.binaries ? caps.binaries.rgShell : '' },

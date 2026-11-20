@@ -154,9 +154,6 @@ for (const name of ['deriveMissionState', 'aggregateMissionState', 'dockToneForM
   ok(!new RegExp(`function ${name}\\s*\\(`).test(boardCode),
     `B2 看板不定义同名函数 ${name}（复制即失去「同一份判据」）`);
 }
-// 121-K1 重钉：判据不变（两样都必须 import 复用、不许复制），来源换成叶子 thread-facts.js。
-// 不再钉 import 语句的逐字形状：只要它们是【从那个叶子来的】就成立 —— 两个名字合成一行 import
-// 或分成两行都不该撞红。
 ok(/from '\.\/thread-facts\.js'/.test(board)
   && new RegExp(`import \\{[^}]*\\bdockToneForMissionState\\b[^}]*\\} from '\\./thread-facts\\.js'`).test(board)
   && new RegExp(`import \\{[^}]*\\belapsedLabel\\b[^}]*\\} from '\\./thread-facts\\.js'`).test(board),
@@ -199,13 +196,6 @@ ok(needsYouSites === 10 && count(focusBody, /needs_you/g) === 1 && count(statusB
 // 所以本模块里：stewardWaitText( 恰好 1 处渲染 + 其余一处是 failNote 递 t 的 stewardQueuedWaitLabel；字面 wait.label 一处都不该再有（不许绕过本地化直印）。
 ok(count(boardCode, /stewardWaitText\(wait, t\)/g) === 1 && count(boardCode, /\bwait\.label\b/g) === 0,
   `B6 每行只渲染等待原因一处（stewardWaitText 恰 1 处，裸 wait.label 0 处；实测 ${count(boardCode, /stewardWaitText\(wait, t\)/g)}／${count(boardCode, /\bwait\.label\b/g)}）`);
-// 117q-B3b 重钉（理由：30 号文 §4.4 P0-4——五态人话原本抄了四份，其中 previewShell.state.* 与
-// stewardShell.drawer.state.* 两套 locale key 已判出不同文案结果。本条原判据「看板复用抽屉那一组
-// stewardShell.drawer.state.* 键」不再成立，不是因为键被删掉了，而是六个键搬到了中性的
-// mission.state.*，三个壳（交办台／看板／抽屉）现在共用同一组键，不再有「谁的键」这个问题。
-// 判据同步收紧：看板必须查 mission.state.，且旧的 stewardShell.drawer.state.* /
-// stewardShell.board.state.* 两个前缀都不许再出现（用 boardCode 剥过注释的版本比对，不让注释里的
-// 说明文字巧合撞出假绿）。
 ok(/mission\.state\./.test(boardCode) && !/stewardShell\.drawer\.state\./.test(boardCode)
   && !/stewardShell\.board\.state\./.test(boardCode),
   'B7 五态人话复用中性的 mission.state.* 键（原抽屉专属命名已废弃），不另开第二套 stewardShell.board.state.*');
@@ -265,7 +255,7 @@ ok(['createQuickSwitchChips', 'doc', 'byId', 'el', 'clear', 'chipsWorthPrinting'
   && !/activeProvider/.test(boardCode) && !/agentCliType/.test(boardCode)
   && !/resolveEngineRoute\(/.test(boardCode)
   && !/function chipsWorthPrinting/.test(boardCode)
-  && count(boardCode, /chipsWorthPrinting\(sessionForRow\(row\), \(state && state\.config\) \|\| \{\}, chipHost\)/g) === 1,
+  && count(boardCode, /chipsWorthPrinting\(session, \(state && state\.config\) \|\| \{\}, chipHost\)/g) === 1,
   'D1 快切 chip 与「跟全局一样吗」判据都是 steward-chips.js 的同一份（紧凑模式：权限＋模型，引擎收进模型菜单）；看板零第二套回落规则、零第二份判据定义');
 ok(count(boardCode, /method: 'PATCH'/g) === 0 && !/permissionMode/.test(boardCode),
   'D2 看板不自己 PATCH 线程权限（唯一写口仍是 steward-chips.js）');
@@ -344,10 +334,6 @@ ok(/const host = next === 'docked' \? byId\('stewardFocus'\) : byId\('stewardShe
 ok(/const keep = active && active !== drawer && drawer\.contains\(active\) \? active : null;/.test(drawer)
   && /keep\.focus\(\{ preventScroll: true \}\)/.test(drawer),
   'E3b 换挂法前后抽屉里的焦点不丢（搬之前记住、搬完原地还回去、不滚动）');
-// 121-K6b **重钉 E4**（§2.6／§13.7 ③「抽屉内部『关掉』语义」）：两态收成一态 —— docked 是常驻
-// 焦点栏，不存在「关」也就不存在模态；overlay 只剩一种可达情形（窄到右栏摆不下，syncNow 的
-// wideEnough 是唯一那道宽度门），那一态恒是模态。原来 applyModal 里还自己判一次宽度，那是浮层
-// 时代留下的第二处判据。companion：docked 下那枚「关掉」由样式层收掉。
 ok(/if \(mountMode === 'docked'\) drawer\.removeAttribute\('aria-modal'\);\s*\n\s*else drawer\.setAttribute\('aria-modal', 'true'\);/.test(drawer)
   && !/min-width: 1000px/.test(drawer.slice(drawer.indexOf('function applyModal'), drawer.indexOf('function applyModal') + 600))
   && /\.steward-drawer\[data-mount="docked"\] > \.steward-drawer-bar \{ display: none; \}/.test(read('css/views/steward-board.css')),
@@ -358,16 +344,6 @@ ok(/drawer\.setOnClosed\(mount => \{ if \(mount === 'docked' && !suppressCloseRe
 // ─── F 刷新纪律 + 零 innerHTML ──────────────────────────────────────────────────
 ok(count(boardCode, /setInterval\(/g) === 0 && boardCode.includes('createDeadlinePoll({'), 'F1 看板使用共享期限调度器，无固定 interval');
 ok(count(board, /setTimeout\(/g) === 0, 'F2 看板零 setTimeout');
-// 121-K2b（34 号文 §6.2／§6.4）**重钉 F3**：门控从三条收成两条 —— 「看板打开」这一条【删了】。
-// 理由不是放宽而是它的前提没了：状态行那句「N 个事项 · A 条在跑，B 条等你」与右栏「现在这一件」
-// 都【一直可见】，看板收起来它们照样在屏幕上，于是那道门换来的正是 32 号文 §5 记的两笔债
-// （看板一关，状态行与紧凑行就停在关上的那一帧）。K4 之后左栏永远开着，「看不见」更不成立。
-// 省下来的请求由新的一档节拍还回去：连接正常时这一拍 30 s 才拉一次（见下面 F3b）。
-// 反向验证：把 isBoardOpen() && 加回去 → 本条与 event-stream-client.browser 的「看板收起后左栏仍
-// 在 ≤1 s 内跟上」双红。
-// 轮询生命周期收编（前端架构债第一批）重钉 F3：门控从 syncPolling 函数体搬进 createPollLifecycle 的
-// shouldRun（启停语义由 steward-chips.js 那一份统一实现，steward-shell.static C2g 真跑钉着）。判据一字未变：
-// 门控恰好是「管家模式 && 页面可见」，唯一入口 syncPolling 只转给 polling.sync()，本文件零直调 polling.start()。
 ok(boardCode.includes('shouldRun: () => isStewardMode() && !(doc() && doc().hidden)') && boardCode.includes('if (streamConnected && !anyThreadRunning()) return Infinity;'), 'F3 隐藏时停表，SSE 在线且无线程运行时休眠');
 // 121-K2b 新钉（§6.4 的三条语义之二）：兜底轮询【存在】，且事件流连着时节拍 ≥30 s。
 // 「存在」这一半与「≥30 s」这一半必须同时钉：只钉前者，改回 5 s 不会红；只钉后者，把兜底整个
@@ -400,13 +376,6 @@ ok(boardAckBody.includes('void pushRefreshRows();')
 ok(count(boardCode, /if \(seq !== missionsLoadSeq\) return missionsLoadLatest;/g) === 2
   && /function loadMissions\(\) \{\s*const seq = \+\+missionsLoadSeq;\s*const run = loadMissionsOnce\(seq\);\s*missionsLoadLatest = run;\s*return run;\s*\}/.test(boardCode),
   'F3e 取行只认最后发出的那一发（回包与解析之后各判一次），被取代的那一发等最后那一发落地再回');
-// 121-K4-3 重钉（前值钉的是那句一行写完的观察者回调）。改动有二，各自都是事实：
-//   ① 回调里先【同步】renderRail() 再走各视角自己那套异步 —— 左栏有三样东西是按视角变的
-//      （「＋」的两义、选中态、点击语义），而切到管家那一路第一件事是 await refreshBoard()，
-//      于是修前切过去的第一帧左栏还写着「新线程」（one-workbench-frame.browser 的 H0 实测到）；
-//   ② leaveSteward 不再清 pinnedId（§2.7「管家视角记住自己的焦点线程」）。
-// 「收摊」这件事本身一个字没松：停表（生命周期收编后是 polling.stop()）仍在 leaveSteward 里，门控仍是 F3 那一条。
-// 反向验证：把 renderRail() 从回调里去掉 → H0 红；把 pinnedId = '' 加回 leaveSteward → K6 红。
 ok(/function leaveSteward\(\) \{[\s\S]*?polling\.stop\(\);/.test(board)
   && count(boardCode, /polling\.stop\(\)/g) === 1
   && !/function leaveSteward\(\) \{[\s\S]*?pinnedId = '';[\s\S]*?polling\.stop\(\);/.test(board)
@@ -425,11 +394,6 @@ for (const [name, source] of [['steward-board.js', boardCode], ['thread-head.js'
   const imports = [...source.matchAll(/^import .*from '([^']+)';$/gm)].map(match => match[1]);
   ok(imports.every(spec => spec.startsWith('./')), `F8 ${name} 的 import 全是本域内相对路径（零第三方库）`);
 }
-// 117n-M1 重钉：el()/clear() 搬进 steward-chips.js 集中定义（composer/drawer/conversation/board/
-// classic-window/settings 六个消费方零本地重复）之后，board.js 自己不再直接调 .createElement——
-// 但它仍然只经从 chips.js import 的共享 el()/clear() 生成节点，createElement 本体仍可在 chips.js
-// 里查证。原判据只证明「某处调过 createElement」；新判据在此之上再加一条正面证据（零本地重复
-// 定义），是更强而不是更弱的版本。
 ok(/textContent/.test(board)
   && /createElement\(/.test(chips)
   && !/function el\(tag, className, text\) \{/.test(boardCode)
@@ -479,7 +443,7 @@ ok(/drawer\.setClassicWindow\(sessionId => openInWorkbench\(sessionId\)\);/.test
 // 121-K4（§2.2／§2.4）：「整体切到 2.0」那两个入口（看板浮层顶部、头像菜单末项）都退役 ——
 // 视角切换只在外框顶栏的分段钮一处。121-K5 再进一步：连那个能力本身（switchWholeShell）也
 // 随 steward-classic-window.js 整文件删除 —— 它是「第二条切壳通道」的最后一块残料。
-// 翻面钉住它真的不在了：壳层不注入、对话流不引用那个文案键、四份 locale 里也没有它。
+// 翻面钉住它真的不在了：壳层不注入、对话流不引用那个文案键、两份 locale 里也没有它。
 ok(!/switchWholeShell/.test(stewardShell)
   && !/stewardShell\.classicWindow\./.test(conversation)
   && !/switchWholeShell/.test(classicWindow)
@@ -621,22 +585,11 @@ ok(!/steward-board-mission/.test(cssCode) && !/steward-board-mission/.test(board
   && /\.rail-task\.is-open \.rail-chev \{ transform: rotate\(180deg\); \}/.test(cssCode)
   && /\.rail-threads\.is-open \{ grid-template-rows: 1fr; \}/.test(cssCode),
   'I6 多线程任务是一行任务行（折角＋展开），不再是一张把线程行裹起来的事项卡');
-// 117u-G2 **重钉 I6b**（B1／B4 把那一串三枚拆成了两处）：事项头只剩「事项名 · N 条」一枚药丸，
-// 钱与验收搬去了卡尾那一行。被钉的事实一个字没变 —— 「·」仍然是【生成内容】，DOM 一个节点没加，
-// 而且仍然只有【一条】声明在生产它（两个落点写在同一条规则里）。判据跟着两个落点走，并额外
-// 钉住「只有一处 content: "·"」——比原来只钉一个选择器更强。
-// 「只有一条规则在生产它」要按【规则块】数，不能按整层数 content:"·" —— 一行状态那枚
-// .steward-status-line::before 从 117h 起就有一个，与药丸串这件事无关（数整层会把它算进来）。
 const pillDotRules = [...cssCode.matchAll(/([^{}]*steward-board-pill[^{}]*)\{([^}]*)\}/g)]
   .filter(match => /content: "·"/.test(match[2]));
 ok(/\.steward-board-facts \.steward-board-pill \+ \.steward-board-pill::before \{/.test(cssCode)
   && pillDotRules.length === 1,
   `I6b 「·」仍是生成内容、仍只有一条规则在生产它（事项头那个落点随事项卡退役，只剩卡尾事实行相邻药丸之间这一处），DOM 一个节点没加（实测涉及药丸的规则块 ${pillDotRules.length} 条）`);
-// 117u-G2 **重钉 I7**（B1）：缩进的意思是「这几条挂在上面那个事项名下面」，所以它只属于【真分了
-// 组】的卡 —— 单线程事项已经不画事项层，那张卡没有可挂的名字，缩进只会让它无故凹进去。原判据
-// 钉的是「.steward-board-thread 自己带 --sp-4」，B1 之后这句话不再成立；新判据把两件事都钉死：
-// 分组时缩进 --sp-4（两个断点各一条，都带 .is-grouped 限定），且【裸】的 .steward-board-thread
-// 规则块里一处 margin-inline-start 都没有（否则单线程那张卡又会凹回去）。
 const bareThreadRule = cssCode.slice(cssCode.indexOf('.steward-board-thread {'),
   cssCode.indexOf('}', cssCode.indexOf('.steward-board-thread {')));
 // 121-K4：缩进的意思没变（「这几条挂在上面那个名字下面」），换的是它挂在谁身上 —— 现在是
@@ -742,15 +695,6 @@ ok(!/async function syncNow/.test(boardCode)
   && !/await drawer\.refreshOnce\(\)/.test(syncNowBody)
   && /drawer\.refreshOnce\(\)\.catch\(\(\) => \{\}\)/.test(syncNowBody),
   'L2 强刷是发射后不管（不 await、失败自吞）：syncNow 仍然同步返回布尔，focusThread 的回退判据与 closeNow／leaveSteward／断点回调拿到的还是真布尔');
-// 121-K4 重钉：多出【第二个】强刷点，理由与 L1 是同一条（「抽屉手里那份切片一定是旧的」），
-// 只是时刻不同 —— applyLivePush 里「这一回合的第一个字」那一刻：抽屉是在 thread.state 那一帧
-// 读的切片，那时回合刚起跑、一个字都没有，所以它画的还是上一回合的「它刚说」。
-// 门开得很窄，三条【同时】成立才补：① 从无到有那一次（!row.liveTail）；② 这条线程正是焦点；
-// ③ 抽屉真导出 refreshOnce。所以仍然不是「每条 live 跟一发请求」（那正是 K2b 拒绝的形状）：
-// 一个回合最多补一发。反向验证：把 firstTick 去掉（每条 live 都补）→ 本条立刻真红。
-// 128f-⑫ 重钉（2 → 3 处 drawer.refreshOnce()）：第三条路是 refreshDrawerIfFocused —— 左栏行上的动作（暂停／继续／停止／
-// 优先／停掉占用者／全部暂停）动的【正是焦点那一条】时补一发（审计 B：修前焦点栏还拿着动作之前的切片）。门同样窄：
-// 只在用户按下这几枚按钮之后、且焦点就是被动的那一条时；refreshBoard 的每一拍、closeNow、leaveSteward 仍然不强刷。
 ok(count(boardCode, /syncNow\(\{ focusRequest: true \}\)/g) === 1
   && /if \(!syncNow\(\{ focusRequest: true \}\) &&/.test(boardCode)
   && count(boardCode, /drawer\.refreshOnce\(\)/g) === 3
@@ -845,10 +789,6 @@ ok(count(boardCode, /missionStateIcon\(/g) === 1
   && /import \{ icon, missionStateIcon \} from '\.\/icons\.js';/.test(board)
   && count(boardCode, /needs_you/g) === 10 && count(boardCode, /'stopped'/g) === 0 && count(boardCode, /'done'/g) === 0,
   `N3 左栏只把 threadStateOf() 的返回值【原样】递给 missionStateIcon（恰好一处调用），五态字面量计数与 B5／M6 同账（${count(boardCode, /needs_you/g)}／${count(boardCode, /'stopped'/g)}／${count(boardCode, /'done'/g)}）`);
-// 117u-G2 **重钉 N4**：tone 从 paintDot 里提成了纯函数 toneOf —— B2 之后小行那颗点归线程色，
-// 但「展开还是折成一行」仍然只认这四档 tone，提出来之前要拿 tone 必须先造一颗点再读回来再扔掉。
-// 被钉的契约一个字没变：settleDone 那一档没动，dockToneForMissionState 在全模块【仍然只被调用
-// 一次】（现在这一次住在 toneOf 里），paintDot 仍然把 state 与 tone 一起写在节点上。
 const paintDotBody = boardCode.slice(boardCode.indexOf('function paintDot(node, value)'), boardCode.indexOf('function paintThreadCard('));
 ok(/function toneOf\(value\) \{ return dockToneForMissionState\(value, \{ settleDone: true \}\); \}/.test(boardCode)
   && /node\.dataset\.state = value;/.test(paintDotBody)

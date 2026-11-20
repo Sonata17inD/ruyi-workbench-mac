@@ -37,7 +37,6 @@ function writeConfig(patch) {
 fs.mkdirSync(HOME, { recursive: true });
 fs.mkdirSync(sessionsDir, { recursive: true });
 writeConfig({});
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 
@@ -232,8 +231,8 @@ console.log('── (C) P1-8 游标损坏 ──');
   };
   const runChild = home => {
     const out = cp.spawnSync(process.execPath, [childScript, SERVER, home], {
-      encoding: 'utf8', windowsHide: true,
-      env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home },
+      encoding: 'utf8',
+      env: { ...process.env, RUYI_HOME: home },
     });
     const line = String(out.stdout || '').split('\n').find(l => l.startsWith('RESULT '));
     try { return JSON.parse(line.slice(7)); } catch { return { rows: -1, corruptLogged: false, raw: String(out.stdout) + String(out.stderr) }; }

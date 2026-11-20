@@ -2,9 +2,9 @@
 
 [简体中文](README.md) · [Contributing](CONTRIBUTING.md) · [Implementation status](docs/mac-native/STATUS.md)
 
-An offline-first agent workbench for Apple Silicon. Node agents, a Web UI and Python document tools run inside an AppKit/WKWebView host, with native Mac system helpers. Supports Anthropic Messages and OpenAI-compatible providers, local Claude Code/Kimi Code CLIs, MCP tools, Office documents, session recovery and agent collaboration.
+An offline-first agent workbench for Apple Silicon. Node agents, a Web UI and Python document tools run inside an AppKit/WKWebView host, with native Mac system helpers. Supports Anthropic Messages and OpenAI-compatible providers, local Claude Code CLI, MCP tools, Office documents, session recovery and agent collaboration.
 
-Development uses Node.js 24, Python 3.12 and Xcode Command Line Tools. The deployment target is arm64/macOS 14; actual minimum-system acceptance is recorded separately. The backend has zero npm runtime dependencies.
+Development uses Node.js 24, Python 3.12 and Xcode Command Line Tools. Full and Slim qualify on the local Apple Silicon Mac running macOS 27.0.1. The arm64 build retains its macOS 14 deployment target. The backend has zero npm runtime dependencies.
 
 ```bash
 cd ruyi-workbench
@@ -33,4 +33,4 @@ The fast suite includes unit tests. Skipped and unexecuted checks are not passes
 
 See [generated engineering facts](facts.json) for the version and test inventory; inventory counts are not pass counts.
 
-[Audit](docs/audits/2026-11-13-mac-only/REPORT.md) · [History](CHANGELOG.md) · [Third-party notices](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)
+[Audit](docs/audits/2026-11-19-mac-slim/REPORT.md) · [History](CHANGELOG.md) · [Third-party notices](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)

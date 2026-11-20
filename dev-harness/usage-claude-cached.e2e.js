@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ④ 下游 GET /api/usage/summary:totals.cachedInTok 与 byEngine claude 一行都反映非零缓存,
 //      不再对 Claude 会话恒为空(用户可见口径的最终验收点)。
 // Judgement line (exact): USAGE-CLAUDE-CACHED E2E: ALL PASS
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -96,7 +96,7 @@ const isTerminal = s => s === 'succeeded' || s === 'failed' || s === 'partial' |
 
   // 117q(usage-subagent-ledger.e2e.js 同款教训):清空 dev 机可能带的 Anthropic 端点 env,否则
   // claudeLedgerSource 会把 costTrusted/provider 判成第三方端点,cost 断言 flake。
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, ANTHROPIC_BASE_URL: '', ANTHROPIC_BASE: '', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: '', WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, ANTHROPIC_BASE_URL: '', ANTHROPIC_BASE: '', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: '', RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 

@@ -20,12 +20,10 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-memory-scope-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 process.env.HOME = path.join(root, 'home');
 process.env.USERPROFILE = process.env.HOME;
 delete process.env.CODEX_HOME;
-delete process.env.KIMI_CODE_HOME;
 fs.mkdirSync(path.join(process.env.HOME, '.claude'), { recursive: true });
 const PROJ = path.join(root, 'proj');
 fs.mkdirSync(PROJ, { recursive: true });

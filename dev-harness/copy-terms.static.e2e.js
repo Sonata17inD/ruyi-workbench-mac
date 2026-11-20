@@ -4,7 +4,7 @@
 //
 // 事实源是 §2.10.4 的两句话：「术语只剩这几个」与「禁用词（界面上一个都不许出现）」。
 // 这一件把那张表钉成一道门，扫两个面：
-//   ① 四份 locale（ruyi-workbench/app/public/locales/{zh-CN,en-US}.json 与 docs/i18n/locales/ 的镜像）的【值】；
+//   ① 两份 locale（ruyi-workbench/app/public/locales/{zh-CN,en-US}.json）的【值】；
 //   ② public/ 的模板（index.html）里【真的会画到屏幕上】的那些字：文本节点与
 //      placeholder／title／aria-label／data-i18n 兜底文案。
 //
@@ -22,7 +22,6 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PUBLIC = path.join(ROOT, 'ruyi-workbench', 'app', 'public');
-const DOCS_LOCALES = path.join(ROOT, 'docs', 'i18n', 'locales');
 
 let fail = 0;
 const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { fail += 1; console.log('FAIL ' + label); } };
@@ -30,8 +29,6 @@ const ok = (condition, label) => { if (condition) console.log('PASS ' + label); 
 const LOCALES = [
   path.join(PUBLIC, 'locales', 'zh-CN.json'),
   path.join(PUBLIC, 'locales', 'en-US.json'),
-  path.join(DOCS_LOCALES, 'zh-CN.json'),
-  path.join(DOCS_LOCALES, 'en-US.json'),
 ];
 
 // ── 禁用词（§2.10.4）。每条都写清楚「界面上该说什么」——门红的时候看这一行就知道怎么改。 ──
@@ -51,7 +48,6 @@ const BANNED = [
 const SESSION_ALLOW = new Map([
   ['error.api.authToken', '「工作台会话令牌」＝ HTTP 鉴权 token（runtime.json 里那一枚），不是线程'],
   ['settings.browserTarget.system', '「复用用户会话」＝ 浏览器里的登录态，说的是系统浏览器'],
-  ['settings.agentCli.hint.kimi', '「会话续接／原生会话」＝ Kimi ACP 协议自己的名词，改了就对不上它的文档'],
   ['settings.resumeClaude', '「自动续接 Claude 会话」＝ 引擎侧 resume（claude --resume 那一层）'],
   ['settings.resumeAgentCli', '同上，Agent CLI 侧的 resume'],
   ['ctx.compact.hintExternal', '「从摘要重建原生会话」＝ 引擎侧上下文，不是如意这一层的线程'],
@@ -83,7 +79,7 @@ function flatten(object, prefix, out) {
   return out;
 }
 
-// ═══════════ 1. 四份 locale 的值 ═══════════
+// ═══════════ 1. 两份 locale 的值 ═══════════
 for (const file of LOCALES) {
   const name = path.relative(ROOT, file).split(path.sep).join('/');
   const flat = flatten(JSON.parse(fs.readFileSync(file, 'utf8')), '', {});

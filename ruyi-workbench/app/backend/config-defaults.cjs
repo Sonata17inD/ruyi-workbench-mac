@@ -11,7 +11,7 @@ const THREAD_INDEX_RECENT_DEFAULT = 30;
 const THREAD_INDEX_RECENT_MIN = 10;
 const THREAD_INDEX_RECENT_MAX = 200;
 
-function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath, detectKimiPath }) {
+function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
   function defaultConfig() {
     return {
       configSchema: CONFIG_SCHEMA,
@@ -24,10 +24,7 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath, detect
       privacyPolicyRecoveryRequiredV1: false,
       credentialEncryptionV1: false, // Opt-in platform-protected storage. Existing encrypted references retain their explicit enabled state.
       version: VERSION,
-      agentCliType: 'claude',       // claude | kimi — native Agent CLI driver
-      // 123-N2(用户 2026-09-13 真机:「新开线程会默认开 Kimi code cli,我希望改成默认上一次用的」):
-      // 新线程的缺省引擎【不再写死跟全局】。'last' = 跟「上一次用的」(见 lastUsedEngineRoute),
-      // 'global' = 老行为(跟 activeProvider / agentCliType / model 那三项全局设置)。默认 'last'。
+      agentCliType: 'claude',
       newThreadEngine: 'last',      // last | global
       // 「上一次用的引擎路由」。**只记用户自己的选择与用户自己发起的回合**(线程头切引擎 = 02 的
       // applySessionMetaPatch;工作台发起的回合 = 10 的 runSessionTurn source==='http'),管家/调度器
@@ -35,7 +32,6 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath, detect
       // ({engine:'openai',providerId,model} | {engine:'agent',agentCliType,model});没有记录时是 null。
       lastUsedEngineRoute: null,
       claudePath: detectClaudePath(),
-      kimiPath: detectKimiPath(),
       defaultWorkspace: os.homedir(),
       // 2026-10 拍板:出厂档是「智能自动」。只管没有存过档的新配置 —— 老用户 config.json 里已有的档原样保留;
       // 「切到」智能自动 / 全自动仍要二次确认(01e PERMISSION_MODES_REQUIRING_CONFIRM),那道门防的是被悄悄放开,
@@ -44,8 +40,6 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath, detect
       includeWorkbenchMcp: true,
       autoResumeClaudeSessions: true,
       model: '',
-      // Universal compaction model. Empty provider/model means "follow the current engine": Claude and
-      // Kimi use their native compactor, while an OpenAI-compatible provider uses its active model.
       compactProviderId: '',
       compactModel: '',
       // Conversation limits are route/model scoped; never use the selected summarizer's window here.
@@ -130,16 +124,8 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath, detect
       browserAutomation: { mode: 'system', executable: '', cdpUrl: 'http://127.0.0.1:9222' },
       // Extra user-defined stdio MCP servers: [{ id,label,command,args:[],cwd,env:{},enabled }]. Capped at 10.
       externalMcpServers: [],
-      // 启动时自动把本机 Claude Code(~/.claude.json 的 mcpServers)中 Ruyi 还没有的 stdio/远程条目映射进
-      // externalMcpServers。默认开;关掉则完全不扫。dismissedMcpIds 记录用户已从 Ruyi 删除的 id,自动导入跳过
-      // 它们(避免「删了又自动回来」的循环);用户经 import-config/apply 显式再导入会从 dismissed 移除。
-      // W2 迁移中心:键名保留(存量兼容),语义扩为「启动时从本机 Agent CLI 自动导入 MCP」——
-      // Claude Code(~/.claude.json)、Codex(~/.codex/config.toml)、Kimi Code(~/.kimi-code/mcp.json)三源同一开关。
       autoImportClaudeCodeMcp: true,
       dismissedMcpIds: [],
-      // W2 迁移中心:启动时把本机其它 Agent CLI 的全局指令文件(~/.claude/CLAUDE.md、~/.codex/AGENTS.md、
-      // ~/.kimi-code/AGENTS.md、~/.gemini/GEMINI.md)同步成工作台全局核心记忆(06d syncAgentInstructionImports)。
-      // 关掉 = 启动时不再扫;迁移中心里的手动「导入」照常可用。
       importAgentInstructions: true,
       // W2 迁移中心:首启提示卡「看过了」的记账 —— 用户看过的候选键(来源:条目)。出现不在这里的新候选才再提示。
       migrationSeenKeys: [],

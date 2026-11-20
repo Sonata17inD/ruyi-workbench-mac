@@ -144,27 +144,6 @@
       "tokens": 131072
     },
     {
-      "match": "k3-256k",
-      "tokens": 262144
-    },
-    {
-      "match": "kimi-k3",
-      "tokens": 1048576
-    },
-    {
-      "match": "k3",
-      "tokens": 1048576,
-      "exact": true
-    },
-    {
-      "match": "kimi",
-      "tokens": 262144
-    },
-    {
-      "match": "moonshot",
-      "tokens": 262144
-    },
-    {
       "match": "minimax-m3",
       "tokens": 1000000
     },

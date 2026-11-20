@@ -31,10 +31,12 @@ test('payload checks detect byte changes, unexpected files, executable mode chan
   fs.writeFileSync(file, 'tampered'); assert.throws(() => verifyPackage(root), /integrity/);
   fs.writeFileSync(file, 'original');
   fs.writeFileSync(path.join(app, 'extra'), 'x'); assert.throws(() => verifyPackage(root), /integrity/); fs.unlinkSync(path.join(app, 'extra'));
-  if (process.platform !== 'win32') { fs.chmodSync(file, 0o644); assert.throws(() => verifyPackage(root), /integrity/); fs.chmodSync(file, 0o755); }
+  fs.chmodSync(file, 0o644);
+  assert.throws(() => verifyPackage(root), /integrity/);
+  fs.chmodSync(file, 0o755);
   fs.unlinkSync(file); assert.throws(() => verifyPackage(root), /integrity/);
 });
-test('relative internal framework links remain movable; absolute, broken and external links are refused', { skip: process.platform === 'win32' }, t => {
+test('relative internal framework links remain movable; absolute, broken and external links are refused', t => {
   const root = fixture(t), payload = path.join(root, 'payload'); fs.mkdirSync(payload);
   fs.writeFileSync(path.join(payload, 'real'), 'x'); fs.symlinkSync('real', path.join(payload, 'link'));
   const before = treeDigest(inventory(payload)); fs.renameSync(payload, path.join(root, '搬移 路径😀'));
@@ -44,7 +46,7 @@ test('relative internal framework links remain movable; absolute, broken and ext
   fs.symlinkSync(path.join(root, '搬移 路径😀', 'real'), path.join(root, '搬移 路径😀', 'bad'));
   assert.throws(() => inventory(path.join(root, '搬移 路径😀')), /Unsafe/);
 });
-test('an App root replaced with a symlink to an external copy is refused', { skip: process.platform === 'win32' }, t => {
+test('an App root replaced with a symlink to an external copy is refused', t => {
   const root = fixture(t), real = path.join(root, 'external'); fs.mkdirSync(real); fs.writeFileSync(path.join(real, 'file'), 'x');
   const files = inventory(real);
   fs.writeFileSync(path.join(root, 'package-manifest.json'), JSON.stringify({ schemaVersion: 1, app: 'Ruyi.app', variant: 'full', files, treeSha256: treeDigest(files) }));

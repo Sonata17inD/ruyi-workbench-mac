@@ -49,8 +49,6 @@ const ROUTE_AUTH = [
   // (前缀条目带尾斜杠,按 startsWith 匹配不到本裸路径,两条不冲突。)
   { m: 'GET', p: '/api/interventions', auth: 'token-browser' },
   { m: 'POST', p: '/api/agent-workflow/launch', auth: 'body-token' },
-  // 代理模式 v2:MCP 子进程(Claude/Kimi)的 wait_agents / agent_result 回环 —— 同 launch 的 body-token 门(handler 内
-  // 另接受 UI 头 token,供管理面/测试直调)。
   { m: 'POST', p: '/api/agent-workflow/wait', auth: 'body-token' },
   { m: 'POST', p: '/api/agent-workflow/result', auth: 'body-token' },
   // token-browser: 敏感内容型 GET + UI 变更型(浏览器须 token;loopback 非浏览器须同源,无需 token)
@@ -87,7 +85,6 @@ const ROUTE_AUTH = [
   { m: 'POST', p: '/api/stop', auth: 'token-browser' },
   { m: 'POST', p: '/api/provider/compact', auth: 'token-browser' },
   { m: 'POST', p: '/api/agent/compact', auth: 'token-browser' },
-  { m: 'GET', p: '/api/kimi/status', auth: 'token-browser' },
   { m: 'POST', p: '/api/permission/decision', auth: 'token-browser' },
   { m: 'POST', p: '/api/chat/answer', auth: 'token-browser' },
   // 提问续时心跳:弹窗打开期间前端周期调用,把挂起提问的超时重新上满(打字多也不被掐断)。

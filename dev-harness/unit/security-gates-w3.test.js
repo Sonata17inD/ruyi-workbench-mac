@@ -20,7 +20,7 @@ const path = require('path');
 const { describe, it, after } = require('node:test');
 
 function tryLink(target, linkPath) {
-  try { fs.symlinkSync(target, linkPath, process.platform === 'win32' ? 'junction' : undefined); return true; }
+  try { fs.symlinkSync(target, linkPath); return true; }
   catch (e) { if (e && (e.code === 'EPERM' || e.code === 'EACCES')) return false; throw e; }
 }
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-sec-w3-'));
@@ -37,7 +37,6 @@ fs.mkdirSync(ws, { recursive: true });
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = dataRootDir;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
 const { createRemoteUncDenial, remoteUncDenial, uncHostAndPath } = require('../../ruyi-workbench/app/backend/workspace-unc-policy.cjs');

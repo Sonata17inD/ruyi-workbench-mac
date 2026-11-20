@@ -180,7 +180,7 @@ Office 默认使用本机可发现的 Mac 中文字体；图表注册字体文�
 `pdf_read_pages` 省略页码时最多读取实际存在的前 5 页；显式指定的越界页码仍会拒绝。
 
 固定输入为 `tests/fixtures/macos-office-sample.json`。仓库根目录下的
-`MACOS-PORTING/dependencies/requirements-macos-arm64-cp312-office.lock.txt` 锁定已验证的 60 个运行依赖；
+`ruyi-workbench/packaging/macos/requirements-macos-arm64-cp312-office.lock.txt` 锁定已验证的 60 个运行依赖；
 ACC 源码 wheel 单独构建。先准备本平台的 wheel 缓存，再以 `--no-index --find-links` 在新虚拟环境重放。
 该锁文件记录 macOS 27.0.1/arm64/CPython 3.12.10 的开发环境，最低系统与正式离线发行仍需后续验证。
 
@@ -189,7 +189,7 @@ ACC 源码 wheel 单独构建。先准备本平台的 wheel 缓存，再以 `--n
 ```bash
 RUYI_OFFICE_REQUIRED=1 RUYI_OFFICE_ARTIFACT_DIR=/tmp/ruyi-office-samples node dev-harness/macos-office-artifacts.e2e.js
 python mcp/ai-computer-control/tests/verify_macos_office_sample.py <输出的样例目录>
-node MACOS-PORTING/probes/render-office-samples.cjs <输出的样例目录>
+node dev-harness/lib/render-office-samples.cjs <输出的样例目录>
 ```
 
 MCP 专项使用真实工作台代理、真实 ACC、检查点和 HTTP 回滚；原有文件逐字节恢复，新产物撤销删除。
@@ -291,7 +291,7 @@ ai-computer-control/
 配置/包存在不能证明可用；先 `browser_open`，再确认连接与实际页面内容。缺缓存或包时准确降级，不影响文件工具。
 自有浏览器在 `browser_close`、正常 stdio EOF 和启动取消时清理；`ACC_BROWSER_HEADLESS=1` 供受控无界面验证，默认有界面。
 
-已验证环境锁为 `MACOS-PORTING/dependencies/requirements-macos-arm64-cp312-browser.lock.txt`，包含63项依赖。
+已验证环境锁为 `ruyi-workbench/packaging/macos/requirements-macos-arm64-cp312-browser.lock.txt`，包含63项依赖。
 预先准备对应wheel与Chromium缓存后，在仓库根目录运行：
 
 ```bash

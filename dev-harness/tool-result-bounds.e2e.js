@@ -86,8 +86,8 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   activeProvider: 'fake',
 }));
 const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-  cwd: WB, windowsHide: true, stdio: 'ignore',
-  env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME },
+  cwd: WB, stdio: 'ignore',
+  env: { ...process.env, RUYI_HOME: HOME },
 });
 try {
   let up = false;

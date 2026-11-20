@@ -1,20 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-// 117q-B3a（P1-6，30 号文 §4.6）伴随断言：「403 场景下 loadMissions() 应换 token 重放并成功」，
-// 此前全仓没有这类回归测试。
-//
-// 为什么不站在真实浏览器 e2e 夹具里做（steward-board.e2e.js 那一路 CDP 无头驱动）：那一路要起
-// 真实 server.js + 真无头浏览器；本刀提交窗口内 117q-B1 正并发改 00-boot.js/05-claude-engine.js/
-// 05b-kimi-bridge.js/07-autonomy.js 并会重跑整条生成器链重建 server.js（见派单稿硬约束），此时去
-// 起一个依赖当前 server.js 状态的真机测试，测出来的红/绿不代表本刀自己的改动，还会平白多一次和
-// 并发切片抢 server.js 的风险。apiRaw()/api() 的重放逻辑只依赖全局 fetch + sessionStorage（document
-// 只在两者都摸不到 token 时才碰一下）——和 i18n.static.e2e.js 验证 net.js 错误信封（第 72-79 行：
-// `global.fetch = ...; await import(data:...)`）用的是同一个办法：把 net.js 当纯 ESM 模块，灌假
-// fetch/sessionStorage，让真实的换 token + 重放代码原样跑一遍。不用真机也能把这条真回归焊死，
-// 而且比正则扫描的静态锁更硬——它真的执行了 apiRaw 内部的分支，不是只看字面有没有出现某个词。
-//
-// 判定行：`NET TOKEN REPLAY E2E: ALL PASS`。
 const fs = require('fs');
 const path = require('path');
 

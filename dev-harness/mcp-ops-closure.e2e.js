@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 /*
  * E2E (第55波 EC-C 55a/55b): MCP 运维闭环 -- 统一读模型 + 健康探针 + 错误归类 + 兼容矩阵 + 启停/删除持久化。
  *
@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/mcp-ops-closure.e2e.js
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -230,7 +230,7 @@ function startLegacySseMcp(port, state) {
       { id: 'drop-shadow', label: '遮蔽dropin', command: process.execPath, args: [FAKE_MCP], env: {}, cwd: '', enabled: true },
     ],
   }));
-  const spawnWb = () => cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const spawnWb = () => cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   // getFreePort is necessarily check-then-use. Under the full suite another short-lived process can claim
   // that port between the probe and server.listen; retry the boot on a newly probed port while preserving
   // the same HOME/config. A real startup crash repeats and still fails after the bounded retries.

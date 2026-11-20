@@ -107,7 +107,7 @@ async function phase(name, fakeUrl, contextWindow, task) {
     activeProvider: 'fake',
   }));
   const port = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   let log = ''; wb.stdout.on('data', d => { log += d; }); wb.stderr.on('data', d => { log += d; });
   const stop = () => { try { killOwnTree(wb); } catch { /* gone */ } };
   const up = await waitFor(() => request(port, 'GET', '/health').catch(() => null), 80, 150);

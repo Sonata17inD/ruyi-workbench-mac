@@ -25,7 +25,7 @@ const { ok } = t;
 const ROOT = path.resolve(__dirname, '..');
 const { shellTool, echo } = require('./lib/platform-shell-fixture');
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-'));
-process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-ws-'));
 const BIN = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2net-bin-'));
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';

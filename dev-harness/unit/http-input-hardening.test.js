@@ -1,6 +1,6 @@
 'use strict';
 // hunt2 · http 区(HTTP 层健壮性)回归锁。每条都是修前能复现的故障:
-//   [S1] 分离式外部启动(office_open / browser_open / 代码编辑器 / Kimi 授权网址 / 资源管理器兜底 / --open)
+//   [S1] 分离式外部启动(office_open / browser_open / 代码编辑器 / 资源管理器兜底 / --open)
 //        找不到程序时 ENOENT 是 ChildProcess 上的【异步】'error' 事件;修前没有监听者 → uncaughtException →
 //        服务 process.exit(1),而工具先回了「opened」。spawnDetachedChecked 是它们共用的唯一入口。
 //   [S2] createSession 收到非字符串 cwd / title(请求体直传)不再原样落盘(修前 {"cwd":5} 让这条会话每回合都死)。
@@ -19,7 +19,6 @@ const { createHttpNdjsonResponse } = require('../../ruyi-workbench/app/backend/h
 
 const REPO = path.resolve(__dirname, '../..');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-http-hardening-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const SERVER = path.join(REPO, 'ruyi-workbench', 'app', 'server.js');
 const srv = require(SERVER);
@@ -37,8 +36,8 @@ test('[S1] spawnDetachedChecked:程序不存在 → {ok:false, code:ENOENT},不�
   const onUncaught = e => { uncaught = e; };
   process.on('uncaughtException', onUncaught);
   try {
-    const missing = path.join(root, 'no-such-launcher-' + process.pid + (process.platform === 'win32' ? '.exe' : ''));
-    const r = await srv.spawnDetachedChecked(missing, ['x'], { detached: true, windowsHide: true, stdio: 'ignore' });
+    const missing = path.join(root, 'no-such-launcher-' + process.pid);
+    const r = await srv.spawnDetachedChecked(missing, ['x'], { detached: true, stdio: 'ignore' });
     assert.equal(r.ok, false);
     assert.equal(r.code, 'ENOENT');
     assert.match(String(r.error), /ENOENT/);
@@ -50,7 +49,7 @@ test('[S1] spawnDetachedChecked:程序不存在 → {ok:false, code:ENOENT},不�
 });
 
 test('[S1] spawnDetachedChecked:能起的程序 → {ok:true, pid}(成功路径与原 spawn().unref() 同参)', async () => {
-  const r = await srv.spawnDetachedChecked(process.execPath, ['-e', ''], { detached: true, windowsHide: true, stdio: 'ignore' });
+  const r = await srv.spawnDetachedChecked(process.execPath, ['-e', ''], { detached: true, stdio: 'ignore' });
   assert.equal(r.ok, true);
   assert.ok(Number(r.pid) > 0);
 });
@@ -100,13 +99,12 @@ before(async () => {
   childHome = fixture.home;
   port = await getFreePort();
   const env = { ...fixture.env, RUYI_HOME: path.join(childHome, '.ruyi-workbench') };
-  delete env.WIN_CLAUDE_WORKBENCH_HOME;
   const openerPreload = path.join(root, 'missing-opener.cjs');
   if (process.platform === 'darwin') {
     // Exercise the same missing-program failure without launching the user's Finder/browser.
     fs.writeFileSync(openerPreload, `const cp=require('child_process');const spawn=cp.spawn;cp.spawn=function(command,args,options){return spawn.call(this,command==='/usr/bin/open'?${JSON.stringify(path.join(root, 'missing-opener'))}:command,args,options)};`);
   }
-  child = cp.spawn(process.execPath, [...(process.platform === 'darwin' ? ['--require', openerPreload] : []), SERVER, 'serve', '--port', String(port)], { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  child = cp.spawn(process.execPath, [...(process.platform === 'darwin' ? ['--require', openerPreload] : []), SERVER, 'serve', '--port', String(port)], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   child.stdout.on('data', c => { serverLog += c; });
   child.stderr.on('data', c => { serverLog += c; });
   const deadline = Date.now() + 45000;
@@ -206,7 +204,7 @@ test('[H7] 声明的 Content-Length 超总闸 → 立即 413 api.body_too_large(
   assert.equal(alive.status, 200);
 });
 
-test('[H8] office_open 起不来打开程序 → 工具失败,服务不崩(Mac 注入缺失 opener;Linux 无 Explorer)', { skip: process.platform === 'win32' ? 'Windows 上 explorer.exe 真的会弹窗;失败分支由 [S1] 直测' : false }, async () => {
+test('[H8] office_open 起不来打开程序 → 工具失败,服务不崩(Mac 注入缺失 opener;Linux 无 Explorer)', async () => {
   const r = await request('POST', '/api/tools/office_open', { body: { path: childHome } });
   assert.equal(r.status, 200);
   assert.equal(r.json.result.ok, false, `修前回 opened:${r.text.slice(0, 200)}`);
@@ -253,10 +251,7 @@ test('[H9] /api/events/stream 连接数有上限(第 33 条 → 503),已有连�
 
 // ---------------------------------------------------------------------------------------------
 // 结构锁(判据本身是结构性的:这段代码必须挂监听 / 必须先判流已收尾)。
-test('[L1] 子进程 stdin 挂了 error 监听(Kimi ACP RPC、Mac shell 会话):EPIPE 不成 uncaughtException', () => {
-  const rpc = functionBlock(readSrc('../backend/kimi-acp-rpc.cjs'), 'createKimiAcpRpc');
-  assert.ok(rpc.length > 200, '切到 createKimiAcpRpc');
-  assert.match(rpc, /child\.stdin\.on\('error'/);
+test('[L1] 子进程 stdin 挂了 error 监听(Mac shell 会话):EPIPE 不成 uncaughtException', () => {
   const shell = functionBlock(readSrc('../backend/shell-sessions.cjs'), 'shellStart');
   assert.ok(shell.length > 200, '切到 shellStart');
   assert.match(shell, /child\.stdin\.on\('error'/);

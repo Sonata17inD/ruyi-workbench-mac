@@ -75,11 +75,11 @@ function unauthorizedStub(port) {
   const DENY_PORT = await getFreePort();
   const DEAD_PORT = await getFreePort(); // 拿到就不监听 -> 保证不可达
 
-  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(FAKE_PORT)], { windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(FAKE_PORT)], {});
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   const denyServer = await unauthorizedStub(DENY_PORT);
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-    cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
@@ -172,8 +172,7 @@ function unauthorizedStub(port) {
     fail += 1;
     console.log('FAIL 未捕获异常: ' + (error && error.stack || error));
   } finally {
-    try { wb.kill(); } catch { /* already gone */ }
-    try { fake.kill(); } catch { /* already gone */ }
+    await Promise.all([wb, fake].map(child => child.kill() && require('node:events').once(child, 'exit')));
     try { denyServer.close(); } catch { /* already closed */ }
   }
 

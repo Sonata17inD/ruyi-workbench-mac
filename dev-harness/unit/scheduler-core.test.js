@@ -19,7 +19,7 @@
 //      不带就没有这个键;服务端自有的 workdir 原样带过去、空不落键、清控制字符、截 1000 字
 //
 // 与既有 dev-harness/unit 件同款约定(见 steward-core.test.js):require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME / RUYI_HOME 覆盖到临时目录,防止污染真实数据根;PASS/FAIL 逐条打印,
+// RUYI_HOME 覆盖到临时目录,防止污染真实数据根;PASS/FAIL 逐条打印,
 // process.exit(fail?1:0)。
 'use strict';
 const cp = require('child_process');
@@ -28,7 +28,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-scheduler-core-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
@@ -396,13 +395,11 @@ const render = (described, lang) => TEXT[lang][described.key](described.params);
     env: {
       ...process.env,
       TZ: 'America/New_York',
-      WIN_CLAUDE_WORKBENCH_HOME: dstHome,
       RUYI_HOME: dstHome,
       HOME: dstHome,
       USERPROFILE: dstHome,
     },
     encoding: 'utf8',
-    windowsHide: true,
   });
   let dst = null;
   try { dst = JSON.parse(String(child.stdout || '')); } catch { dst = null; }

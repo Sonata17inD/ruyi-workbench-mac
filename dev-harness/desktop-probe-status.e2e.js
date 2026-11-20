@@ -53,9 +53,9 @@ const desktopHealth = status => ((status && status.json && status.json.health) |
   const port = await getFreePort();
   const child = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(port)], {
     cwd: path.join(ROOT, 'ruyi-workbench', 'app'),
-    env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, TMP, TEMP: TMP,
+    env: { ...process.env, RUYI_HOME: HOME, TMP, TEMP: TMP,
       AI_COMPUTER_CONTROL_HOME: ACC, WCW_TEST_DESKTOP_PROBE_DELAY_MS: String(DELAY) },
-    windowsHide: true, stdio: 'ignore',
+    stdio: 'ignore',
   });
   try {
     let health = null;

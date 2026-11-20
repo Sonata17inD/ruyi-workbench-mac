@@ -13,7 +13,7 @@ const t = createRunner('STEWARD SETTINGS SCOPE LIVE'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-settings-scope-live-'));
 const home = path.join(root, 'home'), work = path.join(root, 'work');
 fs.mkdirSync(home); fs.mkdirSync(work);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ providers: [provider], activeProvider: provider.id, stewardProviderId: provider.id, stewardModel: provider.model,
   defaultWorkspace: work, recentWorkspaces: [work], includeWorkbenchMcp: false, autoImportClaudeCodeMcp: false, stewardEnabledV1: true,
   permissionMode: 'default', questionTimeoutMs: 240000, newThreadEngine: 'last', lastUsedEngineRoute: { engine: 'openai', providerId: provider.id, model: provider.model } }));

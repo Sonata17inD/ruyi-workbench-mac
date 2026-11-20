@@ -494,7 +494,7 @@ const STEWARD_AUTO_ASK_DATAROOT_PATTERNS = Object.freeze([
   /\bruntime\.json\b/i,
   /(?:\.ruyi-workbench|\.win-claude-workbench)[^\n]{0,160}?(?:\b(?:config|runtime)\.json\b|[\\/'"\s,](?:sessions|memory|usage|logs|steward|missions|scheduler|engine-transcripts|claude-settings-sync)\b)/i,
   /\bconfig\.json\.(?:prev|bak)/i,
-  /\b(?:RUYI_HOME|WIN_CLAUDE_WORKBENCH_HOME|WCW_TOKEN)\b/,
+  /\b(?:RUYI_HOME|WCW_TOKEN)\b/,
 ]);
 // 这两张表只扫【命令类】工具的入参。编排类工具(orchestrate_agents / spawn_agent)的入参是给子代理的任务描述文字 —— 「重构一下 fetch( ) 封装」「用 curl 测接口」
 // 在那里是散文,不是命令;子代理自己的每一步工具调用在它自己的回合里照样过闸。
@@ -1286,13 +1286,6 @@ function stewardThreadEngineRoute(tier, config) {
   if (!provider) return { tier: key, providerId, model: '', found: false, fallback: true };
   return { tier: key, providerId, model: String(slot.model || '').trim() || String(provider.model || ''), found: true, fallback: false };
 }
-// ②b 133d(用户 2026-09-21:「管家新开的线程,默认只能走如意的 OpenAI 兼容端点,走 Claude CLI 和 Kimi CLI 似乎会有问题;
-// 这两个第三方 CLI 只作为能在工作台使用的兼容存在」):那一档没配(或端点已删)时,管家线程【不】回落到 createSession 的
-// 全局缺省 —— 全局可能是 Agent CLI —— 而是按固定顺序挑一个 OpenAI 兼容端点:
-//   ① 管家自己在用的端点(stewardProviderId)> ② 全局主端点(activeProvider,是 OpenAI 端点时)>
-//   ③ 用户上次用的(lastUsedEngineRoute,是 OpenAI 路由且端点还在)> ④ 端点清单里第一个能对话的。
-// 「能对话」= 不是 claude-cli、不是 toolbox- 自动接入的、且不是只做语音的(models 全带 asr 标记)。一个都没有 → null,
-// 调用方留全局缺省并记审计(不拒绝开线程:没端点不该把事儿卡死,但要留痕)。纯函数、不构造 engineRoute(同上一函数的理由)。
 function stewardChatCapableProvider(p) {
   if (!p || typeof p !== 'object') return false;
   const id = String(p.id || '');
@@ -1494,11 +1487,13 @@ const STEWARD_NOTIFY_WINDOW_MS = 60 * 60 * 1000; // 熔断窗口:滚动一小时
 // 住在 06i 而不是 13m(确认面板那族常量的老家)是因为**依赖方向**:13k 要用它,而 13m 排在 13k
 // 之后 —— 直引就是一条新的前向边(实测当场把 68 顶成 69)。06i 对两边都是后向边。
 const STEWARD_ANSWER_BASIS = Object.freeze({ quoteMin: 8, quoteChars: 200, maxMemoryIds: 4, shownChars: 200 });
-// 路径同一性:Windows 不分大小写、分隔符两种写法都有。判据单点在这里,四处消费不许各写一遍。
+function workspacePathKey(value) {
+  if (typeof value !== 'string' || !value.startsWith('/')) return '';
+  return value.replace(/\/+$/, '') || '/';
+}
 function stewardSamePath(a, b) {
-  const norm = v => String(v == null ? '' : v).replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase();
-  const x = norm(a), y = norm(b);
-  return Boolean(x) && x === y;
+  const key = workspacePathKey(a);
+  return Boolean(key) && key === workspacePathKey(b);
 }
 // 这个路径落在哪个【已登记工作区】里?返回那个根;不在任何一个里返回空串(fail-closed)。
 // 判据只认 config.workspaces —— **recentWorkspaces 不算**(打开过 ≠ 授权过,31 号文红线 2 的原话)。
@@ -1509,12 +1504,8 @@ function stewardSamePath(a, b) {
 // 修前这里不看 read,管家能读用户明确关掉读权限的工作区里的任意文本文件。stewardManagedWorkspaces 没有 read 字段,照旧认。
 function stewardWorkspaceRootFor(rawPath, config, opts) {
   const requireRead = Boolean(opts && opts.requireRead);
-  const norm = v => String(v == null ? '' : v).replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase();
-  // 先把 `.` / `..` 段词法消掉再比前缀:修前 `<ws>/../../etc/passwd` 以 `<ws>/` 开头就算「在工作区里」,
-  // steward_file_read 读到了工作区外的文件、steward_thread_workspace 把线程目录设成了 /etc。
-  // 退到根之上(`..` 比段数多)的一律不认。符号链接/联接的真实落点由调用方按 realpath 再判一道。
   const lexical = v => {
-    const s = norm(v);
+    const s = workspacePathKey(v);
     const lead = s.startsWith('/') ? '/' : '';
     const out = [];
     for (const seg of s.split('/')) {
@@ -1522,7 +1513,7 @@ function stewardWorkspaceRootFor(rawPath, config, opts) {
       if (seg === '..') { if (!out.length) return ''; out.pop(); continue; }
       out.push(seg);
     }
-    return out.length ? lead + out.join('/') : '';
+    return lead + out.join('/');
   };
   const target = lexical(rawPath);
   if (!target) return '';
@@ -1533,10 +1524,10 @@ function stewardWorkspaceRootFor(rawPath, config, opts) {
   for (const row of rows) {
     if (requireRead && row && row.read === false) continue;
     const root = String((row && row.path) || '');
-    const key = norm(root);
+    const key = lexical(root);
     // 「在这个根里」= 恰好是它,或以它加一个分隔符开头。少了那个分隔符,`C:/work` 会把
     // `C:/work-secrets` 也算进来 —— 这是路径前缀判据的经典错法。
-    if (key && (target === key || target.startsWith(key + '/'))) return root;
+    if (key && (target === key || target.startsWith(key === '/' ? '/' : key + '/'))) return root;
   }
   return '';
 }
@@ -1548,35 +1539,42 @@ function stewardWorkspaceRootFor(rawPath, config, opts) {
 // 入参是路径数组,返回同长度的名字数组(顺序对齐)。纯字符串运算,不碰文件系统。
 function stewardWorkspaceLabels(stewardLabelPaths) {
   const list = Array.isArray(stewardLabelPaths) ? stewardLabelPaths.map(p => String(p == null ? '' : p)) : [];
-  const segs = list.map(p => p.replace(/[\\/]+/g, '/').replace(/\/+$/, '').split('/').filter(Boolean));
-  const depth = list.map(() => 1);
-  const labelOf = i => (segs[i].length ? segs[i].slice(-depth[i]).join('/') : list[i]) || list[i];
-  for (let round = 0; round < 64; round++) {
-    const groups = new Map();
-    list.forEach((_, i) => { const k = labelOf(i).toLowerCase(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); });
-    let grew = false;
-    for (const members of groups.values()) {
-      if (members.length < 2) continue;
-      for (const i of members) if (depth[i] < segs[i].length) { depth[i] += 1; grew = true; }
+  // Count common suffixes once. A label ends at the first component unique to its path.
+  const root = { children: new Map() };
+  const paths = list.map(value => value.split('/').filter(Boolean));
+  for (const parts of paths) {
+    let node = root;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const part = parts[i];
+      if (!node.children.has(part)) node.children.set(part, { count: 0, children: new Map() });
+      node = node.children.get(part);
+      node.count++;
     }
-    if (!grew) break;
   }
-  return list.map((_, i) => labelOf(i));
+  return paths.map((parts, index) => {
+    if (!parts.length) return list[index];
+    let node = root;
+    let start = parts.length;
+    while (start > 0) {
+      node = node.children.get(parts[--start]);
+      if (node.count === 1) break;
+    }
+    return parts.slice(start).join('/');
+  });
 }
 // 出身:这个目录是不是【如意自己的】—— 落在数据根里(管家会话自己的 cwd、子代理 worktree、上传与临时
 // 目录全在那儿),或者是如意为任务开的、用户还没收编(adopted)的那种。用户亲手加进常用的一律不算。
 // dataRootPath 由调用方给(06i 不引用任何外部符号)。
 // aliases:数据根的其它写法(00 dataRootAliases —— 迁移后旧位置上的联接)。改名前落盘的线程 cwd 写的是旧前缀。
 function stewardRuyiOwnedPath(rawPath, config, dataRootPath, aliases = []) {
-  const norm = v => String(v == null ? '' : v).replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase();
-  const target = norm(rawPath);
+  const target = workspacePathKey(rawPath);
   if (!target) return false;
   for (const base of [dataRootPath, ...(Array.isArray(aliases) ? aliases : [])]) {
-    const root = norm(base);
-    if (root && (target === root || target.startsWith(root + '/'))) return true;
+    const root = workspacePathKey(base);
+    if (root && (target === root || target.startsWith(root === '/' ? '/' : root + '/'))) return true;
   }
   const rows = Array.isArray(config && config.stewardManagedWorkspaces) ? config.stewardManagedWorkspaces : [];
-  return rows.some(row => row && row.adopted !== true && norm(row.path) === target);
+  return rows.some(row => row && row.adopted !== true && workspacePathKey(row.path) === target);
 }
 // 一条线程【自己在交付里列出来的】文件清单(02 的 mission.result.artifacts,封顶 50 条)。
 // 不是「它 cwd 里的任何文件」—— 那等于把线程的工作目录整个开给管家看。
@@ -1703,7 +1701,7 @@ const STEWARD_CONFIG_TIER_FORBIDDEN_NOTE = Object.freeze([
   'providers', 'searchBackend', 'modelsApiKey', 'claudeAuthMode',      // 密钥/token 值与认证(另有正则兜底)
   'defaultWorkspace', 'workspaces', 'recentWorkspaces', 'additionalDirectories', 'allowOutsideWorkspace', 'stewardWorkspaceRoot',
   'stewardManagedWorkspaces',                                            // W7:如意自己开的文件夹那张表(进已知工作区与可读根)
-  'claudePath', 'kimiPath', 'extraClaudeArgs', 'appendSystemPrompt', 'agentRoleOverrides', 'residentSkills',   // 命令行与提示词注入面
+  'claudePath', 'extraClaudeArgs', 'appendSystemPrompt', 'agentRoleOverrides', 'residentSkills',   // 命令行与提示词注入面
   'allowCommandTools', 'allowDesktopTools', 'desktopMcp', 'toolAllowRules', 'bridgedToolTiers',
   'mcpCommandMode', 'permissionBridge', 'autonomyAutoResume', 'bridgeExternalToolsToProvider', 'toolbox', 'autoImportClaudeCodeMcp',
   'capabilityProbeUrl',                                                  // 出网探针地址(SSRF 面)
@@ -1752,7 +1750,7 @@ const STEWARD_CONFIG_HELP = Object.freeze(Object.fromEntries([
   ['enableToolRequiresProbe', '启用工具前先探测依赖是否齐', 'Probe dependencies before enabling a tool'],
   ['sessionSearchIndexV1', '本地会话搜索索引开关', 'Local session search index'],
   ['runtimeFailureTelemetryV1', '本地失败遥测(只记本机,不出网)', 'Local failure telemetry (never leaves the machine)'],
-  ['agentCliType', 'CLI 引擎:claude / kimi', 'CLI engine: claude / kimi'],
+  ['agentCliType', 'CLI 引擎:claude', 'CLI engine: claude'],
   ['engineMode', '引擎模式:interactive / headless', 'Engine mode: interactive / headless'],
   ['activeProvider', '对话主端点:空或 claude-cli = CLI,否则 providers[].id', 'Main endpoint: empty or claude-cli = the CLI, else a providers[].id'],
   ['model', '对话主模型名;空 = 用默认模型', 'Main model; empty = the default model'],

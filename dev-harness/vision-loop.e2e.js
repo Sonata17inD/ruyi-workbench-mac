@@ -1,4 +1,4 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 (async () => {
 // E2E (v0.9-S7): 视觉回路 + 操控规程 — provider 引擎, 离线 via fake-openai + fake-mcp. §0.9-S7 / 总纲 §7.5 · §8 D3.
 // Ports 9011 (fake-openai) + 9012 (workbench). The fake respawns per scenario on the SAME port段 (serial).
@@ -24,7 +24,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      <attachment kind="audio-transcript" untrusted> 围栏＋尖括号中和(fake fencepayload 真载荷) +
 //      textPreview 同款中和补齐 + 原文件可下载 + 记账 aux/asr + 未配置零行为 + 上游失败不挡上传。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -82,7 +82,7 @@ function writeConfig(vision, bridgeMcp, asr, providerExtra) {
   }, null, 2));
 }
 function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore */ } } }
-function spawnFake(env) { const p = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, ...env }, windowsHide: true }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
+function spawnFake(env) { const p = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, ...env } }); p.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); return p; }
 function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: '/v1/models', timeout: 800 }, resp => { resp.resume(); res(true); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); }); }
 function clearCapture() { try { fs.rmSync(CAP_DIR, { recursive: true, force: true }); } catch { /* ignore */ } try { fs.mkdirSync(CAP_DIR, { recursive: true }); } catch { /* ignore */ } }
 function readCaptures() {
@@ -134,7 +134,7 @@ function hasEvictedPlaceholder(ph) {
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
 
   // Boot workbench ONCE; the fake respawns per scenario (config.json is re-read each turn by readConfig).
-  const bootWb = () => { wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true }); wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim()))); procs.push(wb); };
+  const bootWb = () => { wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } }); wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim()))); procs.push(wb); };
 
   try {
     // ── (a) VISION path · image attachment ────────────────────────────────────────────────────────────────

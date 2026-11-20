@@ -4,11 +4,11 @@
 
 面向 Apple Silicon 的离线优先 Agent 工作台。保留 Node Agent 核心、Web UI、Python 文档工具，以及 AppKit／WKWebView 原生宿主；系统能力通过 Mac 原生 helper 提供。
 
-支持 Anthropic Messages、OpenAI 兼容模型服务、本机 Claude Code／Kimi Code CLI、MCP 工具、文件与 Office 文档、会话恢复和多 Agent 协作。系统浏览器打开网址只是交接，不代表已连接 DOM 自动化。
+支持 Anthropic Messages、OpenAI 兼容模型服务、本机 Claude Code CLI、MCP 工具、文件与 Office 文档、会话恢复和多 Agent 协作。系统浏览器打开网址只是交接，不代表已连接 DOM 自动化。
 
 ## 开发
 
-开发使用 Node.js 24、Python 3.12 和 Xcode Command Line Tools。部署目标为 arm64、macOS 14；最低系统实机验收另行登记。
+开发使用 Node.js 24、Python 3.12 和 Xcode Command Line Tools。Full 和 Slim 的运行验收以本机 macOS 27.0.1（Apple Silicon）为准。arm64 构建的最低部署目标为 macOS 14。
 
 ```bash
 cd ruyi-workbench
@@ -48,4 +48,4 @@ node dev-harness/macos-capability-projection.e2e.js
 
 版本与测试清册见 [工程事实](facts.json)，清册数量不表示通过数量。
 
-[审查报告](docs/audits/2026-11-13-mac-only/REPORT.md) · [历史变更](CHANGELOG.md) · [第三方许可](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)
+[审查报告](docs/audits/2026-11-19-mac-slim/REPORT.md) · [历史变更](CHANGELOG.md) · [第三方许可](THIRD-PARTY-NOTICES.md) · [Apache-2.0](LICENSE)

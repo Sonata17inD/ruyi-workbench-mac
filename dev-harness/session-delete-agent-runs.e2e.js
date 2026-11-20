@@ -10,7 +10,7 @@ const { startFakeProvider, textFrames } = require('./lib/fake-openai-provider');
 const { loadServerInternals } = require('./lib/server-internals');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-delete-agent-runs-'));
-for (const key of ['RUYI_HOME', 'WIN_CLAUDE_WORKBENCH_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
+for (const key of ['RUYI_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
 const s = loadServerInternals([
   'createSession', 'saveSession', 'loadSession', 'deleteSession', 'runAgentWorkflow',
   'activeAgentRuns', 'agentRunDir', 'readConfig', 'activeOpenAiProvider', 'saveAgentRun',

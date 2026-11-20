@@ -18,7 +18,7 @@ const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.l
 
 fs.rmSync(UNIT_DATA, { recursive: true, force: true }); fs.mkdirSync(WORK, { recursive: true });
 fs.rmSync(OUTSIDE, { recursive: true, force: true }); fs.mkdirSync(OUTSIDE, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = UNIT_DATA;
+process.env.RUYI_HOME = UNIT_DATA;
 const S = require(SERVER);
 
 const P = (base) => ({ providers: [{ id: 'p', type: 'openai-compat', baseUrl: base, apiKey: 'k', model: 'm' }], activeProvider: 'p' });

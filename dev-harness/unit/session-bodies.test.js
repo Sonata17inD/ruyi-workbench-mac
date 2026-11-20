@@ -24,6 +24,8 @@ test('NDJSON decoding reports torn bytes without changing storage and distinguis
     async stat() { return { size: BigInt(bytes.length), mtimeNs: 1n, ino: 2n }; },
     async readFile() { if (++attempts === 1) throw Object.assign(new Error(), { code: 'EBUSY' }); return bytes; },
   } });
+  assert.deepEqual(await store.readSessionBodyFile('fixture'), { unreadable: true, code: 'EBUSY' });
+  assert.equal(attempts, 1);
   const body = await store.readSessionBodyFile('fixture');
   assert.equal(attempts, 2);
   assert.deepEqual(body.entries, [{ text: '你好' }]);

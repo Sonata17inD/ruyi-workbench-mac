@@ -45,13 +45,13 @@ function req(port, method, route, payload, headers = {}) {
   try {
     const port = await getFreePort();
     fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
-      credentialEncryptionV1: process.platform === 'win32', configSchema: 8, permissionMode: 'bypass', defaultWorkspace: HOME,
+      credentialEncryptionV1: true, configSchema: 8, permissionMode: 'bypass', defaultWorkspace: HOME,
       providers: [{ id: 'p', label: 'P', type: 'openai-compat', baseUrl: 'http://127.0.0.1:9/v1', apiKey: SECRET, model: 'm', models: [{ id: 'm', label: 'm' }] }],
       activeProvider: 'p',
     }, null, 2));
     const env = { ...process.env, HOME, USERPROFILE: HOME, RUYI_HOME: HOME };
-    delete env.WIN_CLAUDE_WORKBENCH_HOME;
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env, windowsHide: true });
+    const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+    wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(port)], { cwd: WB, env });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
     let token = '';
     for (let i = 0; i < 80 && !token; i++) {
@@ -70,9 +70,9 @@ function req(port, method, route, payload, headers = {}) {
       ok(r.status === 404 && !r.raw.includes(SECRET), `P2 ${route} ../config → 404(${r.status} ${r.raw.slice(0, 100).replace(/\s+/g, ' ')})`);
     }
     const after = fs.readFileSync(path.join(HOME, 'config.json'), 'utf8');
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     ok(configReader.recover(JSON.parse(after)).providers[0].apiKey === SECRET && !fs.existsSync(path.join(HOME, 'config.json.corrupt')), 'P2 config.json 没被当成会话改写或隔离,持久凭据准确保留');
-    if (process.platform === 'win32') ok(JSON.parse(after).credentialRefsV1?.version === 1 && !after.includes(SECRET), 'P2 Windows 配置使用加密引用,没有凭据明文');
+    ok(JSON.parse(after).credentialRefsV1?.version === 1 && !after.includes(SECRET), 'P2 Mac 配置使用加密引用,没有凭据明文');
     ok(JSON.parse(before).activeProvider === JSON.parse(after).activeProvider, 'P2 配置内容前后一致');
 
     const sessDir = path.join(HOME, 'sessions');

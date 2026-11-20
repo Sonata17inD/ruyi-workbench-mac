@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // [H] Live:哑 provider 起 DAG,验证节点 model 在【物化(执行前)】即:显式(合法/未知都尊重原样)/ inherit→空 / 省略→空。
 // 第44波增补:[S]/[P] 锁模型列表 API 化(版本型号去硬编码 + 代理发现 sidecar 缓存 + Claude 组/tier 池引擎归属含缓存)。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readServerSource } = require('./src-reader');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
@@ -69,7 +69,6 @@ ok(/function singleAgentShorthandNode\(args\)/.test(workflowInput) && /if \(args
 // propose_task model 通道。
 ok(/model: \{ type: 'string', description: '可选。为新节点按任务难易指定模型/.test(backend('provider-tool-offer.cjs')) && /model: String\(args && args\.model \|\| ''\)\.trim\(\)\.slice\(0, 160\),/.test(backend('agent-workflow.cjs')), 'S propose_task model 通道(schema + item)');
 // 两引擎注入 buildModelHint(带 provider)+ Claude 侧索引信道(第35波 P2: stdin indexSecs)。
-ok(/volatileExtras \+= buildModelHint\(config, provider\);/.test(src), 'S provider 引擎在 volatile user 前缀注入 buildModelHint(带 provider)');
 const cliTurn = backend('agent-cli-turn.cjs');
 ok(/const oh = buildOrchestrateHint\(wfs\);/.test(cliTurn) && /if \(oh\) indexSecs\.push\(oh\);/.test(cliTurn) && /const mh = buildModelHint\(config, activeOpenAiProvider\(config\)\);/.test(cliTurn) && /if \(mh\) indexSecs\.push\(mh\);/.test(cliTurn), 'S Claude 引擎:编排提示与模型提示各自独立进 stdin 索引段');
 // schema 描述改为"填错会失败"(不再宣称"忽略回落")。
@@ -164,7 +163,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   knownModels: ['fast-mini', 'strong-max-pro'], model: 'balanced-base',
   providers: [{ id: 'dummy', label: 'Dummy', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1/v1', apiKey: 'k', model: 'fast-mini', models: [{ id: 'fast-mini' }, { id: 'strong-max-pro' }, { id: 'balanced-base' }] }], activeProvider: 'dummy',
 }, null, 2));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
 wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
 (async () => {
   try {

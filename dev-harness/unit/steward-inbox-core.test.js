@@ -13,7 +13,7 @@
 //   ⑥ 去重键:sessionId+kind+runId+seq;needs_you 的 seq 位是 interventionId;
 //      stewardInboxRowDedupeKeys 能从合并行还原全部源键(重启后不重复入箱的地基)。
 //
-// 与既有 dev-harness/unit 件同款约定:require server.js 前先把 WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时
+// 与既有 dev-harness/unit 件同款约定:require server.js 前先把 RUYI_HOME 覆盖到临时
 // 目录(该变量是系统级的,曾污染真实数据根);逐条打印 PASS/FAIL;process.exit(fail?1:0)。
 'use strict';
 const fs = require('fs');
@@ -21,7 +21,7 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-inbox-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const srv = require(path.join(app, 'server.js'));

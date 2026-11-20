@@ -8,31 +8,8 @@ function createSessionSteering({
   paths, activeChildren, safeSessionId, nowIso, logEvent, saveSession, buildUserEnvelope, writeToChild,
   VisualPipeline, sanitizeFsSegmentName, hasPendingQuestionForSession, STEER_QUEUE_MAX,
 }) {
-  // ── 插话核心(116-2b 零行为抽出)────────────────────────────────────────────────────────────
-  // 原本整段内联在 POST /api/steer 的路由体里。116-2b 的 steward_thread_note 要走的是【同一条】
-  // 插话通道(而不是第二条注入路径),故把入参归一 → 引擎分流 → 注入/入队 → 持久呈现这一整段搬成
-  // 可调用函数,一个字未改:判定顺序、措辞、STEER_QUEUE_MAX 计数口径、[用户插话] 前缀中和、
-  // hasPendingQuestionForSession 拒绝、logEvent 的 kind/source、返回的 body 形状全部原样。
-  //
-  // 返回值是一个"怎么应答"的描述,而不是 HTTP 响应:
-  //   { kind: 'failure', code, detail, message, status }  → 路由 send(res, apiFailure(...))
-  //   { kind: 'json', body }                              → 路由 send(res, json(body))
-  // 这样路由的两种应答形态(apiFailure 与裸 json)都保住,调用方(13g)则只看 body.ok。
-  // 124 真机 bug（用户 2026-09-15）：插话的每一种拒绝理由都要有【稳定码】。
-  //
-  // 修前它们全是遗留字符串（{ok:false, error:'当前没有进行中的回合'}）。00-boot 的
-  // normalizeApiErrorPayload 对不在 LEGACY_API_ERROR_CODES 表里的字符串一律派兜底码
-  // api.request_failed，真话只剩在 message 里；而前端组合根的 apiErrText 是【码优先】的，
-  // 于是屏幕上只剩一句「请求失败。」—— 服务端明明说的是「当前 Kimi 回合正在收尾，请作为下一条
-  // 消息发送」，那句话把该怎么做都告诉用户了，却被抹掉。
-  //
-  // 有码之后两件事才立得住：① 前端能按码兜底（回合已经结束 → 当新回合发出去），而不是去匹配
-  // 中文句子（38 号文 §7 ④ 已经裁决过不许搞关键词表）；② 文案不再被归一吞掉。
-  // 形状用 {code, params, message}：与 apiFailure 的错误对象同形，且因为 error 不再是 string，
-  // normalizeApiErrorPayload 原样放行（既有消费者读 error.message，逐字不变）。
   const STEER_REFUSAL = Object.freeze({
     noLiveTurn: { code: 'steer.no_live_turn', message: '当前没有进行中的回合' },
-    kimiSettling: { code: 'steer.kimi_settling', message: '当前 Kimi 回合正在收尾，请作为下一条消息发送' },
     queueFull: { code: 'steer.queue_full', message: '插话队列已满' },
     turnLimit: { code: 'steer.queue_full', message: '本回合插话已达上限(3 条)' },
     answerPending: { code: 'steer.answer_pending', message: '请先回答当前提问,再插话(避免插话被误收为答案)' },
@@ -82,17 +59,6 @@ function createSessionSteering({
     if (!['queue', 'interrupt'].includes(mode)) return { kind: 'failure', code: 'request.invalid', detail: {}, message: 'mode must be queue or interrupt', status: 400 };
     const reg = activeChildren.get(sessionId);
     if (!reg) return steerRefusal('noLiveTurn');
-    if (reg.kind === 'kimi-acp') {
-      // Kimi ACP 0.37.x has no native mid-prompt steering method. Keep the ACP process/session alive and
-      // enqueue a follow-up session/prompt immediately after the active prompt settles. This preserves native
-      // session continuity and is explicitly reported as queued (and therefore remains retractable).
-      if (reg.acceptingSteer === false) return steerRefusal('kimiSettling');
-      if (!Array.isArray(reg.steerQueue)) reg.steerQueue = [];
-      if (reg.steerQueue.length >= STEER_QUEUE_MAX) return steerRefusal('queueFull');
-      reg.steerQueue.push(attachments.length ? { text, attachments } : text);
-      logEvent({ kind: 'intervention', source: 'steer', protocol: 'kimi-acp-followup', sessionId });
-      return { kind: 'json', body: { ok: true, queued: reg.steerQueue.length, immediate: false, protocol: 'kimi-acp-followup' } };
-    }
     if (reg.kind === 'claude') {
       // 47a Phase A:Claude interactive 引擎 —— stdin 即时注入,无迭代边界队列。
       if (!reg.interactive) {

@@ -6,7 +6,6 @@ const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-routing-unit-'));
 process.env.RUYI_HOME = root;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 const srv = require('../../ruyi-workbench/app/server.js');
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* cleanup */ } });
 

@@ -2,7 +2,7 @@
 // Unit(走查 W1·F10):script_run 的脚本明文不再在 <data>/generated/scripts 里留着(模型嵌进脚本的密钥)。
 //   [S1] node 脚本:运行期间文件在(解释器读得到);结果返回后文件已删;generated/scripts 里没有残留。
 //   [S2] 脚本超时被杀 / 脚本报错退出:同样删。
-//   [S3] python 脚本(本机有 python 才跑)与 powershell 分支(非 Windows 回 windows_only 也要删)。
+//   [S3] python 脚本(本机有 python 才跑)。
 //   [S4] 按龄清扫 sweepStaleScriptFiles:超过 24h 的孤儿删,新的、子目录不动。
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -15,7 +15,6 @@ const { fixtureChildEnv } = require('../lib/fixture-home');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-script-cleanup-'));
 Object.assign(process.env, fixtureChildEnv());
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
@@ -51,7 +50,7 @@ test('[S2] 超时被杀与脚本报错退出:同样删', async () => {
   assert.deepEqual(leftovers(), [], '超时 / 报错之后 generated/scripts 里没有残留');
 });
 
-const havePython = (() => { for (const c of process.platform === 'win32' ? ['python', 'py'] : ['python3', 'python']) { try { if (cp.spawnSync(c, ['--version']).status === 0) return true; } catch { /* next */ } } return false; })();
+const havePython = (() => { for (const c of ['python3', 'python']) { try { if (cp.spawnSync(c, ['--version']).status === 0) return true; } catch { /* next */ } } return false; })();
 test('[S3] python 脚本删掉', { skip: havePython ? false : '本机没有 python' }, async () => {
   const r = await toolCall('script_run', { language: 'python', code: `import os\nprint(os.path.exists(__file__))  # ${SECRET}\n` }, ctx);
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
@@ -59,15 +58,9 @@ test('[S3] python 脚本删掉', { skip: havePython ? false : '本机没有 pyth
   assert.deepEqual(leftovers(), []);
 });
 
-test('[S3] powershell 分支:没有 PowerShell 的平台回 windows_only 也不留脚本', { skip: process.platform === 'win32' ? 'Windows 上走真 PowerShell' : false }, async () => {
-  const r = await toolCall('script_run', { code: `Write-Output '${SECRET}'` }, ctx);
-  assert.equal(r.ok, false);
-  assert.deepEqual(leftovers(), []);
-});
-
 test('[S4] sweepStaleScriptFiles:按龄清孤儿,新文件与子目录不动', async () => {
   fs.mkdirSync(path.join(scriptsDir(), 'keep-dir'), { recursive: true });
-  const stale = path.join(scriptsDir(), 'script_old.ps1');
+  const stale = path.join(scriptsDir(), 'script_old.py');
   const fresh = path.join(scriptsDir(), 'script_new.js');
   const nested = path.join(scriptsDir(), 'keep-dir', 'old-in-subdir.txt');
   for (const f of [stale, fresh, nested]) fs.writeFileSync(f, SECRET);

@@ -78,19 +78,6 @@ function createWorkspaceFilePolicy({ locations, policy, paths, config }) {
     const seen = new Set();
     return roots.filter(r => { const k = samePathKey(r); if (seen.has(k)) return false; seen.add(k); return true; });
   }
-  // Resolve the existing prefix of a path and then re-attach any missing tail. A plain realpath() fallback
-  // to the lexical input is not enough for create destinations: on Windows the parent may be addressed via
-  // an 8.3 short name (RUNNER~1) or a junction while the allowed root resolves to its long/real name. Comparing
-  // those two spellings rejects a legitimate new file. Resolving the nearest existing ancestor preserves the
-  // symlink/junction escape protection while also canonicalizing paths whose leaf does not exist yet.
-  // 安全审计 #7(悬空链接越界写):修前 realpath 报 ENOENT 就一律当「这一段还不存在」往上走,于是工作区里一个
-  // 【悬空】符号链接 / junction(ws\dangle.txt -> D:\outside\new.txt,目标尚不存在)被词法拼回 ws\dangle.txt,包含判定
-  // 放行,而 writeFile 跟着链接把文件建在了工作区外。现在每走到一个 realpath 失败的段先 lstat 它:是链接就读出目标、
-  // 把剩余尾巴接到目标上再整条重算(链接套链接逐层解开,上限 40 层);只有真正不存在的段才照旧词法补回。父目录链
-  // (mkdir -p 要建的中间段)走同一条路:中间某段是悬空链接时,同样解到它的真实落点再判。Node 在 Windows 上把
-  // junction 也报成 isSymbolicLink,readlink 能读出目标。链接读不出目标 / 层数超限 → unresolvable:true,两道护栏
-  // (guardFileToolPath / guardWorkspacePath)据此 fail-closed 拒绝;realpathForContainment 保持「返回一个路径」的
-  // 旧形状供其它调用方(根目录归一、Kimi 计划文件、exec 闸)。
   const REALPATH_LINK_DEPTH_MAX = 40;
   function stripWin32VerbatimPrefix(p) {
     // readlink 读 junction 在 Windows 上可能带 \\?\ 前缀(\\?\C:\x);去掉它,与 realpath 的输出同一种拼法再比包含。
@@ -315,10 +302,9 @@ function createWorkspaceFilePolicy({ locations, policy, paths, config }) {
         logEvent({ kind: 'workspace_boundary', tool, op: 'write', decision: 'deny-autoexec', pathLen: abs.length });
         return { ok: false, code: 'autoexec-denied', error: '该路径属于自动执行文件(如 git hooks/CI 配置/agent CLI 与 MCP 启动配置/登录启动项、shell 与 SSH 配置),已禁止通过文件工具写入;如确需编辑,请直接在终端操作' };
       }
-      // 安全走查 S4(续):挂在用户真实家目录下的 shell rc / .gitconfig / ~/.claude/CLAUDE.md / ~/.codex / ~/.kimi 等(见 userHomePersistenceHit)。
       if (userHomePersistenceHit(abs) || userHomePersistenceHit(real)) {
         logEvent({ kind: 'workspace_boundary', tool, op: 'write', decision: 'deny-user-persistence', pathLen: abs.length });
-        return { ok: false, code: 'autoexec-denied', error: '该路径是用户级登录 / 全局配置(shell 启动脚本、.gitconfig、Claude / Codex / Kimi 的全局指令与配置等),改动会在之后每次开终端或开 agent CLI 时生效,已禁止通过文件工具写入;如确需编辑,请直接在终端操作' };
+        return { ok: false, code: 'autoexec-denied', error: '该路径是用户级登录 / 全局配置(shell 启动脚本、.gitconfig、Claude / Codex 的全局指令与配置等),改动会在之后每次开终端或开 agent CLI 时生效,已禁止通过文件工具写入;如确需编辑,请直接在终端操作' };
       }
       if (isMacManagedPath(abs) || isMacManagedPath(real)) {
         return { ok: false, code: 'managed-location-denied', error: '该路径属于应用或包管理目录，文件工具不可写入。维护此位置需要明确授权的执行操作。' };

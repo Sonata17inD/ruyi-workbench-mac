@@ -6,7 +6,6 @@ const { startFakeProvider, textFrames, toolCallFrames } = require('./lib/fake-op
 const { startFakeAnthropic, messageEvents } = require('./lib/fake-anthropic-provider');
 const run = createRunner('STEWARD NEW CONVERSATION');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-new-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-new-work-'));
 fs.writeFileSync(path.join(work, 'external.txt'), 'external content');

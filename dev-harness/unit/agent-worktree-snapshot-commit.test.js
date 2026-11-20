@@ -14,7 +14,6 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-worktree-commit-unit-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
@@ -22,7 +21,7 @@ after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { 
 
 const repo = path.join(root, 'repo');
 fs.mkdirSync(repo, { recursive: true });
-const git = (args, cwd = repo) => cp.execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8', windowsHide: true }).trim();
+const git = (args, cwd = repo) => cp.execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
 git(['init', '-b', 'main']); git(['config', 'user.name', 'Ruyi Test']); git(['config', 'user.email', 'test@ruyi.local']);
 fs.writeFileSync(path.join(repo, 'value.txt'), 'main\n');
 git(['add', '-A']); git(['commit', '-m', 'initial']);

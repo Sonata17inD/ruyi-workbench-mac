@@ -133,7 +133,7 @@ const { ok } = t;
     const switched = await fx.waitForEval(`(() => {
       const open = Boolean(document.querySelector('.popover .wp-pop'));
       const cur = (window.state.currentSession && window.state.currentSession.cwd) || window.state.config.defaultWorkspace || '';
-      return !open && cur === ${JSON.stringify(pasted)} ? { cur } : null;
+      return !open && cur === ${JSON.stringify(fs.realpathSync(pasted))} ? { cur } : null;
     })()`, 300);
     const switchDiagnostic = switched || await fx.evaluate(`({ open: Boolean(document.querySelector('.popover .wp-pop')), active: document.activeElement && document.activeElement.className, cwd: window.state.currentSession && window.state.currentSession.cwd, defaultWorkspace: window.state.config.defaultWorkspace, pickBodies: window.__pickBodies })`);
     ok(Boolean(switched), `P7 合法路径回车 → 弹层收起、工作文件夹换成它（实测 ${JSON.stringify(switchDiagnostic)}）`);

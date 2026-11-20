@@ -34,7 +34,7 @@ process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 
 //  (O8)W7 清单每行带最近在那儿做过的线程与默认标,尾巴给出选目录顺序。
 //
 // 端口全部 getFreePort() 动态取(run-all 端口审计口径)。判定行:`STEWARD TOOLS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -127,7 +127,6 @@ function writeConfig(patch) {
 fs.mkdirSync(HOME, { recursive: true });
 writeConfig({ stewardEnabledV1: false });
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 
@@ -295,11 +294,6 @@ try {
       await sleep(50);
     }
     const busy = await call('steward_thread_continue', { sessionId: threadId, message: '再来一句' }, stewardCtx());
-    // 【117l D2 重钉】旧断言钉的是 116f 那一版的契约:「目标线程有在途回合 -> steward.busy」。
-    // 那一版只有一道 activeChildren.has 判据,它把三种完全不同的情形混成了一个「忙」:线程在跑、
-    // 线程在等用户回答、线程在等用户批准。用户第四轮走查的第 1、6 条正是它的后果 —— 线程挂在
-    // request_user_input 上等答案时,用户那句「走 A」被原地退回,界面还说成「我正忙着上一件」。
-    // 新契约(27 号文 §11.9 D2):按目标状态选四条通道,在跑 = 插话(steer),不是拒绝。
     ok(busy && busy.ok === true && busy.channel === 'steer',
       `E2 同一目标线程已有在途回合 -> 走插话通道(不再是 steward.busy;got ok=${busy && busy.ok} channel=${busy && busy.channel})`);
     // companion(钉住新契约的另一半):插话【不】开新回合、【不】顶掉在途那个。
@@ -553,16 +547,7 @@ try {
     const cfg = srv.normalizeConfig(JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'))).config;
     const plainTools = srv.buildOpenAiTools(cfg, null, {}).map(t => t.function.name);
     ok(!plainTools.some(n => n.startsWith('steward_')), 'K1 面 1 buildOpenAiTools(普通会话)零 steward_*');
-    // 116-2b 重钉:18 → 19(新增 steward_thread_note);116g 再钉:19 → 20(新增 steward_missions);
-    // 116h 再钉:20 → 21(新增 steward_thread_prioritize,27 号文 §3.1 116h 行 / §8.10「提升优先级」)。
-    // 116-2e 再钉:21 → 26(新增 config_get/config_set/playbook_draft/skill_toggle/quick_ask)。
-    // 117m-A4 再钉:26 → 27(新增 steward_thread_stop,§11.10 用户第六轮走查第 ③ 条 —— 管家原先只有
-    // 班组级的 run_action,普通线程没有 runId 必然 invalid_request)。重钉的同时把这条从【只数个数】
-    // 换成【逐名对账】:个数对但少一个多一个的错法从此也会红。
     const stewardOffered = srv.buildOpenAiTools(cfg, null, { stewardSession: true }).map(t => t.function.name).filter(n => n.startsWith('steward_')).sort();
-    // 123-M2 重钉 27 -> 33(六件定时任务 steward_schedule_*;理由同上:本波真的多了六个工具,
-    // 这条断言的语义仍是等号)。
-    // 前序 73 号交付片已增加 steward_thread_artifact_read；HEAD 基线实测也是 43 个。
     ok(stewardOffered.length === 43, `K1b 面 1 管家会话拿到全部 43 个(含交付原件读取)(got ${stewardOffered.length})`);
     const stewardRegistered = Object.keys(srv.TOOL_HANDLERS).filter(n => n.startsWith('steward_')).sort();
     ok(JSON.stringify(stewardOffered) === JSON.stringify(stewardRegistered),
@@ -578,7 +563,7 @@ try {
     const mcpToolList = text => text.split(/\r?\n/).map(line => { try { return JSON.parse(line); } catch { return null; } })
       .find(row => row && row.id === 2 && Array.isArray(row.result && row.result.tools))?.result.tools;
     const mcpOut = await new Promise(resolve => {
-      const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { cwd: path.join(WB, 'app'), env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+      const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { cwd: path.join(WB, 'app'), env: { ...process.env, RUYI_HOME: HOME } });
       let out = '';
       // 128c:修前判「输出里出现 "tools"」—— initialize 的回包 capabilities 里就有 "tools",于是 K3 在 tools/list
       // 发出去之前就算过了、子进程被杀,800 ms 那一发再往死进程的 stdin 里写。killOwnTree 同步取进程表会占住
@@ -602,7 +587,7 @@ try {
   }
   {
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-      cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+      cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
     });
     wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
     try {
@@ -668,8 +653,6 @@ try {
     ok(omittedCwd !== effectiveDefault, 'N2b 省略 cwd 不再落在 defaultWorkspace 上(这一刀改掉的正是它)');
     ok(fs.existsSync(omittedCwd) && fs.statSync(omittedCwd).isDirectory(), 'N2c 派生出来的目录真的建出来了');
     {
-      // W7 重钉(用户 2026-09-24「如意自己开的工作区,默认不显示在常用工作区中」):派生目录登记进
-      // 如意自己那张表 stewardManagedWorkspaces,【不再】追加进 workspaces[](那张表就是常用工作区)。
       const cfg = readCfg();
       const managed = cfg.stewardManagedWorkspaces || [];
       const last = managed[managed.length - 1];
@@ -695,16 +678,9 @@ try {
     ok(slashy && slashy.ok === true && headOf(slashy.sessionId).cwd === WS_BETA,
       `N4 表内路径换正斜杠/尾斜杠写法 -> 仍命中,cwd 归一到 ${WS_BETA}(got ${slashy && slashy.ok ? headOf(slashy.sessionId).cwd : JSON.stringify(slashy)})`);
 
-    // N5 —— 换【大小写】。win32 上文件系统不区分大小写、01-config 的去重键也是 toLowerCase,
-    // 所以这里折大小写比较;非 win32 上文件系统真区分,同一个字符串折成两个目标才是对的。
     const cased = await newThread(WS_ALPHA.toLowerCase(), 'case');
-    if (process.platform === 'win32') {
-      ok(cased && cased.ok === true && headOf(cased.sessionId).cwd === WS_ALPHA,
-        `N5 (win32)表内路径换小写 -> 仍命中,cwd 回的是表里那一行的原样大小写(got ${cased && cased.ok ? headOf(cased.sessionId).cwd : JSON.stringify(cased)})`);
-    } else {
-      ok(cased && cased.ok === false && cased.error === 'invalid_request',
-        'N5 (非 win32)大小写不同视为两个目标 -> invalid_request');
-    }
+    ok(cased && cased.ok === false && cased.error === 'invalid_request',
+      'N5 (Mac)大小写不同视为两个目标 -> invalid_request');
 
     // N6 —— 表外路径:拒,且错误文案里要有表内候选的【末段名】(模型据此改对,又不泄露全路径)。
     const outside = await newThread(path.join(HOME, 'ws-not-registered'), 'outside');
@@ -738,7 +714,7 @@ try {
     ok(byName && byName.ok === true && headOf(byName.sessionId).cwd === WS_ALPHA,
       `N9 清单里的名字(ws-alpha)-> 换成那个工作区的绝对路径(got ${byName && byName.ok ? headOf(byName.sessionId).cwd : JSON.stringify(byName)})`);
     const byNameCase = await newThread('WS-Beta', 'rel-case');
-    ok(byNameCase && byNameCase.ok === true && headOf(byNameCase.sessionId).cwd === WS_BETA, 'N9b 名字不分大小写(清单造名字时就按不分大小写去撞车)');
+    ok(byNameCase && !byNameCase.ok && byNameCase.error === 'invalid_request', 'N9b 大小写不同的标签不指向已登记工作区');
     const relative = await newThread('ws-alpha/sub', 'rel2');
     ok(relative && relative.ok === false && relative.error === 'invalid_request', 'N9c 不是任何一个名字的相对路径 -> invalid_request');
 
@@ -809,8 +785,6 @@ try {
       ok(cfg.defaultWorkspace === cfg.workspaces[0].path,
         `N14b defaultWorkspace 仍然等于 workspaces[0].path(${cfg.defaultWorkspace} / ${cfg.workspaces[0].path})`);
       ok(cfg.defaultWorkspace === HOME, 'N14c 派生了这么多次,用户的默认工作区一个字都没变');
-      // W7 重钉:派生了这么多次,常用工作区里【一行】如意的目录都没有(修前每次派生追加一行,这正是
-      // 用户在「常用工作区」里看见一串陌生文件夹的来源);派生目录全在如意那张表里、全在 Ruyi 根下。
       ok(cfg.workspaces.length === 3 && !cfg.workspaces.some(w => String(w.path).startsWith(RUYI_ROOT)),
         `N14d 常用工作区里零如意目录(got ${JSON.stringify(cfg.workspaces.map(w => w.path))})`);
       ok((cfg.stewardManagedWorkspaces || []).length >= 5 && cfg.stewardManagedWorkspaces.every(w => String(w.path).startsWith(RUYI_ROOT + path.sep)),

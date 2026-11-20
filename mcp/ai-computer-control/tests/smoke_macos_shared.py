@@ -79,11 +79,23 @@ class MacShared(unittest.TestCase):
         self.assertTrue(result["timed_out"])
         self.assertFalse(result["ok"])
 
-    def test_workbook_bad_path_is_bounded(self):
-        from ai_computer_control.tools.office_read import _load_workbook_bounded
-        workbook, error = _load_workbook_bounded(str(self.home / "absent.xlsx"), timeout=5)
-        self.assertIsNone(workbook)
-        self.assertIsNotNone(error)
+    def test_workbook_timeout_reaps_parser_and_next_read_recovers(self):
+        from ai_computer_control.tools import office_read
+        from openpyxl import Workbook
+
+        fixture = self.home / "small.xlsx"
+        book = Workbook()
+        book.active.append(["表头"])
+        book.save(fixture)
+        self.assertEqual(office_read.excel_read(str(fixture))["headers"], ["表头"])
+        pid = office_read._worker.pid
+        fifo = self.home / "blocked.xlsx"
+        os.mkfifo(fifo)
+        result = office_read._read_workbook({"path": str(fifo)}, timeout=0.05)
+        self.assertIn("超时", result["error"])
+        with self.assertRaises(ProcessLookupError):
+            os.kill(pid, 0)
+        self.assertEqual(office_read.excel_read(str(fixture))["headers"], ["表头"])
 
     def test_rename_obeys_volume_identity_and_preserves_other_entries(self):
         from ai_computer_control.tools.filesystem import move_file

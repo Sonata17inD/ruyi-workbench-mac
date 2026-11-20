@@ -4,7 +4,7 @@ const { PLAYBOOK_REQUIRES, evalPlaybookAvailability } = require('./playbook-poli
 const fsp = require('node:fs/promises');
 const { parseFrontmatter, docMeta, docBody, commandPrompt } = require('./document-metadata.cjs');
 const SKILL_IMPORT_RECORD = '.ruyi-import.json';
-const SKILL_IMPORT_SOURCES = Object.freeze(['claude-code', 'codex', 'kimi', 'claude-plugin']);
+const SKILL_IMPORT_SOURCES = Object.freeze(['claude-code', 'codex', 'claude-plugin']);
 function effectiveSkillSelection(session, config) {
   const resident = Array.isArray(config && config.residentSkills) ? config.residentSkills : [];
   const sessionOnly = Array.isArray(session && session.skills) ? session.skills : [];
@@ -140,13 +140,9 @@ async function loadSkillEntries(cwd, caps, tk = toolkitDirectory(), cliHomes = a
       });
     }
   }
-  // W2 迁移中心:其它 Agent CLI 的技能同样只读直连(活读,不复制),优先级从低到高:
-  //   builtin < claude-plugin(Claude Code 已安装插件自带的技能)< kimi(~/.kimi-code/skills)< codex(~/.codex/skills)
-  //   < claude-code(~/.claude/skills)< user < project。同名时高优先级那份生效,来源标签随条目走(技能库里看得见)。
   for (const dir of await claudePluginSkillDirs()) {
     for (const [id, e] of await readSkillDir(dir.skillsDir, 'claude-plugin', caps)) skillMap.set(id, { ...e, plugin: dir.plugin });
   }
-  for (const [id, e] of await readSkillDir(path.join(cliHomes.kimi, 'skills'), 'kimi', caps)) skillMap.set(id, e);
   for (const [id, e] of await readSkillDir(path.join(cliHomes.codex, 'skills'), 'codex', caps)) skillMap.set(id, e);
   // 本机 Claude Code 个人技能(~/.claude/skills/<id>/SKILL.md)作为第 4 源映射进来(只读直连,不复制)。
   // 优先级:builtin < claude-code < user < project -- 放在 user 之前,让 Ruyi 自己的 user 技能可覆盖同名 Claude Code 技能。

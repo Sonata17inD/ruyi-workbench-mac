@@ -1,7 +1,7 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -43,8 +43,8 @@ async function up(port, path0='/health') { // 117q:预算 50×120ms=6s 小于本
   const reviewFail=JSON.stringify({verdict:'fail',confidence:.9,summary:'found real bugs',findings:[{title:'bug',file:'a.js',line:1,confidence:.9}]});
   const script={parent:[{name:'orchestrate_agents',args:{nodes}}],sub:[],subStepsByTask:{C1_TOOL_SOURCE:[{name:'file_read',args:{path:SOURCE_FILE}}]},parentText:'workflow done',subText:good,evidenceRefByTask:{C1_VALID_REF:'catalog',C1_FORGED_REF:'forged'},memoryRelationByTask:{R4_MEMORY_RELATIONS:{from:'r4-live-a',to:'r4-live-b'}},subTextByTask:{BAD_BLOCK:'not json',BAD_CONTINUE:'not json',BAD_RETRY:'not json',BAD_SETTLED:'not json',PLAIN_NON_VOTE:'{"answer":"correct but not a vote"}',B8_REVIEW_FAIL:reviewFail,M3_UNCOVERED:JSON.stringify({verdict:'pass',confidence:.9,summary:'checked most',findings:[],coverage:{total:3,handled:2,unhandled:['b.js','c.js']}}),M3_COVERED:JSON.stringify({verdict:'pass',confidence:.9,summary:'all checked',findings:[],coverage:{total:2,handled:2,unhandled:[]}}),R1_UNVERIFIED:JSON.stringify({verdict:'pass',confidence:.9,summary:'claims made',findings:[{text:'断言A',evidenceRefs:['evt_fake_99']}]}),M2_HANDLED:JSON.stringify({handledItems:['a','b']}),M2_PROPAGATE:JSON.stringify({items:[{id:'root',group:'g',assignment:'blue'},{id:'peer',group:'g'}],propagationEdges:[{from:'peer',to:'leaf'}]}),M2_CYCLE:JSON.stringify({assignments:{a:'x'},propagationEdges:[{from:'a',to:'b'},{from:'b',to:'a'}]})}};
   fs.writeFileSync(path.join(HOME,'config.json'),JSON.stringify({configSchema:7,permissionMode:'bypass',defaultWorkspace:HOME,subagentMaxPerTurn:12,subagentMaxConcurrent:6,providers:[{id:'fake',label:'Fake',type:'openai-compat',baseUrl:`http://127.0.0.1:${FP}`,apiKey:'k',model:'fake-model'}],activeProvider:'fake'}));
-  const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js')],{env:{...process.env,FAKE_OPENAI_PORT:String(FP),FAKE_SUBAGENT_SCRIPT:JSON.stringify(script)},windowsHide:true});
-  const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WP)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME},windowsHide:true});
+  const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js')],{env:{...process.env,FAKE_OPENAI_PORT:String(FP),FAKE_SUBAGENT_SCRIPT:JSON.stringify(script)}});
+  const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WP)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME}});
   try{
     ok(await up(FP,'/v1/models') && await up(WP), 'fake provider and workbench start');
     const html=await new Promise(resolve=>http.get({host:'127.0.0.1',port:WP,path:'/'},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>resolve(b));}));

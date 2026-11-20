@@ -13,7 +13,7 @@ let fx, sid, fileA, fileB, filePdf;
       provider: ctx => { ctx.text('第二部分已修改,需要重新核验。'); ctx.stop(); },
       prepare: async fixture => {
         await fixture.request('POST', '/api/steward/visit', {});
-        process.env.RUYI_HOME = fixture.home; process.env.WIN_CLAUDE_WORKBENCH_HOME = fixture.home;
+        process.env.RUYI_HOME = fixture.home;
         const s = loadServerInternals(['readConfig', 'createSession', 'saveSession', 'loadSession', 'normalizeMission', 'recordMissionCheckResult', 'stewardCaptureDelivery', 'ensureStewardSession']);
         const cfg = await s.readConfig();
         const session = await s.createSession({ title: '季度交付报告', cwd: fixture.work }); sid = session.id;

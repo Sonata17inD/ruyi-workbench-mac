@@ -1,4 +1,4 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E for v1.2-B —— checkpoint 全覆盖审计(机制性防漏).
 //
 // 背景/动机:ACC v1.6 四个 Office 写族工具上线时漏进 BRIDGED_WRITE_PATH_ARGS(server.js 快照表),
@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      拉法)拿全量 93+ 工具名 → auditBridgedWriteCoverage → 断言 uncovered 为空。ACC 拉不起来 / stdio SDK
 //      只回 <80 工具(已知构建坑)/ 无 python 环境 → SKIP(不 fail),回落 (A) 的静态清单兜底。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -174,8 +174,8 @@ const ACC_TOOL_NAMES_FROZEN = [
 
     // provider 调 fake__move_file(source=orig.txt → destination=moved.txt)。
     const dseq = JSON.stringify([{ name: 'fake__move_file', args: { source: src, destination: dst } }]);
-    const dfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(D_FAKE_PORT), FAKE_TOOL_SEQUENCE: dseq }, windowsHide: true });
-    const dwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(D_WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: D_HOME }, windowsHide: true });
+    const dfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(D_FAKE_PORT), FAKE_TOOL_SEQUENCE: dseq } });
+    const dwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(D_WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: D_HOME } });
     dwb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[dwb!] ' + l.trim())));
     procs.push(dfake, dwb);
     try {
@@ -228,7 +228,7 @@ const ACC_TOOL_NAMES_FROZEN = [
   const det = detectDesktopMcp();
   const launch = (det && det.command)
     ? { id: 'ai-computer-control', command: det.command, args: det.args, cwd: det.cwd, env: det.env }
-    : { id: 'ai-computer-control', command: process.platform === 'win32' ? 'python' : 'python3',
+    : { id: 'ai-computer-control', command: 'python3',
         args: ['-X', 'utf8', '-m', 'ai_computer_control.server'], cwd: REPO,
         env: { PYTHONPATH: path.join(REPO, 'src'), PYTHONUTF8: '1' } };
   let client = null, liveNames = null;

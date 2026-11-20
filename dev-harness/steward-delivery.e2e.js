@@ -9,7 +9,6 @@ const { startFakeProvider, textFrames } = require('./lib/fake-openai-provider');
 const t = createRunner('STEWARD DELIVERY'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-delivery-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 const s = loadServerInternals(['createSession', 'saveSession', 'loadSession', 'writeConfig', 'readConfig', 'normalizeMission', 'recordMissionCheckResult',
   'stewardCaptureDelivery', 'stewardDeliveryProjection', 'stewardValidateDeliveryReference', 'stewardRunAct', 'stewardLaunchPending', 'runSessionTurn', 'createMissionContainer', 'turnSettlers']);
 const ref = d => ({ turnSeq: d.turnSeq, latestTurnSeq: d.latestTurnSeq, sourceStamp: d.sourceStamp, fileStamp: d.fileStamp });

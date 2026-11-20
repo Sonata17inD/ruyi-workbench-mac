@@ -86,11 +86,6 @@ const runner = ['13m-steward-runner-base.js', '../backend/steward-thread-arbiter
     '② 事项投影卡片带 displayTitle —— 看板/抽屉/「现在这一件」读它');
   ok(/briefTitle: sessionBriefOf\(row\.meta\)\.title, briefGist: sessionBriefOf\(row\.meta\)\.gist/.test(search),
     '② 113b 会话搜索结果带 briefTitle/briefGist');
-  // 【117l 重钉】旧断言把 `displayTitle: sessionDisplayTitle(session) }));` 整段(含收尾的 `}));`)
-  // 钉成了字面量 —— 它实际钉住的是「这个键在信封里,而且它正好是最后一个键」。后半句不是契约:
-  // 117l D4 在同一个信封上追加了 liveTail(活回合的尾巴,只在真有活回合时出现)。改成只钉这个键本身,
-  // 并补一条 companion 钉住新契约的另一半:liveTail 必须是【条件展开】,不能无条件出现在信封里
-  // (无条件 = 空回合也下发一个空对象,抽屉就会把「它正在说」一直挂在那儿)。
   ok(/displayTitle: sessionDisplayTitle\(session\)/.test(sessionRoutes),
     '② GET /api/sessions/:id 的信封带 displayTitle(抽屉标题读它)');
   ok(/\.\.\.\(liveTail \? \{ liveTail \} : \{\}\)/.test(sessionRoutes),

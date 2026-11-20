@@ -1,15 +1,4 @@
 'use strict';
-// hunt2-engines:Agent CLI 回合骨架(05 runClaudeTurn / 05b)与它用到的几件公共小件的加固。真源码、临时 HOME、零网络;
-// 回合走进程内 runSessionTurn + tools/fake-claude.js(WCW_FAKE_CLAUDE 测试缝),不起 HTTP 服务。
-//   [C1] #1 同会话并发两个回合:修前 supersede 检查与 activeChildren.set 之间隔着十来个 await,两个回合都看见「空闲」,
-//        各起一个 CLI 子进程且都跑完;修后 spawn 前再判一次,后到的顶掉先到的 —— 恰好一个跑完、一个被停。
-//   [C9] #9 WCW_TOKEN 等回环凭据不在 CLI 进程环境里(模型的 Bash 会继承),只在 --mcp-config 那个 server 的 env 块里。
-//   [C17] #17 CLI 刷屏的 stderr 不再整段落盘:会话里那条 stderr 消息有上限、保留头部、标明省略量。
-//   [C7] #7 外部摘要模型坏了时,自动压缩失败一次后进入退避:下一回合不再重试(修前每回合都重试一次)。
-//   [D8] #8 decodeClaudeCliText 的流式用法:块边界切开的汉字不再被误判成 GB18030 乱码;真 GB18030 流照旧解对。
-//   [R3] #3 ACP 子进程已死、退出事件还没处理时回写 stdin 撞 EPIPE:这个 'error' 必须有人接,不能变成未捕获异常(服务整个退出)。
-//        直接给生产 ACP RPC 传入写入时会报 EPIPE 的子进程流，验证通道关闭及后续请求失败。
-//   [K14] #14 syncMcpServersToKimi 并发调用串行化:一次读改写(读 mcp.json → 写 mcp.json 与所有权旁账)做完下一次才读。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -18,11 +7,8 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cli-hardening-'));
 const work = path.join(root, 'work');
-const kimiHome = path.join(root, 'kimi-home');
 fs.mkdirSync(work, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-process.env.KIMI_CODE_HOME = kimiHome;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 process.env.WCW_FAKE_CLAUDE = path.join(app, '..', 'tools', 'fake-claude.js');
 for (const k of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_MODEL', 'WCW_FAKE_SLOW_MS', 'WCW_FAKE_ENV_CAPTURE', 'WCW_FAKE_ARGV_CAPTURE']) delete process.env[k];
@@ -146,61 +132,6 @@ test('[D8] decodeClaudeCliText 流式:切开的汉字不误判,真 GB18030 照�
   assert.equal(srv.decodeClaudeCliText(gb.subarray(0, 4), stream) + srv.decodeClaudeCliText(gb.subarray(4), stream)
     + srv.decodeClaudeCliText(null, stream), '请求失败');
   assert.equal(srv.decodeClaudeCliText(gb), '请求失败', '不传流状态时一次性解码的旧行为不变');
-});
-
-test('[K14] syncMcpServersToKimi 并发调用串行:一次读改写做完,下一次才读', async () => {
-  const config = await srv.readConfig();
-  const target = path.join(kimiHome, 'mcp.json');
-  const sidecar = path.join(root, 'kimi-mcp-sync.json');
-  await srv.syncMcpServersToKimi({ ...config, includeWorkbenchMcp: true });   // 预热:生成物与目录都在了
-  // 记录「读 mcp.json」与「所有权旁账落盘(rename 到位)」的先后。修前并发的两次调用都先读、再各自写:读 读 写 写 ——
-  // 后写的一方基于旧快照把先写的一方盖掉(一方开/一方关时,旁账与 mcp.json 可能各留一半,接管前的原条目就此丢失)。
-  const trace = [];
-  const fsp = fs.promises;
-  const readFile = fsp.readFile, rename = fsp.rename;
-  fsp.readFile = async function (file, ...rest) {
-    if (path.resolve(String(file)) === target) { trace.push('read'); await new Promise(r => setTimeout(r, 20)); }
-    return readFile.call(this, file, ...rest);
-  };
-  fsp.rename = async function (from, to, ...rest) {
-    const out = await rename.call(this, from, to, ...rest);
-    if (path.resolve(String(to)) === sidecar) trace.push('commit');
-    return out;
-  };
-  try {
-    await Promise.all([
-      srv.syncMcpServersToKimi({ ...config, includeWorkbenchMcp: false }),
-      srv.syncMcpServersToKimi({ ...config, includeWorkbenchMcp: true }),
-      srv.syncMcpServersToKimi({ ...config, includeWorkbenchMcp: false }),
-    ]);
-  } finally { fsp.readFile = readFile; fsp.rename = rename; }
-  assert.deepEqual(trace, ['read', 'commit', 'read', 'commit', 'read', 'commit'], `读改写不交错(实际 ${trace.join(' ')})`);
-  // 最后一次是「关」:如意接管的条目撤掉,旁账清空 —— 串行时结局就是最后一次调用的意图。
-  const own = JSON.parse(fs.readFileSync(target, 'utf8')).mcpServers || {};
-  const ledger = JSON.parse(fs.readFileSync(sidecar, 'utf8'));
-  assert.deepEqual(ledger.managedIds, [], '旁账与最后一次调用的意图一致');
-  assert.equal(Object.keys(own).length, 0, 'mcp.json 与旁账一致:没有残留如意条目');
-});
-
-test('[R3] createKimiAcpRpc 接住 stdin 的 EPIPE:通道记为关闭,后续请求同步失败而不是炸掉进程', async () => {
-  const { EventEmitter } = require('events');
-  const { Writable, PassThrough } = require('stream');
-  const { createKimiAcpRpc } = require(path.join(app, 'backend', 'kimi-acp-rpc.cjs'));
-  const child = new EventEmitter();
-  child.stdout = new PassThrough();
-  child.stdin = new Writable({ write(_chunk, _enc, cb) { cb(Object.assign(new Error('write EPIPE'), { code: 'EPIPE' })); } });
-  const uncaught = [];
-  const onUncaught = error => uncaught.push(error);
-  process.on('uncaughtException', onUncaught);
-  try {
-    const rpc = createKimiAcpRpc(child);
-    assert.equal(rpc.notify('session/cancel', {}), true, '写入本身是异步失败的,notify 当场不知道');
-    await new Promise(resolve => setImmediate(resolve));
-    await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(uncaught.map(error => error.code), [], 'EPIPE 没有变成未捕获异常');
-    assert.equal(rpc.isClosed(), true, '通道记为关闭');
-    await assert.rejects(rpc.request('session/prompt', {}, 1000), /input channel is closed/, '之后的请求同步失败,不再往坏管道里写');
-  } finally { process.removeListener('uncaughtException', onUncaught); }
 });
 
 test.after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });

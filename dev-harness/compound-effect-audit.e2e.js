@@ -68,7 +68,7 @@ async function turn(mode, tool = 'macro_run', direct = false, decision = 'allow'
     if (!snapshotProcessTable()?.some(row => row.pid === process.pid)) throw new Error('Build the owned-process helper before running this fixture');
     port = await getFreePort();
     server = cp.spawn(process.execPath, [targetServer, 'serve', '--port', String(port)], {
-      cwd: workbench, env: { ...process.env, ...env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'] });
+      cwd: workbench, env: { ...process.env, ...env, RUYI_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.resume(); server.stderr.resume();
     await until(async () => {
       try { const runtime = JSON.parse(fs.readFileSync(path.join(data, 'runtime.json'))); if (runtime.pid !== server.pid || !runtime.token) return false;

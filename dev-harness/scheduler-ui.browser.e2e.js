@@ -27,15 +27,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 时间全走 §3.4 的假时钟（WCW_SCHEDULER_CLOCK_FILE）：一天与一次崩溃压进十几秒。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -80,13 +79,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(80);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 class CdpClient {
@@ -229,12 +221,11 @@ function spawnWb(crashAt) {
     cwd: WB,
     env: {
       ...process.env,
-      RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home,
+      RUYI_HOME: home, HOME: home, USERPROFILE: home,
       WCW_SCHEDULER_CLOCK_FILE: clockFile,
       WCW_SCHEDULER_TICK_MS: String(TICK_MS),
       ...(crashAt ? { WCW_SCHEDULER_CRASH_AT: crashAt } : {}),
     },
-    windowsHide: true,
   });
   child.exitInfo = { code: null, done: false };
   child.on('exit', code => { child.exitInfo.code = code; child.exitInfo.done = true; });
@@ -289,11 +280,11 @@ try {
   const appUrl = `http://127.0.0.1:${appPort}/`;
   const profile = path.join(root, 'profile');
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1280,900',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A0e browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -403,7 +394,7 @@ try {
   const lId = lRes && lRes.json && lRes.json.task && lRes.json.task.id;
   ok(Boolean(uId && lId), `C0 两条新任务已建（${uId} / ${lId}）`);
 
-  killTree(server);
+  killOwnTree(server);
   await waitExit(server);
   // ① 带崩溃钩子重启，时钟停在 U 到点【之前】—— 让它走正常的 ontime 那一支，登记完就死。
   setClock(uDue - 2 * MINUTE);
@@ -514,9 +505,8 @@ try {
   console.log('FAIL 未预期异常: ' + (error && error.message ? error.message : String(error)));
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
-  try { stopRuyiTestBrowsers(path.join(root, 'profile')); } catch { /* ignore */ }
+  killOwnTree(browser);
+  killOwnTree(server);
 }
 
 console.log(`\nSCHEDULER UI BROWSER E2E: ${fail ? 'FAIL (' + fail + ')' : 'ALL PASS'}`);

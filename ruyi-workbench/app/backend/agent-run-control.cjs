@@ -53,7 +53,7 @@ function createAgentRunControl({
       // 无害但计数器会被 UI 时延系统性抬高。只在真正 running→paused 时计一次干预(与本文件 pool_approve 先查
       // status!=='proposed' 的"无效重复不计干预"模式一致)。
       const wasPaused = live.paused === true;
-      live.paused = true; live.run.pauseRequestedAt = nowIso();
+      live.paused = true; live.wakeScheduler?.(); live.run.pauseRequestedAt = nowIso();
       if (!wasPaused) bumpRunIntervention(live.run, 'pause'); // 29c(状态迁移才计)
       appendAgentRunEvent(live.run, { type: 'run_paused', data: { reason: 'user' } }); // 25.3
       await saveAgentRun(live.run);
@@ -64,7 +64,9 @@ function createAgentRunControl({
         // Reset the idle clock ATOMICALLY with clearing paused: the watchdog reads live.lastActivityAt, so by the
         // time it observes paused=false the clock is already fresh -> no false idle-abort right after a long pause.
         const wasPaused = live.paused === true; // 对抗轮 P3(#8): 仅 paused→running 计一次(对运行中 run resume 是 no-op,不计)
-        live.paused = false; live.lastActivityAt = Date.now(); const waiters = live.resumeWaiters.splice(0); for (const wake of waiters) wake();
+        live.paused = false; live.lastActivityAt = Date.now();
+        if (wasPaused) live.wakeScheduler?.();
+        const waiters = live.resumeWaiters.splice(0); for (const wake of waiters) wake();
         if (wasPaused) bumpRunIntervention(live.run, 'resume'); // 29c
         appendAgentRunEvent(live.run, { type: 'run_resume_requested', data: { mode: 'warm' } }); // 25.3
         saveAgentRun(live.run).catch(() => {}); // 对抗轮修: 追写快照,让 eventSeq 尽快落盘(缩小崩溃重号窗口)
@@ -108,9 +110,10 @@ function createAgentRunControl({
       let q = live.steerQueues.get(nodeId);
       if (!q) { q = []; live.steerQueues.set(nodeId, q); }
       if (q.length >= STEER_QUEUE_MAX) return { status: 409, body: { ok: false, error: '该节点插话队列已满' } };
-      q.push(text);
+      const queued = q.push(text);
+      live.nodeControls?.get(nodeId)?.signal.dispatchEvent(new Event('steer'));
       bumpRunIntervention(live.run, 'steer_node'); // 29c(队列在内存,计数随下一次快照落盘即可,不额外写盘)
-      return { status: 200, body: { ok: true, queued: q.length, live: elig.node.status === 'running' } };
+      return { status: 200, body: { ok: true, queued, live: elig.node.status === 'running' } };
     }
     return null; // 本函数不认识的动作(apply_isolation / pool_* / 未知)——由路由沿用原分支
   }

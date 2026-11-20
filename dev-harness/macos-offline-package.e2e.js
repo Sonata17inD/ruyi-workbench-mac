@@ -58,7 +58,7 @@ function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
     const temp = path.join(fixture.home, 'tmp');
     for (const directory of [workspace, data, temp]) fs.mkdirSync(directory);
     const environment = { ...fixture.env, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', RUYI_HOME: data,
-      WIN_CLAUDE_WORKBENCH_HOME: '', PYTHONHOME: '', PYTHONPATH: '', PYTHONNOUSERSITE: '1', PYTHONUTF8: '1', PYTHONDONTWRITEBYTECODE: '1',
+      PYTHONHOME: '', PYTHONPATH: '', PYTHONNOUSERSITE: '1', PYTHONUTF8: '1', PYTHONDONTWRITEBYTECODE: '1',
       RUYI_NODE_PATH: '', RUYI_RG_PATH: '', RUYI_MACOS_AUTOMATION_HELPER: '', RUYI_MACOS_PROCESS_HELPER: '', RUYI_MACOS_KEYCHAIN_HELPER: '',
       AI_COMPUTER_CONTROL_HOME: '', PLAYWRIGHT_NODEJS_PATH: '', PLAYWRIGHT_BROWSERS_PATH: '',
       ACC_BROWSER_HEADLESS: '1', ACC_BROWSER_MODE: 'bundled', TMPDIR: temp, WCW_DATA_DIR: path.join(fixture.home, 'acc-data'),
@@ -98,8 +98,8 @@ if(!denied)process.exit(2);const s=net.connect({host:'1.1.1.1',port:443});s.setT
     const base = 'http://127.0.0.1:' + port;
     const request = async (route, body, token = '') => {
       const response = await fetch(base + route, { method: body === undefined ? 'GET' : 'POST',
-        headers: { 'content-type': 'application/json', 'x-wcw-token': token },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) });
+        headers: { connection: 'close', 'content-type': 'application/json', 'x-wcw-token': token },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(15000) }).catch(error => { throw new Error(route + ': ' + (error.cause?.message || error.message) + '; server ' + (api.exitCode ?? api.signalCode ?? 'running') + ' ' + diagnostic); });
       const result = await response.json();
       if (!response.ok) throw new Error(route + ' HTTP ' + response.status);
       return result;
@@ -107,6 +107,13 @@ if(!denied)process.exit(2);const s=net.connect({host:'1.1.1.1',port:443});s.setT
     await until(async () => { if (api.exitCode !== null) throw new Error(diagnostic); try { return (await request('/health')).ok; } catch { return false; } });
     const token = (await request('/api/bootstrap', {})).token;
     ok(readJson(path.join(data, 'runtime.json'))?.pid === api.pid, 'relocated bundled Node starts the actual workbench in a separate writable data root');
+    for (const [id, guide] of [['user-guide', 'USER'], ['admin-guide', 'ADMIN']]) {
+      for (const [lang, suffix] of [['en-US', 'EN'], ['zh-CN', 'CN']]) {
+        const doc = await request('/api/help/doc?id=' + id + '&lang=' + lang, undefined, token);
+        const expected = fs.readFileSync(path.join(workbench, 'docs/manuals', guide + '-GUIDE_' + suffix + '.md'), 'utf8');
+        ok(doc.ok && doc.lang === lang && doc.markdown === expected, manifest.variant + ' serves ' + id + ' in ' + lang);
+      }
+    }
     const inspection = path.join(scratch, 'inspect.cjs');
     fs.writeFileSync(inspection, `const S=require(${JSON.stringify(serverJs)}); (async()=>{
 const cp=require('child_process');const result={node:process.execPath,python:process.env.RUYI_BUNDLED_PYTHON,

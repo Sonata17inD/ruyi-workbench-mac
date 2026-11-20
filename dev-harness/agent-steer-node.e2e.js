@@ -29,7 +29,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *
  * Run: node dev-harness/agent-steer-node.e2e.js   (ports 9101 fake-openai / 9102 workbench)
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -154,7 +154,7 @@ const steer = (runId, sid, nodeId, text, hdr) => post(WP, `/api/agent-runs/${enc
 
   await new Promise(r => fake.listen(FP, '127.0.0.1', r));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_SCENARIO: path.join(HOME, 'claude-fixture.jsonl') },
   });
   try {

@@ -65,10 +65,6 @@ const ok = (condition, label) => {
     ]) === 'last', 'A6 一回合动了多条时取最后一条（事情发生的顺序）');
     ok(executedThreadSessionId(null) === '' && executedThreadSessionId([]) === '' && executedThreadSessionId([null]) === '',
       'A7 空/畸形输入一律空串，不抛');
-    // 117v-V1 ③ 重钉：原判据把两句连写的字面量钉死了，而那一支现在还要多做一件事（当场挂线程卡，
-    // 频道条才会当场多一枚 chip）。要成立的事实是【回合结束、真开出线程时派 focusThread】，
-    // 而不是那两句挨在一起。锚在 finishReply 的函数体里：整文件匹配的话，appendSince 那一处
-    // 同形调用会把本条养成假绿（把 finishReply 里这一句整个删掉也照样绿）。
     const finishReplyRule = conversation.slice(conversation.indexOf('function finishReply('),
       conversation.indexOf('function actionWhyLines'));
     ok(finishReplyRule.length > 0
@@ -97,13 +93,6 @@ const ok = (condition, label) => {
       // 守卫，折叠区就永远是展开的：折叠区没了，那些端点又回到扁平裸列表里（那正是这一刀在修的病）。
       ['css/views/steward-drawer.css', '.steward-chip-fold-body[hidden]'],
     ]) ok(read(file).includes(selector + ' { display: none; }'), `B1b 既有同款守卫仍在：${selector}`);
-    // 32 号文 §4（M2）重钉 B2/B2b/B2c：composer 自己那条 document click 监听撤了 ——「点列表【外】
-    // 任意处收起」现在归两处、共用本层 push 的那一份 owns 判据：
-    //   ① popover 原语的捕获阶段 mousedown（判「既不在节点里、也不是锚点」就关）；
-    //   ② steward-shell.js 那处捕获阶段 click（handleOutsideClick 把 owns 为假的层全关，H7b 已钉）。
-    // 旧三条只问 composer 源码里有没有那三行字面量，于是监听被搬走、甚至整条删掉它照样绿；这里改成
-    // 四件一起问：① 原语真做了点外关；② 那唯一一处 document click 是捕获阶段的 shell；③ composer
-    // 里不再留第二路（两路都关虽然幂等，但次序假设又回来了 —— W2-2 那次就是栽在次序上）。
     const popoverSrc = read('js/popover.js');
     ok(/const onDown = e => \{ if \(!node\.contains\(e\.target\) && e\.target !== anchorEl && !anchorEl\.contains\(e\.target\)\) close\(\); \};/.test(popoverSrc)
       && /globalThis\.document\.addEventListener\('click', event => \{[\s\S]{0,220}stewardEscapeStack\.handleOutsideClick\(event && event\.target\);[\s\S]{0,40}\}, true\);/.test(shell)
@@ -138,12 +127,6 @@ const ok = (condition, label) => {
       'C3b clearFeed 里 park 排在清空之前');
     ok(/if \(kind === 'ruyi'\) row\.appendChild\(el\('span', 'steward-avslot'\)\);/.test(conversation),
       'C4 只有管家的话有槽（用户气泡不留 36px 空位）');
-    // 117l-B2 ④ 重钉（用户第五轮走查 4「很多轮的看起来有点奇怪，尤其是边边那个点」）：
-    // 旧断言钉的是 117j W2-3 当时的做法 ——「历史消息的空槽画一个 8px 静态点」。用户看了十几轮
-    // 之后的真实效果，判定那一列点本身就是噪音，于是那条规则整条删除（不是改样式，是不画了）。
-    // 断言因此从「必须有那条规则」翻成「必须没有」；槽的尺寸契约（36px）原样保留在同一行里，
-    // 由下面的 C5b/C5c companion 把「删掉点之后，正文左缘与视觉锚都还在」重新钉住。
-    // 注意扫的是【剥掉注释】的 CSS：修法注释里逐字写了那条被删的选择器，不剥的话它会自己判红。
     const convCssCode = convCss.replace(/\/\*[\s\S]*?\*\//g, '');
     ok(!/\.steward-avslot:empty::before/.test(convCssCode)
       && /\.steward-avslot \.steward-avatar \{ width: 36px; height: 36px; \}/.test(convCssCode),
@@ -172,12 +155,6 @@ const ok = (condition, label) => {
       'D2 去重靠 createdAt 水位（ISO 8601 定长 UTC 串，字典序即时间序）');
     ok(/lastRenderedAt = '';   \/\/ 117j W2-4/.test(conversation),
       'D2b 整屏重画时水位归零（clearFeed 之后由 renderHistorySince 重新推上去）');
-    // 117l-B2 ① 重钉（语义只加不改）：旧断言逐字钉的是【那一行只做一件事】—— 单语句
-    // `void conversation.appendSince('')`。它钉的是 117j W2-4 当时的形状；本波在【同一个分支里】
-    // 多了一件事（nudgeAvatar()：头像那记「点一下」），语句块因此从单语句变成 `{ … ; … }`。
-    // 判据本身（!firstSeen && 管家模式 && trigger==='inbox'）一个字没动，所以这里只把「一行」
-    // 放宽成「这个分支」，并用下面的 D3c/D3d companion 把「多出来的那件事到底是什么、有没有
-    // 跑到别的分支去」重新钉死 —— 不是放宽正则让它过，是把断言拆成条件与动作两半各钉一遍。
     ok(/if \(isStewardMode\(\) && \(lastReply\.trigger === 'external' \|\| \(!firstSeen && lastReply\.trigger === 'inbox'\)\)\) \{[^}]*void conversation\.appendSince\(''\);[^}]*\}/.test(shell),
       'D3 只认 trigger===\'inbox\'：用户自己发的那一条是 sendToSteward 当场画的，再追加一次就重了');
     // companion ①：nudge 全文件只被调用一次，且就在这一个分支里 —— 用户自己说完一句、
@@ -204,11 +181,6 @@ const ok = (condition, label) => {
     // 轮询生命周期收编（前端架构债第一批）重钉 E1／E2／E3 的前半句：起表那一处从 `pollTimer = setInterval(…)`
     // 搬进 createPollLifecycle 的 arm（steward-chips.js 一份），周期参数一个字没动。
 ok(drawer.includes('createDeadlinePoll({') && drawer.includes('tick: pollSlice'), 'E1 抽屉按实际期限安排一次性唤醒');
-    // 121-K2b（34 号文 §6.2／§6.4）**重钉 E1b／E2／E3**：三处 due 都多了最外面一档 —— 事件流连着时
-    // 它们只是【兜底心跳】（STEWARD_POLL_MS_CONNECTED＝30 s，常量仍只有 steward-chips.js 那一份），
-    // 断开才回到今天那两档。被钉的事一个字没变：表按 5 s 下限起（E1／E2／E3 的前半句），真要不要拉
-    // 由每一拍自己判，而且后端下限没动（E4，pollIntervalMs 仍在最里层）。
-    // 反向验证（三条各做过）：把 STEWARD_POLL_MS_CONNECTED 换回各自的 *_POLL_MS_MIN → 本条真红。
     ok(/const due = streamConnected \? STEWARD_POLL_MS_CONNECTED : \(wasLive \? STEWARD_DRAWER_POLL_MS_MIN : pollIntervalMs\(\)\);/.test(drawer),
       'E1b 连接时 30 s 兜底；断开后有在跑的回合就每拍都拉，否则仍按 config.stewardPollMs');
     // 117s-B 把「真→假」那一支改成了对称的边沿判定：live 只要变了（真→假 = 刚收工，假→真 = 递话后又活了）
@@ -413,22 +385,10 @@ ok([drawer, board, shell].every(src => countOf(src, /setInterval\(/g) === 0), 'E
     }
     ok((conversation.match(/stewardEscapeStack\.push\(/g) || []).length === 2,
       'G3b ※ 浮层与头像菜单各一处（两个都要，不是只挂一个）');
-    // 32 号文 §4（M1-b）重钉「chip」那一条：开合（含焦点归还）搬进了两壳共用的 popover 原语 ——
-    // 焦点归还这件事一秒都没消失，只是从 chips 的 closeMenu 挪进了 popover.js 的 closePopover，
-    // 锚点就是那颗 chip。原判据只问「chips 源码里有没有 owner.button.focus() 这个字面量」，
-    // 这里补成三件一起问：① popover 原语里真把焦点还给 anchor；② chips 开菜单时用的 anchor 就是
-    // 那颗 chip 按钮（popover(chip.button, …)）；③ chips 里不再留第二处 focus（不许两路竞争）。
-    // 比原来强：原来那条就算 focus 被搬走、甚至没人再归还焦点，也照样绿。
     ok(popoverSrc.includes('anchor.focus()')
       && /popover\(chip\.button,/.test(chips)
       && !/owner\.button\.focus\(\)/.test(chips),
       'G4 copy-P2-4/5：chip 关掉时把焦点还回触发它的控件（M1-b 起由 popover 原语的锚点归还，且只有这一处）');
-    // 32 号文 §4（M2）重钉「※」那一条：※ 浮层的开合（含焦点归还）也搬进了两壳共用的 popover 原语
-    // —— 焦点归还这件事一秒都没消失，只是从 closeWhy 挪进了 popover.js 的 closePopover，锚点就是那枚
-    // ※ 触发器。与上面 G4 的 chip／头像两条同口径、同样比原来强：原来那条只问「conversation 源码里
-    // 有没有 trigger.focus() 这个字面量」，焦点被搬走、甚至没人再归还它也照样绿。这里补成三件一起问：
-    // ① 原语里真把焦点还给 anchor；② 开浮层用的 anchor 就是那枚 ※（popover(trigger, …)）；③ 本模块
-    // 里不再留第二处 focus（不许两路竞争）。
     for (const [name, source, needle] of [
       ['盾牌', settings, 'btn.focus()'],
     ]) ok(source.includes(needle), `G4 copy-P2-4/5：${name} 关掉时把焦点还回触发它的控件`);

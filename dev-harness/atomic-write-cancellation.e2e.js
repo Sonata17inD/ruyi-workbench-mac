@@ -59,15 +59,7 @@ const restore = () => Object.assign(fsp, original);
     for (const kind of ['hardlink', 'symlink']) {
       reset();
       const link = path.join(workspace, kind);
-      try {
-        if (kind === 'hardlink') fs.linkSync(target, link); else fs.symlinkSync(target, link);
-      } catch (error) {
-        if (process.platform === 'win32' && kind === 'symlink' && error.code === 'EPERM') {
-          console.log('SKIP symlink fixture requires Windows symlink privilege');
-          continue;
-        }
-        throw error;
-      }
+      if (kind === 'hardlink') fs.linkSync(target, link); else fs.symlinkSync(target, link);
       try {
         await S.FileTextIo.writeFileAtomic(link, Buffer.from('linked'));
         t.ok(fs.readFileSync(target, 'utf8') === 'linked', kind + ' in-place write preserves link semantics');

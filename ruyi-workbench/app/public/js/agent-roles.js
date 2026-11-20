@@ -200,8 +200,6 @@ function addAgentRole() {
   agentRoleDraft.push({ id, label: t('role.customRoles'), description: '', prompt: '', toolTier: 'read', models: { openai: '', claude: 'inherit' }, openaiTools: [], claudeTools: [], mcpServers: [], permissionMode: 'inherit', budgets: { openai: 100, claude: 100 }, isolation: 'none', color: '' }); renderAgentRoleEditors();
 }
 
-// 子代理端点/模型使用受控下拉：避免用户手抄 Provider/model id，也避免从 Kimi 切到 Ark 后
-// 把上一端点的模型误送给新端点。空值仍保留既有“跟随主端点/自动分级”语义。
 function populateSubagentPreferenceSelects(providerValue, modelValue) {
   const providerSel = $('cfgSubagentPreferredProvider');
   const modelSel = $('cfgSubagentPreferredModel');

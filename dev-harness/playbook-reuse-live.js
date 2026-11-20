@@ -13,7 +13,7 @@ const { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('PLAYBOOK REUSE LIVE'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-playbook-reuse-live-'));
 const home = path.join(root, 'home'), work = path.join(root, 'work'); fs.mkdirSync(home); fs.mkdirSync(work);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 function cleanup() {
   let failed = false;
   for (const name of ['config.json', 'config.json.prev']) {

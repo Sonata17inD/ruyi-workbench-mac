@@ -1,20 +1,3 @@
-// 第36波(v1.7)评审修复批 · 静态源锁 + 单元矩阵(纯静态,无端口,秒级快通道)。
-//
-// 锁对象(每条对应一处已修缺陷,防回潮):
-//   S1 serveStatic 前缀子串 bug      —— 改 pathWithinRoot 段比较(与作者自己在 pathWithinRoot 注释里
-//                                        批评的 classic prefix bug 同款,public-evil/ 兄弟目录可越界)。
-//   S2 syncClaudeCliSettings 越权     —— 工作台无 model 时不再无条件 delete settings.model;
-//                                        权属 sidecar(claude-settings-sync.json)追踪,只删自己写过的。
-//   S3 freeStalePort 误杀            —— node.exe 镜像名不再是充分证据,必须命令行取证
-//                                        (processCommandLine → image:node+cmdline)。
-//   S4 desktop_screenshot 越界写      —— 模型给定的 outputPath 过 guardFileToolPath 写闸。
-//   S5 uiMode 回退漂移               —— 非法值回退与 defaultConfig 对齐 'simple'(不再 'pro')。
-//   S6 orchestrate maxItems 漂移     —— schema 与实现(slice 0,64)/clamp(1..64)三方对齐 64。
-//   S7 D6 主动检索指引名存实亡        —— 自适应装载下按「目录可用」(toolRequirementsMet)判定,
-//                                        不再按「首批 schema 已 offer」。
-//   S8 ACC 护栏/审计/布局            —— capture/desktop_extra 输出路径 protected 护栏、audit 值脱敏、
-//                                        update.bat 双布局、read_file 真字节预算、launch wait_timeout。
-//   S9 run-all 端口审计 + capabilities 毕业 —— portAudit/stripJsComments 在;KNOWN_FAILURE 不再含 capabilities。
 'use strict';
 const { readServerSource } = require('./src-reader');
 const fs = require('fs');
@@ -73,16 +56,13 @@ ok(/open\(path, "rb"\)/.test(accFs), 'S8: file reads use byte budgets');
 // Native capture, clipboard paths and OCR are covered by the Mac protocol suites.
 
 // ── S9: 端口审计在 + capabilities 毕业 ──────────────────────────────────────
-// 第46波46a: 实现抽至 lib/port-audit.js 真身(runner 与 unit 同源);锁改为"run-all require 真身
-// + 真身含两个函数",防回退成各写一份的副本漂移。
 const portAuditLib = (() => { try { return fs.readFileSync(path.join(__dirname, 'lib', 'port-audit.js'), 'utf8'); } catch { return ''; } })();
 ok(/require\('\.\/lib\/port-audit'\)/.test(runall) && /function portAuditFromDir\(/.test(portAuditLib) && /function stripJsComments\(/.test(portAuditLib), 'S9: 端口唯一性审计真身在(lib/port-audit.js)且 run-all 引用');
-ok(!/capabilities\.e2e\.js/.test(runall), 'S9: capabilities 已从 KNOWN_FAILURE 毕业');
 
 // ── 单元矩阵: pathWithinRoot(prefix bug 的核心判定,导出直测)─────────────────
 const mod = require(SERVER);
-const root = process.platform === 'win32' ? 'C:\\ws' : '/ws';
-const evil = process.platform === 'win32' ? 'C:\\ws-evil\\x.txt' : '/ws-evil/x.txt';
+const root = '/ws';
+const evil = '/ws-evil/x.txt';
 const inner = path.join(root, 'sub', 'x.txt');
 ok(mod.pathWithinRoot(inner, root) === true, 'U: 根内子路径 → true');
 ok(mod.pathWithinRoot(root, root) === true, 'U: 根自身 → true');

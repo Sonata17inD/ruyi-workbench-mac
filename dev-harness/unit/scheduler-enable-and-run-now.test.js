@@ -23,7 +23,6 @@ const CLOCK = path.join(root, 'clock.txt');
 let clock = new Date(2026, 4, 4, 8, 0, 0).getTime();
 const setClock = ms => { clock = ms; fs.writeFileSync(CLOCK, String(Math.round(ms)), 'utf8'); };
 setClock(clock);
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 process.env.WCW_SCHEDULER_CLOCK_FILE = CLOCK;
 process.env.WCW_SCHEDULER_TICK_MS = '40';

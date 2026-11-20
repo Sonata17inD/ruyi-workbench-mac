@@ -1,7 +1,7 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib 头注)
 // E2E:3.0 统一命名 —— 数据目录 ~/.win-claude-workbench → ~/.ruyi-workbench 的一次性迁移,以及 MCP server id 改名为 ruyi。
-// 每个场景一个独立的临时家目录(HOME / USERPROFILE 指过去),子进程里【去掉】RUYI_HOME 与旧变量 WIN_CLAUDE_WORKBENCH_HOME ——
+// 每个场景一个独立的临时家目录(HOME / USERPROFILE 指过去),子进程里【去掉】RUYI_HOME ——
 // 迁移只在「没有任何数据根环境变量」时发生。
 //   M1 只有旧目录 → 直接运行 serve 时搬成新目录，原处留一个指回新目录的符号链接；配置原样在新目录里；
 //      /api/status 的 dataRoot 是新目录、dataRootAliases 列出旧路径;启动行与日志各记一笔;
@@ -10,7 +10,7 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib �
 //   M4 旧目录里有活实例(runtime.json 的 pid 活着)→ 不迁移、不启动第二个服务、不覆盖旧握手;
 //   M5 设了 RUYI_HOME → 不迁移(旧目录原样);
 //   M6 mcp-config 子命令不迁移;生成的 MCP 配置里如意自己的 server id 是 ruyi,子进程环境只写 RUYI_HOME;
-//   M2b 带 RUYI_HOME 的进程(Claude / Kimi 的 MCP 子进程就是这样)经旧路径联接搜 / 列数据根:敏感文件照样不出现
+//   M2b 带 RUYI_HOME 的进程(Claude 的 MCP 子进程就是这样)经旧路径联接搜 / 列数据根:敏感文件照样不出现
 //       (修前 dataRootAliases 见到环境变量就返回空,旧路径的联接成了绕过口,能搜出 config.json 里的密钥);
 //   M7 旧位置是用户自己建的链接(数据挪去了别的盘)、新目录没有:照旧用它,不落到一个空的新目录、不迁移。
 const cp = require('child_process');
@@ -31,7 +31,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function childEnv(home, extra = {}) {
   const env = { ...process.env, HOME: home, USERPROFILE: home, ...extra };
   if (!('RUYI_HOME' in extra)) delete env.RUYI_HOME;
-  delete env.WIN_CLAUDE_WORKBENCH_HOME;
   return env;
 }
 function makeHome(name) {
@@ -62,7 +61,7 @@ async function waitFor(fn, tries = 80, gap = 150) {
 // 起一个工作台,等到 /health 通,取页面 token;返回 { port, headers, log(), stop() }
 async function serve(home, extraEnv, nodeArgs = []) {
   const port = await getFreePort();
-  const wb = cp.spawn(process.execPath, [...nodeArgs, 'app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: childEnv(home, extraEnv) });
+  const wb = cp.spawn(process.execPath, [...nodeArgs, 'app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: childEnv(home, extraEnv) });
   let log = ''; wb.stdout.on('data', d => { log += d; }); wb.stderr.on('data', d => { log += d; });
   const stop = async () => { try { killOwnTree(wb); } catch { /* gone */ } await sleep(300); };
   const up = await waitFor(() => request(port, 'GET', '/health').catch(() => null));
@@ -73,7 +72,7 @@ async function serve(home, extraEnv, nodeArgs = []) {
 }
 async function refused(home) {
   const port = await getFreePort();
-  const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: childEnv(home) });
+  const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: childEnv(home) });
   let output = ''; child.stdout.on('data', d => { output += d; }); child.stderr.on('data', d => { output += d; });
   const ended = await waitFor(() => child.exitCode !== null ? { code: child.exitCode } : null);
   if (!ended) { killOwnTree(child); throw new Error('duplicate migration startup did not refuse'); }
@@ -123,7 +122,7 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
         process.exit(0);
       })().catch(e => { console.log('PROBE ' + JSON.stringify({ error: String(e && e.message || e) })); process.exit(0); });`;
     const probeEnv = childEnv(h1, { RUYI_HOME: next1 }); // childEnv 里 spread 了 process.env(家目录隔离的唯一来路)
-    const probeOut = cp.execFileSync(process.execPath, ['-e', probe], { cwd: WB, env: probeEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+    const probeOut = cp.execFileSync(process.execPath, ['-e', probe], { cwd: WB, env: probeEnv, encoding: 'utf8', timeout: 60000 });
     const probeLine = (probeOut.split(/\r?\n/).find(l => l.startsWith('PROBE ')) || 'PROBE {}').slice(6);
     const probed = JSON.parse(probeLine);
     ok(!probeLine.includes('MARK-M1') && !/config\.json|runtime\.json/.test(probeLine),
@@ -184,11 +183,11 @@ const same = (a, b) => { try { return fs.realpathSync(a) === fs.realpathSync(b);
     // ── M6:mcp-config 子命令不迁移;生成的配置用新 id 与 RUYI_HOME ─────────────────────────────────
     const h6 = makeHome('m6');
     const legacy6 = seedLegacy(h6, 'MARK-M6');
-    const out = cp.execFileSync(process.execPath, ['app/server.js', 'mcp-config'], { cwd: WB, env: childEnv(h6), encoding: 'utf8', windowsHide: true }).trim().split(/\r?\n/).pop();
+    const out = cp.execFileSync(process.execPath, ['app/server.js', 'mcp-config'], { cwd: WB, env: childEnv(h6), encoding: 'utf8' }).trim().split(/\r?\n/).pop();
     const generated = JSON.parse(fs.readFileSync(out, 'utf8'));
     ok(!isLink(legacy6) && !lexists(path.join(h6, '.ruyi-workbench')), 'M6 mcp-config 子命令不迁移');
     const own = generated.mcpServers && generated.mcpServers.ruyi;
-    ok(own && !generated.mcpServers['win-claude-workbench'] && own.env && own.env.RUYI_HOME && !('WIN_CLAUDE_WORKBENCH_HOME' in own.env),
+    ok(own && !generated.mcpServers['win-claude-workbench'] && own.env && own.env.RUYI_HOME,
       `M6 生成的 MCP 配置:server id 是 ruyi,子进程环境只写 RUYI_HOME(${JSON.stringify(Object.keys(generated.mcpServers || {}))})`);
   } catch (error) {
     t.fail('fatal: ' + (error && error.stack || error));

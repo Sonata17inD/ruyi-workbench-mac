@@ -1,8 +1,8 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // E2E: a quiet bridged tool stays visible/alive without model polling, then a provider steer interrupts it,
 // closes the tool-call pair, and reaches the next model iteration without waiting for the original 30s sleep.
-const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -60,7 +60,7 @@ function stream(port, payload, onEvent) {
 async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)
   for (let i = 0; i < 300; i++) { if (await get(port, '/health')) return true; await sleep(120); } return false; }
 function pidAlive(pid) {
-  try { return new RegExp('\\b' + pid + '\\b').test(cp.execFileSync('tasklist', ['/FI', `PID eq ${pid}`, '/NH'], { encoding: 'utf8', windowsHide: true })); }
+  try { return new RegExp('\\b' + pid + '\\b').test(cp.execFileSync('tasklist', ['/FI', `PID eq ${pid}`, '/NH'], { encoding: 'utf8' })); }
   catch { return false; }
 }
 
@@ -75,9 +75,9 @@ function pidAlive(pid) {
     bridgeExternalToolsToProvider: true,
     desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
   }));
-  let fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { windowsHide: true, env: { ...process.env, FAKE_OPENAI_PORT: String(providerPort), FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'fake__slow_task', args: { ms: 30000 } }]) } });
+  let fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(providerPort), FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'fake__slow_task', args: { ms: 30000 } }]) } });
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(workbenchPort)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_TOOL_HEARTBEAT_MS: '200', WCW_TURN_IDLE_MS: '1000' },
   });
   try {
@@ -133,7 +133,6 @@ function pidAlive(pid) {
     // tree and settle promptly, not merely make the provider stop awaiting a still-running process.
     kill(fakeProvider); await sleep(250);
     fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], {
-      windowsHide: true,
       env: { ...process.env, FAKE_OPENAI_PORT: String(providerPort), FAKE_TOOL_NAME: nativeTool, FAKE_TOOL_ARGS: JSON.stringify({ command: nativeCommand, timeoutMs: 60000 }) },
     });
     for (let i = 0; i < 30 && !(await get(providerPort, '/v1/models')); i++) await sleep(100);
@@ -166,7 +165,7 @@ function pidAlive(pid) {
     ]) {
       kill(fakeProvider); await sleep(250);
       fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], {
-        windowsHide: true, env: { ...process.env, FAKE_OPENAI_PORT: String(providerPort), FAKE_TOOL_NAME: toolSpec.name, FAKE_TOOL_ARGS: JSON.stringify(toolSpec.args) },
+        env: { ...process.env, FAKE_OPENAI_PORT: String(providerPort), FAKE_TOOL_NAME: toolSpec.name, FAKE_TOOL_ARGS: JSON.stringify(toolSpec.args) },
       });
       for (let i = 0; i < 40 && !(await get(providerPort, '/v1/models')); i++) await sleep(100);
       const queuedSession = await post(workbenchPort, '/api/sessions', { title: 'preserve long work', cwd: HOME }, headers);

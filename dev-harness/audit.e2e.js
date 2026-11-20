@@ -12,7 +12,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      plaintext secret NEVER appears anywhere in the response body).
 //  (f) limit clamp: limit=9999 → server clamps to ≤500 (asserted via entries.length ≤ 500).
 // Token手法 copied from checkpoint.e2e.js (meta scrape). Direct tool calls carry sessionId so they journal.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -55,7 +55,7 @@ function writeConfig(home, fakePort) {
   }, null, 2));
 }
 function spawnFake() {
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) } });
   fake.stdout.on('data', () => {});
   return fake;
 }
@@ -69,7 +69,7 @@ async function waitFakeUp() { for (let i = 0; i < 50; i++) { if (await fakeReach
   const procs = [];
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   writeConfig(HOME, FAKE_PORT);
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
 

@@ -7,7 +7,7 @@ const { loadServerInternals } = require('./lib/server-internals');
 const { setTimeout: sleep } = require('node:timers/promises');
 const t = createRunner('STEWARD DECISIONS'); const { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-decisions-api-'));
-process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const s = loadServerInternals(['createSession', 'saveSession', 'writeConfig', 'readConfig', 'createMissionContainer',
   'requestNativePermission', 'requestPlanApproval', 'requestUserQuestion', 'handleInterventionApiRoutes',
   'readInterventions', 'interventionFilePath', 'RUNTIME']);

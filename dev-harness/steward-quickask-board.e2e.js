@@ -25,7 +25,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 再起一次 —— 停机重启是为了绕开投影索引的进程内缓存(buildOrLoadPretenderIndex 只在内存副本
 // 缺席时才重扫会话目录),让夹具的确定性不依赖脏页标记的时序。零模型、零回合。
 // ════════════════════════════════════════════════════════════════════════════════════════════
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 const MissionState = require('../ruyi-workbench/app/public/js/mission-state.js');
@@ -76,7 +76,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   }, null, 2));
 
   const spawnWb = () => {
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     wb.stdout.on('data', () => {});
     procs.push(wb);
@@ -133,15 +133,6 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
 
     const quickRow = rowOf(sidQuick);
     ok(!!quickRow, '③ 【有】管家开的速查线程在 /api/missions 里(' + sidQuick + ';行数 ' + rows.length + ')');
-    // 121-K3(34 号文 §4.2「索引口径」)重钉 —— 本刀合法地把这条断言翻了面,逐对交代:
-    // 修前:卡片只给 `kind==='mission' || stewardWatchedThread(...)` 造,普通会话恒不进 /api/missions;
-    //       这条断言是 117r-D1 立的「另一个方向」,防的是「过滤器被整个删掉」。
-    // 修后:一个判据拆成两个 —— watched(管家要不要动手)与 visible(要不要进索引);普通会话【该】进,
-    //       噪音改用窗口治(§1.3 数出来的病根就是它进不去)。所以「它不在」不再是要守的事实。
-    // 原断言真正要守的东西没变,只是换了一格:**它进了索引也不能冒充管家的线程**。两个方向照钉:
-    //   · 管家开的速查线程:watched 为真、卡片上的 quick 身份为真;
-    //   · 用户自己聊的普通会话:行在,但 watched 为假、quick 为假 —— 判据被整个删掉时这条同样必红
-    //     (删了 watched 判据它会变成 true,删了 quick 身份格它会跟着 kind 一起变成速查)。
     const userRow = rowOf(sidUser);
     ok(!!userRow, '③ 121-K3:用户自己聊的普通会话【进】/api/missions(' + sidUser + ';行数 ' + rows.length + ')');
     ok(!!userRow && userRow.watched === false && userRow.origin === 'user',
@@ -159,13 +150,6 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     ok(quickRow && quickRow.kind === 'quick_ask',
       '④ 速查行的 kind 如实是 quick_ask(实 ' + (quickRow && quickRow.kind) + ')');
     const derived = quickRow ? MissionState.fromCard(quickRow) : null;
-    // 117r-D5 重钉(逐对交代):这一行原来断言 `derived.state === 'quick_ask'`。
-    // 理由:D1 那一刀只关心「它进不进看板」,当时五态对它还是短路的;D5 把第 0 条守卫从
-    // 「kind 是不是速查」换成「调用方有没有事实」之后,这条夹具线程手上有事实(turnSeq 1 +
-    // stewardLastTurn{ok:true} = 跑完了),于是如实落 done。原断言钉的是【被修掉的那个症状】本身
-    // (一条三小时前就跑完的速查线程永远只会说「速查中」),不是被误伤的正确行为。
-    // 伴随的更强断言(原来一条都没有):同一屏上组标题的 aggregateState 必须与行上的五态【不打脸】——
-    // 症状②就是「组标题已停工 / 组内那行速查中」,只钉行不钉组的话那条打脸下次还能悄悄回来。
     ok(derived && derived.state === 'done',
       '④ 跑完的速查线程五态落在 done(已收工;实 ' + (derived && derived.state) + ')');
     ok(quickRow && quickRow.aggregateState === 'done' && quickRow.aggregateState === derived.state,

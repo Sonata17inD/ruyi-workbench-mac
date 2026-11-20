@@ -1,4 +1,5 @@
 'use strict';
+const { clearNativeResume, unavailableAgentRoute } = require('./session-engine-route.cjs');
 
 const { permissionModeFrom, resolvePermissionMode } = require('./agent-role-policy.cjs');
 const { activeOpenAiProvider } = require('./provider-config.cjs');
@@ -28,45 +29,6 @@ function createSessionTurnRuntime({
     }
   }
 
-  // 116c-0(27 号文 §1 摸底表第一行、§3.5 线程族):会话回合核心 —— 从 HTTP 壳里搬出来的「一个完整回合」。
-  // 背景:streamChat 既是 HTTP 处理器又是回合执行器,onEvent 是单一回调。管家(116c)与定时任务(119)要在
-  // 【不经 HTTP】的前提下、自带 sink 地在任意会话上发起一个完整回合,所以先把与传输无关的核心原样搬出。
-  // 这是纯搬家:下面的代码就是原 streamChat 的代码,只是从 HTTP 处理函数里搬出来并加参数,行为不变。
-  //
-  // 进核心(与传输无关、任何发起方都必须走的语义):
-  //   · 权限档三层解析(第78波的请求级临时覆盖 + 116-2a 的会话级字段 + 全局配置,见 resolvePermissionMode:
-  //     请求级 > 会话级 > 全局,每层只认 PERMISSION_MODES 白名单,非法/缺失静默回落,绝不回写全局配置);
-  //   · 会话装载/新建(缺 id 或 loadSession 返回空 → createSession)与 configForSessionEngineRoute 路由派生;
-  //   · pinnedRoute 校验(会话绑定 openai 但 provider 不可用 → 抛错,由下面的 catch 转成 error 事件);
-  //   · 引擎分派:activeOpenAiProvider 有值走 runOpenAiTurn,否则走 runClaudeTurn(Claude/Kimi 桥同签名);
-  //     含 agentTeam 门(仅首回合且 subagentMaxPerTurn>0)、附件(仅首回合)、driverAuto 续跑回合;
-  //   · driverAutoSessions 进出(第27f波:CLI 桥权限超时 → 存档暂停的判定依据);
-  //   · 回合用量取样 lastTurnTokens(含 cache_read/cache_creation,对抗轮 P3)与 turnStopped 观测(对抗轮 P2);
-  //   · driverRunId 登记 + scope:'run' 授权绑定与回合末蒸发(bindDriverRun / revokeGrantsForRun,第27波);
-  //   · turnSettlers 登记与 settle(第69波:rewind 的截断必须排在这个回合的收尾 save 之后);
-  //   · until-done 任务驱动器(runMissionDriver)及其 isAlive 判据(断连 / 已收尾 / 被 /api/stop 停);
-  //   · 断线语义:killOnDisconnect → stopSession(id,'disconnected')。原来挂在 req/res 事件上,现在由调用方
-  //     给的 AbortSignal 触发,核心内部的 finished/disconnectHandled 双闸判定一字未改;
-  //   · 错误兜底:catch → onEvent({type:'error'}) 后正常收尾,不把错误抛给调用方(与原 HTTP 语义一致);
-  //   · 持久化、审计、用量记账、自动压缩、权限桥接、插话、forced-400 重试等都在 runOpenAiTurn /
-  //     runClaudeTurn 内部,本函数只透传,搬家不触碰它们。
-  //
-  // 留在 HTTP 壳(streamChat):
-  //   · readJsonBody 解析请求体并取字段;req.socket.setNoDelay;writeHead/flushHeaders;收尾 res.end;
-  //   · NDJSON 写出与 ts 戳;assistant_delta/thinking_delta 的 50ms 合批(纯传输层优化,故随壳走);
-  //   · req 'aborted' / res 'close' 监听 —— 翻译成 AbortController.abort() 交给核心的 signal。
-  //   鉴权不在这里:/api/chat/stream 的 token 门在 13-http-router 的 ROUTE_AUTH 上游,搬家前后都不变。
-  //
-  // 两个壳钩子的位置是行为等价的关键:
-  //   · onStart 是「壳的起跑枪」,核心在【会话装载之后、第一个事件之前】同步调用它,与原 streamChat 里
-  //     writeHead/flushHeaders/挂监听 的位置逐行对应 —— 这样装载会话时抛错仍然是「响应头未发出」,
-  //     路由的 sendError 能照原样写回错误信封;
-  //   · onFlush 在 finally 的第一行调用,对应原来的 flushDeltas():合批残留必须先落盘到流,再做授权蒸发与
-  //     settle,否则 rewind 会在尾部 delta 写出之前拿到 settle 信号。
-  // source/requestMeta 只作为回合元信息记在 settle 条目上并原样回传,不参与任何判定(管家怎么用是 116c 的事)。
-  // engineRoute 是可选的显式路由覆盖:不传时 routeSource === session,与搬家前逐字节等价;HTTP 壳不传。
-  // 116-5a:取会话里最后一句助手原话(给收工补写那次当上下文)。只读内存副本,不碰磁盘 ——
-  // 回合刚把它 push 进 session.messages,这里是最便宜的取法。
   function lastAssistantTextOf(session) {
     const list = (session && Array.isArray(session.messages)) ? session.messages : [];
     for (let i = list.length - 1; i >= 0; i--) {
@@ -164,6 +126,15 @@ function createSessionTurnRuntime({
       ? storedConfig
       : { ...storedConfig, permissionMode: resolvedPermissionMode, ...(requestPermissionMode ? { permissionModeFromRequest: true } : {}) };
     const routeOverride = body.engineRoute ? normalizeSessionEngineRoute(body.engineRoute) : null;
+    const previousRoute = inferSessionEngineRoute(session) || sessionEngineRouteFromConfig(permissionConfig);
+    const switchingRetiredEngine = unavailableAgentRoute(previousRoute);
+    if (unavailableAgentRoute(routeOverride || previousRoute) || (switchingRetiredEngine && source !== 'http')) {
+      throw Object.assign(new Error('原会话引擎已不可用，请先选择新的引擎。'), { code: 'SESSION_ENGINE_UNAVAILABLE', statusCode: 409 });
+    }
+    if (switchingRetiredEngine && routeOverride) {
+      clearNativeResume(session);
+      session.engineRoute = routeOverride;
+    }
     const routeSource = routeOverride ? { ...session, engineRoute: routeOverride } : session;
     const config = configForSessionEngineRoute(permissionConfig, routeSource);
     // 123-N2 写入点②(实现在 02 的 rememberLastUsedEngineRoute,那里有完整头注):用户【自己】发起
@@ -251,21 +222,10 @@ function createSessionTurnRuntime({
       // 班组的起始事件都从这一个 emit 过 —— 一条线程换过引擎,上一回合读的网页照样记得住。
       // 判据是 06i stewardTaintToolCall(与管家那一侧读回合段表的 stewardTaintToolName 同一张名单,多认一层
       // tool_invoke_* 代理的 input.name —— 段表上没有 input,代理调用只能在这里判准)。
-      // **写在工具【结果】回来那一刻,不写在 tool_use**(主会话复核抓到的缺陷):外部内容是随结果进线程的,而原生回合
-      // 先发 tool_use 再过权限闸(09 发 tool_use → requestNativePermission)。修前在 tool_use 就置位,一条停在待决上的
-      // 写型 http_request 会先把【自己】写进粘性位,管家再去判它时恒为 tainted / sticky:http_request —— 拍板 1「写型
-      // http_request 交给管家判断」在真路径上永远做不到;tool_invoke_* 代理调这几个工具同理。所以 tool_use(以及 Kimi
-      // 改名改参的 tool_use_update)只把「这条调用会带外部内容回来」记进本回合的 stewardTaintInFlight;同一条调用的
-      // tool_result 到了才置位 —— 不看 isError(被拒、出错也照算,保守:判不清它有没有读到东西)。三个引擎的
-      // tool_result 都与自己的 tool_use 同 id(09 `{type:'tool_result', id: tc.id}`、05 `id: ev.id`、05b ACP `id` /
-      // 子会话 `kimi:<child>:<tool>`),子代理的调用带 subagentId,键里一起算,父子两边的 id 撞不到一起。
-      // 子代理只认 start、班组任一事件都算(它们在自己的循环里读什么,父回合看不见),这两条照旧在事件到达时置位。
-      // 只写内存里这一份会话,随引擎既有的 saveSession 落盘(09 每批工具之后都存一次:读进来的内容进 providerHistory
-      // 与这个位落盘是同一次写)。活回合里管家读的也是这同一个会话对象(13k stewardExemptLiveTurn 经登记表的
-      // reg.session),所以结果一回来就生效。已经置过就不再改:记的是「第一次读外部内容的那一步」,清除只由用户
-      // 亲发消息做(见上面 source === 'http' 那一行)。
+      // Record the call identity before permission checks. Mark the session only when its result arrives.
+      // Child calls use a separate namespace because their tool IDs can match a parent call.
       let taintedBy = '';
-      if (evt && (evt.type === 'tool_use' || evt.type === 'tool_use_update') && evt.id) {
+      if (evt && evt.type === 'tool_use' && evt.id) {
         const inFlightKey = String(evt.subagentId || '') + '\u0000' + String(evt.id);
         const inFlightName = stewardTaintToolCall(evt.name, evt.input);
         // 改名改参之后不算了,也不撤掉先前那一次的记号(保守:它先前被判成会读外部内容)。

@@ -11,7 +11,7 @@ after(() => fs.rmSync(root, { recursive: true, force: true }));
 let count = 0;
 async function fixture() {
   const data = path.join(root, 'data-' + (++count)); fs.mkdirSync(data);
-  process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  process.env.RUYI_HOME = data;
   const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime', 'turnSettlers', 'ServerStartNotices']);
   const ownership = await api.ServerOwnership.acquire([data]);
   await api.DesktopExecutionRuntime.initialize(ownership);
@@ -107,7 +107,7 @@ test('string, null and nonfinite rewind generations cannot alias a real host gen
 });
 test('replacement between acquiring OS ownership and initializing runtime cannot reset execution evidence', async () => {
   const data = path.join(root, 'before-init-' + (++count)); fs.mkdirSync(data);
-  process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  process.env.RUYI_HOME = data;
   const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime']);
   const owner = await api.ServerOwnership.acquire([data]);
   try {
@@ -120,7 +120,7 @@ test('replacement between acquiring OS ownership and initializing runtime cannot
 });
 test('cold missing data root binds its first identity under the original startup gate', async () => {
   const data = path.join(root, 'cold-missing-' + (++count));
-  process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  process.env.RUYI_HOME = data;
   const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime']);
   const owner = await api.ServerOwnership.acquire([data]);
   try {
@@ -134,7 +134,7 @@ test('cold missing data root binds its first identity under the original startup
 test('legacy migration binds the acquired source inode even when its old name becomes a symlink', async () => {
   const source = path.join(root, 'migration-old-' + (++count)), data = path.join(root, 'migration-new-' + count);
   fs.mkdirSync(source); fs.writeFileSync(path.join(source, 'keep'), 'historical evidence');
-  process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  process.env.RUYI_HOME = data;
   const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime']);
   const owner = await api.ServerOwnership.acquire([source, data]);
   try {
@@ -148,7 +148,7 @@ test('legacy migration binds the acquired source inode even when its old name be
 test('confirmed legacy rename releases startup gate when creating the old junction failed', async () => {
   const source = path.join(root, 'no-junction-old-' + (++count)), data = path.join(root, 'no-junction-new-' + count);
   fs.mkdirSync(source); fs.writeFileSync(path.join(source, 'keep'), 'retained without junction');
-  process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+  process.env.RUYI_HOME = data;
   const api = loadServerInternals(['ServerOwnership', 'DesktopExecutionRuntime']);
   const owner = await api.ServerOwnership.acquire([source, data]);
   try {

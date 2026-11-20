@@ -12,7 +12,7 @@ const { loadServerInternals } = require('../lib/server-internals');
 const { startFakeProvider, textFrames, toolCallFrames } = require('../lib/fake-openai-provider');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-notes-refresh-'));
-for (const key of ['RUYI_HOME', 'WIN_CLAUDE_WORKBENCH_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
+for (const key of ['RUYI_HOME', 'HOME', 'USERPROFILE']) process.env[key] = root;
 const s = loadServerInternals([
   'createSession', 'saveSession', 'runSessionTurn', 'readSessionNotes', 'sessionNotesPath',
   'maybeWriteSessionNotes', 'deleteSession', 'flushSessionIndex', 'CompactionKernel',

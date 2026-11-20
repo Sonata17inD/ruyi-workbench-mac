@@ -58,7 +58,7 @@ try {
   }, null, 2));
   writeConfig({});
   const port = await getFreePort();
-  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(port)], { cwd: WB_DIR, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_TEST_ALLOW_LOOPBACK: '1' }, windowsHide: true });
+  wb = cp.spawn(process.execPath, [SERVER, 'serve', '--port', String(port)], { cwd: WB_DIR, env: { ...process.env, RUYI_HOME: HOME, WCW_TEST_ALLOW_LOOPBACK: '1' } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   const httpJson = (method, route, body, headers) => new Promise(resolve => {
     const data = body == null ? '' : JSON.stringify(body);
@@ -161,7 +161,7 @@ try {
   // ───────── (P) 管家代答 ─────────
   console.log('── (P) 管家代答路径(进程内直调 steward_decide) ──');
   writeConfig({ stewardEnabledV1: true, stewardPollMs: 120000, stewardMaxTurnsPerHour: 500, stewardGlobalMaxTurnsPerHour: 500 });
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME; process.env.RUYI_HOME = HOME; process.env.USERPROFILE = HOME; process.env.HOME = HOME;
+   process.env.RUYI_HOME = HOME; process.env.USERPROFILE = HOME; process.env.HOME = HOME;
   const srv = require(SERVER);
   const stewardCtx = { session: { id: 'steward', kind: 'steward', providerHistory: [] } };
   const decide = (sid, id) => srv.toolCall('steward_decide', { missionId: sid, interventionId: id, action: 'allow' }, stewardCtx);

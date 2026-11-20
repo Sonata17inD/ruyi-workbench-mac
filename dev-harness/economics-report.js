@@ -312,7 +312,7 @@ function summarizeEconomicsEvents(events) {
       historyBytes: pstats(historyBytes),
       note: 'stable prefix bytes/first changed segment 需逐段对比, 当前以 schema fingerprint 变化与 historyBytes 趋势作代理。',
     },
-    note: '本报表只读脱敏账本事件, 不改 prompt/调度/history; 是 E2+ 主动实验的归因基线, 不授权任何运行时行为。总量口径以 econ_call_totals 为事实源; claude/kimi 桥接回合与 playbook 草拟等非摘要辅助调用当前不在账本内(缺失标 unknown)。',
+    note: '本报表只读脱敏账本事件, 不改 prompt/调度/history; 是 E2+ 主动实验的归因基线, 不授权任何运行时行为。总量口径以 econ_call_totals 为事实源; Claude 桥接回合与 playbook 草拟等非摘要辅助调用当前不在账本内(缺失标 unknown)。',
   };
 }
 

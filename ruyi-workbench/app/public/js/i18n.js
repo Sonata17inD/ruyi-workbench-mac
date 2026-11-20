@@ -147,7 +147,7 @@ export async function setLocale(preferredLocale = 'auto') {
     const previousLocale = localeDispatched ? activeLocale : null;
     activeLocale = catalogs.has(target) ? target : FALLBACK_LOCALE;
     document.documentElement.lang = activeLocale;
-    applyTranslations();
+    if (previousLocale !== activeLocale) applyTranslations();
     localeDispatched = true;
     window.dispatchEvent(new CustomEvent('i18n:change', { detail: { locale: activeLocale, changed: previousLocale !== activeLocale } }));
     return activeLocale;

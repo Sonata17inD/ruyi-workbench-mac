@@ -13,6 +13,7 @@ Object.assign(SubAgentMemoryHooks, {
 });
 
 const agentWorkflowPorts = {
+  backgroundChanged: sessionId => RUYI_EVENTS.emit('background.changed', { sessionId }),
   activeAgentRuns, sessionSaveIsTombstoned, safeSessionId, makeId, nowIso,
   runs: AgentRunStore,
   worktrees: { createAgentWorktree, finalizeAgentWorktree, cleanupAgentWorktree, cleanupAgentWorktreeForRetry },
@@ -78,7 +79,7 @@ function planParallelReadIsland(...args) { return ToolPolicy.planParallelReadIsl
 const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn({
   appendUsageLedger, cwdWarning, isStewardToolName, logEvent, makeId, nowIso, readConfig, safeSessionId,
   session: {
-    loadSession, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
+    loadSession, reconcileTurnMetadata, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
     normalizeTodoItems, liveSessionPermissionMode,
   },
   history: {
@@ -148,7 +149,7 @@ const runOpenAiTurn = require('./backend/provider-turn.cjs').createProviderTurn(
     runAgentWorkflow: (...args) => runAgentWorkflow(...args),
   },
   missions: {
-    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn, mergeMissionBeforeSave,
+    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn,
     recordMissionBudgetTrippedChange, recordMissionStalledChange, normalizeMetaToolArgs,
   },
   checkpoints: {

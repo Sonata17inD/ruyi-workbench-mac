@@ -16,11 +16,9 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // D 段:同一 HOME 改死探测地址重启 → 离线;离线卡/行只一句降级文案(要联网、现在离线、下一步),服务条仍引导查网络。
 // 反向:① 后端把未知并进可用 → C1/C2/C4 红;② 服务条可用数改回按 p.available 数 → C3 红(实得 3)。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
-const { findBrowserExecutable } = require('./lib/browser-path');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const appPort = await getFreePort();
@@ -68,7 +66,7 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
 }
 function killTree(child) {
   if (!child || !child.pid) return;
-  try { if (process.platform === 'win32') killOwnTree(child); else child.kill('SIGKILL'); }
+  try { child.kill('SIGKILL'); }
   catch { /* already exited */ }
 }
 
@@ -152,8 +150,7 @@ for (const pb of F01_PLAYBOOKS) fs.writeFileSync(path.join(home, 'playbooks', pb
 const spawnWb = () => cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
   cwd: WB,
   // 127-⑧:WCW_TEST_NO_NET_ANCHORS=1 + 无 provider + 无探测地址 → online:null(真未知);B 段只用无 requires 的内置模板,不受影响。
-  env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home, WCW_TEST_NO_NET_ANCHORS: '1' },
-  windowsHide: true,
+  env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home, WCW_TEST_NO_NET_ANCHORS: '1' },
 });
 
 const READY = `(() => {
@@ -193,12 +190,11 @@ try {
   if (!executable) throw new Error('browser unavailable');
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
-    ...(process.platform === 'darwin' ? ['--use-mock-keychain', '--password-store=basic'] : []),
     '--force-device-scale-factor=1', '--window-size=1280,900',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + path.join(root, 'profile'), appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A2 CDP target found');
   if (!target) throw new Error('no CDP target');
@@ -359,7 +355,6 @@ try {
   killTree(browser);
   killTree(server);
   await sleep(300);
-  try { stopRuyiTestBrowsers(path.join(root, 'profile')); } catch { /* ignore */ }
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ }
   process.exit(fail === 0 ? 0 : 1);
 }

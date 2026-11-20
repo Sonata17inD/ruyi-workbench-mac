@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-compact-marker-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
 const { createCompactionKernel } = require(path.join(app, 'backend', 'compaction-kernel.cjs'));
@@ -60,13 +60,13 @@ test('对话行闭环压缩集:user/assistant 之后才允许开新行', () => {
   assert.equal(m2.compactMeta.beforeTokens, 95000, '新集以自身起点为准');
 });
 
-test('stderr 等噪声行不打断连续性;kind 隔离 auto 与 kimi', () => {
+test('stderr 等噪声行不打断连续性;kind 隔离 auto 与手动压缩', () => {
   const session = { messages: [] };
   const m1 = upsertCompactMarker(session, { kind: 'auto', label: '自动压缩', evaporated: 3, saved: 3000, beforeTokens: 80000, afterTokens: 70000 });
   session.messages.push({ role: 'system', content: '{"level":"warn"}', source: 'stderr' });
   const m2 = upsertCompactMarker(session, { kind: 'auto', label: '自动压缩', evaporated: 1, saved: 1500, beforeTokens: 70000, afterTokens: 68000 });
   assert.equal(m1, m2, '噪声行透明,可并入');
-  const k1 = upsertCompactMarker(session, { kind: 'kimi', label: 'Kimi 自动压缩', approx: false, accuracy: '原生会话实测', beforeTokens: 66000, afterTokens: 31000 });
+  const k1 = upsertCompactMarker(session, { kind: 'provider-manual', label: '手动压缩', approx: false, accuracy: '原生会话实测', beforeTokens: 66000, afterTokens: 31000 });
   assert.notEqual(k1, m2, '不同 kind 各开各行');
   assert.match(k1.content, /66K→31K（原生会话实测）/);
   assert.doesNotMatch(k1.content, /约/);

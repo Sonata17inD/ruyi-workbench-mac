@@ -14,15 +14,15 @@ async function main() {
     // Actual engine regression uses an isolated home and a synthetic transport, independently
     // of the browser fixture below. A negative reference must not poison the next request.
     for (const protocol of ['chat', 'responses', 'anthropic']) {
-      const regression = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/reference-history-quarantine-repro.js'), '--protocol=' + protocol], { encoding: 'utf8', windowsHide: true, timeout: 45000 });
+      const regression = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/reference-history-quarantine-repro.js'), '--protocol=' + protocol], { encoding: 'utf8', timeout: 45000 });
       t.ok(regression.status === 0 && regression.stdout.includes('"desiredContract": true'), 'H0 ' + protocol + ': refused references recover in the actual main/child engines while execution stays strict and canonical audit survives');
       if (regression.status !== 0) throw Error('history_quarantine_regression_failed_' + protocol);
-      const typed = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/typed-turn-recovery-repro.js'), '--protocol=' + protocol], { encoding: 'utf8', windowsHide: true, timeout: 45000 });
+      const typed = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/typed-turn-recovery-repro.js'), '--protocol=' + protocol], { encoding: 'utf8', timeout: 45000 });
       t.ok(typed.status === 0 && typed.stdout.includes('"desiredContract": true'), 'H1 ' + protocol + ': typed content recovery preserves completed writes, command count, canonical audit and the next actual turn without sending originals');
       if (typed.status !== 0) throw Error('typed_recovery_regression_failed_' + protocol);
     }
     if (process.platform !== 'darwin') throw Error('Mac privacy integration requires macOS');
-    const stewardRegression = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/steward-privacy-repro.js')], { encoding: 'utf8', windowsHide: true, timeout: 45000 });
+    const stewardRegression = require('node:child_process').spawnSync(process.execPath, [path.join(__dirname, 'privacy-31/steward-privacy-repro.js')], { encoding: 'utf8', timeout: 45000 });
     t.ok(stewardRegression.status === 0 && stewardRegression.stdout.includes('"desiredContract": true'), 'S0 steward natural-rule operations persist only at successful settlement, cover input/tool roundtrips and preserve provenance/config guards');
     if (stewardRegression.status !== 0) throw Error('steward_privacy_regression_failed');
     fx = await startBrowserFixture({ prefix: 'ruyi-privacy-ui-', ok: t.ok, isolatedKeychain: true,

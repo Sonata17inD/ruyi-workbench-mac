@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), crypto = require('node:crypto');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-preparation-unit-'));
 for (const key of ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TMPDIR']) process.env[key] = path.join(root, key);
-process.env.RUYI_HOME = path.join(root, 'data'); process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
+process.env.RUYI_HOME = path.join(root, 'data');
 const { loadServerInternals } = require('../lib/server-internals');
 const { prepareDesktopExecutionArguments: prepare, executionArgumentsDigest: digest } = loadServerInternals(['prepareDesktopExecutionArguments', 'executionArgumentsDigest']);
 after(() => fs.rmSync(root, { recursive: true, force: true }));

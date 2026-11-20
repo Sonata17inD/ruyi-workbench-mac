@@ -79,8 +79,8 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${PROVIDER_PORT}`, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
 }, null, 2), 'utf8');
 const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-  cwd: WB, windowsHide: true,
-  env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, WCW_TEST_STEWARD_PERMISSION_WAIT_MS: String(MEDIATED_MS), WCW_TURN_IDLE_MS: String(IDLE_MS) },
+  cwd: WB,
+  env: { ...process.env, RUYI_HOME: HOME, WCW_TEST_STEWARD_PERMISSION_WAIT_MS: String(MEDIATED_MS), WCW_TURN_IDLE_MS: String(IDLE_MS) },
 });
 proc.stdout.on('data', () => {});
 proc.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));

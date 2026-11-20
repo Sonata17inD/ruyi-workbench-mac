@@ -90,10 +90,6 @@ function authorizeRoute(req, method, pathname) {
       case 'token-browser':
         if (browser) return tokenOk(req) ? null : 'missing or invalid workbench token';
         return originOk(req) ? null : 'cross-origin request rejected';
-      // 3.0 收口走查(第四波):body-token 的 token 在请求体里,handler 要先把体读完(上限 128MB)才验得了 —— 修前这一档对所有请求放行,
-      // 任意网页 `fetch(…, {mode:'no-cors', body: 'a'.repeat(1e8)})`(简单请求,无预检)就能让工作台每请求缓冲约 100MB(实测 RSS
-      // 106→297MB),并发几发足以压垮进程。合法调用方(MCP 子进程 / Kimi 桥的 node 回环)不带 Origin / Sec-Fetch-*;
-      // 浏览器发来的只放同源,跨站在读体之前就拒。
       case 'body-token': {
         const secSite = String(req.headers['sec-fetch-site'] || '').toLowerCase();
         return (browser && (!originOk(req) || secSite === 'cross-site' || secSite === 'same-site')) ? 'cross-origin request rejected' : null;

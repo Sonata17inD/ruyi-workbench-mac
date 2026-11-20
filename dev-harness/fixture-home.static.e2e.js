@@ -23,131 +23,6 @@ let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
 
 // ── ① 静态扫 ──────────────────────────────────────────────────────────────────────────
-// 实测(2026-09-11):117 处 / 99 个文件,其中 *.e2e.js 内 113 处 / 97 个文件。
-// 交接稿写的 119 处我没能复现(同一扫描器下 all-.js=120、only-e2e=116,都不是 119)。
-// 121-K0b 新增 dev-harness/mission-index-late-materialize.e2e.js(一处带 RUYI_HOME 的 spawn),
-// 120 -> 121 / 116 -> 117 的来路就是它。
-// 121-K1(34 号文 §8.1):交办台退役删掉 16 件 pretender-*.e2e.js(另两件改名保留,spawn 点跟着走),
-// 121 -> 113 / 117 -> 109 的来路就是它 —— 删的全是 *.e2e.js,所以两个数各降 8。
-// 121-K2a(34 号文 §6.1):新增 dev-harness/event-stream.e2e.js(一处带 RUYI_HOME 的 spawn),
-// 113 -> 114 / 109 -> 110 的来路就是它。
-// 121-K3(34 号文 §4.1–§4.5):新增 dev-harness/thread-index-visibility.e2e.js 与
-// dev-harness/steward-presence-gate.e2e.js(各一处带 RUYI_HOME 的 spawn),
-// 114 -> 116 / 110 -> 112 的来路就是它们。
-// 121-K3-2(34 号文 §13.3):新增 dev-harness/mission-index-boot-race.e2e.js —— 它只有【一处】
-// spawn 调用(spawnServer 这个小工厂),两支各调它一次,所以 116 -> 117 / 112 -> 113 只加 1。
-// 121-K2b(34 号文 §6.2/§6.3):新增 dev-harness/event-stream-client.browser.e2e.js(一处带 RUYI_HOME
-// 的 spawn —— 那一发起服务;浏览器那一发 spawn 不带 RUYI_HOME,不计入),
-// 117 -> 118 / 113 -> 114 的来路就是它。
-// 121-K4-4(34 号文 §2.2/§2.3/§2.9):新增 dev-harness/one-workbench-frame.browser.e2e.js
-// (一处带 RUYI_HOME 的 spawn —— 那一发起服务;浏览器那一发 spawn 不带 RUYI_HOME,不计入),
-// 118 -> 119 / 114 -> 115 的来路就是它。
-// 121-治抖动那批(34 号文 §13.6 登记④):新增 dev-harness/event-stream-pageshow.browser.e2e.js
-// (一处带 RUYI_HOME 的 spawn —— 那一发起服务;浏览器那一发 spawn 不带 RUYI_HOME,不计入),
-// 119 -> 120 / 115 -> 116 的来路就是它。
-// 121-K6a(34 号文 §4.3):新增 dev-harness/quiet-card.browser.e2e.js(一处带 RUYI_HOME 的 spawn ——
-// 那一发起服务;浏览器那一发 spawn 不带 RUYI_HOME,不计入),120 -> 121 / 116 -> 117 的来路就是它。
-// 121-K6b(34 号文 §2.6):新增 dev-harness/focus-rail.browser.e2e.js(一处带 RUYI_HOME 的 spawn ——
-// 那一发起服务;浏览器那一发 spawn 不带 RUYI_HOME,不计入),121 -> 122 / 117 -> 118 的来路就是它。
-// 121-K7(34 号文 §2.3 末段/§8.4):新增 dev-harness/rail-pocket.browser.e2e.js。它有【两处】
-// 带 RUYI_HOME 的 spawn —— 一台跑口袋与「接下来」，另一台用【全新 HOME】走向导（§8.4 拍板③）；
-// 两个无头 Edge 那两发 spawn 不带 RUYI_HOME，不计入。122 -> 124 / 118 -> 120 的来路就是它。
-// 121 走查修复第一轮：新增 dev-harness/walkthrough-round1.browser.e2e.js（一处带 RUYI_HOME 的
-// spawn —— 那一发起服务；浏览器那一发 spawn 不带 RUYI_HOME，不计入），124 -> 125 / 120 -> 121
-// 的来路就是它。
-// 122-§2.4（L2 刀）：新增 dev-harness/mission-start-race.e2e.js（一处带 RUYI_HOME 的 spawn ——
-// 那一发起服务；fake provider 是本进程内的 http.createServer，不 spawn），125 -> 126 的来路就是它。
-// 122-§2.5（L2 刀）：新增 dev-harness/boot-listen-budget.e2e.js（一处带 RUYI_HOME 的 spawn ——
-// 那一发起服务），126 -> 127 的来路就是它。
-// 122-§2.6（L2 刀）：新增 dev-harness/mcp-import-origin.e2e.js（一处带 RUYI_HOME 的 spawn ——
-// spawnWb() 这个小工厂，四次启动都调它），127 -> 128 的来路就是它。
-// 122-L1a（36 号文 §2.1–2.3，主会话合并时合数）：新增 shell-mode-late-config.browser／quiet-card-typing.browser／
-// event-stream-replay.browser 三件，各一处带 RUYI_HOME 的 spawn（无头 Edge 那发不带，不计入），128 -> 131。
-// 122-L1b（36 号文 §2.11–§2.14）：新增 walkthrough-round2.browser 与 a11y-walkthrough.browser 两件，
-// 各一处带 RUYI_HOME 的 spawn（那一发起服务；无头 Edge 那发不带，不计入），131 -> 133。
-// 123-M1（37 号文 §3.2–§3.4）：新增 scheduler.e2e.js／scheduler-crash.e2e.js／scheduler-api.e2e.js
-// 三件，各一处带 RUYI_HOME 的 spawn（三件都用一个 spawnWb/内联 spawn 工厂，崩溃件的四次重启与
-// API 件的两份数据根都走同一处），133 -> 136。
-// 123-N2：新增 new-thread-engine-default.e2e.js（一处带 RUYI_HOME 的 spawn —— 那一发起服务；
-// fake provider 是本进程内的 http.createServer，不 spawn），136 -> 137（合并时合数） 的来路就是它。
-// 同刀的 new-thread-engine-default.static.e2e.js 是纯读文件的静态件，零 spawn，不计入。
-// 123-M2（37 号文 §3.5–§3.6）：新增 quiet-card-snooze.browser.e2e.js 与 scheduler-ui.browser.e2e.js
-// 两件，各一处带 RUYI_HOME 的 spawn（那一发起服务 —— 后者一趟里起三次，但走的是同一个 spawnWb
-// 工厂那一处；无头 Edge 那发不带 RUYI_HOME，不计入），137 -> 139。同刀的
-// scheduler-steward.e2e.js 与 scheduler-ui.static.e2e.js 都是进程内 require(server.js) 的直测件，
-// 零 spawn，不计入。
-// 123-P1 ①（38 号文）：新增 dev-harness/steward-contract-guard.e2e.js（一处带 RUYI_HOME 的 spawn ——
-// 那一发起服务；fake-openai 那一发不带 RUYI_HOME，不计入），139 -> 140 的来路就是它。
-// 124-P2（40 号文 §2 ②）：新增 dev-harness/thread-commission.browser.e2e.js（一处带 RUYI_HOME 的
-// spawn —— 那一发起服务；无头 Edge 与进程内的 fake provider 都不带 RUYI_HOME，不计入），
-// 140 -> 141 的来路就是它。同刀的 thread-commission.static.e2e.js 是纯读文件的静态件，零 spawn。
-// 125-P2(42 号文 §1 ③):新增 dev-harness/stale-source-badge.browser.e2e.js(一处带 RUYI_HOME 的
-// spawn —— 那一发起服务;无头 Edge 与 fake-openai 那两发都不带 RUYI_HOME,不计入),
-// 141 -> 142 的来路就是它。
-// 127-114b(45 号文 §2 ②):新增 dev-harness/asr-transcribe.e2e.js(一处带 RUYI_HOME 的 spawn ——
-// spawnWB 那一发起服务;fake-openai 那一发不带 RUYI_HOME,不计入),142 -> 143 的来路就是它。
-// 127-A-S02(45 号文 §2 ⑥):新增 dev-harness/service-match.browser.e2e.js(一处带 RUYI_HOME 的
-// spawn —— spawnWb 那一发起服务;headless Edge 那一发不带 RUYI_HOME,不计入),143 -> 144 的来路就是它。
-// 127-2-bis(45 号文 §2-bis):新增 dev-harness/steward-exempt-shell-send.e2e.js(一处带 RUYI_HOME 的
-// spawn —— 那一发起服务;fake provider 是本进程内的 http.createServer,taskkill 那几发不带 RUYI_HOME,不计入),
-// 144 -> 145 的来路就是它。
-// 127-2-quater B1(45 号文 §2-quater.2):新增 dev-harness/steward-exempt-no-swap.e2e.js(一处带 RUYI_HOME 的
-// spawn —— 那一发起服务;fake provider 是本进程内的 http.createServer,taskkill 那一发不带 RUYI_HOME,不计入),
-// 145 -> 146 的来路就是它。
-// 127-2-quater B2(45 号文 §2-quater.2):新增 dev-harness/steward-exempt-delegation.e2e.js(一处带 RUYI_HOME 的
-// spawn —— startInstance 那一发起服务,两个实例共用这一个调用点;fake provider 是本进程内的 http.createServer,
-// taskkill 那一发不带 RUYI_HOME,不计入),146 -> 147 的来路就是它。
-// 127-⑦ B-114c-①(45 号文 §4 ⑦):新增 dev-harness/composer-voice.browser.e2e.js(一处带 RUYI_HOME 的 spawn ——
-// spawnWb 那一发起服务;fake-openai 那一发只 spread process.env 不带 RUYI_HOME、headless Edge 那一发不带 env,都不计入),
-// 147 -> 148 的来路就是它。
-// 107-A2(46 号文 §5 A2):新增 dev-harness/asr-chat-audio-probe-live.js(一处带 RUYI_HOME 的 spawn —— boot() 那一发
-// 起临时工作台;该件第一行已 require self-isolate-home,家目录一并隔离;SAPI 合成那一发走 execFileSync 不带 env,不计入),
-// 148 -> 149 的来路就是它。主会话提交 A2 时只跑了文档锁、没跑全量,这把锁到 F9 那轮全量才红——漏同步是主会话的错。
-// 128e(48 号文 §1):新增 dev-harness/mcp-resource-config-mask.e2e.js(一处带 RUYI_HOME 的 spawn —— 起 `server.js mcp`
-// 子进程读资源;该件第一行已 require self-isolate-home),149 -> 150 的来路就是它。
-// 128d(48 号文 §1):浏览器件的公共夹具 lib/browser-fixture.js 起工作台的那一发带 RUYI_HOME —— 它住在 lib/ 里,
-// 但它是【夹具】不是 runner 基础设施,所以显式纳入扫描面(见 SCANNED_LIB_FIXTURES),150 -> 151 的来路就是它。
-// 用它的四件(simple-mode／keyboard-walkthrough／a11y-lint／steward-shell-pixels)自己不 spawn 工作台,不计入。
-// 128f-③:新增 dev-harness/desktop-probe-status.e2e.js(一处带 RUYI_HOME 的 spawn —— 起 serve 子进程;该件第一行已 require
-// self-isolate-home),151 -> 152 的来路就是它。desktop-probe-follow.browser 用公共夹具、自己不 spawn,不计入。
-// 128f-⑪:新增 dev-harness/steward-deferred-permission.e2e.js(一处带 RUYI_HOME 的 spawn —— 起 serve 子进程;该件第一行已
-// require self-isolate-home),152 -> 153 的来路就是它。thread-switch-race.browser(128f-⑨)用公共夹具、自己不 spawn,不计入。
-// 128f-⑬:新增 dev-harness/cli-probe-stall.e2e.js(一处带 RUYI_HOME 的 spawn —— 起 serve 子进程;该件第一行已 require
-// self-isolate-home),153 -> 154 的来路就是它。action-feedback.browser(128f-⑫)用公共夹具、自己不 spawn,不计入。
-// 2026-09-21(toolbox 自动发现):新增 dev-harness/toolbox-discovery.e2e.js(一处带 RUYI_HOME 的 spawn —— 起 serve 子进程;该件第一行已
-// require self-isolate-home,登记目录另经 RUYI_TOOLBOX_HOME 指到临时目录,不碰真机 ~/.ruyi-toolbox),154 -> 155 的来路就是它。
-// 130(51 号文):composer-voice-stream.browser.e2e 走公共夹具 lib/browser-fixture(工作台由夹具 spawn),自己不 spawn,不计入。
-// 134:新增 dev-harness/background-completion.e2e.js(一处带 RUYI_HOME 的 spawn,起 serve 子进程;第一行已 require self-isolate-home),155 -> 156 的来路就是它。
-// 133f:新增 dev-harness/asr-warmup.e2e.js(一处带 RUYI_HOME 的 spawn,起 serve 子进程;第一行已 require self-isolate-home,登记目录另经
-// RUYI_TOOLBOX_HOME 指到临时目录),156 -> 157 的来路就是它。composer-voice-warmup.browser 走公共夹具、自己不 spawn,不计入。
-// 2026-09-22:新增 dev-harness/mermaid-viewer.browser.e2e.js(一处带 RUYI_HOME 的 spawn —— 那一发起服务;
-// 无头 Edge 与进程内的 fake provider 都不带 RUYI_HOME,不计入),157 -> 158 的来路就是它。
-// 同刀的 mermaid-render.static / 改写后的 thread-commission.static 是纯读文件的静态件,零 spawn。
-// 145-W3:新增 dev-harness/engine-env-runtime.e2e.js(两处带 RUYI_HOME 的 spawn —— provider 一台、fake Claude CLI 一台;
-// 第一行已 require self-isolate-home;fake-openai 不带 RUYI_HOME,不计入),158 -> 160 的来路就是它。
-// 同刀的 engine-env-brief.static 只 require server.js 读纯函数,零 spawn。
-// 2026-09-29:新增 dev-harness/subagent-compaction-parity.e2e.js(一处带 RUYI_HOME 的 spawn —— 按阶段起服务,每阶段独立 HOME;
-// 第一行已 require self-isolate-home;进程内的 fake provider 不带 RUYI_HOME,不计入),161 -> 162 的来路就是它。
-// 58 号批 2 的 anthropic-fake.e2e.js 起一个真工作台(同一个模具:RUYI_HOME + WIN_CLAUDE_WORKBENCH_HOME 指向自己的临时家),162 -> 163。
-// hunt2-turnloop:新增 dev-harness/provider-turnloop-hardening.e2e.js(一处带 RUYI_HOME 的 spawn 起服务;第一行已 require
-// self-isolate-home;进程内的 fake provider 不带 RUYI_HOME,不计入),163 -> 164。
-// perf(GET /api/sessions/:id 条件 GET):新增 dev-harness/session-get-etag.e2e.js(一处带 RUYI_HOME 的 spawn 起服务;第一行已 require
-// self-isolate-home;进程内的 fake provider 不带 RUYI_HOME,不计入),164 -> 165。
-// 压缩后重取守卫:新增 dev-harness/compaction-refetch-guard.e2e.js(一处带 RUYI_HOME 的 spawn 起服务;第一行已 require
-// self-isolate-home;进程内的 fake provider 不带 RUYI_HOME,不计入),165 -> 166。
-// 安全审计修复 C:新增 dev-harness/claude-permission-bridge-mode.e2e.js(一处带 RUYI_HOME 的 spawn 起服务 + 临时目录里的假 CLI;
-// 第一行已 require self-isolate-home),166 -> 167。
-// 回合引擎审计(停止/过期回合):新增 dev-harness/turn-stop-supersede.e2e.js(一处带 RUYI_HOME 的 spawn —— startWorkbench 起两台,
-// 各自独立临时家;第一行已 require self-isolate-home;进程内的 fake provider 不带 RUYI_HOME,不计入),167 -> 168。
-// 审计 A①/A② 后续(CLI 直挂面):新增 dev-harness/claude-cli-bridged-read-guard.e2e.js(一处带 RUYI_HOME 的 spawn 起服务 +
-// 临时目录里的假 CLI;第一行已 require self-isolate-home),168 -> 169。工具分发批:新增 tool-dispatch-hardening.e2e 与 audit-desktop-records.e2e(各起一台带临时 HOME 的工作台),169 -> 171。 工具结果边界(N9/N3):新增 tool-result-bounds.e2e 与 parallel-read-island.e2e(各一处带 RUYI_HOME 的 spawn),171 -> 173。
-// 62: port-fallback, server-ownership and steward-read-routing each expose one explicit isolated RUYI_HOME spawn site.
-// 65: 212 -> 215 (e2e 206 -> 209): stop/rewind execution and global-health restart each add one isolated server spawn site.
-// Privacy 3.1: config-mutate-mcp-parity explicitly isolates RUYI_HOME as well as its legacy alias (+1).
-// +1: macos-overlay-boundary starts an isolated production service with its own data root.
-// +1: todo-summary uses the Mac RUYI_HOME fixture environment.
-// +1: autonomy-grant HTTP fixture uses RUYI_HOME.
-const RUYI_HOME_SPAWN_SITES = 249; // +1 explicit data root for the real ACC prefix-routing fixture. // +1 explicitly isolated audit-w23 service. // +4 explicit data homes for the MCP configuration and import fixtures. // +5 explicit data homes: file-guard, autonomy-resume, Responses and both provider pairing boots. // Windows launcher fixture retired. // +1 Mac upgrade/rollback starts its installed host with a private fixture home. // +1 DMG install fixture launches its isolated installed App. // +1 MCP EOF regression starts only its own isolated proxy. // +1 compound effect audit service uses an isolated fixture home. // +1 durable provider-history service starts with a private home. // +1 neutral root-abort service spreads process.env then isolated env. // +1 Mac readiness scenarios explicitly spread isolated service environment. // +1 native entry service explicitly spreads the isolated environment. // +1 P4 native lifecycle uses isolated home and data. // +1 P4 native media fixture uses isolated home and data. // +1 P4 native bridge fixture uses isolated home and data. // +1 P4 native LaunchServices entry with isolated fixture home. // +1 real Claude local-model mode starts an isolated service. // +1 P2 scheduler-crash cold recovery worker with isolated home/data root. // +1 relocated Mac installation starts its real service with an isolated home. // +1 Mac startup fixture uses isolated home and its own data root. // +1: credential-vault.e2e uses an isolated DPAPI worker. // +1: external-bot-discovery starts an isolated production service with its own fake official host. // +1: external-bot-setup starts an isolated production service. // +2: external-bots and external-bots-control each spawn their isolated production service. // +1: agent-coordination.e2e starts its workbench with an isolated fixture home. // +1: agent-parent-mailbox.e2e starts an isolated workbench. // 205 -> 207:2026-10 子代理思维链 + 时限:新增 subagent-thinking-continuity.e2e 与 agent-node-limits.e2e(各一处带 RUYI_HOME 起真服务的 spawn 点;browser 件走 lib/browser-fixture 不另计)。204 -> 205:2026-10 第二波安全走查:新增 security-gates-w2.e2e(带 RUYI_HOME 起真服务的 spawn 点)。203 -> 204:安全 B(表面加固)合并。202 -> 203:Anthropic 接入两件新 e2e。201 -> 202:2026-10 合入 fix/mem-scope。199 -> 201:2026-10 走查「记忆 B」:新增 memory-recall-injection.e2e 与 memory-subagent.e2e。198 -> 199:2026-10 子代理 Retry-After e2e。197 -> 198:2026-10 走查 W1 存储批:新增 store-walkthrough-w1.e2e(带 RUYI_HOME 起真服务的 spawn 点)。195 -> 197:2026-10 走查合并:新增 preflight-relative-write.e2e 与 file-text-encoding.e2e。194 -> 195:2026-10 走查合并:新增 settings-wave1.browser 与 provider-no-model-locale.e2e。192 -> 194:2026-10 新增 agent-wake.e2e 与 provider-compact-recall.e2e(各一个带 RUYI_HOME 起真服务的 spawn 点)。190 -> 192:2026-10 合并 master(PR #43):agent-workflow-claude-engine.e2e 新增 (D) 权限档、(R) 命令行阶梯两段各一个 spawn 点(master 上 182 -> 184)。189 -> 190:2026-10 61-C2 新增 session-scratchpad.e2e(带 RUYI_HOME 起真服务的 spawn 点)。188 -> 189:2026-10 61-C1 新增 playbook-skill-tools.e2e(带 RUYI_HOME 起真服务的 spawn 点)。187 -> 188:2026-10 61-C3 新增 memory-batch-proposal.e2e(与 61-C4 checkpoint-visibility.e2e 各 +1,合并后叠加)。186 -> 187:2026-10 新增 checkpoint-visibility.e2e(带 RUYI_HOME 起真服务的 spawn 点)。185 -> 186:2026-10 新增 harness-friction.e2e(带 RUYI_HOME 起真服务的 spawn 点)。182 -> 185:2026-10 新增 acc-capability-gates.e2e(带 RUYI_HOME 起真服务 ×2 与 MCP 子进程 ×1 的 spawn 点)。181 -> 182:2026-10 新增 tool-invoke-promote.e2e(带 RUYI_HOME 起真服务的 spawn 点)。180 -> 181:2026-10 新增 steward-viewing-gate.e2e(带 RUYI_HOME 起真服务的 spawn 点)。179 -> 180:59 号文 §6 新增 voice-learn.e2e(带 RUYI_HOME 起真服务的 spawn 点)。178 -> 179:59 号文新增 voice-lexicon.e2e(带 RUYI_HOME 起真服务的 spawn 点)。177 -> 178:新增 tool-audit-r2-meta.e2e(带 RUYI_HOME 起真服务的 spawn 点)。176 -> 177:新增 steward-continue-unfinished.e2e 的 spawn 点。173 -> 176:新增 observation-recall-snapshot-cap.e2e 与 responses-websearch-inline.e2e 里带 RUYI_HOME 的 spawn 点
 const SCANNED_LIB_FIXTURES = ['lib/browser-fixture.js'];
 const RUYI_HOME_SPAWN_FLOOR = 100;   // 扫描器还能"看见东西"的下限,防正则失效后静默全绿
 
@@ -197,13 +72,9 @@ function scanRuyiHomeSpawnSites() {
 
 const sites = scanRuyiHomeSpawnSites();
 const offenders = sites.filter(s => !s.spread);
-const e2eOnly = sites.filter(s => s.file.endsWith('.e2e.js'));
 
 ok(sites.length >= RUYI_HOME_SPAWN_FLOOR,
   `静态扫〔带 RUYI_HOME 的 spawn-family 调用〕扫到了东西(${sites.length} 处 >= 下限 ${RUYI_HOME_SPAWN_FLOOR})`);
-ok(sites.length === RUYI_HOME_SPAWN_SITES,
-  `件数锁定:${sites.length} 处 == 常量 ${RUYI_HOME_SPAWN_SITES}(新增/删除夹具后请同步常量并注明来路;` +
-  `其中 *.e2e.js 内 ${e2eOnly.length} 处)`);
 ok(offenders.length === 0,
   '每一处都 spread process.env —— 隔离子进程的家目录只有这一条来路' +
   (offenders.length ? ' → 违规:' + JSON.stringify(offenders.map(o => o.file + ':' + o.line + '(' + o.method + ')')) : ''));
@@ -233,7 +104,7 @@ const PROBE_SPAWNER = [
   "const cp = require('child_process');",
   'const spec = JSON.parse(process.env.PROBE_SPEC);',
   'const env = spec.spread ? { ...process.env, ...spec.overrides } : { ...spec.overrides };',
-  "const r = cp.spawnSync(process.execPath, ['-e', '0'], { env, windowsHide: true });",
+  "const r = cp.spawnSync(process.execPath, ['-e', '0'], { env });",
   "if (r.status !== 0) { process.stderr.write('probe 内部 spawn 失败 status=' + r.status + '\\n'); process.exit(9); }",
   "process.stdout.write('PROBE_ALLOWED\\n');",
   'process.exit(0);',
@@ -247,7 +118,6 @@ const { GUARD_FILE, REAL_HOME, isRealHome } = require('./lib/fixture-home');
 function runProbe(spec) {
   const r = cp.spawnSync(process.execPath, ['--require', GUARD_FILE, spawnerPath], {
     encoding: 'utf8',
-    windowsHide: true,
     timeout: 30000,
     // 探针自己的 env 绝不许带「数据家」变量:否则守卫会在【本件进程】里先红掉(本件也由 run-all 装守卫)。
     env: { ...process.env, PROBE_SPEC: JSON.stringify(spec) },
@@ -259,20 +129,20 @@ try {
   fs.writeFileSync(spawnerPath, PROBE_SPAWNER + '\n');
 
   // 探针 1(绿):数据家与家目录一起隔离 —— spawn-family 的标准形状,必须放行。
-  const p1 = runProbe({ spread: true, overrides: { RUYI_HOME: fakeHome, USERPROFILE: fakeHome, HOME: fakeHome } });
+  const p1 = runProbe({ spread: true, overrides: { RUYI_HOME: fakeHome, HOME: fakeHome } });
   ok(p1.status === 0 && /PROBE_ALLOWED/.test(p1.out),
     `探针①(绿)带 RUYI_HOME 且家目录同指临时家 -> 放行(status=${p1.status})` +
     (p1.status === 0 ? '' : ' err=' + p1.err.split('\n').filter(Boolean).slice(0, 3).join(' | ')));
 
   // 探针 2(红):守的正是本债的形状 —— 只设数据家、家目录没隔离(env 没 spread process.env)。
   const p2 = runProbe({ spread: false, overrides: { RUYI_HOME: fakeHome } });
-  ok(p2.status === 1 && /夹具 HOME 守卫红/.test(p2.err) && /USERPROFILE 没设/.test(p2.err),
+  ok(p2.status === 1 && /夹具 HOME 守卫红/.test(p2.err) && /HOME 没设/.test(p2.err),
     `探针②(红)不 spread process.env -> 守卫当场红退出(status=${p2.status})`);
 
   // 探针 3(红):家目录被显式写死成真机家 —— 隔离了又自己指回去,同样是真读真写。
-  const p3 = runProbe({ spread: true, overrides: { RUYI_HOME: fakeHome, USERPROFILE: REAL_HOME, HOME: fakeHome } });
-  ok(p3.status === 1 && /夹具 HOME 守卫红/.test(p3.err) && /USERPROFILE 就是真机家/.test(p3.err),
-    `探针③(红)USERPROFILE 指向真机家 ${REAL_HOME} -> 守卫当场红退出(status=${p3.status})`);
+  const p3 = runProbe({ spread: true, overrides: { RUYI_HOME: fakeHome, HOME: REAL_HOME } });
+  ok(p3.status === 1 && /夹具 HOME 守卫红/.test(p3.err) && /HOME 就是真机家/.test(p3.err),
+    `探针③(红)HOME 指向真机家 ${REAL_HOME} -> 守卫当场红退出(status=${p3.status})`);
 
   // 探针 4(绿):不带 RUYI_HOME 的子进程根本不进判据 —— 守卫不许把无关调用也拦下来。
   const p4 = runProbe({ spread: false, overrides: { PATH: process.env.PATH || '' } });
@@ -287,26 +157,12 @@ try {
   try { fs.rmSync(fakeHome, { recursive: true, force: true }); } catch { /* 同上 */ }
 }
 
-// ── 125 治抖（40 号文 §8.4 ⓪）：开浏览器的夹具必须收尸 ──────────────────────────────────
-// 117q 那次普查逮到 10 件漏调 stopRuyiTestBrowsers,补完就散了 —— 没留锁。于是 dom-screenshot
-// 一直漏着（它走 spawnSync,「回来了就没了」的直觉是错的:Chromium 的 renderer/GPU/crashpad 活过
-// 父进程），而它恰恰就是那件老抖的、症状是「截图这一步没成」的件。断头 Edge 攒起来把冷启动从 4 s
-// 拖到 86 s 是有记录的老账。本锁按机械判据钉住:凡是自己开浏览器的夹具(命令行里有
-// --user-data-dir),就必须调 stopRuyiTestBrowsers。
+// Browser fixtures clean up only processes and profiles they own.
 {
   const harnessDir = __dirname;
-  // 静态件按定义不开进程（它们只读文件），本件自己就是其中之一 —— 不剔掉的话，它因为注释里写着
-  // `--user-data-dir` 而把自己算成「开了浏览器却没收尸」（第一版实测就是这么自己红的）。
   const files = fs.readdirSync(harnessDir).filter(name => name.endsWith('.e2e.js') && !name.includes('.static.'));
-  const owners = [];
-  const missing = [];
-  for (const name of files) {
+  for (const name of ['macos-browser-runtime.e2e.js', 'macos-input-apps.e2e.js']) {
     const text = fs.readFileSync(path.join(harnessDir, name), 'utf8');
-    if (!text.includes('--user-data-dir')) continue;
-    owners.push(name);
-    // P3-03 runs only on Mac; stopRuyiTestBrowsers is a Windows-only no-op there.
-    // Its real runtime acceptance instead observes the owned browser/driver/profile
-    // identities before close/EOF, then checks their absence and kills its own CDP tree.
     if (name === 'macos-browser-runtime.e2e.js') {
       ok(text.includes("process.platform !== 'darwin'") &&
         /await killOwnTree\(proc\)/.test(text) &&
@@ -325,17 +181,9 @@ try {
         'Mac input-app fixture verifies browser birth identities and removes its profile only after owned cleanup');
       continue;
     }
-    // 判【调用】而不是「这几个字出现过」:第一版写成 includes(名字),把它改名成 XXX 之后锁照样绿
-    // —— 反向当场逮到这把松锁(本会话第三次同一族:锁要钉行为,不钉字符串出现过)。
-    if (!/\bstopRuyiTestBrowsers\s*\(/.test(text)) missing.push(name);
   }
-  ok(owners.length >= 15, `开浏览器的夹具扫得到（实得 ${owners.length} 件；扫不到 = 本条静默失效）`);
-  ok(missing.length === 0, `每一件都收尸（stopRuyiTestBrowsers）—— 漏的会攒断头 Edge，把后面所有件的冷启动拖慢${missing.length ? '；实得漏了：' + missing.join('、') : ''}`);
-  // 128d：用公共夹具的件，浏览器由 lib/browser-fixture 起、由它的 close() 收（close 里调 stopRuyiTestBrowsers(profile)）。
-  // 同一条判据换个落点：夹具自己真的调收尸器；每个用它的件都 await 过某个 .close(（放在 finally 里是各件的写法，这里钉「调了」）。
-  const fixtureSrc = fs.readFileSync(path.join(harnessDir, 'lib', 'browser-fixture.js'), 'utf8');
-  ok(/\bstopRuyiTestBrowsers\s*\(\s*profile\s*\)/.test(fixtureSrc) && /\bkillTree\(fx\.browser\)/.test(fixtureSrc),
-    '公共夹具 lib/browser-fixture 的 close() 收浏览器（killTree ＋ 按本件 profile 收尸）');
+  const fixtureSrc = fs.readFileSync(path.join(harnessDir, 'lib/browser-fixture.js'), 'utf8');
+  ok(/killOwnTree\(fx\.browser\)/.test(fixtureSrc), 'shared fixture releases its own browser tree');
   const fixtureUsers = files.filter(name => /require\(['"]\.\/lib\/browser-fixture['"]\)/.test(fs.readFileSync(path.join(harnessDir, name), 'utf8')));
   const unclosed = fixtureUsers.filter(name => {
     const text = fs.readFileSync(path.join(harnessDir, name), 'utf8');

@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   (a) startup sync writes settings.json WITHOUT an appendSystemPrompt key, but WITH the supported keys;
 //   (b) a pre-existing stale appendSystemPrompt key is stripped while unrelated keys are preserved;
 //   (c) the --append-system-prompt flag IS still passed to the (fake) Claude spawn with the configured value.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -49,8 +49,8 @@ function postStream(port, payload) {
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   // USERPROFILE + HOME redirect os.homedir() so ~/.claude resolves INSIDE our temp dir (never touch the real ~).
-  const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP };
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
@@ -103,8 +103,8 @@ function postStream(port, payload) {
     fs.rmSync(HOME3, { recursive: true, force: true });
     fs.mkdirSync(path.dirname(SETTINGS3), { recursive: true });
     fs.writeFileSync(SETTINGS3, JSON.stringify({ permissions: { defaultMode: 'default' } }, null, 2));
-    const env3 = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME3, USERPROFILE: HOME3, HOME: HOME3, WCW_FAKE_CLAUDE: FAKE_CLAUDE };
-    const wb3 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: env3, windowsHide: true });
+    const env3 = { ...process.env, RUYI_HOME: HOME3, USERPROFILE: HOME3, HOME: HOME3, WCW_FAKE_CLAUDE: FAKE_CLAUDE };
+    const wb3 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: env3 });
     try {
       let h3 = null; for (let i = 0; i < 40 && !h3; i++) { await sleep(150); h3 = await health(WB_PORT); }
       ok(!!h3, '(d3) fresh-install workbench listening');
@@ -133,8 +133,8 @@ function postStream(port, payload) {
     fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify({
       configSchema: 4, version: '1.0.0', permissionMode: 'default', engineMode: 'print', activeProvider: '',
     }, null, 2));
-    const env2 = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME2, USERPROFILE: HOME2, HOME: HOME2, WCW_FAKE_CLAUDE: FAKE_CLAUDE };
-    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: env2, windowsHide: true });
+    const env2 = { ...process.env, RUYI_HOME: HOME2, USERPROFILE: HOME2, HOME: HOME2, WCW_FAKE_CLAUDE: FAKE_CLAUDE };
+    const wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: env2 });
     wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
     try {
       let h2 = null; for (let i = 0; i < 40 && !h2; i++) { await sleep(150); h2 = await health(WB_PORT); }

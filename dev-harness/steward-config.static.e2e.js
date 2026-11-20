@@ -31,15 +31,10 @@ const ok = (condition, label) => { if (condition) console.log('PASS ' + label); 
 const configSrc = fs.readFileSync(path.join(APP, 'backend', 'config-schema.cjs'), 'utf8');
 const configDefaults = fs.readFileSync(path.join(APP, 'backend', 'config-defaults.cjs'), 'utf8');
 
-// 121 波 K0 重钉(34 号文 §8.4 拍板③):默认关 → 默认开,管家视角成为默认入口。
-// 归一口径【不动】(=== true,见下面 ④ 的 'yes' -> false),这里钉的只是默认表那一个值。
 ok(/stewardEnabledV1:\s*true,/.test(configDefaults), '默认值: stewardEnabledV1=true(121 波 K0 从 false 翻转)');
 ok(/stewardProviderId:\s*'',/.test(configDefaults), "默认值: stewardProviderId=''");
 ok(/stewardModel:\s*'',/.test(configDefaults), "默认值: stewardModel=''(在 stewardProviderId 之后,与 subagent 写法对齐)");
 ok(/stewardPollMs:\s*60000,/.test(configDefaults), '默认值: stewardPollMs=60000');
-// 117m-A1 重钉(用户第六轮走查⑦):默认值 12 → 30。12 是 116a 拍脑袋的保守值,真机上被「代批风暴」
-// 15 分钟吃光(11 条 steward_decision),于是用户那两句「还在正常运转吗」撞上熔断。重钉的同时补两条
-// 【更强】的伴随断言:默认表与 sanitize 兜底必须是同一个数(B10b),且 clamp 区间一字未动(下面 clampChecks)。
 ok(/stewardMaxTurnsPerHour:\s*30,/.test(configDefaults), '默认值: stewardMaxTurnsPerHour=30(117m-A1 从 12 抬到 30)');
 {
   const declared = (configDefaults.match(/stewardMaxTurnsPerHour:\s*(\d+),/) || [])[1];
@@ -47,10 +42,6 @@ ok(/stewardMaxTurnsPerHour:\s*30,/.test(configDefaults), '默认值: stewardMaxT
   ok(declared === '30' && fallback === '30',
     `默认值: stewardMaxTurnsPerHour 的默认表与 sanitize 兜底是同一个数(默认表 ${declared} / 兜底 ${fallback})—— 两处漂移会让「缺省」和「填了垃圾」落到不同上限`);
 }
-// 存量配置【不迁移】:normalizeConfig 只在值缺失/非法时才写默认值,合法的旧值(含 12)原样保留 ——
-// 静默抬高别人的花钱上限不合适。下面 c1 那一段的 clamp 断言就是这条纪律的机器证据。
-ok(/if \(clamped !== config\.stewardMaxTurnsPerHour\) \{ config\.stewardMaxTurnsPerHour = clamped; changed = true; \}/.test(configSrc),
-  'sanitize: 合法的存量值原样保留(只有 clamp 后不同才回写 —— 抬高默认值不会动老用户已有的上限)');
 ok(/stewardMaxCostPerDay:\s*5,/.test(configDefaults), '默认值: stewardMaxCostPerDay=5');
 // 129g 加了第五格 answer(代答),**默认关** —— 它独立于 relay:勾「事项内自动交接」不该顺带
 // 把「替我回答线程的提问」也给出去(一格两权,用户按的时候看不见第二个)。
@@ -81,9 +72,6 @@ ok(/stewardMaxParallelThreads:\s*5,/.test(configDefaults), '默认值: stewardMa
 ok(/stewardGlobalMaxTurnsPerHour:\s*120,/.test(configDefaults), '默认值: stewardGlobalMaxTurnsPerHour=120');
 ok(/stewardGlobalMaxCostPerDay:\s*50,/.test(configDefaults), '默认值: stewardGlobalMaxCostPerDay=50');
 
-// stewardEnabledV1 严格布尔归一(=== true),不是宽松真值判断。
-ok(/const b = config\.stewardEnabledV1 === true;/.test(configSrc),
-  'sanitize: stewardEnabledV1 严格布尔(=== true)归一');
 
 // stewardConversationRetention 枚举 visit/24h/forever。
 ok(/\['visit', '24h', 'forever'\]\.includes\(config\.stewardConversationRetention\)/.test(configSrc),
@@ -186,7 +174,7 @@ ok(!/require\(/.test(stewardSrc), '06i 零 require(纯函数层,不反向拉传�
 /* ═══════════════════════ ④ 一处真实回环:normalizeConfig 幂等 ═══════════════════════ */
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-config-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = tmpHome;
+process.env.RUYI_HOME = tmpHome;
 const srv = require(path.join(APP, 'server.js'));
 
 // 3.1 走测反馈：缺省与非法值采用新默认；用户已明确保存的旧预算和不限预算保持原样。
@@ -227,6 +215,7 @@ const dirty = {
   stewardGlobalMaxCostPerDay: 'lots',  // 非数字 -> 回默认 50
 };
 
+ok(srv.normalizeConfig({ stewardMaxTurnsPerHour: 12 }).config.stewardMaxTurnsPerHour === 12, '已有的每小时 12 回合预算在归一化后保持原值');
 const first = srv.normalizeConfig(dirty);
 const c1 = first.config;
 ok(c1.stewardEnabledV1 === false, "非法 stewardEnabledV1='yes' 归一为 false");

@@ -104,8 +104,8 @@ const readReplies = () => { try { return fs.readFileSync(CAPTURE, 'utf8').split(
   const { ok } = t;
   const PORT = await getFreePort();
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-    cwd: WB, windowsHide: true,
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLI },
+    cwd: WB,
+    env: { ...process.env, RUYI_HOME: HOME, USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLI },
   });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {

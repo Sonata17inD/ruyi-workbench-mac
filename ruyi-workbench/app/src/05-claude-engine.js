@@ -4,16 +4,6 @@ const { AGENT_CLI_ADAPTERS, agentCliAdapter } = require('./backend/agent-cli-ada
     CLAUDE_PERMISSION_MODE_MAP, RUYI_MCP_CLI_TOOL_PREFIX, buildClaudeAgentDefinitions, claudeCostFields,
     discoverModels, effectiveAnthropicEnv, isClaudeResumeMissingError, offlineModelList, parseClaudeEvent,
   },
-  kimi: {
-    applyKimiStatusToSession: (...args) => applyKimiStatusToSession(...args), discoverKimiModels,
-    kimiContextWindow, kimiModelList, kimiSessionStatus: (...args) => kimiSessionStatus(...args),
-    kimiUsageFromStatus: (...args) => kimiUsageFromStatus(...args), parseKimiStreamJsonEvent,
-    runKimiAcpTurnPrepared: (...args) => runKimiAcpTurnPrepared(...args),
-    runKimiCompact: (...args) => runKimiCompact(...args),
-    syncKimiSessionUsage: (...args) => syncKimiSessionUsage(...args),
-    syncKimiTurnPreferences: (...args) => syncKimiTurnPreferences(...args), syncMcpServersToKimi,
-    watchKimiWire: (...args) => watchKimiWire(...args),
-  },
   tools: {
     classifyToolPacks: (...args) => classifyToolPacks(...args), generateSessionMcpConfig,
     sessionDesktopToolsOf,
@@ -61,7 +51,13 @@ const { runClaudeTurn } = require('./backend/agent-cli-turn.cjs').createAgentCli
   },
   storage: {
     buildTurnSummary, bumpMissionChangeSeq, captureWorkspaceTurnBaseline, createTurnSegmentBuilder,
-    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine, loadSession,
-    mergeMissionBeforeSave, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
+    finalizeMissionAfterTurn, isUntitledSessionTitle, journalReadIndex, lastAssistantEngine,
+    reconcileTurnMetadata, reconcileWorkspaceTurnBaseline, saveSession, saveTurnFinalSession,
   },
+});
+
+const maybeAutoCompactAgentSession = require('./backend/agent-auto-compaction.cjs').createAgentAutoCompaction({
+  loadSession,
+  agentConversationContextMeta: (...args) => agentConversationContextMeta(...args),
+  runAgentExternalCompact: (...args) => runAgentExternalCompact(...args),
 });

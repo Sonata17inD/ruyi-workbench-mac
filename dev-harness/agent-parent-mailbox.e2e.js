@@ -81,7 +81,7 @@ async function main() {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ configSchema: 8, permissionMode: 'bypass', defaultWorkspace: home,
     agentAutoWake: true, subagentMaxPerTurn: 8, subagentMaxConcurrent: 2,
     providers: [{ id: 'fake', label: 'fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model' }], activeProvider: 'fake' }));
-  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: wbDir, windowsHide: true, env: { ...process.env, RUYI_HOME: home } });
+  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: wbDir, env: { ...process.env, RUYI_HOME: home } });
   const base = `http://127.0.0.1:${port}`;
   let token = '';
   const post = async (route, body) => (await fetch(base + route, { method: 'POST', headers: { 'content-type': 'application/json', 'x-wcw-token': token }, body: JSON.stringify(body) })).json();
@@ -148,7 +148,6 @@ async function main() {
     ok(runStatus.some(e => e.type === 'tool_result' && e.id === 'status_RECEIPT_RUN' && e.content.status === 'delivered'), 'main tool status queries own receipt after run has completed');
     // Capture the real node history at the existing compaction boundary. Small histories need not run L2.
     process.env.RUYI_HOME = home;
-    process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
     const internals = loadServerInternals(['runSubAgentCore', 'SessionCompaction', 'defaultConfig']);
     const { summaryTaskSourceRole } = require('../ruyi-workbench/app/backend/summary-evidence.cjs');
     let mailHistory;

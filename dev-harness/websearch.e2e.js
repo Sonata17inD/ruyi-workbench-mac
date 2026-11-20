@@ -21,7 +21,7 @@ process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 
 const { extractMainText, parseBingHtml, parseBaiduHtml } = require('../ruyi-workbench/app/backend/html-content.cjs');
 const { classifyFetchError } = require('../ruyi-workbench/app/backend/http-transport.cjs');
 const { webFetchFailMessage } = require('../ruyi-workbench/app/backend/http-request.cjs');
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -96,7 +96,7 @@ function startFakeSearx(port) {
 function writeConfig(home, extra) {
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(Object.assign({
     // 116-5a:本件隔离回合/工具/台账,不测线程自动摘要(它有自己的 thread-brief.e2e.js)
-    stewardThreadBriefV1: false, credentialEncryptionV1: process.platform === 'win32',
+    stewardThreadBriefV1: false, credentialEncryptionV1: true,
     configSchema: 8, version: '1.0.0', permissionMode: 'bypass', toolLoadingMode: 'full',
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_PORT, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
     activeProvider: 'fake',
@@ -108,10 +108,10 @@ function writeConfig(home, extra) {
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   // Isolate the module's dataRoot (paths.webcache) into the temp HOME BEFORE requiring server.js — the module
-  // resolves WIN_CLAUDE_WORKBENCH_HOME at load. Otherwise the cache round-trip would touch the real data dir.
+  // resolves RUYI_HOME at load. Otherwise the cache round-trip would touch the real data dir.
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+  process.env.RUYI_HOME = HOME;
   const mod = require(path.join(WB, 'app', 'server.js'));
 
   // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ function writeConfig(home, extra) {
 
   // ─────────────────────────────────────────────────────────────────────────────────────────────────
   // UNIT — cache round-trip + SSRF-blocked url never serves cache. Uses an isolated HOME so paths.webcache
-  // is deterministic (module reads WIN_CLAUDE_WORKBENCH_HOME at load — set below via a child process check).
+  // is deterministic (module reads RUYI_HOME at load — set below via a child process check).
   // Here we exercise the pure read/write against a temp url and a hand-written cache file.
   // ─────────────────────────────────────────────────────────────────────────────────────────────────
   ok(typeof mod.writeWebCache === 'function' && typeof mod.readWebCache === 'function' && typeof mod.webCachePath === 'function', 'cache fns exported');
@@ -326,9 +326,10 @@ function writeConfig(home, extra) {
   // the 开箱即用 contract: an install that never picked a backend can still search. (Was: 'none' → filtered.)
   writeConfig(HOME, { searchBackend: { type: 'none', baseUrl: '', apiKey: '' } });
 
-  const fake1 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR } });
+  const fake1 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR } });
   fake1.stdout.on('data', () => {});
-  let wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  let wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let configReader = null;
@@ -362,18 +363,18 @@ function writeConfig(home, extra) {
     const status = await getJson(WB_PORT, '/api/status');
     ok(status.config.searchBackend.apiKey === '••••3456', 'GET /api/status masks searchBackend.apiKey (••••3456)');
     // Exact persistence semantics are checked after authenticated slot recovery.
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     const rawDisk = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
     const onDisk = configReader.recover(rawDisk);
     ok(onDisk.searchBackend.apiKey === 'bing-secret-key-123456', 'persisted config recovers the exact REAL searchBackend key');
     const privateDisk = () => ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(HOME, name)))
       .every(name => !fs.readFileSync(path.join(HOME, name), 'utf8').includes('bing-secret-key-123456'));
-    ok(process.platform !== 'win32' || rawDisk.credentialRefsV1?.version === 1 && rawDisk.searchBackend.apiKey === '' && privateDisk(), 'Windows persistence stores encrypted references with no search key plaintext in config, backups or vault');
+    ok(rawDisk.credentialRefsV1?.version === 1 && rawDisk.searchBackend.apiKey === '' && privateDisk(), 'Mac persistence stores encrypted references with no search key plaintext in config, backups or vault');
     // Round-trip: POST the masked value straight back (as the UI would) → disk key survives.
     await postJson(WB_PORT, '/api/config', { searchBackend: { type: 'bing', baseUrl: '', apiKey: '••••3456' } }, { 'x-wcw-token': token });
     const onDisk2 = configReader.recover(JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8')));
     ok(onDisk2.searchBackend.apiKey === 'bing-secret-key-123456', 'masked round-trip SAVE does NOT wipe the real key');
-    ok(process.platform !== 'win32' || privateDisk(), 'masked round-trip does not reintroduce search key plaintext into physical files');
+    ok(privateDisk(), 'masked round-trip does not reintroduce search key plaintext into physical files');
   } catch (e) { console.log('ERROR(live none) ' + (e && e.stack || e)); fail++; }
   finally { configReader?.close(); killp(wb); killp(fake1); await sleep(300); }
 
@@ -381,11 +382,10 @@ function writeConfig(home, extra) {
   fs.rmSync(CAP_DIR, { recursive: true, force: true });
   writeConfig(HOME, { searchBackend: { type: 'searxng', baseUrl: 'http://127.0.0.1:' + SEARX_PORT, apiKey: '' } });
   const fake2 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR, FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'web_search', args: { query: 'latest news', maxResults: 3 } }]) },
   });
   fake2.stdout.on('data', () => {});
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
   try {

@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       注入不写入 providerHistory(非持久) / 无 notes 文件零注入 /
 //       首条 user 含摘要标记 → 跳过注入 / 显式关闭 → 零注入
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -24,7 +24,6 @@ const http = require('http');
 
 // 隔离纪律:require server.js 之前把数据根指向临时目录。
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w105d-inject-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 
 const HERE = __dirname;
@@ -75,10 +74,9 @@ async function launchStack(tag, flags) {
     ...(flags || {}),
   }, null, 2));
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true,
     env: { ...process.env, FAKE_NO_USAGE: '1', FAKE_CAPTURE_DIR: CAP },
   });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: EHOME, RUYI_HOME: EHOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: EHOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!' + tag + '] ' + l.trim())));
   let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await get(WB_PORT, '/health'); } // 117q:预算 40×150ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)
   const readCap = n => { try { return JSON.parse(fs.readFileSync(path.join(CAP, 'req-' + String(n).padStart(3, '0') + '.json'), 'utf8')); } catch { return null; } };

@@ -15,7 +15,7 @@ const t = createRunner('MACOS INPUT EVENTS');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-p5-events-'));
 process.env.RUYI_HOME = path.join(root, 'data');
 const reports = [];
-let fixture, client, runtime, launched, watchdogWorker;
+let fixture, fixtureClosed, client, runtime, launched, watchdogWorker;
 async function until(read, timeout = 8000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
@@ -79,6 +79,7 @@ function diagnostic(label, value) { if (!value.ok) console.log(label + ' ' + JSO
     const watchdogOnly = process.env.RUYI_P5_WATCHDOG_ONLY === '1';
     fixture = cp.spawn(binary, watchdogOnly ? ['--clipboard-only'] : [], {
       env: { ...fixtureChildEnv(), RUYI_P5_CLIPBOARD_FIXTURE: '1' }, stdio: ['pipe', 'pipe', 'pipe'] });
+    fixtureClosed = new Promise(resolve => fixture.once('close', resolve));
     let buffer = '';
     fixture.stdout.on('data', data => {
       buffer += data;
@@ -317,8 +318,12 @@ function diagnostic(label, value) { if (!value.ok) console.log(label + ' ' + JSO
       fixture.stdin.write('quit\n');
       await until(() => fixture.exitCode !== null || fixture.signalCode !== null, 3000).catch(() => killOwnTree(fixture));
     }
-    if (reports.some(report => report.event === 'seed-clipboard' && report.clipboardSnapshot))
-      t.ok(reports.some(report => report.event === 'clipboard-restore' && report.restored), 'fixture restores the pre-test clipboard after its last controlled content');
+    if (fixtureClosed) await fixtureClosed;
+    if (reports.some(report => report.event === 'seed-clipboard' && report.clipboardSnapshot)) {
+      const restoration = reports.find(report => report.event === 'clipboard-restore');
+      if (!restoration?.restored) console.log('Clipboard cleanup', restoration || { exitCode: fixture.exitCode, signal: fixture.signalCode });
+      t.ok(restoration?.restored, 'fixture restores the pre-test clipboard after its last controlled content');
+    }
     if (fixture) t.ok(fixture.exitCode !== null || fixture.signalCode !== null, 'owned input receiver is reaped');
     if (launched) t.ok(!snapshotProcessTable()?.some(row => row.pid === launched.pid), 'LaunchServices fixture has no remaining process');
     fs.rmSync(root, { recursive: true, force: true }); t.done();

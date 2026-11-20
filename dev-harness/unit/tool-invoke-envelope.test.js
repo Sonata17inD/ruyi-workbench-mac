@@ -15,7 +15,6 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-tool-invoke-envelope-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const { toolInvokeEnvelopeRepair } = require('../../ruyi-workbench/app/backend/tool-policy.cjs');

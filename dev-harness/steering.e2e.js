@@ -16,7 +16,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ⑦ PARALLEL-batch segment (FAKE_PARALLEL_TOOLS: 2 tool_calls in ONE assistant message + steer mid-turn):
 //      contiguity holds AND the interjection sits AFTER the complete tool block (assistant→tool→tool→user)
 //      — regression pin for the removed mid-batch drain (a steer must never split a tool block).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -96,9 +96,9 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
   writeConfig(HOME, FAKE_PORT);
   // Two file_read steps so the turn spans two API calls → a real boundary for injection to land at.
   const seq = JSON.stringify([{ name: 'file_read', args: { path: f1 } }, { name: 'file_read', args: { path: f2 } }]);
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq, FAKE_STREAM_DELAY_MS: '150' }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq, FAKE_STREAM_DELAY_MS: '150' } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 
@@ -193,7 +193,7 @@ function fakeUp(port) { return new Promise(res => { const r = http.get({ host: '
     try { killOwnTree(fake); } catch { /* ignore */ }
     await sleep(300);
     const par = JSON.stringify([{ name: 'file_read', args: { path: f1 } }, { name: 'file_read', args: { path: f2 } }]);
-    const fake2 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_PARALLEL_TOOLS: par, FAKE_STREAM_DELAY_MS: '150' }, windowsHide: true });
+    const fake2 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_PARALLEL_TOOLS: par, FAKE_STREAM_DELAY_MS: '150' } });
     fake2.stdout.on('data', d => String(d).trim() && console.log('[fake2] ' + String(d).trim()));
     procs.push(fake2);
     let up = false; for (let i = 0; i < 30 && !up; i++) { await sleep(150); up = await fakeUp(FAKE_PORT); }

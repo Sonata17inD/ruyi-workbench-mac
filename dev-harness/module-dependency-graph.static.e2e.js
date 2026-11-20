@@ -18,7 +18,7 @@ const ok = (condition, label) => {
 };
 
 const checked = cp.spawnSync(process.execPath, [path.join(__dirname, 'module-dependency-graph.js'), '--check'], {
-  cwd: ROOT, encoding: 'utf8', windowsHide: true,
+  cwd: ROOT, encoding: 'utf8',
 });
 ok(checked.status === 0, '103b generated contract and human/machine graphs match source byte-for-byte');
 if (checked.status !== 0) console.log(String(checked.stdout || '') + String(checked.stderr || ''));
@@ -80,7 +80,7 @@ const operations = graph.modules.find(item => item.file === '04-permission-runti
 const hookAssembly = fs.readFileSync(path.join(SRC, operations.file), 'utf8');
 ok(/createAgentLoopHooks\(\{\s*makeId, logEvent: .*?, redact,\s*\}\)/s.test(hookAssembly),
   'Agent loop composition injects trace generation, logging and redaction');
-for (const consumer of ['05-claude-engine.js', '05b-kimi-bridge.js', '09-workflow.js', '14-main.js']) {
+for (const consumer of ['05-claude-engine.js', '09-workflow.js', '14-main.js']) {
   const module = graph.modules.find(item => item.file === consumer);
   ok(module && module.requires.some(req => req.provider === operations.file && req.symbol === 'AgentLoopHooks'),
     consumer + ' consumes the shared AgentLoopHooks instance');

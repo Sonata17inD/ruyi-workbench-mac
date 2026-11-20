@@ -29,7 +29,6 @@ fs.writeFileSync(path.join(DATA, 'config.json'), JSON.stringify({
   activeProvider: 'local',
   externalMcpServers: [{ id: 'fake', label: 'Fake', command: process.execPath, args: [FAKE_MCP], enabled: true }],
 }, null, 2));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
 process.env.RUYI_HOME = DATA;
 process.env.HOME = root;
 process.env.USERPROFILE = root;

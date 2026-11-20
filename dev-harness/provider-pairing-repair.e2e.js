@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      存量毒历史自愈、现场截断当场收口,断言【假 provider 实际收到的请求体】arguments 全能 parse。
 'use strict';
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -222,10 +222,9 @@ if (typeof repairProviderHistoryToolArgs !== 'function') {
 console.log('── [L] Live:孤儿 tool_calls 历史 + 新回合 ──');
 const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(FAKE_PORT)], {
   env: { ...process.env, FAKE_STRICT_PAIRING: '1', FAKE_LOG_BODY: BODY_LOG },
-  windowsHide: true,
 });
 fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
 wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
 wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 try {
@@ -340,10 +339,9 @@ try {
       FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'file_read', args: { path: 'seed.txt' } }]),
       FAKE_LOG_BODY: BODY_LOG2,
     },
-    windowsHide: true,
   });
   fake2.stdout.on('data', d => String(d).trim() && console.log('[fake2] ' + String(d).trim()));
-  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2 }, windowsHide: true });
+  wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT2)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME2 } });
   wb2.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2] ' + l.trim())));
   wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
   let h2 = null; for (let i = 0; i < 40 && !h2; i++) { await sleep(150); h2 = await health(WB_PORT2); }

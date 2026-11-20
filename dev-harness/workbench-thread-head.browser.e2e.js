@@ -26,15 +26,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 截图落点：默认在夹具临时目录，设了 RUYI_SHOT_DIR 就落到那里（交付报告要贴这三张）。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -86,13 +85,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider（与 K4 那一件同一份）：'ask' → 一条 request_user_input；'hang' → 只开流不收尾；
 // 其余 → 一段短回答。判据按【整份请求体里的标记】认，不按「最后一条 user 消息」认。
@@ -297,8 +289,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A1 workbench started');
 
@@ -353,11 +345,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1920,1080',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A9 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -657,10 +649,9 @@ try {
 } finally {
   for (const res of openSockets) { try { res.end(); } catch { /* ignore */ } }
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) { try { provider.close(); } catch { /* ignore */ } }
-  try { stopRuyiTestBrowsers(profile); } catch { /* ignore */ }
 }
 
 console.log(`\nWORKBENCH THREAD HEAD BROWSER E2E: ${fail ? 'FAIL (' + fail + ')' : 'ALL PASS'}`);

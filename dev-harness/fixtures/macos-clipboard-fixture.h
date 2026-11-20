@@ -27,9 +27,12 @@ static void RestoreClipboard(void) {
     if (!clipboardSnapshot) return;
     NSPasteboard *board = NSPasteboard.generalPasteboard;
     BOOL restored = NO;
-    if (board.changeCount == expectedClipboardVersion) {
+    NSInteger observedVersion = board.changeCount;
+    if (observedVersion == expectedClipboardVersion) {
         [board clearContents];
         restored = savedClipboard.count == 0 || [board writeObjects:savedClipboard];
     }
-    printf("{\"event\":\"clipboard-restore\",\"restored\":%s}\n", restored ? "true" : "false"); fflush(stdout);
+    printf("{\"event\":\"clipboard-restore\",\"restored\":%s,\"expectedVersion\":%ld,\"observedVersion\":%ld}\n",
+           restored ? "true" : "false", (long)expectedClipboardVersion, (long)observedVersion);
+    fflush(stdout);
 }

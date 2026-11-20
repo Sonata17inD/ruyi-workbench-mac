@@ -6,15 +6,10 @@ import { api } from './net.js';
 import { $, el, escapeHtml, autoGrow, toast } from './util.js';
 import { icon } from './icons.js';
 import { t, tCount } from './i18n.js';
-import { agentCliMeta } from './agent-cli-registry.js';
+import { knownAgentCliMeta } from './agent-cli-registry.js';
 
-// 点选一条命令时往输入框里插什么。内置命令(随包 offline-toolkit)两种引擎都插展开后的任务模板:Claude Code 里
-// 它们只以插件命令 `/offline-toolkit:<id>` 存在,而且只有跑过 install-workbench.ps1 装上插件才有;裸 `/<id>` 永远
-// 解析不了(2026-10 走查实测:「no command with that name」)。用户自己的 ~/.claude/commands 只在认得它们的 Agent CLI
-// (agent-cli-registry 的 claudeUserCommands:Claude Code 是,Kimi Code 不是)下插 `/name`,由 CLI 自己展开;其余插正文。
-// unit/offline-plugin-bundle.test.js 钉着。
 export function commandInsertionText(entry, providerMode, agentCliType) {
-  const expand = providerMode || entry.source === 'builtin' || !agentCliMeta(agentCliType).claudeUserCommands;
+  const expand = providerMode || entry.source === 'builtin' || !knownAgentCliMeta(agentCliType)?.claudeUserCommands;
   return expand ? (entry.prompt || entry.description || entry.name || '') : (entry.insert || ('/' + entry.id));
 }
 
@@ -153,11 +148,10 @@ function skillDisplayDescription(entry) {
   return skillDisplayText(entry, 'description');
 }
 function skillDisplaySource(entry) {
-  // W2 迁移中心:其它 Agent CLI 的技能同样活读进来,来源标签要看得见(codex / kimi / Claude Code 插件)。
   const key = ({ project: 'skills.source.project', user: 'skills.source.user', builtin: 'skills.source.builtin', 'claude-code': 'skills.source.claude-code',
-    codex: 'skills.source.codex', kimi: 'skills.source.kimi', 'claude-plugin': 'skills.source.claude-plugin' })[entry?.source];
+    codex: 'skills.source.codex', 'claude-plugin': 'skills.source.claude-plugin' })[entry?.source];
   // W8:经迁移中心「复制到如意」的技能已归如意所有(source=user),只多一句「复制自 …」说明出处。
-  const from = entry?.source === 'user' ? ({ 'claude-code': 'skills.source.claude-code', codex: 'skills.source.codex', kimi: 'skills.source.kimi',
+  const from = entry?.source === 'user' ? ({ 'claude-code': 'skills.source.claude-code', codex: 'skills.source.codex',
     'claude-plugin': 'skills.source.claude-plugin' })[entry?.copiedFrom] : '';
   if (from) return t('skills.source.copiedFrom', { source: t(from) });
   return key ? t(key) : t('common.unknown');

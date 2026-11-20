@@ -1,6 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port.js');
 // E2E for v1.0.2-S2「上下文窗口三级自适应」. 零依赖、离线、node 直跑。
 // 解析链(优先级从高到低):manual(provider.contextWindow) > probe(/v1/models context_length, 缓存 10min)
@@ -59,7 +59,6 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   ok(srv.contextWindowFromTable('glm-5.2') === 1000000 && srv.contextWindowFromTable('glm-5.3-flash') === 1000000
     && srv.contextWindowFromTable('glm-4.6') === 202752 && srv.contextWindowFromTable('glm-4.5') === 131072,
     '(unit) table: GLM 5.2/5.3 1M, 4.6 202752, 4.5 128K');
-  ok(srv.contextWindowFromTable('kimi-k2') === 262144 && srv.contextWindowFromTable('moonshot-v1') === 262144, '(unit) table: kimi/moonshot → 262144');
   ok(srv.contextWindowFromTable('MiniMax/MiniMax-M3') === 1000000 && srv.contextWindowFromTable('MiniMax-M2.7') === 196608,
     '(unit) table: MiniMax M3 1M, M2.7 196608');
   ok(srv.contextWindowFromTable('gemma4:e2b-it-qat') === 131072 && srv.contextWindowFromTable('minicpm5:1b-q4') === 131072,
@@ -74,10 +73,6 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   ok(srv.contextWindowFromTable('gpt-4o-mini') === 128000 && srv.contextWindowFromTable('gpt-4.1') === 128000, '(unit) table: gpt-4o/gpt-4.1 → 128000');
   ok(srv.contextWindowFromTable('o3-mini') === 200000 && srv.contextWindowFromTable('o4') === 200000, '(unit) table: o3/o4 → 200000');
   ok(srv.contextWindowFromTable('claude-3-5-sonnet') === 200000, '(unit) table: claude → 200000');
-  // 2026-09-22 全面更新新增家族(顺序敏感:k3-256k 先于 kimi-k3/k3;llama-4-scout 先于 llama;step-5 先于 step;具名 Anthropic 档先于 claude)。
-  ok(srv.contextWindowFromTable('kimi-k3') === 1048576 && srv.contextWindowFromTable('k3') === 1048576
-    && srv.contextWindowFromTable('moonshot/k3') === 1048576 && srv.contextWindowFromTable('k3-256k') === 262144
-    && srv.contextWindowFromTable('kimi-for-coding') === 262144, '(unit) table: Kimi k3 1M, k3-256k/kimi-for-coding 256K');
   ok(srv.contextWindowFromTable('gpt-6') === 1050000 && srv.contextWindowFromTable('gpt-6-mini') === 1050000, '(unit) table: GPT-6 → 1050000');
   ok(srv.contextWindowFromTable('gemini-2.5-pro') === 1048576 && srv.contextWindowFromTable('grok-4.6') === 500000
     && srv.contextWindowFromTable('grok-3') === 500000, '(unit) table: Gemini 1M, Grok 500K');
@@ -112,7 +107,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
   ok(rFb.value === srv.CONTEXT_WINDOW_FALLBACK && rFb.value === 1000000 && rFb.source === 'fallback', '(unit) resolve: 全无 → 1000000 (source fallback)');
 
   // ② 探测生效 + 手动覆盖探测:先用 fetchOpenAiModels 填探测缓存, 再断言 resolve 命中 probe;然后加 contextWindow 手动覆盖。
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_MODELS_CONTEXT_LEN: '200000' }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_MODELS_CONTEXT_LEN: '200000' } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   procs.push(fake);
   // 等 fake 就绪。
@@ -135,8 +130,8 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     providers: [{ id: 'fakep', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_PORT, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }, { id: 'qwen3.8-flash', label: 'Qwen 3.8 Flash' }] }],
     activeProvider: 'fakep',
   }, null, 2));
-  const env = { ...process.env }; delete env.RUYI_HOME; env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env }; env.RUYI_HOME = HOME;
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
 

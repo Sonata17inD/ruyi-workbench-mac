@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // Regression: an in-chat multi-agent tool call keeps its parent turn alive both while a child provider is
 // actively streaming and during a quiet workflow window. Quiet workflow heartbeats must not mask the DAG's
 // own idle watchdog: the wedged node is still aborted and its failed workflow result returns to the parent.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -78,7 +78,7 @@ function kill(proc) { if (proc && proc.pid) try { killOwnTree(proc); } catch {} 
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${FP}`, apiKey: 'k', model: 'fake-model' }], activeProvider: 'fake',
   }));
   const fake = await startFakeProvider({ port: FP, handler: handleChat });
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME, WCW_TURN_IDLE_MS: String(IDLE_MS), WCW_AGENT_WORKFLOW_IDLE_MS: String(IDLE_MS) } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WCW_TURN_IDLE_MS: String(IDLE_MS), WCW_AGENT_WORKFLOW_IDLE_MS: String(IDLE_MS) } });
   try {
     let healthy = false; for (let i = 0; i < 300 && !healthy; i++) { await sleep(120); healthy = !!(await get(WP, '/health')); } // 117q:预算 50×120ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)
     ok(healthy, 'workbench starts');

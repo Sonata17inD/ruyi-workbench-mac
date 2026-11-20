@@ -176,7 +176,7 @@ const CRITICAL_FUNCS = [
   'escapeHtml', 'fmtBytes', 'fmtTime', 'fmtTokens', 'autoGrow', 'toast', 'setStatus',
   'wcwToken', 'authHeaders', 'api', 'apiErrText',
   // ctx-meter 族(Phase 1 保留 app.js,Phase 2 拟抽;契约先固化)
-  'ctxWindowGuess', 'ctxWindow', 'ctxTokensOf', 'renderContextMeter', 'updateContextMeter', 'openContextPopover',
+  'ctxWindow', 'ctxTokensOf', 'renderContextMeter', 'updateContextMeter', 'openContextPopover',
   // Claude CLI thinking effort: topbar popover persists the closed enum through /api/config.
   'setClaudeThinkingEffort',
   // 引导入口

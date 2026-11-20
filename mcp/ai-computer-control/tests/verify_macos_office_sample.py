@@ -131,7 +131,7 @@ with tempfile.TemporaryDirectory(prefix="stale-render-control-", dir=root) as tm
     for name, suffix in (("report", "docx"), ("data", "xlsx"), ("slides", "pptx")):
         (control / f"{name}.{suffix}").write_bytes(b"invalid current input")
         (control / "renders" / f"{name}.pdf").write_bytes(b"%PDF-stale previous output")
-    result = subprocess.run(["node", str(ROOT.parents[1] / "MACOS-PORTING/probes/render-office-samples.cjs"), str(control)],
+    result = subprocess.run(["node", str(ROOT.parents[1] / "dev-harness/lib/render-office-samples.cjs"), str(control)],
                             env=dict(os.environ, RUYI_OFFICE_RENDERER="/usr/bin/true"),
                             capture_output=True, text=True, timeout=30)
     check(result.returncode != 0, "zero-exit renderer cannot accept stale PDF outputs as a fresh render")

@@ -1,25 +1,7 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-// E2E (v0.8-S8 收官片): 开源合规 + 如意 Ruyi 品牌落地的回归钉。Ports 8990-8992.
-//
-// 断言:
-//  a) 根 LICENSE 与 THIRD-PARTY-NOTICES.md 存在且非空;LICENSE 含 "Apache License"。
-//  b) 可发布源码扫描:无真密钥模式命中(白名单:dev-harness 自身 + docs 的示例/占位如 <API_KEY>);
-//     活文档(DEV-README / 两 README / ARCHITECTURE_CN / 路线总纲)无该真实用户名(见 USERNAME 常量)。
-//  c) RUYI_HOME 生效:RUYI_HOME=临时目录 → /api/status.dataRoot === 该目录;
-//     只带旧 WIN_CLAUDE_WORKBENCH_HOME → 旧 env 生效(兼容);两者都带 → RUYI_HOME 优先。
-//  d) /api/status.app === '如意 Ruyi';index.html 含 favicon <link rel="icon"> 与「如意」。
-//  e) F2 apiKey 掩码(安全):种一个带真实 apiKey 的 provider →
-//     ① GET /api/status 响应里 apiKey 为 ••••<后4位> 且 hasKey:true、全响应不含明文 key;
-//     ② 把 status 拿到的(掩码)providers 原样 POST /api/config → 磁盘 config.json 真 key 完好;
-//     ③ POST /api/config 换新明文 key → 磁盘更新为新值。
-//  f) 107-S0b 外部 MCP 连接器密钥(stdio 的 env、远程的 headers、args 里的 `--token xyz`／URL userinfo):
-//     ① GET /api/status 与其它回显面(POST /api/config 回包、/api/mcp/connectors、workbench_self_status、mcp_list)全文零明文,
-//        env／headers 键名可见、值是 ••••<后4位>,args 显示脱敏;
-//     ② 掩码原样回传 → 磁盘逐字节不变;改一个 env 为新明文 → 照存;删一个键 → 删掉;新 id／改名／改了启动向量 → 清空不落掩码;
-//     ③ 磁盘、.mcp.json、Kimi 的 mcp.json、`claude mcp add-json` 的实参、MCP 子进程 env、远程请求头拿到的都是真值。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 
 const { getFreePort } = require('./free-port.js');
@@ -27,7 +9,7 @@ const { getFreePort } = require('./free-port.js');
 const HERE = __dirname;
 const ROOT = path.resolve(HERE, '..');                       // repo root
 const WB = path.resolve(ROOT, 'ruyi-workbench');
-const PORT_A = await getFreePort(), PORT_B = await getFreePort(), PORT_C = await getFreePort(); // PORT_C: F2 apiKey-mask section (dedicated instance)
+const PORT_A = await getFreePort(), PORT_C = await getFreePort(); // PORT_C: F2 apiKey-mask section (dedicated instance)
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 function health(port) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: '/health', timeout: 800 }, resp => { let b = ''; resp.on('data', c => (b += c)); resp.on('end', () => { try { res(JSON.parse(b)); } catch { res(null); } }); }); r.on('error', () => res(null)); r.on('timeout', () => { r.destroy(); res(null); }); }); }
@@ -51,22 +33,28 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
 // Spawn the workbench with a specific env override map (env vars NOT listed are cleared re: the two HOME
 // vars so precedence is deterministic — we start from the parent env, then delete both, then apply overrides).
 const hygieneRecoveryReaders = new Map();
+const keyProviders = new Map();
+function isolatedServer(data) {
+  const { entry, helper } = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(data);
+  keyProviders.set(data, helper);
+  return entry;
+}
 async function hygieneRuntimeConfig(configFile) {
   const data = path.dirname(configFile);
-  if (!hygieneRecoveryReaders.has(data)) hygieneRecoveryReaders.set(data, await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(data));
+  if (!hygieneRecoveryReaders.has(data)) hygieneRecoveryReaders.set(data, await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(data, keyProviders.get(data)));
   return hygieneRecoveryReaders.get(data).recover(JSON.parse(fs.readFileSync(configFile, 'utf8')));
 }
 process.once('exit', () => { for (const reader of hygieneRecoveryReaders.values()) reader.close(); });
 
 async function statusWith(port, envOverrides) {
   const env = { ...process.env };
-  delete env.RUYI_HOME; delete env.WIN_CLAUDE_WORKBENCH_HOME;
+  delete env.RUYI_HOME;
   Object.assign(env, envOverrides);
   // This test owns only the Ruyi data-root precedence contract. Isolate Claude Code discovery too, otherwise
   // real ~/.claude.json MCP entries can be imported on the first boot and make a later restart exceed 6s.
-  const isolatedUserHome = envOverrides.RUYI_HOME || envOverrides.WIN_CLAUDE_WORKBENCH_HOME;
+  const isolatedUserHome = envOverrides.RUYI_HOME;
   if (isolatedUserHome) { env.HOME = isolatedUserHome; env.USERPROFILE = isolatedUserHome; }
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(port); }
@@ -115,7 +103,7 @@ function walk(dir, acc, skip) {
   let files;
   try {
     files = cp.execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-      { cwd: ROOT, encoding: 'utf8', windowsHide: true, timeout: 10000, maxBuffer: 8 * 1024 * 1024 })
+      { cwd: ROOT, encoding: 'utf8', timeout: 10000, maxBuffer: 8 * 1024 * 1024 })
       .split('\0').filter(Boolean).map(file => path.join(ROOT, file));
   } catch { files = walk(ROOT, [], skip); }
   // Only scan textual sources; skip this very file (it carries the regexes) and binary-ish vendor libs.
@@ -174,25 +162,13 @@ function walk(dir, acc, skip) {
 
   // ============ (c) RUYI_HOME precedence ============
   const ruyiHome = path.join(os.tmpdir(), 'wcw-hygiene-ruyi');
-  const oldHome = path.join(os.tmpdir(), 'wcw-hygiene-old');
   fs.rmSync(ruyiHome, { recursive: true, force: true });
-  fs.rmSync(oldHome, { recursive: true, force: true });
 
   // (c1) RUYI_HOME only → dataRoot === ruyiHome
   const r1 = await statusWith(PORT_A, { RUYI_HOME: ruyiHome });
   ok(r1.up, '(c1) workbench up with RUYI_HOME');
   ok(r1.status && path.resolve(r1.status.dataRoot) === path.resolve(ruyiHome), '(c1) RUYI_HOME → dataRoot === ruyiHome (got ' + (r1.status && r1.status.dataRoot) + ')');
   ok(r1.status && r1.status.app === '如意 Ruyi', '(d) /api/status.app === 如意 Ruyi (got ' + (r1.status && r1.status.app) + ')');
-
-  // (c2) old env only → old wins (compat)
-  const r2 = await statusWith(PORT_A, { WIN_CLAUDE_WORKBENCH_HOME: oldHome });
-  ok(r2.up, '(c2) workbench up with old env only');
-  ok(r2.status && path.resolve(r2.status.dataRoot) === path.resolve(oldHome), '(c2) old WIN_CLAUDE_WORKBENCH_HOME still honored (got ' + (r2.status && r2.status.dataRoot) + ')');
-
-  // (c3) both → RUYI_HOME wins
-  const r3 = await statusWith(PORT_B, { RUYI_HOME: ruyiHome, WIN_CLAUDE_WORKBENCH_HOME: oldHome });
-  ok(r3.up, '(c3) workbench up with both envs');
-  ok(r3.status && path.resolve(r3.status.dataRoot) === path.resolve(ruyiHome), '(c3) RUYI_HOME takes precedence over old env (got ' + (r3.status && r3.status.dataRoot) + ')');
 
   // ============ (d) index.html favicon + 如意 branding ============
   const indexPath = path.join(WB, 'app', 'public', 'index.html');
@@ -203,13 +179,10 @@ function walk(dir, acc, skip) {
 
   // cleanup temp homes
   fs.rmSync(ruyiHome, { recursive: true, force: true });
-  fs.rmSync(oldHome, { recursive: true, force: true });
 
   // ============ (e) F2: provider apiKey is masked in API responses; disk key never leaks/wipes ============
   {
-    const F2_HOME = path.join(os.tmpdir(), 'wcw-hygiene-f2');
-    fs.rmSync(F2_HOME, { recursive: true, force: true });
-    fs.mkdirSync(F2_HOME, { recursive: true });
+    const F2_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-hygiene-f2-'));
     const cfgPath = path.join(F2_HOME, 'config.json');
     const REAL_KEY = 'sk-test-1234abcd';
     // 107-S0(46 号文 §1.5 ②):Claude CLI 引擎的认证覆盖值,修前 maskSecrets 不盖它、GET /api/status 明文下发。
@@ -217,13 +190,13 @@ function walk(dir, acc, skip) {
     const REAL_MODELS_KEY = 'mk-test-5566wxyz';
     const keyHead = v => (typeof v === 'string' ? JSON.stringify(v.slice(0, 6) + (v.length > 6 ? '…' : '')) : String(v));
     fs.writeFileSync(cfgPath, JSON.stringify({
-      credentialEncryptionV1: process.platform === 'win32', configSchema: 6, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false,
+      credentialEncryptionV1: true, configSchema: 6, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false,
       modelsApiBase: 'http://127.0.0.1:1', modelsApiKey: REAL_MODELS_KEY,
       providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1', apiKey: REAL_KEY, model: 'm', models: [{ id: 'm', label: 'M' }] }],
       activeProvider: 'fake',
     }, null, 2));
-    const f2env = { ...process.env }; delete f2env.RUYI_HOME; f2env.WIN_CLAUDE_WORKBENCH_HOME = F2_HOME;
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT_C)], { cwd: WB, env: f2env, windowsHide: true });
+    const f2env = { ...process.env }; f2env.RUYI_HOME = F2_HOME;
+    const wb = cp.spawn(process.execPath, [isolatedServer(F2_HOME), 'serve', '--port', String(PORT_C)], { cwd: WB, env: f2env });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     try {
       let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(PORT_C); }
@@ -245,7 +218,7 @@ function walk(dir, acc, skip) {
       const disk1 = await hygieneRuntimeConfig(cfgPath);
       const dp1 = disk1.providers.find(p => p.id === 'fake');
       const physical = fs.readFileSync(cfgPath, 'utf8');
-      ok(process.platform !== 'win32' || (JSON.parse(physical).credentialRefsV1 && !physical.includes(REAL_KEY)), '(e②) physical Windows configuration uses encrypted references and contains no plaintext provider key');
+      ok((JSON.parse(physical).credentialRefsV1 && !physical.includes(REAL_KEY)), '(e②) physical Mac configuration uses encrypted references and contains no plaintext provider key');
       ok(dp1 && dp1.apiKey === REAL_KEY, '(e②) disk config.json real key intact after masked round-trip (got ' + (dp1 && dp1.apiKey) + ')');
       // the save response is itself masked (never re-emits the real key).
       ok(save1.raw && !save1.raw.includes(REAL_KEY), '(e②) POST /api/config response contains NO plaintext key');
@@ -288,12 +261,8 @@ function walk(dir, acc, skip) {
 
   // ============ (f) 107-S0b:外部 MCP 连接器的 env／headers／args 不明文下发,回传不抹、不落掩码 ============
   {
-    const MCP_HOME = path.join(os.tmpdir(), 'wcw-hygiene-mcp-secrets');
-    fs.rmSync(MCP_HOME, { recursive: true, force: true });
-    fs.mkdirSync(MCP_HOME, { recursive: true });
+    const MCP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-hygiene-mcp-secrets-'));
     const cfgPath = path.join(MCP_HOME, 'config.json');
-    const KIMI_HOME = path.join(MCP_HOME, 'kimi-code');
-    const KIMI_FILE = path.join(KIMI_HOME, 'mcp.json');
     const CLAUDE_LOG = path.join(MCP_HOME, 'claude-argv.log');
     const ENV_CAPTURE = path.join(MCP_HOME, 'mcp-env-capture.ndjson');
     const GEN_FILE = path.join(MCP_HOME, 'generated', 'workbench.mcp.json');
@@ -316,14 +285,9 @@ function walk(dir, acc, skip) {
     const readText = f => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
     const safeParse = t => { try { return JSON.parse(t); } catch { return null; } };
 
-    // 假 claude:把整行实参追加进日志(quoteWinArg 用 "" 转义,JSON 整段在 cmd 眼里始终在引号内,echo %* 原样落盘)。
-    const fakeClaude = path.join(MCP_HOME, process.platform === 'win32' ? 'claude.cmd' : 'claude');
-    if (process.platform === 'win32') {
-      fs.writeFileSync(fakeClaude, '@echo off\r\n>>"' + CLAUDE_LOG + '" echo %*\r\nexit /b 0\r\n', 'utf8');
-    } else {
-      fs.writeFileSync(fakeClaude, '#!' + process.execPath + '\n'
-        + 'require("fs").appendFileSync(' + JSON.stringify(CLAUDE_LOG) + ', process.argv.slice(2).join(" ") + "\\n");\n', { mode: 0o755 });
-    }
+    const fakeClaude = path.join(MCP_HOME, 'claude');
+    fs.writeFileSync(fakeClaude, '#!' + process.execPath + '\n'
+      + 'require("fs").appendFileSync(' + JSON.stringify(CLAUDE_LOG) + ', process.argv.slice(2).join(" ") + "\\n");\n', { mode: 0o755 });
     // 假远程 MCP(streamable HTTP,只回 JSON):记下每个请求带来的 Authorization。
     const remoteAuth = [];
     const remotePaths = [];   // 107-S2:真正发出去的请求路径 —— 掩码只能活在显示面,上游必须收到真 ?api_key=
@@ -353,15 +317,15 @@ function walk(dir, acc, skip) {
     const REMOTE_URL_SHOWN = 'http://127.0.0.1:' + PORT_REMOTE + '/mcp?api_key=' + MASK + URL_KEY.slice(-4);
     const REMOTE = { id: 'hyg-remote', label: 'Hyg remote', type: 'http', url: REMOTE_URL, headers: { Authorization: 'Bearer ' + BEARER_VAL }, enabled: true };
     fs.writeFileSync(cfgPath, JSON.stringify({
-      credentialEncryptionV1: process.platform === 'win32', configSchema: 11, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, enableMcpDropIn: false,
+      credentialEncryptionV1: true, configSchema: 11, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, enableMcpDropIn: false,
       desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
-      claudePath: fakeClaude, agentCliType: 'kimi', includeWorkbenchMcp: true,
+      claudePath: fakeClaude, agentCliType: 'claude', includeWorkbenchMcp: true,
       stewardEnabledV1: false, stewardThreadBriefV1: false,
       externalMcpServers: [STDIO, REMOTE],
     }, null, 2));
     const fenv = { ...process.env }; delete fenv.RUYI_HOME;
-    fenv.WIN_CLAUDE_WORKBENCH_HOME = MCP_HOME; fenv.KIMI_CODE_HOME = KIMI_HOME;
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT_F)], { cwd: WB, env: fenv, windowsHide: true });
+    fenv.RUYI_HOME = MCP_HOME;
+    const wb = cp.spawn(process.execPath, [isolatedServer(MCP_HOME), 'serve', '--port', String(PORT_F)], { cwd: WB, env: fenv });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     try {
       let h = null; for (let i = 0; i < 200 && !h; i++) { await sleep(150); h = await health(PORT_F); }
@@ -370,18 +334,15 @@ function walk(dir, acc, skip) {
       ok(!!token, '(f) UI token scraped');
       const hdr = { 'x-wcw-token': token };
       // 启动期的两路同步是 fire-and-forget:等它们各落一次,再清掉产物,之后看到的就只属于「掩码回传」那一次保存。
-      for (let i = 0; i < 100 && !(/add-json hyg-stdio/.test(readText(CLAUDE_LOG)) && fs.existsSync(KIMI_FILE)); i++) await sleep(150);
+      for (let i = 0; i < 100 && !(/add-json hyg-stdio/.test(readText(CLAUDE_LOG))); i++) await sleep(150);
       await sleep(1000);
       const diskBase = await readDisk();
       const physicalMcp = fs.readFileSync(cfgPath, 'utf8');
-      ok(process.platform !== 'win32' || (JSON.parse(physicalMcp).credentialRefsV1 && !leaks(physicalMcp).length), '(f) physical Windows MCP configuration contains encrypted references and zero fixture secrets');   // 启动时 normalize 过的那一份才是「磁盘真值」基线
+      ok((JSON.parse(physicalMcp).credentialRefsV1 && !leaks(physicalMcp).length), '(f) physical Mac MCP configuration contains encrypted references and zero fixture secrets');   // 启动时 normalize 过的那一份才是「磁盘真值」基线
       const baseStdio = findIn(diskBase.externalMcpServers, 'hyg-stdio');
       const baseRemote = findIn(diskBase.externalMcpServers, 'hyg-remote');
       ok(baseStdio && baseStdio.env.GITHUB_TOKEN === GH && baseRemote && baseRemote.headers.Authorization === 'Bearer ' + BEARER_VAL, '(f) fixture on disk carries the real env/header values');
 
-      // ① GET /api/status:全文零明文;键名可见;值是掩码;args 显示脱敏;结构字段原样。
-      // 本段首个 /api/status 撞的是冷探针(选了 Kimi CLI 时 --version + provider list 各 ~0.9 s,偶有桌面组件
-      // Python 探测同步插进来再 +2 s):本段验的是掩码不是延迟(延迟归 perf 闸),给冷启动一个现实的上限。
       const st = await getJson(PORT_F, '/api/status', undefined, 15000);
       const sStdio = st.json && st.json.config ? findIn(st.json.config.externalMcpServers, 'hyg-stdio') : null;
       const sRemote = st.json && st.json.config ? findIn(st.json.config.externalMcpServers, 'hyg-remote') : null;
@@ -399,7 +360,7 @@ function walk(dir, acc, skip) {
         '(f①) remote url credential masked, scheme/host/path still visible (got ' + (sRemote && sRemote.url) + ')');
 
       // ② 掩码原样回传 → 磁盘逐字节不变,回包零明文。先清掉启动期的同步产物,③ 看到的只属于这一次保存。
-      fs.rmSync(CLAUDE_LOG, { force: true }); fs.rmSync(KIMI_FILE, { force: true });
+      fs.rmSync(CLAUDE_LOG, { force: true });
       const echoed = st.json.config.externalMcpServers;
       const save1 = await postJson(PORT_F, '/api/config', { externalMcpServers: echoed }, hdr, 20000);
       ok(save1.status === 200 && save1.json && save1.json.ok === true, '(f②) POST /api/config with masked MCP echo ok (status ' + save1.status + ')');
@@ -426,11 +387,6 @@ function walk(dir, acc, skip) {
       const gRemote = gen && gen.mcpServers && gen.mcpServers['hyg-remote'];
       ok(gStdio && gStdio.env.GITHUB_TOKEN === GH && gStdio.args[2] === ARG_TOKEN && gRemote && gRemote.headers.Authorization === 'Bearer ' + BEARER_VAL
         && !readText(GEN_FILE).includes(MASK) && !readText(GEN_FILE).includes(REDACTED), '(f③) generated workbench.mcp.json carries real values, no masks');
-      const kimi = safeParse(readText(KIMI_FILE));
-      const kStdio = kimi && kimi.mcpServers && kimi.mcpServers['hyg-stdio'];
-      const kRemote = kimi && kimi.mcpServers && kimi.mcpServers['hyg-remote'];
-      ok(kStdio && kStdio.env.GITHUB_TOKEN === GH && kStdio.args[2] === ARG_TOKEN && kRemote && kRemote.headers.Authorization === 'Bearer ' + BEARER_VAL
-        && !readText(KIMI_FILE).includes(MASK) && !readText(KIMI_FILE).includes(REDACTED), '(f③) Kimi sync (mcp.json written by this save) carries real values, no masks (exists=' + fs.existsSync(KIMI_FILE) + ')');
       const addJsonLines = readText(CLAUDE_LOG).split(/\r?\n/).filter(l => /add-json hyg-stdio/.test(l));
       ok(addJsonLines.length >= 1 && addJsonLines.every(l => l.includes(GH) && l.includes(ARG_TOKEN) && l.includes(DB_PW)),
         '(f③) claude mcp add-json from this save got the real env/args (' + addJsonLines.length + ' call(s))');

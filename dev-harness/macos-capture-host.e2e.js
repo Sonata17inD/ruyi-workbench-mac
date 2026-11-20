@@ -74,9 +74,9 @@ const shot=await api('/api/tools/desktop_screenshot',{method:'POST',body:JSON.st
 const result=shot.result;
 return {capture:caps.runtime?.capabilities?.['desktop.capture'],offered:status.tools.some(tool=>tool.name==='desktop_screenshot'),shot:{ok:result.ok,code:result.code,
 width:result.width,height:result.height,scale:result.scale,scale_y:result.scale_y,coordinate_space:result.coordinate_space}};`);
-    const env={...fixtureChildEnv(),RUYI_HOME:data,WIN_CLAUDE_WORKBENCH_HOME:data,RUYI_NODE_PATH:process.execPath};
+    const env={...fixtureChildEnv(),RUYI_HOME:data,RUYI_NODE_PATH:process.execPath};
     const launchEnv={HOME:env.HOME,USERPROFILE:env.USERPROFILE,LOCALAPPDATA:env.LOCALAPPDATA,APPDATA:env.APPDATA,
-      RUYI_HOME:data,WIN_CLAUDE_WORKBENCH_HOME:data,RUYI_NODE_PATH:process.execPath};
+      RUYI_HOME:data,RUYI_NODE_PATH:process.execPath};
     const beforeLaunch=snapshotProcessTable();
     if(!beforeLaunch) throw new Error('Cannot observe identities before capture App launch');
     beforeApp=new Set(beforeLaunch.map(row=>row.pid+'/'+row.created));

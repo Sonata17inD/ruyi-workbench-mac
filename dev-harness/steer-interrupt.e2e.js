@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 配对块连续(3 tool_call -> 3 role:tool 不劈)
 // + 插话在配对块后。与 steering.e2e ⑦(测配对块后注入,断言不区分真实/refusal)互补: 本件明确断言
 // between-tools 中断的 refusal 标志。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
@@ -77,9 +77,9 @@ function checkToolBlockContiguity(ph) {
   // already executed results instead of falsely labelling them "not executed".
   const par = JSON.stringify([readIsland ? { name: 'file_read', args: { path: f1 } } : { name: 'file_write', args: { path: f1, content: 'serial-first-write' } },
     { name: 'file_read', args: { path: f2 } }, { name: 'file_read', args: { path: f3 } }]);
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_PARALLEL_TOOLS: par, FAKE_STREAM_DELAY_MS: '150' }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_PARALLEL_TOOLS: par, FAKE_STREAM_DELAY_MS: '150' } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 

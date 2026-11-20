@@ -22,7 +22,7 @@ const SOURCE_WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const ROOT_TMP = path.join(os.tmpdir(), 'wcw-engine-env-runtime-e2e');
 const WB = process.platform === 'darwin' ? path.join(ROOT_TMP, 'workbench') : SOURCE_WB;
 const VENDOR_BIN = path.join(WB, 'app', 'vendor-bin');
-const RG_NAME = process.platform === 'win32' ? 'rg.exe' : 'rg';
+const RG_NAME = 'rg';
 const FAKE_CLAUDE = path.join(WB, 'tools', 'fake-claude.js');
 const { shellTool } = require('./lib/platform-shell-fixture');
 const HOME_P = path.join(ROOT_TMP, 'provider');
@@ -61,7 +61,7 @@ function rgFreeEnvOverrides() {
   });
   return { [PATH_KEY]: kept.join(path.delimiter), RUYI_RG_PATH: '' };
 }
-const sameDir = (a, b) => { const key = value => { let result; try { result = fs.realpathSync.native(String(value)); } catch { result = path.resolve(String(value || '')); } return process.platform === 'win32' ? result.toLowerCase() : result; }; return key(a) === key(b); };
+const sameDir = (a, b) => { const key = value => { let result; try { result = fs.realpathSync.native(String(value)); } catch { result = path.resolve(String(value || '')); } return result; }; return key(a) === key(b); };
 
 (async () => {
   let fail = 0;
@@ -116,11 +116,11 @@ const sameDir = (a, b) => { const key = value => { let result; try { result = fs
       { name: 'shell_start', args: { shellId: 'rgshell' } },
       { name: 'shell_send', args: { shellId: 'rgshell', input: 'rg --version' } },
     ]);
-    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq, FAKE_CAPTURE_DIR: CAPTURE }, windowsHide: true });
+    const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq, FAKE_CAPTURE_DIR: CAPTURE } });
     fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
     const wb = cp.spawn(process.execPath, ['--require', PRELOAD, 'app/server.js', 'serve', '--port', String(WB_PORT)], {
-      cwd: WB, windowsHide: true,
-      env: { ...process.env, ...rgFreeEnvOverrides(), WIN_CLAUDE_WORKBENCH_HOME: HOME_P, RUYI_HOME: HOME_P, RECORD_SYNC_RG_OUT: SPAWN_LOG },
+      cwd: WB,
+      env: { ...process.env, ...rgFreeEnvOverrides(), RUYI_HOME: HOME_P, RECORD_SYNC_RG_OUT: SPAWN_LOG },
     });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     procs.push(fake, wb);
@@ -167,8 +167,8 @@ const sameDir = (a, b) => { const key = value => { let result; try { result = fs
       workspaces: [{ path: WORK, read: true, write: true, execute: true }],
     }, null, 2));
     const wbC = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_C)], {
-      cwd: WB, windowsHide: true,
-      env: { ...process.env, ...rgFreeEnvOverrides(), WIN_CLAUDE_WORKBENCH_HOME: HOME_C, RUYI_HOME: HOME_C, USERPROFILE: HOME_C, HOME: HOME_C, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_ENV_CAPTURE: ENV_CAP },
+      cwd: WB,
+      env: { ...process.env, ...rgFreeEnvOverrides(), RUYI_HOME: HOME_C, USERPROFILE: HOME_C, HOME: HOME_C, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_ENV_CAPTURE: ENV_CAP },
     });
     wbC.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbC!] ' + l.trim())));
     procs.push(wbC);

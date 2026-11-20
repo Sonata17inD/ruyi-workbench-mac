@@ -93,8 +93,6 @@ const drainBackgroundJobs = session => {
   }
   session.backgroundJobSeen = [...seen].slice(-100);
 };
-// Claude/Kimi 引擎没有 providerHistory:下一回合开头把未读的【代理信封】(只取代理类,命令类本就是 provider 专属)
-// 拼成一段文字交给 05 塞进 prompt;同一张 seen 表,同样只投递一次。
 const drainAgentEnvelopesText = session => {
   if (!session) return '';
   const seen = new Set(session.backgroundJobSeen || []);

@@ -1,4 +1,4 @@
-﻿require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+﻿require('./lib/self-isolate-home.js');
 // E2E (v0.8-S0): bridged-tool permission tiering under permissionMode 'default'.
 //   Segment A: a READ-tier bridged tool (fake__screenshot_full — matches BRIDGED_TOOL_TIERS' read rule)
 //     must auto-allow: NO permission_request event, tool_result ok.
@@ -6,7 +6,7 @@
 //     with no UI answering it times out (permissionTimeoutMs 6000) and the tool_result is a denial,
 //     and the turn still finishes cleanly.
 // Two independent workbench+fake pairs keep the two provider configs isolated. Fully offline.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 const WB = require('path').resolve(__dirname, '..', 'ruyi-workbench');
@@ -54,10 +54,10 @@ function seedHome(home, fakePort) {
 
 async function runSegment({ label, wbPort, fakePort, home, toolName, toolArgs, procs, contractDecision }) {
   seedHome(home, fakePort);
-  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_NAME: toolName, FAKE_TOOL_ARGS: JSON.stringify(toolArgs || {}) }, windowsHide: true });
+  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_NAME: toolName, FAKE_TOOL_ARGS: JSON.stringify(toolArgs || {}) } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake:' + label + '] ' + String(d).trim()));
   fake.stderr.on('data', d => String(d).trim() && console.log('[fake!:' + label + '] ' + String(d).trim()));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home }, windowsHide: true });
+  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb:' + label + '] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!:' + label + '] ' + l.trim())));
   procs.push(fake, wb);

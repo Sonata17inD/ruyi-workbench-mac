@@ -86,12 +86,12 @@ function createModelSelection({ paths, atomicWriteJson, effectiveAnthropicEnv })
   // openai 节点选 Claude 别名(必失败)。label 扁平化防注入。
   function buildModelHint(config, provider) {
     const all = offlineModelList(config).filter(m => m.id);
-    if (!all.length) return '';
+    const catalogById = new Map(all.map(model => [model.id, model]));
     // OpenAI 组【优先用当前激活 provider 声明的模型】—— 只有它们对该 provider 真实可用;knownModels/config.model 可能
     // 是【别的 provider】的模型(如 deepseek 激活时 knownModels 里的 qwen 属 dashscope),混进来会诱导 AI 选了必失败。
     // 直接从 provider.models 构建(它们未必在 offlineModelList 里),label 命中 offlineModelList 则取其 label。
     const provList = []; const seenP = new Set();
-    const addP = id => { id = String(id || '').trim(); if (id && !seenP.has(id) && !CLAUDE_ALIAS_IDS.has(id)) { seenP.add(id); const f = all.find(m => m.id === id); provList.push(f || { id, label: id }); } };
+    const addP = id => { id = String(id || '').trim(); if (id && !seenP.has(id) && !CLAUDE_ALIAS_IDS.has(id)) { seenP.add(id); provList.push(catalogById.get(id) || { id, label: id }); } };
     if (provider) { if (Array.isArray(provider.models)) for (const x of provider.models) addP((x && x.id) || x); if (provider.model) addP(provider.model); }
     // provider 声明了模型 → 只列这些;什么都没声明(自建单模型)→ 退回非预设自定义(尽力)。
     // 第44波: Claude 组 = 别名 ∪ 代理发现缓存(API 真实清单);openai 兜底池同步排除两者(防跨引擎诱导选错必失败)。

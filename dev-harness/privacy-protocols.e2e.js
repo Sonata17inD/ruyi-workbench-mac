@@ -8,7 +8,7 @@ const { startFakeAnthropic, messageEvents } = require('./lib/fake-anthropic-prov
 const { loadServerInternals } = require('./lib/server-internals');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-privacy-protocols-')), data = path.join(root, 'data'), work = path.join(root, 'work');
 fs.mkdirSync(data); fs.mkdirSync(work);
-process.env.RUYI_HOME = data; process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
+process.env.RUYI_HOME = data;
 const app = loadServerInternals(['LocalSecretCryptoHooks', 'runSessionTurn', 'createSession', 'loadSession', 'readConfig', 'mutateConfig', 'PrivacyGateway', 'PrivacyCore', 'providerRawCompletion', 'runSubAgentCore', 'guardFileToolPath', 'toolCall', 'mcpClients', 'mcpStartingClients', 'killAllMcpClients']);
 app.LocalSecretCryptoHooks.helperPath = (() => { const helper = require('./lib/isolated-keychain-fixture').createIsolatedKeychain(root); return () => helper; })();
 const t = createRunner('PRIVACY PROTOCOLS'), email = 'protocol-contact@example.test', secret = 'fixture-private-key-123456789';

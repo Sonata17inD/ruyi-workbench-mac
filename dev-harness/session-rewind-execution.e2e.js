@@ -39,8 +39,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   const start = async () => {
     token = '';
     server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-      cwd: WB, windowsHide: true, stdio: 'ignore',
-      env: { ...process.env, ...isolated.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home },
+      cwd: WB, stdio: 'ignore',
+      env: { ...process.env, ...isolated.env, RUYI_HOME: home },
     });
     await until(async () => { try { return (await request('GET', '/health')).status === 200; } catch { return false; } }, 'service health');
     await until(async () => {

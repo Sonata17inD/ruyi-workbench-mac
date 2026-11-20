@@ -5,7 +5,7 @@ const MigrationCenter = require('./backend/migration-center.cjs').createMigratio
     run: (...args) => DesktopShell.runProcess(...args),
   },
   packages: { externalRoot, findRuyiPackageRootFor, ruyiPackageInfo, samePathKey, readInstallRegistry, writeInstallRegistry },
-  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig, kimiMcpManagedIds },
+  config: { readConfig, mutateConfig, atomicWriteJson, agentMcpImportSources, classifyAgentMcpCandidate, generateMcpConfig },
   skills: { agentCliHomes, tildePath, SkillRegistry, syncAgentInstructionImports },
 });
 const handleMigrationApiRoutes = require('./backend/migration-routes.cjs').createMigrationRoutes({ migration: MigrationCenter });

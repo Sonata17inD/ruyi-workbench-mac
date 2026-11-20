@@ -1,4 +1,4 @@
-﻿require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+﻿require('./lib/self-isolate-home.js');
 process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 充当「网络在线」(06 networkAnchors 的测试后门,默认关;生产里本机/内网 provider 不再当联网锚点,见 unit/network-anchors.test.js)
 // E2E for v0.8-S6 能力矩阵 + 分层提示词框架（含身份钉死）+ 错误类播种 + FAKE_REJECT_TOOLS.
 //
@@ -19,7 +19,7 @@ process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1'; // 2026-10:本机假 provider 
 //   f) FAKE_REJECT_TOOLS: the tools-rejected retry branch fires (meta reports tools>0, but the turn still
 //      completes ok and the second captured request carries no `tools`).
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -128,10 +128,10 @@ function systemOf(body) {
   }, null, 2));
 
   const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR, FAKE_MCP_OPTIONAL: JSON.stringify({ ocr: true, uia: true, cv2: false, playwright: false }) },
+    env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR, FAKE_MCP_OPTIONAL: JSON.stringify({ ocr: true, uia: true, cv2: false, playwright: false }) },
   });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
@@ -235,7 +235,7 @@ function systemOf(body) {
     }, null, 2));
     // v1.1-W1a (T2): suppress the fixed live CN anchors so the dead-probe offline simulation actually reads
     // offline (a real baidu/cn.bing on the test box would otherwise flip online:true).
-    const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_B)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_B, WCW_TEST_NO_NET_ANCHORS: '1' }, windowsHide: true });
+    const wbB = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_B)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_B, WCW_TEST_NO_NET_ANCHORS: '1' } });
     wbB.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbB] ' + l.trim())));
     wbB.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbB!] ' + l.trim())));
     try {
@@ -270,10 +270,10 @@ function systemOf(body) {
       capabilityProbeUrl: 'http://127.0.0.1:' + DEAD_PORT + '/health',
       enableToolRequiresProbe: true, // arm the test-only TOOL_REQUIRES entry
     }, null, 2));
-    const fakeE = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT_E)], { windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR_E } });
+    const fakeE = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT_E)], { env: { ...process.env, FAKE_CAPTURE_DIR: CAP_DIR_E } });
     // v1.1-W1a (T2): suppress fixed anchors so the dead-probe → offline simulation holds (http_request's
     // requires:['network'] must be unmet). Without this the live baidu/cn.bing anchors flip online:true.
-    const wbE = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_E)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_E, WCW_TEST_NO_NET_ANCHORS: '1' }, windowsHide: true });
+    const wbE = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_E)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_E, WCW_TEST_NO_NET_ANCHORS: '1' } });
     wbE.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbE] ' + l.trim())));
     wbE.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbE!] ' + l.trim())));
     try {
@@ -311,9 +311,9 @@ function systemOf(body) {
       providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_PORT_F, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake Model' }] }],
       activeProvider: 'fake',
     }, null, 2));
-    const fakeF = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT_F)], { windowsHide: true, env: { ...process.env, FAKE_REJECT_TOOLS: '1', FAKE_CAPTURE_DIR: CAP_DIR_F } });
+    const fakeF = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT_F)], { env: { ...process.env, FAKE_REJECT_TOOLS: '1', FAKE_CAPTURE_DIR: CAP_DIR_F } });
     fakeF.stdout.on('data', d => String(d).trim() && console.log('[fakeF] ' + String(d).trim()));
-    const wbF = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_F)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_F }, windowsHide: true });
+    const wbF = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_F)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_F } });
     wbF.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbF] ' + l.trim())));
     wbF.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbF!] ' + l.trim())));
     try {
@@ -368,7 +368,7 @@ function systemOf(body) {
         configSchema: 6, version: '1.0.0', permissionMode: 'bypass',
         desktopMcp: item.desktopMcp,
       }, null, 2));
-      const wbG = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_G)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME_G, WCW_TEST_NO_NET_ANCHORS: '1' }, windowsHide: true });
+      const wbG = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT_G)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME_G, WCW_TEST_NO_NET_ANCHORS: '1' } });
       wbG.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wbG!] ' + l.trim())));
       try {
         let h = null; for (let i = 0; i < 40 && !h; i++) { await sleep(150); h = await health(WB_PORT_G); }

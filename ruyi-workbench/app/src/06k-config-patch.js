@@ -6,7 +6,7 @@ const applyConfigPatch = require('./backend/config-patch.cjs').createConfigPatch
   hooks: { StewardHooks, ToolboxHooks },
   cli: {
     invalidateAgentCliPathCaches, rememberLastUsedEngineRoute, sessionEngineRouteFromConfig,
-    syncAgentCliMcpManifests, syncAgentRolesToClaude, syncClaudeCliSettings,
+    syncAgentRolesToClaude, syncClaudeCliSettings,
   },
   mcp: { invalidateMcpRuntime, syncMcpServersToClaude },
 });

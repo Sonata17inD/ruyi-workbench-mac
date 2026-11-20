@@ -1,12 +1,4 @@
 'use strict';
-// 源码切片的公共件(架构还债批 3·D)。
-//
-// 静态锁先问自己:要断言的东西能不能在运行时拿到?server.js 的导出、public/js 的 ES 模块、
-// tools/ 的 CommonJS 模块 —— 能拿到就断言它的值或行为,别读源码(见 docs/architecture/source-text-locks.md)。
-// 只有「本来就是结构性」的判据(某文件零 setInterval、零 innerHTML、某段代码不许出现某个调用)才读源码;
-// 那时用这里的三个切片,不要每件测试各写一条 /const X = \[([\s\S]*?)\n\];/ —— 那种正则一遇到
-// 合并常量表、改缩进、在表尾加一行注释就静默切错或切空。
-//
 //   sliceBlock(src, start, end, { inclusive })  从 start 标记切到其后的 end 标记(字符串或正则);找不到给 ''。
 //   constBlock(src, name)                        `const|let|var NAME = …` 整条声明(按括号配对到初值结束)。
 //   functionBlock(src, name)                     `[async] function NAME(…) { … }` 整个函数(按括号配对)。

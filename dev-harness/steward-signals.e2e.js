@@ -25,7 +25,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (H) 开关关时:账本照写,但收件箱与自理零动作零写入。
 //
 // 端口全部 getFreePort() 动态取。判定行:`STEWARD SIGNALS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -60,11 +60,9 @@ const STEWARD_REPLY = JSON.stringify({ say: '我看了一眼。', why: '收件�
 const toolFake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], {
   // 32 步 = 两个循环回合各 15 次调用(第 3 次 5x 命中硬停)。(A) 用一个,(B) 用另一个。
   env: { ...process.env, FAKE_OPENAI_PORT: String(TOOL_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(Array.from({ length: 32 }, () => LOOP_STEP)) },
-  windowsHide: true,
 });
 const replyFake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(REPLY_PORT)], {
   env: { ...process.env, FAKE_REPLY_SEQUENCE: JSON.stringify([STEWARD_REPLY]) },
-  windowsHide: true,
 });
 for (const f of [toolFake, replyFake]) f.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
 await sleep(700);
@@ -130,7 +128,7 @@ async function newMissionSession(title) {
 }
 function spawnWb() {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   child.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   return child;
@@ -264,7 +262,6 @@ await sleep(400);
 
 /* ═════════════════════ 进程内阶段:自理动作与插话补充 ═════════════════════ */
 console.log('── (D)-(H) 进程内:自理动作与插话补充 ──');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 // 换主端点:循环夹具的剧本早被前两阶段消费光了(耗尽后 fake 只回一句话 = 单轮回合,没有迭代边界)。
 // 插话必须在【下一次迭代边界】被 drain 才算「被下一步消费」,故这里换一个「有多轮工具 + 流慢」的 fake。
@@ -281,7 +278,6 @@ const steerFake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.
     FAKE_TOOL_SEQUENCE: JSON.stringify(Array.from({ length: 60 }, (_, i) => ({ name: 'file_read', args: { path: READ_TARGETS[i % READ_TARGETS.length] } }))),
     FAKE_STREAM_DELAY_MS: '150',
   },
-  windowsHide: true,
 });
 steerFake.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
 await sleep(700);

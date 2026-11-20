@@ -19,7 +19,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-thread-state-quick-kind-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
@@ -83,13 +82,6 @@ const cardBoth = (card, expected, label) => {
   const b = fromCardFront(card);
   ok(a.state === expected, `② ${label} -> ${expected}(got ${a.state})`);
   ok(JSON.stringify(a) === JSON.stringify(b), `② ${label}:两份 fromCard 结果逐字相等`);
-  // 121-K3 重钉(逐对交代):原判据是 `card.kind !== 'quick_ask'`。K3 之前「有卡片 + kind 是
-  // quick_ask」恰好等价于「管家开的速查线程」—— 因为那时只有 mission 与管家关心的线程才有卡片。
-  // K3 把索引口径放宽成 threadVisible 之后,用户自己在 2.0 里聊的普通会话也有卡片了,而
-  // sessionKind 对它们同样返回 'quick_ask'(第 70 波的「纯问答默认档」是【档位】不是【身份】),
-  // 巧合破了。身份因此单独给了一格 card.quick(13d buildMissionCard,判据与 13j stewardQuickThread
-  // 同源)。断言的意图一个字没变(「身份没丢」),只是换了读哪一格 —— 而且比修前更紧:
-  // 下面紧接着钉了反面(普通会话的卡片不许拿到这个身份),修前那条拦不住它。
   ok(a.sources.kind === 'quick_ask' || card.quick !== true,
     `② ${label}:身份仍如实留在 sources 里当证据(身份没丢,只是不再判定 state)`);
 };
@@ -157,15 +149,7 @@ const codeOnly = text => text.split(/\r?\n/).map(line => line.replace(/\/\/.*$/,
 const producers = (codeOnly(aggregateSource).match(/factsUnknown:\s*true/g) || []).length;
 ok(producers === 1 && /else derived = deriveStewardThreadState\(\{ kind: 'quick_ask', factsUnknown: true \}\);/.test(aggregateSource),
   `④ factsUnknown:true 在事项聚合模块里恰好一处,就是那条不读会话头的 else 支(got ${producers} 处)`);
-// 117r 收尾重钉(主会话)：原来这里钉的是【只有 13d 一处】。它钉的是「今天的代码长什么样」,
-// 不是「什么必须成立」—— 13g 的 steward_threads_search 有一条同形的兜底支(没有卡片、一个事实都不喂),
-// D5 之后它掉进「无 run、无回合」那条分支说出「交办中」,那是假话;主会话补了 factsUnknown: true,
-// 这条计数锁就把一次【正确的】修改判成了违规。改成白名单 + 一条更强的伴随断言(下一条):
-// 真正的危险不是「有几处」,而是「有人一边说没事实、一边把真事实喂进来」——那才是拿 kind 当 state 用。
 const srcDir = path.join(repo, 'ruyi-workbench', 'app', 'src');
-// 117 波 T1(32 号文 §2.1)重钉:steward_threads_search 随拆分搬进了 13k-steward-threads.js
-// (纯搬家,逐字节不变)。白名单钉的是「哪个调用面允许明说没事实」,不是「哪个文件名」——
-// 故只把落点从 13g 换成它现在真正住的 13k,判据与条数一个字没改。
 const backendDir = path.join(srcDir, '../backend');
 const serverFiles = fs.readdirSync(srcDir).filter(file => file.endsWith('.js'))
   .concat(fs.readdirSync(backendDir).filter(file => file.endsWith('.cjs')).map(file => '../backend/' + file));

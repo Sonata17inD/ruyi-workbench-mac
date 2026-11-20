@@ -1,82 +1,20 @@
 'use strict';
-// 架构还债批 3 A:Agent CLI 适配器(05 AGENT_CLI_ADAPTERS)。runClaudeTurn 是 Claude Code / Kimi Code 两个命令行引擎
-// 共用的唯一回合骨架,原先在一个函数体里按 `agentCliType === 'claude' | 'kimi'` 分叉三十来处;现在骨架只问适配器。
-// 真源码、临时 HOME、零网络、不起 CLI。
-//
-// 判据:
-//   [S] 方法集:两个适配器的键集合逐项相同、与下面登记的接口清单相同、各键类型一致(可选钩子 null|function);
-//       适配器表的键与 01 AGENT_CLI_TYPES 的键相同(登记一个新 CLI 类型就必须给它一份适配器)。
-//   [A] 命令行参数金样:buildArgs(输出格式/交互输入/部分消息/betas/MCP/权限桥/权限模式映射/模型/思考强度/轮数)、
-//       resumeArgs(--resume vs --session)、extraArgs、appendSystemPromptFlag、cmdLineBudget、prepareSpawn。
-//   [E] 子进程环境金样:第三方端点 bearer / x-api-key / auto、Kimi Coding 端点的全家族模型改写、Bedrock/Vertex 清空、
-//       MAX_THINKING_TOKENS、骨架共有项的先后;Kimi 一律原样继承 process.env。
-//   [P] 事件解析金样:一组 Claude stream-json 行(含 fixtures/fake-claude-long-process.jsonl 与 tools/fake-claude.js
-//       出现过的全部形状)与一组 Kimi stream-json 行,逐行钉死解析结果;适配器解析与兼容出口 parseAgentCliEvent 同步。
-//   [U] 用量记账金样:有结果帧 → 真实行(cachedInTok = 读 + 创建);无结果帧 → 估算行;都没有 → 不记;Kimi 不记。
-//   [M] 其余决定:交互模式、斜杠原样、stdin 送提示、原生子代理工具、续接丢失判定、思考强度显示、旁路观察、回合后用量。
-//   [G] 骨架形状:runClaudeTurn 函数体里不再出现按 CLI 类型分叉的比较。
-// 架构还债批 4 给适配器加了四个回合外能力成员(nativeAskUserQuestion / modelCatalog / contextStatus / nativeCompact),
-// [S] 同样钉它们的形状;它们的金样与 05 之外调用点的形状锁在 unit/agent-cli-registry.test.js。
-// 金样由抽适配器前(基线提交)的 runClaudeTurn 行为得出:抽取期间另用差分脚本把新旧两份 server.js 各跑 34 个回合
-// (拦截 spawn,逐项比较命令/参数/环境/stdin/事件流/落盘消息/用量账/Kimi 设置文件),归一化后逐字节相同。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-cli-adapters-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 for (const k of ['ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_MODEL', 'MAX_THINKING_TOKENS', 'WCW_CLAUDE_CMDLINE_BUDGET']) delete process.env[k];
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(app, 'server.js'));
-const { AGENT_CLI_ADAPTERS, agentCliAdapter, AGENT_CLI_TYPES, parseAgentCliEvent } = srv;
+const { AGENT_CLI_ADAPTERS } = srv;
 const claude = AGENT_CLI_ADAPTERS.claude;
-const kimi = AGENT_CLI_ADAPTERS.kimi;
 const plain = v => JSON.parse(JSON.stringify(v));   // 解析结果里的 undefined 字段(如缺 arguments 的 tool_use.input)按线上 JSON 口径比
 
-const INTERFACE = {
-  id: 'string', interactive: 'function', slashCommandVerbatim: 'boolean', buildArgs: 'function', resumeArgs: 'function',
-  extraArgs: 'function', prepareSpawn: 'function', appendSystemPromptFlag: 'string',
-  runPreparedTurn: 'optional', buildAgentDefinitions: 'function', buildEnv: 'function', beforeSpawn: 'optional',
-  thinkingEffortLabel: 'function', watchSideChannel: 'function', promptViaStdin: 'boolean', isNativeAgentTool: 'function',
-  parseEvent: 'function', isResumeMissingError: 'function', syncPostTurnUsage: 'optional', recordTurnUsage: 'function',
-  // 架构还债批 4:回合外能力(05 之后的模块经 agentCliAdapter 取;金样见 unit/agent-cli-registry.test.js [C])。
-  nativeAskUserQuestion: 'boolean', modelCatalog: 'capability', contextStatus: 'optional-capability', nativeCompact: 'optional-capability',
-};
-// 能力成员是冻结的小对象,各自的成员集合固定。
-const CAPABILITIES = {
-  modelCatalog: { offline: 'function', discover: 'function' },
-  contextStatus: { probeWindow: 'function', read: 'function', apply: 'function', usage: 'function' },
-  nativeCompact: { mode: 'string', run: 'function' },
-};
-
-test('[S] 两个适配器方法集逐项相同,且与登记的接口清单、AGENT_CLI_TYPES 对齐', () => {
-  assert.deepEqual(Object.keys(AGENT_CLI_ADAPTERS).sort(), Object.keys(AGENT_CLI_TYPES).sort(), '每个登记的 CLI 类型都有一份适配器');
-  const want = Object.keys(INTERFACE).sort();
-  for (const [id, adapter] of Object.entries(AGENT_CLI_ADAPTERS)) {
-    assert.equal(adapter.id, id);
-    assert.deepEqual(Object.keys(adapter).sort(), want, `${id} 的键集合 = 接口清单`);
-    assert.ok(Object.isFrozen(adapter), `${id} 冻结`);
-    for (const [key, kind] of Object.entries(INTERFACE)) {
-      const value = adapter[key];
-      if (kind === 'optional') assert.ok(value === null || typeof value === 'function', `${id}.${key} 是 null 或函数`);
-      else if (kind === 'capability' || (kind === 'optional-capability' && value !== null)) {
-        assert.ok(value && typeof value === 'object' && Object.isFrozen(value), `${id}.${key} 是冻结对象`);
-        assert.deepEqual(Object.keys(value).sort(), Object.keys(CAPABILITIES[key]).sort(), `${id}.${key} 的成员集合`);
-        for (const [member, memberKind] of Object.entries(CAPABILITIES[key])) assert.equal(typeof value[member], memberKind, `${id}.${key}.${member} 是 ${memberKind}`);
-      } else if (kind !== 'optional-capability') assert.equal(typeof value, kind, `${id}.${key} 是 ${kind}`);
-    }
-  }
-  assert.ok(Object.isFrozen(AGENT_CLI_ADAPTERS));
-  assert.equal(agentCliAdapter('claude'), claude);
-  assert.equal(agentCliAdapter('kimi'), kimi);
-  assert.equal(agentCliAdapter('unknown'), claude, '未知类型同 selectedAgentCli 口径归到 claude');
-  assert.equal(agentCliAdapter(undefined), claude);
-});
-
-const BRIDGE = ['--permission-prompt-tool', 'mcp__ruyi__permission_prompt'];
 const HEAD = ['-p', '--output-format', 'stream-json', '--verbose'];
+const BRIDGE = ['--permission-prompt-tool', 'mcp__ruyi__permission_prompt'];
 const noMcp = extra => ({ includeWorkbenchMcp: false, ...extra });
 
 test('[A] Claude buildArgs 金样', async () => {
@@ -109,21 +47,14 @@ test('[A] Claude buildArgs 金样', async () => {
   assert.deepEqual([...printMcp.slice(0, 5), ...printMcp.slice(6)], [...HEAD, '--mcp-config', '--permission-mode', 'plan']);
 });
 
-test('[A] Kimi buildArgs 为空;续接/额外参数/追加系统提示/命令行预算/起进程', async () => {
-  assert.deepEqual(await kimi.buildArgs({ config: { permissionMode: 'default', permissionBridge: true, model: 'x', includeWorkbenchMcp: true }, session: { id: 's' }, basePrompt: '', attachments: [], interactive: false }), []);
+test('[A] Claude 参数、续接与启动路径', async () => {
   assert.deepEqual(claude.resumeArgs('sid-1'), ['--resume', 'sid-1']);
-  assert.deepEqual(kimi.resumeArgs('sid-1'), ['--session', 'sid-1']);
   assert.deepEqual(claude.extraArgs({ extraClaudeArgs: ['--foo', 'bar'] }), ['--foo', 'bar']);
   assert.deepEqual(claude.extraArgs({ extraClaudeArgs: '--foo' }), []);
   assert.deepEqual(claude.extraArgs({}), []);
-  assert.deepEqual(kimi.extraArgs({ extraClaudeArgs: ['--foo'] }), []);
   assert.equal(claude.appendSystemPromptFlag, '--append-system-prompt');
-  assert.equal(kimi.appendSystemPromptFlag, '', 'Kimi 的追加系统提示改走 stdin <ruyi-agent-cli-instructions> 段');
   const args = ['-p', 'x y'];
-  assert.deepEqual(claude.prepareSpawn('C:\\tools\\claude.exe', args), { command: 'C:\\tools\\claude.exe', args, opts: {} });
-  assert.deepEqual(claude.prepareSpawn('C:\\npm\\claude.cmd', args), srv.prepareAgentCliSpawn('claude', 'C:\\npm\\claude.cmd', args));
-  assert.deepEqual(kimi.prepareSpawn('X:\\tools\\kimi.exe', ['acp']), { command: 'X:\\tools\\kimi.exe', args: ['acp'], opts: {} });
-  assert.deepEqual(kimi.prepareSpawn('kimi', ['acp']), srv.prepareAgentCliSpawn('kimi', 'kimi', ['acp']));
+  assert.deepEqual(claude.prepareSpawn('/opt/homebrew/bin/claude', args), { command: '/opt/homebrew/bin/claude', args, opts: {} });
 });
 
 test('[E] 子进程环境金样', () => {
@@ -131,17 +62,15 @@ test('[E] 子进程环境金样', () => {
   process.env.CLAUDE_CODE_USE_BEDROCK = '1';
   process.env.CLAUDE_CODE_USE_VERTEX = '1';
   try {
-    const common = { WIN_CLAUDE_WORKBENCH_HOME: 'H:\\data' };
+    const common = { RUYI_HOME: '/tmp/data' };
     const pick = (env, keys) => Object.fromEntries(keys.map(k => [k, env[k]]));
-    const KEYS = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'MAX_THINKING_TOKENS', 'WIN_CLAUDE_WORKBENCH_HOME', 'CLAUDE_CODE_SUBAGENT_MODEL'];
+    const KEYS = ['ANTHROPIC_BASE_URL', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_API_KEY', 'ANTHROPIC_MODEL', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'MAX_THINKING_TOKENS', 'RUYI_HOME', 'CLAUDE_CODE_SUBAGENT_MODEL'];
     const bearer = claude.buildEnv({ modelsApiBase: 'https://proxy.example.test/v1', modelsApiKey: 'sk-1', claudeAuthMode: 'bearer', model: 'test-model-a', thinkingBudget: 2048 }, common);
     assert.deepEqual(pick(bearer, KEYS), {
       ANTHROPIC_BASE_URL: 'https://proxy.example.test/v1', ANTHROPIC_AUTH_TOKEN: 'sk-1', ANTHROPIC_API_KEY: '', ANTHROPIC_MODEL: 'test-model-a',
-      CLAUDE_CODE_USE_BEDROCK: '', CLAUDE_CODE_USE_VERTEX: '', MAX_THINKING_TOKENS: '2048', WIN_CLAUDE_WORKBENCH_HOME: 'H:\\data', CLAUDE_CODE_SUBAGENT_MODEL: undefined,
+      CLAUDE_CODE_USE_BEDROCK: '', CLAUDE_CODE_USE_VERTEX: '', MAX_THINKING_TOKENS: '2048', RUYI_HOME: '/tmp/data', CLAUDE_CODE_SUBAGENT_MODEL: undefined,
     });
-    // Windows 的 process.env 大小写不敏感(真键名通常是 Path),拷贝成普通对象后只认真键名 —— 按真键名比。
-    const pathKey = Object.keys(process.env).find(key => key.toUpperCase() === 'PATH') || 'PATH';
-    assert.equal(bearer[pathKey], process.env[pathKey], '其余键原样继承');
+    assert.equal(bearer.PATH, process.env.PATH);
     const xkey = claude.buildEnv({ modelsApiBase: 'https://gw.example.test', modelsApiKey: 'sk-2', claudeAuthMode: 'x-api-key', model: 'm-2' }, common);
     assert.deepEqual(pick(xkey, KEYS.slice(0, 7)), {
       ANTHROPIC_BASE_URL: 'https://gw.example.test', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: 'sk-2', ANTHROPIC_MODEL: 'm-2',
@@ -149,14 +78,6 @@ test('[E] 子进程环境金样', () => {
     });
     const auto = claude.buildEnv({ modelsApiBase: 'https://gw.example.test', modelsApiKey: 'sk-3', claudeAuthMode: 'auto' }, common);
     assert.deepEqual(pick(auto, KEYS.slice(0, 4)), { ANTHROPIC_BASE_URL: 'https://gw.example.test', ANTHROPIC_AUTH_TOKEN: 'sk-3', ANTHROPIC_API_KEY: 'sk-3', ANTHROPIC_MODEL: undefined });
-    const kimiCoding = claude.buildEnv({ modelsApiBase: 'https://api.kimi.com/coding/', modelsApiKey: 'sk-4', claudeAuthMode: 'auto', model: 'k-model' }, common);
-    assert.deepEqual(pick(kimiCoding, ['ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_MODEL',
-      'ANTHROPIC_DEFAULT_FABLE_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_HAIKU_MODEL',
-      'ANTHROPIC_SMALL_FAST_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL']), {
-      ANTHROPIC_BASE_URL: 'https://api.kimi.com/coding/', ANTHROPIC_API_KEY: 'sk-4', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_MODEL: 'k-model',
-      ANTHROPIC_DEFAULT_FABLE_MODEL: 'k-model', ANTHROPIC_DEFAULT_OPUS_MODEL: 'k-model', ANTHROPIC_DEFAULT_SONNET_MODEL: 'k-model',
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'k-model', ANTHROPIC_SMALL_FAST_MODEL: 'k-model', CLAUDE_CODE_SUBAGENT_MODEL: 'k-model',
-    });
     // 没配第三方端点:Bedrock/Vertex 不动,不凭空添 ANTHROPIC_*;thinkingBudget 为 0 不写 MAX_THINKING_TOKENS。
     const direct = claude.buildEnv({ thinkingBudget: 0 }, common);
     assert.deepEqual(pick(direct, KEYS.slice(0, 7)), {
@@ -164,11 +85,8 @@ test('[E] 子进程环境金样', () => {
       CLAUDE_CODE_USE_BEDROCK: '1', CLAUDE_CODE_USE_VERTEX: '1', MAX_THINKING_TOKENS: undefined,
     });
     // 先后:骨架共有项盖过继承值;MAX_THINKING_TOKENS 在共有项之后写(共有项里同名也以配置为准)。
-    const order = claude.buildEnv({ thinkingBudget: 10 }, { MAX_THINKING_TOKENS: 'common', WIN_CLAUDE_WORKBENCH_HOME: 'X' });
+    const order = claude.buildEnv({ thinkingBudget: 10 }, { MAX_THINKING_TOKENS: 'common', RUYI_HOME: 'X' });
     assert.equal(order.MAX_THINKING_TOKENS, '10');
-    // Kimi:一律继承 process.env + 共有项,Claude 的第三方端点与思考预算都不碰。
-    const k = kimi.buildEnv({ modelsApiBase: 'https://proxy.example.test', modelsApiKey: 'sk-k', model: 'kimi-code/k', thinkingBudget: 4096 }, common);
-    assert.deepEqual(k, { ...process.env, ...common });
   } finally {
     for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
   }
@@ -219,53 +137,16 @@ const CLAUDE_ROWS = [
   [42, [{ kind: 'unknown', raw: 42 }]],
   ['text', [{ kind: 'unknown', raw: 'text' }]],
 ];
-const KIMI_ROWS = [
-  [{ role: 'meta', type: 'system.version', version: '0.37.2' }, []],
-  [{ role: 'meta', type: 'session.resume_hint', session_id: 'kimi-sess-1' }, [{ kind: 'init', sessionId: 'kimi-sess-1', subtype: 'session.resume_hint' }]],
-  [{ role: 'meta', type: 'session.resume_hint', sessionId: 'kimi-sess-2' }, [{ kind: 'init', sessionId: 'kimi-sess-2', subtype: 'session.resume_hint' }]],
-  [{ role: 'meta', type: 'session.resume_hint' }, []],
-  [{ role: 'meta', type: 'turn.step.retrying', next_attempt: 2, max_attempts: 3, error_message: 'rate limited' }, [{ kind: 'diagnostic', text: 'Kimi 正在重试(2 / 3)：rate limited' }]],
-  [{ role: 'meta', type: 'turn.step.retrying', error_name: 'Timeout' }, [{ kind: 'diagnostic', text: 'Kimi 正在重试(? / ?)：Timeout' }]],
-  [{ role: 'assistant', content: 'Looking.', tool_calls: [
-    { id: 't1', function: { name: 'ReadFile', arguments: '{"path":"a.txt"}' } }, { id: 't2', function: { name: 'Agent', arguments: { prompt: 'sub' } } },
-    { id: 't3', function: { name: 'Shell', arguments: 'not-json' } }, { id: 't4' }] }, [
-    { kind: 'text', text: 'Looking.', partial: false }, { kind: 'tool_use', id: 't1', name: 'ReadFile', input: { path: 'a.txt' } },
-    { kind: 'tool_use', id: 't2', name: 'Agent', input: { prompt: 'sub' } }, { kind: 'tool_use', id: 't3', name: 'Shell', input: 'not-json' },
-    { kind: 'tool_use', id: 't4', name: '' }]],
-  [{ role: 'assistant', content: '' }, []],
-  [{ role: 'assistant', content: ['array'] }, []],
-  [{ role: 'tool', tool_call_id: 't1', content: 'file body' }, [{ kind: 'tool_result', id: 't1', content: 'file body', isError: false }]],
-  [{ role: 'user', content: 'x' }, [{ kind: 'unknown', raw: { role: 'user', content: 'x' } }]],
-  [{ type: 'result', subtype: 'success', result: 'claude-shaped' }, [{ kind: 'unknown', raw: { type: 'result', subtype: 'success', result: 'claude-shaped' } }]],
-  [{}, [{ kind: 'unknown', raw: {} }]],
-  [null, [{ kind: 'unknown', raw: null }]],
-  [7, [{ kind: 'unknown', raw: 7 }]],
-];
-
-test('[P] 事件解析金样(Claude stream-json / Kimi stream-json),适配器与兼容出口同步', () => {
+test('[P] 事件解析金样(Claude stream-json),适配器与兼容出口同步', () => {
   for (const [row, want] of CLAUDE_ROWS) {
     assert.deepEqual(plain(claude.parseEvent(row)), want, `claude ${JSON.stringify(row).slice(0, 80)}`);
-    assert.deepEqual(plain(parseAgentCliEvent(row, 'claude')), want);
-    assert.deepEqual(plain(parseAgentCliEvent(row)), want, '缺省驱动 = claude');
   }
-  for (const [row, want] of KIMI_ROWS) {
-    assert.deepEqual(plain(kimi.parseEvent(row)), want, `kimi ${JSON.stringify(row).slice(0, 80)}`);
-    assert.deepEqual(plain(parseAgentCliEvent(row, 'kimi')), want);
-  }
-  for (const [row] of [...CLAUDE_ROWS, ...KIMI_ROWS]) {
-    assert.deepEqual(plain(parseAgentCliEvent(row, 'nope')), [{ kind: 'unknown', raw: row }], '未知驱动一律 unknown');
-  }
-  // 两份解析器互不认对方的行形(交叉喂:Claude 行给 Kimi 解析器 → 只认 role 字段,Claude 行没有 → unknown)。
-  const init = CLAUDE_ROWS[0][0];
-  assert.deepEqual(kimi.parseEvent(init), [{ kind: 'unknown', raw: init }]);
-  assert.deepEqual(claude.parseEvent(KIMI_ROWS[1][0]), [{ kind: 'unknown', raw: KIMI_ROWS[1][0] }]);
   // 夹具 fixtures/fake-claude-long-process.jsonl(真 CLI 线上形状)逐行可解析,且不产生 unknown。
   const fixture = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'fake-claude-long-process.jsonl'), 'utf8').split(/\r?\n/).filter(Boolean).map(l => JSON.parse(l));
   assert.ok(fixture.length > 10);
   for (const row of fixture) {
     const out = claude.parseEvent(row);
     assert.ok(out.length && out.every(e => e.kind !== 'unknown'), `fixture row ${row.type} 解析为已知事件`);
-    assert.deepEqual(out, parseAgentCliEvent(row, 'claude'));
   }
 });
 
@@ -289,7 +170,6 @@ test('[U] 用量记账金样', async () => {
     usage: { usage: { input_tokens: 10, output_tokens: 2 }, costUsd: 0.5 } });
   claude.recordTurnUsage({ session: { id: 'sess_u4', turnSeq: 1 }, config: {}, usage: null, billInMax: 0, billOutMax: 0 });
   claude.recordTurnUsage({ session: { id: 'sess_u5', turnSeq: 1 }, config: {}, usage: { costUsd: 1 }, billInMax: 0, billOutMax: 0 });
-  kimi.recordTurnUsage({ session: { id: 'sess_u6', turnSeq: 1 }, config: {}, usage: { usage: { input_tokens: 5, output_tokens: 5 } }, billInMax: 9, billOutMax: 9 });
   // hunt2-engines#2:Claude 的 input_tokens 不含缓存;重缓存回合(3 vs 5 万)修前被 appendUsageLedger 的 min 夹成 cachedInTok 3。
   // claudePricing 在场:定价仍按原始 input_tokens(3×1 + 500×2)/1e6,不因归一多算。
   claude.recordTurnUsage({ session: { id: 'sess_u7', turnSeq: 2 }, config: { model: 'test-model-h', claudePricing: { inputPerM: 1, outputPerM: 2, currency: 'USD' } }, billInMax: 0, billOutMax: 0,
@@ -300,58 +180,21 @@ test('[U] 用量记账金样', async () => {
     { sessionId: 'sess_u2', engine: 'claude', provider: 'claude-cli', model: 'test-model-n', inTok: 300, outTok: 55, cachedInTok: 0, cost: null, currency: null, costTrusted: true, estimated: true, turnSeq: 1, kind: 'turn' },
     { sessionId: 'sess_u3', engine: 'claude', provider: 'claude-endpoint:proxy.example.test', model: '', inTok: 10, outTok: 2, cachedInTok: 0, cost: null, currency: null, costTrusted: false, estimated: false, turnSeq: 1, kind: 'turn' },
     { sessionId: 'sess_u7', engine: 'claude', provider: 'claude-cli', model: 'test-model-h', inTok: 50003, outTok: 500, cachedInTok: 50000, cost: 0.001003, currency: 'USD', costTrusted: true, estimated: false, turnSeq: 2, kind: 'turn' },
-  ], '有结果帧记真实行、无结果帧有计费下限记估算行、都没有不记;Kimi 不记');
+  ], '有结果帧记真实行、无结果帧有计费下限记估算行、都没有不记');
 });
 
 test('[M] 其余逐 CLI 决定', async () => {
   assert.equal(claude.interactive({ engineMode: 'interactive' }), true);
   assert.equal(claude.interactive({ engineMode: 'legacy' }), false);
-  assert.equal(kimi.interactive({ engineMode: 'interactive' }), false);
-  assert.equal(claude.slashCommandVerbatim, false);
-  assert.equal(kimi.slashCommandVerbatim, true);
-  assert.equal(claude.promptViaStdin, true);
-  assert.equal(kimi.promptViaStdin, false);
   assert.equal(claude.thinkingEffortLabel({ claudeThinkingEffort: 'xhigh' }), 'xhigh');
   assert.equal(claude.thinkingEffortLabel({ claudeThinkingEffort: '' }), 'default');
-  assert.equal(kimi.thinkingEffortLabel({ claudeThinkingEffort: 'xhigh' }), 'cli-managed');
-  for (const name of ['Agent', 'Task']) { assert.equal(claude.isNativeAgentTool(name), true); assert.equal(kimi.isNativeAgentTool(name), false); }
   for (const name of ['TaskOutput', 'Bash', '', undefined]) assert.equal(claude.isNativeAgentTool(name), false);
   const miss = 'No conversation found with session ID: abc';
   assert.equal(claude.isResumeMissingError(miss), true);
   assert.equal(claude.isResumeMissingError('Error: session ID abc does not exist'), true);
   assert.equal(claude.isResumeMissingError('auth failed: bad key'), false);
-  assert.equal(kimi.isResumeMissingError(miss), false, 'Kimi 不走「去掉续接重试一次」');
-  assert.equal(claude.runPreparedTurn, null);
-  assert.equal(claude.beforeSpawn, null);
-  assert.equal(claude.syncPostTurnUsage, null);
-  assert.equal(typeof kimi.runPreparedTurn, 'function', 'Kimi 由 ACP(05b)接管回合');
-  assert.equal(typeof kimi.beforeSpawn, 'function');
-  assert.equal(await kimi.syncPostTurnUsage({ id: 's', claudeSessionId: null }, {}, () => {}), null, '没有原生会话 id 不去取用量');
-  const events = [];
-  const stopClaude = claude.watchSideChannel({ claudeSessionId: 'x' }, e => events.push(e));
-  const stopKimi = kimi.watchSideChannel({ claudeSessionId: null }, e => events.push(e));
-  assert.equal(typeof stopClaude, 'function'); assert.equal(typeof stopKimi, 'function');
-  stopClaude(); stopKimi();
-  assert.deepEqual(events, []);
-  assert.deepEqual(await kimi.buildAgentDefinitions(root, {}, 6000), { definitions: {}, roles: [], omitted: [] });
   const cfg = srv.normalizeConfig({ defaultWorkspace: root }).config;
   assert.deepEqual(await claude.buildAgentDefinitions(root, cfg, 6000), await srv.buildClaudeAgentDefinitions(root, cfg, 6000));
-});
-
-test('[G] runClaudeTurn 骨架不再按 CLI 类型分叉', () => {
-  const { functionBlock } = require('../lib/source-slice');
-  const src = fs.readFileSync(path.join(app, 'backend', 'agent-cli-turn.cjs'), 'utf8');
-  const turn = functionBlock(src, 'runClaudeTurn');
-  assert.ok(turn);
-  const body = turn.split('\n').filter(l => !/^\s*\/\//.test(l)).join('\n');
-  assert.doesNotMatch(body, /agentCliType\s*[!=]==/, '按 agentCliType 比较的分叉都进适配器');
-  assert.doesNotMatch(body, /[!=]==\s*'(?:claude|kimi)'/, '不与 CLI 名字面量比较');
-  for (const call of ['effectiveAnthropicEnv(', 'parseAgentCliEvent(', 'parseClaudeEvent(', 'watchKimiWire(', 'syncKimiSessionUsage(',
-    'syncMcpServersToKimi(', 'syncKimiTurnPreferences(', 'runKimiAcpTurnPrepared(', 'buildClaudeAgentDefinitions(', 'prepareAgentCliSpawn(',
-    'cmdLineBudgetFor(', 'isClaudeResumeMissingError(', 'appendUsageLedger(']) {
-    assert.ok(!body.includes(call), `骨架不直接调 ${call.slice(0, -1)}(经适配器)`);
-  }
-  assert.match(body, /const adapter = agentCliAdapter\(agentCliType\);/);
 });
 
 test.after(() => { try { srv.flushUsageLedgerSync(); } catch { /* ignore */ } fs.rmSync(root, { recursive: true, force: true }); });

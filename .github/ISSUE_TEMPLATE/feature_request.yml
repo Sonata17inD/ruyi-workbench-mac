@@ -19,7 +19,7 @@ body:
     id: proposal
     attributes:
       label: "期望结果 · Proposed outcome"
-      description: "说明期望的用户体验和约束（离线、Windows、安全等）。 / Describe the desired user experience and constraints (offline, Windows, security, etc.)."
+      description: "说明期望的用户体验和约束（离线、macOS、安全等）。 / Describe the desired user experience and constraints (offline, macOS, security, etc.)."
     validations:
       required: true
   - type: textarea

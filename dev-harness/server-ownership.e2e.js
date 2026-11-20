@@ -32,9 +32,9 @@ function data(name) {
 function spawn(root, port, command = 'serve', nodeArgs = [], extraEnv = {}) {
   const home = path.join(ROOT, 'user'); fs.mkdirSync(home, { recursive: true });
   const child = cp.spawn(process.execPath, [...nodeArgs, SERVER, command, ...(command === 'serve' ? ['--port', String(port)] : [])], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     // Keep runner injection; the fixture environment overrides user home and both AppData roots.
-    env: { ...process.env, ...envBase, HOME: home, USERPROFILE: home, RUYI_HOME: root, WIN_CLAUDE_WORKBENCH_HOME: root, ...extraEnv },
+    env: { ...process.env, ...envBase, HOME: home, USERPROFILE: home, RUYI_HOME: root, ...extraEnv },
   });
   child.output = '';
   for (const stream of [child.stdout, child.stderr]) stream.on('data', chunk => { child.output = (child.output + chunk).slice(-16000); });
@@ -92,13 +92,9 @@ function pending(root) {
     ok(fs.readFileSync(path.join(root, 'runtime.json'), 'utf8') === beforeRuntime && !fs.existsSync(path.join(root, 'last-start-error.json')), 'refusal leaves owner handshake and startup notice unchanged');
     ok((await request(portA))?.overlayId === rtA.overlayId && a.exitCode === null, 'the first service remains alive with the same identity');
 
-    const alias = path.join(ROOT, 'junction-alias'); fs.symlinkSync(root, alias, 'junction');
+    const alias = path.join(ROOT, 'symlink-alias'); fs.symlinkSync(root, alias, 'dir');
     const aliasChild = spawn(alias, await getFreePort());
-    ok(await exited(aliasChild) === 1, 'junction alias resolves to the same OS gate');
-    if (process.platform === 'win32') {
-      const casing = spawn(root.toUpperCase(), await getFreePort());
-      ok(await exited(casing) === 1, 'Windows case aliases resolve to the same OS gate');
-    }
+    ok(await exited(aliasChild) === 1, 'symbolic link resolves to the same OS gate');
 
     const mcp = spawn(root, null, 'mcp');
     mcp.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'ownership-test', version: '1' } } }) + '\n');
@@ -122,7 +118,7 @@ function pending(root) {
     ok(await exited(loser) === 1 && winner.exitCode === null, 'simultaneous OS binds produce exactly one serving owner');
     await stop(winner);
 
-    if (process.platform === 'win32' || process.platform === 'darwin' || (process.platform === 'linux' && Number(process.versions.node.split('.')[0]) >= 22)) {
+    if (process.platform === 'darwin' || (process.platform === 'linux' && Number(process.versions.node.split('.')[0]) >= 22)) {
       const exitRoot = data('exit-writes');
       const control = path.join(ROOT, 'exit-control');
       const inExit = path.join(ROOT, 'inside-exit');
@@ -178,7 +174,7 @@ function pending(root) {
     }
 
     const legacyRoot = data('legacy-live');
-    const innocent = cp.spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { windowsHide: true, env: envBase });
+    const innocent = cp.spawn(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { env: envBase });
     innocent.completed = new Promise(resolve => innocent.once('close', resolve)); children.push(innocent);
     const legacyRecord = JSON.stringify({ pid: innocent.pid, port: 1, overlayId: 'old-or-reused-pid' });
     fs.writeFileSync(path.join(legacyRoot, 'runtime.json'), legacyRecord);

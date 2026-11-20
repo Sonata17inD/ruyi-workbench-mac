@@ -20,7 +20,6 @@ fs.mkdirSync(data, { recursive: true });
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = data;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = data;
 const { loadServerInternals } = require('../lib/server-internals');
 const { syncClaudeCliSettings } = loadServerInternals(['syncClaudeCliSettings']);
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });

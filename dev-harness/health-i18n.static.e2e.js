@@ -66,8 +66,6 @@ function healthIdsFromServer() {
   /* ═══════════ ⑤ i18n:四文件齐 + 占位符对齐 ═══════════ */
   const zh = readJson(path.join(PUBLIC, 'locales', 'zh-CN.json'));
   const en = readJson(path.join(PUBLIC, 'locales', 'en-US.json'));
-  const docsZh = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'));
-  const docsEn = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json'));
   const t = (key, params) => {
     const value = zh[key];
     if (typeof value !== 'string') return `[${key}]`;
@@ -99,8 +97,6 @@ function healthIdsFromServer() {
   }
   const missingKeys = [...wanted].filter(key => typeof zh[key] !== 'string' || !zh[key] || typeof en[key] !== 'string' || !en[key]);
   ok(missingKeys.length === 0, `E1 health.* 文案键齐(${wanted.size} 条)` + (missingKeys.length ? ' (缺: ' + missingKeys.slice(0, 4).join(', ') + ')' : ''));
-  const drifted = [...wanted].filter(key => docsZh[key] !== zh[key] || docsEn[key] !== en[key]);
-  ok(drifted.length === 0, 'E2 四个 locale 文件逐字一致' + (drifted.length ? ' (漂移: ' + drifted.slice(0, 3).join(', ') + ')' : ''));
   const placeholders = value => [...String(value).matchAll(/{{\s*([\w.-]+)\s*}}/g)].map(m => m[1]).sort().join(',');
   const badPlaceholder = [...wanted].filter(key => placeholders(zh[key]) !== placeholders(en[key]));
   ok(badPlaceholder.length === 0, 'E3 中英占位符契约一致' + (badPlaceholder.length ? ' (' + badPlaceholder.join(', ') + ')' : ''));

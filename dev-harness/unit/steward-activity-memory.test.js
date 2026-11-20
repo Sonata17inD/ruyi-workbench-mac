@@ -5,7 +5,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
 const { createStewardThreadAdmission } = require('../../ruyi-workbench/app/backend/steward-thread-admission.cjs');
 const { createStewardConversationVisits } = require('../../ruyi-workbench/app/backend/steward-conversation-visits.cjs');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-activity-memory-'));
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ stewardEnabledV1: true, includeWorkbenchMcp: false, defaultWorkspace: home }));
 const srv = require('../../ruyi-workbench/app/server.js');
 after(() => fs.rmSync(home, { recursive: true, force: true }));

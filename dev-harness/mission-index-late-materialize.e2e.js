@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 反向验证见文末 REVERSE VERIFICATION 注释块:把 13e-pretender-index.js 里新加的空目录早退分支
 // 临时改成 `if (false && ...)` 后单跑本件,必须 FAIL(page.total === 0);跑完照原样改回来。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -86,7 +86,7 @@ fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursiv
 // 5000ms,让第一拍 tick 尽早跑(它在 14-main.js 里是 startServer 之后【同步 await】的,/health 200
 // 不蕴含这一拍已经跑完 —— 下面用 /api/steward/state.lastTickAt 显式等它跑完,而不是猜时间)。
 fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, includeWorkbenchMcp: false, stewardEnabledV1: true, stewardPollMs: 5000 }), 'utf8');
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' } });
 let stderr = ''; wb.stderr.on('data', d => stderr += String(d));
 
 try {

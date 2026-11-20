@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-health-unit-'));
-process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const { loadServerInternals } = require('../lib/server-internals');
 const srv = loadServerInternals(['agentRunHealth', 'missionRunDigest', 'missionHealthRuns', 'buildMissionCard', 'overlayMissionCard', 'pretenderLiveOverlayRevision', 'turnSettlers', 'activeChildren', 'activeAgentRuns', 'RUYI_EVENTS', 'saveAgentRun', 'getPretenderProjectionIndex', 'EventStreamHooks', 'sessionExecutionSnapshot', 'stewardThreadTurnQueued', 'stewardAsksYouForThread', 'nowIso']);
 after(() => { srv.activeAgentRuns.clear(); assert.equal(path.dirname(root), path.resolve(os.tmpdir())); assert.ok(path.basename(root).startsWith('ruyi-steward-health-unit-')); fs.rmSync(root, { recursive: true, force: true }); });

@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 171(精确 148 / 前缀 11 / 正则 12),ROUTE_AUTH 157 条,生成于 2026-11-18T17:34:42.697Z。
+> 判定点 170(精确 147 / 前缀 11 / 正则 12),ROUTE_AUTH 156 条,生成于 2026-11-19T16:03:44.477Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -9,11 +9,11 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/agent-runs` | exact | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 45 件 |
-| GET | `/api/agent-runs/…/events` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
-| POST | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
-| DELETE | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
-| GET | `/api/agent-runs/` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 26 件 |
+| GET | `/api/agent-runs` | exact | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 46 件 |
+| GET | `/api/agent-runs/…/events` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 27 件 |
+| POST | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 27 件 |
+| DELETE | `/api/agent-runs/` | prefix | token | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 27 件 |
+| GET | `/api/agent-runs/` | prefix | token self | ../backend/agent-run-routes.cjs · `handleAgentRunApiRoutes` | agent-coordination.e2e.js, agent-deadlock-watchdog.e2e.js, agent-mode-v2.e2e.js 等 27 件 |
 
 ## agent-workflow(3)
 
@@ -56,7 +56,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/chat/stream` | exact | token-browser | ../backend/http-chat-stream.cjs · `handleChatApiRoute` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 209 件 |
+| POST | `/api/chat/stream` | exact | token-browser | ../backend/http-chat-stream.cjs · `handleChatApiRoute` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 208 件 |
 
 ## checkpoint-storage(7)
 
@@ -74,7 +74,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/config` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 68 件 |
+| POST | `/api/config` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 67 件 |
 | GET | `/api/agent-roles` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
 | POST | `/api/agent-roles` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
 | GET | `/api/agent-workflows` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
@@ -120,11 +120,11 @@
 | POST | `/api/missions/:missionId/interventions/:interventionId/decision` | regex | token | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | acceptance-provenance.e2e.js, action-feedback.browser.e2e.js, agent-workflow-replan-approve.e2e.js 等 35 件 |
 | GET | `/api/interventions` | exact | token-browser self | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | agent-workflow-replan-approve.e2e.js, agent-workflow-replan-review.e2e.js, event-stream-client.browser.e2e.js 等 30 件 |
 | GET | `/api/interventions/:sessionId` | regex | token-browser self | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | interventions-persist.e2e.js, mission-index-scale.e2e.js, session-id-path-guard.e2e.js 等 7 件 |
-| POST | `/api/chat/answer` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | event-stream-client.browser.e2e.js, event-stream-replay.browser.e2e.js, event-stream.e2e.js 等 17 件 |
+| POST | `/api/chat/answer` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | event-stream-client.browser.e2e.js, event-stream-replay.browser.e2e.js, event-stream.e2e.js 等 16 件 |
 | POST | `/api/question/heartbeat` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | — |
 | POST | `/api/question/request` | exact | body-token | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | — |
 | POST | `/api/permission/request` | exact | body-token | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | acc-capability-gates.e2e.js, claude-cli-bridged-read-guard.e2e.js, claude-permission-bridge-mode.e2e.js 等 6 件 |
-| POST | `/api/permission/decision` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | acc-capability-gates.e2e.js, autonomy-pause.e2e.js, claude-binary-live.e2e.js 等 17 件 |
+| POST | `/api/permission/decision` | exact | token-browser | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | acc-capability-gates.e2e.js, autonomy-pause.e2e.js, claude-binary-live.e2e.js 等 16 件 |
 | POST | `/api/plan/decision` | exact | token | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | intervention-mission-gate.e2e.js, interventions-snapshot.e2e.js, plan-mode.e2e.js 等 7 件 |
 | POST | `/api/_test/intervention-cas` | exact | token self | ../backend/intervention-routes.cjs · `handleInterventionApiRoutes` | interventions-cas.e2e.js, interventions-changeseq.e2e.js |
 
@@ -138,7 +138,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/help/doc` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | help-viewer.e2e.js, onboarding.static.e2e.js |
+| GET | `/api/help/doc` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | help-viewer.e2e.js, macos-offline-package.e2e.js, onboarding.static.e2e.js |
 | POST | `/api/open-path` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | copy-path-guard.static.e2e.js, help-menu.e2e.js, macos-runtime-start.e2e.js |
 | GET | `/api/logs/tail` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | help-menu.e2e.js, ui-misc-wave1.browser.e2e.js |
 | GET | `/api/file/preview` | exact | token self | ../backend/local-support-routes.cjs · `handleLocalSupportApiRoutes` | artifacts.e2e.js, audit-w23.e2e.js, file-text-encoding.e2e.js 等 8 件 |
@@ -234,7 +234,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/models` | exact | open | ../backend/provider-routes.cjs · `handleModelsApiRoute` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 7 件 |
+| GET | `/api/models` | exact | open | ../backend/provider-routes.cjs · `handleModelsApiRoute` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 5 件 |
 | POST | `/api/provider/test` | exact | token | ../backend/provider-routes.cjs · `handleProviderTestApiRoute` | anthropic-gateway-setup.e2e.js, anthropic-provider-setup.browser.e2e.js, audit-w23.e2e.js 等 8 件 |
 
 ## scheduler(6)
@@ -252,21 +252,20 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 274 件 |
+| GET | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 272 件 |
 | GET | `/api/sessions/search` | exact | token self | ../backend/session-routes.cjs · `handleSessionApiRoutes` | session-id-path-guard.e2e.js, session-search.e2e.js, steward-runner.e2e.js 等 4 件 |
-| POST | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 274 件 |
+| POST | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 272 件 |
 | POST | `/api/sessions/bulk-delete` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | session-bulk-cleanup.e2e.js |
 | GET | `/api/sessions/background-counts` | exact | token-browser self | ../backend/session-routes.cjs · `handleSessionApiRoutes` | — |
-| DELETE/GET/PATCH/POST | `/api/sessions/:id` | regex | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | acc-capability-gates.e2e.js, action-feedback.browser.e2e.js, agent-mode-v2.e2e.js 等 156 件 |
+| DELETE/GET/PATCH/POST | `/api/sessions/:id` | regex | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | acc-capability-gates.e2e.js, action-feedback.browser.e2e.js, agent-mode-v2.e2e.js 等 153 件 |
 
-## session-execution(4)
+## session-execution(3)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/stop` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | agent-resource-wait-stop.e2e.js, agent-run-lifecycle.e2e.js, agent-wake.e2e.js 等 27 件 |
+| POST | `/api/stop` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | agent-resource-wait-stop.e2e.js, agent-run-lifecycle.e2e.js, agent-wake.e2e.js 等 25 件 |
 | POST | `/api/provider/compact` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | context-compact-v2.e2e.js, provider-compact-recall.e2e.js, provider-compact.e2e.js 等 6 件 |
-| POST | `/api/agent/compact` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | agent-cli-registry.test.js |
-| GET | `/api/kimi/status` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | kimi-agent-cli.e2e.js, store-walkthrough-w1.e2e.js |
+| POST | `/api/agent/compact` | exact | token-browser | ../backend/session-execution-routes.cjs · `handleSessionExecutionApiRoutes` | — |
 
 ## skills(3)
 
@@ -280,16 +279,16 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/bootstrap` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 22 件 |
-| GET | `/api/status` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 82 件 |
+| POST | `/api/bootstrap` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 21 件 |
+| GET | `/api/status` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 80 件 |
 | GET | `/api/capabilities` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | capabilities.e2e.js, macos-capability-popover.browser.e2e.js, macos-capture-host.e2e.js 等 7 件 |
 
 ## steer(2)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
-| DELETE | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 13 件 |
+| POST | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 12 件 |
+| DELETE | `/api/steer` | exact | token | ../backend/session-steering.cjs · `handleSteerApiRoute` | agent-steer-node.e2e.js, classic-window-live-steer.e2e.js, composer-session-races.browser.e2e.js 等 12 件 |
 
 ## steward(20)
 
@@ -336,31 +335,3 @@
 - ../backend/mcp-routes.cjs · `handleMcpApiRoutes` → `handleMigrationApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardApiRoutes` → `handleStewardRunnerApiRoutes`
 - ../backend/steward-routes.cjs · `handleStewardRunnerApiRoutes` → `handleStewardDeliveryApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleStatusApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handlePlaybookApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleWorkspaceApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleModelsApiRoute`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleConfigurationApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleProviderTestApiRoute`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleSessionApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleMissionsApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleSkillApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleMemoryApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleSessionExecutionApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleInterventionApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleMissionLedgerApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleAutonomyGrantApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleAgentWorkflowApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleUsageApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleAgentRunApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleCheckpointQueryApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleLocalSupportApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleMcpApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleDiagnosticsApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleCheckpointApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleSteerApiRoute`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleAudioApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleSchedulerApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleAttachmentApiRoutes`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleChatApiRoute`
-- ../backend/workbench-api-router.cjs · `handleApi` → `handleToolApiRoutes`

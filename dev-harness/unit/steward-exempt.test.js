@@ -16,7 +16,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-exempt-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
@@ -476,9 +475,6 @@ for (const [group, commands] of Object.entries(HIT)) {
   const DEL = 'Remove-Item .\\tmp -Recurse';
   const PUSH = 'git push origin main';
 
-  // 107-S1 ①②③ 重钉：闸名表由八项变十项（scan_limit 之后插 indirect_command / absolute_target），
-  // 全文上限由 1000 降到摘录长度 300。两条都是【锁跟着判据走】，不是判据跟着锁走：
-  // 46 号文 §5 ⑦b 的 E3 实测 927 字命令 delegable:true 而管家只看得见 300 字。
   ok(JSON.stringify(STEWARD_EXEMPT_DELEGATION_GATES) === JSON.stringify(['switch_off', 'mode', 'not_watched', 'floor', 'scan_limit', 'indirect_command', 'absolute_target', 'tainted', 'risk_note', 'hourly_cap'])
     && Object.isFrozen(STEWARD_EXEMPT_DELEGATION_GATES),
     `⑧ 闸名表十项、顺序固定、冻结（实得 ${brief(STEWARD_EXEMPT_DELEGATION_GATES)}）`);

@@ -5,7 +5,7 @@
 //
 //   node --require dev-harness/lib/fixture-home-guard.js dev-harness/111-compaction-live.js \
 //        [--switches=111d,111e,111a,111b,111c] [--repeats=5] [--model=deepseek-v4-flash] \
-//        [--dir=<证据目录>] [--budget-cny=25] [--out=docs/optimization-plan/107-e1-readings.json]
+//        [--dir=<证据目录>] [--budget-cny=25] [--out=<输出文件>]
 //
 // 为什么叫 *-live.js 而不是 *.e2e.js:`run-all.js:248` 只收 `.e2e.js`,live 件(真 key、真花钱)
 // 一律不许进全量。本件与 `deepseek-ab-live.js` / `compact-quality-live.e2e.js` 同族。
@@ -77,7 +77,7 @@ const REPEATS = Math.max(1, Number(arg('repeats', 5)) || 5);
 const MODEL = String(arg('model', 'deepseek-v4-flash'));
 const PROVIDER_ID = String(arg('provider', 'deepseek'));
 const BUDGET_CNY = Number(arg('budget-cny', 25)) || 25;
-const OUT = arg('out', path.resolve(__dirname, '..', 'docs', 'optimization-plan', '107-e1-readings.json'));
+const OUT = arg('out', path.join(require('node:os').tmpdir(), '107-e1-readings.json'));
 const HARNESS_VERSION = 'e1-1';
 
 const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15);
@@ -89,7 +89,7 @@ const EVID = path.join(DIR, 'evidence');
 
 // ── 隔离:先换家,再 require server.js ──────────────────────────────────────────────────
 const REAL_HOME_DIR = process.env.RUYI_REAL_HOME || os.homedir();
-const norm = p => { let s = path.resolve(String(p || '')); while (s.length > 3 && /[\\/]$/.test(s)) s = s.slice(0, -1); return process.platform === 'win32' ? s.toLowerCase() : s; };
+const norm = p => { let s = path.resolve(String(p || '')); while (s.length > 3 && /[\\/]$/.test(s)) s = s.slice(0, -1); return s; };
 const REAL_WCW = require('./lib/real-data-root.js').defaultDataRootIn(REAL_HOME_DIR);
 
 for (const d of [SIM_HOME, SIM_USER, SIM_WORK, EVID, path.join(SIM_USER, 'AppData', 'Local'), path.join(SIM_USER, 'AppData', 'Roaming')]) fs.mkdirSync(d, { recursive: true });
@@ -133,23 +133,14 @@ const SIM_CONFIG = {
 const SIM_CONFIG_FILE = path.join(SIM_HOME, 'config.json');
 fs.writeFileSync(SIM_CONFIG_FILE, JSON.stringify(SIM_CONFIG, null, 2), 'utf8');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = SIM_HOME;
 process.env.RUYI_HOME = SIM_HOME;
 process.env.USERPROFILE = SIM_USER;
 process.env.HOME = SIM_USER;
-if (process.platform === 'win32') {
-  const parsed = path.parse(SIM_USER);
-  process.env.HOMEDRIVE = parsed.root.replace(/[\\/]+$/, '');
-  process.env.HOMEPATH = SIM_USER.slice(parsed.root.length - 1);
-}
-process.env.LOCALAPPDATA = path.join(SIM_USER, 'AppData', 'Local');
-process.env.APPDATA = path.join(SIM_USER, 'AppData', 'Roaming');
-process.env.KIMI_CODE_HOME = path.join(SIM_USER, '.kimi-code');
 process.env.WCW_KILL_PORT = '0';
 if (!process.env.RUYI_REAL_HOME) process.env.RUYI_REAL_HOME = REAL_HOME_DIR;
 
 // 自检:数据家/用户家都不许是真机家。
-for (const [label, value] of [['WIN_CLAUDE_WORKBENCH_HOME', SIM_HOME], ['USERPROFILE', SIM_USER], ['HOME', SIM_USER]]) {
+for (const [label, value] of [['RUYI_HOME', SIM_HOME], ['USERPROFILE', SIM_USER], ['HOME', SIM_USER]]) {
   if (norm(value) === norm(REAL_HOME_DIR) || norm(value) === norm(REAL_WCW)) {
     console.error('FATAL 隔离自检红:' + label + ' 指向真机家 ' + value); process.exit(2);
   }
@@ -751,7 +742,6 @@ function fingerprint(label) {
     ['wcw-config', path.join(REAL_WCW, 'config.json')],
     ['scheduler-tasks', path.join(REAL_WCW, 'scheduler', 'tasks-v1.json')],
     ['claude-json', path.join(REAL_HOME_DIR, '.claude.json')],
-    ['kimi-mcp', path.join(REAL_HOME_DIR, '.kimi-code', 'mcp.json')],
   ];
   const out = { label, at: new Date().toISOString(), files: {} };
   for (const [k, p] of targets) {

@@ -37,7 +37,6 @@ const ERROR_CLASSES = {
   gate_unverified: { zh: '质量门的结论缺少验证', next: '让节点真的跑一次验证再下结论' },
   gate_unpropagated: { zh: '质量门结论没有传到下游', next: '检查下游节点有没有声明依赖' },
   claude_cli_error: { zh: 'Claude CLI 这一回合非正常退出', next: '看会话里最后的输出;多为 CLI 侧问题,可以重发' },
-  kimi_acp_error: { zh: 'Kimi 这一回合非正常退出', next: '看会话里最后的输出;可以重发' },
   cli_missing: { zh: '找不到可用的 CLI', next: '到 设置 检查 CLI 路径' },
   launch_error: { zh: '这一回合根本没起来', next: '重发一次;仍然不行就看工作台日志' },
   // hunt2:主回合 429 已自动退避重试过几次仍被限流(09 runOpenAiTurn)。修前归 tool_error,把人引去查工具。

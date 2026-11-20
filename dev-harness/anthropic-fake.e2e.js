@@ -106,7 +106,7 @@ async function waitFor(fn, tries = 150, gap = 100) {
       providers: [provider], activeProvider: 'claude',
     }));
     const port = await getFreePort();
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME } });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     let log = ''; wb.stdout.on('data', d => { log += d; }); wb.stderr.on('data', d => { log += d; });
     const up = await waitFor(() => request(port, 'GET', '/health').catch(() => null), 80, 150);
     if (!up) throw new Error('workbench did not start: ' + log.slice(-800));
@@ -193,7 +193,6 @@ async function waitFor(fn, tries = 150, gap = 100) {
   // ── 进程内:非流式与模型清单 ─────────────────────────────────────────────────────────────
   try {
     process.env.RUYI_HOME = path.join(ROOT, 'inproc');
-    process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
     fs.mkdirSync(process.env.RUYI_HOME, { recursive: true });
     const srv = require(path.join(WB, 'app', 'server.js'));
     const provider = { id: 'claude', apiStyle: 'anthropic', baseUrl: fake.url + '/anthropic', apiKey: 'sk-ant-fake-key', model: MODEL, models: [] };

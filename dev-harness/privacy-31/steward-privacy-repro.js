@@ -10,7 +10,7 @@ const f = require('../lib/privacy-test-fixture').fixture();
 app.PrivacyCore.configHooks.sealLocal = f.vault.sealLocal; app.PrivacyCore.configHooks.openLocal = f.vault.openLocal;
 const state = app.__eval(`(() => {
   const state = { steps: [], wire: [], calls: [] };
-  detectClaudePath = () => ''; detectKimiPath = () => '';
+  detectClaudePath = () => '';
   openAiStreamOnce = async function(options) {
     state.wire.push(structuredClone(await PrivacyGateway.beforeRequest(options.body)));
     PrivacyGateway.assertPolicyAvailable();

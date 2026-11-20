@@ -2,13 +2,13 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 // 105h / 4.3 第二项: <=4 块顺序 refine。总门无净收益,默认关;任一步失败整条回退现有 map-reduce。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105h-unit-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105h-unit-'));
 const HERE = __dirname;
 const WB = path.resolve(HERE, '..', 'ruyi-workbench');
 const srv = require(path.join(WB, 'app', 'server.js'));
@@ -19,7 +19,7 @@ const ok = (value, label) => value ? console.log('PASS ' + label) : (failures++,
 function kill(proc) { if (proc && proc.pid) try { killOwnTree(proc); } catch { /* ignore */ } }
 function fakeUp(port, env) {
   const proc = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(port)], {
-    env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env }, windowsHide: true,
+    env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env },
   });
   proc.stdout.on('data', () => {}); proc.stderr.on('data', () => {});
   return proc;

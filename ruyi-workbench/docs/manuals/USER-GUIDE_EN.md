@@ -1,6 +1,7 @@
 # Ruyi User Guide
 
-For the Mac arm64 local/internal trial, start with [installation, upgrade and recovery](../MACOS-RELEASE_EN.md). Windows commands and overlay updates below do not apply to Mac.
+For installation and upgrades on Apple Silicon, see the [Administrator Guide](ADMIN-GUIDE_EN.md).
+
 
 
 > This guide is for everyday users who do not need to write code. It explains how to delegate work such as
@@ -13,15 +14,13 @@ See also: [Chinese edition](USER-GUIDE_CN.md) · [administrator guide](ADMIN-GUI
 
 ### Open the workbench
 
-Double-click Start-Workbench.cmd or the shortcut prepared by your administrator. A browser opens the local Ruyi
-page; the window title reads Ruyi Workbench and the top bar carries a **Steward | Workbench** segmented control. If
-the page does not open, open the local address supplied by the administrator; the default port is 8765.
+Open Ruyi Full or Ruyi from Applications. The top bar has a **Steward | Workbench** view control. Full includes Office, browser and desktop tools. Slim includes the core workbench. Configure a model to start chatting.
 
 ### Complete first-run setup
 
 A new install opens in the **steward view**. Choose **Start the guide** in the welcome content, or use the model-setup prompt when no model is ready. The wizard follows **Language → Engine → Provider → Steward model → Workspace → Safety → Done**; complete the steps needed for your engine.
 
-1. **Connect a model.** Local Ollama and LM Studio need no key. A cloud or on-prem provider needs its address, model name and the appropriate credentials; test the connection after entering them. An installed Claude Code or Kimi Code can be selected as an Agent CLI instead.
+1. **Connect a model.** Local Ollama and LM Studio need no key. A cloud or on-prem provider needs its address, model name and the appropriate credentials; test the connection after entering them. An installed Claude Code can be selected as an Agent CLI instead.
 2. **Choose a workspace and permission mode.** Select the materials for this task and decide which actions should ask you first. The workspace is not an operating-system sandbox; see section 2.
 3. **Send a task.** Finishing returns to the steward view, where you can describe the work directly. The workbench view also offers task cards in an empty conversation.
 
@@ -92,7 +91,7 @@ Ask me every step. A change applies from the next turn and does not interrupt a 
 When information is missing, Ruyi opens a question card instead of guessing. A question may accept one choice,
 multiple choices, or typed text. Option descriptions explain their effects, and an Other choice can accept a
 custom response when available. Submit answer becomes available only after every question is answered; use
-Ctrl+Enter (or Command+Enter on macOS) as a shortcut.
+Command+Enter as a shortcut.
 
 Ruyi does not preselect an answer. Closing the card cancels the question. After submission, the card stays open
 until delivery is confirmed, so a temporary network failure can be retried without losing the response.
@@ -112,7 +111,7 @@ Renames, outbound messages, payments and arbitrary script side effects cannot al
 ### Combine Excel workbooks
 
 Ask Ruyi to align columns, combine files, add a source-file column, and remove exact duplicates. Example:
-Combine all Excel files in D:\Reports\October and save the result as Summary.xlsx.
+Combine all Excel files in Reports/October and save the result as Summary.xlsx.
 
 ### Rename a group of files
 
@@ -235,7 +234,7 @@ providers / Speech recognition / Agent CLI / Agent roles), **Tools & integration
 MCP / Add-on components / Skills & templates / Migration center) and **System** (Diagnostics / Storage & data /
 Advanced / Update Center). The "?" on each page opens the matching section of this guide.
 
-Configure either a local Agent CLI path (Claude Code or Kimi Code, under Models & Services → Agent CLI) or an
+Configure either a local Agent CLI path (Claude Code, under Models & Services → Agent CLI) or an
 OpenAI-compatible provider (Models & Services → Model providers: press "+ Add Provider" and pick a starting point from the
 drop-down beside it: local Ollama, local LM Studio, or the one "custom" entry (OpenAI-compatible / self-hosted). A cloud
 API and an Anthropic-compatible gateway both use "custom": enter the base URL and key the service gave you. The
@@ -283,16 +282,15 @@ A notification is sent in two situations only:
   and only while the window is not in the foreground (minimised or unfocused).
 
 Each event notifies once and a notification is not withdrawn afterwards. Items that arrive during quiet hours, or
-while permission is denied, are not replayed later, and restarting the workbench does not emit a backlog. The desktop
-shell uses a tray balloon.
+while permission is denied, are not replayed later, and restarting the workbench does not emit a backlog.
 
 ### The Steward tab
 
 **External bots and remote control:** ask the Steward to connect a QQ or Feishu bot and provide its app details. The Steward checks missing information, prepares a disabled connection and offers a setup entry. QQ requires the AppID; Feishu requires the App ID and, in this iteration, the tenant key and bot open_id. If you only have the Feishu App ID and App Secret, use "Discover from app credentials" in the External bots panel: Ruyi probes the fixed official Feishu endpoints once, fills in the tenant key and bot open_id and prepares the connection. Existing Feishu connections can re-check that tenant and bot still match. A Feishu custom group webhook is a different integration.
 
-Use the dedicated password fields for credentials instead of ordinary chat. On Windows, the current user's system protection stores them across restarts. Start pairing, configure the callback in the platform console as instructed, and send the pairing code to the bot. Ruyi identifies your sender and conversation automatically; review the identity and shared-context scope, then authorize remote control locally. Group replies are visible to members. Pairing, actual task execution and accepted platform replies are separate facts. App creation, platform permissions and an HTTPS entrance still require the indicated external setup steps.
+Use the dedicated password fields for credentials instead of ordinary chat. macOS Keychain protects stored bot credentials across restarts. Start pairing, configure the callback in the platform console as instructed, and send the pairing code to the bot. Ruyi identifies your sender and conversation automatically; review the identity and shared-context scope, then authorize remote control locally. Group replies are visible to members. Pairing, actual task execution and accepted platform replies are separate facts. App creation, platform permissions and an HTTPS entrance still require the indicated external setup steps.
 
-Advanced users can retain manual sender/conversation allowlists and `RUYI_BOT_` environment references. Enter names, never secret values, in environment-reference fields. Other platforms continue to use environment references in this iteration; there is no unprotected plaintext credential fallback.
+Advanced users can retain manual sender/conversation allowlists and `RUYI_BOT_` environment references. Enter names, never secret values, in environment-reference fields.
 
 Choose **Remote control**, bind your account, conversation and direct/group type, and confirm locally. You can then delegate, continue, query progress/results and stop specified tasks from QQ or Feishu, with the current reply returned to the same conversation. This is the same Steward as on your computer: it shares context and existing task permissions without raising the permission level. In a group, only the bound account mentioning the bot can control it; other members can see replies. Required confirmations and failures remain explicit.
 
@@ -625,8 +623,7 @@ that button for you within the rules**, so a scheduled task does not sit blocked
 6. The command contains no **concatenation, encoding, or evaluation** — indirect constructions such as
    `& ('shut' + 'down')`, which spell a keyword out at run time. The rules cannot tell what such a command really
    runs, so it always waits for you.
-7. For a **delete-data** match, the deletion target must be a **relative path**. A drive letter (`C:\`), a
-   leading `/`, `~`, `$env:`, or `%VARIABLE%` all send it to you.
+7. For a **delete-data** match, the deletion target must be a **relative path**. An absolute path, home directory, or variable expansion all send it to you.
 8. The steward **wrote down a reason** (no reason, no approval).
 9. When the thread **read a web page** this turn (or last turn, with no message from you since), anything
    **outbound** or **push-to-remote** is never delegated — deleting files or installing software still can be,
@@ -634,9 +631,9 @@ that button for you within the rules**, so a scheduled task does not sit blocked
 10. **At most 6 times per hour** (the count resets on restart).
 
 **What it will never approve for you** (floor items; any profile, any condition): payments, purchases, and
-transfers; formatting and partitioning; shutdown, restart, and boot-entry changes; registry and firewall changes;
-scheduled tasks, system services, execution-policy and Defender-exclusion changes (system changes that "stay once installed"); registering an MCP server; tools whose very name means sending a message, plus `sendmail`; and any command that
-takes `/`, `C:\`, or your home directory as its deletion target. In addition, network access started from a command or script (plain reads included) and reading secret files in the Ruyi data folder also stop to ask in Smart auto, and the steward never approves those either; a networked request that looks like it carries a payload (a very long query string, a long encoded run) asks first at every level except Fully automatic, and sub-agents are refused.
+transfers; formatting and partitioning; shutdown, restart, and boot-entry changes; firewall changes;
+scheduled tasks, system services (system changes that "stay once installed"); registering an MCP server; tools whose very name means sending a message, plus `sendmail`; and any command that
+takes `/` or your home directory as its deletion target. In addition, network access started from a command or script (plain reads included) and reading secret files in the Ruyi data folder also stop to ask in Smart auto, and the steward never approves those either; a networked request that looks like it carries a payload (a very long query string, a long encoded run) asks first at every level except Fully automatic, and sub-agents are refused.
 
 **What you will see:**
 

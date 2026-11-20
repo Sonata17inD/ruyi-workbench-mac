@@ -27,13 +27,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      磁盘真值逐字节不变;applied／undoRef／决策日志里零明文。
 //
 // 判定行:`STEWARD CONFIG TOOLS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
-const SERVER = path.join(WB, 'app', 'server.js');
+const { createIsolatedKeychainServer } = require('./lib/isolated-keychain-fixture');
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-cfgtools-'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let fail = 0;
@@ -47,7 +47,7 @@ const MCP_GH = 'ghp_' + 'StewardS0b' + 'Fake0123456789LMNOP';
 const MCP_ARG = 'stewArg' + 'S0b' + 'Tok445566';
 fs.mkdirSync(HOME, { recursive: true });
 fs.writeFileSync(configFile, JSON.stringify({
-  credentialEncryptionV1: process.platform === 'win32', configSchema: 7, engineMode: 'interactive', permissionMode: 'default', locale: 'zh-CN',
+  credentialEncryptionV1: true, configSchema: 7, engineMode: 'interactive', permissionMode: 'default', locale: 'zh-CN',
   includeWorkbenchMcp: false, defaultWorkspace: HOME, recentWorkspaces: [], subagentMaxPerTurn: 0,
   stewardEnabledV1: true, stewardPollMs: 120000, stewardMaxParallelThreads: 5,
   providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:1', apiKey: 'super-secret-key', model: 'm', models: [{ id: 'm', label: 'm' }] }],
@@ -55,9 +55,10 @@ fs.writeFileSync(configFile, JSON.stringify({
   externalMcpServers: [{ id: 'stew-mcp', label: 'Steward MCP', command: 'node', args: ['-e', '0', '--token', MCP_ARG], cwd: '', env: { GITHUB_TOKEN: MCP_GH }, enabled: false }],
 }, null, 2), 'utf8');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
-const srv = require(SERVER);
+const keychain = createIsolatedKeychainServer(HOME);
+const srv = require('./lib/server-internals').loadServerInternals(['toolCall', 'stewardConfigTierFor', 'LocalSecretCryptoHooks']);
+srv.LocalSecretCryptoHooks.helperPath = () => keychain.helper;
 
 const ctxPlain = { session: { id: 'steward', kind: 'steward', providerHistory: [] }, sessionId: 'steward' };
 const ctxPressed = { ...ctxPlain, userPressed: true };
@@ -175,17 +176,17 @@ try {
     const plain = t => ![MCP_GH, MCP_ARG].some(s => String(t).includes(s));
     const diskServers = () => JSON.stringify(onDisk().externalMcpServers);
     const before = diskServers();
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     const recoveredServers = () => JSON.stringify(configReader.recover(onDisk()).externalMcpServers);
     const recoveredBefore = recoveredServers();
     const recovered = JSON.parse(recoveredBefore).find(s => s.id === 'stew-mcp');
     ok(recovered?.env.GITHUB_TOKEN === MCP_GH && recovered?.args[3] === MCP_ARG, 'I0 夹具:持久 env/args 解密为逐字相同的原值');
-    if (process.platform === 'win32') {
+    {
       const raw = onDisk(), rawMcp = raw.externalMcpServers.find(s => s.id === 'stew-mcp');
       const physicalFiles = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(HOME, name)));
       ok(raw.credentialRefsV1?.version === 1 && rawMcp?.env === '' && rawMcp?.args === ''
         && physicalFiles.every(name => { const text = fs.readFileSync(path.join(HOME, name), 'utf8'); return plain(text) && !text.includes('super-secret-key'); }),
-      'I0b Windows 主配置、备份和凭据库无 MCP 或服务商凭据明文');
+      'I0b Mac 主配置、备份和凭据库无 MCP 或服务商凭据明文');
     }
     const g = await call('steward_config_get', { keys: ['externalMcpServers'] });
     const srvView = g && g.values && Array.isArray(g.values.externalMcpServers) ? g.values.externalMcpServers.find(s => s.id === 'stew-mcp') : null;
@@ -215,8 +216,8 @@ try {
   /* ═════════ (G) arbiterRefresh 副作用(真服务)═════════ */
   console.log('── (G) 同一个落盘函数 ──');
   {
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-      cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    wb = cp.spawn(process.execPath, [keychain.entry, 'serve', '--port', String(WB_PORT)], {
+      cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
     });
     wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
     let token = '';
@@ -249,10 +250,6 @@ try {
       ok(!/function applyConfigPatch\(/.test(routerSrc) && (routerSrc.match(/await ConfigPatchHooks\.applyConfigPatch\(body\)/g) || []).length === 1,
         'G4b 路由层只剩一处经 ConfigPatchHooks 的调用,不另留一份 applyConfigPatch');
     }
-    // 117 波 T1(32 号文 §2.1)重钉:steward_config_set 的实现随拆分搬进了 13l-steward-ops.js
-    // (纯搬家,逐字节不变)。原来钉的是「13g 这个文件里有这一行」—— 钉的是落点;改成钉
-    // 「整个 13g 族里恰好一处走 applyConfigPatch」:跟着搬家走,而且比原来严 —— 原来只要有就绿,
-    // 现在族里再冒出第二条落盘路径也红。
     const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
       '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs']
       .map(f => fs.readFileSync(path.join(WB, 'app', 'src', f), 'utf8')).join('\n');

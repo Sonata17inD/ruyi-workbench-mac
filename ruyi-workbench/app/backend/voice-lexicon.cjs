@@ -475,7 +475,6 @@ Anthropic = 安斯若匹克
 OpenAI = open AI, 欧喷AI
 Qwen = q wen
 DeepSeek = 迪普西克, deep seek
-Kimi = 基米, 奇米
 GLM
 Gemini = 杰米尼
 Llama = 拉玛

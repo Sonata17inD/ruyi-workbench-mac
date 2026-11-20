@@ -5,10 +5,7 @@
 // 凭据：走本机 git 的凭据助手（`git credential fill`，与 `git push` 用的是同一份）——不读环境变量、不落盘、不打印。
 // Credential: taken from git's credential helper (the same one `git push` uses); never printed or written anywhere.
 //
-// 用法 / usage（在仓库根目录）：
-//   node dev-harness/publish-github-release.js --tag v3.0.0-preview.1 --title "…" \
-//     --notes docs/release-notes/v3.0.0-preview.1.md --prerelease \
-//     --asset ruyi-workbench/dist/Ruyi-v3.0.0-preview.1-slim.zip --asset … [--dry-run]
+// Usage: publish-github-release.js --tag TAG --title TITLE --notes FILE --asset DMG [--dry-run]
 'use strict';
 const fs = require('fs');
 const path = require('path');

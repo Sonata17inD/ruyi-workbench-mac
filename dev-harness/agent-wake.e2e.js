@@ -162,7 +162,7 @@ function streamChatStopAfterToolResult(body, afterMs, onStop, authHeaders) {
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }], activeProvider: 'fake',
   }));
   const startWorkbench = () => {
-    const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME } });
+    const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     child.stderr.on('data', d => String(d).trim() && console.log('[wb!] ' + String(d).trim()));
     return child;
   };

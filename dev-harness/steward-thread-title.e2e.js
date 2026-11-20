@@ -35,7 +35,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 判定行:`STEWARD THREAD TITLE E2E: ALL PASS`。
 // ════════════════════════════════════════════════════════════════════════════════════════════
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -127,7 +127,7 @@ const missionRow = async (sid, hdr) => {
 let wb = null;
 const spawnWb = () => {
   const p = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   p.stdout.on('data', () => {});
   p.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));

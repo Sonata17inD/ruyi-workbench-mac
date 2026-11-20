@@ -10,7 +10,7 @@ process.env.RUYI_DESKTOP_EXECUTION_RECEIPTS='1';
 const {loadServerInternals}=require('../lib/server-internals');
 after(()=>fs.rmSync(root,{recursive:true,force:true}));let count=0;
 async function fixture(){
-  const data=path.join(root,'data-'+(++count));fs.mkdirSync(data);process.env.RUYI_HOME=data;process.env.WIN_CLAUDE_WORKBENCH_HOME=data;
+  const data=path.join(root,'data-'+(++count));fs.mkdirSync(data);process.env.RUYI_HOME=data;
   const api=loadServerInternals(['ServerOwnership','DesktopExecutionRuntime','turnSettlers','activeAgentRuns','sessionRewindGenHighWater','markSessionDeleted']);
   const ownership=await api.ServerOwnership.acquire([data]);await api.DesktopExecutionRuntime.initialize(ownership);
   const session={id:'sess_node',turnSeq:1,rewindGen:0,createdAt:new Date().toISOString()},owner={driverRunId:'drun_node',cancelRequested:false};

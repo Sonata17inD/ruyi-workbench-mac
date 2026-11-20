@@ -1,13 +1,12 @@
 'use strict';
 // Isolated real-file state machine only. Ownership is a simulated assertion, receipts are synthetic;
 // this does not qualify actual server ownership, provider dispatch, ACC/native IO or restart replay.
-const {test:nodeTest,after}=require('node:test');
-const test=(name,fn)=>nodeTest(name,{skip:process.platform==='win32'},fn); // POSIX private-file feature; Windows legacy remains separate.
+const { test, after } = require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'ruyi-execution-ledger-'));
 for(const key of ['HOME','USERPROFILE','APPDATA','LOCALAPPDATA','TMPDIR'])process.env[key]=path.join(root,key);
-process.env.RUYI_HOME=path.join(root,'data');process.env.WIN_CLAUDE_WORKBENCH_HOME=process.env.RUYI_HOME;
+process.env.RUYI_HOME=path.join(root,'data');
 const {loadServerInternals}=require('../lib/server-internals');
 const {DesktopExecutionLedger:Ledger,DurableJsonStore}=loadServerInternals(['DesktopExecutionLedger','DurableJsonStore']);
 after(()=>fs.rmSync(root,{recursive:true,force:true}));

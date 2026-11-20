@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // PART B — integration (real workbench on an ephemeral port) proving the guard is wired into the live /api/tools/ path:
 //   No-provider config denies reads outside the workspace. Bypass permits writes except protected paths.
 //   flip config to a LOCAL provider → out-of-bounds read now ALLOWED (provider-sensitive, live).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 

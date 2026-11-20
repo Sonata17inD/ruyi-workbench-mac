@@ -324,12 +324,39 @@ function propagateAssignments(dependencies, gate) {
   }
   for (const [item, key] of itemKeys) if (Object.prototype.hasOwnProperty.call(assignments, item) && !keyValues.has(key)) keyValues.set(key, assignments[item]);
   for (const [item, key] of itemKeys) if (!Object.prototype.hasOwnProperty.call(assignments, item) && keyValues.has(key)) assignments[item] = keyValues.get(key);
-  const visiting = new Set(); const visited = new Set(); let cycle = false;
-  const visit = id => { if (visiting.has(id)) { cycle = true; return; } if (visited.has(id)) return; visiting.add(id); for (const to of (edges.get(id) || [])) visit(to); visiting.delete(id); visited.add(id); };
-  for (const id of edges.keys()) visit(id);
+  const incoming = new Map();
+  const order = new Map();
+  for (const [from, targets] of edges) {
+    order.set(from, order.size);
+    if (!incoming.has(from)) incoming.set(from, 0);
+    for (const to of targets) incoming.set(to, (incoming.get(to) || 0) + 1);
+  }
+  const ready = [...incoming.keys()].filter(id => incoming.get(id) === 0);
+  for (let cursor = 0; cursor < ready.length; cursor++) {
+    for (const to of edges.get(ready[cursor]) || []) {
+      incoming.set(to, incoming.get(to) - 1);
+      if (incoming.get(to) === 0) ready.push(to);
+    }
+  }
+  const cycle = ready.length !== incoming.size;
   if (!cycle) {
-    let changed = true;
-    while (changed) { changed = false; for (const [from, targets] of edges) if (Object.prototype.hasOwnProperty.call(assignments, from)) for (const to of targets) if (!Object.prototype.hasOwnProperty.call(assignments, to)) { assignments[to] = assignments[from]; changed = true; } }
+    // Earlier rows used to win conflicts within each forward scan. Compute that
+    // arrival order on the DAG without re-scanning edges on successive passes.
+    const seeds = new Set(Object.keys(assignments));
+    const arrival = new Map();
+    for (const from of ready) {
+      if (!Object.hasOwn(assignments, from)) continue;
+      const row = order.get(from);
+      const received = arrival.get(from);
+      const pass = received ? received.pass + Number(received.row >= row) : 0;
+      for (const to of edges.get(from) || []) {
+        if (seeds.has(to)) continue;
+        const prior = arrival.get(to);
+        if (prior && (prior.pass < pass || (prior.pass === pass && prior.row <= row))) continue;
+        arrival.set(to, { pass, row });
+        assignments[to] = assignments[from];
+      }
+    }
   }
   const expected = new Set([...itemKeys.keys(), ...edges.keys(), ...[...edges.values()].flatMap(x => [...x])]);
   const unpropagated = [...expected].filter(item => !Object.prototype.hasOwnProperty.call(assignments, item));

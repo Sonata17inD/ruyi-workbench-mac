@@ -37,7 +37,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   stewardEnabledV1: true, stewardPollMs: 120000,
   workspaces: [{ path: WS_A, read: true, write: true, execute: true }, { path: WS_B, read: true, write: true, execute: true }],
 }, null, 2), 'utf8');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

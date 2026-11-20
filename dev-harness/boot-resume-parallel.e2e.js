@@ -12,16 +12,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //          失败不影响护栏已落盘的观测)。
 // Judgement line (exact): BOOT-RESUME-PARALLEL E2E: ALL PASS
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
-const HOME = path.join(os.tmpdir(), 'wcw-boot-resume-e2e');   // 单元层 dataRoot
-const HOME2 = path.join(os.tmpdir(), 'wcw-boot-resume-e2e-live'); // 集成层 dataRoot(子进程)
+const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-boot-unit-'));
+const HOME2 = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-boot-live-'));
 const { getFreePort } = require('./free-port.js');
 
-fs.rmSync(HOME, { recursive: true, force: true });
-fs.mkdirSync(HOME, { recursive: true });
 process.env.RUYI_HOME = HOME; // paths.* 在 module load 时定型,必须先设
 const { mapPool } = require('../ruyi-workbench/app/backend/agent-recovery.cjs');
 const srv = require(path.join(WB, 'app', 'server.js'));
@@ -96,8 +94,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   }
 
   // ──────────────────────── (L) 集成层(真 boot) ────────────────────────
-  fs.rmSync(HOME2, { recursive: true, force: true });
-  fs.mkdirSync(HOME2, { recursive: true });
   fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify({ configSchema: 4, version: '0.7.0', permissionMode: 'bypass', autonomyAutoResume: true }, null, 2));
   const mkRun = (sid, rid, status, nodes, eventSeq) => {
     const dir = path.join(HOME2, 'agent-runs', sid);
@@ -123,11 +119,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   mkRun('sessl2b', 'run_00000b01', 'interrupted', [{ id: 'n1', status: 'interrupted', engine: 'openai', wait: { kind: 'timer', seconds: 60 } }], 0);
 
   const WB_PORT = await getFreePort();
-  // 子进程环境:删掉单元层的 RUYI_HOME(spawn env 里写 undefined 会变成字符串 "undefined" 的经典坑),
-  // 只认 WIN_CLAUDE_WORKBENCH_HOME(与 resume-dangling 同款)。
-  const childEnv = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME2 };
-  delete childEnv.RUYI_HOME;
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: childEnv, windowsHide: true });
+  const childEnv = { ...process.env, RUYI_HOME: HOME2 };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: childEnv });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   const health = () => new Promise(res => { const r = http.get({ host: '127.0.0.1', port: WB_PORT, path: '/health', timeout: 800 }, resp => { let b = ''; resp.on('data', c => (b += c)); resp.on('end', () => res(resp.statusCode === 200)); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });

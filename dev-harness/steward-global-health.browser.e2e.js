@@ -106,7 +106,7 @@ const { ok } = runner;
     const run = JSON.parse(fs.readFileSync(runFile,'utf8'));run.persistenceDegraded=false;run.idleAborted=false;run.nodes[0].idleAborted=false;fs.writeFileSync(runFile,JSON.stringify(run));
     const head = JSON.parse(fs.readFileSync(headFile,'utf8'));head.mission.milestones[0].desc='HEALTH_ACCEPT_B';fs.writeFileSync(headFile,JSON.stringify(head));
     fx.server = cp.spawn(process.execPath,['app/server.js','serve','--port',String(fx.appPort)],{
-      cwd:WB,env:{...process.env,...fixtureChildEnv(),RUYI_HOME:fx.home,WIN_CLAUDE_WORKBENCH_HOME:fx.home,HOME:fx.home,USERPROFILE:fx.home},windowsHide:true,stdio:'ignore',
+      cwd:WB,env:{...process.env,...fixtureChildEnv(),RUYI_HOME:fx.home,HOME:fx.home,USERPROFILE:fx.home},stdio:'ignore',
     });
     ok(Boolean(await waitForHttp(fx.appPort,'GET','/health',result=>result.status===200)), 'G11 process B starts on the exact same port and data root');
     ok(Boolean(await fx.waitForEval(`healthAcks.some(id=>id!==healthOriginalEpoch)`)), 'G12 unchanged page reconnects and sees the new server epoch');

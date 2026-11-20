@@ -18,7 +18,6 @@ const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', po
   cwd: path.join(ROOT, 'ruyi-workbench'),
   env: process.env,
   stdio: 'inherit',
-  windowsHide: true,
 });
 child.on('exit', code => { process.exitCode = code == null ? 1 : code; });
 for (const signal of ['SIGINT', 'SIGTERM']) {

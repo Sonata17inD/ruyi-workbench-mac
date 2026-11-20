@@ -70,7 +70,7 @@ async function boot(providerBase, apiStyle, model) {
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', ...(apiStyle ? { apiStyle } : {}), baseUrl: providerBase, apiKey: 'k', model, models: [{ id: model, label: model }] }],
     activeProvider: 'fake',
   }));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   const up = await waitFor(() => request(port, 'GET', '/health').catch(() => null), 100, 150);
   if (!up) throw new Error('workbench did not start');
   const html = await new Promise(resolve => http.get({ host: '127.0.0.1', port, path: '/' }, res => { let b = ''; res.on('data', c => { b += c; }); res.on('end', () => resolve(b)); }));

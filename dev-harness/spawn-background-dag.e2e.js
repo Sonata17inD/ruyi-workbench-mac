@@ -6,7 +6,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  2) the parent executes an independent todo_write while the child is still live;
 //  3) wait_agents collects the DELIVERY ENVELOPE (bounded node summary, not the raw node result); and
 //  4) the same ad-hoc launch is persisted in /api/agent-runs for the Workbench DAG with background:true.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -59,8 +59,8 @@ try {
     ],
     sub: [], subText: '后台子任务最终结论：' + '证据已核验。'.repeat(30), parentText: '父会话已汇总后台结果。',
   });
-  fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_SUBAGENT_SCRIPT: script, FAKE_STREAM_DELAY_MS: '70' }, windowsHide: true });
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_SUBAGENT_SCRIPT: script, FAKE_STREAM_DELAY_MS: '70' } });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).trim() && console.log('[wb!] ' + String(d).trim()));
   let up = null; for (let i = 0; i < 80 && !up; i++) { await sleep(150); up = await health(); }
   ok(!!up, 'workbench starts');

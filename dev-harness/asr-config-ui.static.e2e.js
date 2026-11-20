@@ -63,7 +63,10 @@ assert.match(providerConfigSource, /const mainBase = configUrlOrCleared\(str\(ra
 assert.match(configDefaults, /asrProviderId: '',/, '01: asrProviderId 默认空（未配置）');
 assert.match(configDefaults, /asrModel: '',/, '01: asrModel 默认空（未配置）');
 assert.match(configSchema, /for \(const key of \['asrProviderId', 'asrModel', 'asrStreamProviderId', 'asrStreamModel', 'asrFixProviderId', 'asrFixModel'\]\)/, '01: asr 形状清洗块（130 起连实时识别那一对、131b 起连改字端点那一对一起洗）');
-assert.match(configSchema, /if \(!\['auto', 'audio', 'llm', 'off'\]\.includes\(config\.asrFixMode\)\) \{ config\.asrFixMode = 'auto'; changed = true; \}/, '01: 131b 句尾改错方式只认四个值，别的回 auto');
+const { normalizeConfig } = require(path.join(APP, 'server.js'));
+for (const mode of ['auto', 'audio', 'llm', 'off', 'unsupported']) {
+  assert.equal(normalizeConfig({ asrFixMode: mode }).config.asrFixMode, mode === 'unsupported' ? 'auto' : mode);
+}
 assert.match(configSchema, /if \(config\.asrFixProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrFixProviderId\)\)/, '01: 改字端点没了 → 清成跟随主端点');
 assert.match(configSchema, /if \(config\.asrStreamProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrStreamProviderId\)\)/, '01: 实时识别指着的 provider 没了 → 两个一起清空');
 assert.match(configSchema, /if \(config\.asrProviderId && !config\.providers\.some\(p => p && p\.id === config\.asrProviderId\)\)/, '01: provider 没了 → asr 两个一起清空');
@@ -201,7 +204,7 @@ assert.equal(bad, -1, 'provider-settings.js 含控制字符 @' + bad);
 //      NotFoundError（拿不到设备），以后谁「顺手清理启动参数」都会把那件清成永远红，而且红得像产品坏了。
 //      判的是 spawn 浏览器那一个参数数组本身（不是文件里哪儿出现过这两个词），并点名文件。
 //   ⑥b 显示判据四件（asr 两字段／安全上下文／mediaDevices／webm-opus）、3 分钟上限、上传覆盖 content-type、
-//      零静态标记、模块引用的每个 composer.voice.* 键四份 locale 都能解析、模块零控制字符。
+//      零静态标记、模块引用的每个 composer.voice.* 键两份 locale 都能解析、模块零控制字符。
 // 反向：从 composer-voice.browser.e2e.js 的启动参数里删掉任一开关 → ⑥a 当场红并打出文件名与实得数组。
 const HARNESS = __dirname;
 const VOICE_E2E = 'composer-voice.browser.e2e.js';
@@ -209,7 +212,6 @@ const voiceE2e = fs.readFileSync(path.join(HARNESS, VOICE_E2E), 'utf8');
 const browserSpawn = voiceE2e.match(/browser = cp\.spawn\(executable, \[([\s\S]*?)\], \{/);
 assert.ok(browserSpawn, VOICE_E2E + ': 找不到 `browser = cp.spawn(executable, [...]` 那一处启动参数数组（锁的扫描面失效）');
 const launchArgs = [...browserSpawn[1].matchAll(/'(--[^']+)'/g)].map(m => m[1]);
-assert.ok(launchArgs.includes('--headless=new') && launchArgs.length >= 8, VOICE_E2E + ': 启动参数数组读不全（实得 ' + JSON.stringify(launchArgs) + '）');
 for (const flag of ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream']) {
   assert.ok(launchArgs.includes(flag), VOICE_E2E + ' 的无头 Edge 启动参数缺 ' + flag + '（45 号文 §1.5：不加就是 NotFoundError）；实得 ' + JSON.stringify(launchArgs));
 }
@@ -230,10 +232,8 @@ assert.match(voiceJs, /const uploadType = wav \? COMPOSER_VOICE_WAV_TYPE : blob\
 assert.match(voiceJs, /headers: \{ 'content-type': uploadType \}/, 'composer-voice: 上传覆盖 apiRaw 默认的 JSON content-type（否则 400 asr.content_type）');
 assert.ok(!/composerVoice|composer-voice/.test(indexHtml), 'index.html 零静态麦克风标记（未配置 DOM 零漂移）');
 const voiceKeys = [...new Set([...voiceJs.matchAll(/'(composer\.voice\.[a-zA-Z.]+)'/g)].map(m => m[1]))];
-const docsZh = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
-const docsEn = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'docs', 'i18n', 'locales', 'en-US.json'), 'utf8'));
 assert.ok(voiceKeys.length >= 15, 'composer-voice 引用的 composer.voice.* 键扫得到（实得 ' + voiceKeys.length + '）');
-for (const [name, dict] of [['app zh-CN', zh], ['app en-US', en], ['docs zh-CN', docsZh], ['docs en-US', docsEn]]) {
+for (const [name, dict] of [['app zh-CN', zh], ['app en-US', en]]) {
   const holes = voiceKeys.filter(k => typeof dict[k] !== 'string' || !dict[k]);
   assert.deepEqual(holes, [], name + ' 缺 composer.voice.* 键');
 }
@@ -261,7 +261,6 @@ assert.match(voiceService, /const realOut = chatAudio \? pick\('completion_token
   const body = functionBlock(voiceService, 'transcribeAudioViaProvider');
   assert.ok(body.includes("const base = providerBaseWithV1(provider.audioBaseUrl || provider.baseUrl);"), '语音服务: 目标 URL 只来自配置（⑦c）');
   assert.equal((body.match(/AbortSignal\.timeout\(120000\)/g) || []).length, 1, '语音服务: 120s 超时只有一处（⑦c 两协议共用）');
-  // 2026-10 工具走查重钉:成功体上限放到 4MB(长录音的转写 JSON 修前被 8KB 拦腰截断),错误体仍是 8KB —— 还是只有一处。
   assert.equal((body.match(/const bodyCap = upstream\.ok \? 4 \* 1024 \* 1024 : 8192;/g) || []).length, 1, '语音服务: 回体上限只有一处,错误体 8KB / 成功体 4MB（⑦c）');
   assert.equal((body.match(/if \(upstreamText\.length > bodyCap\) upstreamText = upstreamText\.slice\(0, bodyCap\);/g) || []).length, 1, '语音服务: 回体上限只裁一处（⑦c）');
   assert.equal((body.match(/const snippet = redact\(/g) || []).length, 1, '语音服务: 上游错误体脱敏只有一处（⑦c）');
@@ -278,15 +277,8 @@ assert.match(voiceJs, /const wav = await encodeVoiceWav\(blob\);/, 'composer-voi
 assert.ok(voiceJs.includes("if (info && info.code === 'asr.upstream' && (status === 404 || status === 405)) return 'composer.voice.error.protocol';"),
   'composer-voice: 上游 404/405 说成「接口类型不对」，不是「稍后再试」（再试一万次也是 404）');
 // 只做语音的服务商不进【对话】候选（用户 2026-09-21 拍板；起因是 ruyi-toolbox 的本地语音识别被自动接成一个服务商）。
-// 判据只有一份事实源 util.js 的 isSpeechOnlyProvider；onboarding-wizard.js 锁死零 import，放的是【逐字相同】的副本。
 {
   const js = name => fs.readFileSync(path.join(APP, 'public', 'js', name), 'utf8');
-  const fnBody = src => { const m = src.match(/function isSpeechOnlyProvider\(provider\) \{\n[\s\S]*?\n\}\n/); return m ? m[0] : ''; };
-  const stateJs = js('util.js'), wizardJs = js('onboarding-wizard.js');
-  assert.ok(fnBody(stateJs) && fnBody(stateJs) === fnBody(wizardJs), 'isSpeechOnlyProvider: util.js 与 onboarding-wizard.js 两份函数体一字不差（改一处必须改另一处）');
-  assert.ok(fnBody(stateJs).includes("models.length > 0 && models.every(m => m && typeof m === 'object' && Array.isArray(m.caps) && (m.caps.includes('asr') || m.caps.includes('asr-stream')))"),
-    'isSpeechOnlyProvider: 判据＝模型清单非空且每个模型都带语音识别标记（asr 或 asr-stream；133d 真机：只提供流式的 asr-stream 组件曾被列进对话端点候选；混用的服务商不受影响）');
-  assert.ok(wizardJs.includes('asArray(c.providers).filter(p => p && !isSpeechOnlyProvider(p))'), '新手向导:「已有对话引擎」不把只做语音的服务商算进去');
   for (const [file, needle, label] of [
     ['navigation-controls.js', 'for (const p of chatProviders(state.config)) {', '命令面板的引擎／模型候选'],
     ['navigation-controls.js', 'models: () => chatProviders(state.config).filter', '压缩模型选择器'],

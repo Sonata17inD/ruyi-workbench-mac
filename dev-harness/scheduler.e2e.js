@@ -31,7 +31,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // fake 引擎:本件自带一个进程内的 OpenAI 兼容小服务(同 mission-start-race.e2e.js 的做法),
 // 按【用户消息里的暗号】分叉 —— PLAIN 直接回一句、BOOM 回 HTTP 500(造失败)、TOOLCALL 发起一次
 // file_write(edit 档 -> 在 default 权限下 gate 判 ask,正是 J 组要的)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -157,7 +157,6 @@ function startProvider(port) {
   /* ═════════ A 零开销(进程内直测:setInterval 起没起,HTTP 面上看不见)═════════ */
   {
     const probeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-sched-probe-'));
-    process.env.WIN_CLAUDE_WORKBENCH_HOME = probeHome;
     process.env.RUYI_HOME = probeHome;
     const srv = require(path.join(WB, 'app', 'server.js'));
     const { startScheduler, stopScheduler, schedulerRuntimeSnapshot } = srv;
@@ -231,7 +230,6 @@ function startProvider(port) {
       WCW_SCHEDULER_TICK_MS: String(TICK_MS),
       WCW_SCHEDULER_ASK_WAIT_MS: String(ASK_WAIT_MS),
     },
-    windowsHide: true,
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
 

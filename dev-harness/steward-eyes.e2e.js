@@ -48,7 +48,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   // 这件会真的去搜网。第一版就是这么漏的,下面 C4 的前提断言专门钉住它。
   searchBackend: { type: 'none', baseUrl: '', apiKey: '' }, searchBackendMigrated: true,
 }, null, 2), 'utf8');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

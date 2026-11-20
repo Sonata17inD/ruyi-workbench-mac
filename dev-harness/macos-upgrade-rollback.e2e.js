@@ -28,7 +28,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
   async function host(app, data, name) {
     const report = path.join(scratch, name + '.json');
     const child = cp.spawn(path.join(app, 'Contents/MacOS/RuyiDesktop'), ['--acceptance-report', report, '--acceptance-auto-quit'],
-      { cwd: scratch, env: { ...process.env, ...fixture.env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: '', PATH: '/usr/bin:/bin',
+      { cwd: scratch, env: { ...process.env, ...fixture.env, RUYI_HOME: data, PATH: '/usr/bin:/bin',
         RUYI_NODE_PATH: '/missing/external-node', NODE_OPTIONS: '', NODE_PATH: '', PYTHONPATH: '', PYTHONHOME: '' }, stdio: ['ignore', 'ignore', 'pipe'] });
     children.push(child); child.stderr.on('data', () => {});
     await until(() => child.exitCode !== null);

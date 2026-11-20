@@ -18,7 +18,6 @@ const path = require('path');
 const cp = require('child_process');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-exec-shape-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = path.join(root, 'data');
 process.env.RUYI_HOME = path.join(root, 'data');
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 const ws = path.join(root, 'ws');

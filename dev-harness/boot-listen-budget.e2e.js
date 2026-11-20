@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // E2E(第122波 §2.5):启动探针挪到 listen 之后 —— 「打开工作台等半天才出界面」。
 //
 // 现状(修前,本机实测,全新 HOME + TEMP 指向全新目录即磁盘缓存冷):
-//   spawnSync 逐发计时 → readConfig 里 claude/kimi 的 --version 各一发(合计 ~1 s),
+//   spawnSync 逐发计时 → readConfig 里 Claude 的 --version 各一发(合计 ~1 s),
 //   然后 syncMcpServersToClaude 的【同步前缀】resolveExternalMcpServers → detectDesktopMcp → pickPython
 //   一发 python 探针 1983 ms;listen 落在 3.2 s,/health 200 落在 3.35 s。
 //   那三处 void 调用虽是 fire-and-forget,函数体在第一个 await 之前照样同步跑。
@@ -20,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      预热改走异步孪生 ensureDesktopMcpWarm()，形状锁跟着钉住「三处 fire-and-forget 排在它的 .then 里」）；
 //   ④ 39 号文：探针在飞的时候 /health 不该被挡住（同步 spawnSync 会把整个进程钉住 ~2 s）。
 //      —— ① 在「本机没装任何 python」的机器上会变弱（探针本来就不慢），③ 是与机器无关的那一半。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { functionBlock } = require('./lib/source-slice');
 
@@ -71,8 +71,8 @@ function getJson(pathname, token, timeoutMs) {
   // env 就地写在 spawn 里（不抽成变量）：fixture-home.static 的静态扫按「实参文本里出现 RUYI_HOME」
   // 认这一处，抽成变量它就扫不到，那条「每一处都 spread process.env」的守卫也就管不到本件。
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, windowsHide: true,
-    env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, TEMP: FRESH_TMP, TMP: FRESH_TMP },
+    cwd: WB,
+    env: { ...process.env, RUYI_HOME: HOME, HOME, TMPDIR: FRESH_TMP },
   });
   let stdout = '';
   wb.stdout.on('data', d => { stdout += String(d); });
@@ -117,8 +117,7 @@ function getJson(pathname, token, timeoutMs) {
     ok(bootStart > 0 && listenAt > bootStart, 's 定位到 boot 段与 listenWithFallback');
     const beforeListen = src.slice(bootStart, listenAt);
     const afterListen = src.slice(listenAt);
-    // 架构还债批 4:启动时的 Kimi MCP 同步收进 01 syncAgentCliMcpManifests(按 CLI 登记表推给从用户配置读 MCP 的那一家)。
-    for (const name of ['syncMcpServersToClaude(config)', 'syncAgentCliMcpManifests(config)', 'getCapabilities(config)']) {
+    for (const name of ['syncMcpServersToClaude(config)', 'getCapabilities(config)']) {
       ok(!beforeListen.includes(name) && afterListen.includes(name), `s boot 段 listen 之前不再调 ${name}，挪到了 listen 之后`);
     }
     ok(!/await generateMcpConfig\(config\.mcpCommandMode\)/.test(beforeListen)

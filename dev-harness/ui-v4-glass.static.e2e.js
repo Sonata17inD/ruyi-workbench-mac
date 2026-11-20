@@ -26,8 +26,6 @@ const HTML = fs.readFileSync(path.join(ROOT, 'ruyi-workbench', 'app', 'public', 
 const readLoc = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
 const zh = readLoc('ruyi-workbench/app/public/locales/zh-CN.json');
 const en = readLoc('ruyi-workbench/app/public/locales/en-US.json');
-const dzh = readLoc('docs/i18n/locales/zh-CN.json');
-const den = readLoc('docs/i18n/locales/en-US.json');
 
 let fail = 0;
 const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
@@ -88,7 +86,7 @@ ok(/cur === 'dark' \? 'light' : cur === 'light' \? 'system' : 'dark'/.test(WORKS
 ok(/addEventListener\('change'/.test(WORKSPACE_PREFS) && WORKSPACE_PREFS.includes("if (cur === 'system') applyTheme('system')"), 'G7c matchMedia 变更监听(system 档随 OS)');
 ok(HTML.includes("t === 'system'") && HTML.includes('prefers-color-scheme'), 'G7d index.html 预绘解析 system(防闪)');
 ok(!APP.includes("$('themeToggle').textContent = theme === 'dark' ? '🌙' : '☀️'"), 'G7e themeToggle emoji 已换 SVG(emoji 清零首例)');
-for (const [name, content] of [['zh', zh], ['en', en], ['docs-zh', dzh], ['docs-en', den]]) {
+for (const [name, content] of [['zh', zh], ['en', en]]) {
   ok(content.includes('"navigation.theme.system"'), 'G7f i18n navigation.theme.system 在(' + name + ')');
 }
 

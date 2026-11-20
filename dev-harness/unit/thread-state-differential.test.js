@@ -17,7 +17,6 @@ const path = require('path');
 const { constBlock } = require('../lib/source-slice');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-thread-state-diff-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const APP = path.resolve(__dirname, '../../ruyi-workbench/app');
 const srv = require(path.join(APP, 'server.js'));

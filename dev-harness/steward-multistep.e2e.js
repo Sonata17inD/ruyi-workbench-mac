@@ -7,7 +7,7 @@ const { startFakeProvider, toolCallFrames } = require('./lib/fake-openai-provide
 const subagent = require('../ruyi-workbench/app/backend/subagent-runner.cjs');
 const t = createRunner('STEWARD MULTISTEP'); const { ok } = t;
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-multistep-'));
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let fake, s, holdReached = false;
 let releaseTighten;

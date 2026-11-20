@@ -28,7 +28,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // .call(value, 'why');` 改成恒 false → B/C/D 三段全红(旗子不见、审计零条)。
 //
 // 端口全部 getFreePort() 动态取(run-all 端口审计口径)。判定行:`STEWARD CONTRACT GUARD E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -63,7 +63,6 @@ const EMPTY_WHY = JSON.stringify({ say: '好的,我记下了。', why: '', acts:
 
 const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(PROVIDER_PORT)], {
   env: { ...process.env, FAKE_REPLY_SEQUENCE: JSON.stringify([SAY_ONLY, FULL_CONTRACT, EMPTY_WHY]) },
-  windowsHide: true,
 });
 fake.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
 await sleep(600);
@@ -137,7 +136,7 @@ try {
   /* ═════════ (A) 起服务 ═════════ */
   console.log('── (A) 起服务 ──');
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   let up = null;

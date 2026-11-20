@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (d) 只读派生 + 鉴权:GET /api/interventions/:sid 无 token -> 403;有 token -> 200 + counts;
 //      GET 不改磁盘(读前后 NDJSON 一致)。
 //  (e) 静态锁:02 helper、13d 路由+missionPendingCounts async、01-config ROUTE_AUTH、13-http-router boot、04/07 注册/决策点。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -111,7 +111,7 @@ function streamWithQuestion(body, token, onAsk) {
 }
 
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
 }
 
 (async () => {

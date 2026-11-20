@@ -27,20 +27,13 @@ const STEWARD_MANAGED_WORKSPACES_CAP = 200;
 // 一个用处:认出【老版本】追加进常用工作区的那些行,把它们挪回如意自己那张表(清洗块的「迁出」一支)。
 const STEWARD_WORKSPACE_LEGACY_NOTE = 'Ruyi 自动开的';
 
-function createWorkspaceConfig({ platform }) {
+function createWorkspaceConfig() {
   function normalizeWorkspacePathString(value) {
     const raw = String(value == null ? '' : value);
-    let s = platform === 'darwin' && raw.startsWith('/') ? raw : raw.trim();
-    const pairs = [['"', '"'], ["'", "'"], ['“', '”'], ['‘', '’']];
-    for (let guard = 0; guard < 3; guard++) {
-      const pair = pairs.find(([open, close]) => s.length >= 2 && s.startsWith(open) && s.endsWith(close));
-      if (!pair) break;
-      s = s.slice(pair[0].length, s.length - pair[1].length).trim();
-    }
-    // 代码走查 C14:去掉结尾分隔符(盘符根 C:\ 与单独的 / 保留)—— 修前带不带结尾「\」存成两条常用文件夹。
-    const stripped = s.replace(platform === 'darwin' && s.startsWith('/') ? /\/+$/ : /[\\/]+$/, '');
-    if (stripped && !/^[A-Za-z]:$/.test(stripped)) s = stripped;
-    else if (s) s = s.slice(0, stripped.length + 1);
+    let s = raw.startsWith('/') ? raw : raw.trim();
+    const pairs = { '"': '"', "'": "'", '“': '”', '‘': '’' };
+    if (s.length > 1 && pairs[s[0]] === s.at(-1)) s = s.slice(1, -1);
+    s = s.replace(/\/+$/, '') || (s.startsWith('/') ? '/' : '');
     return s.slice(0, 1000);
   }
 
@@ -57,7 +50,7 @@ function createWorkspaceConfig({ platform }) {
   //     不再往常用工作区写任何一行),这一行留下,如意那张表里对应的条目标 adopted:true。迁出只认
   //     「不在如意那张表里」的行,所以收编过的行下一次读配置不会再被挪走(否则两条迁移会来回拉锯)。
   function stewardManagedWorkspaceKey(value) {
-    const normalized = String(value == null ? '' : value).replace(/[\\/]+/g, '/').replace(/\/+$/, '');
+    const normalized = String(value == null ? '' : value).replace(/\/+/g, '/').replace(/\/+$/, '');
     return normalized;
   }
   function normalizeStewardManagedWorkspaces(config, wsRows) {

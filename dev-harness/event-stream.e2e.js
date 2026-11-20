@@ -23,7 +23,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // EventSource:这条路由是 token-browser 档,EventSource 设不了请求头)。
 // 判定行:`EVENT STREAM E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -80,13 +80,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // ── SSE 客户端(Node 原生 http;不用 EventSource)────────────────────────────────
 // 帧格式按 SSE 规范:`id:` / `event:` / `data:` 三行 + 空行分隔;`: ping` 是注释行(心跳)。
@@ -251,8 +244,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started');
 
@@ -467,7 +460,7 @@ try {
   console.log('FAIL 夹具异常: ' + ((error && error.stack) || error));
 } finally {
   try { if (stream) stream.close(); } catch { /* ignore */ }
-  killTree(server);
+  killOwnTree(server);
   try { if (provider) provider.close(); } catch { /* ignore */ }
   await sleep(300);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* temp dir */ }

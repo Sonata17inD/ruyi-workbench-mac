@@ -35,7 +35,7 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib �
 // 花费:每次代批 = 2–3 次真管家调用(§9.6.7 实测约 ¥0.054/回合),3+2 次约 ¥0.5;`--budget-cny` 是硬闸。
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const fs = require('fs');
@@ -147,11 +147,11 @@ async function startInstance(tag, pollMs) {
     ],
   }, null, 2), 'utf8');
   const env = {
-    ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME,
+    ...process.env, RUYI_HOME: HOME,
     USERPROFILE: USER, HOME: USER, LOCALAPPDATA: path.join(USER, 'AppData', 'Local'), APPDATA: path.join(USER, 'AppData', 'Roaming'),
-    KIMI_CODE_HOME: path.join(USER, '.kimi-code'), WCW_KILL_PORT: '0', RUYI_REAL_HOME: REAL_HOME,
+    WCW_KILL_PORT: '0', RUYI_REAL_HOME: REAL_HOME,
   };
-  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env, windowsHide: true });
+  const proc = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env });
   proc.stdout.on('data', () => {});
   proc.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb-' + tag + '!] ' + redactKey(l.trim()).slice(0, 200))));
   const inst = { tag, HOME, USER, WORK, PORT, proc, TOKEN: '', pollMs, sessionsDir: path.join(HOME, 'sessions') };

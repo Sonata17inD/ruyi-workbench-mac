@@ -36,7 +36,6 @@ import { createChatRenderPrimitives } from './js/chat-render-primitives.js';
 import { createAttachmentTray } from './js/attachment-tray.js'; // 附件托盘:渲染 / 上传(上传中占位)/ 预览 URL 释放(F13)
 // Agent CLI 登记表（ENGINEERING-SPEC §11.1）：两个零 import 工厂（渲染原语／流运行时）经 deps.agentCliMeta 拿它。
 import { agentCliMeta } from './js/agent-cli-registry.js';
-import { renderMermaidBlocks } from './js/mermaid-runtime.js';
 import { createChatStaticRenderer } from './js/chat-static-renderer.js';
 import { createChatStreamRuntime } from './js/chat-stream-runtime.js';
 import { createTurnActivity, describeTurnActivity } from './js/turn-activity.js';
@@ -104,15 +103,6 @@ const API_ERROR_I18N = {
   'session.rewound_during_write': 'error.api.rewoundDuringWrite',
   'session.history_changed_during_compact': 'error.api.historyChangedDuringCompact',
 };
-// 124 真机 bug（用户 2026-09-15）：**api.request_failed 是「没有稳定码」的兜底码，按它翻译等于把
-// 服务端刚说清楚的原因抹掉。** 00-boot 的 normalizeApiErrorPayload 对任何不在 LEGACY_API_ERROR_CODES
-// 表里的遗留字符串错误一律派这个码，真话全留在 message 里；这里若先查表，屏幕上就只剩一句
-// 「请求失败。」。用户那次看到的正是它 —— 服务端说的是「当前 Kimi 回合正在收尾，请作为下一条
-// 消息发送」，该怎么做都写在里面了，却被吞掉。
-// 所以这个码【单独】走 message 优先。其余码都是真码（服务端明确选的），仍然按表翻译，
-// 因为那才是能本地化的那一半。
-// provider-settings.js 的 mcpErrText 早就为同一个坑就地打过一块（它的注释写的是同一个诊断）。
-// 上游收口之后那一块已经是冗余的，但删它是另一处回归面，本刀不顺手动：登记在号文里。
 function apiErrText(error) {
   const info = apiErrorInfo(error);
   if (info.code === 'api.request_failed' && info.message) return info.message;
@@ -325,7 +315,10 @@ const {
   renderCurrentSession: (...args) => renderCurrentSession(...args),
   renderAttachments: () => renderAttachments(),   // F9:编辑重发把原附件放回托盘
   // 109a: mermaid 图表渲染(懒加载 vendor,缺文件时原样降级);每张图换上去时经 keepPinnedAcross 保持贴底。
-  renderMermaidBlocks: (container, opts) => renderMermaidBlocks(container, { ...opts, withLayoutChange: keepPinnedAcross }),
+  renderMermaidBlocks: async (container, opts) => {
+    const { renderMermaidBlocks } = await import('./js/mermaid-runtime.js');
+    return renderMermaidBlocks(container, { ...opts, withLayoutChange: keepPinnedAcross });
+  },
   renderResumeBanner: (...args) => renderResumeBanner(...args),
   saveAsMemory: (...args) => saveAsMemory(...args),
   sendPrompt: (...args) => sendPrompt(...args),
@@ -532,7 +525,6 @@ const {
   focusFirstInteractive: container => focusFirstInteractive(container),
   loadAgentRoles: () => loadAgentRoles(),
   refreshMcpOps: probe => refreshMcpOps(probe),
-  updateShellPolling: () => updateShellPolling(),
   loadFileTree: () => loadFileTree(),
   renderArtifactsGallery: () => renderArtifactsGallery(),
   loadChanges: () => loadChanges(),
@@ -575,12 +567,10 @@ const {
   appendToolOutput,
   expirePendingPlanCards,
   handlePlanEvent,
-  newShellSession,
   pushRawEvent,
   renderRawEventSnapshot,
   resolveClassicPlanIntervention,
   runTool,
-  updateShellPolling,
 } = createToolRuntimeDomain({
   apiErrText,
   decidePlan: (...args) => decidePlan(...args),
@@ -1270,7 +1260,6 @@ async function bootData() {
   // best-effort playbook re-render).
   else bootStepSync('renderCurrentSession', () => renderCurrentSession());
   // v0.8-S2: PowerShell is the default-active tab, so start the shell-session poll now.
-  bootStepSync('updateShellPolling', () => updateShellPolling());
 }
 // v1.5 (§1.3): 首次连接本地服务失败 —— 不再只把英文错误塞进状态行 + toast,而是在对话区渲染显式故障卡
 // (大标题 +「无法连接本地服务」+ 三条可能原因 +「重试连接」+「查看日志/诊断」)。主画像第一次翻车最狠的点。

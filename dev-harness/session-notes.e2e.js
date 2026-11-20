@@ -19,7 +19,6 @@ const zlib = require('zlib');
 
 // 隔离纪律:require server.js 之前把数据根指向临时目录(notes 会写 <data>/sessions)。
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w105b-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 
 const HERE = __dirname;
@@ -150,7 +149,7 @@ const SUMMARY_EN = [
     const child = cp.spawnSync(process.execPath, ['-e',
       `const srv=require(${JSON.stringify(path.join(WB, 'app', 'server.js'))});` +
       `srv.readSessionNotes(${JSON.stringify(SID)}).then(t=>{console.log(JSON.stringify({len:t&&t.length}));});`],
-      { env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, encoding: 'utf8', timeout: 30000 });
+      { env: { ...process.env, RUYI_HOME: HOME }, encoding: 'utf8', timeout: 30000 });
     let out = null; try { out = JSON.parse(String(child.stdout || '').trim().split('\n').pop()); } catch { /* ignore */ }
     ok(out && out.len === bodies[9].length, 'R1 子进程(模拟重启后)读回 notes 长度一致');
   }

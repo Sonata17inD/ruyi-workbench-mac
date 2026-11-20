@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       ⑤ metrics 调用后 storage-trend.json 落盘且再调不重复追点。
 // Judgement line (exact): METRICS-PANEL E2E: ALL PASS
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
@@ -67,8 +67,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   fs.mkdirSync(HOME2, { recursive: true });
   fs.writeFileSync(path.join(HOME2, 'config.json'), JSON.stringify({ configSchema: 4, version: '0.7.0', permissionMode: 'bypass' }, null, 2));
   const PORT = await getFreePort();
-  const childEnv = { ...process.env, RUYI_HOME: HOME2, WIN_CLAUDE_WORKBENCH_HOME: HOME2 };
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: childEnv, windowsHide: true });
+  const childEnv = { ...process.env, RUYI_HOME: HOME2 };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: childEnv });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   function getJson(p, headers) {

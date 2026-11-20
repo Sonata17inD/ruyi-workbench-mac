@@ -52,9 +52,6 @@ const ok = (condition, label) => {
 
 // ─── A 页签顺序、六组 section、全部控件 id ────────────────────────────────────────
 const tabs = [...html.matchAll(/data-stab="([a-z]+)"/g)].map(match => match[1]);
-// W6 设置重组翻面重钉（用户 2026-09-24「设置里的内容有点乱，把重复／类似的统一成公用设置」）：「通用」一组从一页
-// 变成三页（基础／权限与安全／用量与限额），「模型」一组以「模型分配」打头。117e 钉的那条阅读顺序语义不变 ——
-// 管家页签紧跟「通用」一组、在「模型」一组（首页＝模型分配，Agent CLI 在同组）之前 —— 只是两侧邻居换了人。
 ok(JSON.stringify(tabs.slice(0, 3)) === JSON.stringify(['basic', 'security', 'limits'])
   && tabs.indexOf('steward') === tabs.indexOf('limits') + 1 && tabs.indexOf('models') === tabs.indexOf('steward') + 1
   && tabs.indexOf('claude') > tabs.indexOf('models'),
@@ -75,19 +72,6 @@ const modelsPanel = panelOf('stab-models');
 ok(panelStart > 0 && panel.length > 0 && securityPanel && limitsPanel && modelsPanel,
   'A3 管家面板与三枚公用页（权限与安全／用量与限额／模型分配）的边界都可定位');
 
-// 117l-A3 重钉：旧断言钉的是「117e 那一版」六组面板。117l-A3 在「模型与预算」之后插入第七组
-// 「新开线程用什么模型」（强/快两档，§11.9）——新契约是七组、顺序固定，不是放宽旧契约，是把新组
-// 纳入同一条「齐全且顺序固定」的判据（companion 见下面 A4b，单独钉住新组的插入位置）。
-// 121-K7 翻面重钉（34 号文 §13.5 登记③与 §7.2 表首行）：在「新开线程用什么模型」之后
-// 插入两组 ——「任务索引」（threadIndexRecent 的设置入口）与「定时任务」（口袋第一项与
-// 焦点栏「接下来」落到的那一面）。新契约是八组、顺序固定，不是放宽旧契约。
-// 136 翻面重钉（用户 2026-09-23「言行不够拟人」）：在「管家总开关」之后插入「管家人设」
-// （名字/口吻偏好，01-config 的 stewardPersonaName/stewardPersonaStyle）。人设是身份，跟着总开关走;
-// 新契约是十组、顺序固定，不是放宽旧契约（A4c companion 单独钉它的插入位置）。
-// W6 翻面重钉：管家页只留管家自己的事，十组变八组 ——「新线程默认权限」整段（连 id）搬去「权限与安全」，
-// 「新开线程用什么模型」随「管家用的模型」一起搬去「模型分配」那张表；原「模型与预算」组（id 不变）只剩
-// 管家自己的节奏与上下文，花费／回合／并发三类上限去了「用量与限额」。新契约是八组、顺序固定，不是放宽旧契约：
-// 搬走的两组由下面 A4d 在新页里逐个钉住（id、aria-labelledby、所在页），一组都不许丢。
 const GROUP_IDS = ['cfgStewardGroupPower', 'cfgStewardGroupPersona', 'cfgStewardGroupAuto',
   'cfgStewardGroupBudget', 'cfgStewardGroupIndex', 'cfgStewardGroupSchedule',
   'cfgStewardGroupExternalBots', 'cfgStewardGroupMemory', 'cfgStewardGroupDecisions'];
@@ -168,8 +152,6 @@ const imports = [...settings.matchAll(/^import \{([\s\S]*?)\} from '([^']+)';$/g
   .map(match => ({ names: match[1].split(',').map(name => name.trim()).filter(Boolean), from: match[2] }));
 const fromChips = imports.find(entry => entry.from === './steward-chips.js');
 ok(Boolean(fromChips), 'B1 steward-settings.js 从 steward-chips.js import 权限档位');
-// 2026-10 重钉 B2：确认文案改按档取（permissionConfirmSpec：智能自动仍是 STEWARD_CONFIRM_KEYS 那五条，全自动另有四条），
-// settings 不再直接 import STEWARD_CONFIRM_KEYS，改 import 取文案的那一个函数。
 ok(fromChips && ['STEWARD_PERMISSION_MODES', 'STEWARD_PERMISSION_CONFIRM_MODES', 'permissionConfirmSpec',
   'permissionLabelKey', 'permissionHintKey'].every(name => fromChips.names.includes(name)),
   `B2 四档表、确认档、确认文案键、两个人话键全部复用（实测 ${JSON.stringify(fromChips && fromChips.names)}）`);
@@ -216,7 +198,6 @@ ok(chipsMod.STEWARD_CONFIRM_KEYS === confirmPanelMod.STEWARD_CONFIRM_KEYS
 ok(chipsMod.STEWARD_PERMISSION_CONFIRM_MODES === confirmPanelMod.STEWARD_PERMISSION_CONFIRM_MODES
   && !/export const STEWARD_PERMISSION_CONFIRM_MODES/.test(chips),
   'B5d 「哪一档要二次确认」同样只有一份定义（confirm-panel.js），chips 与 settings 读同一个数组对象');
-// 2026-10 重钉 B6：117d 那四档末尾加回 bypass（全自动），前四档顺序不动。
 ok(JSON.stringify(chipsMod.STEWARD_PERMISSION_MODES) === JSON.stringify(['default', 'acceptEdits', 'plan', 'auto', 'bypass'])
   && JSON.stringify(chipsMod.STEWARD_PERMISSION_CONFIRM_MODES) === JSON.stringify(['auto', 'bypass']),
   'B6 复用到的档位表：117d 的四档顺序不动，末尾加回全自动；智能自动与全自动都要二次确认');
@@ -247,12 +228,6 @@ ok(!/saveConfig\(/.test(stopBlock), 'C5 一键停机／唤醒不写配置（只�
 // ─── D 零 innerHTML、零计时器、<a download> 只此一处 ─────────────────────────────
 ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(settingsCode),
   'D1 零 innerHTML/insertAdjacentHTML/document.write');
-// 117n-M1 重钉：el()/button()/clear() 搬进 steward-chips.js 集中定义（六个消费方零本地重复）之后，
-// settings.js 自己不再直接调 .createElement——但它仍然只经从 chips.js import 的共享
-// el()/button()/clear() 生成节点，createElement 本体仍可在 chips.js 里查证；同一条 chips import
-// 也确实带着 doc/byId/el/clear/button 这五个名字（fromChips 是下面 B 节已经解析好的那份，此处复用
-// 不再重新解析一次）。原判据只证明「某处调过 createElement」；新判据在此之上再加两条正面证据
-// （五个名字真的都 import 了、零本地重复定义），是更强而不是更弱的版本。
 ok(/textContent/.test(settings)
   && /createElement\(/.test(chips)
   && ['doc', 'byId', 'el', 'clear', 'button'].every(name => fromChips.names.includes(name))
@@ -303,10 +278,6 @@ ok(/class="tb-right"/.test(topbar) && !/class="steward-header-actions"/.test(htm
   'E3 两个常驻控件在顶栏右侧那一组里；壳头部那条 actions 行随搬家退役');
 ok(Array.isArray(mod.STEWARD_MEMORY_KINDS) && typeof mod.createStewardSettingsDomain === 'function',
   'E4 设置域是导出的工厂函数');
-// 121-K7 翻面重钉（34 号文 §2.3 末段／§2.4／§9 K7 验收「头像菜单只剩『细节』『设置』」）：
-// 「记得的关于你」「行动流水」搬进左栏栏底的口袋（js/rail-pocket.js），头像菜单只剩一项。
-// **两半一起钉**（否则「搬走」会退化成「删掉」）：这里钉菜单表只剩 settings，下面 E5b 钉那两个
-// section 名在口袋那张表里各出现一次、且落在同一个 openStewardPanel 上。
 const menuSections = (await import(pathToFileURL(path.join(PUBLIC, 'js', 'steward-conversation.js')).href)).STEWARD_MENU_SECTIONS;
 ok(Array.isArray(menuSections) && JSON.stringify(menuSections) === JSON.stringify([
   ['stewardShell.menu.settings', ''],
@@ -321,7 +292,7 @@ const settingsSrc = fs.readFileSync(path.join(PUBLIC, 'js', 'steward-settings.js
 ok(pocketItems.filter(item => item.panel).every(item => new RegExp(`\\n    ${item.panel}: 'cfgStewardGroup`).test(settingsSrc)),
   'E5b2 口袋那三个 section 名在 steward-settings.js 的 PANEL_SECTIONS 表里各有一条落点（deep link 不是死链）');
 ok(pocketItems.every(item => typeof pocketMod.RAIL_POCKET_ITEMS === 'object' && zh[item.labelKey] && en[item.labelKey]),
-  'E5c 口袋四项的短词四份 locale 齐');
+  'E5c 口袋四项的短词两份 locale 齐');
 ok(/openStewardPanel\(section\)/.test(conversation) && /openStewardPanel = null,/.test(conversation),
   'E6 对话模块只负责调用注入的 openStewardPanel（不认识设置页的任何 id）');
 ok(/openStewardPanel: section => settings\.openPanel\(section\),/.test(stewardShell),
@@ -333,15 +304,12 @@ ok(appLines <= 1280, `F1 app.js 仍在 1280 行护栏内（实测 ${appLines}）
 const appStewardLines = app.split('\n').filter(line => /fillStewardSettings|openSettingsTab:/.test(line));
 ok(appStewardLines.length === 2 && appStewardLines.every(line => /\/\/ 117e/.test(line)),
   `F2 组合根为 117e 净增恰好两行注入（fillStewardSettings + openSettingsTab；实测 ${appStewardLines.length} 行）`);
-// 117j classic-2 重钉：这两条管家侧的旁路各自包了一层 try/catch（谁抛错都不该把它后面的草稿播种与
-// renderProviders() 一起带走）。「只多一处调用」这条契约一个字没变，变的是它外面多了一层守卫。
 ok(count(providerSettings, /fillStewardSettings\(\)/g) === 1
   && /try \{ fillStewardSettings\(\); \}          \/\/ 117e/.test(providerSettings),
   'F3 provider-settings.js 只多一处 fillStewardSettings() 调用（既有静态锁只加）');
 ok(/try \{ syncStewardShellAvailability\(\); \}[\s\S]{0,120}console\.warn\('\[steward\] syncStewardShellAvailability failed'/.test(providerSettings)
   && /try \{ fillStewardSettings\(\); \}[\s\S]{0,120}console\.warn\('\[steward\] fillStewardSettings failed'/.test(providerSettings),
   'F3b 117j classic-2：两条管家旁路各自 try/catch + console.warn，任何抛错不得阻断其后的草稿播种与 renderProviders()');
-// 117j UX-F1 重钉：注入表多了 syncShellAvailability（总开关关掉即回经典，判定仍在壳层单点）。
 ok(/const settings = createStewardSettingsDomain\(\{\s*api, state, t, saveConfigPartial, openSettingsTab, presence: presenceApi,\s*syncShellAvailability: \(\) => syncStewardShellAvailability\(\),\s*\}\);/.test(stewardShell),
   'F4 设置域在 steward-shell.js 内组装并注入依赖');
 ok(/try \{ syncShellAvailability\(\); \} catch \(error\) \{ console\.warn\('\[steward\] syncShellAvailability failed', error\); \}/.test(settings),
@@ -424,7 +392,6 @@ ok(count(settingsCode, /\bfetch\(/g) === 0, 'I3 零直调 fetch（一律经注�
 // ─── J 117l-A3：新开线程用什么模型（强/快两档）──────────────────────────────────
 const THREAD_MODEL_IDS = ['cfgStewardGroupThreadModels', 'cfgStewardThreadModelsHeading',
   'cfgStewardStrongProviderId', 'cfgStewardStrongModel', 'cfgStewardFastProviderId', 'cfgStewardFastModel'];
-// W6 翻面重钉：这一组随「管家用的模型」一起搬进「模型分配」那张表（谁用哪个模型，一处看全）。
 const missingThreadModelIds = THREAD_MODEL_IDS.filter(id => !new RegExp(`id="${id}"`).test(modelsPanel));
 ok(missingThreadModelIds.length === 0, `J1 六个 id 都在「模型分配」页里（缺: ${missingThreadModelIds.join(',') || '无'}）`);
 const stewardRowIdx = modelsPanel.indexOf('id="cfgStewardProviderId"');

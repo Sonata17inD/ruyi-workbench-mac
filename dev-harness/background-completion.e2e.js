@@ -41,7 +41,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     fs.writeFileSync(path.join(root, 'config.json'), JSON.stringify({ configSchema: 7, permissionMode: 'bypass', defaultWorkspace: root,
       desktopMcp: { enabled: false, autodetect: false }, externalMcpServers: [] }));
     child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-      cwd: path.resolve(__dirname, '../ruyi-workbench'), windowsHide: true, env: { ...process.env, RUYI_HOME: root }, stdio: 'ignore',
+      cwd: path.resolve(__dirname, '../ruyi-workbench'), env: { ...process.env, RUYI_HOME: root }, stdio: 'ignore',
     });
     let up = false;
     for (let i = 0; i < 300; i++) { try { if (await request('GET', '/health')) { up = true; break; } } catch {} await sleep(100); }

@@ -108,20 +108,11 @@ const src01b = read('../backend/http-route-policy.cjs');
   const files = manifest.modules.map(m => m.file);
   const iRunner = files.indexOf('13h-steward-runner.js');
   ok(iRunner > 0, '① manifest 收录 13h-steward-runner.js');
-  // 117 波 T2 重钉:13g 与 13h 之间插入了 T2 拆出的五个文件(纯搬家)。原来钉的是「下标差 1」,
-  // 那钉的是当时的排布长什么样;这条判据的用意是「运行器族整段待在 13g 之后、组合根 14-main 之前,
-  // 且顺序即依赖方向」。故改钉整条链本身 —— 比原来那个探针更严:族里任何一个被挪出这段连续区间、
-  // 或顺序被换,这条都红。
   const iFam = files.indexOf('13g-steward.js') + 1;
   const stitchedFamily = STEWARD_RUNNER_FAMILY.filter(file => !file.startsWith('../backend/'));
   ok(iFam > 0 && stitchedFamily.every((f, k) => files[iFam + k] === f),
     '① 运行器的拼接片段紧跟 13g、以 13h 收尾(' + stitchedFamily.join(' -> ') + ';实得 '
     + JSON.stringify(files.slice(iFam, iFam + stitchedFamily.length)) + ')');
-  // 121 波 K2a 重钉:13h 与 14-main 之间插进了 13r-event-stream.js(事件流,同为 transport 层;
-  // 它必须排在【所有】管家模块之后 —— 它订阅总线、读五态与未决计数,排在前面全是前向边)。原来
-  // 钉的是「下标恰好差 1」,那钉的是当时的排布长什么样;这条判据的【用意】写在上一行注释里 ——
-  // 「运行器族整段待在组合根 14-main 之前」。故改钉这条用意本身:14-main 仍是最后一个模块,
-  // 且 13h 在它之前。反向验证:把 14-main.js 挪到 manifest 中间 -> 这两条同时红。
   ok(files[files.length - 1] === '14-main.js', '① 14-main.js 仍是组合根(manifest 最后一个模块)');
   ok(iRunner < files.indexOf('14-main.js'), '① 13h 在 14-main.js 之前');
   // 13g 不得继续膨胀(SPEC §2 目标 2000 行;116c 交付记录已把 116f 另起 13h 的理由写在案)。
@@ -154,10 +145,6 @@ const src01b = read('../backend/http-route-policy.cjs');
   const runnerSymbols = [...new Set([...srcRunnerFamily.matchAll(/^(?: {2}(?=(?:async )?function steward))?(?:async )?function ([A-Za-z0-9_]+)/gm)]
     .map(match => match[1]))];
   ok(runnerSymbols.length >= 15, `② 13h 顶层函数抽取到 ${runnerSymbols.length} 个(锁的样本足够大)`);
-  // 116h 重钉:消费者面从 06/09/10/13g 扩到 06/09/10/12/13/13d/13g —— 仲裁的钩子多了三个新消费者
-  // (12 的工具 handler、13 的 /api/stop、13d 的事项聚合行)。加入样本让「零前向边」的判据【更严】
-  // (这三个文件同样不许出现 13h 的符号),同时让下面反向的 unused 判据仍然覆盖全部消费者。
-  // 117 波 T1 再扩:13g 拆出的三个新文件同属 13g 族,同样不许出现 13h 的符号(判据更严,不是放宽)。
   const consumers = [['06-provider-engine.js', src06], ...providerServices, ['10-context-governance.js', src10],
     ['session-compaction.cjs', sessionCompaction], ['compaction-kernel.cjs', read('../backend/compaction-kernel.cjs')], ['session-turn-runtime.cjs', turnRuntime],
     ['12-tool-dispatch.js', src12], ['steward-tool-handlers.cjs', stewardToolHandlers],
@@ -188,35 +175,6 @@ const src01b = read('../backend/http-route-policy.cjs');
   const filled = [...new Set((src13h.match(/^\s{2}([a-zA-Z]+): /gm) || []).map(m => m.trim().replace(':', '')))];
   const assignBlock = src13h.slice(src13h.indexOf('Object.assign(StewardHooks, {'));
   const hookKeys = [...new Set((assignBlock.match(/^\s{2}([a-zA-Z]+): /gm) || []).map(m => m.trim().replace(':', '')))];
-  // 14 = 116f 的 8 个 + 116-pre 的 preroute + 116h 的 4 个仲裁键(acquireTurnSlot / arbiterWait /
-  // cancelQueuedTurn / arbiterRefresh)+ 116h 的第 21 个工具键 threadPrioritize(它的实现要直接调 13h 的
-  // 仲裁器原语,故与其余 20 个工具不同、由 13h 填充)。插队原语与仲裁器快照【不】上命名空间——它们的
-  // 消费者全在 13h 内部,挂上去会被下面的 unused 判据判成死代码。重钉来源:27 号文 §3.1 116h 行。
-  //
-  // 【117l 重钉 14 -> 16】旧断言钉的是 116h 那一刻的键集大小 —— 那是一个「当时有几个」的快照,不是
-  // 契约本身。117l 新增两个实现键,两个都是因为「够不着」才落在 13h:
-  //   · relayDeliver —— 递话四通道的判定与执行,要同时够到 04 的三张待决表、13b 的 steerSessionCore、
-  //     13d 的 decideIntervention 与 09 的 activeChildren;
-  //   · applyThreadTier —— 把 06i 判出的那一档落成 session.engineRoute,要 02 的 normalizeSessionEngineRoute
-  //     与 04 的 logEvent(06i 不能引用 00/02/04:103b 的依赖债务上限会把它拖进强连通分量)。
-  // 真正的约束是下面两条(每个键都有消费者 + 每个键都登记在 06i 的契约注释里),故同时补一条
-  // companion:新增的必须【就是】这两个,而不是"随便多了两个钩子";通道判定 stewardRelayChannelFor
-  // 仍不上命名空间(消费者全在 13h 内)。
-  // 117m-A4 重钉 16 -> 17。理由与 116h/117l 那两次同款:本波真的多了一个【够不着才落在 13h】的实现键 ——
-  // threadStop 要直接调本文件的仲裁器原语 stewardCancelQueuedTurn,而 13g 已经顶到 SPEC §2 的 2000 行目标
-  // (steward-runner.static ① 那道闸:HEAD 上是 1998 行)。这条断言本身仍是等号,没有被放宽。
-  // 同款 companion 一起补:新增的必须【就是】threadStop,而不是「随便又多了一个钩子」。
-  // 117s-G 重钉 17 -> 18。这一次多出来的不是「够不着才落在 13h」的新实现,而是一个【本来就在 13h、
-  // 现在多了一个 13h 外消费者】的既有判定:relayChannel(= stewardRelayChannelFor)。13d 的
-  // GET /api/sessions/:id 要把「这条线程此刻该走哪条递话通道」投影成信封上的 relay 键下发给经典壳,
-  // 而 13d -> 13h 是前向边,只能经 06i 的延迟绑定命名空间取(与 arbiterWait 同款)。
-  // 上一版那条「它不上命名空间,挂上去就是死代码」的理由随第一个外部消费者出现而失效 ——
-  // 下面的 unused 判据仍然逐键看着「每个键都真的有人用」,纪律没有被放宽。
-  // 129g 重钉 19 -> 20:currentTurnTrigger。它与 relayChannel 同款 —— 不是「够不着才落在 13h」的
-  // 新实现,而是一个本来就在 13h 的既有事实(当前回合是谁触发的,读 stewardRunnerRuntime.inflight.kind)
-  // 现在多了一个 13h 外的消费者:13g 的 stewardToolHandler 要按它给工具循环的 ctx 补上 trigger。
-  // 不补的话 09-workflow 造的 ctx 里没有这个字段,所有按 trigger 分档的闸在【模型直接调工具】
-  // 这条面上整个失灵(129g 的头注记了全程)。13g -> 13h 是前向边,只能经 06i 迟绑定取。
   ok(hookKeys.length === 21, `② 13h 填充 21 个实现键(116f 8 + 116-pre 1 + 116h 5 + 117l 2 + 117m-A4 1 + 117s-G 1 + 121-K5 1 + 129g 1 + external context 1;got ${hookKeys.length}: ${hookKeys.join(',')})`);
   ok(hookKeys.includes('threadStop') && /async function stewardImplThreadStop/.test(read(stewardThreadControl)) && /threadStop: stewardToolHandler\('steward_thread_stop', stewardImplThreadStop\)/.test(src13h),
     '② 停止钩子经管家工具门连接线程控制服务');
@@ -231,9 +189,9 @@ const src01b = read('../backend/http-route-policy.cjs');
   // 117 波 T1:relayDeliver / applyThreadTier 的消费者随线程族工具搬进了 13k-steward-threads.js,
   // 故消费面同样扩到整个 13g 族(13g/13j/13k/13l)。判据一字未变:每个键都必须真的有人用。
   // 架构还债批 2 B2:arbiterRefresh 的消费点 applyConfigPatch 随纯搬家从 13 去了 06k,消费面跟着落点扩一个文件(判据不变)。
-  const consumedText = providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + configPatch + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
+  const consumedText = read('14-main.js') + providerTurn + src10 + sessionCompaction + turnRuntime + src12 + stewardToolHandlers + src13 + apiRouter + src13d + src13g + stewardToolAdmission + src13j + src13k + src13l + threadServiceSource + toolServiceSource + inboxComposition + inboxSource + configPatch + src13s + stewardRoutes + sessionEnvelope + sessionRoutes + sessionExecutionRoutes + [...runnerActionServices, ...runnerTurnServices].map(read).join('\n');
   const unused = hookKeys.filter(k => !new RegExp('StewardHooks\\.' + k + '\\b').test(consumedText));
-  ok(unused.length === 0, '② 每个钩子键都被 09/10/12/13/13d/13g/13s 族之一消费' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
+  ok(unused.length === 0, '② 每个钩子键都有实际消费者' + (unused.length ? ' → 无人用: ' + unused.join(',') : ''));
   ok(filled.length >= hookKeys.length, '② 键集抽取自 Object.assign 块(样本自洽)');
   // 06i 的契约注释必须把这些键写下来(注释不是装饰品:steward-tools.static 用它对账填充完整性)。
   const contract = src06i.slice(src06i.indexOf('// 预留键名契约'), src06i.indexOf('const StewardHooks = {};'));
@@ -243,7 +201,6 @@ const src01b = read('../backend/http-route-policy.cjs');
 
 /* ═════════════ ③ 06b steward 段与分层预算 ═════════════ */
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-runner-static-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = tmpHome;
 process.env.RUYI_HOME = tmpHome;
 const srv = require(path.join(APP, 'server.js'));
 {
@@ -323,8 +280,6 @@ const srv = require(path.join(APP, 'server.js'));
     '③ 117v-V3 英文包同步一条同义规则(destination 而非 "See the full ...")');
   ok(!/全文/.test(zh.stable) && !/full[- ]?text/i.test(en.stable),
     '③ 117v-V3 这条在易变层 rules、没有塞进 stable(≤2500 硬闸没被顶破;英文 stable 现在 ' + en.stable.length + ')');
-  // 117 波 T2 重钉:下面五条钉的都是【运行器里有这件事】,不是【它住哪个文件】,故一律改读整族
-  // (拆分把 label 兜底搬进 13p、总览搬进 13o、三个数值口径搬进 13m)。期望值一个字没改。
   ok(/label: String\(row\.label \|\| ''\)[\s\S]{0,80}stewardActLabel\(/.test(srcRunnerFamily),
     '③ 117v-V3 那枚 act 的 label 确实由模型给(13h 族是 row.label 优先、仓里的 stewardActLabel 只兜底),故只能靠提示词管');
   // 上限数字只有一份:13h 族引用 06i 的 STEWARD_DIGEST_LIMITS,不自带 40/12000。
@@ -460,10 +415,6 @@ const srv = require(path.join(APP, 'server.js'));
 
 /* ═════════════ ④ 普通会话包零变化 ═════════════ */
 {
-  // 137 重钉:普通包文字在 137 波有意改动(引擎运行环境说明/代理模式 v2/管家工作区规则)并已 bump;
-  // 本条仍钉「管家段不单独 bump 普通包」—— 版本号只随普通包文字变。
-  // 138 重钉:W9 提示词审查同时改了普通包(toolProtocol.rules / questioning / onDemand / answerShape)与管家 stable,
-  // 普通包文字变了所以 bump 是对的;钉的口径不变 —— 只改管家段时这个值不许动。
   ok(srv.PROMPT_PACK_VERSION === '2026-w138-2', `④ PROMPT_PACK_VERSION 为 138 波值(普通包文字新增跨线程回读指引;管家段不单独 bump 普通包;got ${srv.PROMPT_PACK_VERSION})`);
   const provider = { id: 'fake', label: 'Fake端点', model: 'fake-model' };
   const tools = [{ function: { name: 'file_read' } }, { function: { name: 'tool_search' } }];

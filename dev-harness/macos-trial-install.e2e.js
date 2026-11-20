@@ -53,7 +53,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
       stewardEnabledV1: false, schedulerEnabledV1: false, autoImportClaudeCodeMcp: false, includeWorkbenchMcp: false,
       enableMcpDropIn: false, desktopMcp: { enabled: false, autodetect: false }, providers: [] }));
     const marker = path.join(data, 'retained.txt'); fs.writeFileSync(marker, 'keep user data');
-    const environment = { ...fixture.env, RUYI_HOME: standaloneFull ? '' : data, WIN_CLAUDE_WORKBENCH_HOME: '', PATH: '/usr/bin:/bin', RUYI_NODE_PATH: '/missing/node',
+    const environment = { ...fixture.env, RUYI_HOME: standaloneFull ? '' : data, PATH: '/usr/bin:/bin', RUYI_NODE_PATH: '/missing/node',
       NODE_OPTIONS: '', NODE_PATH: '', PYTHONPATH: '', PYTHONHOME: '' };
     const report = path.join(scratch, 'native.json');
     const nativeHost = cp.spawn(path.join(installed, 'Contents/MacOS/RuyiDesktop'), ['--acceptance-report', report, '--acceptance-auto-quit'],
@@ -65,7 +65,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     const lsReport = path.join(scratch, 'launch-services.json');
     const launcher = cp.spawn('/usr/bin/open', ['-n', '-W', '-a', installed,
       '--env', 'HOME=' + fixture.home, '--env', 'USERPROFILE=' + fixture.home,
-      '--env', 'RUYI_HOME=' + environment.RUYI_HOME, '--env', 'WIN_CLAUDE_WORKBENCH_HOME=', '--env', 'RUYI_NODE_PATH=/missing/node', '--env', 'PATH=/usr/bin:/bin',
+      '--env', 'RUYI_HOME=' + environment.RUYI_HOME, '--env', 'RUYI_NODE_PATH=/missing/node', '--env', 'PATH=/usr/bin:/bin',
       '--args', '--acceptance-report', lsReport, '--acceptance-auto-quit'],
     { env: { ...process.env, ...fixture.env }, stdio: ['ignore', 'ignore', 'pipe'] });
     children.push(launcher); launcher.stderr.on('data', () => {});
@@ -102,7 +102,23 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
       ok(trash.exitCode === 0 && trashOut.includes('MACOS MIGRATION TRASH E2E: ALL PASS') && read(trashReport)?.helperSha256 === sha256(helper),
         'installed backend and bundled native Trash helper move and restore only the disposable old App');
     }
+    if (manifest.capabilities.officeFiles) {
+      const python = path.join(installed, 'Contents/Resources/workbench/mcp/ai-computer-control/runtime/python/bin/python3');
+      const script = `
+from openpyxl import Workbook
+from ai_computer_control import server
+from ai_computer_control.tools.office_read import excel_read
+book = Workbook()
+book.active.append(["金额"])
+book.active.append([123])
+book.save("sample.xlsx")
+assert excel_read("sample.xlsx")["data"] == [[123]]
+`;
+      run(python, ['-I', '-B', '-c', script], { cwd: workspace,
+        env: { ...process.env, ...fixture.env, WCW_DATA_DIR: data }, timeout: 30000 });
+    }
     verifyInstalledApp(installed, manifest);
+    ok(true, 'installed payload and code signature still verify after use in the writable install directory');
     const spctl = cp.spawnSync('/usr/sbin/spctl', ['--assess', '--type', 'execute', installed], { encoding: 'utf8', timeout: 15000 });
     fs.writeFileSync(path.join(scratch, 'gatekeeper-assessment.json'), JSON.stringify({ status: spctl.status, error: spctl.error?.code, stderr: spctl.stderr }));
     console.log('INFO Gatekeeper assessment recorded; actual downloaded-origin approval remains unverified');

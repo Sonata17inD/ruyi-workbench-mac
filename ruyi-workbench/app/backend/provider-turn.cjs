@@ -15,6 +15,7 @@ const {
   budgetGuardWarnRatio, budgetGuardDecision, toolTimeBudgetEnabled, toolTimeBudgetShadowEnabled,
   toolTimeBudgetWarnMs, toolTimeBudgetHardMs, toolByteBudgetShadowBytes, volatileTailLayoutEnabled,
 } = require('./runtime-policy.cjs');
+const { providerEndpoints } = require('./provider-http.cjs');
 const { stripUrlUserinfo } = require('./provider-config.cjs');
 const { providerThrownErrorText } = require('./provider-http.cjs');
 const { createTurnSegmentBuilder } = require('./turn-segments.cjs');
@@ -42,7 +43,7 @@ function createProviderTurn({
   // Last successful endpoint per provider for this server instance.
   const failoverStickyBase = new Map();
   const {
-    loadSession, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
+    loadSession, reconcileTurnMetadata, saveSession, saveTurnFinalSession, sessionDesktopToolsOf, isUntitledSessionTitle,
     normalizeTodoItems, liveSessionPermissionMode,
   } = session;
   const {
@@ -99,7 +100,7 @@ function createProviderTurn({
     resolveWaitAgentsMs, runAgentWorkflow, saveAgentRun, settleWaitEnvelopes, waitForAgentRunResults,
   } = agents;
   const {
-    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn, mergeMissionBeforeSave,
+    applyMissionUpdate, bumpMissionChangeSeq, finalizeMissionAfterTurn,
     recordMissionBudgetTrippedChange, recordMissionStalledChange, normalizeMetaToolArgs,
   } = missions;
   const {
@@ -142,6 +143,21 @@ function createProviderTurn({
     return afterText
       ? '\n\n[模型没有给出最终回答就结束了本轮(空回复);可以发送「继续」或再问一次]'
       : '[模型这次返回了空回复(没有文字,也没有调用工具);可以重发一次,或换个说法、换个模型再试]';
+  }
+
+  async function buildOrchestrationPrompt(workingDir, config, provider) {
+    const roles = await getAgentRoleLibrary(workingDir, config);
+    let hint = '';
+    if (roles.length) {
+      // Project-authored descriptions must fit on one line inside the role list.
+      const roleHintText = v => neutralizeAuthoredText(String(v || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim()).slice(0, 80);
+      hint += '\n\n可用 Agent 角色：' + roles.map(r => `${r.id}(${roleHintText(r.description || r.label)})`).join('；') + '。派发任务或 DAG 节点时优先填写 role，角色会约束模型、工具、MCP、权限与迭代预算。';
+    }
+    const workflows = await getAgentWorkflows(workingDir).catch(() => []);
+    hint += buildOrchestrateHint(workflows);
+    hint += buildModelHint(config, provider);
+    hint += '\n\n代理并行规则：当主线还有不依赖代理结果的工作可做时，orchestrate_agents 设置 background:true 立即拿到 runId 继续主线；代理完成后交付信封会自动注入一次（也可 wait_agents 收件，可省略 runIds）；届时本对话若已空闲，工作台会自己起一个新回合把信封送来，所以主线做完就可以结束本回合（告诉用户代理还在后台跑），不必空等。只有必须立刻取得结果时才同步等待。你收到的只是信封（每节点摘要与产物路径），需要全文时用 agent_result({runId, nodeId?})。单个代理直接写顶层 {task, role?, toolTier?, background?}。send_to_agent({action:"list",runId?}) 查询本会话活组或指定组的节点实时资格；queued 表示可排队，名单不保证随后送达。消息是参考通信，不会重启终态节点；明确续派用 orchestrate_agents({followup:{previousRunId,previousNodeId,task}}) 新建独立 run。任务池默认 off；显式 poolPolicy:"manual" 仅开放待审批提案，审批物化仍受原发起回合预算约束，不会自动扩展。';
+    return hint;
   }
 
   async function runOpenAiTurn({ session, message, attachments, cwd, onEvent, provider, config, driverAuto, agentTeam, messageMeta, executionOwner, delegationPlan }) {
@@ -209,23 +225,7 @@ function createProviderTurn({
     const plannedTurnSeq = (Number(session.turnSeq) || 0) + 1;
     activeTraceId = AgentLoopHooks.makeAgentLoopTraceId(session.id, plannedTurnSeq);
 
-    // v1.0-S6 (B): failover candidate sequence = [main baseUrl, ...extraBaseUrls], each normalized through
-    // the protocol's endpointBase/completionUrl (so a bare host gets its /v1 like the primary). Each candidate keeps BOTH its display
-    // `base` (for the failover event's from/to + the sticky key value) and its derived `chatUrl`. We de-dupe on
-    // the derived chatUrl (two raw bases that normalize identically are one endpoint). When provider has no
-    // extraBaseUrls this list is length 1 and the loop below behaves EXACTLY as the single-endpoint code did.
-    const failoverCandidates = [];
-    {
-      const seenUrls = new Set();
-      for (const raw of [provider.baseUrl, ...(Array.isArray(provider.extraBaseUrls) ? provider.extraBaseUrls : [])]) {
-        const b = wire.endpointBase(raw);
-        const u = wire.completionUrl(raw);
-        if (!u || seenUrls.has(u)) continue;
-        seenUrls.add(u);
-        // base(显示/日志/粘住键)剥 userinfo 防明文凭据外泄;chatUrl 保留原样以完成 basic-auth 请求。
-        failoverCandidates.push({ base: stripUrlUserinfo(b), chatUrl: u });
-      }
-    }
+    const sendToEndpoint = providerEndpoints(provider, wire, failoverStickyBase);
 
     // The API is stateless, so every Claude/workflow message since the previous Provider turn must be mirrored
     // before this request. The cursor prevents duplicates while retaining Provider-native tool protocol rows.
@@ -399,7 +399,8 @@ function createProviderTurn({
     // allowDesktopTools = 修前逐字行为。管家会话自己永远走不到这条支路的「true」那一边:它的 kind
     // 是 'steward',上面那一支只给它 steward_* 工具面,桌面工具压根不在候选里。
     // C2(61 号文):会话草稿本 scratchpad_write 只发给普通会话的主回合(管家会话不传 scratchpadEnabled;子代理走 08,也不传)。
-    const ownTools = buildOpenAiTools(config, caps, { skillsEnabled: enabledSkillEntries.length > 0, desktopOverride: sessionDesktopToolsOf(session), ...(isStewardTurn ? { stewardSession: true } : { scratchpadEnabled: true, sendToAgentEnabled: true }) });
+    const sessionDesktopOverride = sessionDesktopToolsOf(session);
+    const ownTools = buildOpenAiTools(config, caps, { skillsEnabled: enabledSkillEntries.length > 0, desktopOverride: sessionDesktopOverride, ...(isStewardTurn ? { stewardSession: true } : { scratchpadEnabled: true, sendToAgentEnabled: true }) });
     // v0.7d line 2: also expose external/desktop MCP tools (bridged via in-process MCP stdio clients).
     // Done ONCE per turn (not per iteration). route maps bridgedName -> {serverId,toolName}.
     let bridged = { tools: [], route: {} };
@@ -411,7 +412,6 @@ function createProviderTurn({
     // 2026-10 能力总闸补桥接面:allowCommandTools / allowDesktopTools(+ 会话级 desktopTools)关掉的内置桌面 MCP 工具不进工具面,
     // 与上面 ownTools 对原生工具的滤法同一个会话覆盖口径。只滤 tools,route 原样留着:模型硬调被关掉的名字时分发面靠它认出来、
     // 回 tool-disabled。collectBridgedTools 的结果是带缓存的共享对象,这里换一个新对象,不就地改。
-    const sessionDesktopOverride = sessionDesktopToolsOf(session);
     bridged = { tools: dropPolicyDisabledBridgedTools(bridged.tools, bridged.route, config, sessionDesktopOverride), route: bridged.route };
     const bridgedRoute = bridged.route;
     const allTools = ownTools.concat(bridged.tools);   // catalog is collected once, schemas are injected lazily
@@ -427,7 +427,6 @@ function createProviderTurn({
     };
     const initialTools = toolLoading.current();
     syncSessionToolSchemaNames();
-    const agentRoleMap = new Map((await getAgentRoleLibrary(workingDir, config)).map(role => [role.id, role]));
     // v0.8-S6 layered system prompt (§7.6, PROVIDER-ONLY). Identity is pinned to provider.label + model (the
     // product name never enters the prompt). The project-memory layer reads cwd's CLAUDE.md/AGENTS.md (≤16KB,
     // fenced as untrusted reference). provider.systemPrompt is APPENDED as the provider层 (was: it replaced the
@@ -453,24 +452,8 @@ function createProviderTurn({
     const enabledMemoryConflicts = enabledMemoryEntries.length ? await buildMemoryConflictMap(workingDir).catch(() => new Map()) : null;
     let sys = buildStableSystemPrompt(provider, model, workingDir, initialTools, false, config); // 51d C1b: 只稳定层(prefix-cache 友好),易变层走 turnVolatile
     let volatileExtras = ''; // 52c(51d C2): 920-945 附加提示移 user 侧(与 turnVolatile 合并),sys 纯稳定(prefix-cache 完整命中)
-    if (agentRoleMap.size && initialTools.some(t => t.function && t.function.name === 'orchestrate_agents')) {
-      // 角色的 description 来自项目目录(.claude/agents/*.md、.ruyi/agents.json 随仓库走)—— 外来文本,与 08 buildOrchestrateHint 对工作流模板
-      // 同口径:压成单行、中和尖括号、截到 80 字再进易变层,不让一份角色文件用换行 / 伪造标签冒充一段指令。内置角色的说明都在 25 字内,不受影响。
-      const roleHintText = v => neutralizeAuthoredText(String(v || '').replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim()).slice(0, 80);
-      volatileExtras += '\n\n可用 Agent 角色：' + [...agentRoleMap.values()].map(r => `${r.id}(${roleHintText(r.description || r.label)})`).join('；') + '。派发任务或 DAG 节点时优先填写 role，角色会约束模型、工具、MCP、权限与迭代预算。';
-    }
-    // v1.4.4: list saved/built-in workflow templates so orchestrate_agents' workflowId can actually be used
-    // — the model has no other way to discover which ids exist. Only relevant when the tool is offered.
-    // 第23波: 提示升级为意图触发(buildOrchestrateHint,与 Claude 引擎共用),不再仅"形状匹配时"被动复用。
-    if (initialTools.some(t => t.function && t.function.name === 'orchestrate_agents')) {
-      const workflows = await getAgentWorkflows(workingDir).catch(() => []);
-      volatileExtras += buildOrchestrateHint(workflows);
-    }
-    // 第30波:编排可用时注入"可选模型 + 能力档位 + 按难度选型指引",让 AI 自主为不同节点选模型。数据取 offlineModelList,零网络。
-    if (initialTools.some(t => t.function && t.function.name === 'orchestrate_agents')) {
-      volatileExtras += buildModelHint(config, provider); // 引擎分组:provider 供 openai 组模型
-      // 代理模式 v2:后台规则 + 信封契约(只改这段子代理/后台文字)。
-      volatileExtras += '\n\n代理并行规则：当主线还有不依赖代理结果的工作可做时，orchestrate_agents 设置 background:true 立即拿到 runId 继续主线；代理完成后交付信封会自动注入一次（也可 wait_agents 收件，可省略 runIds）；届时本对话若已空闲，工作台会自己起一个新回合把信封送来，所以主线做完就可以结束本回合（告诉用户代理还在后台跑），不必空等。只有必须立刻取得结果时才同步等待。你收到的只是信封（每节点摘要与产物路径），需要全文时用 agent_result({runId, nodeId?})。单个代理直接写顶层 {task, role?, toolTier?, background?}。send_to_agent({action:"list",runId?}) 查询本会话活组或指定组的节点实时资格；queued 表示可排队，名单不保证随后送达。消息是参考通信，不会重启终态节点；明确续派用 orchestrate_agents({followup:{previousRunId,previousNodeId,task}}) 新建独立 run。任务池默认 off；显式 poolPolicy:"manual" 仅开放待审批提案，审批物化仍受原发起回合预算约束，不会自动扩展。';
+    if (initialTools.some(tool => tool.function?.name === 'orchestrate_agents')) {
+      volatileExtras = await buildOrchestrationPrompt(workingDir, config, provider);
     }
     // v0.9-S5 (真流程 plan mode): when permissionMode==='plan' on the provider engine, append a TURN-LOCAL plan
     // instruction (not baked into buildProviderSystemPrompt — kept here so it never leaks into summary/identity
@@ -1145,9 +1128,6 @@ function createProviderTurn({
       if (!live || live === permissionModeAtTurnStart) return config.permissionMode;
       return live;
     };
-    // 挂到活回合登记表上(只读的一个函数引用,零新增状态):13k stewardExemptLiveTurn 经 activeChildren 调它。
-    // Claude CLI / Kimi 的登记表上没有它 —— 管家那一侧读不到就按「判不出档位」拦下(那两个引擎在 auto 档
-    // 本来就不经这道闸问人,45 号文 §2-quater.1 取证 10)。
     reg.effectivePermissionMode = effectivePermissionModeNow;
     const gateWithLiveMode = (gateTier, gateToolName, gateInput) => {
       const snapshotGate = nativeToolGate(config.permissionMode, gateTier, gateToolName, gateInput);
@@ -1252,59 +1232,16 @@ function createProviderTurn({
       return modelNotes.length && envelope && typeof envelope === 'object' ? { ...envelope, notes: modelNotes } : envelope;
     };
 
-    // v1.0-S6 (B): failover-aware wrapper around openAiStreamOnce. For ONE logical API call it walks the
-    // candidate endpoint sequence, advancing to the next candidate ONLY on a pre-first-byte failure
-    // (connect/TLS transport throw surfaced as call.transportError, OR an httpError carrying failoverStatus
-    // 502/503/504). Any other outcome — a real reply, an httpError WITHOUT failoverStatus (401/403/400/404/
-    // 422/429), a mid-stream error (which openAiStreamOnce lets propagate, not our concern here) — is returned
-    // as-is and stops the walk (归因保留). 会话内粘住: candidates start at the sticky base (last success for this
-    // provider.id) if present; a success (re)stamps it; a stale sticky that fails just walks from there through
-    // the rest of the sequence. Each switch emits a `failover` event {providerId, from, to, reason}. Every
-    // candidate is tried AT MOST once per logical call;全失败 → the last failure object is returned (its
-    // httpError/transportError drives the caller's existing error path). Single-candidate providers: the loop
-    // runs once and this is a transparent pass-through (行为与现状完全一致).
-    const streamWithFailover = async buildRequestBody => {
-      // Order the candidates for THIS call: sticky base first (if it's in the sequence), then the rest in
-      // declared order, so a proven endpoint is tried first but the full sequence remains a fallback.
-      const sticky = failoverStickyBase.get(provider.id);
-      const ordered = [];
-      if (sticky) { const s = failoverCandidates.find(c => c.base === sticky); if (s) ordered.push(s); }
-      for (const c of failoverCandidates) { if (!ordered.includes(c)) ordered.push(c); }
-      let lastCall = null, prevBase = null;
-      for (let i = 0; i < ordered.length; i++) {
-        const cand = ordered[i];
-        if (prevBase !== null) {
-          // We are ABOUT to try a NEW endpoint after a pre-first-byte failure on the previous one → announce it.
-          econTotals.failoverAttempts += 1; // 不抽样:每次额外端点尝试都是一次真实 HTTP 发出(第0步口径)
-          onEvent({ type: 'failover', providerId: provider.id, from: prevBase, to: cand.base, reason: lastCall._failReason });
-          logEvent({ kind: 'failover', sessionId: session.id, provider: provider.id, from: prevBase, to: cand.base, reason: lastCall._failReason });
-        }
-        await refreshMemoryPromptScope();
-        const requestBody = buildRequestBody();
-        promptAttempted = true; // Conservative request intent; never remove it as a definitely unsent prompt.
-        const call = await openAiStreamOnce({ chatUrl: cand.chatUrl, headers, body: requestBody, ctrl, onEvent, markUsage, rawSeqRef, touch, protocol: wire });
-        // Decide if this outcome is a failover trigger (pre-first-byte only).
-        let failReason = null;
-        if (call.transportError) failReason = call.transportReason || 'connect';
-        else if (call.httpError && call.failoverStatus) failReason = 'http_' + call.failoverStatus;
-        if (!failReason) {
-          // Terminal outcome for this logical call. A clean/streamed result (no httpError, no transportError)
-          // means THIS endpoint served us → remember it as the sticky base for the rest of the session.
-          if (!call.httpError && !call.transportError) failoverStickyBase.set(provider.id, cand.base);
-          return call;
-        }
-        // Failover-eligible failure on this candidate. Record + walk to the next (if any).
-        call._failReason = failReason;
-        lastCall = call; prevBase = cand.base;
-      }
-      // Every candidate failed a pre-first-byte check. Return the LAST failure so the caller reports it
-      // (归因保留 — the last endpoint's error is what the user sees). Normalize a transport-only failure into
-      // an httpError string so the caller's existing httpError branch handles it uniformly.
-      if (lastCall && !lastCall.httpError && lastCall.transportError) {
-        lastCall.httpError = lastCall.transportError;
-      }
-      return lastCall || { httpError: 'no endpoint available', text: '', reasoning: '', toolCalls: [] };
-    };
+    const streamWithFailover = buildRequestBody => sendToEndpoint(async chatUrl => {
+      await refreshMemoryPromptScope();
+      const body = buildRequestBody();
+      promptAttempted = true;
+      return openAiStreamOnce({ chatUrl, headers, body, ctrl, onEvent, markUsage, rawSeqRef, touch, protocol: wire });
+    }, ({ providerId, from, to, reason }) => {
+      econTotals.failoverAttempts += 1;
+      onEvent({ type: 'failover', providerId, from, to, reason });
+      logEvent({ kind: 'failover', sessionId: session.id, provider: providerId, from, to, reason });
+    });
 
     // 硬停(工具轮次上限 / 预算保护)时队列里还有插话:这一回合不能再发模型调用了,但也不许把已接受的插话静默丢掉 ——
     // 在边界把它记进会话(providerHistory + 带 steered 标记的正文,与平常的注入同一条路),下一条消息时模型就能看到。
@@ -2380,9 +2317,6 @@ function createProviderTurn({
             continue;
           }
         }
-        // 最终回答流式期间到达的插话:/api/steer 已回 ok(接受了),这里若直接 break,队列随回合结束被丢掉、
-        // 模型永远看不到。回合还在跑就再转一圈:循环顶端 drainSteerQueue 注入插话,模型接着回应(同 Kimi 的 follow-up)。
-        // 历史此刻是完整的(最终回答已入历史,没有未配对的工具调用),在边界注入是配对安全的。
         if (reg.state === 'running' && Array.isArray(reg.steerQueue) && reg.steerQueue.length) { separateNextIterationText(); continue; }
         // 空回复(正常结束、没有文字也没有工具调用):修前回合就这么静悄悄地结束,界面上只剩一个空气泡,用户分不清是
         // 还在跑、出错了还是模型真的什么都没说。给一句看得见的提示 —— 同上面「输出上限」那句,只进显示正文、不进
@@ -2549,17 +2483,7 @@ function createProviderTurn({
     // 摘要取【最后一个有文字的迭代】的开头(= 最终答复的首段,answerShape 要求它是结论),不取整段正文的前 160 字:多迭代回合里整段正文
     // 以第一轮的开场白起头(「我先看一下文件」)。回合没有任何迭代文字(整回合只有失败 / 提示)时才回落整段正文。
     session.summary = (String(lastIterationText || finalText).replace(/\s+/g, ' ').trim().slice(0, 160)) || session.summary || '';
-    // P2-3: a mid-turn POST /api/session/skills wrote the new enable set to DISK (and updated reg.session in place);
-    // re-read it before the final save so the turn's stale in-memory copy can't clobber a mid-turn skill toggle.
-    // P2-3(记忆): 同款回读 session.memories + memoriesExplicit —— 免得回合边缘窗口用户「全部停用」被陈旧内存副本回滚,
-    // 下一回合默认策略又自动全启。memoriesExplicit 仅当磁盘为 boolean 才覆盖。
-    // 122-§2.4: mission 也要落盘前合并 —— 回合的这段窗口里到达的 POST /api/mission 落了盘却同步不进
-    // 活回合内存(C4 只在 activeChildren 命中时生效),不合并则收尾这一存把整本账本盖掉。见 mergeMissionBeforeSave。
-    try { const onDisk = await loadSession(session.id); if (onDisk && Array.isArray(onDisk.skills)) session.skills = onDisk.skills; if (onDisk && Array.isArray(onDisk.memories)) session.memories = onDisk.memories; if (onDisk && typeof onDisk.memoriesExplicit === 'boolean') session.memoriesExplicit = onDisk.memoriesExplicit; if (onDisk && Array.isArray(onDisk.memoryExclusions)) session.memoryExclusions = onDisk.memoryExclusions; mergeMissionBeforeSave(session, onDisk); } catch { /* keep in-memory */ }
-    // 第72波:回合内 mission_update 推迟的 complete 章在此刻盖 —— 本回合 turnSummary 已入 messages,
-    // 结果快照的不可逆账/变更/验收才能包含完成它的这个回合;盖章随下方 saveSession 一并落盘。
-    // 122-§2.4:这一段从「摘要之前」挪到了【落盘前合并之后】—— 章必须盖在合并后的那一本账本上,否则
-    // 合并会把刚盖好的 complete 章连同 mission 整份换掉(05/05b 的回读本来就排在盖章之前,这里补齐对齐)。
+    await reconcileTurnMetadata(session);
     if (session.__missionFinalizeHow) {
       const how = session.__missionFinalizeHow; delete session.__missionFinalizeHow;
       try { if (await finalizeMissionAfterTurn(session, how)) onEvent({ type: 'mission', mission: session.mission }); } catch { /* 盖章失败不阻断回合 */ }
@@ -2609,9 +2533,6 @@ function createProviderTurn({
       usage: usageObj && usageObj.usage ? { ...usageObj.usage, calls: usageObj.calls, estimated: usageObj.estimated === true } : undefined,
     });
     logEvent({ kind: 'turn_end', traceId: activeTraceId, sessionId: session.id, turnSeq: session.turnSeq, engine: 'openai', provider: provider.id, ok: ok && !wasStopped, replyLen: finalText.length, tools: toolCalls.length, aborted: wasStopped, errorClass, durationMs: Date.now() - turnStartedAt, ...(turnSuperseded ? { superseded: true } : {}) });
-    // 22-§4.2 第0步: 回合级「不抽样总量」账目 —— E1 报表口径的事实源。本体不受采样与事件上限约束,
-    // sampledLogged/eventsDropped 字段让报表能对账明细完整性(截断→标 unknown,不推算)。缺此行的引擎
-    // 路径(claude/kimi 桥接回合、playbook 草拟/JSON 修复等非摘要辅助调用)由报表显式标记未覆盖。
     if (econOn && (econTotals.modelCallAttempts > 0 || econTotals.toolActions > 0)) {
       try {
         logEvent({

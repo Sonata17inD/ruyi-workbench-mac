@@ -19,7 +19,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 边界(不重复锁定,只引用):question 契约级混合并发/持久化行序 = interventions-persist.e2e.js (j);
 // CAS 六窗崩溃恢复 = interventions-cas.e2e.js;pool 活 run 成功/提案已处理 = interventions-pool.e2e.js;
 // plan 批准/拒绝真流程 = plan-mode.e2e.js。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -85,7 +85,7 @@ const contractRoute = (m, i) => '/api/missions/' + encodeURIComponent(m) + '/int
 // ── fake provider(openai-compat SSE):TOOL_SEQUENCE 驱动,与 persist/perm-v2 同款。 ──
 function spawnFake(env) {
   const p = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], {
-    env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env }, windowsHide: true,
+    env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env },
   });
   p.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
   return p;
@@ -132,7 +132,7 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
 
 try {
   await restartFake({}); // 先占端口(question/permission 场景前再换序列重启)
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' }, windowsHide: true });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' } });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   ok(await waitHealth(), 'workbench up');
   // 117q-P1-33:见 waitToken 头注——单次 readToken() 可能在 runtime.json 落盘前抢跑,读到空串。

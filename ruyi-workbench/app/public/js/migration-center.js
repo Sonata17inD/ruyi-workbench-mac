@@ -5,22 +5,6 @@ import { el, fmtBytes, fmtTime, toast } from './util.js';
 import { t, tCount } from './i18n.js';
 import { confirmDanger } from './confirm-panel.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// migration-center.js — 迁移中心（W2，56 号文 §3）。
-//
-// 两块，一个面：
-//   ① 「从 Claude Code / Codex / Kimi 导入」：全局指令文件（导成核心记忆）、MCP、技能，逐项状态 + 一键导入；
-//      技能默认活读，W8 起可逐项勾选「复制到如意」（POST /api/migration/skills/copy，撤销走 /api/migration/undo）；
-//   ② 「老版本如意」：检测到的老包（版本 / 大小 / 最后启动）、还指着老包的引用（逐项勾选，默认全勾）、
-//      「全部改到新版」「撤销上次迁移」「移到回收站」。
-// 后端全在 /api/migration/*（13u，经 MigrationHooks 迟绑定）；本文件只渲染与转发，判据一个都不在这里。
-//
-// 挂点：设置弹窗「迁移中心」页签 #stab-migration（2026-10 前是「集成」页签末尾），运行时追加 <section id="migrationCenter">。
-// 设置页的标记由 W6 重组，这里【不改】index.html，只认这个面板 id（W6 知道这个挂点）。
-// 首启提示：scan 回 prompt.show（有用户没看过的候选键）→ 两个视角都在右上角起一张一次性、非模态的卡
-// （沿用安静卡的外观类 .quiet-card*），「查看并迁移」「以后再说」都会记「看过了」（apply markSeen）。
-// 零 innerHTML：全部 el()/textContent 拼装。
-// ─────────────────────────────────────────────────────────────────────────────
 
 export const MIGRATION_CENTER_ID = 'migrationCenter';
 export const MIGRATION_CARD_HOST_ID = 'migrationCardHost';
@@ -64,7 +48,6 @@ const REASON_KEYS = Object.freeze({
 const SOURCE_KEYS = Object.freeze({
   'claude-code': 'migration.source.claudeCode',
   codex: 'migration.source.codex',
-  kimi: 'migration.source.kimi',
   'claude-plugin': 'migration.source.claudePlugin',
 });
 

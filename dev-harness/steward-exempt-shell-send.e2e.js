@@ -21,7 +21,7 @@ const { writeFile, echo } = require('./lib/platform-shell-fixture');
 //   ④ 命中内容判据时 message 带类别人话(删数据/改系统/装卸载/对外发送/推送远端),details 带 exemptCategory 机器键。
 //
 // 端口全部 getFreePort()。判定行:`STEWARD EXEMPT SHELL_SEND E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -137,7 +137,7 @@ const markerD = path.join(HOME, 'captured-ran.txt');
 try {
   /* ══════════════════════ (H) 原生引擎真回合 ══════════════════════ */
   console.log('── (H) 原生引擎回合路径(真服务) ──');
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME } });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let up = null; for (let i = 0; i < 200 && !up; i++) { await sleep(150); up = await health(WB_PORT); }
@@ -216,7 +216,6 @@ try {
 /* ══════════════════════ (P) 管家代答路径(进程内) ══════════════════════ */
 console.log('── (P) 管家代答路径(进程内直调 steward_decide) ──');
 writeConfig({ stewardEnabledV1: true, stewardPollMs: 120000, stewardMaxTurnsPerHour: 500, stewardGlobalMaxTurnsPerHour: 500 });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 process.env.USERPROFILE = HOME;
 process.env.HOME = HOME;

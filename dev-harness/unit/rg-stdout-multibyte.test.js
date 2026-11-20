@@ -13,7 +13,6 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-rg-multibyte-unit-'));
-const SKIP = process.platform === 'win32' ? 'fake rg is a shebang script' : false;
 const DIR_NAME = '中文目录';
 const ws = path.join(root, 'ws');
 fs.mkdirSync(path.join(ws, DIR_NAME), { recursive: true });
@@ -50,19 +49,18 @@ if (args.includes('-l')) {
 fs.chmodSync(fakeRg, 0o755);
 process.env.RUYI_RG_PATH = fakeRg;
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 after(() => { try { srv.killAllMcpClients && srv.killAllMcpClients(); } catch { /* ignore */ } try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* ignore */ } });
 const ctx = { sessionId: 'sess_rg_mb', session: { id: 'sess_rg_mb', cwd: ws }, workingDir: ws, config: {} };
 
-test('[R0] 前置:服务确实用了假 rg', { skip: SKIP }, async () => {
+test('[R0] 前置:服务确实用了假 rg', async () => {
   const info = await srv.probeRgAsync();
   assert.ok(info && info.path === fakeRg, `probe 应选中 RUYI_RG_PATH(got ${JSON.stringify(info)})`);
 });
 
-test('[R1] --json 主搜索:切在汉字中间的块拼回完整路径与命中行', { skip: SKIP }, async () => {
+test('[R1] --json 主搜索:切在汉字中间的块拼回完整路径与命中行', async () => {
   process.env.FAKE_RG_MATCH = '1';
   try {
     const r = await srv.toolCall('file_search', { pattern: 'world', path: ws }, ctx);
@@ -77,7 +75,7 @@ test('[R1] --json 主搜索:切在汉字中间的块拼回完整路径与命中�
   } finally { delete process.env.FAKE_RG_MATCH; }
 });
 
-test('[R2] -l 高字节文件清单:路径完整,GBK 补扫找得到真文件', { skip: SKIP }, async () => {
+test('[R2] -l 高字节文件清单:路径完整,GBK 补扫找得到真文件', async () => {
   const r = await srv.toolCall('file_search', { pattern: '你好', path: ws }, ctx);
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
   const list = r.results || r.matches || [];

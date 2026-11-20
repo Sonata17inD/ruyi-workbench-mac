@@ -13,9 +13,10 @@ const os = require('os');
 const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-config-bom-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
-const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
+const srv = require('../lib/server-internals').loadServerInternals(['readConfig', 'mutateConfig', 'LocalSecretCryptoHooks']);
+const helper = require('../lib/isolated-keychain-fixture').createIsolatedKeychain(root);
+srv.LocalSecretCryptoHooks.helperPath = () => helper;
 const cfgFile = path.join(root, 'config.json');
 const BOM = '﻿';
 const ws = path.join(root, 'ws-bom');
@@ -48,7 +49,7 @@ test('[B3] 真损坏 + 有 .prev:从 .prev 恢复并按明确加密选择保留 
   const prevWs = path.join(root, 'prev-ws');
   fs.mkdirSync(prevWs, { recursive: true });
   const broken = '{ "defaultWorkspace": "' + ws.replace(/\\/g, '\\\\') + '", "oops": ';   // 截断,不是合法 JSON
-  for (const encryption of process.platform === 'win32' ? [false, true] : [false]) {
+  for (const encryption of [false, true]) {
     fs.writeFileSync(cfgFile + '.prev', JSON.stringify({ defaultWorkspace: prevWs, credentialEncryptionV1: encryption }), 'utf8');
     fs.writeFileSync(cfgFile, broken, 'utf8');
     const cfg = await srv.readConfig();
@@ -56,7 +57,7 @@ test('[B3] 真损坏 + 有 .prev:从 .prev 恢复并按明确加密选择保留 
     const recovery = fs.readFileSync(cfgFile + '.corrupt', 'utf8');
     if (encryption) {
       assert.equal(JSON.parse(recovery).ruyiEncryptedBackupV1, 1, '显式开启后，损坏留底采用认证加密');
-      assert.equal(await require('../lib/privacy-backup-fixture').recoverCorruptBackup(root), broken, '加密留底仍逐字恢复原始坏文件');
+      assert.equal(await require('../lib/privacy-backup-fixture').recoverCorruptBackup(root, 'config.json.corrupt', helper), broken, '加密留底仍逐字恢复原始坏文件');
     } else {
       assert.equal(recovery, broken, '默认关闭时保持原始留底格式');
       assert.ok(!fs.existsSync(path.join(root, 'credential-vault-v1.json')), '默认关闭恢复不创建加密库');

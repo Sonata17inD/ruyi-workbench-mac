@@ -3,30 +3,8 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { AGENT_CLI_TYPES, isAgentCliType } = require('./agent-cli-types.cjs');
 
-function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.process }) {
-  function claudeInstallCandidates() {
-    const home = os.homedir();
-    return [path.join(home, '.local', 'bin', 'claude'), path.join(home, '.claude', 'local', 'claude'), '/opt/homebrew/bin/claude', '/usr/local/bin/claude'];
-  }
-
-  // v1.0-S7 (perf): detectClaudePath spawnSync-probes for `claude` (up to several launches, each with a 4s
-  // timeout). It was called from defaultConfig(), which normalizeConfig() spreads on EVERY readConfig() — so
-  // the (blocking) probe ran repeatedly, twice per startup (readConfig + generateMcpConfig) and on every
-  // config read thereafter. The RESULT is stable within a process run, so memoize it. This collapses the
-  // startup cost to a single probe and makes all later readConfig() calls probe-free. A short TTL lets a
-  // long-lived server re-detect a claude installed after boot without ever re-probing on the hot path.
-  // would otherwise cost up to ~4s PER readConfig; memoization bounds it to once per TTL window.)
-  //
-  // 128f-⑬(mission-index-scale (e)/(f) 取证时 CPU 剖面挖出来的;用户 2026-09-19「删除线程没有及时的界面反馈」那一刻
-  // 真机上也撞见了它 —— DELETE 与同时在飞的四发请求一起卡了 1.9 s):上面那句「once per TTL window」就是毛病所在。
-  // 过期之后的第一次 readConfig 仍然【同步】探一整轮(claude 与 kimi 两支,每个候选一次 node 冷启动,最多 4 s),
-  // 这期间事件循环被整个占住 —— 于是【大约每分钟一次】,赶上的那个请求以及同时在飞的所有请求、推送、计时器一起等。
-  // 修法:只有进程里还没有任何结果时同步探(启动那一次;设置里改了 CLI 路径之后那一次 —— 两处都要当场的答案);
-  // 过期之后先答旧值,后台异步重探(spawnProbeAsync,判据与同步那支逐字相同),探完换上。后台重探每一支同时只有一发,
-  // 探的途中又被「作废」(invalidate)了的那一发,结果不许回写(_cliProbeGeneration)。
-  // 测试口 WCW_TEST_CLI_PROBE_TTL_MS 把记忆期缩短(cli-probe-stall.e2e);产品里恒为 60 s。
+function createAgentCliDiscovery({ probes, process = globalThis.process }) {
   let _claudePathProbe = null; // { at:number, value:string }
   const CLAUDEPATH_CACHE_MS = (() => {
     const raw = Number(process.env.WCW_TEST_CLI_PROBE_TTL_MS);
@@ -41,19 +19,16 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     return true;
   }
   function claudeProbeCandidates() {
-    // 先 PATH 上的裸名(快、常见),再常见安装位置(必须真的存在才探)。
-    const names = ['claude'];
-    const onPath = [process.env.CLAUDE_CLI_PATH, ...names].filter(Boolean).map(command => ({ command, mustExist: false }));
-    return [...onPath, ...claudeInstallCandidates().map(command => ({ command, mustExist: true }))];
+    const home = os.homedir();
+    const installs = [path.join(home, '.local/bin/claude'), path.join(home, '.claude/local/claude'),
+      '/opt/homebrew/bin/claude', '/usr/local/bin/claude'];
+    return [...new Set([process.env.CLAUDE_CLI_PATH, 'claude', ...installs.filter(file => fs.existsSync(file))].filter(Boolean))];
   }
   function detectClaudePathUncached() {
-    for (const { command, mustExist } of claudeProbeCandidates()) {
+    for (const command of claudeProbeCandidates()) {
       try {
-        if (mustExist && !fs.existsSync(command)) continue;
-        const s = { command, args: ['--version'], opts: {} };
-        const ok = probes.spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
-        const found = !ok.error && ok.status !== null;
-        if (found) return command;
+        const result = probes.spawnProbeSync(command, ['--version'], { stdio: 'ignore', timeout: 4000 });
+        if (!result.error && result.status !== null) return command;
       } catch (error) {
         if (error.cleanupIncomplete) throw error;
         // keep scanning
@@ -62,14 +37,11 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     return '';
   }
   async function detectClaudePathUncachedAsync() {
-    for (const { command, mustExist } of claudeProbeCandidates()) {
+    for (const command of claudeProbeCandidates()) {
       try {
-        if (mustExist && !fs.existsSync(command)) continue;
-        const s = { command, args: ['--version'], opts: {} };
-        const ok = await probes.spawnProbeAsync(s.command, s.args, s.opts);
-        if (ok.cleanupIncomplete) throw Object.assign(ok.error, { cleanupIncomplete: true });
-        // 判据与同步版逐字相同(61-C6:批处理启动器要求退出码 0)。
-        if (!ok.error && ok.status !== null) return command;
+        const result = await probes.spawnProbeAsync(command, ['--version'], {});
+        if (result.cleanupIncomplete) throw Object.assign(result.error, { cleanupIncomplete: true });
+        if (!result.error && result.status !== null) return command;
       } catch (error) {
         if (error.cleanupIncomplete) throw error;
         // keep scanning
@@ -80,11 +52,8 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
   function detectClaudePath() {
     if (_claudePathProbe) {
       if ((Date.now() - _claudePathProbe.at) >= CLAUDEPATH_CACHE_MS) {
-        refreshInBackground('claude', async () => {
-          const generation = _cliProbeGeneration;
-          const value = await detectClaudePathUncachedAsync();
-          if (generation === _cliProbeGeneration) _claudePathProbe = { at: Date.now(), value };
-        });
+        const generation = _cliProbeGeneration;
+        refreshInBackground('claude', () => refreshClaudePath(generation));
       }
       return _claudePathProbe.value;
     }
@@ -92,60 +61,37 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     _claudePathProbe = { at: Date.now(), value };
     return value;
   }
-  // v1.0-S7: let a settings save / explicit "re-detect CLI" action force a fresh probe (e.g. the user just
-  // installed the CLI). Exported for the doctor/status path — a no-op if never called.
   function invalidateClaudePathCache() { _claudePathProbe = null; _cliProbeGeneration += 1; }
 
-  let _agentCliPathProbe = new Map(); // type -> { at, value }
-
-  let bootCliPathProbes = null; // Only initialized by a real serve startup, never by config reads.
-  function queueBootCliPathProbe(probe) {
-    const state = bootCliPathProbes;
-    const job = Promise.resolve().then(probe).catch(() => {}).finally(() => state.pending.delete(job));
-    state.pending.add(job);
+  async function refreshClaudePath(generation) {
+    const value = await detectClaudePathUncachedAsync();
+    if (generation === _cliProbeGeneration) _claudePathProbe = { at: Date.now(), value };
   }
+
+  let bootProbe;
+  let bootStarted = false;
+  let beforeListen = true;
   function beginBootCliPathProbes() {
-    if (bootCliPathProbes) return;
-    bootCliPathProbes = { beforeListen: true, pending: new Set() };
-    const generation = _cliProbeGeneration;
+    if (bootStarted) return;
+    bootStarted = true;
     if (!_claudePathProbe) {
       _claudePathProbe = { at: Date.now(), value: '' };
-      queueBootCliPathProbe(async () => {
-        const value = await detectClaudePathUncachedAsync();
-        if (generation === _cliProbeGeneration) _claudePathProbe = { at: Date.now(), value };
-      });
-    }
-    if (!_agentCliPathProbe.has('kimi')) {
-      const provisional = { at: Date.now(), value: '' };
-      _agentCliPathProbe.set('kimi', provisional);
-      queueBootCliPathProbe(async () => {
-        const value = await detectAgentCliPathUncachedAsync('kimi');
-        if (generation === _cliProbeGeneration) _agentCliPathProbe.set('kimi', { at: Date.now(), value });
-        else if (_agentCliPathProbe.get('kimi') === provisional) _agentCliPathProbe.delete('kimi');
-      });
+      bootProbe = refreshClaudePath(_cliProbeGeneration).catch(() => {}).finally(() => { bootProbe = undefined; });
     }
   }
-  function finishBootCliPathProbes() {
-    if (bootCliPathProbes) bootCliPathProbes.beforeListen = false;
-  }
-  async function waitForBootCliPathProbes() {
-    // Launcher verification discovered during a boot read can add another job while
-    // the first checks are in flight. Wait for the whole set, not just one snapshot.
-    while (bootCliPathProbes?.pending.size) await Promise.all([...bootCliPathProbes.pending]);
-  }
+  function finishBootCliPathProbes() { beforeListen = false; }
+  async function waitForBootCliPathProbes() { await bootProbe; }
 
   function agentCliProbeSpawn(command) {
     const isScript = /\.cjs$/i.test(command);
-    const kimiEntry = isScript ? '' : resolveKimiNpmEntry(command);
-    const nodeExe = kimiEntry ? bundledNodeExe() : '';
-    return isScript ? { command: process.execPath, args: [command, '--version'], opts: {} }
-      : (kimiEntry && nodeExe ? { command: nodeExe, args: [kimiEntry, '--version'], opts: {} } : { command, args: ['--version'], opts: {} });
+    return isScript ? { command: process.execPath, args: [command, '--version'] }
+      : { command, args: ['--version'] };
   }
   function probeAgentCliLauncher(command) {
     if (!command) return false;
     try {
       const s = agentCliProbeSpawn(command);
-      const ok = probes.spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000, ...s.opts });
+      const ok = probes.spawnProbeSync(s.command, s.args, { stdio: 'ignore', timeout: 4000 });
       return !ok.error && ok.status === 0;
     } catch (error) { if (error.cleanupIncomplete) throw error; return false; }
   }
@@ -162,7 +108,7 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     if (!command) return 'missing';
     try {
       const s = agentCliProbeSpawn(command);
-      const result = await probes.spawnProbeAsync(s.command, s.args, s.opts);
+      const result = await probes.spawnProbeAsync(s.command, s.args, {});
       if (result.cleanupIncomplete) throw Object.assign(result.error, { cleanupIncomplete: true });
       return agentCliProbeVerdict(result);
     } catch (error) { if (error.cleanupIncomplete) throw error; return 'missing'; }
@@ -170,58 +116,6 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
   async function probeAgentCliLauncherAsync(command) {   // 128f-⑬:后台重探用,判据与上面同步版逐字相同(只有 'ok' 为真)
     return (await probeAgentCliLauncherVerdictAsync(command)) === 'ok';
   }
-  function agentCliInstallCandidates(type) {
-    if (!isAgentCliType(type)) return [];
-    return AGENT_CLI_TYPES[type].installCandidates({ env: process.env, home: os.homedir(), join: (...parts) => path.join(...parts), platform: process.platform });
-  }
-  function agentCliProbeable(candidate) {
-    // Explicit/absolute candidates must exist; bare commands are resolved by the launcher/PATH.
-    return !((path.isAbsolute(candidate) || /[\\/]/.test(candidate)) && !fs.existsSync(candidate));
-  }
-  async function detectAgentCliPathUncachedAsync(type) {
-    for (const candidate of agentCliInstallCandidates(type)) {
-      if (!agentCliProbeable(candidate)) continue;
-      if (await probeAgentCliLauncherAsync(candidate)) return candidate;
-    }
-    return '';
-  }
-  function detectAgentCliPath(type) {
-    const cached = _agentCliPathProbe.get(type);
-    if (cached) {
-      // 128f-⑬:过期先答旧值、后台重探(同 detectClaudePath 头注)。
-      if (Date.now() - cached.at >= CLAUDEPATH_CACHE_MS) {
-        refreshInBackground('agent:' + type, async () => {
-          const generation = _cliProbeGeneration;
-          const fresh = await detectAgentCliPathUncachedAsync(type);
-          if (generation === _cliProbeGeneration) _agentCliPathProbe.set(type, { at: Date.now(), value: fresh });
-        });
-      }
-      return cached.value;
-    }
-    let value = '';
-    for (const candidate of agentCliInstallCandidates(type)) {
-      if (!agentCliProbeable(candidate)) continue;
-      if (probeAgentCliLauncher(candidate)) { value = candidate; break; }
-    }
-    _agentCliPathProbe.set(type, { at: Date.now(), value });
-    return value;
-  }
-
-  function resolveKimiNpmEntry(command) {
-    const raw = String(command || '').trim();
-    if (!/(?:^|\/)kimi$/.test(raw)) return '';
-    const candidates = path.isAbsolute(raw) || raw.includes('/') ? [path.resolve(raw)]
-      : String(process.env.PATH || '').split(path.delimiter).filter(Boolean).map(dir => path.join(dir, raw));
-    for (const launcher of candidates) {
-      try {
-        const entry = fs.realpathSync(launcher);
-        if (entry.endsWith('/@moonshot-ai/kimi-code/dist/main.mjs')) return entry;
-        if (fs.existsSync(launcher)) return '';
-      } catch { /* Try the next PATH entry. */ }
-    }
-    return '';
-  }
-
   // 128f-⑬:健康检查那一项「选中的 CLI 起不起得来」。修前 computeHealth 每一次都【同步】跑一遍「<cli> --version」、不记忆 ——
   // 而 /api/status 每换一次线程就调一次(session-experience openSession),于是换线程这个动作每次都把整个服务钉住一次
   // CLI 冷启动。改成异步、按启动器记 60 s(与路径探测同一个记忆期、同一个作废口)。
@@ -245,11 +139,6 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     }
     return probeAgentCliLauncherRemembered(command);
   }
-  // 回合入口(05 runClaudeTurn / 05b ensureKimiServer)问「选中的 CLI 启动器能不能用」。修前直接 spawnSync「<cli> --version」
-  // (最长 4 s):每个回合都把整个事件循环钉住一次,超时还被当成「未检测到 CLI」把用户的输入挡在门外。现在:
-  //   · 异步探(不钉事件循环);
-  //   · 只有判定「缺失」(起不来 / 退出码非 0)才拒绝回合,超时算「在,只是慢」放行 —— 真起不来,后面的 spawn 自己会报;
-  //   · 「在」(含慢)的结果按 60 s 记忆(与路径探测同一个记忆期与作废口);【缺失不记】,用户刚装好 CLI 要立刻就能用。
   const _agentCliLauncherPresent = new Map();   // command -> 记下「在」的时刻
   async function agentCliLauncherUsable(command) {
     if (!command) return false;
@@ -264,29 +153,31 @@ function createAgentCliDiscovery({ probes, bundledNodeExe, process = globalThis.
     }
     return true;
   }
-  function invalidateAgentCliPathCaches() { invalidateClaudePathCache(); _agentCliPathProbe = new Map(); _agentCliLauncherOk.clear(); _agentCliLauncherPresent.clear(); }
+  function invalidateAgentCliPathCaches() { invalidateClaudePathCache(); _agentCliLauncherOk.clear(); _agentCliLauncherPresent.clear(); }
 
   function waitForConfigCliProbes() {
-    if (bootCliPathProbes && !bootCliPathProbes.beforeListen && bootCliPathProbes.pending.size) return waitForBootCliPathProbes();
+    if (!beforeListen) return bootProbe;
   }
 
   return {
     detectClaudePath, detectClaudePathUncached, detectClaudePathUncachedAsync, claudeProbeCandidates,
-    detectAgentCliPath, detectAgentCliPathUncachedAsync, agentCliInstallCandidates, resolveKimiNpmEntry,
     probeAgentCliLauncher, probeAgentCliLauncherVerdictAsync, agentCliProbeVerdict,
     agentCliLauncherOk, agentCliLauncherUsable, invalidateClaudePathCache, invalidateAgentCliPathCaches,
-    beginBootCliPathProbes, finishBootCliPathProbes, queueBootCliPathProbe, waitForBootCliPathProbes, waitForConfigCliProbes,
+    beginBootCliPathProbes, finishBootCliPathProbes, waitForBootCliPathProbes, waitForConfigCliProbes,
   };
 }
 
 function createAgentCliSelection({ AGENT_CLI_TYPES, normalizeAgentCliType, AGENT_CLI_HOST }) {
   function selectedAgentCli(config) {
-    const meta = AGENT_CLI_TYPES[normalizeAgentCliType(config && config.agentCliType)];
+    const id = typeof config?.agentCliType === 'string' && config.agentCliType.trim() || 'claude';
+    if (!Object.hasOwn(AGENT_CLI_TYPES, id)) return { id, label: id, path: '', detected: '' };
+    const meta = AGENT_CLI_TYPES[id];
     const detected = meta.detectPath(AGENT_CLI_HOST);
     return { ...meta, path: String(config && config[meta.pathKey] || detected || ''), detected };
   }
   function prepareAgentCliSpawn(type, command, args) {
     const argv = Array.isArray(args) ? args : [];
+    if (type && !Object.hasOwn(AGENT_CLI_TYPES, type)) throw new Error('Unavailable CLI: ' + type);
     return AGENT_CLI_TYPES[normalizeAgentCliType(type)].prepareSpawn(AGENT_CLI_HOST, command, argv);
   }
   return { selectedAgentCli, prepareAgentCliSpawn };

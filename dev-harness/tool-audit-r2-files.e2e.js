@@ -32,7 +32,7 @@ const t = createRunner('TOOL AUDIT R2 FILES');
 const { ok } = t;
 const ROOT = path.resolve(__dirname, '..');
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2files-'));
-process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2files-ws-'));
 const OUTSIDE = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-r2files-out-'));
 const sw = p => p.replace(/\\/g, '/');

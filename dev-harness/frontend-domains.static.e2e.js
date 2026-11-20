@@ -232,7 +232,7 @@ const wave62Domains = [
   ['navigation-controls.js', navigation, ['switchTab', 'openModal', 'openContextPopover']],
   ['session-experience.js', sessionExperience, ['renderSessions', 'openSession', 'renderCurrentSession']],
   ['interaction-prompts.js', interactionPrompts, ['buildModal', 'handlePermissionRequest', 'showAskUserModal']],
-  ['tool-runtime.js', toolRuntime, ['runTool', 'updateShellPolling', 'handlePlanEvent']],
+  ['tool-runtime.js', toolRuntime, ['runTool', 'handlePlanEvent']],
   ['workspace-preferences.js', workspacePreferences, ['applyTheme', 'currentWorkspace', 'pickWorkspace']],
 ];
 for (const [file, source, functions] of wave62Domains) {

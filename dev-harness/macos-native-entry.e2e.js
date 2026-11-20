@@ -181,7 +181,7 @@ async function stopNativeWorkers() {
     fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify(config, null, 2));
     port = await getFreePort();
     server = cp.spawn(process.execPath, [path.join(workbench, 'app/server.js'), 'serve', '--port', String(port)], {
-      env: { ...process.env, ...env, RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data }, cwd: workbench, stdio: ['ignore', 'pipe', 'pipe'] });
+      env: { ...process.env, ...env, RUYI_HOME: data }, cwd: workbench, stdio: ['ignore', 'pipe', 'pipe'] });
     server.stdout.on('data', value => calls.push({ name: 'service-stdout', text: String(value).slice(-4000) }));
     server.stderr.on('data', value => calls.push({ name: 'service-stderr', text: String(value).slice(-4000) }));
     serverIdentity = await until(() => snapshotProcessTable()?.find(row => row.pid === server.pid), 'service birth identity');

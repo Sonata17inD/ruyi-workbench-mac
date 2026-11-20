@@ -67,7 +67,7 @@ http.createServer((req, res) => {
   }, null, 2));
   try {
     // 夹具 2:fake-openai 当第二遍(whisper-1 回显)。另标一个 asr-stream 模型指向它:它没有 /stream/sessions → 用来验 E 回落。
-    asrStub = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(asrPort)], { windowsHide: true, env: { ...process.env }, stdio: 'ignore' });
+    asrStub = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(asrPort)], { env: { ...process.env }, stdio: 'ignore' });
     ok(Boolean(await waitForHttp(asrPort, 'GET', '/v1/models', r => r.status === 200)), 'A0 fake-openai(第二遍桩)已起');
     fx = await startBrowserFixture({
       ok, prefix: 'ruyi-voice-stream-', width: 1280, height: 900,

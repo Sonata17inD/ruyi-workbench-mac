@@ -4,13 +4,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // 105j: 摘要调用策略回归。
 // [U] 已知 DeepSeek V4 选择实测锚定的 reasoning/output 候选;未知端点零控制字段。
 // [A] fake 端点拒绝参数时只兼容重试一次;命中 finish_reason=length 时只升一档,不放大到无限输出。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105j-policy-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105j-policy-'));
 const srv = require('../ruyi-workbench/app/server.js');
 const { getFreePort } = require('./free-port.js');
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -19,7 +19,7 @@ let failures = 0;
 const ok = (value, label) => { if (value) console.log('PASS ' + label); else { failures++; console.error('FAIL ' + label); } };
 function fakeUp(port, env) {
   const child = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(port)], {
-    env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env }, windowsHide: true,
+    env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env },
   });
   child.stdout.on('data', () => {}); child.stderr.on('data', () => {});
   return child;

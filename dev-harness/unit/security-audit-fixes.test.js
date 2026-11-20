@@ -33,7 +33,6 @@ fs.writeFileSync(path.join(DATA, 'config.json'), JSON.stringify({
   activeProvider: 'remote',
   externalMcpServers: [{ id: 'fake', label: 'Fake', command: process.execPath, args: [FAKE_MCP], enabled: true }],
 }, null, 2));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
 process.env.RUYI_HOME = DATA;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
@@ -130,7 +129,7 @@ test('[A3] 桥接读文件过读边界:内部数据/相对路径/远端越界拒
 });
 
 function gitAvailable() {
-  try { return cp.spawnSync('git', ['--version'], { windowsHide: true }).status === 0; } catch { return false; }
+  try { return cp.spawnSync('git', ['--version'], {}).status === 0; } catch { return false; }
 }
 
 test('[B] git_status / git_diff 不执行仓库自带的 clean 过滤器(含子模块)', { skip: !gitAvailable() && 'git not installed' }, async () => {
@@ -138,7 +137,7 @@ test('[B] git_status / git_diff 不执行仓库自带的 clean 过滤器(含子�
   const env = { ...process.env, GIT_AUTHOR_NAME: 'a', GIT_AUTHOR_EMAIL: 'a@a', GIT_COMMITTER_NAME: 'a', GIT_COMMITTER_EMAIL: 'a@a',
     GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: path.join(base, 'no-global') };
   const git = (cwd, args) => {
-    const r = cp.spawnSync('git', args, { cwd, env, encoding: 'utf8', windowsHide: true });
+    const r = cp.spawnSync('git', args, { cwd, env, encoding: 'utf8' });
     assert.equal(r.status, 0, 'git ' + args.join(' ') + ': ' + r.stderr);
     return r.stdout;
   };
@@ -162,7 +161,7 @@ test('[B] git_status / git_diff 不执行仓库自带的 clean 过滤器(含子�
     git(repo, ['config', 'filter.evil.smudge', filterCmd]);
     // 对照:同一个仓库里裸 git status 确实会执行过滤器(证明夹具是真的)。
     touch(path.join(repo, 'a.txt'), 'jello\n', 5000);
-    cp.spawnSync('git', ['status', '--porcelain'], { cwd: repo, env, windowsHide: true });
+    cp.spawnSync('git', ['status', '--porcelain'], { cwd: repo, env });
     assert.ok(fs.existsSync(marker), 'fixture sanity: plain git status runs the clean filter');
     fs.rmSync(marker, { force: true });
 

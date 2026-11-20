@@ -12,7 +12,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      update 把剩余标 done -> 路由路径盖 complete 章;重复 update 不重复盖章(finishedAt 稳定)。
 //  (c) 旧会话诚实标注:第72波前回合(turnSummary 无 irreversible 字段)-> legacyCommands 单列,不混入新账。
 //  (s) 静态锁:02 账/结果模型/盖章点,13 stop+update 接线,09 回合内接线,13d 快照字段。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -98,7 +98,7 @@ function streamChat(body, token) {
   });
 }
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
 }
 
 (async () => {
@@ -243,14 +243,10 @@ function spawnWb() {
     // 128b:check／update 的落盘改走 mutateSession,盖章落在新读的那份副本(fresh)上 —— 接线本身不变。
     ok(/await maybeFinalizeMission\((?:session|fresh), 'check'\)/.test(ledgerRoutes) && /await maybeFinalizeMission\((?:session|fresh), 'update'\)/.test(ledgerRoutes), 's 账本 check/update 接线盖章');
     ok(/Object\.defineProperty\(session, '__missionFinalizeHow'/.test(providerTurn) && /finalizeMissionAfterTurn\(session, how\)/.test(providerTurn), 's Provider 回合内 mission_update 推迟盖章 + 收尾 finalize(含本回合交付)');
-    // 122-§2.4:这条原本钉的是「05 收尾那一行长什么样」（`session.mission = onDisk.mission`）——
-    // 那句已经收编进三引擎共用的 mergeMissionBeforeSave。改钉【哪件事必须成立】（纪律 5）：
-    // 收尾落盘前先把磁盘账本合并进来，并且盖章（finalizeMissionAfterTurn）排在合并【之后】，
-    // 否则章会被合并连同 mission 整份换掉。顺序判据用切片位置，不钉行号也不钉写法。
     const cliTurn = backendSource('agent-cli-turn.cjs');
     const tailAt = cliTurn.indexOf('if (stderrText.trim()) {');
     const claudeTail = tailAt >= 0 ? cliTurn.slice(tailAt) : '';
-    const mergeAt = claudeTail.indexOf('mergeMissionBeforeSave(session, onDisk);');
+    const mergeAt = claudeTail.indexOf('await reconcileTurnMetadata(session,');
     const stampAt = claudeTail.indexOf("if (session.__missionFinalizeHow) {");
     ok(mergeAt > 0 && stampAt > mergeAt && /async function finalizeMissionAfterTurn\(session, how\)/.test(src),
       's 05 claude 收尾先落盘前合并、再盖当前轮 result 章（不沿用上一轮交付，也不被合并盖掉）');

@@ -1,6 +1,6 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port.js');
 // E2E for v0.9-S3 (C3 / §0.9-S3): 文件树 + 工作文件夹 + 文件夹拖拽设工作区(指纹定位).
 // Ports 9003 (fake-openai) + 9004 (workbench).
@@ -174,9 +174,9 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     }
   }
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { windowsHide: true, env: { ...process.env } });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], { env: { ...process.env } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 
   try {
@@ -215,17 +215,12 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
     const cfg1 = (await getJson(WB_PORT, '/api/status')).json;
     const rw1 = cfg1 && cfg1.config && cfg1.config.recentWorkspaces;
     ok(Array.isArray(rw1) && rw1[0] === newWs && rw1.length === 4, '④ front-inserted path leads, prior kept (4 total)');
-    // Windows treats case variants as duplicates. POSIX stores them as distinct paths.
     const rc2 = await reqJson(WB_PORT, 'POST', '/api/config', { recentWorkspaces: [newWs, newWs.toUpperCase(), myproj, repA, repB] }, hdr);
     ok(rc2.status === 200, '④ POST duplicate-laden list ok');
     const cfg2 = (await getJson(WB_PORT, '/api/status')).json;
     const rw2 = cfg2.config.recentWorkspaces;
-    if (process.platform === 'win32') {
-      ok(rw2.length === 4 && rw2[0] === newWs, '④ case-insensitive de-dupe keeps the first (length 4)');
-    } else {
-      ok(JSON.stringify(rw2) === JSON.stringify([newWs, newWs.toUpperCase(), myproj, repA, repB]),
-        '④ POSIX recent paths preserve case distinctions and insertion order');
-    }
+    ok(JSON.stringify(rw2) === JSON.stringify([newWs, newWs.toUpperCase(), myproj, repA, repB]),
+      '④ POSIX recent paths preserve case distinctions and insertion order');
     // The picker persists recent + favorite arrays in one POST. Assert both reach the same on-disk snapshot,
     // which is what the next process boot will read.
     const atomic = await reqJson(WB_PORT, 'POST', '/api/config', {

@@ -12,8 +12,6 @@ require('./lib/self-isolate-home.js');
 const ALLOWED = {
   'error.api.authToken':
     '"session token" 是安全用语（工作台鉴权令牌），36 号文 §2.10 原话点名的允许项。',
-  'settings.agentCli.hint.kimi':
-    '"session resume"／"native session" 描述的是 Kimi ACP 协议自身的会话续接机制（原生概念），不是 Ruyi 线程。',
   'ctx.compact.hintExternal':
     '"native session" 指 Agent CLI 的 --resume 原生会话目标（引擎原生概念），不是 Ruyi 线程。',
   'turnActivity.notice.resumeRecovery':

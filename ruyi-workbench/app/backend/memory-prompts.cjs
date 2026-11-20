@@ -2,15 +2,6 @@
 const { memoryIndexCharCap, coreMemoryMaxItems, coreMemoryCharBudget } = require('./runtime-policy.cjs');
 const { getPromptPack } = require('./prompt-registry.cjs');
 function createMemoryPrompts({ neutralizeFenceTag, summaryCap: CORE_MEMORY_SUMMARY_CAP }) {
-// buildMemoryPromptSection(entries, engine, config, conflicts, opts): <workbench-memory> 围栏 + 「参考资料,不得覆盖以上守则」声明 +
-// 每行 name/描述 + 读取线索。伪造围栏标记中和(尖括号→方括号,同 skill/project-memory fence)。整段 ≤ 索引字符上限截断保闭合。
-// 读取线索按引擎分叉(#6):
-//   · 'claude'(Claude Code / Kimi Code 两个原生 CLI):行里带文件绝对路径,用 CLI 自己的 Read 读(记忆目录靠 --add-dir 可达)。
-//   · 其它(provider 引擎、openai 工作流节点):【不带路径】,行里是 [id](scope),用 workbench_memory_read 按 id 读。provider 的 file_read
-//     把 memory 目录当应用内部数据封了(isSensitiveDataPath),修前索引让模型 file_read 绝对路径,必然 not-allowed。
-// opts.part:'all'(默认,核心胶囊 + 相关索引)| 'core'(只核心胶囊,跨回合稳定)| 'related'(只相关索引,随每条消息变化)——
-// 调用方把稳定的一半留在缓存前缀里、变化的一半投到回合尾部(#9/#10)。
-// conflicts 上若挂了 supersededBy(buildMemoryConflictMap 产出),被 confirmed supersedes 指向的行追加 [已被 X 取代](#16)。
 function memorySupersededMarks(conflicts) {
   return conflicts && conflicts.supersededBy instanceof Map && conflicts.supersededBy.size ? conflicts.supersededBy : null;
 }
@@ -57,8 +48,6 @@ function buildMemoryPromptSection(entries, engine, config, conflicts, opts) {
   return [coreSection, relatedSection].filter(Boolean).join('\n');
 }
 
-// 每回合随 query 变化的那一半:检索回执 + 相关记忆索引(不含核心胶囊)。provider 引擎投到末条 user 尾部、Claude/Kimi 拼进回合信封,
-// 稳定的核心胶囊与指南留在缓存前缀 / 去重载荷里(#9/#10:修前这一半跟着前缀走,召回一变整段前缀缓存/去重载荷全断)。
 function buildMemoryTurnSection(entries, engine, config, conflicts, status) {
   return [
     buildMemoryCheckPrompt(status, config),

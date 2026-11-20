@@ -26,12 +26,7 @@ Three styles ship; 'business' is the default. v1.7 gives each a full **name & id
     (vs 白 = 3.82，过 3.0 图形阈值，仍属「金」家族，与鎏金同调而更沉). minimal / vibrant 两色都够深,
     其 accent == accent_on_light. PPT content 标题栏下划线用 accent_on_light (画在白底正文区顶).
 
-中文字体是生死线 (target machine is 中文 Windows): body/heading font names are Chinese-Windows font
-family names ('微软雅黑' / '黑体' / '宋体') that python-docx / openpyxl / python-pptx write verbatim into
-the file, so Office resolves the real CJK font at open time. python-docx additionally needs the
-`w:eastAsia` rFonts attribute set by hand or CJK runs fall back to the theme's minor-EA font (see
-document.py _set_style_font). matplotlib needs an actual font *file*, resolved separately via
-font_chain() below (probing C:\\Windows\\Fonts at call time).
+Office documents declare the CJK family in the document. Charts resolve a local font file.
 """
 
 import os
@@ -285,7 +280,6 @@ def font_chain() -> dict:
         {"family": <name>, "path": <abs font file>}                 on success
         {"family": None,   "path": None, "warning": <中文人话>}      when no CJK font file is found
 
-    Probes C:\\Windows\\Fonts for msyh.ttc -> simhei.ttf -> simsun.ttc at call time (existence check).
     Cached after the first call.
     """
     global _FONT_CHAIN_CACHE

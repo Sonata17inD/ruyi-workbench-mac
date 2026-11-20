@@ -27,7 +27,7 @@ const ZH = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench
 (async () => {
   let fx = null, configReader = null;
   try {
-    fx = await startBrowserFixture({ ok, prefix: 'ruyi-voice-setup-', width: 1400, height: 900, config: { credentialEncryptionV1: process.platform === 'win32' } });
+    fx = await startBrowserFixture({ isolatedKeychain: true, ok, prefix: 'ruyi-voice-setup-', width: 1400, height: 900, config: { credentialEncryptionV1: true } });
     const mic = id => fx.evaluate(`(() => { const b = document.getElementById(${JSON.stringify(id)});
       return b ? { state: b.dataset.state || '', title: b.title || '', label: b.getAttribute('aria-label') || '', pressed: b.getAttribute('aria-pressed') } : null; })()`);
     const waitMic = (id, state) => fx.waitForEval(`(() => { const b = document.getElementById(${JSON.stringify(id)}); return b && b.dataset.state === ${JSON.stringify(state)} ? 1 : null; })()`, 150);
@@ -58,7 +58,7 @@ const ZH = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench
     ok(Boolean(landed) && /asr-add-model/.test(landed.focused), `V2b 焦点落在「模型名」输入框(实测 activeElement.className=${landed && landed.focused})`);
 
     /* ── V3 添加并启用 ── */
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(fx.home);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(fx.home, fx.keychainHelper);
     const before = configReader.recover(JSON.parse(fs.readFileSync(path.join(fx.home, 'config.json'), 'utf8')));
     const keyBefore = ((before.providers || []).find(p => p && p.id === 'fake') || {}).apiKey;
     // 134(4ecd1ed) 起「模型名」是统一下拉,只能选服务商目录里有的:先像「刷新模型清单」那样把 fake-asr 发布进 fake 的目录,再选它。
@@ -80,10 +80,10 @@ const ZH = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'ruyi-workbench
     ok(Boolean(saved) && disk.asrProviderId === 'fake' && disk.asrModel === 'fake-asr' && Boolean(asrModel) && Array.isArray(asrModel.caps) && asrModel.caps.includes('asr'),
       `V3 添加并启用:盘上 config.json 里服务商多了一条带 asr 能力的模型、语音识别选中了它(实测 asr=${disk.asrProviderId}/${disk.asrModel} 模型 ${JSON.stringify(asrModel)})`);
     ok(Boolean(keyBefore) && fake.apiKey === keyBefore, 'V3b 整份服务商回写后,持久凭据解密仍为逐字相同的原值');
-    if (process.platform === 'win32') {
+    {
       const physicalFiles = ['config.json', 'config.json.prev', 'credential-vault-v1.json'].filter(name => fs.existsSync(path.join(fx.home, name)));
       const rawFake = (rawDisk.providers || []).find(provider => provider.id === 'fake');
-      ok(rawDisk.credentialRefsV1?.version === 1 && rawFake?.apiKey === '' && physicalFiles.every(name => !fs.readFileSync(path.join(fx.home, name), 'utf8').includes(keyBefore)), 'V3b1 Windows 主配置、备份及凭据库使用密文引用,不含原密钥明文');
+      ok(rawDisk.credentialRefsV1?.version === 1 && rawFake?.apiKey === '' && physicalFiles.every(name => !fs.readFileSync(path.join(fx.home, name), 'utf8').includes(keyBefore)), 'V3b1 Mac 主配置、备份及凭据库使用密文引用,不含原密钥明文');
     }
     ok((fake.models || []).some(m => (m && typeof m === 'object' ? m.id : m) === 'fake-model'), 'V3c 原来那个聊天模型还在');
 

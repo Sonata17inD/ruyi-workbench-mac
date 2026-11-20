@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   [H-sim] 从项目真实 history-24 的消息内容派生 22K/26K/28K 高密度模拟历史：22K 保持单发，
 //       26K/28K 在 48K 窗口、默认 32K 单发档下由旧 map-reduce 收敛为一次单发。
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -23,7 +23,7 @@ const path = require('path');
 const zlib = require('zlib');
 
 // 隔离纪律(同 context-compact-v2):require server.js 之前把数据根指向临时目录。
-process.env.WIN_CLAUDE_WORKBENCH_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105f-unit-'));
+process.env.RUYI_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-105f-unit-'));
 
 const HERE = __dirname;
 const WB = path.resolve(HERE, '..', 'ruyi-workbench');
@@ -34,7 +34,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failures = 0;
 const ok = (v, l) => { if (v) console.log('PASS ' + l); else { failures++; console.error('FAIL ' + l); } };
 function kill(p) { if (p && p.pid) try { killOwnTree(p); } catch { /* ignore */ } }
-function fakeUp(port, env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(port)], { env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env }, windowsHide: true }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; }
+function fakeUp(port, env) { const p = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(port)], { env: { ...process.env, FAKE_OPENAI_PORT: String(port), ...env } }); p.stdout.on('data', () => {}); p.stderr.on('data', () => {}); return p; }
 const user = content => ({ role: 'user', content });
 // 用真实估算器反推文本长度,避免把字符/token 比假定写死(同 context-compact-v2 的 historyNearTokens)。
 function historyNearTokens(target, blocks) {

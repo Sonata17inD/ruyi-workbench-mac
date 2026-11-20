@@ -2,7 +2,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // Agent 团队 composer mode: UI one-shot contract + live dual-driver prompt injection.
 // Fully offline: fake OpenAI captures request bodies; fake Claude captures argv.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -123,10 +123,10 @@ function capturedUser() {
   }, null, 2));
 
   const fake = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(FAKE_PORT)], {
-    windowsHide: true, env: { ...process.env, FAKE_CAPTURE_DIR: CAPTURE_DIR },
+    env: { ...process.env, FAKE_CAPTURE_DIR: CAPTURE_DIR },
   });
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: path.join(WB, 'tools', 'fake-claude.js'), WCW_FAKE_ARGV_CAPTURE: ARGV_CAPTURE },
   });
   try {

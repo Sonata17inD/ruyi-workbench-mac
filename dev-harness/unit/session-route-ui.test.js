@@ -8,7 +8,7 @@ const path = require('path');
 const vm = require('vm');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-session-route-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const app = path.join(repo, 'ruyi-workbench', 'app');
 const publicDir = path.join(app, 'public');
@@ -39,9 +39,9 @@ test('legacy sessions infer their route from the latest assistant source', () =>
   assert.deepEqual(providerSession.engineRoute, { engine: 'openai', providerId: 'p2', model: 'm2' });
 
   const agentSession = srv.normalizeSession({ messages: [
-    { role: 'assistant', engine: 'claude', agentCliType: 'kimi', model: 'kimi-k2' },
+    { role: 'assistant', engine: 'claude', agentCliType: 'retired-cli', model: 'old-model' },
   ], providerHistory: [], attachments: [] }).session;
-  assert.deepEqual(agentSession.engineRoute, { engine: 'agent', agentCliType: 'kimi', model: 'kimi-k2' });
+  assert.deepEqual(agentSession.engineRoute, { engine: 'agent', agentCliType: 'retired-cli', model: 'old-model' });
 });
 
 test('a live turn stale save cannot overwrite a newer session route choice', async () => {

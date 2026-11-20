@@ -9,7 +9,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-head-adapter-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const SRC = path.resolve(__dirname, '../../ruyi-workbench/app/src');
 const srv = require('../../ruyi-workbench/app/backend/steward-core.cjs').createStewardCore({});

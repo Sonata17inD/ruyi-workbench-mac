@@ -32,15 +32,14 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 判定行：`SHELL MODE LATE CONFIG BROWSER E2E: ALL PASS`。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -87,13 +86,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：每一发都回一段够长的中文，攒够高度让 #messages 真的能滚（B 组要它）。
 async function startProvider(port) {
@@ -260,8 +252,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A0 workbench started');
 
@@ -293,11 +285,11 @@ try {
   // 【先开空白页再导航】：`/api/status` 是 boot 的第一发请求，要拦它就必须在页面加载之前
   // 把 Fetch 域打开 —— 直接把 appUrl 交给浏览器命令行的话，等我们连上 CDP 时它早发完了。
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1280,900',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, 'about:blank',
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForBlankTarget(debugPort);
   ok(Boolean(target), 'A0f browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -425,10 +417,9 @@ try {
   console.log('FAIL 未预期异常: ' + (error && error.message ? error.message : String(error)));
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) { try { provider.close(); } catch { /* ignore */ } }
-  try { stopRuyiTestBrowsers(path.join(root, 'profile')); } catch { /* ignore */ }
 }
 
 console.log(`\nSHELL MODE LATE CONFIG BROWSER E2E: ${fail ? 'FAIL (' + fail + ')' : 'ALL PASS'}`);

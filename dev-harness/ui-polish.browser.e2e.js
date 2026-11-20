@@ -14,7 +14,7 @@ const ok = (value, label) => { console.log((value ? 'PASS ' : 'FAIL ') + label);
       const t = (key, params) => key + (params ? JSON.stringify(params) : '');
       const host = el('div', 'composer'); host.style.cssText = 'position:fixed;top:100px;left:100px;z-index:5000';
       const input = el('textarea'); host.append(input); document.body.append(host);
-      const fakeDoc = { hidden:false, body:document.body, get activeElement(){return document.activeElement;}, addEventListener(){},
+      const fakeDoc = { hidden:false, body:document.body, get activeElement(){return document.activeElement;}, addEventListener(){}, removeEventListener(){},
         querySelector: s => s === '.chat-pane .composer' ? host : s === '#promptInput' ? input : null, querySelectorAll: () => [] };
       let items = [{ id:'a',kind:'shell',shellId:'a',name:'A',startedAt:new Date().toISOString() }, { id:'b',kind:'shell',shellId:'b',name:'B',startedAt:new Date().toISOString() }];
       let offline = false, sid = 'sess_a', resolveConfirm, stoppedUrl = '';

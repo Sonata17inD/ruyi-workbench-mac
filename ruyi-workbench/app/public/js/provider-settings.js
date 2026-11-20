@@ -15,10 +15,10 @@ import { describeHealthItem, healthSummaryText, HEALTH_ACTIONS, HEALTH_ALIAS_IDS
 // 118b: 「怎么办」跳手册时复用经典壳登记的那一个阅读器实例(见 help-viewer.js 的登记处说明)。
 import { openSharedHelpDoc } from './help-viewer.js';
 // 118e: 本机零配置预设(Ollama / LM Studio)的三条纯判定 -- 免 Key、探测失败的人话、手册小节锚点。
-// 事实源在 onboarding-wizard.js(零 import 的纯函数层),设置页与向导共用同一口径,不各写一份。
+// 事实源在 onboarding-wizard.js,设置页与向导共用同一口径,不各写一份。
 import { providerKeyOptional, localEndpointDownKey, LOCAL_MODELS_ANCHOR_KEY, ONBOARDING_MANUAL_DOC_ID, validateBaseUrlShape } from './onboarding-wizard.js';
 // 每个 Agent CLI 的知识（品牌名、路径键、思考强度档位、头像字母……）只问这一张登记表（ENGINEERING-SPEC §11.1）。
-import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_IDS, agentCliMeta, knownAgentCliMeta, normalizeAgentCliType } from './agent-cli-registry.js';
+import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_IDS, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
 // 服务商线协议(provider.apiStyle)只问这一张表(58 号方案批 1;键集合与服务端 04i PROVIDER_WIRE_PROTOCOLS 相同)。
 import { PROVIDER_API_STYLE_DEFAULT, PROVIDER_API_STYLES, normalizeProviderApiStyle, providerApiStyleMeta, PROVIDER_REASONING_EFFORT_CHOICES, ANTHROPIC_AUTH_CHOICES, ANTHROPIC_THINKING_CHOICES } from './provider-api-styles.js';
 import { stripProviderEndpointSuffix, inferProviderApiStyleFromUrl, isAnthropicOfficialUrl, stepAutoProviderStyle } from './provider-api-styles.js';
@@ -225,7 +225,7 @@ function normalizeConversationRoute(raw) {
     return providerId ? { engine: 'openai', providerId, model } : null;
   }
   if (raw.engine === 'agent' || raw.engine === 'claude') {
-    return { engine: 'agent', agentCliType: normalizeAgentCliType(raw.agentCliType), model };
+    return { engine: 'agent', agentCliType: storedAgentCliType(raw.agentCliType), model };
   }
   return null;
 }
@@ -246,7 +246,7 @@ function currentConversationRoute() {
     const provider = (state.config?.providers || []).find(item => item && item.id === providerId);
     return { engine: 'openai', providerId, model: String(provider?.model || '') };
   }
-  return { engine: 'agent', agentCliType: normalizeAgentCliType(state.config?.agentCliType), model: String(state.config?.model || '') };
+  return { engine: 'agent', agentCliType: storedAgentCliType(state.config?.agentCliType), model: String(state.config?.model || '') };
 }
 // The model id currently in effect for the opened conversation. Global config is only the fallback used
 // before a session exists; switching sessions restores that session's pinned route.
@@ -263,38 +263,37 @@ function activeProviderObj() {
   return (state.config.providers || []).find(p => p.id === route.providerId) || null;
 }
 function currentAgentCliType() {
-  return normalizeAgentCliType(String(currentConversationRoute().agentCliType || state.config?.agentCliType || AGENT_CLI_DEFAULT_ID));
+  return storedAgentCliType(String(currentConversationRoute().agentCliType || state.config?.agentCliType || AGENT_CLI_DEFAULT_ID));
 }
 function currentAgentCliLabel() {
-  return agentCliMeta(currentAgentCliType()).label;
+  const id = currentAgentCliType();
+  return knownAgentCliMeta(id)?.label || t('engine.unavailable', { id });
 }
 function currentAgentCliPath() {
-  const { pathKey, detectedKey } = agentCliMeta(currentAgentCliType());
+  const meta = knownAgentCliMeta(currentAgentCliType());
+  if (!meta) return '';
+  const { pathKey, detectedKey } = meta;
   return state.config?.[pathKey] || state.status?.[detectedKey] || '';
 }
 // W6：「用哪个命令行引擎」并进了「模型分配」的主模型那一行（原 #cfgAgentCliType 那枚选择器退役），所以这里按
 // 【全局】config.agentCliType 显隐 —— 设置页讲的是全局默认，不是正在看的那条线程（修前退回 currentAgentCliType()
 // 会跟着线程路由走）。命令行引擎页顶上那一行说明也在这里写（写的是哪一个、去哪儿换）。
 function settingsAgentCliType() {
-  return normalizeAgentCliType(String((state.config && state.config.agentCliType) || AGENT_CLI_DEFAULT_ID));
+  return storedAgentCliType(state.config?.agentCliType);
 }
 function updateAgentCliSettingsVisibility() {
   const type = settingsAgentCliType();
-  { const note = $('agentCliCurrentHint'); if (note) note.textContent = t('settings.agentCli.current', { name: agentCliMeta(type).label }); }
+  const meta = knownAgentCliMeta(type);
+  { const note = $('agentCliCurrentHint'); if (note) note.textContent = t('settings.agentCli.current', { name: meta?.label || t('engine.unavailable', { id: type }) }); }
   document.querySelectorAll('[data-agent-cli-path]').forEach(node => node.classList.toggle('hidden', node.dataset.agentCliPath !== type));
   document.querySelectorAll('[data-agent-cli-only]').forEach(node => node.classList.toggle('hidden', node.dataset.agentCliOnly !== type));
   const effort = $('cfgThinkingEffort');
   if (effort) {
-    const supported = agentCliMeta(type).settingsThinkingEfforts;   // null = 全部档位可用
-    for (const option of effort.options) {
-      const unavailable = Boolean(supported && !supported.includes(option.value));
-      option.disabled = unavailable;
-      option.hidden = unavailable;
-    }
-    if (supported && !supported.includes(effort.value)) effort.value = '';
+    effort.disabled = !meta;
+    if (!meta) effort.value = '';
   }
   const hint = $('agentCliCapabilityHint');
-  if (hint) hint.textContent = t(`settings.agentCli.hint.${type}`);
+  if (hint) hint.textContent = meta ? t(`settings.agentCli.hint.${type}`) : t('engine.unavailable', { id: type });
 }
 // 123-N2:设置页那一行说明 —— 「上次用的」现在【具体是什么】。没有这一行,那个选项就是一句
 // 无法验证的承诺(用户看不出它记住的是哪一个),而这正是用户报的那条病的反面。
@@ -309,8 +308,8 @@ function lastUsedEngineText() {
     const p = (c.providers || []).find(item => item && item.id === raw.providerId) || null;
     meta = { engine: 'openai', providerId: String(raw.providerId), providerLabel: (p && (p.label || p.id)) || String(raw.providerId), model: String(raw.model || '') };
   } else {
-    const cli = agentCliMeta(raw.agentCliType);
-    meta = { engine: 'claude', agentCliType: cli.id, agentCliLabel: cli.label, model: String(raw.model || '') };
+    const id = storedAgentCliType(raw.agentCliType);
+    meta = { engine: 'claude', agentCliType: id, agentCliLabel: knownAgentCliMeta(id)?.label || t('engine.unavailable', { id }), model: String(raw.model || '') };
   }
   const label = engineVisual(meta).label;
   return t('settings.newThreadEngine.lastIs', { p1: meta.model ? `${label} · ${meta.model}` : label });
@@ -331,7 +330,7 @@ function parseMainEngineValue(value) {
   const raw = String(value || '');
   if (raw.startsWith(CLI_ENGINE_PREFIX)) {
     const type = raw.slice(CLI_ENGINE_PREFIX.length);
-    return { cli: normalizeAgentCliType(type), providerId: '' };
+    return { cli: storedAgentCliType(type), providerId: '' };
   }
   return raw ? { cli: '', providerId: raw } : { cli: settingsAgentCliType(), providerId: '' };
 }
@@ -344,11 +343,16 @@ function fillMainEngineSelects() {
   fillProviderSelect(provSel, {
     lead: AGENT_CLI_IDS.map(type => ({ value: cliEngineValue(type), label: t('settings.models.cliOption', { name: agentCliMeta(type).label }) })),
     providers: chatProviders(c),
-    value: pid || cliEngineValue(settingsAgentCliType()),
-    savedLabel: value => t('settings.steward.providerSaved', { value }),
+    value: pid || cliEngineValue(storedAgentCliType(c.agentCliType)),
+    savedLabel: value => value.startsWith(CLI_ENGINE_PREFIX) ? t('engine.unavailable', { id: value.slice(CLI_ENGINE_PREFIX.length) }) : t('settings.steward.providerSaved', { value }),
   });
   const fillModels = () => {
     const pick = parseMainEngineValue(provSel.value);
+    modelSel.disabled = Boolean(pick.cli && !knownAgentCliMeta(pick.cli));
+    if (modelSel.disabled) {
+      modelSel.replaceChildren(new Option(state.config.model || t('engine.unavailable', { id: pick.cli }), state.config.model || ''));
+      return;
+    }
     const provider = () => (state.config.providers || []).find(p => p.id === pick.providerId);
     // 换到另一个命令行引擎时，旧引擎的模型名对新引擎没有意义：清成它自己的缺省。
     const sameCli = Boolean(pick.cli) && pick.cli === settingsAgentCliType();
@@ -366,14 +370,12 @@ function fillMainEngineSelects() {
 }
 async function setGlobalEngineDefault(engineValue, modelId) {
   const pick = parseMainEngineValue(engineValue);
+  if (pick.cli && !knownAgentCliMeta(pick.cli)) return false;
   const pid = pick.providerId, model = String(modelId || '');
   const patch = { activeProvider: pid };
   if (pid) patch.providers = (Array.isArray(state.config.providers) ? state.config.providers : []).map(p => (p && p.id === pid ? { ...p, model } : p));
   else { patch.model = model; patch.agentCliType = pick.cli; }
   const cliChanged = !pid && pick.cli !== settingsAgentCliType();
-  // 修前页脚「保存」里的那一段原样搬来：全局命令行引擎换了、而正打开的这条线程走的就是命令行引擎 —— 这条线程跟着换。
-  // 判据必须在落盘【之前】取：没钉路由的线程会回落到全局，落盘之后再问就问成了新值。
-  const followOpened = cliChanged && Boolean(state.currentSession?.id && currentConversationRoute().engine === 'agent');
   const provSel = $('cfgMainProvider'), modelSel = $('cfgMainModel');
   if (provSel) provSel.disabled = true; if (modelSel) modelSel.disabled = true;
   const saved = await saveConfigPartial(patch);
@@ -381,23 +383,11 @@ async function setGlobalEngineDefault(engineValue, modelId) {
   if (!saved) { fillMainEngineSelects(); return false; }
   if (cliChanged) {
     updateAgentCliSettingsVisibility();
-    if (followOpened) await followOpenedAgentRoute(pick.cli);
     void refreshModels();
   }
   updateEngineDependentUI();
   toast(t('settings.mainEngine.toast'), 'ok');
   return true;
-}
-async function followOpenedAgentRoute(type) {
-  if (!state.currentSession?.id) return;
-  const engineRoute = { engine: 'agent', agentCliType: normalizeAgentCliType(type), model: currentModelId() };
-  try {
-    const result = await api(`/api/sessions/${encodeURIComponent(state.currentSession.id)}`, {
-      method: 'POST', headers: { 'content-type': 'application/json', 'x-http-method': 'PATCH' }, body: JSON.stringify({ engineRoute }),
-    });
-    if (result?.session) state.currentSession = result.session;
-    else state.currentSession.engineRoute = engineRoute;
-  } catch (error) { toast(t('toast.saveFail', { p1: apiErrText(error) }), 'err'); }
 }
 // W6「模型分配」里 provider-settings 管的另两行：上下文压缩、子代理（管家三行归 steward-settings.js，句尾改错归语音那一段）。
 // 同一个组件：左边 fillProviderSelect、右边 bindModelSelect；服务商一换模型清空（＝那一家的缺省模型），选中即存。
@@ -456,7 +446,7 @@ function engineVisual(meta) {
   if (meta.engine === 'claude' || (!meta.engine && !meta.providerId)) {
     const type = meta.agentCliType || currentAgentCliType();
     const label = meta.agentCliLabel || knownAgentCliMeta(type)?.label || 'Agent CLI';
-    return { letter: agentCliMeta(type).avatarLetter, colorVar: 'var(--accent)', label }; // Agent CLI drivers share the local-engine color family.
+    return { letter: knownAgentCliMeta(type)?.avatarLetter || '?', colorVar: 'var(--accent)', label }; // Agent CLI drivers share the local-engine color family.
   }
   const id = String(meta.providerId || '').toLowerCase();
   const label = meta.providerLabel || meta.providerId || 'provider';
@@ -503,8 +493,6 @@ async function refreshModels(announce, context = {}) {
   try {
     const r = await api('/api/models' + routeQuery);
     const fresh = r && Array.isArray(r.models) ? r.models : [];
-    // ok:false 只说明【探测那一步】没成（典型：Kimi Code CLI 没检测到），载荷里的 models 仍是这个端点
-    // 自己的离线兜底清单 —— 有货就照样折回列表，只有「既没成也没货」才算刷新失败。
     if (r && r.ok === false && !fresh.length) throw new Error(apiErrText(r.error) || t('modelMenu.refreshUnchanged'));
     if (fresh.length) {
       if (r.engine === 'openai' && r.provider) {
@@ -803,7 +791,6 @@ function fillSettings() {
   { const el0 = $('cfgUiMode'); if (el0) el0.value = (c.uiMode === 'simple' ? 'simple' : 'pro'); } // v0.9-S1
   { const el0 = $('cfgOutputStyle'); if (el0) el0.value = (c.outputStyle === 'concise' ? 'concise' : 'detailed'); } // v0.9-S1
   $('claudePathInput').value = c.claudePath || state.status?.detectedClaudePath || '';
-  $('kimiPathInput').value = c.kimiPath || state.status?.detectedKimiPath || '';
   // W6：权限与安全页的两条等待时限；用量与限额页的回合看门狗（turnIdleTimeoutMs，按分钟显示）。
   fillWaitSelect('cfgPermissionTimeout', PERMISSION_WAIT_CHOICES, c.permissionTimeoutMs);
   fillWaitSelect('cfgQuestionTimeout', QUESTION_WAIT_CHOICES, c.questionTimeoutMs);
@@ -1718,7 +1705,6 @@ const INSTANT_SETTINGS = Object.freeze([
   { ids: ['cfgNewThreadEngine'], patch: () => ({ newThreadEngine: $('cfgNewThreadEngine').value === 'global' ? 'global' : 'last' }), after: () => fillMainEngineSelects() },
   // ── Agent CLI（命令行引擎）──
   { ids: ['claudePathInput'], patch: () => ({ claudePath: $('claudePathInput').value.trim() }), after: refreshAfterSave },
-  { ids: ['kimiPathInput'], patch: () => ({ kimiPath: $('kimiPathInput').value.trim() }), after: refreshAfterSave },
   { ids: ['cfgPartial'], patch: () => ({ includePartialMessages: $('cfgPartial').checked }) },
   { ids: ['cfgBeta'], patch: () => ({ betaInterleavedThinking: $('cfgBeta').checked }) },
   { ids: ['cfgResume'], patch: () => ({ autoResumeClaudeSessions: $('cfgResume').checked }) },

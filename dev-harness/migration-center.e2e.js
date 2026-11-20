@@ -1,17 +1,16 @@
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——本件还另起一份自己的临时家，服务的导入/同步两个方向都只碰它（见 lib 头注）
 'use strict';
-// E2E(W2 迁移中心,56 号文 §3):从 Claude Code / Codex / Kimi 与老版本如意迁移到当前包。
+// E2E(W2 迁移中心,56 号文 §3):从 Claude Code / Codex 与老版本如意迁移到当前包。
 //
 // 隔离:本件自建临时根 ROOT,工作台的 HOME/USERPROFILE 与数据根都指进去(测试绝不碰真机家目录 ——
 // 真机 ~/.claude.json 被夹具污染过三次);回收站动作经测试钩子 RUYI_MIGRATION_RECYCLE_STUB_DIR 换成「挪进一个临时目录」。
 //
 // 造的现场(隔离家里):
 //   ~/.claude/CLAUDE.md · ~/.codex/AGENTS.md · ~/.codex/config.toml(含 mcp)· ~/.codex/skills/x-codex-skill/SKILL.md
-//   ~/.kimi-code/mcp.json(一条 Kimi 自己的 + 一条如意同步过去的)· 假老包 OLD1(app/server.js 等)
 //   ~/.claude.json 引用 OLD1(一条能改到新版的、一条新包里没有对应文件的)· 登记表里一个「正在运行」的老包 OLD0
 // 判据(派单验收):
 //   A  启动即导入:指令文件成核心记忆(core:true / convention / 前言记来源与哈希);MCP 三源导入且打来源标记,
-//      如意自己的入口与 Kimi 里如意同步过去的条目不导;技能来源出现 codex
+//      如意自己的入口不导;技能来源出现 codex
 //   B  scan 全部列出(指令/ MCP / 技能 / 老包引用 / 老包),首启提示 show
 //   C  去重:provider 引擎的系统提示里有 claude-md 那条;Claude 引擎回合的 stdin 注入里没有它(codex 那条两边都有)
 //   D  来源变更自动同步;用户改过的不覆盖,只标 source-updated;移除后记 dismissed 不再自动导回
@@ -21,7 +20,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   H  (W8)技能「复制到如意」:按来源逐目录列出(含被遮住的)与五种状态;整目录复制 + 来源记录;符号链接/联接不复制;
 //      注册表里变 user 且带 copiedFrom;来源变 → 可更新;副本改过 → 不带 overwrite 拒绝;同名用户技能/另一来源副本 → 拒绝;
 //      超 20 MB / 500 个文件拒绝;路径穿越 key 拒绝;撤销只删没改过的副本、撤销更新换回旧副本
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -47,8 +46,8 @@ const readText = file => { try { return fs.readFileSync(file, 'utf8'); } catch {
 function makePackage(root, version) {
   write(path.join(root, 'app', 'server.js'), '// fake old ruyi package\n');
   write(path.join(root, 'package.json'), JSON.stringify({ name: 'ruyi-workbench', version }));
-  write(path.join(root, 'Start-Workbench.cmd'), '@echo off\r\n');
-  write(path.join(root, 'mcp', 'ai-computer-control', 'python_embed', 'python.exe'), '');
+  write(path.join(root, 'start-macos.command'), '#!/bin/sh\n');
+  write(path.join(root, 'runtime', 'python-previous', 'bin', 'python3'), '');
 }
 
 // ---- fixtures -------------------------------------------------------------------------------------------
@@ -57,20 +56,15 @@ write(path.join(HOME, '.codex', 'AGENTS.md'), '# Codex 规则\n\nCODEX_AGENTS_MA
 write(path.join(HOME, '.gemini', 'GEMINI.md'), '# Gemini\n\nGEMINI_MD_MARKER\n');
 write(path.join(HOME, '.codex', 'config.toml'), 'model = "gpt-5"\n\n[mcp_servers.codex-fs]\ncommand = "node"\nargs = ["codex-fs.js"]\n');
 write(path.join(HOME, '.codex', 'skills', 'x-codex-skill', 'SKILL.md'), '---\nname: X Codex Skill\ndescription: CODEX_SKILL_MARKER 来自 Codex 的技能\n---\n\n# body\n');
-write(path.join(HOME, '.kimi-code', 'mcp.json'), JSON.stringify({ mcpServers: {
-  'kimi-tool': { command: 'node', args: ['kimi-tool.js'] },
-  'ruyi-managed': { command: 'node', args: ['managed.js'] },
-} }, null, 2));
 makePackage(OLD1, '1.0.0');
 makePackage(OLD0, '0.9.0');
 const CLAUDE_JSON = path.join(HOME, '.claude.json');
 const CLAUDE_JSON_ORIGINAL = { numStartups: 3, mcpServers: {
   'claude-tool': { type: 'stdio', command: 'node', args: ['claude-tool.js'], env: {} },
   'old-bridge': { type: 'stdio', command: 'node', args: [path.join(OLD1, 'app', 'server.js'), 'mcp'], env: {} },
-  'ai-computer-control': { type: 'stdio', command: path.join(OLD1, 'mcp', 'ai-computer-control', 'python_embed', 'python.exe'), args: ['-m', 'ai_computer_control.server'], env: {} },
+  'ai-computer-control': { type: 'stdio', command: path.join(OLD1, 'runtime', 'python-previous', 'bin', 'python3'), args: ['-m', 'ai_computer_control.server'], env: {} },
 } };
 write(CLAUDE_JSON, JSON.stringify(CLAUDE_JSON_ORIGINAL, null, 2));
-write(path.join(DATA, 'kimi-mcp-sync.json'), JSON.stringify({ managedIds: ['ruyi-managed'], previous: {} }));
 write(path.join(DATA, 'install-registry.json'), JSON.stringify({ schema: 1, packages: [
   { packageRoot: OLD0, version: '0.9.0', launchMode: 'node', firstSeenAt: new Date().toISOString(), lastLaunchedAt: new Date().toISOString(), pid: process.pid },
 ] }));
@@ -124,11 +118,11 @@ const apply = async body => request('POST', '/api/migration/apply', body);
     onboarding: { completedAt: '2026-09-13T00:00:00.000Z', version: 1, skipped: false },
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + providerPort, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
   }, null, 2));
-  const env = { ...process.env, RUYI_HOME: DATA, WIN_CLAUDE_WORKBENCH_HOME: DATA, HOME, USERPROFILE: HOME,
+  const env = { ...process.env, RUYI_HOME: DATA, HOME, USERPROFILE: HOME,
     WCW_DATA_DIR: path.join(ROOT, 'acc-data'), RUYI_MIGRATION_RECYCLE_STUB_DIR: STUB,
     WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP };
-  delete env.CODEX_HOME; delete env.KIMI_CODE_HOME; // 各家覆盖变量一律不带进去 —— 只认隔离家
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env, windowsHide: true });
+  delete env.CODEX_HOME; // 各家覆盖变量一律不带进去 —— 只认隔离家
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let up = false;
@@ -153,8 +147,6 @@ const apply = async body => request('POST', '/api/migration/apply', body);
     const ext = id => (cfg1.externalMcpServers || []).find(s => s && s.id === id);
     ok(ext('claude-tool') && ext('claude-tool').origin === 'claude-code', 'A4 Claude Code 的 MCP 自动导入,origin=claude-code');
     ok(ext('codex-fs') && ext('codex-fs').origin === 'codex' && ext('codex-fs').command === 'node', 'A5 Codex config.toml 的 MCP 自动导入,origin=codex');
-    ok(ext('kimi-tool') && ext('kimi-tool').origin === 'kimi', 'A6 Kimi mcp.json 的 MCP 自动导入,origin=kimi');
-    ok(!ext('ruyi-managed'), 'A7 Kimi 里如意自己同步过去的条目(kimi-mcp-sync.json 记着)不导回来');
     ok(!ext('old-bridge') && !ext('ai-computer-control'), 'A8 指向如意包 app/server.js 的入口与保留 id 不导(不让如意连自己)');
     const skills = await request('GET', '/api/skills');
     const codexSkill = skills && skills.json && (skills.json.skills || []).find(s => s.id === 'x-codex-skill');
@@ -164,11 +156,11 @@ const apply = async body => request('POST', '/api/migration/apply', body);
     const s1 = await scan();
     ok(s1 && s1.ok, 'B0 scan ok');
     const instr = key => (s1.instructions || []).find(x => x.key === key) || {};
-    ok(instr('claude-md').status === 'imported' && instr('codex-agents').status === 'imported' && instr('kimi-agents').status === 'absent',
-      'B1 指令文件逐项状态(claude-md/codex-agents 已导入,kimi 无此文件)');
+    ok(instr('claude-md').status === 'imported' && instr('codex-agents').status === 'imported',
+      'B1 指令文件逐项状态(claude-md/codex-agents 已导入)');
     ok(instr('gemini-md').status === 'importable' && !fs.existsSync(path.join(memDir, 'agentmd-gemini-md-1.md')), 'B1b Gemini(非点名三家)只列为可导入,启动期不自动导');
     const mcpRow = (origin, id) => (s1.mcp.servers || []).find(x => x.origin === origin && x.id === id) || {};
-    ok(mcpRow('codex', 'codex-fs').status === 'imported' && mcpRow('kimi', 'ruyi-managed').reason === 'ruyi-managed'
+    ok(mcpRow('codex', 'codex-fs').status === 'imported'
       && mcpRow('claude-code', 'old-bridge').reason === 'ruyi-self', 'B2 MCP 逐项状态与跳过原因');
     ok((s1.skills || []).some(x => x.id === 'x-codex-skill' && x.source === 'codex'), 'B3 技能来源 codex 列出');
     const refBridge = (s1.refs || []).find(r => r.serverId === 'old-bridge');
@@ -268,14 +260,13 @@ const apply = async body => request('POST', '/api/migration/apply', body);
     ok(seen && seen.json && seen.json.ok && seen.json.seen > 0, 'G1 markSeen ok');
     const s7 = await scan();
     ok(s7.prompt && s7.prompt.show === false, 'G1b 看过之后不再提示');
-    write(path.join(HOME, '.kimi-code', 'AGENTS.md'), '# Kimi\n\nKIMI_AGENTS_MARKER\n');
+    fs.appendFileSync(path.join(HOME, '.codex', 'config.toml'), '\n[mcp_servers.later]\ncommand = "node"\nargs = ["later.js"]\n');
     const s8 = await scan();
-    ok(s8.prompt && s8.prompt.show === true && (s8.instructions.find(x => x.key === 'kimi-agents') || {}).status === 'imported', 'G3 出现新来源(Kimi 全局 AGENTS.md)→ 自动导入且再提示一次');
+    ok(s8.prompt.show && s8.mcp.servers.some(server => server.origin === 'codex' && server.id === 'later'), 'G3 看过后出现新 MCP 时再次提示');
 
     // ── H 技能「复制到如意」(W8)──
     const CC = path.join(HOME, '.claude', 'skills');
     const CX = path.join(HOME, '.codex', 'skills');
-    const KM = path.join(HOME, '.kimi-code', 'skills');
     const USK = path.join(DATA, 'skills');
     const OUTSIDE = path.join(ROOT, 'outside');
     write(path.join(OUTSIDE, 'secret.txt'), 'OUTSIDE_SECRET_MARKER\n');
@@ -363,10 +354,10 @@ const apply = async body => request('POST', '/api/migration/apply', body);
     ok(noTokCopy && noTokCopy.status === 403, 'H11c 不带 token 的 copy 被 403');
 
     // 撤销:同一次复制里,没改过的删掉、改过的保留并说明
-    write(path.join(KM, 'w8-c', 'SKILL.md'), '# c\n');
-    write(path.join(KM, 'w8-d', 'SKILL.md'), '# d\n');
-    const c9 = await copySkills({ keys: ['kimi:w8-c', 'kimi:w8-d'] });
-    ok(c9 && c9.json.copied === 2, 'H12 kimi 两项复制');
+    write(path.join(CX, 'w8-c', 'SKILL.md'), '# c\n');
+    write(path.join(CX, 'w8-d', 'SKILL.md'), '# d\n');
+    const c9 = await copySkills({ keys: ['codex:w8-c', 'codex:w8-d'] });
+    ok(c9 && c9.json.copied === 2, 'H12 codex 两项复制');
     fs.appendFileSync(path.join(USK, 'w8-d', 'SKILL.md'), 'USER_EDIT_D\n', 'utf8');
     const u1 = await request('POST', '/api/migration/undo', { id: c9.json.id });
     const sk1 = (u1 && u1.json && u1.json.skills) || [];
@@ -374,7 +365,7 @@ const apply = async body => request('POST', '/api/migration/apply', body);
       && (sk1.find(x => x.id === 'w8-c') || {}).outcome === 'removed' && (sk1.find(x => x.id === 'w8-d') || {}).reason === 'edited',
       'H12b 撤销只删没改过的副本(w8-c),改过的(w8-d)保留并说明 edited');
     const sk2 = await request('GET', '/api/skills');
-    ok(((sk2 && sk2.json && sk2.json.skills) || []).some(s => s.id === 'w8-c' && s.source === 'kimi'), 'H12c 撤销后 w8-c 回到活读(来源 kimi)');
+    ok(((sk2 && sk2.json && sk2.json.skills) || []).some(s => s.id === 'w8-c' && s.source === 'codex'), 'H12c 撤销后 w8-c 回到活读(来源 codex)');
     // 撤销「更新」:换回更新前的副本
     const u2 = await request('POST', '/api/migration/undo', { id: updateLogId });
     ok(u2 && u2.json.ok && ((u2.json.skills || [])[0] || {}).outcome === 'restored-previous' && readText(path.join(USK, 'w8-a', 'ref', 'notes.md')) === 'NOTES_V1\n'

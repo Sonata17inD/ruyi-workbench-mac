@@ -12,7 +12,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   (4) 项目记忆随 cwd 切换正确换组(两个临时项目各自 projectKey 隔离).
 //   (5) 默认项目+全局轻量检索、零命中回执、会话排除/关闭/恢复默认。
 //   extras: cwd 越界回退;伪造围栏中和;8000 合成三段优先级(用户 > 技能 > 记忆).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 
 const { getFreePort } = require('./free-port.js');
@@ -125,7 +125,7 @@ function memorySection(sys) { const start = sys.indexOf('以下为本会话已�
 function readLedgerRows() { try { const dir = path.join(HOME, 'usage'); return fs.readdirSync(dir).filter(f => f.endsWith('.jsonl')).flatMap(f => fs.readFileSync(path.join(dir, f), 'utf8').split(/\r?\n/).filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)); } catch { return []; } }
 
 let fake = null;
-function startFake(extraEnv) { return new Promise(resolve => { fake = cp.spawn(process.execPath, [FAKE, String(FAKE_PORT)], { windowsHide: true, env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, FAKE_DRAFT_JSON: DRAFT_JSON, ...extraEnv } }); fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); fake.stderr.on('data', d => String(d).trim() && console.log('[fake!] ' + String(d).trim())); setTimeout(resolve, 400); }); }
+function startFake(extraEnv) { return new Promise(resolve => { fake = cp.spawn(process.execPath, [FAKE, String(FAKE_PORT)], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_CAPTURE_DIR: CAP_DIR, FAKE_DRAFT_JSON: DRAFT_JSON, ...extraEnv } }); fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim())); fake.stderr.on('data', d => String(d).trim() && console.log('[fake!] ' + String(d).trim())); setTimeout(resolve, 400); }); }
 function stopFake() { return new Promise(resolve => { if (fake && fake.pid) { try { killOwnTree(fake); } catch { /* ignore */ } } fake = null; setTimeout(resolve, 200); }); }
 
 // save a memory via the API; returns the saved {id,scope,file,...}
@@ -138,8 +138,8 @@ async function saveMem(id, scope, name, description, body, cwd, type = 'conventi
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   await startFake({});
-  const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_DATA_DIR: path.join(HOME, 'isolated-acc-data'), USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP };
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+  const env = { ...process.env, RUYI_HOME: HOME, WCW_DATA_DIR: path.join(HOME, 'isolated-acc-data'), USERPROFILE: HOME, HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: ARGV_CAP, WCW_FAKE_STDIN_CAPTURE: STDIN_CAP };
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {

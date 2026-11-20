@@ -42,7 +42,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   const workbench = path.join(bundle, 'Contents/Resources/workbench');
   const home = path.join(staging, 'home');
   fs.mkdirSync(home);
-  const env = { HOME: home, USERPROFILE: home, LOCALAPPDATA: path.join(home, 'local'), APPDATA: path.join(home, 'roaming'),
+  const env = { HOME: home,
     TMPDIR: path.join(staging, 'tmp'), LANG: 'en_US.UTF-8', PYTHONUTF8: '1',
     PATH: '/usr/bin:/bin:/usr/sbin:/sbin', PYTHONPATH: '', PYTHONHOME: '', PYTHONNOUSERSITE: '1', PYTHONDONTWRITEBYTECODE: '1',
     PIP_NO_INDEX: '1', PIP_DISABLE_PIP_VERSION_CHECK: '1', PIP_CONFIG_FILE: '/dev/null', PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
@@ -73,7 +73,10 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
       copyTree(inputs.python.directory, pythonRoot);
       const python = path.join(pythonRoot, 'bin/python3');
       const wheels = path.join(staging, 'wheels');
-      copyTree(inputs.wheels.directory, wheels);
+      fs.mkdirSync(wheels);
+      for (const { filename } of lock.wheels) {
+        fs.copyFileSync(path.join(inputs.wheels.directory, filename), path.join(wheels, filename), fs.constants.COPYFILE_FICLONE);
+      }
       const requirementFile = path.join(acc, 'requirements.lock.txt');
       fs.copyFileSync(path.join(repo, lock.requirements), requirementFile);
       if (sha256(requirementFile) !== lock.requirementsSha256) throw new Error('Requirements lock changed');

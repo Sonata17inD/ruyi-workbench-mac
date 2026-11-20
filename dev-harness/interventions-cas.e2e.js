@@ -14,7 +14,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //        after_terminal (terminal) -> 不变(已终态,boot 不动)。
 //  (e) 静态锁:transitionInterventionState / INTERVENTION_TERMINAL / indeterminate / test 端点在 server.js。
 // 测试端点 /api/_test/intervention-cas 由 RUYI_TEST_HOOKS=1 env 门控(生产 404)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -81,7 +81,7 @@ function seedPending(sid, ivId) {
   fs.writeFileSync(ivFile(sid), JSON.stringify(rec) + '\n', 'utf8');
 }
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' } });
 }
 async function cas(token, sid, ivId, expectedVersion, toStatus, crashAt, source) {
   const body = { sessionId: sid, ivId, expectedVersion, toStatus };

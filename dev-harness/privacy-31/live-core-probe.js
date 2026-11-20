@@ -18,7 +18,6 @@ async function main() {
   const configArgument = process.argv.find(x => x.startsWith('--config='));
   const configFile = configArgument ? path.resolve(configArgument.slice(9)) : [
     process.env.RUYI_HOME && path.join(process.env.RUYI_HOME, 'config.json'),
-    process.env.WIN_CLAUDE_WORKBENCH_HOME && path.join(process.env.WIN_CLAUDE_WORKBENCH_HOME, 'config.json'),
     path.join(os.homedir(), '.ruyi-workbench/config.json'), path.join(os.homedir(), '.win-claude-workbench/config.json'),
   ].filter(Boolean).find(file => fs.existsSync(file));
   if (!configFile) failure('config_not_found');

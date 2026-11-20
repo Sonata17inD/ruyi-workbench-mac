@@ -16,7 +16,7 @@ let moved, running;
     if (process.platform !== 'darwin') { console.log('SKIP actual Trash requires macOS'); return; }
     const home = path.join(root, 'home'), data = path.join(home, 'data');
     process.env.HOME = process.env.USERPROFILE = home; process.env.RUYI_HOME = data;
-    delete process.env.WIN_CLAUDE_WORKBENCH_HOME; delete process.env.RUYI_MIGRATION_RECYCLE_STUB_DIR;
+     delete process.env.RUYI_MIGRATION_RECYCLE_STUB_DIR;
     write(path.join(data, 'config.json'), JSON.stringify({ configSchema: 14, providers: [], includeWorkbenchMcp: false,
       autoImportClaudeCodeMcp: false, stewardEnabledV1: false, schedulerEnabledV1: false, desktopMcp: { enabled: false, autodetect: false } }));
     const helper = process.env.RUYI_TRASH_HELPER || buildMacTrashHelper(path.join(root, 'trash-helper'));

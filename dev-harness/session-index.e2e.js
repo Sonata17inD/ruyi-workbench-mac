@@ -13,7 +13,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  ⑥ DELETE a session over HTTP → index drops it; list stays correct.
 // Judgement line (exact): SESSION-INDEX E2E: ALL PASS
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -84,9 +84,9 @@ const byId = arr => new Map((arr || []).map(e => [String(e.id), e]));
     activeProvider: 'fake',
   }, null, 2));
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT) } });
   fake.stdout.on('data', () => {});
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   let wb2 = null; // PF2 ⑧: a second (restarted) instance, killed in finally
 
@@ -219,7 +219,7 @@ const byId = arr => new Map((arr || []).map(e => [String(e.id), e]));
     const staleIdx = realIdx.map(e => (String(e.id) === ids[0] ? { ...e, title: 'CRASH-STALE-TITLE' } : e)); // id-set unchanged
     fs.writeFileSync(IDX, JSON.stringify(staleIdx, null, 2));
     ok(byId(readIndexFile()).get(ids[0]).title === 'CRASH-STALE-TITLE', '⑧ planted a crash-stale index (id-set intact, one title wrong)');
-    wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+    wb2 = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wb2.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb2!] ' + l.trim())));
     let h2 = null; for (let i = 0; i < 40 && !h2; i++) { await sleep(150); h2 = await health(WB_PORT); }
     ok(!!h2, '⑧ workbench restarted on :' + WB_PORT);

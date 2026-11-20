@@ -20,7 +20,7 @@ const { shellTool, echo, delay } = require('./lib/platform-shell-fixture');
 //  H  子代理事件层:子代理的 tool_use/tool_result 带 subagentId;活回合的 liveTail.tools 不含子代理工具(父实时工具列表零泄漏)。
 //  I  MCP 面:tools/list 无 spawn_agent、有 orchestrate_agents/wait_agents/agent_result;tools/call agent_result 经回环取到全文;
 //     tools/call spawn_agent 被翻译成单节点 orchestrate 并附「已并入」提示。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -118,8 +118,8 @@ try {
     subTextByTask: { '快速同步分析': '同步节点结论:' + 'S'.repeat(3000), '慢速后台收件': '后台慢节点结论。', '瞬时后台收件': '后台瞬时节点结论。', 'MCP 快任务': 'MCP 节点结论。' },
     parentText: '父回合完成。',
   });
-  fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_SUBAGENT_SCRIPT: script, FAKE_CAPTURE_DIR: CAP }, windowsHide: true });
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_SUBAGENT_SCRIPT: script, FAKE_CAPTURE_DIR: CAP } });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).trim() && console.log('[wb!] ' + String(d).trim()));
   let up = null; for (let i = 0; i < 80 && !up; i++) { await sleep(150); up = await health(); }
   ok(!!up, 'workbench starts');
@@ -272,7 +272,7 @@ try {
   // 改用源锁(agent-mode-v2.static)钉 appendLiveTail 的 subagentId 早退;这里只断言事件层形状。
 
   // ── I MCP 面 ──
-  mcp = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, WCW_SESSION_ID: sid, WCW_PORT: String(WB_PORT), WCW_HOST: '127.0.0.1', WCW_TOKEN: tok }, windowsHide: true });
+  mcp = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, RUYI_HOME: HOME, WCW_SESSION_ID: sid, WCW_PORT: String(WB_PORT), WCW_HOST: '127.0.0.1', WCW_TOKEN: tok } });
   mcp.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[mcp!] ' + l.trim())));
   const pending = new Map(); let mbuf = ''; let idc = 0;
   mcp.stdout.on('data', d => { mbuf += d; let nl; while ((nl = mbuf.indexOf('\n')) >= 0) { const line = mbuf.slice(0, nl); mbuf = mbuf.slice(nl + 1); if (!line.trim()) continue; try { const m = JSON.parse(line); if (m.id !== undefined && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } } catch {} } });

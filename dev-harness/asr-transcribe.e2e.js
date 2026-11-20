@@ -18,7 +18,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   反向:把 05 的协议分叉改成永远走 transcriptions → H2 红(回显来自 chat 支的桩,Whisper 支给不出)。
 // 2026-10 追加 H5-H7:对话型服务商上的百炼 fun-asr-* 改打 DashScope 原生口(兼容口真机回 400 `{}`);通用型上的 fun-asr 不改道。
 // 判定行:`ASR TRANSCRIBE E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -44,7 +44,7 @@ function writeConfig(extra) {
   }, extra || {}), null, 2));
 }
 function spawnWB() {
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   wb.on('exit', (code, signal) => console.log('[wb] EXIT code=' + code + ' signal=' + signal));
@@ -85,7 +85,7 @@ function readUsageRows() {
 
 (async () => {
   WB_PORT = await getFreePort(); ASR_PORT = await getFreePort();
-  let asr = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(ASR_PORT)], { windowsHide: true, env: { ...process.env } });
+  let asr = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js'), String(ASR_PORT)], { env: { ...process.env } });
   asr.stdout.on('data', () => {}); asr.stderr.on('data', () => {});
   let wb = null;
   try {

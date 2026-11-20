@@ -30,7 +30,7 @@ const { stewardKnownWorkspaceRows, stewardWorkspaceTableBlock } = require('./bac
   sessions: { listSessions, readMissionContainer, sessionDisplayTitle, sessionMetaIsSteward },
   workspaces: {
     STEWARD_KNOWN_WORKSPACE_LIMITS, STEWARD_WORKSPACE_TABLE_MAX, redact, stewardCanonWorkspacePath,
-    stewardFoldWorkspacePath, stewardKnownWorkspaces, stewardSanitizeText,
+    stewardKnownWorkspaces, stewardSanitizeText,
   },
 });
 

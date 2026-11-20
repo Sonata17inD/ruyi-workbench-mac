@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   (C) 启用技能集变化 → hash 变 → 重新注入(新旧技能都在,hash 变)。
 //   (D) 再次稳定 → 恢复去重跳过。
 //   (E) slash 命令轮: 不注入(必须占 stdin 首 token)且不污染 hash —— 下一轮普通消息仍按去重跳过。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
@@ -73,9 +73,9 @@ async function turn(port, sessionId, message) {
   let fail = 0;
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: {
-      ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, USERPROFILE: HOME, HOME, RUYI_HOME: HOME,
+      ...process.env, USERPROFILE: HOME, HOME, RUYI_HOME: HOME,
       // 122 波 §2.8a 实测发现:不隔离 WCW_DATA_DIR 时,启动期 migrateLegacyAccMemory() 会去扫真机
       // %LOCALAPPDATA%/ai-computer-control/data/memory.json(与 os.homedir()/.ai-computer-control/
       // memory.json),把真机上真实存在的 ACC 记忆条目导进本夹具的 memory/global —— 这些条目内容

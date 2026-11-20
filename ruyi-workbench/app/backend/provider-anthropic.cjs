@@ -131,12 +131,6 @@ function anthropicRequestHeaders(provider, opts) {
   if (provider && provider.extraHeaders) Object.assign(headers, provider.extraHeaders);
   return headers;
 }
-// 思考配置。display:'summarized' 让界面拿得到可读的推理摘要 —— Opus 5.5 / Sonnet 5.5 把工具调用之间的进度说明也放进思考块,
-// 缺省 display:'omitted' 时界面会在整个长回合里一声不吭。官方主机再带 block_binding:drop_block(前缀对不上的思考块由 API 丢掉,
-// 不回 400;配套 beta 头由 anthropicRequestHeaders 按同一判据带上)。
-// 经典思考:网关上的非 Claude 模型(DeepSeek / Kimi / GLM / MiniMax 的 Anthropic 兼容端点)与不认自适应思考的旧 Claude 要开思考,
-// 发的是 {type:'enabled', budget_tokens} —— 各家兼容网关都实现的那一种。adaptive 是官方新模型才认的类型,网关普遍回 400,
-// 再被 retryOn400 整个去掉思考:修前「思考:开」在网关上等于静默关。预算按本次 max_tokens 留出作答余量,放不下就不开。
 function anthropicClassicThinking(maxTokens, effort) {
   const max = Number(maxTokens) || 0;
   const wanted = ANTHROPIC_THINKING_EFFORT_BUDGET[String(effort || '')] || Math.floor(max / 2);

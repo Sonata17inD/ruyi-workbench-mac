@@ -23,7 +23,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-list-links-'));
 const home = path.join(root, 'home');
 const dataRootDir = path.join(home, '.ruyi-workbench');
 fs.mkdirSync(dataRootDir, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.RUYI_HOME = dataRootDir;
 const srv = require(process.env.WALK_TEST_SERVER || path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });

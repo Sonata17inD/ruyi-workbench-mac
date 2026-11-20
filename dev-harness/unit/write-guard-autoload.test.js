@@ -1,18 +1,3 @@
-// Unit(安全审计 2026-09 · 写闸):文件工具 / 下载 / 解压 / 检查点回滚的【写落点】回归。
-//
-// 每一条都是审计实测打通过的链(修法注释在 app/src 对应处,搜「安全审计 #N」):
-//   #1  edit 档文件工具能把「不经审批自动加载的启动配置」写进去:<dataRoot>/mcp/<x>/ruyi-mcp.json(scanMcpDropIns
-//       每回合按它起进程)、agent-workflows/ checkpoints/ scheduler/ 等受信状态;工作区 / 家目录里的
-//       .claude/settings(.local).json(CLI hooks)、.mcp.json、.claude.json、.kimi/mcp.json、~/.ruyi-toolbox/components/。
-//       读照旧(检查点内容、工作流模板要能读)。
-//   #3  http_download 落盘:无 ctx 时只看父目录在不在 dataRoot/cwd 下(实测盖掉了 config.json);带 ctx 时走读闸,
-//       .git/hooks/pre-commit 照下不误。现在与 file_write 同一个写闸。
-//   #4  archive_unzip 只验 destDir 与词法包含:destDir = 家目录时包里的 data/config.json、ws/.git/hooks/pre-commit
-//       照写。现在逐条目过写闸,任一被拒整包拒、一个文件都不写。
-//   #7  悬空符号链接 / junction:ws\dangle.txt -> outside\new.txt(目标不存在)被当成「还不存在的工作区文件」放行。
-//   #8  检查点回滚按 index.json 里的 path 原样写回,不验。
-// 直接 require server.js 调导出(guardFileToolPath / guardDownloadDest / toolCall / zipWrite / rewindSession ...),
-// 数据根与家目录都在临时目录里,不碰真机。
 'use strict';
 
 const assert = require('assert');
@@ -28,7 +13,6 @@ const home = path.join(root, 'home');
 const dataRootDir = path.join(home, '.ruyi-workbench');
 const toolboxHome = path.join(root, 'toolbox-override');
 fs.mkdirSync(dataRootDir, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.RUYI_HOME = dataRootDir;
 process.env.RUYI_TOOLBOX_HOME = toolboxHome;
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
@@ -50,7 +34,7 @@ const denied = g => g && g.ok === false;
 // 能建链接就建(Windows 非开发者模式下文件符号链接要特权 → 该用例跳过,目录用 junction)。
 function tryLink(target, linkPath, kind) {
   try {
-    fs.symlinkSync(target, linkPath, process.platform === 'win32' ? (kind === 'dir' ? 'junction' : 'file') : undefined);
+    fs.symlinkSync(target, linkPath);
     return true;
   } catch (e) {
     if (e && (e.code === 'EPERM' || e.code === 'EACCES')) return false;

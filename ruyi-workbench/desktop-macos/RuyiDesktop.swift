@@ -19,6 +19,8 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     private var lockDescriptor: Int32 = -1
     private var ownsInstance = false
     private var activationKey = ""
+    private var frameWrite: Timer?
+    private var savedFrame: String?
     private var hostCache: URL?
     private var signalSources: [DispatchSourceSignal] = []
     private var quitting = false
@@ -368,6 +370,7 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         if let cache = hostCache, let saved = try? String(contentsOf: cache.appendingPathComponent(activationKey + ".frame"), encoding: .utf8) {
             let frame = NSRectFromString(saved)
             if frame.width >= 780, frame.height >= 560, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(frame) }) {
+                savedFrame = saved
                 window.setFrame(frame, display: false)
             }
         }
@@ -676,8 +679,8 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
-    func windowDidMove(_ notification: Notification) { saveFrame() }
-    func windowDidResize(_ notification: Notification) { saveFrame() }
+    func windowDidMove(_ notification: Notification) { scheduleFrameWrite() }
+    func windowDidResize(_ notification: Notification) { scheduleFrameWrite() }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if backgroundOnClose { return true }
         NSApp.terminate(nil)
@@ -692,9 +695,23 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         }
     }
 
+    private func scheduleFrameWrite() {
+        frameWrite?.invalidate()
+        let timer = Timer(timeInterval: 0.4, repeats: false) { [weak self] _ in self?.saveFrame() }
+        frameWrite = timer
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
     private func saveFrame() {
+        frameWrite?.invalidate()
+        frameWrite = nil
         guard let cache = hostCache, let window = window else { return }
-        try? NSStringFromRect(window.frame).write(to: cache.appendingPathComponent(activationKey + ".frame"), atomically: true, encoding: .utf8)
+        let value = NSStringFromRect(window.frame)
+        guard savedFrame != value else { return }
+        do {
+            try value.write(to: cache.appendingPathComponent(activationKey + ".frame"), atomically: true, encoding: .utf8)
+            savedFrame = value
+        } catch { NSLog("Ruyi could not save the window position: %@", error.localizedDescription) }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -724,6 +741,7 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        saveFrame()
         microphoneAcceptanceDeadline?.cancel()
         microphoneAcceptancePoll?.invalidate()
         microphoneAcceptanceObserver?.invalidate()

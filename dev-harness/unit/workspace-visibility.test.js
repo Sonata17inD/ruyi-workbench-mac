@@ -21,10 +21,10 @@ const PUBLIC_JS = path.resolve(__dirname, '..', '..', 'ruyi-workbench', 'app', '
 let modulePromise;
 const load = () => (modulePromise ||= import(pathToFileURL(path.join(PUBLIC_JS, 'util.js')).href));
 
-const DATA_ROOT = 'C:\\Users\\u\\.ruyi-workbench';
+const DATA_ROOT = '/Users/u/.ruyi-workbench';
 const OWNED = [
-  { path: 'C:\\Users\\u\\Ruyi\\下周A股走势分析', at: '' },
-  { path: 'C:\\Users\\u\\Ruyi\\英伟达分析', at: '', adopted: true },
+  { path: '/Users/u/Ruyi/下周A股走势分析', at: '' },
+  { path: '/Users/u/Ruyi/英伟达分析', at: '', adopted: true },
 ];
 
 describe('isRuyiOwnedWorkspace', () => {
@@ -32,22 +32,22 @@ describe('isRuyiOwnedWorkspace', () => {
     const { isRuyiOwnedWorkspace } = await load();
     const ctx = { dataRoot: DATA_ROOT, owned: [] };
     assert.equal(isRuyiOwnedWorkspace(DATA_ROOT, ctx), true);
-    assert.equal(isRuyiOwnedWorkspace(DATA_ROOT + '\\agent-worktrees\\run_1', ctx), true);
-    assert.equal(isRuyiOwnedWorkspace('c:/users/u/.ruyi-workbench/tmp/', ctx), true, '正斜杠 + 小写 + 尾斜杠同样认');
+    assert.equal(isRuyiOwnedWorkspace(DATA_ROOT + '/agent-worktrees/run_1', ctx), true);
+    assert.equal(isRuyiOwnedWorkspace('/users/u/.ruyi-workbench/tmp/', ctx), false, '目录大小写不同');
     assert.equal(isRuyiOwnedWorkspace(DATA_ROOT + '-backup', ctx), false, '同前缀的兄弟目录不算(整段比,不是字符串前缀)');
   });
   it('② 如意开的、没收编的算;收编过的不算', async () => {
     const { isRuyiOwnedWorkspace } = await load();
     const ctx = { dataRoot: DATA_ROOT, owned: OWNED };
-    assert.equal(isRuyiOwnedWorkspace('C:/Users/u/Ruyi/下周A股走势分析/', ctx), true);
-    assert.equal(isRuyiOwnedWorkspace('C:\\Users\\u\\Ruyi\\英伟达分析', ctx), false, '用户亲手加回常用的,以用户为准');
-    assert.equal(isRuyiOwnedWorkspace('C:\\Users\\u\\Ruyi', ctx), false, '如意根本身不在表里,不猜');
+    assert.equal(isRuyiOwnedWorkspace('/Users/u/Ruyi/下周A股走势分析/', ctx), true);
+    assert.equal(isRuyiOwnedWorkspace('/Users/u/Ruyi/英伟达分析', ctx), false, '用户亲手加回常用的,以用户为准');
+    assert.equal(isRuyiOwnedWorkspace('/Users/u/Ruyi', ctx), false, '如意根本身不在表里,不猜');
   });
   it('③ 空值与缺参不炸', async () => {
     const { isRuyiOwnedWorkspace } = await load();
     assert.equal(isRuyiOwnedWorkspace('', {}), false);
     assert.equal(isRuyiOwnedWorkspace(null), false);
-    assert.equal(isRuyiOwnedWorkspace('D:\\work', { owned: null }), false);
+    assert.equal(isRuyiOwnedWorkspace('/Volumes/Data/work', { owned: null }), false);
   });
 });
 
@@ -55,21 +55,21 @@ describe('visibleFavoriteWorkspaces', () => {
   it('③ 用户的工作区一行不少、顺序不变;如意的与数据目录里的去掉', async () => {
     const { visibleFavoriteWorkspaces } = await load();
     const rows = [
-      { path: 'C:\\Users\\u' },
-      { path: 'C:\\Users\\u\\Ruyi\\下周A股走势分析' },
-      { path: 'E:\\Claude\\ruyi-workbench-oss' },
+      { path: '/Users/u' },
+      { path: '/Users/u/Ruyi/下周A股走势分析' },
+      { path: '/Volumes/Work/Claude/ruyi-workbench-oss' },
       { path: DATA_ROOT },
-      { path: 'C:\\Users\\u\\Ruyi\\英伟达分析' },
+      { path: '/Users/u/Ruyi/英伟达分析' },
       { path: '' },
     ];
     const shown = visibleFavoriteWorkspaces(rows, { dataRoot: DATA_ROOT, owned: OWNED }).map(r => r.path);
-    assert.deepEqual(shown, ['C:\\Users\\u', 'E:\\Claude\\ruyi-workbench-oss', 'C:\\Users\\u\\Ruyi\\英伟达分析']);
+    assert.deepEqual(shown, ['/Users/u', '/Volumes/Work/Claude/ruyi-workbench-oss', '/Users/u/Ruyi/英伟达分析']);
     // 返回的是原对象(不是拷贝):调用方拿它去原表里找位置交换。
     assert.equal(visibleFavoriteWorkspaces(rows, { dataRoot: DATA_ROOT, owned: OWNED })[0], rows[0]);
   });
   it('没有如意痕迹时原样返回', async () => {
     const { visibleFavoriteWorkspaces } = await load();
-    const rows = [{ path: 'D:\\a' }, { path: 'D:\\b' }];
+    const rows = [{ path: '/Volumes/Data/a' }, { path: '/Volumes/Data/b' }];
     assert.deepEqual(visibleFavoriteWorkspaces(rows, { dataRoot: '', owned: [] }), rows);
     assert.deepEqual(visibleFavoriteWorkspaces(null, {}), []);
   });

@@ -32,7 +32,7 @@ function readTestRuntimeSource() {
 // 也能跑 RUYI_TEST_SERVER_JS 指到的修前基线,反向验证才是同一把尺子。默认不给,不扩大别的测试的接触面。
 // opts.testPlatform: run platform-specific handlers against an isolated module-local process
 // facade. Only the platform name is overridden; the actual global/node:process is never changed.
-// Callers must replace external platform operations (for example DPAPI) with synthetic adapters.
+// Callers inject fixture-owned implementations for native operations.
 function loadServerInternals(names, opts = {}) {
   if (!Array.isArray(names) || !names.length || !names.every(n => /^[A-Za-z_$][\w$]*$/.test(n))) {
     throw new Error('loadServerInternals: names must be a non-empty array of identifiers');
@@ -44,7 +44,7 @@ function loadServerInternals(names, opts = {}) {
   const evalHook = opts && opts.withEval ? '\n;module.exports.__eval = code => eval(code);' : '';
   let compiled = `${src}\n;module.exports.__internals = { ${names.join(', ')} };${evalHook}\n`;
   if (opts && Object.hasOwn(opts, 'testPlatform')) {
-    if (!['win32', 'linux', 'darwin'].includes(opts.testPlatform)) throw new Error('loadServerInternals: invalid testPlatform');
+    if (!['darwin', 'linux'].includes(opts.testPlatform)) throw new Error('loadServerInternals: invalid testPlatform');
     const testPlatform = opts.testPlatform, bound = new Map();
     mod.__testProcess = new Proxy(Object.create(null), {
       get(target, name) {

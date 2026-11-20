@@ -155,7 +155,6 @@ const STEWARD_RUNNER_FAMILY = ['13m-steward-runner-base.js', '../backend/steward
 /* ═════════════ ① 四处登记一致(真实产物内省,不靠 grep 形状) ═════════════ */
 
 const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-tools-static-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = tmpHome;
 process.env.RUYI_HOME = tmpHome;
 const srv = require(path.join(APP, 'server.js'));
 
@@ -170,11 +169,6 @@ ok(JSON.stringify(schemaNames) === JSON.stringify(expected), `① 13f schema 恰
 ok(JSON.stringify(regNames) === JSON.stringify(expected), `① 12 TOOL_HANDLERS 恰好登记 43 个 steward_*(got ${regNames.length})`);
 ok(JSON.stringify(tierNames) === JSON.stringify(expected), `① 07 NATIVE_TOOL_TIER 恰好登记 43 个 steward_*(got ${tierNames.length})`);
 ok(JSON.stringify(packNames) === JSON.stringify(expected), `① 07 NATIVE_TOOL_PACKS 恰好登记 43 个 steward_*(got ${packNames.length})`);
-// 117m-A4 重钉 89 -> 90。理由:本波【真的新增了一个工具】(steward_thread_stop),数字变化就是被测事实
-// 本身,不是把闸门放宽 —— 这条断言的语义是「注册表里一个不多一个不少」,重钉后它仍是等号。
-// 按「断言只加不改」的纪律,重钉的同时补两条【更强】的伴随断言(下面 ①b/①c):新增的这一个必须
-// 恰好是决策族里【唯一】的线程级停止原语,且必须真的登记进了 13h 的 STEWARD_ACTION_HOOKS ——
-// 只钉总数会让「加错了一个工具」也照样过。
 ok(Object.keys(srv.TOOL_HANDLERS).length === 119, `① 注册表总数 119(移除 PowerShell / SendKeys -2;P1 platform shell_run +1;67 bot setup +1;thread_title_update +1;跨线程两个只读工具 +2;61-C2 增 scratchpad_write 111→112;61-C1 增 playbook_list / playbook_read / skill_list 三个只读工具 108→111;61 号文 C4 增只读 checkpoint_list 107→108;代理模式 v2:spawn_agent 退役 -1、wait_agents/agent_result 入表 +2,106→107;此前 63 + 42 steward_* + 1 audio_transcribe;123-M2 增六件定时任务 90→96,127-114c③ 增 audio_transcribe 96→97,129b 增三张只读清单 97→100,129d 增眼睛四件 100→104,129e 增 steward_thread_workspace 104→105,129f 增 steward_notify 105→106;got ${Object.keys(srv.TOOL_HANDLERS).length})`);
 const stopPrimitives = expected.filter(n => /_stop$/.test(n));
 ok(JSON.stringify(stopPrimitives) === JSON.stringify(['steward_thread_stop']),
@@ -342,8 +336,6 @@ const cfg = srv.normalizeConfig({}).config;
 const offeredPlain = srv.buildOpenAiTools(cfg, null, {}).map(t => t.function.name).filter(n => n.startsWith('steward_'));
 const offeredSteward = srv.buildOpenAiTools(cfg, null, { stewardSession: true }).map(t => t.function.name).filter(n => n.startsWith('steward_'));
 ok(offeredPlain.length === 0, `⑤ 回环:普通会话 buildOpenAiTools 零 steward_*(got ${offeredPlain.length})`);
-// 117m-A4 重钉 26 -> 27(理由同 ① 的重钉:本波真的多了一个工具)。同时把这条从【只数个数】
-// 换成【逐名对账】—— 那是更强的断言:个数对但少一个多一个的错法从此也会红。
 ok(offeredSteward.length === 43, `⑤ 回环:管家会话 buildOpenAiTools 拿到 43 个 steward_*(got ${offeredSteward.length})`);
 ok(JSON.stringify([...offeredSteward].sort()) === JSON.stringify(expected),
   `⑤b 回环:offer 出去的那一份与四张登记表【逐名】相同(缺: ${expected.filter(n => !offeredSteward.includes(n)).join(',') || '无'};多: ${offeredSteward.filter(n => !expected.includes(n)).join(',') || '无'})`);
@@ -419,10 +411,6 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   const COMMENT_RE = /^\s*(\/\/|\*|\/\*)/;
   const STEWARD_TOOL_FAMILY = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
     '../backend/steward-thread-launch.cjs', '../backend/steward-thread-create.cjs', threadEdits, settingsTools, contentTools, decisionTools, toolAdmission];
-  // 117 波 T2 重钉:白名单里的「13h」扩成 T2 拆出的运行器族六个文件(纯搬家)。三处出现点各自的
-  // 落点:13m 是 ACTION_HOOKS 表头那两行注释、13q 是【唯一】置 true 的那一行(stewardRunAct)、
-  // 13h 是 act 路由里「不置 userPressed」的那句注释。被钉的事实(唯一置 true 点在 act 路径、读点
-  // 恰好两处且都在 13l、权限门与授权书零 userPressed)一个字没变。
   const ALLOWED = new Set(['06i-steward-core.js', '../backend/steward-routes.cjs', ...STEWARD_TOOL_FAMILY, ...STEWARD_RUNNER_FAMILY]);
   const hits = [];
   for (const file of srcFiles) {
@@ -592,12 +580,6 @@ for (const name of ['file_read', 'git_status', 'todo_write']) {
   ok(bareCaps.length === 0, '⑪ 清洗块代码行里零裸字面量帽子' + (bareCaps.length ? ' → ' + JSON.stringify(bareCaps) : ''));
   ok(!/\bWORKSPACE_TABLE_CAP\b\s*=\s*20\b/.test(workspace), '⑪ 反向:常量没被悄悄改回 20');
 
-  // W7 重钉:117w-W1④ 那道「派生前帽检查」(stewardWorkspaceTableFull,一处实现三处调用)【退役】。
-  // 理由(事实变了,不是放宽):派生出来的目录从这一刀起登记进如意自己那张表 stewardManagedWorkspaces,
-  // 不再往 workspaces[] 追加 —— 那张表就是用户的「常用工作区」(用户 2026-09-24:如意自己开的工作区
-  // 默认不显示在常用工作区中)。派生于是不再占常用工作区的行,「常用工作区满了就拒开线程」这件事
-  // 没有对象了;如意那张表满了由 01-config 从最老的一行起丢(用户看不见也清不了那张表,拒只会让管家卡死)。
-  // 下面钉的是新事实,并反向保护旧路不回来。
   const stewardWorkspaces = read('../backend/steward-workspaces.cjs');
   const retired = [...srcFiles, '../backend/steward-workspaces.cjs'].filter(f => /stewardWorkspaceTableFull|workspace_table_full/.test(read(f)));
   ok(retired.length === 0, '⑪ 退役的帽检查在全 src 零残留(stewardWorkspaceTableFull / workspace_table_full)' + (retired.length ? ' → ' + retired.join(',') : ''));

@@ -1,17 +1,3 @@
-// Unit（117j 收尾）：会话头的【带瞬时重试】读取 `readSessionHeadResilient`。
-//
-// 它修的是一条实证定位到的真 bug：Windows 上 `rename(tmp, final)` 替换【已存在】的文件时，
-// 并发的读会在「旧文件已解链、新文件还没链入」的那一瞬拿到 **ENOENT**。会话头每保存一次就开一个
-// 这样的窗口，而回合跑起来时它一直在写。`decideIntervention` 里那一发单打的 readFile 因此会偶发
-// 读空，把「文件正在被原子替换」误判成「这个会话不存在」，用户看到的是「答不进去」。
-//
-// 复现证据（steward-drawer.e2e 的 E4b，约 1/3 概率红）：打点抓到那一发抛的正是 ENOENT，而同一时刻
-// `pendingQuestions.has(qid)` 仍为 true —— 待决好端端在那儿，只是读不到会话头。
-//
-// 本件三条：
-//   ① 正常情况原样读回；
-//   ② **文件在重试窗口内出现**（模拟 rename 的替换瞬间）→ 仍然读到，不再假 404；
-//   ③ 真的不存在的会话仍然返回 null（重试不改变判据，只是多等 ~80ms）。
 'use strict';
 const assert = require('assert');
 const fs = require('fs');
@@ -21,7 +7,6 @@ const path = require('path');
 const { describe, it } = require('node:test');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-session-head-read-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
@@ -42,34 +27,28 @@ describe('readSessionHeadResilient', () => {
     assert.equal(head && head.title, '正常');
   });
 
-  it('② 文件在重试窗口内出现（rename 替换的那一瞬）→ 仍然读到，不再假 404', async () => {
-    const id = 'sess_race';
-    writeHead(id, { title: '被替换中' });
-    // 模拟 rename 的替换瞬间：先把文件挪走（此刻任何读都是 ENOENT），~20ms 后再放回去。
-    const stash = headPath(id) + '.stash';
-    await fsp.rename(headPath(id), stash);
-    const restore = setTimeout(() => { try { fs.renameSync(stash, headPath(id)); } catch { /* ignore */ } }, 20);
-    const head = await readSessionHeadResilient(id);
-    clearTimeout(restore);
-    assert.ok(head, '重试窗口内文件回来了就应该读到（单发 readFile 在这里会返回 null，那正是 E4b 那条 flake）');
-    assert.equal(head.id, id);
-  });
-
-  it('③ 真的不存在的会话仍然返回 null（判据不变，只是多等一会儿）', async () => {
-    const started = Date.now();
-    const head = await readSessionHeadResilient('sess_never_existed');
-    assert.equal(head, null);
-    // 四次重试的退避是 5+15+25+35=80ms；给足余量，只确认它确实退避过而不是立刻放弃。
-    assert.ok(Date.now() - started >= 60, `应当退避重试过（实测 ${Date.now() - started}ms）`);
+  it('reads a missing head once and propagates filesystem errors', async () => {
+    const readFile = fsp.readFile;
+    let reads = 0;
+    fsp.readFile = async (...args) => {
+      reads++;
+      return readFile(...args);
+    };
+    try {
+      assert.equal(await readSessionHeadResilient('absent'), null);
+      assert.equal(reads, 1);
+      fs.mkdirSync(headPath('directory'));
+      await assert.rejects(readSessionHeadResilient('directory'), { code: 'EISDIR' });
+    } finally {
+      fsp.readFile = readFile;
+    }
   });
 
   it('④ 内容坏掉不重试（那是隔离路径的事，重试只会把坏内容读四遍）', async () => {
     const id = 'sess_corrupt';
     fs.mkdirSync(sessionsDir, { recursive: true });
     fs.writeFileSync(headPath(id), '{ this is not json', 'utf8');
-    const started = Date.now();
     assert.equal(await readSessionHeadResilient(id), null);
-    assert.ok(Date.now() - started < 60, '解析失败要立刻返回，不该走退避');
   });
 });
 
@@ -230,33 +209,27 @@ describe('loadSession：装载那一眼之后有人写过盘，就不许拿旧�
   });
 });
 
-describe('两道守卫的源码锁（把「不许在并发写盘时动手」钉住，防回改）', () => {
-  const store = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'session-persistence.cjs'), 'utf8');
-  const decisions = fs.readFileSync(path.join(repo, 'ruyi-workbench', 'app', 'backend', 'intervention-decisions.cjs'), 'utf8');
-
-  it('守卫①：写链在跑就等它跑完再重来，绝不截断/隔离', () => {
-    assert.ok(/const inFlight = sessionWriteChains\.get\(id\);/.test(store)
-      && /await inFlight\.catch\(\(\) => \{\}\);/.test(store)
-      && /return loadSession\(id, reloadDepth \+ 1\);/.test(store),
-    '这一条是真正起作用的那道守卫：只重读头不够（写链里正文先落、头后落，重读拿到的仍是旧头）');
-  });
-
-  it('守卫②：动手前把头再读一遍，头变了就重来', () => {
-    assert.ok(/const again = await readSessionHeadResilient\(id\);/.test(store)
-      && /if \(reloadDepth >= 1\) return null;/.test(store),
-      '有界重来：连着两次都在写就诚实地不给结果，绝不用一次可疑的读去删数据');
-  });
-
-  it('守卫③：decideIntervention 的头读走带重试的那一个', () => {
-    assert.ok(/const head = await readSessionHeadResilient\(missionId\);/.test(decisions)
-      && !/readFile\(sessionPath\(missionId\)/.test(decisions),
-      '它是用户动作的判定入口：读空一次就等于把「允许／回答」判成 404「会话不存在」');
-  });
-
-  it('守卫④：重试只认瞬时错误，解析失败仍然立刻放手', () => {
-    assert.ok(/SESSION_HEAD_TRANSIENT = new Set\(\['ENOENT', 'EPERM', 'EBUSY', 'EACCES'\]\)/.test(store),
-      '内容坏了归隔离路径管，重试只会把坏内容读四遍');
-  });
-});
-
 process.on('exit', () => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
+
+it('turn completion reads editable metadata from the head and preserves provider-owned todos', async () => {
+  const { createSessionPersistence } = require('../../ruyi-workbench/app/backend/session-persistence.cjs');
+  const { reconcileTurnMetadata } = createSessionPersistence({
+    files: { sessionPath: headPath },
+    model: { mergeMissionBeforeSave: (session, head) => { session.mission = head.mission; } },
+    coordination: {},
+    safeJsonParse: JSON.parse,
+  });
+  const id = 'turn-metadata';
+  writeHead(id, {
+    skills: [], todos: ['disk'], memories: ['selected'], memoriesExplicit: false,
+    memoryExclusions: ['excluded'], mission: { changeSeq: 4 },
+  });
+  for (const includeTodos of [true, false]) {
+    const session = { id, todos: ['in-flight'], skills: ['old'], memoriesExplicit: true, messages: ['current'] };
+    await reconcileTurnMetadata(session, { includeTodos });
+    assert.deepEqual(session, {
+      id, todos: includeTodos ? ['disk'] : ['in-flight'], skills: [], memoriesExplicit: false,
+      memories: ['selected'], memoryExclusions: ['excluded'], mission: { changeSeq: 4 }, messages: ['current'],
+    });
+  }
+});

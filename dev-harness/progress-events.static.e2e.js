@@ -149,12 +149,10 @@ ok(drawer.includes("from './turn-activity.js'") && drawer.includes('describeTurn
 ok(!/function describeTurnActivity\s*\(/.test(drawer) && !/function createTurnActivity\s*\(/.test(drawer),
   'D12 抽屉不自己定义同名实现(复用而非复制;复制即失去「同一份判据」)');
 
-// ── 文案:四份 locale 同步,零裸字符串 ────────────────────────────────────────────────────────
+// ── 文案:两份 locale 同步,零裸字符串 ────────────────────────────────────────────────────────
 const LOCALES = [
   'ruyi-workbench/app/public/locales/zh-CN.json',
   'ruyi-workbench/app/public/locales/en-US.json',
-  'docs/i18n/locales/zh-CN.json',
-  'docs/i18n/locales/en-US.json',
 ];
 const REQUIRED_KEYS = [
   ...activityContext.PHASES.map(phase => `turnActivity.phase.${phase}`),
@@ -175,7 +173,7 @@ for (const rel of LOCALES) {
   const catalog = JSON.parse(read(rel));
   for (const key of REQUIRED_KEYS) if (!(key in catalog)) missingKeys.push(`${path.basename(path.dirname(rel))}/${path.basename(rel)}:${key}`);
 }
-okList(missingKeys, 'D15 状态条文案在四份 locale 里齐全');
+okList(missingKeys, 'D15 状态条文案在两份 locale 里齐全');
 // 扁平点号键:嵌套会让 t() 查不到(catalog[key] 是一次性查表,不遍历嵌套)
 ok(LOCALES.every(rel => Object.entries(JSON.parse(read(rel)))
   .filter(([key]) => key.startsWith('turnActivity.'))

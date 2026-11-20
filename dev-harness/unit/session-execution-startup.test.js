@@ -10,7 +10,7 @@ const cp = require('node:child_process');
 const http = require('node:http');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-start-stop-'));
 const work = path.join(home, 'work'); fs.mkdirSync(work, { recursive: true });
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 const app = path.resolve(__dirname, '../../ruyi-workbench/app');
 process.env.WCW_FAKE_CLAUDE = path.resolve(app, '../tools/fake-claude.js');
 const configuration = engine => ({ configSchema: 14, permissionMode: 'default', defaultWorkspace: work,

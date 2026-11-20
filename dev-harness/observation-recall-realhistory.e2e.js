@@ -32,7 +32,6 @@ const FIXTURES = path.join(HERE, 'realhist-fixtures', 'checkpoints');
 const SRC_ROOT = require('./lib/real-data-root.js').defaultDataRootIn('C:/Users/87179').replace(/\\/g, '/') + '/checkpoints'; // 仅 sha256 校验,绝不写入
 
 const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w105b-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 
 const srv = require(path.join(WB, 'app', 'server.js'));

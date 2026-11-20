@@ -1,21 +1,12 @@
 #!/usr/bin/env node
-// CI / 本地共用串行/并行 e2e runner(零依赖,Windows-first)。
-//
-// 遍历 dev-harness/*.e2e.js,排除 live 件(真 key/真子进程),串行或并行跑,汇总。
-// 每件超时 killOwnTree 收整棵自己的树(128c:核创建时间,不再用 taskkill /T;防 server.js 孙进程残留占端口)。
-// 退出码:任一失败 -> 1。
-// 第46波: 开跑前先过 unit 快通道(node --test dev-harness/unit/*.test.js,挂即拒跑);
-// 失败件自动重跑一次,二跑通过记 [flaky](汇总可见),仍失败才算红。
-//
+// Mac E2E runner. Failed fixtures get one retry and retain their first failure diagnostics.
 // 用法:
 //   node dev-harness/run-all.js                  # 全量串行
 //   node dev-harness/run-all.js --parallel 4     # unit 与 E2E 都限制为 4 路并行
 //   node dev-harness/run-all.js --fast           # 仅快通道(.static 纯静态锁,秒级)
 //   node dev-harness/run-all.js foo.e2e.js       # 仅指定件(可多个,空格分隔)
 //
-// 设计依据见 docs/archive/OPTIMIZATION-ROADMAP-HISTORY-V1-2.md 第34波(CI 基建) + 第38波(V1.8-A 并行化)。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -34,249 +25,93 @@ function recordAttempt(file, attempt, result) {
   fs.writeFileSync(path.join(EVIDENCE_DIR, name + '.json'), JSON.stringify({ file, attempt,
     ok: result.ok, status: result.status, timedOut: result.timedOut, ms: result.ms }, null, 2) + '\n', { flag: 'wx' });
 }
-// 非 Windows 下各件 detached 自成进程组,终端的 Ctrl-C 不再自动传到它们 —— 自己转发,免得中断后留一地服务。
 const LIVE_GROUPS = new Set();
-if (process.platform !== 'win32') {
-  for (const sig of ['SIGINT', 'SIGTERM']) {
-    process.once(sig, () => {
-      for (const pgid of LIVE_GROUPS) { try { process.kill(-pgid, 'SIGKILL'); } catch { /* 已退 */ } }
-      process.exit(130);
-    });
+function killFixtureGroup(pid) {
+  if (!LIVE_GROUPS.has(pid)) return;
+  try { process.kill(-pid, 'SIGKILL'); }
+  catch (error) {
+    if (error.code === 'ESRCH') return;
+    if (error.code === 'EPERM') {
+      const table = cp.spawnSync('/bin/ps', ['-axo', 'pgid=,stat='], { encoding: 'utf8' });
+      if (table.status === 0 && !table.stdout.trim().split('\n').some(row => {
+        const [group, state] = row.trim().split(/\s+/);
+        return Number(group) === pid && !state.startsWith('Z');
+      })) return;
+    }
+    return error;
   }
 }
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    for (const pid of LIVE_GROUPS) killFixtureGroup(pid);
+    process.exit(130);
+  });
+}
 const TIMEOUT_MS = 120000; // 单件超时;最硬的 autonomy-durability 实测 ~15s,留 8x 余量
-// Wall-clock performance gates measure the product, not contention from three unrelated Edge/server
-// tests. They still belong to the complete suite, but run alone after parallel functional buckets.
-// 121-K1: the only entry was pretender-preview-performance.e2e.js, deleted with the dispatch desk.
-// 121-K2b: the event stream latency budget (34 号文 §6.3) is exactly that next wall-clock gate —
-// every one of its five assertions is "server wrote the frame → the DOM changed, ≤1 s", and its C/D
-// groups count polls inside fixed 60 s / 35 s windows. Both are unmeasurable next to three unrelated
-// Edge/server tests, so it runs alone after the parallel functional buckets.
-// 121-K4-4: one-workbench-frame.browser 同理 —— 它有两条墙钟门(J2「管家开线程 → 左栏出现
-// 这一行 ≤1 s」)与一组按像素比的版面断言(1920/1200/900 三档的栏宽与截图)。三个不相干的
-// Edge/服务挤在一起时这两类都量不准,所以它也排在并行功能桶之后单独跑。
-// 121-K5: workbench-thread-head.browser 同理 —— 它有一组按像素比的版面断言(1200/1600/1920
-// 三档的线程头高度逐字相同 ＋ 三张截图),还要在真回合飞着的时候点停止。三个不相干的
-// Edge/服务挤在一起时这两类都量不准,所以它也排在并行功能桶之后单独跑。
-// 121-治抖动那批(34 号文 §14 末条):live-full-text.browser 同一个模具 —— fake provider 按
-// GROW_STEP_MS=2500ms 的硬节拍连吐 GROW_ROUNDS=14 轮字(§S 组「视口不许跟着页面高度乱跳」),
-// `--parallel 4` 下与另外十件浏览器/服务件同跑时实测复现:provider 子进程与 CDP 往返被挤慢,
-// S 组的「两拍必然已经长过」read 不到新内容,整件卡死在 S1/S2 直到撞 120s 硬超时(单跑无争用时
-// 只要 ~54s)。判据本身已经改成有判据的轮询(见文件内 GROW_WAIT_ATTEMPTS 注释),但硬节拍窗口
-// 本身量的是「产品多快吐字、多快跟手」,与另外几个 Edge/服务同抢 CPU 时这件事量不准,所以也排
-// 到并行功能桶之后单独跑。
-// 121-K6a:quiet-card.browser 同一个模具 —— 一趟里起五条真线程、连三次 request_user_input
-// 往返(候选答案/去看/合并测试各一条)、每一次「不出卡」的反向计时都要真实盖过 13i 收件箱 tick
-// 的 5s 下限(§4.3 三种在场状态各一次 6.5s 静置窗)。`--parallel 8` 下与其余功能桶同抢 CPU 时
-// 实测撞 120s 硬超时(单跑无争用 ~39s),这些墙钟窗口本身就是在测「收件箱 tick 到达」这件事,
-// 挤在一起量不准,排到并行功能桶之后单独跑。
+// Run timing, focus and physical desktop fixtures without competing lanes.
 const PARALLEL_EXCLUSIVE = new Set([
-  // Real AppKit fixtures share the foreground window, screen and input focus. A
-  // parallel neighbor can invalidate their target/authorization observations.
-  // Run the existing assertions unchanged, in an exclusive lane.
   'macos-desktop-host.e2e.js', 'macos-desktop-bridge.e2e.js',
   'macos-desktop-media.e2e.js', 'macos-desktop-lifecycle.e2e.js',
   'macos-capture.e2e.js', 'macos-capture-host.e2e.js', 'macos-capture-contract.e2e.js',
   'macos-input-events.e2e.js', 'macos-input-host.e2e.js', 'macos-input-apps.e2e.js',
   'macos-window-clipboard.e2e.js', 'macos-ax.e2e.js', 'macos-ocr.e2e.js',
   'macos-observe.e2e.js', 'macos-record.e2e.js', 'macos-manual-record.e2e.js',
-  // The hand-off undo button has a real 10-second expiry. CDP inspection and the
-  // subsequent click share that window; competing browser fixtures can exhaust it.
-  // Keep all existing rewind/identity/grouping assertions, run this clock-bound UI alone.
   'steward-conversation.e2e.js',
   'event-stream-client.browser.e2e.js',
   'one-workbench-frame.browser.e2e.js',
   'workbench-thread-head.browser.e2e.js',
   'live-full-text.browser.e2e.js',
   'quiet-card.browser.e2e.js',
-  // 121-K6b：焦点栏那一件量的是「thread.live 帧 → DOM ≤100 ms」，那是一个【硬节拍】——
-  // 与别的 Edge 抢 CPU 时量不准（同 live-full-text.browser 的理由）。
   'focus-rail.browser.e2e.js',
-  // 121-K7：口袋那一件有两段墙钟窗口 —— H 组 12 s 静置量「没人给 /api/scheduler/tasks 开第二条
-  // 节拍」，另加两台真服务 ＋ 两个无头 Edge（第二台跑全新 HOME 的向导）。与别的 Edge 抢 CPU 时
-  // 静置窗与全新 HOME 的首启探针都会被挤长，所以也排到并行功能桶之后单独跑。
   'rail-pocket.browser.e2e.js',
-  // 121 走查修复第一轮：walkthrough-round1.browser 量的全是【命中测试】—— 十来处
-  // document.elementFromPoint（哪块面盖在哪块面上）、真鼠标 hover 触发的 :hover 规则、
-  // 以及在行里逐点扫出一块「不是按钮」的地方再真点下去。与别的 Edge 抢 CPU 时，
-  // 视图过渡与浮层的开合会落在半途上被读到（第一轮实测就抓到过一次这种夹具级抖动），
-  // 所以它也排在并行功能桶之后单独跑。
   'walkthrough-round1.browser.e2e.js',
-  // 122 波 §2.8c：classic-window-live-steer 一趟里要起一条真线程、插话打断、等回合收尾，
-  // 墙钟大头压在 provider 子进程的响应节拍上（TIMEOUT_OVERRIDES 里同一件的 300 s 豁免就是
-  // 为它留的）。单跑实测 32 s（24 核机器，本波复核）；与并行功能桶里其余 Edge/服务件同抢
-  // CPU 时，插话→收尾这段时序会被挤慢，与 quiet-card/live-full-text 同一个模具，所以也排
-  // 到并行功能桶之后单独跑。
   'classic-window-live-steer.e2e.js',
-  // 122-L1a（36 号文 §2.1 判据③）：这一件用 CDP `Fetch` 把 `/api/status` **扣住 1500 ms**，再在
-  // 放行前后各量一次现场。它量的是【墙钟窗口】——延迟窗里点四下分段钮、打一段草稿，放行后 2 s
-  // 收口；与别的 Edge 抢 CPU 时，那 1500 ms 里 boot 走到哪一步会飘，B 组「同一拍里两次意图」
-  // 也可能被调度切开。所以排到并行功能桶之后单独跑（同 quiet-card.browser 的理由）。
   'shell-mode-late-config.browser.e2e.js',
-  // 122-L1a（§2.2 J04）：安静卡与长输入。判据是「卡弹出来的那一刻焦点／草稿／滚动位置一个都
-  // 没变」——`scrollTop` 与 `activeElement` 都是会被别的 Edge 抢焦点／抢渲染时序搅动的量，
-  // 同 quiet-card.browser 一样进独占桶。
   'quiet-card-typing.browser.e2e.js',
-  // 122-L1a（§2.3 J16）：SSE 重连补发去重。一趟里要拦下浏览器自己的重连请求改写 `Last-Event-ID`
-  // （CDP `Fetch` 全域拦截），另开一条并行 Node SSE 客户端做「服务端真的重放了」的对照，
-  // 再靠两段 3 s 观察窗判「卡数仍为 0」。拦截与观察窗都吃调度，进独占桶。
   'event-stream-replay.browser.e2e.js',
-  // 122-L1b（§2.11–§2.13、§5.2）：walkthrough-round2 与 walkthrough-round1 同一条理由 ——
-  // 它量的是【命中测试与墙钟窗口】：真鼠标点 chip／齿轮菜单、量文字的 scrollWidth 有没有溢出、
-  // 再用 CDP `Fetch` 把 `/api/status` 扣住 1500 ms 在延迟窗里点分段钮。与别的 Edge 抢 CPU 时
-  // 菜单开合与延迟窗都会落在半途上被读到，所以排到并行功能桶之后单独跑。
   'walkthrough-round2.browser.e2e.js',
-  // 122-L1b（§2.14 U05）：a11y-walkthrough 反复改视口（Emulation.setDeviceMetricsOverride）再量
-  // getBoundingClientRect 与容器查询的重排结果，还要连按几十下 Tab 逐站读 activeElement ——
-  // 布局重排与键盘事件的落地都吃调度，同上进独占桶。
   'a11y-walkthrough.browser.e2e.js',
-  // 123-M2（37 号文 §3.5/§3.6）：两件定时任务的真浏览器件，与 quiet-card.browser 同一条理由 ——
-  // 它们量的都是【墙钟窗口】：安静卡的「稍后」要等 13i 那一拍（5 s 下限）把 needs_you 写进箱子、
-  // 再把假时钟拨过 30 分钟等调度器那一拍把 reminder 推回来；设置面那件还要等 schedule.changed
-  // 帧到达之后口袋角标从 2 变 1。与别的 Edge 抢 CPU 时这些窗口都会被挤长，所以排到并行功能桶
-  // 之后单独跑。
   'quiet-card-snooze.browser.e2e.js',
   'scheduler-ui.browser.e2e.js',
-  // 127-⑦（45 号文 §4 ⑦）：输入框麦克风的真浏览器件。它量的是【真录音的墙钟】—— 假设备录 1.2–1.5 s、
-  // 录到一半按 Esc 之后等 2 s 确认「没有转写请求」、把 performance.now 拨快等下一拍自动结束，外加 390px
-  // 反复改视口量 getBoundingClientRect。与别的 Edge 抢 CPU 时录音时长与观察窗都会被挤歪，同上进独占桶。
   'composer-voice.browser.e2e.js',
-  // 2026-10 子代理时限:agent-node-limits 用 env 缝把「收尾 / 宽限 / 硬上限 / 节点空闲」缩成 1 s / 2.5 s / 10 s / 3 s,
-  // 断言的恰是各层时限在哪一刻动手(持续有进展的节点跑过 3.5 s 不被中止、一直吐字的在 10 s 硬上限处被中止、没动静的在 2.5 s 宽限后被中止)。
-  // 与别的 Edge/服务抢 CPU 时,节点两次事件之间的间隔会被挤过 2.5 s 的宽限、把「持续有进展」误判成「没动静」,所以进独占桶。
   'agent-node-limits.e2e.js',
-  // 125 治抖（43 号文 §3）：以上 16 件全是真浏览器件，逐件按事故补进来的 —— 于是这张名单
-  // 漏掉了**两件自己算 P95 的墙钟性能门**，而它们恰恰是 2026-09-15 那轮全量里唯二上榜的：
-  //   · mission-index-scale：`(e) 详情冷P95≤800ms` 红在 1101 ms；同一台机器空闲单跑三次
-  //     实得 617／535／538 ms。它全文件五条墙钟判据里这条余量最窄（800÷617≈1.3 倍），
-  //     其余三条是 1.7／2.7／13 倍 —— 所以并行负载下只有它越线，其余照过。**不是产品退化**：
-  //     同件的「低配×2 余量」判据（detailCold P95≤1600 ms）在那一跑里是绿的。
-  //   · ec-d-performance：首跑红在「CDP page target available」，连浏览器都没挂上；它量的是
-  //     视图切换 P95＜200 ms，是全仓余量最窄的一条硬节拍。
-  // 两件与本桶里那 16 件同一条理由：判据是【墙钟】，与别的服务／Edge 抢 CPU 时量不准。
-  // 空闲下量才是这两道闸的本意 —— 它们真要抓的是「详情走没走索引」「切视图有没有重排」，
-  // 那种退化是数量级的，不会被 2 倍的调度噪声淹没；把闸放宽才是掩盖。
   'mission-index-scale.e2e.js',
   'ec-d-performance.e2e.js',
-  // 125 治抖第三批（42 号文 §5-decies）：**一次性启动浏览器**的那两件。它们用 spawnSync 把
-  // Edge 连同 `--dump-dom` / `--screenshot=` 一起拉起来，**把启动结果本身当断言** —— 没有 CDP
-  // 那条「连不上就重连」的重试面，所以是全仓对启动期抢占最敏感的形状。
-  // 连着两轮全量的读数把这件事钉死了：两轮里唯一的红/flaky 都出自这两件，而且**退出码一模一样**
-  // ——`4294967295`(-1)，`result.signal` 为空(不是 spawnSync 的 90 s 超时，是 Edge 自己退的)，
-  // stderr 只有 Chromium 的 task-provider 噪声。两件分别单跑各两次全绿（7.0 s / 14.7 s）。
-  // 顺带排除掉一个诱人的错理论：当时机器上残留的 7 个 msedge 全是**用户自己的** Edge 后台进程
-  // （真机 profile ＋ `--no-startup-window --win-session-start`），不是夹具泄漏 —— 补收尸治的是
-  // 另一件事，治不了这一条。
   'dom-screenshot.e2e.js',
   'dom-smoke.e2e.js',
-  // 107-F5（46 号文 §5 ⓪；42 号文 §5-undecies 留给 107 的第二件）：**断言里写死了墙钟上界、而墙钟本身就是被测量**
-  // 的件。fixture-home.static 的第三条判据（lib/wallclock-window-scan.js）机械扫出 22 件 43 处，逐件分了三类：
-  // 墙钟是产品承诺 → 进这里；墙钟只是代理的紧界 → 改判因果／次序（perm-v2 ④、thread-arbiter ④）；防挂死的宽界
-  // → 就地写「墙钟上界豁免」。下面六件是第一类，读数取自本批双负载（两路 run-all --parallel 3 常驻）：
-  //   · perf：冷启动 < 7500 ms、会话加载延迟 < 2000 ms —— 性能预算本身（108 波首跑红过「冷启动 5.3 s > 5 s」）；
-  //   · boot-listen-budget：spawn → /health ≤ 2500 ms、探针在飞时 /health ≤ 800 ms —— 双负载实得 2287 ms，
-  //     离门 9%（45 号文 §9.5 那轮作废的全量里实得 4672 ms 红过）；
-  //   · event-stream：八条「服务端写帧 → 客户端收到 ≤ 1000 ms」是 34 号文 §6.3 的延迟预算，与已在桶里的
-  //     event-stream-client.browser 同一条理由（双负载实得 0–1 ms，但被测的就是这个数）；
-  //   · steward-board：R4「强刷读到旧帧后，下一拍（5 s 下限那一档）真的去复核 ≤ 12 s」量的是产品节拍，R8／S7
-  //     「点一下 ≤ 5 s 换帧」同件，外加真 Edge ＋ CDP（123／125 两波都以超时与 R8pre2 上过榜）；
-  //   · scheduler-ready-queue：「A 总时长 < 15000 ms、无调度停滞」量的是调度器本身，双负载实得 7905 ms，只剩 1.9 倍；
-  //   · autonomy-durability：「§5 MTTR < 30 s（崩溃 → 重启 → 续跑完成）」是产品 SLO，双负载实得 12264 ms，2.4 倍。
   'perf.e2e.js',
   'boot-listen-budget.e2e.js',
   'event-stream.e2e.js',
   'steward-board.e2e.js',
   'scheduler-ready-queue.e2e.js',
   'autonomy-durability.e2e.js',
-  // 128d（48 号文 §1）：两件新的真浏览器件与 a11y-walkthrough 同一条理由 ——
-  //   · keyboard-walkthrough：连按上百下 Tab 逐站读焦点样式，外加菜单／弹窗／焦点卡的开合时序，键盘事件的落地吃调度；
-  //   · steward-shell-pixels：截图比像素，字体与异步取数「落定」靠等，与别的 Edge 抢 CPU 时可能拍到半途的一帧。
   'keyboard-walkthrough.browser.e2e.js',
   'steward-shell-pixels.browser.e2e.js',
 ]);
 
-// 第46波46b: 按件超时表(默认 120s 之外的特例)。只收"实测稳定超过默认 60%"的件,
-// 每条附实测依据 —— 表不是兜底借口,能优化掉的慢件应优化而非加薪。
 const TIMEOUT_OVERRIDES = {
-  // Current Mac final acceptance: repeated cold Vision calls each took ~38 s, inside
-  // their unchanged native/Python 60/65 s deadlines. The full real OCR and composed
-  // fixtures completed in 166.525/202.021 s with every assertion and cleanup passing;
-  // both 120 s attempts had been killed mid-observation. This is a whole-file guard,
-  // not a change to product deadlines or assertions (P6/mac-closeout/targeted-recheck).
   'macos-ocr.e2e.js': 300000,
   'macos-observe.e2e.js': 300000,
-  // 3.1 privacy release acceptance adds G: eleven real PS5 rollback fixtures, including
-  // complete 3 MB reader compilation/fingerprints and rejection/audit/zero-write checks.
-  // Both default 120 s attempts reached G and were killed before finishing, with all reached
-  // assertions passing. This is a whole-file hang guard, not a product latency assertion;
-  // keep every PS invocation's 120 s bound and all functional/security assertions unchanged.
-  'overlay-update-core.e2e.js': 300000,
-  // scheduler-ready-queue: 时序敏感(等调度器 tick),慢机器上偶发贴边
   'scheduler-ready-queue.e2e.js': 180000,
-  // 123 合并复核（37 号文 §5.5）：steward-board 一趟里起一台真服务并跑一百多条看板断言，
-  // 串行实测 22.9／23.1 s——远在默认 120 s 之内，问题只在 8 路下的争抢：本波三轮全量里
-  // 它两轮首跑失败重跑通过、收官那轮直接撞 120 s 墙（TIMEOUT）。同期每个 worker 的服务
-  // 都要付一次桌面 MCP 探针（首个 /api/status ≈2.5 s，见 §5.5 登记的产品债），八份叠在
-  // 一起就把这类「服务多、断言多」的件挤过线。豁免到 300 s 防误杀；真正的根治是
-  // detectDesktopMcp async 化，那条债一旦还上，这条豁免应当回来复测并考虑撤掉。
-  // 【39 号文 2026-09-14】根因已还：探针改异步预热，首个 /api/status 不再钉住事件循环
-  // （同一时刻的 /health 2389 ms → 2 ms，boot＋首个 status 期间同步 python 探针 0 发）。
-  // **豁免仍未撤**：原始现象只在 24 核那台的 8 路全量下出现，本机 12 核跑 4 路复现不了原始故障，
-  //「没复现」不等于「治好了」。12 核 4 路两轮实得：第一轮 flaky（首跑失败重跑过）、第二轮
-  // 首跑即过 6.9 s。撤销条件＝在 24 核机器上跑一轮 8 路全量，本件首跑即过且墙钟远在 120 s 内，
-  // 那时把这条连同本段注释一起删掉。
   'steward-board.e2e.js': 300000,
-  // tools-v2: 8 子测试各自 spawn workbench,(d) group 改用独立端口(9190/9191 避 8962 TIME_WAIT),
-  // 本机多轮 e2e 后资源紧张时整体 >120s(实测 240s,逻辑全 PASS)。豁免到 300s 防误杀。
   'tools-v2.e2e.js': 300000,
-  // 121 换机器（34 号文 §13.8／§13.11）：classic-window-live-steer 单跑实测 32 s（24 核机器）但历史上
-  // 记录过 240 s+（老机器），8 路全量下又被挤到 TIMEOUT；它一趟里要起真线程、插话、等回合收尾，
-  // 墙钟大头在 provider 子进程。豁免到 300 s 防误杀。
   'classic-window-live-steer.e2e.js': 300000,
-  // 121-K2b: 事件流客户端的墙钟门。观察窗本身就是硬性的（§6.3 的 60 s 安静窗 ＋ 35 s 恢复窗），
-  // 再加一条真线程跑满「起跑→工具→提问→收工」四段（~40 s）与冷启动，实测 ~230 s。
   'event-stream-client.browser.e2e.js': 420000,
-  // 121-K4-4: 一台两视的外框件。一趟里要起三条真线程(一条长回答 ＋ 一条停在待决 ＋ 一条
-  // 一直在跑)、切视角六个来回、三档视口各量一遍并存两张截图、再让管家自己开一条线程,
-  // 实测单跑 ~200 s(并行桶之后独占跑)。豁免到 360 s。
   'one-workbench-frame.browser.e2e.js': 360000,
-  // 121-K5: 工作台线程头件。一趟里要起三条真线程(一条停在待决 ＋ 一条一直在跑 ＋ 一条短回答)、
-  // 开合模型菜单四轮、切视角四个来回、三档视口各量一遍并存三张截图,再点停止并读决策日志,
-  // 实测单跑 ~150 s(并行桶之后独占跑)。豁免到 300 s。
   'workbench-thread-head.browser.e2e.js': 300000,
-  // 121-K7: 口袋件。一趟里起【两台】真服务与两个无头 Edge —— 第一台量口袋四项、四条 deep link、
-  // 「新」角标（要重载一次）、「接下来」（再重载一次）、12 s 静置窗、两档视口与两张截图；第二台
-  // 用【全新 HOME】走完七步向导（首启还要付 detectDesktopMcp 那几发 python 探针）。24 核机器上
-  // 实测单跑 28 s、独占桶里 25 s —— 默认 120 s 本来就够。**豁免仍然要留**：老机器上全新 HOME 的
-  // 首启探针一发 ~1.7 s ×3（34 号文 §13.10／ia.e2e ⑦ 的 20 s 门就是为它放的），加上两台服务两个
-  // 浏览器与那 12 s 静置窗，默认值会贴边。300 s 是照 workbench-thread-head 那一档给的余量。
   'rail-pocket.browser.e2e.js': 300000,
-  // 121 走查修复第一轮：一趟里起四条真线程（一条停在待决 ＋ 一条一直在跑 ＋ 一条短回答 ＋ 一条空的）、
-  // 切视角七个来回、开合六张浮层各量三点命中、两档密度各悬停一次、再切一次模型跑一个真回合，
-  // 外加两张截图。24 核机器上实测单跑 ~120 s（独占桶里）。豁免到 300 s，与同族两件同一档。
   'walkthrough-round1.browser.e2e.js': 300000,
-  // 3.0 收口走查第三波:界面修复件。H1–H6 逐项在出问题的宽度 × 中英两种语言上量(线程头 11 档宽 × 2 语言、
-  // 设置页签 3 档 × 2 语言、抽屉 Tab 序、定时任务表单……)再加 M 组的真回合,单跑实测 128 s,已越过默认 120 s
-  // (本机 4 路全量里撞墙 TIMEOUT,断言全 PASS)。豁免到 300 s,与同族走查件同一档。
   'frontend-wave3.browser.e2e.js': 300000,
 };
 function timeoutFor(file) { return TIMEOUT_OVERRIDES[file] || TIMEOUT_MS; }
 
-// 显式排除清单(不靠文件名猜测,让"为什么跳过"可审计)。判断依据 = 需真 key/真外部子进程:
-//   grep -lE "argv\[2\].*KEY|KEY\s*=\s*process\.argv" *.e2e.js  ->  deepseek-live / deepseek-tools
-//   - deepseek-live:        真调 DeepSeek API,需 DEEPSEEK_API_KEY(argv[2])
-//   - deepseek-tools:       真调 DeepSeek v4-pro function-calling,需 key(argv[2]);头部标 LIVE
-//   - desktop-bridge-live:  真起 Python MCP 子进程(ai-computer-control),CI 无 Python 环境
-//   - claude-binary-live:   第42b波 真身 claude.exe 冒烟(解析/直启/stream-json/权限桥;真实 API 小额消耗)
-//   - claude-compact-probe-live: 第42c波 print 模式压缩行为探针(真实 API,大额 token;手工决策用)
+// Live qualifications require credentials, a physical device or explicit opt-in.
 const SKIP = new Set([
   'deepseek-live.e2e.js',
   'deepseek-tools.e2e.js',
   'desktop-bridge-live.e2e.js',
   // 第42b波: 真身 claude 二进制冒烟(真实 API 调用,需本机已登录 CLI;手工 node 直跑)
   'claude-binary-live.e2e.js',
-  // 第42c波: CLI print 模式压缩行为探针(真实 API,大额 token 消耗;手工 node 直跑)
-  'claude-compact-probe-live.e2e.js',
   // 第45波45e: 压缩质量评测(真实 provider API,读真实 config 拿凭据;手工 node 直跑)
   'compact-quality-live.e2e.js',
   // 22号线#1 Prompt Cache 纪律验证(真实 DeepSeek API,argv 传 key,固定多轮冷/热对照;手工直跑)
@@ -292,15 +127,6 @@ const SKIP = new Set([
   'macos-execution-input.e2e.js',
 ]);
 
-// 已知失败件(积压回归,CI 全量暴露,后续波修)。失败不计红(不挂 CI),但报告标 [known-fail];
-// 若 PASS 则标 [unexpected-pass] 提醒清理名单。每条附原因 -- 名单不能成永久豁免,修好即删。
-// 第36波(v1.7): capabilities 毕业 —— 挂账的 identity bleed 断言实测已过;真正失败的是 W1a 主动检索
-// 指引(自适应装载后 web_search 不进首批 schema,D6 行按旧"已 offer"口径永不渲染),已修为目录可用口径。
-// 第40波(v1.9): ui-v3-p1 毕业 —— ghost-danger hover 补 --danger-veil 令牌(两主题对称);发送⇄停止锁
-// 迁移到 i18n 形状。名单清零,机制保留(空表 = 全绿无例外)。
-const KNOWN_FAILURE = {};
-
-// 快通道:无端口纯静态锁件(spawn|listen=0),秒级,先跑求快速反馈。
 const isFast = f => /\.static\.e2e\.js$/.test(f);
 
 // ─── 第36波(v1.7): 端口唯一性审计 ─────────────────────────────────────────────────────────────
@@ -309,7 +135,6 @@ const isFast = f => /\.static\.e2e\.js$/.test(f);
 // 任何登记动作。实现住 dev-harness/lib/port-audit.js(第46波46a 抽出真身,unit 测试同源 require,
 // 杜绝"测复制副本"的 E2 漂移坑)。判定口径详见该模块头注。
 const { portAuditFromDir } = require('./lib/port-audit');
-const { stopRuyiTestBrowsers, countRuyiTestBrowsers } = require('./lib/browser-cleanup');
 // 107-F9b:每件开浏览器的测试一个自己的临时根,收尸只收这个根(头注在 lib/browser-profile-scope.js)。
 const { SCOPE_ENV: BROWSER_SCOPE_ENV, SCOPE_FILE: BROWSER_SCOPE_FILE, createScope: createBrowserScope, reapScope: reapBrowserScope } = require('./lib/browser-profile-scope');
 // 27 号文 §11.21.7 债④:夹具 HOME 守卫。夹具拿到的家目录是【临时家】,真机家另走 RUYI_REAL_HOME;
@@ -323,10 +148,6 @@ function listE2e() {
     .sort();
 }
 
-// 跑一件:spawn + 超时 killOwnTree 收整棵自己的树(Windows 孙进程兜底;128c 起不再用 taskkill /T)。
-// 122 波 §2.7:每件一份独立临时家(perTest mkdtemp),不再整轮共用 —— 先跑的件往共用家写
-// .claude.json,后跑的件又把它当"外部已装"的 MCP 导入,是 websearch 在 8 路全量下红的真根。
-// ok 件跑完(close 之后)就地 rmSync 回收;失败件保留目录并把路径打进该件输出,便于取证。
 function runOne(file) {
   return new Promise(resolve => {
     const t0 = Date.now();
@@ -335,55 +156,31 @@ function runOne(file) {
     const fileSrc = fs.readFileSync(full, 'utf8');
     const ownsBrowserProfile = fileSrc.includes('--user-data-dir=') || /require\(['"]\.\/lib\/browser-fixture['"]\)/.test(fileSrc);
     const { env: childEnv, home: childHome } = fixtureChildEnv({ perTest: true });
-    // 107-F9b:开浏览器的件拿一个【属于这一件】的临时根,经环境变量交给夹具、再以 --require 装上
-    // browser-profile-scope(它把夹具进程的 os.tmpdir() 指到这个根,并拦下根外的 --user-data-dir)。
-    // 建不出来就不装、也不收(下一轮 run-all 开头的全局收尸兜底)—— 绝不退回不带范围的收尸。
-    let browserScope = '';
-    if (ownsBrowserProfile) {
-      try { browserScope = createBrowserScope(); } catch { browserScope = ''; }
-      if (browserScope) childEnv[BROWSER_SCOPE_ENV] = browserScope;
-    }
-    // --require 走 CLI 实参而不是 NODE_OPTIONS:Node 的 NODE_OPTIONS 分词器吃引号/反斜杠,
-    // 本仓检出路径含空格,走 NODE_OPTIONS 必挂;CLI 实参还保证 --require 从夹具 argv 里被剔掉。
+    const browserScope = ownsBrowserProfile ? createBrowserScope() : '';
+    if (browserScope) childEnv[BROWSER_SCOPE_ENV] = browserScope;
     const scopeArgs = browserScope ? ['--require', BROWSER_SCOPE_FILE] : [];
     const child = cp.spawn(process.execPath, ['--require', FIXTURE_GUARD, ...scopeArgs, full], {
       cwd: HARNESS,
-      windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: childEnv,
-      // 非 Windows:每件自成一个进程组。件退出后组里还活着的(没收干净的 server.js/假组件)按组一把收掉,
-      // 不然它们挂到 init 下成孤儿,越积越多、抢 CPU 与端口(Linux 容器一次全量曾留下 ~55 个)。
-      detached: process.platform !== 'win32',
+      detached: true,
     });
-    if (process.platform !== 'win32' && child.pid) LIVE_GROUPS.add(child.pid);
+    if (child.pid) LIVE_GROUPS.add(child.pid);
     let stdout = '', stderr = '', timedOut = false;
     child.stdout.on('data', d => (stdout += d));
     child.stderr.on('data', d => (stderr += d));
     const timer = setTimeout(() => {
       timedOut = true;
-      // 收整棵自己的树(含 server.js 孙进程):lib/kill-own-tree 按创建时间认子孙,父号过期撞号的陌生进程不算。
-      try {
-        if (process.platform === 'win32') {
-          killOwnTree(child);
-        } else {
-          try { process.kill(-child.pid, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
-        }
-      } catch { /* 已退出 */ }
+      killFixtureGroup(child.pid);
     }, timeoutFor(file));
     child.on('close', code => {
       clearTimeout(timer);
-      if (process.platform !== 'win32') {
-        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* 组里已经没人了 */ }
-        LIVE_GROUPS.delete(child.pid);
-      }
-      // Edge utility processes can escape the child tree. Reap them before the next case, otherwise a long
-      // serial run eventually exhausts process and handle resources.
-      // 107-F9b: reap ONLY this case's scope. The unscoped form matched every Ruyi test browser on the
-      // machine, so under --parallel one lane finishing killed the browsers the other lanes were still
-      // driving (their CDP calls then hung to the 120 s timeout — F8's steward-settings B3).
-      if (browserScope) reapBrowserScope(browserScope, stopRuyiTestBrowsers);
-      const ok = code === 0 && !timedOut;
+      const cleanupError = killFixtureGroup(child.pid);
+      LIVE_GROUPS.delete(child.pid);
+      if (browserScope) reapBrowserScope(browserScope);
+      const ok = code === 0 && !timedOut && !cleanupError;
       let out = stdout + stderr;
+      if (cleanupError) out += `\nFAIL fixture process group cleanup: ${cleanupError.message}`;
       if (ok) {
         try { fs.rmSync(childHome, { recursive: true, force: true, maxRetries: 3 }); } catch { /* 回收不了不影响结果 */ }
       } else {
@@ -394,34 +191,26 @@ function runOne(file) {
     });
     child.on('error', e => {
       clearTimeout(timer);
-      if (browserScope) reapBrowserScope(browserScope, stopRuyiTestBrowsers);
+      if (browserScope) reapBrowserScope(browserScope);
       resolve({ file, ok: false, timedOut: false, status: -1, out: stdout + stderr + '\n[spawn error] ' + e + `\n[fixture home 保留取证] ${childHome}`, ms: Date.now() - t0 });
     });
   });
 }
 
-// 第46波46b: 失败自动重跑一次。首跑失败 -> 原地重跑;二跑通过记 [flaky](计时累加,日志可见),
-// 二跑仍失败才算真 fail(保留两次输出 tail,重跑的那次为准)。KNOWN_FAILURE 名单件不重试 ——
-// 已知失败重试是浪费;flaky 计数进汇总,>0 时退出码仍为 0 但报告必须可见(沉默的 flaky 是明天的红)。
 async function runWithRetry(file) {
   const first = await runOne(file);
   recordAttempt(file, 1, first);
-  if (first.ok || KNOWN_FAILURE[file]) return { r: first, flaky: false };
+  if (first.ok) return { r: first, flaky: false };
   const second = await runOne(file);
   recordAttempt(file, 2, second);
-  // 125:首跑那次的 FAIL 行【留住】。修前 flaky 件的首跑输出整份丢掉,于是汇总只说得出「这件抖」,
-  // 说不出「抖在哪一条」—— 本轮全量 4 件 flaky、零诊断,40 号文 §8.4 ⓪ 想治的正是这个。
-  // 129(本波取证时补):首跑【没有任何 FAIL 行】的那一类 flaky —— 超时、被杀、启动就炸 —— 修前
-  // 现场整份丢掉,汇总只说得出「多半是超时或进程被杀」,于是这一类永远查不下去(kimi-agent-cli
-  // 跨两轮重现,两次都卡在这里)。125 那一刀还的是「断言红在哪一条」,这一刀还的是「它是怎么死的」:
-  // 带上首跑的超时标/退出码,以及在没有 FAIL 行时的末 12 行原文。
   if (second.ok) {
+    const firstFail = failLines(first.out);
     return {
       r: {
         ...second, ms: first.ms + second.ms,
-        firstFail: failLines(first.out),
+        firstFail,
         firstTimedOut: first.timedOut, firstStatus: first.status,
-        firstTail: failLines(first.out).length ? [] : tailLines(first.out, 12).split(String.fromCharCode(10)).filter(Boolean),
+        firstTail: firstFail.length ? [] : tailLines(first.out, 12).split(String.fromCharCode(10)).filter(Boolean),
       },
       flaky: true,
     };
@@ -443,15 +232,6 @@ function failLines(s) {
 }
 
 async function main() {
-  // 开跑前的全局收尸【保留不带范围】:此刻还没有任何车道在跑,收的是上一轮(或手工单跑)漏下的。
-  // 107-F9b 之后,run-all 里不带范围的收尸只许有这一处 —— unit/browser-profile-scope.test.js 钉着。
-  stopRuyiTestBrowsers();
-  // 129i(49 号文;用户 2026-09-20 拍板「排进」):进程收完了,再把【陈年的夹具目录】扫一遍。
-  // 病灶是取证目录只进不出:失败件的现场有意保留(对的)、各件自己的临时目录只在成功时删,
-  // 于是这台机器攒到了 19730 个 —— 目录一多,Edge 冷启动与 mkdtemp 都被拖慢,并行全量里
-  // 就冒出一批「超时但没有断言红」的假偶发。判据与纪律全在 lib/temp-janitor.js(绝不碰 6 小时内的,
-  // worktree 前缀排除),这里只负责在【一个车道都还没起来】的此刻调一次,并把读数打出来 ——
-  // 静默的清理和静默的 flaky 一样,是明天的红。
   {
     const stats = pruneStaleFixtureDirs({ root: os.tmpdir() });
     if (stats.deleted || stats.failed) {
@@ -463,14 +243,13 @@ async function main() {
   // --parallel N: 并行路数(默认1=串行)
   const parallelIdx = argv.indexOf('--parallel');
   const PARALLEL = parallelIdx >= 0 ? Math.max(1, parseInt(argv[parallelIdx + 1], 10) || 4) : 1;
-  // 第46波修复:无 --parallel 时 parallelIdx=-1,旧过滤式 i!==parallelIdx+1 会误删 argv[0]
-  // —— `--fast` 被吞跑全量、指定件清单丢第一件。仅当旗标真实存在时才剔除它的两个槽位。
   const argvClean = parallelIdx >= 0 ? argv.filter((_, i) => i !== parallelIdx && i !== parallelIdx + 1) : argv;
 
+  const targeted = argvClean.length > 0 && !argvClean[0].startsWith('-');
   let files;
   if (argvClean.includes('--fast')) {
     files = listE2e().filter(isFast);
-  } else if (argvClean.length && !argvClean[0].startsWith('-')) {
+  } else if (targeted) {
     files = argvClean.filter(f => f.endsWith('.e2e.js'));
   } else {
     files = listE2e();
@@ -480,7 +259,7 @@ async function main() {
 
   console.log(`# Ruyi e2e runner`);
   console.log(`# 件数: ${files.length} ran / ${SKIP.size} skipped(live)`);
-  console.log(`# 超时: ${TIMEOUT_MS / 1000}s/件,${PARALLEL > 1 ? `并行(${PARALLEL}路)` : '串行(killOwnTree 收整树)'}`);
+  console.log(`# 超时: ${TIMEOUT_MS / 1000}s/件,${PARALLEL > 1 ? `并行(${PARALLEL}路)` : '串行'}`);
   console.log(`# Node ${process.version}, platform ${process.platform}`);
   // 27 号文 §11.21.7 债④:夹具一律拿临时家,真机家只以 RUYI_REAL_HOME 的形式传下去(守卫的判据源)。
   // 122 波 §2.7:不再是整轮共用一份 —— 每一件各自 mkdtemp 一份独立临时家,跑完(仅 ok 件)即删,
@@ -495,153 +274,64 @@ async function main() {
     process.exit(2);
   }
   console.log(`# 端口审计: ${audit.count} 个带内端口,跨文件零撞车\n`);
-  // 第46波46a: unit/ 不再是孤儿 —— 快通道最前跑 node --test(秒级),挂即拒跑。
-  // 单测测的是 runner/安全关键逻辑(端口审计/注释剥离/XSS 规则),先挂先知道,别等 25 分钟全量。
-  {
-    const unitDir = path.join(HARNESS, 'unit');
-    if (fs.existsSync(unitDir) && fs.readdirSync(unitDir).some(f => f.endsWith('.test.js'))) {
-      // 注意:传目录会被 Node 当作入口模块(MODULE_NOT_FOUND),--test 要吃 glob 串(正斜杠)。
-      const unitGlob = (unitDir + '/*.test.js').replace(/\\/g, '/');
-      // Honor the explicit local resource budget in both stages. Otherwise node:test uses every
-      // CPU for the unit gate even when E2E was limited to four lanes; CI's default is unchanged.
-      const unitArgs = ['--test', ...(parallelIdx >= 0 ? ['--test-concurrency=' + PARALLEL] : []), unitGlob];
-      const u = cp.spawnSync(process.execPath, unitArgs, { encoding: 'utf8', windowsHide: true });
-      fs.writeFileSync(path.join(HARNESS, 'last-unit-run.log'), String(u.stdout || '') + String(u.stderr || ''));
-      const tail = String(u.stdout + u.stderr).split(/\r?\n/).filter(l => /^(?:#|ℹ) (pass|fail|tests|skipped)\b/.test(l));
-      if (u.status !== 0) {
-        console.error('# unit 测试失败(node --test dev-harness/unit),拒跑 e2e:\n' + String(u.stdout + u.stderr).split(/\r?\n/).slice(-40).join('\n'));
-        process.exit(2);
-      }
-      console.log('# unit 测试: ' + (tail.join(' / ') || 'ALL PASS'));
+  const buildJs = path.join(HARNESS, '..', 'ruyi-workbench', 'app', 'build.js');
+  const build = cp.spawnSync(process.execPath, [buildJs], { encoding: 'utf8' });
+  if (build.status !== 0) throw new Error(build.stderr || build.stdout || String(build.error));
+  console.log('# ' + build.stdout.trim());
+
+  if (!targeted) {
+    const unitGlob = path.join(HARNESS, 'unit', '*.test.js');
+    const unitArgs = ['--test', ...(parallelIdx >= 0 ? ['--test-concurrency=' + PARALLEL] : []), unitGlob];
+    const logPath = path.join(HARNESS, 'last-unit-run.log');
+    const log = fs.openSync(logPath, 'w');
+    let unit;
+    try {
+      unit = cp.spawnSync(process.execPath, unitArgs, { stdio: ['ignore', log, log] });
+    } finally {
+      fs.closeSync(log);
     }
-  }
-  // 第43波: 构建 freshness 门 —— 测试永远跑【新鲜产物】。src/ 被改过而产物未重建时,
-  // 自动重建(确定性操作,静默跑陈旧代码才是真风险);重建失败(切点自检不过)即拒跑。
-  // build.js 不存在(部分检出/回滚到 43 波前的单体时代)则跳门,保持向后兼容。
-  {
-    const buildJs = path.join(HARNESS, '..', 'ruyi-workbench', 'app', 'build.js');
-    if (!fs.existsSync(buildJs)) {
-      console.log('# build freshness: app/build.js 不存在(单体时代树)— 跳门');
-    } else {
-      const b = cp.spawnSync(process.execPath, [buildJs, '--check'], { encoding: 'utf8', windowsHide: true });
-      if (b.status !== 0) {
-        console.log('# build freshness: 产物落后于 src —— 自动重建(node app/build.js)');
-        const r = cp.spawnSync(process.execPath, [buildJs], { encoding: 'utf8', windowsHide: true });
-        if (r.status !== 0) { console.error('# build 重建失败:\n' + (r.error && r.error.stack || r.stderr || r.stdout || '(无输出)')); process.exit(2); }
-        console.log('# ' + String(r.stdout).trim());
-      } else {
-        console.log('# build freshness: 产物与 src 一致');
-      }
-    }
+    const lines = fs.readFileSync(logPath, 'utf8').split(/\r?\n/);
+    if (unit.status !== 0) throw new Error(unit.error?.message || lines.slice(-40).join('\n'));
+    console.log('# unit 测试: ' + lines.filter(l => /^(?:#|ℹ) (pass|fail|tests|skipped)\b/.test(l)).join(' / '));
   }
 
-  let pass = 0, fail = 0, knownFail = 0, unexpectedPass = 0, flakyCount = 0;
-  const failed = [], results = [], flakyFiles = [];
-
-  if (PARALLEL <= 1) {
-    // ── 串行模式（原有逻辑）──
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      const tag = isFast(f) ? '[fast]' : '[main]';
-      process.stdout.write(`(${String(i + 1).padStart(3)}/${files.length}) ${tag} ${f} ... `);
-      const { r, flaky } = await runWithRetry(f);
-      results.push({ file: f, ok: r.ok, known: !!KNOWN_FAILURE[f], flaky, timedOut: r.timedOut, status: r.status, ms: r.ms, firstFail: r.firstFail, firstTimedOut: r.firstTimedOut, firstStatus: r.firstStatus, firstTail: r.firstTail });
-      const known = KNOWN_FAILURE[f];
-      if (r.ok) {
-        pass++;
-        if (flaky) { flakyCount++; flakyFiles.push(f); console.log(`PASS [flaky: 首跑失败,重跑通过 —— 需查时序] (${r.ms}ms)`); }
-        else if (known) { unexpectedPass++; console.log(`PASS [unexpected-pass: known-failure 修好了?清理名单] (${r.ms}ms)`); }
-        else console.log(`PASS (${r.ms}ms)`);
-      } else {
-        if (known) {
-          knownFail++;
-          console.log(`FAIL [known-fail] (${r.ms}ms) - ${known}`);
-        } else {
-          fail++;
-          const reason = r.timedOut ? `TIMEOUT(>${timeoutFor(f) / 1000}s)` : `exit=${r.status}`;
-          console.log(`FAIL ${reason} (重跑仍失败, ${r.ms}ms)`);
-          failed.push(r);
-        }
-      }
+  const results = [];
+  async function runFixture(file, lane) {
+    let row;
+    try {
+      const { r, flaky } = await runWithRetry(file);
+      row = { ...r, flaky };
+    } catch (error) {
+      row = { file, ok: false, status: -1, out: String(error.stack || error), ms: 0 };
     }
+    const status = row.ok ? (row.flaky ? 'FLAKY_PASS' : 'PASS')
+      : row.timedOut ? 'TIMEOUT' : 'FAIL exit=' + row.status;
+    console.log(`${lane} ${file} ${status} (${row.ms}ms)`);
+    if (row.ok) delete row.out;
+    results.push(row);
+  }
+
+  if (PARALLEL === 1) {
+    for (const file of files) await runFixture(file, isFast(file) ? '[fast]' : '[main]');
   } else {
-    // ── 并行模式 ──
-    // 将普通文件分成 PARALLEL 个桶,桶间并行,桶内串行；严格墙钟基准最后独占执行。
-    const exclusiveFiles = files.filter(f => PARALLEL_EXCLUSIVE.has(f));
-    const parallelFiles = files.filter(f => !PARALLEL_EXCLUSIVE.has(f));
     const buckets = Array.from({ length: PARALLEL }, () => []);
-    for (let i = 0; i < parallelFiles.length; i++) buckets[i % PARALLEL].push(parallelFiles[i]);
-
-    console.log(`# 并行模式: ${PARALLEL} 路,每桶 ~${Math.ceil(parallelFiles.length / PARALLEL)} 件；${exclusiveFiles.length} 件性能门独占\n`);
-
-    const bucketPromises = buckets.map(async (bucket, bi) => {
-      const bucketResults = [];
-      for (const f of bucket) {
-        const tag = isFast(f) ? '[fast]' : '[main]';
-        const prefix = `[B${bi}]`;
-        process.stdout.write(`${prefix} (${tag}) ${f} ... `);
-        const { r, flaky } = await runWithRetry(f);
-        // Preserve the captured output in parallel mode too. Without it the final failure heading could name
-        // the right file but print an empty/misleading tail, making a load flake needlessly hard to diagnose.
-        bucketResults.push({ file: f, ok: r.ok, known: !!KNOWN_FAILURE[f], flaky, timedOut: r.timedOut, status: r.status, out: r.out, ms: r.ms, firstFail: r.firstFail, firstTimedOut: r.firstTimedOut, firstStatus: r.firstStatus, firstTail: r.firstTail });
-        const known = KNOWN_FAILURE[f];
-        if (r.ok) {
-          if (flaky) console.log(`${prefix} PASS [flaky: 重跑通过] (${r.ms}ms)`);
-          else if (known) console.log(`${prefix} PASS [unexpected-pass] (${r.ms}ms)`);
-          else console.log(`${prefix} PASS (${r.ms}ms)`);
-        } else {
-          const reason = r.timedOut ? `TIMEOUT(>${timeoutFor(f) / 1000}s)` : `exit=${r.status}`;
-          if (known) console.log(`${prefix} FAIL [known-fail] (${r.ms}ms) - ${known}`);
-          else console.log(`${prefix} FAIL ${reason} (重跑仍失败, ${r.ms}ms)`);
-        }
-      }
-      return bucketResults;
-    });
-
-    const allBuckets = await Promise.allSettled(bucketPromises);
-    for (const settled of allBuckets) {
-      // 审计教训(第39波): bucket 驳回时静默 [] 会把整桶结果从汇总里抹掉 —— 失败不可见即"假绿"。驳回必须入账。
-      const bucketResults = settled.status === 'fulfilled' ? settled.value
-        : [{ file: '(bucket-runner)', ok: false, timedOut: false, status: -1, out: '[bucket rejected] ' + (settled.reason && settled.reason.stack || settled.reason), ms: 0 }];
-      for (const r of bucketResults) {
-        results.push(r);
-        const known = KNOWN_FAILURE[r.file];
-        if (r.ok) {
-          pass++;
-          if (r.flaky) { flakyCount++; flakyFiles.push(r.file); }
-          if (known) unexpectedPass++;
-        } else {
-          if (known) knownFail++;
-          else { fail++; failed.push(r); }
-        }
-      }
+    const exclusive = [];
+    let nextLane = 0;
+    for (const file of files) {
+      if (PARALLEL_EXCLUSIVE.has(file)) exclusive.push(file);
+      else buckets[nextLane++ % PARALLEL].push(file);
     }
-    for (const f of exclusiveFiles) {
-      process.stdout.write(`[exclusive] ([performance]) ${f} ... `);
-      const { r, flaky } = await runWithRetry(f);
-      const row = { file: f, ok: r.ok, known: !!KNOWN_FAILURE[f], flaky, timedOut: r.timedOut, status: r.status, out: r.out, ms: r.ms, firstFail: r.firstFail, firstTimedOut: r.firstTimedOut, firstStatus: r.firstStatus, firstTail: r.firstTail };
-      results.push(row);
-      const known = KNOWN_FAILURE[f];
-      if (r.ok) {
-        pass++;
-        if (flaky) { flakyCount++; flakyFiles.push(f); console.log(`PASS [flaky: 重跑通过] (${r.ms}ms)`); }
-        else if (known) { unexpectedPass++; console.log(`PASS [unexpected-pass] (${r.ms}ms)`); }
-        else console.log(`PASS (${r.ms}ms)`);
-      } else {
-        if (known) { knownFail++; console.log(`FAIL [known-fail] (${r.ms}ms) - ${known}`); }
-        else {
-          fail++; failed.push(row);
-          const reason = r.timedOut ? `TIMEOUT(>${timeoutFor(f) / 1000}s)` : `exit=${r.status}`;
-          console.log(`FAIL ${reason} (重跑仍失败, ${r.ms}ms)`);
-        }
-      }
-    }
+    await Promise.all(buckets.map(async (bucket, index) => {
+      for (const file of bucket) await runFixture(file, '[B' + index + ']');
+    }));
+    for (const file of exclusive) await runFixture(file, '[exclusive]');
   }
 
-  console.log(`\n# 汇总: ${pass} pass / ${fail} fail / ${knownFail} known-fail / ${unexpectedPass} unexpected-pass / ${flakyCount} flaky / ${files.length} ran / ${SKIP.size} skipped`);
-  // 107-F9b:只数、不杀。每件按自己的根收尸之后这里应当是 0;不是 0 = 有夹具漏收(下一轮开头的全局收尸兜底)。
-  const leftoverBrowsers = countRuyiTestBrowsers();
-  console.log(`# 收工残留测试浏览器(ruyi-/wcw- profile): ${leftoverBrowsers < 0 ? '没数出来' : leftoverBrowsers}`);
+  const failed = results.filter(row => !row.ok);
+  const flakyFiles = results.filter(row => row.flaky).map(row => row.file);
+  const fail = failed.length;
+  const summary = `${results.length - fail} pass / ${fail} fail / ${flakyFiles.length} flaky / ${results.length} ran / ${SKIP.size} skipped`;
+  console.log('# 汇总: ' + summary);
   if (flakyFiles.length) {
     console.log(`# [flaky] 名单(首跑失败重跑通过,时序可疑,建议后续波治理):`);
     for (const f of flakyFiles) {
@@ -680,10 +370,9 @@ async function main() {
   try {
     fs.writeFileSync(path.join(HARNESS, 'last-run.log'), [
       `# Ruyi e2e last-run log`,
-      `# ${pass} pass / ${fail} fail / ${knownFail} known-fail / ${unexpectedPass} unexpected-pass / ${flakyCount} flaky / ${files.length} ran / ${SKIP.size} skipped`,
+      '# ' + summary,
       `# Node ${process.version}, platform ${process.platform}, parallel=${PARALLEL}`,
-      `# 收工残留测试浏览器(ruyi-/wcw- profile): ${leftoverBrowsers < 0 ? '没数出来' : leftoverBrowsers}`,
-      ...results.map(r => `${r.ok ? (r.known ? 'UNEXPECTED_PASS' : (r.flaky ? 'FLAKY_PASS' : 'PASS')) : (r.known ? 'KNOWN_FAIL' : 'FAIL')}\t${r.ms}ms\t${r.file}`),
+      ...results.map(r => `${r.ok ? (r.flaky ? 'FLAKY_PASS' : 'PASS') : 'FAIL'}\t${r.ms}ms\t${r.file}`),
     ].join('\n') + '\n');
   } catch { /* 只读环境(CI 沙箱)忽略 */ }
 

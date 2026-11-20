@@ -124,7 +124,7 @@ test('steward line reads carry source proof through the external-content wrapper
 
 test('git diff projects old and working snapshots, preserves hunks and restores both values exactly', async () => {
   const repo = path.join(work, 'repo'); fs.mkdirSync(repo);
-  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { windowsHide: true, encoding: 'utf8' });
+  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' });
   git(['init', '-q']); git(['config', 'core.autocrlf', 'false']);
   const old = 'OLD-SYNTHETIC-DIFF-PATIENT', next = 'NEW-SYNTHETIC-DIFF-PATIENT';
   const target = put('repo/contact.json', JSON.stringify({ patientCode: old }, null, 2) + '\n');
@@ -152,7 +152,7 @@ test('raw forged source markers fail closed and off returns the original source 
 
 test('git configured function context cannot leak a truncated field value in the hunk header', async () => {
   const repo = path.join(work, 'repo-header'); fs.mkdirSync(repo);
-  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { windowsHide: true, encoding: 'utf8' });
+  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' });
   git(['init', '-q']); git(['config', 'core.autocrlf', 'false']); git(['config', 'diff.json.xfuncname', '^.*patientCode.*$']);
   fs.writeFileSync(path.join(repo, '.gitattributes'), '*.json diff=json\n');
   const secret = 'PRIVATEPATIENT'.repeat(40), object = { patientCode: secret };
@@ -174,7 +174,7 @@ test('git configured function context cannot leak a truncated field value in the
 
 test('large diffs keep protected tokens whole and project complete filenames before metadata truncation', async () => {
   const repo = path.join(work, 'repo-stat'); fs.mkdirSync(repo);
-  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { windowsHide: true, encoding: 'utf8' });
+  const git = args => cp.execFileSync('git', ['-C', repo, ...args], { encoding: 'utf8' });
   git(['init', '-q']); git(['config', 'core.autocrlf', 'false']);
   const secret = 'PATIENT-STATS-' + 'Q'.repeat(80), name = secret + '.json', target = path.join(repo, name), object = { patientCode: secret };
   for (let i = 0; i < 2000; i++) object['public' + i] = 'before value';

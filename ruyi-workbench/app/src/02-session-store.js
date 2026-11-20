@@ -99,7 +99,7 @@ const { interventionFilePath, dropInterventionSessionState, appendIntervention, 
 const SessionBodies = require('./backend/session-bodies.cjs').createSessionBodies({
   isWriting: id => sessionWriteChains.has(id), logEvent,
 });
-const { sessionMessagesStamp, sessionMessagesDelta, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, SESSION_BODY_READ_TRANSIENT, SESSION_HEAD_READ_RETRIES, danglingTurnState, getSessionBodyState } = SessionBodies;
+const { sessionMessagesStamp, sessionMessagesDelta, sessionBodyRecord, setSessionBodyState, dropSessionBodyState, sessionBodyRecordFromRead, sessionBodyDanglingFromLines, readSessionBodyFile, planSessionBodyAppend, serializeSessionBody, sessionBodyText, sessionBodyDigest, sessionBodyCommitValid, sessionBodiesMatchCommit, rebaseStaleSessionBody, sessionBodyPerfStats, danglingTurnState, getSessionBodyState } = SessionBodies;
 
 
 // ===== PF2: session metadata index (sessions/index.json) =====================================================
@@ -220,7 +220,7 @@ const SessionPersistence = require('./backend/session-persistence.cjs').createSe
   },
   events: RUYI_EVENTS, safeSessionId, safeJsonParse, nowIso, logEvent, storageVersion: SESSION_STORAGE_VERSION,
 });
-const { sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER, readSessionRouteHead } = SessionPersistence;
+const { sessionOmittedProviderHistory, sessionProviderHistoryLength, SESSION_LOAD_OMIT_PROVIDER, readSessionRouteHead, reconcileTurnMetadata } = SessionPersistence;
 // Legacy host adapters disappear with the HTTP/engine composition migration.
 async function loadSession(...args) { return SessionPersistence.loadSession(...args); }
 async function saveSession(...args) { return SessionPersistence.saveSession(...args); }

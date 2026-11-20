@@ -62,7 +62,6 @@ function runChild(fx, mode) {
   const result = cp.spawnSync(process.execPath, [fx.child, mode || 'real'], {
     env: { ...process.env, TEMP: fx.temp, TMP: fx.temp, TMPDIR: fx.temp },
     encoding: 'utf8',
-    windowsHide: true,
     timeout: 60000,
   });
   assert.equal(result.status, 0, `child exited ${result.status}: ${result.stderr}`);

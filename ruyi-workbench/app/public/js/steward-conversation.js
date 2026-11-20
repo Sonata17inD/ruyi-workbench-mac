@@ -612,7 +612,7 @@ export function stewardActErrorMessage(error, translate) {
 }
 
 // 流事件里算「在动手」的那几类（presence 的 phase 由它切到 calling_tool，§8.3 working 态）。
-const STEWARD_TOOL_EVENT_TYPES = Object.freeze(['tool_use', 'tool_use_update', 'tool_progress', 'tool_result']);
+const STEWARD_TOOL_EVENT_TYPES = Object.freeze(['tool_use', 'tool_progress', 'tool_result']);
 
 export function createStewardConversation({
   api = async () => null,

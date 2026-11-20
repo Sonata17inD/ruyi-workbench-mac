@@ -2,39 +2,17 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 换机器：直跑时家目录自隔离（服务启动会从真机 ~/.claude.json 导入 MCP 并同步回真机 CLI 配置，两个方向都要断）
 
-// 第 124 波 P2 真浏览器 E2E，2026-09-22 用户拍板改写：**委托书横幅已退役，折叠块保留**。
-//
-// 退役的口径（用户原话）：「委托书本身删掉吧，会话中会有委托消息历史保留的记录」。
-// 线程头下那条 #threadCommission 横幅整条拆除；委托内容本来就留在历史第一条消息里，
-// 气泡内那个 <details class="brief-fence"> 折叠块（132a）是它现在【唯一】的界面形态。
-// 本件按四组事实钉这个形态：
-//
-//   A11 管家开的线程上 #threadCommission 【不在 DOM 里】（退役不回潮的真机面）；
-//   B9  第一条消息 = 用户原话 + 折叠的管家补充：气泡正文【只有】原话、围栏标签不上屏、
-//       默认合上；**改的是显示、不是数据** —— state 里那条消息仍是整段原件
-//      （回退／检查点／复制读的都是它，这条最要紧）；
-//   B10 折叠块是活的：点 summary 开合两灵，展开时逐字的管家补充在屏上；开合按【线程】记
-//      （换走再换回来还开着 —— 用户是明确要求看它的，再折回去就是跟他对着干）；
-//   B8  长会话：消息窗真起作用（第一条在窗外）时，「展开全部」之后折叠块仍完好
-//      （它跟着 renderCurrentSession 走，窗口怎么裁都不该把它弄丢）。
-//
-// 服务端事实（A5/A6/A6b）原样保留：brief.userText 逐字落盘、supplement 有「验收项」、
-// 管家递的那一回合先跑完 —— 折叠块印的就是这份盘上数据。
-//
-// 夹具：确定性 fake provider；线程 S 由 `POST /api/steward/act` 的 steward_thread_new 开出来
-// （与 one-workbench-frame.browser 同一条既有路径，不需要假管家模型）；线程 U 由用户自己建。
-// 后端零改动。
+// 验证委托内容在消息历史中的折叠、展开和窗口切换。
 
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -86,13 +64,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：一句短回答收尾即可（本件不测回合内容）。
 async function startProvider(port) {
@@ -252,8 +223,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A1 workbench started');
 
@@ -316,11 +287,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1600,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A8 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -442,10 +413,9 @@ try {
   console.log('FAIL 未预期异常: ' + (error && error.message ? error.message : String(error)));
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) { try { provider.close(); } catch { /* ignore */ } }
-  try { stopRuyiTestBrowsers(profile); } catch { /* ignore */ }
 }
 
 console.log(`\nTHREAD COMMISSION BROWSER E2E: ${fail ? 'FAIL (' + fail + ')' : 'ALL PASS'}`);

@@ -14,7 +14,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //
 // 末行判定固定为 `FAILOVER E2E: ALL PASS`。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -109,7 +109,7 @@ function writeConfig(home, provider, extra) {
 }
 
 function spawnWB() {
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   return wb;
@@ -121,7 +121,7 @@ async function waitWB() { let h = null; for (let i = 0; i < 40 && !h; i++) { awa
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   fs.rmSync(HOME, { recursive: true, force: true });
   fs.mkdirSync(HOME, { recursive: true });
-  process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+  process.env.RUYI_HOME = HOME;
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════════
   // UNIT (A + B cleansing) — direct module functions, no server.
@@ -223,7 +223,7 @@ async function waitWB() { let h = null; for (let i = 0; i < 40 && !h; i++) { awa
   // LIVE ① + ② — failover to a backup endpoint + session-sticky.
   // primary = DEAD_PORT (nobody listening) → ECONNREFUSED; backup = live fake-openai on FAKE_LIVE.
   // ═══════════════════════════════════════════════════════════════════════════════════════════════════
-  let live = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { windowsHide: true, env: { ...process.env } });
+  let live = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { env: { ...process.env } });
   live.stdout.on('data', () => {});
   writeConfig(HOME, { id: 'fo', label: 'Failover', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + DEAD_PORT, extraBaseUrls: ['http://127.0.0.1:' + FAKE_LIVE], apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] });
   let wb = spawnWB();
@@ -261,7 +261,7 @@ async function waitWB() { let h = null; for (let i = 0; i < 40 && !h; i++) { awa
   // ═══════════════════════════════════════════════════════════════════════════════════════════════════
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   const srv401 = await start401(FAKE_401);
-  let live3 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { windowsHide: true, env: { ...process.env } });
+  let live3 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { env: { ...process.env } });
   live3.stdout.on('data', () => {});
   writeConfig(HOME, { id: 'fo', label: 'Failover', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_401, extraBaseUrls: ['http://127.0.0.1:' + FAKE_LIVE], apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] });
   wb = spawnWB();
@@ -287,9 +287,9 @@ async function waitWB() { let h = null; for (let i = 0; i < 40 && !h; i++) { awa
   // backup is configured but must never be reached.
   // ═══════════════════════════════════════════════════════════════════════════════════════════════════
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
-  let dieSrv = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_DIE)], { windowsHide: true, env: { ...process.env, FAKE_DIE_MIDSTREAM: '1' } });
+  let dieSrv = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_DIE)], { env: { ...process.env, FAKE_DIE_MIDSTREAM: '1' } });
   dieSrv.stdout.on('data', () => {});
-  let live4 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { windowsHide: true, env: { ...process.env } });
+  let live4 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { env: { ...process.env } });
   live4.stdout.on('data', () => {});
   writeConfig(HOME, { id: 'fo', label: 'Failover', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_DIE, extraBaseUrls: ['http://127.0.0.1:' + FAKE_LIVE], apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] });
   wb = spawnWB();
@@ -313,7 +313,7 @@ async function waitWB() { let h = null; for (let i = 0; i < 40 && !h; i++) { awa
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   const searchSrv2 = await startFakeSearch(SEARCH_PORT);
   // fake-openai drives a single web_search tool call, then echoes its result → the tool actually runs.
-  let live5 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { windowsHide: true, env: { ...process.env, FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'web_search', args: { query: '今日头条', maxResults: 3 } }]) } });
+  let live5 = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_LIVE)], { env: { ...process.env, FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'web_search', args: { query: '今日头条', maxResults: 3 } }]) } });
   live5.stdout.on('data', () => {});
   writeConfig(HOME, { id: 'fo', label: 'Failover', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + FAKE_LIVE, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] },
     { searchBackend: { type: 'tavily', baseUrl: 'http://127.0.0.1:' + SEARCH_PORT, apiKey: 'tav-secret-123456' } });

@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 'use strict';
 // Workspace information-architecture contract. The right pane is for user-visible files, outputs,
 // changes and progress; model-facing execution tools stay behind the conversation/runtime boundary.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -77,13 +77,6 @@ ok(/id="toolOutput" class="tool-output hidden"/.test(html), '③ raw tool output
 const doctor = between(html, '<div class="settings-tab" id="stab-doctor">', '<!-- ===== 高级 ===== -->');
 for (const id of ['storageSummary', 'metricsPanel', 'rawEvents', 'debugDownloadBtn'])
   ok(doctor.includes(`id="${id}"`), `④ #${id} 已迁入设置体检`);
-// 121-K7 翻面重钉（34 号文 §13.13 K8 登记②「右栏『项目与进度』页签 1920 下折三行，布局归 K7」）。
-// 钉的事实从「是三列」换成「**折不到第三行**」—— §2.6「七页签不动」是前提，所以能改的只有列数：
-// 列数 N 必须让 ceil(这一档看得见的枚数 / N) ≤ 2。三列（前值）在专家档就是三行，当场红。
-//
-// **前值那条正则是假绿**（K7 实测，纪律 5 的又一个样本）：`/\.tool-tabs\s*\{/` 也是
-// `:root[data-ui-mode="simple"] .tool-pane .tool-tabs {` 的后缀，把基础档改成四列之后它照旧命中
-// 精简档那一条 repeat(3) 并 PASS。所以这里改成【按整条选择器逐字取规则】，不再用后缀正则。
 const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
 function cssRuleBody(selector) {
   for (const match of cssNoComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
@@ -144,14 +137,14 @@ ok(/function openPermPopover\(/.test(appjs) && !/function openMoreMenu\(/.test(a
 const tempHome = path.join(os.tmpdir(), 'wcw-ia-e2e');
 fs.rmSync(tempHome, { recursive: true, force: true });
 fs.mkdirSync(tempHome, { recursive: true });
-const env = { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: tempHome };
+const env = { ...process.env, RUYI_HOME: tempHome };
 delete env.RUYI_HOME;
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env });
 try {
   let ready = null;
   // 121-治抖动（2026-09-12 换机器实测）：这一行是「服务起得来」的门，不是性能指标。全新 HOME 首启
   // 会走 01-config detectDesktopMcp 的三次 python 探针（python/python3/py -3 各 ~1.7 s，装了 Python
-  // 但没装 mcp 包的机器每次都慢失败）＋ claude/kimi CLI 探针，实测 6.5 s 才到 /health —— 原来 40×150ms
+  // 但没装 mcp 包的机器每次都慢失败）＋ Claude CLI 探针，实测 6.5 s 才到 /health —— 原来 40×150ms
   // = 6 s 的预算在这种机器上必红（基线提交同样红，不是回归）。门放到 20 s；探针本身的阻塞登记为产品债。
   for (let i = 0; i < 134 && !ready; i++) { await sleep(150); ready = await health(WB_PORT); }
   ok(!!ready, '⑦ workbench listening（全新 HOME）');

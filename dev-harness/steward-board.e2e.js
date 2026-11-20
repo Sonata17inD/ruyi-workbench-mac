@@ -18,14 +18,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      太早时下一拍要真去复核（不被推后一整个空闲节拍），行上的「打开」这条不派事件的焦点路要强刷。
 // 与 steward-drawer.e2e.js / steward-shell.e2e.js 同一套 CDP 无头驱动；后端零改动。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -66,7 +65,7 @@ const POLL_MS = 120000;   // 配置的节拍拉满：测试窗口内不会真的
 // 117j W2-5：表按 5s 下限起（见 steward-board.js pollTick 头注），数计时器要按这个周期。
 const TICK_MS = 5000;
 
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const browserPath = findBrowserExecutable;
 
 // 121-K4 修夹具（不是修产品）：`timeoutMs` 是新加的第六个参数，默认仍是 20 s。
@@ -110,13 +109,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：'ask' → 一条 request_user_input（挂成 question 待决）；'hang' → 只开流不收尾
 // （回合一直在飞，五态 = 在跑）；其余 → 一句话收尾。
@@ -413,8 +405,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200, undefined, 300)), 'A1 workbench started'); // 117q:此启动门原吃默认 attempts=200(200×80ms=16s)低于 30 号文 P1-31 建议的 300×同款间隔量级,是「FAIL workbench up」假红的根;默认值被本文件下方多处业务断言调用复用,不能整体抬,这里改成显式传 300 只抬这一处(30 号文 P1-31)
 
@@ -508,11 +500,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1440,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A9 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -607,9 +599,6 @@ try {
   const groupC = opened.groups.find(group => group.missionId === created.C) || null;
   ok(Boolean(groupM) && groupM.title === MISSION_TITLE,
     `C3 事项行显示【容器】标题（117h 第 0 步的 missionTitle；实测「${groupM && groupM.title}」）`);
-  // 117u-G2 **重钉 C4**（B4：钱与验收从事项头搬到卡尾一行）：被钉的事实没变 —— 验收 a/b 仍然
-  // 【显示且只显示一次】，变的只是它印在哪儿（多线程事项印在组尾，单线程印在那唯一一张卡的卡尾）。
-  // 新判据比旧的强：旧的只问「事项头那串里有没有它」，新的连「有没有印重复」一起钉。
   ok(Boolean(groupM) && groupM.facts.length === 1
     && groupM.facts[0].includes(fill('stewardShell.board.acceptance', { done: 1, total: 2 })),
     `C4 验收 a/b 印在卡尾那一行事实里，且整组只印一次（实测 ${groupM && JSON.stringify(groupM.facts)}）`);
@@ -638,10 +627,6 @@ try {
   ok(Boolean(groupC) && !groupC.facts.join(' ').includes(zh['stewardShell.board.acceptanceUnrecorded']),
     `C4e 自带账本的那条【记过】，看板闭嘴（实测 ${groupC && JSON.stringify(groupC.facts)}）`);
 
-  // 117u-G2 **重钉 C5**（B1：单线程事项不画事项层 —— §11.15.2 病 2「标题字面重复两次」）。
-  // 旧判据钉的是「自成事项的事项名回落成它自己的标题」，那句话在修前【必然】导致同一个名字上下
-  // 印两遍（事项头一遍、线程行一遍）。新判据钉的是这一刀真正要保证的事：那种组根本没有事项层，
-  // 而那个名字在整组里【恰好出现一次】（在线程卡上）—— 更强，也更贴用户看见的那张截图。
   ok(Boolean(groupC) && groupC.grouped === false && groupC.hasHead === false && groupC.title === '',
     `C5 自成事项（1 事项 = 1 线程）不画事项层（实测 grouped=${groupC && groupC.grouped} hasHead=${groupC && groupC.hasHead}）`);
   const nameHits = (haystack, needle) => String(haystack || '').split(needle).length - 1;
@@ -653,9 +638,6 @@ try {
     'C6 线程行按事项归位（M 两条、C 一条）');
   const rowA = groupM && groupM.threads.find(thread => thread.sessionId === created.A);
   const rowB = groupM && groupM.threads.find(thread => thread.sessionId === created.B);
-  // 117u-G2 **重钉 C7**（B2「色 ≠ 态」）：五态从那颗点的 data-state 搬到卡头那枚药丸上 ——
-  // 点自此只说「这是哪条线程」（线程色），态由药丸独家承担。判据跟着事实走，且比旧的多钉一件：
-  // 线程卡上【一颗按状态上色的点都没有】（.steward-board-dot 计数为 0），否则两套信号又混回去了。
   ok(Boolean(rowA) && rowA.state === 'needs_you' && Boolean(rowB) && rowB.state === 'running',
     `C7 线程行五态经 mission-state.js，写在卡头那枚药丸上（A=${rowA && rowA.state} / B=${rowB && rowB.state}）`);
   ok(Boolean(rowB) && rowB.statePillText === zh['mission.state.running'],
@@ -665,23 +647,13 @@ try {
     `C7c 色 ≠ 态：线程卡上零颗按状态上色的点，只有一根色条＋一颗线程色点（实测 A 状态点=${rowA && rowA.stateDots} 色点=${rowA && rowA.hueDots} 色条=${rowA && rowA.bars}）`);
   ok(Boolean(rowA) && rowA.wait.length > 0,
     `C8 等你那条给出等待原因（116h 的 wait.label 单点判定；实测「${rowA && rowA.wait}」）`);
-  // 117u-G2 **重钉 C8b**（B2 的直接后果）：修前没在等的那一行会把五态人话再印一遍 —— B2 之后
-  // 卡头那枚药丸已经把这句话说过了，等待行再说一次就是 §11.15.2 病 3 那串等重灰字。所以新判据是
-  // 「没在等就一个字都不说」，同一件事实的另一面（药丸仍然说得出来）由上面的 C7b 钉着。
   ok(Boolean(rowB) && rowB.wait === '' && rowB.statePillText === zh['mission.state.running'],
     `C8b 没在等的那条【不再重复印状态】（药丸已经说了；实测等待行「${rowB && rowB.wait}」／药丸「${rowB && rowB.statePillText}」）`);
-  // 117u-G2 **重钉 C9**（B3「事实降级」）：权限与模型只在【与全局不同】时才印。两侧都验 ——
-  // A／B 跟随全局（不印），C 定了会话级权限档（印）。旧判据「每行都有」在 B3 之后正是要消灭的病
-  // （§11.15.2 病 3：每行都印一遍「跟随全局」，信息量为零、墨量却与线程名争重心）。
   const rowC = groupC && groupC.threads.find(thread => thread.sessionId === created.C);
   ok(Boolean(rowA) && rowA.chips.length === 0 && Boolean(rowB) && rowB.chips.length === 0,
     `C9 跟随全局的行【不印】权限与模型（实测 A=${rowA && JSON.stringify(rowA.chips)} B=${rowB && JSON.stringify(rowB.chips)}）`);
   ok(Boolean(rowC) && JSON.stringify(rowC.chips) === JSON.stringify(['permission', 'model']),
     `C9b 定过会话级权限档的那一行【印】出紧凑快切 chip：权限＋模型（引擎收进模型菜单；实测 ${rowC && JSON.stringify(rowC.chips)}）`);
-  // 2026-09-24 重钉（用户：「有按钮的话默认直接打开工作台里的对应线程」）：菜单里「打开」自此就是
-  // 「在工作台打开」（两视角同义，见 steward-board.js 的 openInWorkbenchRow），原来并排的那枚
-  // 「在工作台打开」（data-action="classic"）是重复的一枚，随之退役 —— 翻面钉它【不在】。
-  // 右栏预览由点行本身承担（F2 钉着）。
   ok(Boolean(rowA) && ['prioritize', 'stop', 'open'].every(action => rowA.actions.includes(action))
     && !rowA.actions.includes('classic'),
     `C10 行操作齐备（优先／停止／打开＝去工作台），不再有第二枚「在工作台打开」（实测 ${rowA && JSON.stringify(rowA.actions)}）`);
@@ -764,11 +736,6 @@ try {
   })()`);
   ok(Boolean(hueProof) && hueProof.board !== '' && hueProof.board === hueProof.drawer && hueProof.board === hueProof.registryA,
     `C12 同一条线程在【看板卡】与【线程详情栏卡头】上是同一个色号，且逐字等于那张模块级登记表发的号（实测 看板=${hueProof && hueProof.board} 详情栏=${hueProof && hueProof.drawer} 登记表=${hueProof && hueProof.registryA}）`);
-  // 121-K6b **重钉 C12b**（34 号文 §5「色号按任务分配、线程继承任务色」）：原判据钉的是「右栏
-  // 小行也问同一张表」，而右栏自本刀起【只叠在途的线程】（§2.6「其它在途」），B 此刻已收工、
-  // 不在那一栏 —— 那一面的同色由 S 组（真有在途线程的那一段）与新件 focus-rail.browser 钉。
-  // 这里换钉本刀的要害：**A 与 B 同属容器 M，所以它们拿同一个号**（修前必然是两个号）。
-  // 反向验证：把 stewardThreadHueFor 的键改回 sessionId → 本条与 C12d 第三个合取项同时红。
   ok(Boolean(hueProof) && hueProof.sibling !== '' && hueProof.sibling === hueProof.board
     && hueProof.registryB === hueProof.registryA,
     `C12b 同一个任务下的两条线程拿【同一个】号（线程继承任务色；实测 A=${hueProof && hueProof.board} B=${hueProof && hueProof.sibling}）`);
@@ -907,13 +874,6 @@ try {
     'E2a 服务端投影里确实有它 —— 看板此刻取不到它的唯一原因是【行还没刷】');
   const boardIdsOf = snapshot => (snapshot && Array.isArray(snapshot.groups) ? snapshot.groups : [])
     .flatMap(group => group.threads.map(thread => thread.sessionId));
-  // 121-K2b（34 号文 §6.2）**重钉 E2b**：这一条原本断言的是「派事件之前，行里没有它」——
-  // 那是 117r-D2 造这个时序时的【前提】，不是它要守的结论。K2b 之后这个前提不成立了：
-  // `thread.created` 一到，左栏当场把那一行重拉了（§6.3 的指标 e，新件实测 ~87 ms），
-  // 而这【正是本波要的】。所以翻面钉「它已经在行里了」。
-  // 「手里那批行没有它时焦点事件照样打得开」这条路【没有失去覆盖】：E2f 派的是一条根本
-  // 不存在的 id（行里永远不会有它），钉的就是同一条路 ＋ 它的有界性。
-  // 反向验证：把 steward-board.js 的 EVENT_STREAM_ROW_EVENTS 那一圈注释掉 → 本条真红。
   const beforeFocus = await waitForEval(cdp, `(() => {
     const snapshot = ${BOARD};
     const ids = (Array.isArray(snapshot.groups) ? snapshot.groups : []).flatMap(g => g.threads.map(t => t.sessionId));
@@ -1063,14 +1023,6 @@ try {
   await sleep(6000);
   request(appPort, 'POST', '/api/chat/stream', { sessionId: idF, message: 'hang here', cwd: workF }, token, 600000);
   ok(Boolean(await liveOn(idF)), 'R6 线程 F 的新回合也在飞了（服务端投影 activeTurn=true）');
-  // 121-K2b（34 号文 §6.2／§6.3 指标 a）**重钉 R7**：这一条原本钉的是一笔【债】——
-  // 「看板行上的『打开』与行标题走 focusThread()，不派事件，抽屉那边一无所知，于是右栏已经
-  // 开着这条线程时它一次都不刷」。K2b 把它还清了：回合一起跑，thread.state 当场到，右栏
-  // 在 1 s 级别内翻成「进行中」＋「它正在说」，**不需要任何交互**。
-  // 紧跟的 R8（行上『打开』这一路自己也得刷）一个字没动 —— 它钉的是另一件事，而且断连时
-  // 那条路仍是唯一能救回来的眼睛。
-  // 反向验证：把 steward-drawer.js 与 steward-board.js 两处 EVENT_STREAM_ROW_EVENTS 订阅都
-  // 注释掉 → 本条回到修前那一帧（「已收工」＋「它刚说」）即红。
   const liveF = await waitForEval(cdp, `(() => {
     const snapshot = ${BOARD};
     return snapshot.nowState === ${JSON.stringify(zh['mission.state.running'])}
@@ -1287,11 +1239,6 @@ try {
     `S3 焦点那一条【就是那份抽屉】（同一个节点仍挂在 #stewardFocus 里），它不再另画一条小行：列内 ${stacked && stacked.order.length} 格 → ${stacked && stacked.rows.length} 条小行 ＋ 1 份抽屉`);
   const rowOf = (snapshot, id) => (snapshot && snapshot.rows.find(row => row.sessionId === id)) || null;
   const rowG = rowOf(stacked, idG);
-  // 121-K6b 重钉 S4（34 号文 §2.6「其它【在途】：其余非收工线程的最紧密度行」）：已收工的那条
-  // 自此【不进焦点栏】—— 它在左栏里，点一下就换成焦点；摆在焦点栏里只会把「此刻该看什么」冲淡。
-  // 原判据钉的是「收工的折成一行、没有回答口」，那是它还在这一栏时的形状；现在钉的是更强的
-  // 「它根本不在这一栏」，同一条设计意图的下一步。
-  // 反向验证：把 steward-board.js renderNow 里那句 `if (!inFlight(row)) return;` 拔掉 → 它冒出来 → 本条红。
   ok(rowG === null,
     `S4 已收工的那条【不进焦点栏】（其它在途只叠非收工的；实测 ${rowG ? 'tone=' + rowG.tone + ' 仍在栏里' : '不在栏里'}）`);
   const nowRowH = rowOf(stacked, idH);
@@ -1410,12 +1357,11 @@ try {
 } finally {
   if (cdp && fail) console.log('CONSOLE ' + cdp.logs.slice(-6).join(' | '));
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   for (const socket of openSockets) { try { socket.end(); } catch { /* already closed */ } }
   if (provider) await new Promise(resolve => provider.close(resolve));
   await sleep(300);
-  stopRuyiTestBrowsers(profile);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* browser profile lock */ }
   console.log(`\nSTEWARD BOARD E2E: ${fail ? `FAIL (${fail})` : 'ALL PASS'}`);
   process.exitCode = fail ? 1 : 0;

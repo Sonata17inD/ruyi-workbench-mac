@@ -8,10 +8,10 @@ const hash = value => crypto.createHash('sha256').update(value).digest('hex'), o
 require('./lib/self-isolate-home');
 const { createRunner } = require('./lib/harness'), { loadServerInternals } = require('./lib/server-internals');
 const t = createRunner('STEWARD ROUTING LIVE'), root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-routing-live-'));
-process.env.RUYI_HOME = root; process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
+process.env.RUYI_HOME = root;
 const s = loadServerInternals(['getPromptPack', 'buildOpenAiTools', 'defaultConfig', 'providerWireProtocol']);
 const wire = s.providerWireProtocol(provider), model = provider.model;
-const oldSource = cp.execFileSync('git', ['show', '256f0cc3:ruyi-workbench/app/src/06b-prompt-registry.js'], { cwd: path.resolve(__dirname, '..'), encoding: 'utf8', windowsHide: true });
+const oldSource = cp.execFileSync('git', ['show', '256f0cc3:ruyi-workbench/app/src/06b-prompt-registry.js'], { cwd: path.resolve(__dirname, '..'), encoding: 'utf8' });
 const old = vm.runInNewContext(oldSource + '\n;({zh:PROMPT_ZH.steward.stable,en:PROMPT_EN.steward.stable})', {});
 const currentTools = s.buildOpenAiTools(s.defaultConfig(), null, { stewardSession: true });
 const oldTools = structuredClone(currentTools);

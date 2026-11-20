@@ -54,8 +54,8 @@ fs.writeFileSync(childScript, [
 
 function runChild() {
   const out = cp.spawnSync(process.execPath, [childScript, SERVER, HOME], {
-    encoding: 'utf8', windowsHide: true,
-    env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME },
+    encoding: 'utf8',
+    env: { ...process.env, RUYI_HOME: HOME },
   });
   if (out.status !== 0) console.error('child stderr:', out.stderr);
 }

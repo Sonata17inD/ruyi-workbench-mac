@@ -1,14 +1,3 @@
-// Unit(第二波安全走查 S4):auto / bypass 宽写 + 出厂「家目录就是工作区」下,一次 file_write 不能再把东西写进
-// 【用户级自启动 / 登录即执行 / 全局信任配置】落点 —— Windows 启动文件夹、PowerShell profile、shell rc、.ssh 的 authorized_keys 与 config、
-// .gitconfig、~/.claude/CLAUDE.md 与 agents/、~/.codex ~/.kimi 下的配置、家目录根的 AGENTS.md、计划任务目录、.config/autostart。
-//
-// 两层判据(都在 03-bridge-guard):
-//   · AUTOEXEC_DENYLIST 里的【形状】条目(启动文件夹 / profile / .ssh / autostart / System32\Tasks)—— 与路径在哪儿无关,Windows 形(大小写不敏感、\ / 都认);
-//   · userHomePersistenceHit —— 必须挂在【用户真实家目录】下才算的那批(.bashrc / .gitconfig / AGENTS.md …),项目里的同名文件不误伤。
-// 写工具(file_write / file_edit / file_delete / file_move / file_copy / archive_unzip / http_download)全部走 guardFileToolPath 的写闸,所以
-// 这里既直测闸本身,也端到端打 toolCall。读不拦。
-//
-// 反向验证:RUYI_TEST_SERVER_JS=<修前 server.js> node --test 本文件 → 全部写拒断言红。
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -24,10 +13,8 @@ fs.mkdirSync(dataRootDir, { recursive: true });
 process.env.HOME = home;            // os.homedir():POSIX 读 HOME,Windows 读 USERPROFILE
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = dataRootDir;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
 delete process.env.CODEX_HOME;
-delete process.env.KIMI_CODE_HOME;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
 const { createWorkspaceWriteProtection } = require('../../ruyi-workbench/app/backend/workspace-write-protection.cjs');
@@ -141,20 +128,17 @@ describe('S4 · guardFileToolPath 写闸:家目录里的持久化落点在任何
     for (const p of [path.join(home, '.BASHRC'), path.join(home, '.Claude', 'claude.MD'), path.join(home, '.SSH', 'Authorized_Keys'), home + '/.zshrc.', path.join(home, 'agents.MD')]) {
       const g = await I.guardFileToolPath(p, ctx, { tool: 'file_write', write: true });
       // agents.MD 不是 AGENTS.md 的同名文件(文件名不同),只在 Windows(大小写不敏感)上等同 —— Linux 上不强求
-      if (/agents\.MD$/.test(p) && process.platform !== 'win32') continue;
+      if (/agents\.MD$/.test(p)) continue;
       assert.ok(denied(g), p + ' → ' + JSON.stringify(g));
     }
   });
-  it('userHomePersistenceHit 认 CODEX_HOME / KIMI_CODE_HOME 挪过位置的家', () => {
+  it('userHomePersistenceHit 认 CODEX_HOME 挪过位置的家', () => {
     const codex = path.join(root, 'elsewhere-codex');
-    const kimi = path.join(root, 'elsewhere-kimi');
     process.env.CODEX_HOME = codex;
-    process.env.KIMI_CODE_HOME = kimi;
     try {
       assert.equal(I.userHomePersistenceHit(path.join(codex, 'config.toml')), true);
-      assert.equal(I.userHomePersistenceHit(path.join(kimi, 'AGENTS.md')), true);
       assert.equal(I.userHomePersistenceHit(path.join(root, 'elsewhere-other', 'x')), false);
-    } finally { delete process.env.CODEX_HOME; delete process.env.KIMI_CODE_HOME; }
+    } finally { delete process.env.CODEX_HOME; }
   });
 });
 

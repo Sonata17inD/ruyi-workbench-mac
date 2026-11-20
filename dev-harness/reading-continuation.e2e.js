@@ -10,7 +10,7 @@ const { StringDecoder } = require('string_decoder');
 const t = createRunner('READING CONTINUATION'), { ok } = t;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-reading-pages-')), home = path.join(root, 'data'), ws = path.join(root, 'work');
 fs.mkdirSync(home); fs.mkdirSync(ws);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1'; process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR = '1';
 for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy']) delete process.env[key];
 const srv = require('../ruyi-workbench/app/server.js');
@@ -34,7 +34,7 @@ function pagesValid(pages, expected) {
 }
 function unwrapExternal(content) { return content.split('\n').slice(2, -1).join('\n'); }
 async function startMcp(sessionId) {
-  const child = cp.spawn(process.execPath, [path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'mcp'], { env: { ...process.env, WCW_SESSION_ID: sessionId }, windowsHide: true });
+  const child = cp.spawn(process.execPath, [path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'mcp'], { env: { ...process.env, WCW_SESSION_ID: sessionId } });
   const waiting = new Map(), decoder = new StringDecoder('utf8'); let buffer = '', counter = 0;
   child.stdin.on('error', () => {});
   child.stdout.on('data', bytes => {

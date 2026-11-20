@@ -25,8 +25,6 @@ function createProviderToolOffer({ sessions, policy }) {
   // 写了就占掉主模型的槽(同回合先到者胜,主模型反而得到 alreadyPending),卡片上还看不出是谁提的。list / read 是只读,留着。
   // offer 面(buildOpenAiTools 的 opts.noMemoryWriteTools)与分发面(08 子代理循环的拒绝分支)共用这一张表。
   const MEMORY_WRITE_TOOL_NAMES = new Set(['workbench_memory_propose', 'workbench_memory_revise', 'workbench_memory_relation_propose', 'workbench_memory_relation_revoke']);
-  // 能力总闸(allowDesktopTools 的会话级覆盖)要的会话头:回合内的调用 ctx 带 session;MCP 子进程(Claude / Kimi CLI 经如意 MCP)
-  // 里 ctx 为空,按注入的 WCW_SESSION_ID 装(与下面桥接分支的 sidSession、journalSessionCtx 同一个来源)。装不到 = null = 跟随全局。
   async function policySessionFor(ctx) {
     if (ctx && ctx.session) return ctx.session;
     const sid = process.env.WCW_SESSION_ID || '';
@@ -116,9 +114,6 @@ function createProviderToolOffer({ sessions, policy }) {
       if ((caps || needsRuntime) && !toolRequirementsMet(t.name, caps, toolRequiresEnabled, config).met) continue; // requirement unmet → drop
       out.push({ type: 'function', function: { name: t.name, description: t.description || t.name, parameters: t.inputSchema || { type: 'object', properties: {} } } });
     }
-    // C2(61 号文)会话草稿本:只在调用方显式传 opts.scratchpadEnabled 时 offer —— 09 主回合对非管家会话传;08 子代理、
-    // 管家会话(末尾唯一出口只留 steward_*)、各类探针不传。schema 在 13f PROVIDER_SESSION_TOOL_SCHEMAS(不进 MCP_TOOLS,
-    // 所以 Claude/Kimi CLI 的 MCP 面、/api/status、代理目录天然没有它)。read 档,tierFilter 也挡不住它,照常过一遍。
     if (opts && opts.scratchpadEnabled === true) {
       for (const t of PROVIDER_SESSION_TOOL_SCHEMAS) {
         if (maxRank !== null && (tierRank[nativeToolTier(t.name)] ?? 2) > maxRank) continue;

@@ -1,26 +1,9 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E (第46波46c): 浏览器 DOM 冒烟 v1 —— 真实浏览器渲染真实前端,零依赖。
-//
-// 路线:系统 Edge/Chrome headless `--dump-dom --virtual-time-budget`(Windows 必装 Edge,
-// CI windows-latest 同),不引入 Playwright/npm 依赖。01 方案说"Playwright 已捆绑"实测不成立
-// (无 node_modules / 无 npm 包 / 无 python playwright),且本仓零依赖纪律优先 —— 视觉回归门
-// (第50波)届时也可用同款 headless --screenshot 延续零依赖,或再评估引入 Playwright。
-//
-// v1 断言三层:
-//   (A) 静态资源完整:/ /app.js /styles.css /locales/zh-CN.json 全 200(抓 404/MIME 回归)
-//   (B) 渲染后 DOM 结构:sidebar/railList/messages/promptInput/sendBtn/modelChip/
-//       workflowEditorBtn/newSessionBtn 在;__WCW_TOKEN__ 占位符已替换(抓 token 注入回归)
-//   (C) JS 真启动:modelChip 的 title 由 app.js 拉 /api/status 后渲染("Claude CLI · 默认"),
-//       它在静态 index.html 里不存在 —— 在 = JS boot + API 通路 + 渲染管线全活。
-//
-// v1 不覆盖(留给第50波视觉回归门的 v2): 控制台错误捕获、交互(点开弹层/DAG 编辑器)、截图对比。
-// dump-dom 无交互能力,这是刻意取舍而非遗漏。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
 const { CSS_COMPAT_ROUTES, CSS_ROUTES } = require('./read-frontend-css.js');
 
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
@@ -61,20 +44,17 @@ function post(p, body, headers = {}) {
   });
 }
 
-// 浏览器探测:Edge(Win 必装) -> Chrome -> 明确 FAIL(不静默跳过,沉默的跳过 = 假绿)。
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 const findBrowser = findBrowserExecutable;
 
 function dumpDom(browser, url, profileDir) {
-  const edgeCompat = /msedge\.exe$/i.test(browser) ? ['--edge-skip-compat-layer-relaunch'] : [];
   const r = cp.spawnSync(browser, [
-    ...edgeCompat,
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--user-data-dir=' + profileDir,
     '--virtual-time-budget=10000', // 虚拟时间快进:等 fetch /api/status + 渲染尘埃落定
     '--dump-dom', url,
-  ], { encoding: 'utf8', timeout: 90000, windowsHide: true });
+  ], { encoding: 'utf8', timeout: 90000 });
   return { dom: r.stdout || '', error: r.error ? String(r.error) : '', status: r.status };
 }
 
@@ -83,7 +63,7 @@ fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursiv
 // 冒烟（#modelChip 已渲染、#promptInput 有 placeholder、无故障卡），管家开着虽然也能过（那些节点在
 // DOM 里只是被藏起来），但那就成了「名字说经典、实际拍的是管家」的假绿。显式关掉管家。
 fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ configSchema: 7, version: '1.0.0', permissionMode: 'bypass', stewardEnabledV1: false }));
-const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
 wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 const profile = path.join(os.tmpdir(), 'wcw-dom-smoke-profile-' + PORT);
 
@@ -136,7 +116,7 @@ const profile = path.join(os.tmpdir(), 'wcw-dom-smoke-profile-' + PORT);
       const chipHost = dom.match(/<div id="threadChips"[\s\S]*?<\/div>\s*<div id="contextMeter"/);
       // 走查 U15:芯片的值带上了 title(英文长值被省略号截断时悬停能看全),span 上多一个属性 —— 正则放宽到允许属性。
       const engineChip = chipHost && chipHost[0].match(/data-chip="engine"[\s\S]*?<span class="steward-chip-value"[^>]*>([^<]*)</);
-      ok(!!engineChip && /Claude (?:CLI|Code)|Kimi/.test(engineChip[1]),
+      ok(!!engineChip && /Claude (?:CLI|Code)/.test(engineChip[1]),
         'C1 线程头那组 chip 已按 /api/status 渲染引擎标签(engine="' + (engineChip && engineChip[1]) + '") = JS boot + API + 渲染全活');
       ok(dom.includes('提示词、计划或问题') || dom.includes('placeholder="描述你要做的事') || /placeholder="[^"]{4,}"/.test(dom.match(/id="promptInput"[^>]*/)?.[0] || ''),
         'C2 输入框 placeholder 就位(i18n/静态文案管线活)');
@@ -150,7 +130,6 @@ const profile = path.join(os.tmpdir(), 'wcw-dom-smoke-profile-' + PORT);
     if (wb && wb.pid) { try { killOwnTree(wb); } catch { /* ignore */ } }
     await sleep(300);
     fs.rmSync(HOME, { recursive: true, force: true });
-    stopRuyiTestBrowsers(profile);
     try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }); } catch { /* best-effort */ }
     console.log('\nDOM-SMOKE E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));
     process.exit(fail ? 1 : 0);

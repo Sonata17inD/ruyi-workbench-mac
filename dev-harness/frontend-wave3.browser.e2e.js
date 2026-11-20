@@ -420,7 +420,7 @@ const TOPBAR_PROBE = `(() => {
       const server = ['claude-subagent.cjs', 'subagent-runner.cjs']
         .map(file => fs.readFileSync(path.join(ROOT, 'backend', file), 'utf8')).join('\n');
       ok(/noteCode: 'streaming'/.test(server) && /noteCode: 'init'/.test(server) && /noteCode: 'generating'/.test(server), 'M4.6 服务端三处 subagent_progress 都带 noteCode');
-      for (const code of ['init', 'streaming', 'generating', 'kimiRunning', 'kimiRunningFor', 'kimiPaused', 'kimiPausedWaiting']) {
+      for (const code of ['init', 'streaming', 'generating']) {
         const key = `chat.subagent.note.${code}`;
         ok(typeof EN[key] === 'string' && !CJK.test(EN[key]) && typeof ZH[key] === 'string', `M4.7 词表有 ${key}（en 无中文）`);
       }

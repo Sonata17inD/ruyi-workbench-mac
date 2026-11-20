@@ -103,7 +103,7 @@ async function runShape(shape) {
     searchBackend: { type: 'builtin', baseUrl: '', apiKey: '' },
   }, null, 2));
   const wbPort = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   try {
     let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await getJson(wbPort, '/health'); }
@@ -160,7 +160,7 @@ async function runShape(shape) {
         activeProvider: 'qwen-resp', searchBackend: { type: 'builtin', baseUrl: '', apiKey: '' },
       }, null, 2));
       const wbPort = await getFreePort();
-      const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home }, windowsHide: true });
+      const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
       wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
       try {
         let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await getJson(wbPort, '/health'); }

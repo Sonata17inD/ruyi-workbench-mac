@@ -19,8 +19,6 @@ const navigation = fs.readFileSync(path.join(WB, 'app', 'public', 'js', 'navigat
 const css = require('./read-frontend-css.js').readFrontendCss();
 const zh = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'zh-CN.json'), 'utf8'));
 const en = JSON.parse(fs.readFileSync(path.join(WB, 'app', 'public', 'locales', 'en-US.json'), 'utf8'));
-const zhDoc = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'), 'utf8'));
-const enDoc = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json'), 'utf8'));
 const runtime = fs.readFileSync(path.join(WB, 'app', 'backend', 'mcp-client-runtime.cjs'), 'utf8');
 let failures = 0;
 const ok = (v, label) => { if (v) console.log('PASS ' + label); else { failures++; console.error('FAIL ' + label); } };
@@ -85,7 +83,7 @@ const KEYS = [
 ok(KEYS.length === 44, 'M15 键清单 44 个(自锁;W2-F6 把 settings.mcp.count 拆成 .one/.other,原 43 个 +1)');
 let keysOk = true;
 for (const k of KEYS) {
-  for (const [name, cat] of [['zh', zh], ['en', en], ['zhDoc', zhDoc], ['enDoc', enDoc]]) {
+  for (const [name, cat] of [['zh', zh], ['en', en]]) {
     if (!cat[k]) { keysOk = false; console.error(`  missing ${k} in ${name}`); }
   }
 }

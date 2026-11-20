@@ -218,7 +218,7 @@ async function turn(spec, message = spec.label) {
     data = path.join(root, 'data'); work = path.join(root, 'work');
     env = { ...fixtureChildEnv(), HOME: path.join(root, 'home'), USERPROFILE: path.join(root, 'home'),
       APPDATA: path.join(root, 'appdata'), LOCALAPPDATA: path.join(root, 'localappdata'), TMPDIR: root,
-      RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_DESKTOP_EXECUTION_RECEIPTS: '1' };
+      RUYI_HOME: data, RUYI_DESKTOP_EXECUTION_RECEIPTS: '1' };
     for (const dir of [data, work, env.HOME, env.APPDATA, env.LOCALAPPDATA]) fs.mkdirSync(dir, { mode: 0o700 });
     Object.assign(process.env, env);
     const prerequisite = cp.spawnSync(helper, [], { input: JSON.stringify({ version: 1, op: 'status' }), encoding: 'utf8', timeout: 5000 });

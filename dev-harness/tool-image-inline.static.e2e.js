@@ -10,7 +10,7 @@
 //      guard 不重复取图);image-toobig -> 一个跳侧栏按钮、无 <img>;fetch 失败 -> 都没有;
 //      未完成(pending)/isError 的卡片不取图。
 //   ④ CSS:owning 层(css/states/chat-live.css)含 .tool-image / .tool-image img / .tool-image.expanded。
-//   ⑤ i18n:三个新键在 zh-CN/en-US 与 docs/i18n 对应文件里都存在且逐字一致。
+//   ⑤ i18n:三个新键在 zh-CN/en-US 词典里都存在。
 //
 // 判定行:`TOOL IMAGE INLINE STATIC E2E: ALL PASS`。
 const fs = require('fs');
@@ -244,13 +244,9 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
   const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
   const zh = readJson(path.join(PUBLIC, 'locales', 'zh-CN.json'));
   const en = readJson(path.join(PUBLIC, 'locales', 'en-US.json'));
-  const docsZh = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'));
-  const docsEn = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json'));
   for (const key of ['chat.toolImage.expand', 'chat.toolImage.collapse', 'chat.toolImage.openInSidebar']) {
     ok(typeof zh[key] === 'string' && zh[key].length > 0, `H ${key} 在 public zh-CN 存在`);
     ok(typeof en[key] === 'string' && en[key].length > 0, `H ${key} 在 public en-US 存在`);
-    ok(docsZh[key] === zh[key], `H ${key} docs/i18n zh-CN 与 public 逐字一致`);
-    ok(docsEn[key] === en[key], `H ${key} docs/i18n en-US 与 public 逐字一致`);
   }
 
   console.log('\nTOOL IMAGE INLINE STATIC E2E: ' + (fail ? `FAIL (${fail})` : 'ALL PASS'));

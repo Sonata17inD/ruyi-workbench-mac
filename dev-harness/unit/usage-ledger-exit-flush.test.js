@@ -59,7 +59,7 @@ function childExit(withFlush) {
     'srv.appendUsageLedger({ sessionId: "exit-probe", engine: "openai", provider: "p", model: "m", inTok: 10, outTok: 2, kind: "turn" });',
     'process.exit(0);',
   ].join('\n');
-  const r = cp.spawnSync(process.execPath, ['-e', script], { env: { ...process.env, RUYI_HOME: home }, encoding: 'utf8', timeout: 60000, windowsHide: true });
+  const r = cp.spawnSync(process.execPath, ['-e', script], { env: { ...process.env, RUYI_HOME: home }, encoding: 'utf8', timeout: 60000 });
   const lines = ledgerLines(home).filter(x => x.sessionId === 'exit-probe');
   fs.rmSync(home, { recursive: true, force: true });
   return { status: r.status, lines: lines.length };

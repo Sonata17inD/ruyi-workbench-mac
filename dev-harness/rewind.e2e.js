@@ -16,7 +16,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      FAKE_STREAM_DELAY_MS 把回合确定性摁在「进行中」窗口驱动回归。
 //  (e) 第69波静态锁:sendPrompt 乐观 user 行(合成对象,无 turnSeq/不在 messages)的操作条在回合拿到
 //      持久化真身后重绑 —— 否则其「回溯到此处」必弹「无法定位该消息的回合」(用户线上报告)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -62,7 +62,7 @@ function writeConfig(home, fakePort) {
 function spawnFake(seq, extraEnv) {
   const env = { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...(extraEnv || {}) };
   if (seq) env.FAKE_TOOL_SEQUENCE = JSON.stringify(seq);
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env });
   fake.stdout.on('data', () => {});
   return fake;
 }
@@ -74,7 +74,7 @@ function spawnFake(seq, extraEnv) {
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   const bTxt = path.join(HOME, 'b.txt');
   writeConfig(HOME, FAKE_PORT);
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
 

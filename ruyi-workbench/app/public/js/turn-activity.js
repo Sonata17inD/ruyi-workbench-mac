@@ -39,8 +39,6 @@ export const TURN_ACTIVITY_CONSUMED = Object.freeze([
   'context_estimate',
   'error',
   'failover',
-  'kimi_plan_decision',
-  'kimi_plan_snapshot',
   'loop_recovery',
   'meta',
   'permission_decision',
@@ -60,7 +58,6 @@ export const TURN_ACTIVITY_CONSUMED = Object.freeze([
   'tool_progress',
   'tool_result',
   'tool_use',
-  'tool_use_update',
   'usage',
 ]);
 
@@ -221,12 +218,6 @@ export function createTurnActivity({ now = () => Date.now() } = {}) {
           deadlineMs: 0,
           warnMs: 0,
         });
-        break;
-      }
-
-      case 'tool_use_update': {
-        const card = state.tools.get(String(evt.id || ''));
-        if (card && evt.name) card.name = String(evt.name);
         break;
       }
 
@@ -392,11 +383,7 @@ export function createTurnActivity({ now = () => Date.now() } = {}) {
       case 'plan':
         setPending(state, 'plan', 'plan', evt.planId, '');
         break;
-      case 'kimi_plan_snapshot':
-        setPending(state, 'plan', 'plan', evt.planId, '');
-        break;
       case 'plan_decision':
-      case 'kimi_plan_decision':
         clearPending(state, 'plan');
         break;
 

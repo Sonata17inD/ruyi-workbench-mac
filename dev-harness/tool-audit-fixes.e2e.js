@@ -28,7 +28,7 @@ const t = createRunner('TOOL AUDIT FIXES');
 const { ok } = t;
 const ROOT = path.resolve(__dirname, '..');
 const HOME = process.env.RUYI_HOME || fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-tool-audit-'));
-process.env.RUYI_HOME = HOME; process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
+process.env.RUYI_HOME = HOME;
 const WS = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-tool-audit-ws-'));
 const OUTSIDE = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-tool-audit-out-'));
 const hasGit = (() => { try { cp.execFileSync('git', ['--version'], { stdio: 'ignore' }); return true; } catch { return false; } })();

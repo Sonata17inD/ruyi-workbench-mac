@@ -61,12 +61,11 @@ ok(/renderMermaidBlocks = \(\) => Promise\.resolve\(0\),/.test(primitives),
   'B1 chat-render-primitives 从 deps 取 renderMermaidBlocks(缺省安全空实现)');
 ok(/renderMermaidBlocks\(container, \{ t, toast \}\)/.test(primitives),
   'B2 highlightIn() 同一趟调用 renderMermaidBlocks(container)');
-ok(primitives.includes("!(block.classList && block.classList.contains('language-mermaid'))"),
-  'B3 hljs 明确跳过 code.language-mermaid');
-ok(appJs.includes("import { renderMermaidBlocks } from './js/mermaid-runtime.js';"),
-  'B4 组合根 app.js 导入 mermaid 运行时');
-ok(appJs.includes('renderMermaidBlocks: (container, opts) => renderMermaidBlocks(container, { ...opts, withLayoutChange: keepPinnedAcross }),'),
-  'B5 组合根把真实实现注入 chat-render-primitives,并让每次换图都经聊天区的贴底守卫(keepPinnedAcross)');
+ok(primitives.includes("if (block.classList.contains('language-mermaid')) hasDiagram = true;"),
+  'B3 Mermaid 代码块单独渲染');
+ok(appJs.includes("await import('./js/mermaid-runtime.js')") && !appJs.includes("from './js/mermaid-runtime.js'"),
+  'B4 首屏依赖图不加载 Mermaid 运行时');
+ok(appJs.includes('withLayoutChange: keepPinnedAcross'), 'B5 换图时保持聊天区贴底');
 
 // ═══════════ ③ 载荷 / 合规 ═══════════
 const html = read('ruyi-workbench/app/public/index.html');

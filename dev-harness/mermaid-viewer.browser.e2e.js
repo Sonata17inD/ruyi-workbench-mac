@@ -2,34 +2,7 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 换机器：直跑时家目录自隔离（服务启动会从真机 ~/.claude.json 导入 MCP 并同步回真机 CLI 配置，两个方向都要断）
 
-// 2026-09-22 真浏览器 E2E：**mermaid 图表的放大查看**（用户反馈「大图缩在消息栏里看不全，
-// 不能点开全屏看或者保存」）。修前大图被 .mermaid-view 的 max-width:100% 压成一团；
-// 现在点图或工具条「放大」开全屏灯箱：滚轮缩放（指针为锚）、拖拽平移、「适应窗口」复位，
-// Esc／点遮罩／「关闭」退出。
-//
-// 本件钉这条链的真机面（DOM 桩件 mermaid-render.static.e2e.js 管逻辑，本件管浏览器里真发生）：
-//   B1  回复里的 ```mermaid 围栏真渲染成 SVG（vendor 懒加载链路通了 —— 这是
-//       ruyi-workbench/app/public/vendor/mermaid.min.js 入库后的第一件真机验证）；
-//   B2  工具条五枚：源码 / 复制 / 放大 / 导出 SVG / 导出 PNG；
-//   B3  灯箱：点「放大」开出全屏 dialog，里面是同一份 SVG，开箱即「适应窗口」落位；
-//   B4  滚轮缩放真改 transform（放大后 scale 变大），「适应窗口」按回去；
-//   B5  三只退出的手全灵：Esc、「关闭」按钮、点遮罩；点图本身也能再开。
-//
-// 2026-10-03 用户反馈「暗色下 mermaid 不好看、有的图生成得有问题、浅色下点开图片后鼠标很容易看不到」，追加：
-//   B7c PNG 导出带底色（暗色图是浅字，透明底在白底看图器里看不见）；
-//   B8  切换亮暗后已画好的图按新主题重画（修前亮色图原样留在暗底上），切回也收敛；
-//   B9  甘特图按栏宽排版、同日刻度不重复、排期外的「今天」线去掉（排期内保留）、网格线用色板线色；
-//   B10 浅色下灯箱是压暗的实色幕布 + 实底卡片（修前 46% 白毛玻璃 + 透明底图，光标糊在里面）。
-//
-// 2026-10-04 用户请 Sonnet 分五路把 mermaid 各种图走查一遍，追加（每条都是走查实测到的毛病）：
-//   B7d 导出的 SVG 带固有宽高（修前 width="100%" 无高，宽图在看图器里量成 300×5）；
-//   B11 模型常写的「画不出来 / 画错」：括号标签、中文 xychart、中文桑基图自动修好再画；浅底节点配深字；
-//       click 链接失效；架构图图标不被挤乱；C4 关系字不再是 #444；时序图 rect 高亮块变淡；宽图不缩成一条；
-//       真画不了的回落里有解析器原话与「复制」钮；
-//   B12 灯箱：在遮罩上拖拽后松手不关；触控板式的小滚动按量缩放（修前每个事件都 ×1.25）。
-//   B13 一条回复里 8 张图：打开线程、图一张张画完后聊天区仍贴着底（修前内容涨了几千 px、没人重新贴底，停在半途）。
-//
-// 夹具：确定性 fake provider —— 回答里带一段 ```mermaid 围栏。后端零改动。
+// Exercise diagram loading, rendering and viewer controls in an isolated browser.
 
 (async () => {
 const { killOwnTree } = require('./lib/kill-own-tree');
@@ -39,8 +12,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -92,13 +64,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
   return null;
 }
 
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
-}
 
 // 确定性 provider：一次回答里带一段 ```mermaid 围栏（流式两帧收尾）。
 async function startProvider(port) {
@@ -259,8 +224,8 @@ try {
   provider = await startProvider(providerPort);
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A1 workbench started');
 
@@ -294,11 +259,11 @@ try {
 
   const appUrl = `http://127.0.0.1:${appPort}/`;
   browser = cp.spawn(executable, [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     '--force-device-scale-factor=1', '--window-size=1600,1000',
     '--remote-debugging-port=' + debugPort, '--user-data-dir=' + profile, appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A7 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -307,6 +272,8 @@ try {
   await cdp.send('Page.enable');
   await cdp.send('Runtime.enable');
   ok(Boolean(await waitForEval(cdp, READY)), 'A8 首屏就绪');
+  const runtimeRequestCount = "performance.getEntriesByType('resource').filter(entry => new URL(entry.name).pathname.endsWith('/mermaid-runtime.js')).length";
+  ok(await cdp.evaluate(runtimeRequestCount) === 0, 'A8b 首屏没有请求 Mermaid 运行时');
   ok(Boolean(await openThread(cdp, sessionId)), 'A9 打开这条线程');
 
   /* ═════════ B1 围栏真渲染成 SVG ═════════ */
@@ -322,6 +289,7 @@ try {
   })()`);
   ok(Boolean(rendered) && rendered.nodes >= 4,
     `B1 mermaid 围栏真渲染成 SVG（${rendered && rendered.nodes} 个节点；vendor 懒加载链路真机首验）`);
+  ok(await cdp.evaluate(runtimeRequestCount) === 1, 'B1a 打开图表后请求一次 Mermaid 运行时');
   ok(Boolean(rendered) && rendered.hint === false, 'B1b 零降级提示（不是「图表库未就绪」那一支）');
 
   /* ═════════ B2 工具条五枚 ═════════ */
@@ -777,10 +745,9 @@ try {
   console.log('FAIL 未预期异常: ' + (error && error.message ? error.message : String(error)));
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
+  killOwnTree(browser);
+  killOwnTree(server);
   if (provider) { try { provider.close(); } catch { /* ignore */ } }
-  try { stopRuyiTestBrowsers(profile); } catch { /* ignore */ }
 }
 
 console.log(`\nMERMAID VIEWER BROWSER E2E: ${fail ? 'FAIL (' + fail + ')' : 'ALL PASS'}`);

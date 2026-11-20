@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  * - (C) A Claude-engine node (fake-claude long-text fixture) persists a "生成中 · N 字" streamed-text
  *       milestone, and the final "子 Agent 完成" entry appends independently without overwriting it.
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -127,7 +127,7 @@ function runOf(r, runId) { return r && Array.isArray(r.runs) && r.runs.find(x =>
   }));
   await new Promise(r => fake.listen(FP, '127.0.0.1', r));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     // WCW_FAKE_CLAUDE + WCW_FAKE_SCENARIO drive the Claude-engine node through fake-claude replaying the
     // long-text fixture (no real Claude CLI); OpenAI nodes ignore both and use the fake provider above.
     env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_SCENARIO: path.join(HOME, 'longtext.jsonl') },

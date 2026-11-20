@@ -1,5 +1,5 @@
 ﻿'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // Covers three v1.4.4 fixes:
 //  (A) buildClaudeCliEnv actually reaching the spawned Claude CLI child — config wins over a stale OS
 //      env var (the reported "changes back to ark-code-latest no matter what" symptom).
@@ -9,7 +9,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      unset, gets the full workbench MCP config); read/edit tiers get no MCP config at all.
 //  (D) 2026-10: a Claude-engine node is gated by the permission mode like the OpenAI path — default /
 //      acceptEdits run as `dontAsk` with the allowlist capped to the tiers that mode allows (no more bypass).
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -39,15 +39,12 @@ async function tokenFor(port) {
 }
 
 (async () => {
-  // ---- (K) 2026-10:Kimi Code 父回合(reg.kind 'kimi-acp')不再被当成 'openai' ----
-  // 修前 `reg ? (reg.kind === 'claude' ? 'claude' : 'openai') : …`:没配 provider 时路由成 provider=null,节点一启动就抛。
-  // 活的 Kimi 父回合在离线夹具里起不来,这里钉结构:只有活的 provider 父回合才映射成 'openai',其余按可用引擎挑。
   {
     const { sliceBlock } = require('./lib/source-slice.js');
     const workflowRoutes = fs.readFileSync(path.join(WB, 'app', 'backend', 'agent-workflow-routes.cjs'), 'utf8');
     const routing = sliceBlock(workflowRoutes, 'const parentEngine = ', ';', { inclusive: true });
     ok(/reg && reg\.kind === 'claude' \? 'claude'/.test(routing) && /reg && reg\.kind === 'openai' \? 'openai'/.test(routing) && /provider \? 'openai' : 'claude'/.test(routing),
-      'K launch routing maps only a live provider parent to openai; a Kimi parent (or none) picks from the available engines');
+      'K launch routing maps only a live provider parent to openai; other parents use available engines');
   }
   // ---- (A) config-driven third-party endpoint/model reaches the actually-spawned CLI child ----
   {
@@ -63,7 +60,7 @@ async function tokenFor(port) {
     // Simulate exactly the reported bug: the OS/shell env already carries an official-endpoint + stale
     // ark-code-latest setup (e.g. from an earlier `setx`) before the workbench even starts.
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true,
+      cwd: WB,
       env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ENV_CAPTURE: envCapture,
         ANTHROPIC_BASE_URL: 'https://api.anthropic.com', ANTHROPIC_API_KEY: 'stale-official-key', ANTHROPIC_MODEL: 'ark-code-latest' },
     });
@@ -91,7 +88,7 @@ async function tokenFor(port) {
       claudeThinkingEffort: 'xhigh',
     }, null, 2));
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true,
+      cwd: WB,
       env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: argvCapture },
     });
     try {
@@ -141,7 +138,7 @@ async function tokenFor(port) {
       agentRoleOverrides: [{ id: 'mcp-worker', label: 'MCP Worker', prompt: 'test worker', toolTier: 'exec', mcpServers: ['win-claude-workbench'] }],
     }, null, 2));
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true,
+      cwd: WB,
       env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: argvCapture },
     });
     try {
@@ -178,7 +175,7 @@ async function tokenFor(port) {
       desktopMcp: { enabled: false },
     }, null, 2));
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true,
+      cwd: WB,
       env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: argvCapture },
     });
     try {
@@ -269,7 +266,7 @@ async function tokenFor(port) {
     }, null, 2));
     const budget = Math.max(1000, longRoleArgvLength - 1500);
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], {
-      cwd: WB, windowsHide: true,
+      cwd: WB,
       env: { ...process.env, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE, WCW_FAKE_ARGV_CAPTURE: argvCapture, WCW_FAKE_STDIN_CAPTURE: stdinCapture, WCW_CLAUDE_CMDLINE_BUDGET: String(budget) },
     });
     try {
@@ -303,7 +300,7 @@ async function tokenFor(port) {
     }, null, 2));
     const env = { ...process.env, RUYI_HOME: HOME };
     delete env.WCW_FAKE_CLAUDE;   // 走真的「找可执行文件」判定
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, windowsHide: true, env });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env });
     try {
       ok(await up(PORT), 'claude-missing test server starts');
       const token = await tokenFor(PORT); const hdr = { 'x-wcw-token': token };
@@ -326,7 +323,7 @@ async function tokenFor(port) {
     }, null, 2));
     const env = { ...process.env, RUYI_HOME: HOME };
     delete env.WCW_FAKE_CLAUDE;
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, windowsHide: true, env });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env });
     try {
       ok(await up(PORT), 'claude-missing/no-provider test server starts');
       const token = await tokenFor(PORT); const hdr = { 'x-wcw-token': token };

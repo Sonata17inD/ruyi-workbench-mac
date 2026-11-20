@@ -57,7 +57,7 @@ const venvPy = path.join(ROOT, 'mcp', 'ai-computer-control', '.venv', 'bin', 'py
 if (fs.existsSync(venvPy)) {
   const r = cp.spawnSync(venvPy, ['-X', 'utf8', '-c',
     "import sys; sys.path.insert(0, r'mcp/ai-computer-control/src'); import ai_computer_control.server as s; print(len(s.mcp._tool_manager.list_tools()))"],
-    { cwd: ROOT, encoding: 'utf8', timeout: 120000, windowsHide: true });
+    { cwd: ROOT, encoding: 'utf8', timeout: 120000 });
   const live = parseInt(String(r.stdout || '').trim().split(/\r?\n/).pop(), 10);
   const probeOk = r.status === 0 && Number.isInteger(live);
   ok(probeOk, `ACC 活注册表探针可执行${probeOk ? '' : ': ' + String(r.error?.message || r.stderr || 'empty output').trim().slice(0, 600)}`);

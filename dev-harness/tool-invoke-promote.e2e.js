@@ -96,7 +96,7 @@ const request = (method, p) => new Promise((resolve, reject) => {
 });
 const startServer = async () => {
   WP = await getFreePort();
-  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, stdio: 'ignore', env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME } });
+  wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, stdio: 'ignore', env: { ...process.env, RUYI_HOME: HOME } });
   let up = false;
   for (let i = 0; i < 300 && !up; i++) { try { up = (await request('GET', '/health')) === 200; } catch { /* not yet */ } if (!up) await sleep(120); }
   return up;

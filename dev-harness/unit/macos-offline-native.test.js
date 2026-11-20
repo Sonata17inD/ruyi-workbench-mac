@@ -68,7 +68,7 @@ test('native closure canonicalizes system prefixes before exempting an absolute 
   assert.throws(() => nativeAudit(payload), /Nonportable native dependency|Unresolved native dependency/);
 });
 
-test('a timed-out offline build probe prevents its same-group child from writing afterwards', { skip: process.platform === 'win32' }, t => {
+test('a timed-out offline build probe prevents its same-group child from writing afterwards', t => {
   const root = fixture(t), ready = path.join(root, 'ready'), late = path.join(root, 'late');
   const descendant = "const fs = require('node:fs');fs.writeFileSync(process.argv[1], 'ready');"
     + "setTimeout(() => fs.writeFileSync(process.argv[2], 'late'), 1200);";
@@ -80,7 +80,7 @@ test('a timed-out offline build probe prevents its same-group child from writing
   assert.equal(fs.existsSync(late), false, 'owned descendant cannot perform delayed writes after failure');
 });
 
-test('a nonzero offline build probe also prevents its same-group child from writing afterwards', { skip: process.platform === 'win32' }, t => {
+test('a nonzero offline build probe also prevents its same-group child from writing afterwards', t => {
   const root = fixture(t), late = path.join(root, 'late');
   const descendant = "process.stdout.write('ready');"
     + "setTimeout(() => require('node:fs').writeFileSync(process.argv[1], 'late'), 1000);";

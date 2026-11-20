@@ -5,12 +5,11 @@ require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(require se
 // 145-W3 静态/单元件:按引擎的「如意运行环境说明」(06 buildEngineEnvBrief,文字在 06b engineBrief)。
 //
 // 用户 2026-09-24:「根据不同引擎的线程设计不同的提示词,让 claude code 知道它是在如意工作台中、有什么能力」。
-// 修前只有 provider 引擎有「你在如意里」的说明,Claude/Kimi 只有零散提示。本件钉住:
+// 修前只有 provider 引擎有「你在如意里」的说明,Claude 只有零散提示。本件钉住:
 //   A  Claude 变体:引擎专属标记(Claude Code / 原生工具名 / CLAUDE.md 原生读取 / mcp__ruyi__ 前缀 /
 //      request_user_input 与交互模式禁原生 AskUserQuestion)+ 能力事实(桌面开/关两组、终端 rg 来源、mermaid 成图、
 //      权限档含义、管家代开);只提 orchestrate_agents,绝不出现 spawn_agent;中文 ≤ 1800 字;
 //      文字里没有 % 与 !(claude.cmd 启动时整段过 cmd.exe),除自身围栏外没有尖括号标签(fenceSafeSlice 会当悬空围栏切)。
-//   B  Kimi 变体:Kimi Code / 原生 AskUserQuestion 落到如意提问卡 / Bash 由如意代执行;不提 CLAUDE.md 与 request_user_input。
 //   C  provider 变体:不重复身份层 —— 稳定层只多 mermaid 成图一句(且无 Claude/Workbench 字样,身份泄漏守卫),
 //      易变层补权限档/提问弹窗/管家代开,rg 并进既有能力行(「终端里也可直接用 rg」)。
 //   D  缓存纪律:同一能力集两次装配逐字节相同、指纹相同;能力集之外的东西(模型名、会话 id、cwd)变了不影响;
@@ -92,14 +91,6 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   const modeTexts = modes.map(m => brief('claude', baseConfig({ permissionMode: m }), {}, RG_BUNDLED).text);
   ok(new Set(modeTexts).size === modes.length && modeTexts.every(t => /权限：当前是「[^」]+」模式/.test(t)), 'A22 五个权限档各有自己的含义句');
 
-  /* ═══════════ B Kimi 变体 ═══════════ */
-  const kimi = brief('kimi', baseConfig(), { id: 'sess_k' }, { path: 'x', source: 'system', shell: 'system' }).text;
-  ok(kimi.includes('Kimi Code') && !kimi.includes('Claude Code'), 'B1 Kimi 版身份是 Kimi Code');
-  ok(/用原生 AskUserQuestion，如意界面会弹出提问卡/.test(kimi) && !kimi.includes('request_user_input'), 'B2 Kimi 提问走原生 AskUserQuestion(经 ACP 落到如意提问卡),不提 request_user_input');
-  ok(/Bash 命令由如意代为执行/.test(kimi) && !kimi.includes('CLAUDE.md'), 'B3 Kimi 原生 Bash 由如意代执行;不提 CLAUDE.md');
-  ok(/ripgrep 可用（本机已安装）/.test(kimi) && kimi.includes('mcp__ruyi__') && kimi.includes('```mermaid'), 'B4 Kimi 版同样带能力事实(系统 rg / 如意 MCP / mermaid)');
-  ok(kimi.length <= 1800 && !/[%!]/.test(kimi), 'B5 中文 Kimi 版 ≤ 1800 字且无 % !(实 ' + kimi.length + ')');
-
   /* ═══════════ C provider 变体 ═══════════ */
   const provider = { id: 'fake', label: 'Fake端点', model: 'fake-model' };
   const tools = [{ function: { name: 'file_read' } }, { function: { name: 'request_user_input' } }];
@@ -128,7 +119,7 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
     ['rg', brief('claude', baseConfig(), { createdBy: 'steward' }, null)],
     ['权限档', brief('claude', baseConfig({ permissionMode: 'plan' }), { createdBy: 'steward' }, RG_BUNDLED)],
     ['管家代开', brief('claude', baseConfig(), {}, RG_BUNDLED)],
-    ['引擎', brief('kimi', baseConfig(), { createdBy: 'steward' }, RG_BUNDLED)],
+    ['引擎', brief('provider', baseConfig(), { createdBy: 'steward' }, RG_BUNDLED)],
   ];
   ok(flips.every(([, b]) => b.fingerprint !== claudeOn.fingerprint && b.text !== cOn), 'D3 能力集里任一项变了(桌面/rg/权限档/管家代开/引擎),指纹与文字都跟着变');
   const pbAgain = brief('provider', baseConfig(), { createdBy: 'steward' }, { shell: 'bundled' });
@@ -141,8 +132,8 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
     && /Desktop control: enabled/.test(en) && /The steward opened this thread/.test(en) && !/spawn_agent/.test(en) && !/[%!]/.test(en)
     && tagsOf(en).length === 2, 'E1 英文 Claude 版同构(身份/MCP/mermaid/桌面/管家代开;无 spawn_agent、无 % !、只有自身围栏)');
   ok(/in double quotes/.test(en) && /comments on their own line/.test(en) && /top-down \(TD\)/.test(en), 'E1b 英文版同样带 mermaid 写法建议');
-  const enKimi = brief('kimi', baseConfig({ locale: 'en-US', desktopMcp: { enabled: false } }), {}, null).text;
-  ok(/You are Kimi Code/.test(enKimi) && /native AskUserQuestion/.test(enKimi) && /Desktop control: disabled/.test(enKimi) && /no usable ripgrep/.test(enKimi), 'E2 英文 Kimi 版(原生提问/桌面关/无 rg)');
+  const enLimited = brief('claude', baseConfig({ locale: 'en-US', desktopMcp: { enabled: false } }), {}, null).text;
+  ok(/Desktop control: disabled/.test(enLimited) && /no usable ripgrep/.test(enLimited), 'E2 英文版桌面关闭且无 rg');
 
   /* ═══════════ F 接线(源码) ═══════════ */
   const claude = fs.readFileSync(path.join(ROOT, 'ruyi-workbench/app/backend/agent-cli-turn.cjs'), 'utf8');
@@ -152,7 +143,7 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
   const iBrief = codeOnly.indexOf('if (envBrief && envBrief.text) appendSys +=');
   const iBatching = codeOnly.indexOf('toolProtocol.batching}`;');
   const iSection = codeOnly.indexOf('const sectionLimit =');
-  ok(/await resolveEngineEnvBrief\(\{ engine: agentCliType, config, session \}\)/.test(codeOnly), 'F1 runClaudeTurn 经 resolveEngineEnvBrief 装配(按 agentCliType 出 Claude/Kimi 变体)');
+  ok(/await resolveEngineEnvBrief\(\{ engine: agentCliType, config, session \}\)/.test(codeOnly), 'F1 runClaudeTurn 经 resolveEngineEnvBrief 装配(按 agentCliType 出 Claude 变体)');
   ok(iUser >= 0 && iBrief > iUser && iBatching > iBrief && iSection > iBrief, 'F2 注入位置:用户 append 之后、四层协议之前、sectionLimit 之前(无条件前缀,降级从尾部切)');
   ok(/if \(!envBrief && interactive && config\.includeWorkbenchMcp\)/.test(codeOnly) && /if \(!envBrief && config\.includeWorkbenchMcp && config\.toolLoadingMode === 'auto'\)/.test(codeOnly),
     'F3 并进环境说明的两句旧提示只在没有环境说明时(管家会话)才注入,不重复');
@@ -163,7 +154,7 @@ const brief = (engine, config, session, rg) => srv.buildEngineEnvBrief({ engine,
 
   /* ═══════════ G rg:PATH 前置 + 来源探测 ═══════════ */
   const vendorDir = path.join(ROOT, 'ruyi-workbench', 'app', 'vendor-bin');
-  const hasVendorRg = fs.existsSync(path.join(vendorDir, process.platform === 'win32' ? 'rg.exe' : 'rg'));
+  const hasVendorRg = fs.existsSync(path.join(vendorDir, 'rg'));
   const firstPath = String(process.env.PATH || '').split(path.delimiter)[0] || '';
   ok(!hasVendorRg || path.resolve(firstPath).toLowerCase() === path.resolve(vendorDir).toLowerCase(),
     'G1 require server.js 后进程 PATH 第一项就是随包 vendor-bin(子进程全继承;实 ' + firstPath + ')');

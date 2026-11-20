@@ -1,18 +1,7 @@
 'use strict';
+import { chatProviders, presetDisplayLabel, stripWrappingQuotes, workspaceKey } from './util.js';
 
-// 118a: shell-agnostic welcome wizard.
-//
-// Why a zero-import factory: the workbench view (`session-experience.js`) and the settings page must be
-// able to open the SAME wizard (before 121-K1 the retired dispatch desk was a third caller), and the
-// 117 steward line has to be able to
-// replay the same step definitions as a conversation. So every environment dependency (state / api / el /
-// t / toast / picker / settings opener) is injected, and the pure parts (step list, shape validators,
-// first-run gate) are plain named exports that a test or the steward can call without a DOM.
-//
-// Discipline: zero innerHTML (DOM is built with the injected el() + textContent), the API key is never
-// stored in module state beyond the live form nor echoed back into the UI after the save, and provider
-// serialization is NOT reimplemented here: providerDraftFromPreset() is injected from provider-settings.js
-// so the settings page and the wizard write byte-identical provider entries.
+// Host dependencies are injected so the settings page and conversation use the same wizard.
 
 export const ONBOARDING_VERSION = 1;
 
@@ -23,7 +12,7 @@ export const ONBOARDING_VERSION = 1;
 // 用户在这里仍然能填一个模型名或留空跟随主端点）。
 export const ONBOARDING_STEP_IDS = Object.freeze(['language', 'engine', 'provider', 'steward', 'workspace', 'safety', 'done']);
 // Engine choice on step 2. 'cloud' = a hosted preset, 'local' = any OpenAI-compatible endpoint (Ollama /
-// LM Studio / an intranet gateway), 'cli' = an already installed Claude Code / Kimi Code binary.
+// LM Studio / an intranet gateway), 'cli' = an already installed Claude Code binary.
 export const ONBOARDING_ENGINE_CHOICES = Object.freeze(['cloud', 'local', 'cli']);
 // Human-worded safety profiles on step 5, mapped 1:1 to config.permissionMode values.
 export const ONBOARDING_SAFETY_MODES = Object.freeze(['default', 'acceptEdits', 'plan', 'auto']);
@@ -45,12 +34,9 @@ export const KEY_OPTIONAL_PRESET_IDS = Object.freeze(['ollama', 'lmstudio']);
 // text must equal a `##` heading in both manuals verbatim (same discipline as the settings tab anchors).
 export const LOCAL_MODELS_ANCHOR_KEY = 'help.anchor.localModels';
 
-// True when a blank API key is normal for this preset: any local endpoint (the free-form 'local' choice)
-// plus the two zero-config local presets. Pure, so both shells and the steward can ask the same question.
-// 两个文件夹路径是不是同一个（Windows 不分大小写、尾部斜杠不算）。纯函数，只用于提示，不是安全判据。
 export function sameFolder(a, b) {
-  const norm = p => String(p || '').trim().replace(/[\\/]+$/, '').replace(/\\/g, '/').toLowerCase();
-  return Boolean(norm(a)) && norm(a) === norm(b);
+  const key = workspaceKey(a);
+  return Boolean(key) && key === workspaceKey(b);
 }
 
 export function presetAllowsEmptyKey(presetId) {
@@ -124,20 +110,10 @@ export function shouldShowOnboarding(config, sessions) {
   return noSessions && noWorkspaces;
 }
 
-// Data-driven step list. Always the same six steps in the same order (the wizard may fast-forward through
-// one at runtime, e.g. the provider step when the user already has a CLI, but the definition never shrinks
-// so 117 can render the identical checklist). `done` is derived from config only, never from live UI state.
-// 只做语音的服务商不算「对话引擎」（判据的事实源在 util.js 的 isSpeechOnlyProvider）。本模块零 import 是锁死的纪律
-// （壳无关、可在 Node 里经 data: URL 直接加载），所以这里放一份【逐字相同】的副本 —— asr-config-ui.static 钉住两份函数体一字不差，
-// 改一处不改另一处当场红。
-function isSpeechOnlyProvider(provider) {
-  const models = provider && Array.isArray(provider.models) ? provider.models : [];
-  return models.length > 0 && models.every(m => m && typeof m === 'object' && Array.isArray(m.caps) && (m.caps.includes('asr') || m.caps.includes('asr-stream')));
-}
 export function onboardingStepsFor(config) {
   const c = asObject(config);
-  const providers = asArray(c.providers).filter(p => p && !isSpeechOnlyProvider(p));   // 自动接入的本地语音识别不是对话引擎:不能让它把「配置引擎」这一步标成已完成
-  const engineReady = providers.length > 0 || Boolean(c.claudePath) || Boolean(c.kimiPath);
+  const providers = chatProviders(c);
+  const engineReady = providers.length > 0 || Boolean(c.claudePath);
   // 走查 #10：defaultWorkspace 永远有值（缺省＝整个用户目录）、permissionMode 永远有出厂值 —— 拿它们判「做过了」
   // 等于新装第一秒就把「文件夹」「安全档」画成绿的。改成要有真凭据：选过文件夹（recentWorkspaces）、选过档位（显式键）或整套向导走完过。
   const completed = Boolean(asObject(c.onboarding).completedAt);
@@ -252,17 +228,6 @@ export function createOnboardingWizardDomain({
   // 118a-fix: 应用内手册阅读器入口(help-viewer.js)。组合根注入,向导本身仍壳无关。
   openHelpViewer = () => {},
 } = {}) {
-
-  // U14 走查：provider preset 卡片标题直接印服务端 label 字面量，几条带中文描述的
-  // （"自定义 (OpenAI 兼容 / 内网自建)"／通义千问／智谱／本机模型这几处）在 en-US 下会照原样露出。
-  // 与 provider-settings.js 的 populateProviderPresets 同一份查法（那边走 util.js 的
-  // presetDisplayLabel；本模块按「零 import」纪律自己重复这几行，不建立新的模块依赖）。
-  function presetTitle(preset) {
-    if (!preset) return '';
-    const key = `provider.preset.${String(preset.id || '').replace(/[-_](\w)/g, (_, c) => c.toUpperCase())}.label`;
-    const translated = t(key);
-    return translated === `[${key}]` ? (preset.label || preset.id) : translated;
-  }
 
   /* ---------------- persistence ---------------- */
   // The single config write path used by every step. Mirrors provider-settings' saveConfigPartial (POST
@@ -651,7 +616,7 @@ export function createOnboardingWizardDomain({
         for (const preset of visiblePresets) {
           cards.append(choiceCard({
             selected: wiz.presetId === preset.id,
-            title: presetTitle(preset),
+            title: presetDisplayLabel('provider', preset, t),
             description: preset.baseUrl || t('onboarding.wizard.provider.noBaseUrl'),
             extra: preset.keyOptional ? t('onboarding.wizard.provider.noKeyNeeded') : (preset.defaultModel || ''),
             onSelect: () => {
@@ -931,10 +896,9 @@ export function createOnboardingWizardDomain({
       const useBtn = el('button', 'btn btn-sm onboard-wiz-path-use', t('onboarding.wizard.workspace.pathUse'));
       useBtn.type = 'button';
       const usePath = async () => {
-        const raw = String(pathInput.value || '').trim().replace(/^["'“‘](.*)["'”’]$/, '$1').trim();
-        if (!raw) { pathInput.focus && pathInput.focus(); return; }
-        await setWorkspacePath(raw);
-        if (String(asObject(state.config).defaultWorkspace || '') === raw) { wiz.workspaceError = ''; wiz.workspacePath = ''; }
+        const raw = stripWrappingQuotes(pathInput.value);
+        if (!raw) { pathInput.focus(); return; }
+        if (await setWorkspacePath(raw)) { wiz.workspaceError = ''; wiz.workspacePath = ''; }
         render();
       };
       useBtn.onclick = usePath;
@@ -1051,7 +1015,6 @@ export function createOnboardingWizardDomain({
       // （116-3 B1：切全自动缺 confirm:true 就 409 permission.confirm_required）把它挡回来，而卡片先被标成选中、
       // 保存失败只剩一句 toast。现在：要二次确认的那一档先在本步里【就地】展开一段确认（与设置页、盾牌菜单同一条纪律：
       // 不跳走、不叠第二层模态），点「确定」才带 confirm:true 落盘；落盘成功之后才把卡片标成选中。
-      // 本模块零 import（壳无关），「哪一档要确认」按服务端那张 PERMISSION_MODES_REQUIRING_CONFIRM 的前端投影写在这里。
       const needsConfirm = mode => mode === 'auto';
       const choose = async (mode, extra) => {
         if (!(await persist({ permissionMode: mode, ...(extra || {}) }))) { render(); return false; }

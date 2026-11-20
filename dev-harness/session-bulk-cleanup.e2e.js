@@ -3,7 +3,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // E2E: safe bulk history cleanup. It proves the endpoint clears only unpinned, non-current chats
 // and, when requested, purges the per-session checkpoint / Agent-run directories as well.
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -44,7 +44,7 @@ function auxiliary(id) {
   const ok = (condition, label) => { if (condition) console.log('PASS ' + label); else { failures++; console.log('FAIL ' + label); } };
   try {
     fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
-    server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+    server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     let healthy = false;
     for (let i = 0; i < 300 && !healthy; i++) { await sleep(125); healthy = (await get('/health')).status === 200; } // 117q:预算 40×125ms=5s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)
     ok(healthy, 'workbench started');

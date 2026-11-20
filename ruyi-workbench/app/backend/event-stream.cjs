@@ -221,6 +221,11 @@ function eventStreamOnActiveChildEvent(reg, evt) {
 // ────────────────────────────────────────────────────────────────────────────
 const unsubscribeEvents = RUYI_EVENTS.subscribe((name, payload) => {
   const data = (payload && typeof payload === 'object') ? payload : {};
+  if (name === 'background.changed') {
+    const sessionId = safeSessionId(data.sessionId);
+    if (sessionId) eventStreamPublish(name, { sessionId });
+    return;
+  }
   if (name === 'background.completed') {
     const sessionId = safeSessionId(data.sessionId);
     if (sessionId) eventStreamPublish(name, { sessionId, jobId: String(data.jobId || ''), status: String(data.status || ''), persisted: data.persisted === true });

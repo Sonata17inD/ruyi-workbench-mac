@@ -1,4 +1,4 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 (async () => {
 // E2E (第46波46d): fake-mcp 20 工具契约 —— ACC 离线回归的底座。
 // 三段:
@@ -11,7 +11,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (P3) 静态锁:fake-mcp 写族工具集 === BRIDGED_WRITE_PATH_ARGS 键集(服务器真身 export)。
 //       两侧任一加写族工具而另一侧没跟上 → 红。治「漏表 = 不能撤销」的 v1.1 返修教训机制化。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -58,7 +58,7 @@ function killp(c) { if (c && c.pid) { try { killOwnTree(c); } catch { /* ignore 
 
 // ── P1: 直连 fake-mcp 的极简 stdio JSON-RPC 客户端 ─────────────────────────────────────────
 function mcpClient() {
-  const child = cp.spawn(process.execPath, [FAKE_MCP], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  const child = cp.spawn(process.execPath, [FAKE_MCP], { stdio: ['pipe', 'pipe', 'pipe'] });
   let buf = '';
   const pending = new Map();
   let nextId = 1;
@@ -244,8 +244,8 @@ function mcpClient() {
       { name: 'fake__move_file', args: { source: P('src.txt'), destination: P('moved.txt') } },
       { name: 'fake__copy_file', args: { source: P('note.txt'), destination: P('note_copy.txt') } },
     ];
-    const gfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) }, windowsHide: true });
-    const gwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: G_HOME }, windowsHide: true });
+    const gfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: JSON.stringify(seq) } });
+    const gwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: G_HOME } });
     gwb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     procs.push(gfake, gwb);
     try {

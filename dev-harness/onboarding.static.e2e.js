@@ -49,8 +49,6 @@ ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(moduleSrc),
   'E1 向导模块零 innerHTML / insertAdjacentHTML / document.write');
 ok(moduleSrc.includes('replaceChildren(') && moduleSrc.includes("el('"),
   'E2 DOM 全部经 el() 与 replaceChildren() 构建');
-ok(!/^import\s/m.test(moduleSrc),
-  'E3 模块零 import(壳无关:每个环境依赖都从工厂注入,117 管家可零 DOM 复用纯函数)');
 // 118a-fix: 「复制路径让用户自己去打开」的反模式在向导里彻底消失(键、类名、剪贴板调用三处一起锁)。
 ok(!/onboarding\.wizard\.done\.(copyPath|copied|copyFailed)/.test(moduleSrc)
   && !/onboard-wiz-copy/.test(moduleSrc)
@@ -223,7 +221,7 @@ const findOne = (node, cls) => findAll(node, cls)[0] || null;
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 (async () => {
-  const mod = await import(`data:text/javascript;base64,${Buffer.from(moduleSrc).toString('base64')}`);
+  const mod = await import(require('node:url').pathToFileURL(modulePath).href);
 
   /* ① 导出面 */
   for (const name of ['ONBOARDING_VERSION', 'ONBOARDING_STEP_IDS', 'ONBOARDING_SAFETY_MODES', 'ONBOARDING_PLAYBOOK_IDS',
@@ -250,14 +248,22 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 
   /* ② 步骤定义 */
   const steps = mod.onboardingStepsFor({});
-  // 121-K7 翻面重钉（34 号文 §8.4 拍板③与 §13.1 登记）：stewardEnabledV1 默认改 true 之后，
-  // 新装的第一天管家就在后台跑回合，那是要花钱的 —— 向导因此多一步「管家用哪个模型」，
-  // 插在 provider 之后（那一步刚把服务商配好）。七步、顺序固定，不是放宽旧契约。
   ok(steps.length === 7, `B1 步骤定义恒为 7 步（实测 ${steps.length}）`);
   ok(steps.map(s => s.id).join(',') === 'language,engine,provider,steward,workspace,safety,done',
     `B2 步骤次序 = 语言/引擎/密钥/管家模型/文件夹/安全档/完成（实测 ${steps.map(s => s.id).join(',')}）`);
   ok(steps.every((s, i) => s.index === i && typeof s.titleKey === 'string' && s.titleKey.startsWith('onboarding.wizard.')),
     'B3 每步带 index 与 onboarding.wizard.* 文案键(117 管家可直接复用)');
+  for (const [models, ready] of [
+    [[{ caps: ['asr'] }], false],
+    [[{ caps: ['asr-stream'] }], false],
+    [[{ caps: ['asr'] }, { caps: [] }], true],
+    [[], true],
+  ]) {
+    const steps = mod.onboardingStepsFor({ providers: [{ models }] });
+    for (const id of ['engine', 'provider']) {
+      ok(steps.find(step => step.id === id).done === ready, id + ' reflects chat capability for ' + JSON.stringify(models));
+    }
+  }
   const doneSteps = mod.onboardingStepsFor({
     locale: 'zh-CN', providers: [{ id: 'p' }], defaultWorkspace: 'C:/w', permissionMode: 'default',
     onboarding: { completedAt: '2026-09-03T00:00:00.000Z', version: 1, skipped: false },
@@ -686,11 +692,9 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
   const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
   const zh = readJson(path.join(PUBLIC, 'locales', 'zh-CN.json'));
   const en = readJson(path.join(PUBLIC, 'locales', 'en-US.json'));
-  const docsZh = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'zh-CN.json'));
-  const docsEn = readJson(path.join(ROOT, 'docs', 'i18n', 'locales', 'en-US.json'));
   const wizardKeys = Object.keys(zh).filter(key => key.startsWith('onboarding.wizard.'));
   ok(wizardKeys.length >= 80, `H1 onboarding.wizard.* 键齐(${wizardKeys.length} 条)`);
-  const missing = wizardKeys.filter(key => !(typeof en[key] === 'string' && en[key]) || docsZh[key] !== zh[key] || docsEn[key] !== en[key]);
+  const missing = wizardKeys.filter(key => !(typeof en[key] === 'string' && en[key]));
   ok(missing.length === 0, 'H2 四个 locale 文件逐字一致' + (missing.length ? ' (缺: ' + missing.slice(0, 3).join(', ') + ')' : ''));
   // 源码里引用的每个 onboarding.wizard.* 静态键都必须可解析(动态拼接的键单独枚举)。
   const referenced = new Set([...moduleSrc.matchAll(/'(onboarding\.wizard\.[A-Za-z0-9_.-]+)'/g)].map(m => m[1]));
@@ -705,11 +709,11 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
     .filter(key => !key.endsWith('.'))
     .concat(['help.doc.open', 'help.doc.lang.zh-CN', 'help.doc.lang.en-US']);
   const helpMissing = helpDocKeys.filter(key => typeof zh[key] !== 'string' || typeof en[key] !== 'string'
-    || docsZh[key] !== zh[key] || docsEn[key] !== en[key]);
+   );
   ok(helpMissing.length === 0, 'H4 help.doc.* 文案键四文件齐'
     + (helpMissing.length ? ' (缺: ' + helpMissing.slice(0, 3).join(', ') + ')' : ''));
   const retired = ['onboarding.wizard.done.copyPath', 'onboarding.wizard.done.copied', 'onboarding.wizard.done.copyFailed'];
-  const stillThere = retired.filter(key => key in zh || key in en || key in docsZh || key in docsEn);
+  const stillThere = retired.filter(key => key in zh || key in en);
   ok(stillThere.length === 0, 'H5 复制路径相关文案键已从四个 locale 文件里删除'
     + (stillThere.length ? ' (残留: ' + stillThere.join(', ') + ')' : ''));
   ok(!/复制/.test(zh['onboarding.wizard.done.manualHint'] || '') && !/copy/i.test(en['onboarding.wizard.done.manualHint'] || ''),

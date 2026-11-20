@@ -70,7 +70,7 @@ const isSub = req => sysOf(req).includes('子任务执行体');
       providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: fake.url, apiKey: 'k', model: 'sub-model' }], activeProvider: 'fake',
     }));
     const port = await getFreePort();
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home } });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
     let log = ''; wb.stdout.on('data', d => { log += d; }); wb.stderr.on('data', d => { log += d; });
     const up = await waitFor(() => request(port, 'GET', '/health').catch(() => null), 100, 150);
     if (!up) throw new Error('workbench did not start: ' + log.slice(-800));

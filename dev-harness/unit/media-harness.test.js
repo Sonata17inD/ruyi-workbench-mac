@@ -8,7 +8,7 @@ const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-media-harness-'));
 const ws = path.join(root, 'workspace'), home = path.join(root, 'data');
 fs.mkdirSync(ws); fs.mkdirSync(home);
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 if (process.env.RUYI_NATIVE_READ_TEST_PYTHON) process.env.RUYI_BUNDLED_PYTHON = process.env.RUYI_NATIVE_READ_TEST_PYTHON;
 const srv = require('../lib/server-internals').loadServerInternals(['toolCall', 'buildOpenAiTools', 'buildToolCatalog', 'searchToolCatalog', 'ProcessRuntime']);
 // These schema/loading fixtures model a ready runtime; unavailable hosts have dedicated e2e coverage.
@@ -69,7 +69,7 @@ test('recursive copy/move/delete and batches use checkpoints; preflight failures
 
 test('directory operations reject symbolic links rather than traversing external contents', async t => {
   fs.mkdirSync(path.join(ws, 'links'), { recursive: true });
-  try { fs.symlinkSync(path.join(ws, 'out'), path.join(ws, 'links/junction'), process.platform === 'win32' ? 'junction' : 'dir'); }
+  try { fs.symlinkSync(path.join(ws, 'out'), path.join(ws, 'links/junction'), 'dir'); }
   catch (error) { if (error.code === 'EPERM') return t.skip('symlink permission unavailable'); throw error; }
   const result = await call('file_delete', { path: 'links', recursive: true });
   assert.equal(result.code, 'symlink_refused'); assert.equal(result.partial, false);

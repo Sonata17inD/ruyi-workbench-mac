@@ -17,7 +17,6 @@ const path = require('path');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-big-targets-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
 process.env.WCW_TEST_ALLOW_LOOPBACK = '1';
@@ -48,7 +47,7 @@ test('[B1] file_edit:>50MB 的文件先 stat 就拒,不整份读进内存', asyn
   assert.equal(fs.statSync(f).size, 51 * MB, '文件没被动');
 });
 
-test('[B1] file_edit:>2GiB 的稀疏文件回信封,不抛裸 ERR_FS_FILE_TOO_LARGE', { skip: process.platform === 'win32' ? 'Windows 上扩 3GB 要真写盘' : false }, async () => {
+test('[B1] file_edit:>2GiB 的稀疏文件回信封,不抛裸 ERR_FS_FILE_TOO_LARGE', async () => {
   const f = path.join(ws, 'huge-sparse.bin');
   fs.writeFileSync(f, 'x');
   try { fs.truncateSync(f, 3 * 1024 * MB); } catch { return; /* 文件系统不支持稀疏大文件:跳过 */ }

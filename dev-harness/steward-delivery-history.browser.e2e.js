@@ -21,7 +21,7 @@ async function clickWhenReady(selector, text = '') {
     fx = await startBrowserFixture({ prefix: 'ruyi-delivery-history-', ok, width: 1440,
       provider: ctx => { calls++; ctx.text('unexpected model call'); ctx.stop(); },
       prepare: async fixture => {
-        process.env.RUYI_HOME = fixture.home; process.env.WIN_CLAUDE_WORKBENCH_HOME = fixture.home;
+        process.env.RUYI_HOME = fixture.home;
         const s = loadServerInternals(['createSession', 'saveSession', 'stewardCaptureDelivery']);
         const session = await s.createSession({ title: '历史两步交付', cwd: fixture.work }); sid = session.id;
         artifact = path.join(fixture.work, '汇总.md'); fs.writeFileSync(artifact, '# 汇总\n4 单，3000 元。');

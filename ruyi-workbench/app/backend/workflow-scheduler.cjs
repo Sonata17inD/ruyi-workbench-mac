@@ -41,37 +41,30 @@ function computeSchedulerStep(nodes, opts) {
   return { toBlock, toSkip, toDispatch, toArm, allTerminal, cycleDead };
 }
 
-// 第98波(P5-A):真实调度波次 -- 静态模拟 computeSchedulerStep 的派发过程,给每个节点标注【首次被派发的波次号】。
-// 与前端 crewDepths(纯依赖拓扑层)的区别:纳入并发上限(同层节点多于并发数时拆成多波)与 wait 节点(不占并发槽,同波武装)。
-// 静态预估:假设无条件跳过/失败(条件分支的跳过依赖运行时求值结果,无法静态预知),故为"乐观调度波次",供班组图分列。
+// Estimate dispatch waves in input order. Wait nodes do not consume slots.
 function computeWaveSeq(nodes, opts) {
   const { concurrency = 1, isWaitNode } = opts || {};
-  const list = Array.isArray(nodes) ? nodes.filter(n => n && n.id) : [];
-  const index = new Map();
-  for (const node of list) if (!index.has(String(node.id))) index.set(String(node.id), node);
-  const byId = id => index.get(String(id));
-  const isWait = n => (typeof isWaitNode === 'function') ? !!isWaitNode(n) : false;
+  const remaining = new Map();
+  for (const node of Array.isArray(nodes) ? nodes : []) {
+    if (!node?.id) continue;
+    const id = String(node.id);
+    if (!remaining.has(id)) remaining.set(id, node);
+  }
   const wave = new Map();
-  const remaining = new Set(list.map(n => String(n.id)));
   const maxConcurrent = Math.max(1, Math.floor(Number(concurrency) || 1));
-  let currentWave = 0;
-  let guard = 0;
-  while (remaining.size && guard++ < list.length + 4) {
-    const ready = [...remaining].filter(id => {
-      const n = byId(id);
-      const deps = (Array.isArray(n && n.dependsOn) ? n.dependsOn : []).map(String);
-      return deps.every(d => wave.has(d));
-    });
-    if (!ready.length) break; // 依赖环/死锁:剩余节点无法就绪,停止(保留未分配)
+  for (let current = 0; remaining.size; current++) {
+    const before = remaining.size;
     let slots = maxConcurrent;
-    for (const id of ready) {
-      const n = byId(id);
-      if (isWait(n)) { wave.set(id, currentWave); continue; } // wait 节点不占并发槽,同波武装
-      if (slots <= 0) continue;                                // 并发满位:留待下一波
-      wave.set(id, currentWave); slots--;
+    for (const [id, node] of remaining) {
+      if (Array.isArray(node.dependsOn) && !node.dependsOn.every(dep => wave.get(String(dep)) < current)) continue;
+      if (!(typeof isWaitNode === 'function' && isWaitNode(node))) {
+        if (!slots) continue;
+        slots--;
+      }
+      wave.set(id, current);
+      remaining.delete(id);
     }
-    for (const id of ready) if (wave.has(id)) remaining.delete(id);
-    currentWave++;
+    if (remaining.size === before) break;
   }
   return wave;
 }

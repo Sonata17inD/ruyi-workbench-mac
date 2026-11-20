@@ -6,7 +6,7 @@ const path = require('node:path');
 
 function createWorkbenchDataRoots({ process }) {
   // 3.0 收口(原 v1.0-S9「建议 v2.0 收口」):数据目录缺省名改为 .ruyi-workbench。解析顺序:
-  //   RUYI_HOME → WIN_CLAUDE_WORKBENCH_HOME(旧变量名,只读兼容,不再往子进程里写)→ ~/.ruyi-workbench;
+  //   RUYI_HOME → ~/.ruyi-workbench;
   //   新目录还不存在、旧目录 ~/.win-claude-workbench 是真目录(迁移没成或还没轮到)时继续用旧目录 —— 数据不会因为改名「消失」。
   // 迁移(把旧目录搬成新名、原处留一个指回来的目录联接)只在直接运行 serve 时做一次,见 migrateLegacyDataRoot。
   const RUYI_DATA_DIR_NAME = '.ruyi-workbench';
@@ -22,11 +22,10 @@ function createWorkbenchDataRoots({ process }) {
   // 结果按「两个环境变量 + 家目录」记住:进程内能改变答案的只有这三样(迁移发生在启动时,迁移后清一次缓存)。
   let _dataRootMemo = null;
   function dataRootMemoKey() {
-    return [process.env.RUYI_HOME || '', process.env.WIN_CLAUDE_WORKBENCH_HOME || '', os.homedir()].join('\0');
+    return [process.env.RUYI_HOME || '', os.homedir()].join('\0');
   }
   function resolveDataRootUncached() {
     if (process.env.RUYI_HOME) return path.resolve(process.env.RUYI_HOME);
-    if (process.env.WIN_CLAUDE_WORKBENCH_HOME) return path.resolve(process.env.WIN_CLAUDE_WORKBENCH_HOME);
     const { next, legacy } = defaultDataRoots();
     if (lstatOrNull(next)) return next;
     const old = lstatOrNull(legacy);
@@ -43,10 +42,6 @@ function createWorkbenchDataRoots({ process }) {
     _dataRootMemo = { key, root, aliases: null };
     return root;
   }
-  // 数据根的别名:指向同一个目录的其它写法 —— 迁移后旧位置上留的目录联接,或者新位置是指向旧目录的链接。敏感子树判定
-  // (03 isSensitiveDataPath 与文件遍历的跳过)是按词法前缀比的,只认数据根本身的话,经别名的写法就能读到 config.json /
-  // runtime.json(token)/ 会话。**与环境变量无关**:Claude / Kimi 的 MCP 子进程总带 RUYI_HOME,修前在那里一律返回空,
-  // 旧路径上的链接也要纳入保护。按 realpath 对照，数据根暂缺时留到下次计算。
   function dataRootAliases() {
     const root = dataRoot();
     if (_dataRootMemo && _dataRootMemo.root === root && Array.isArray(_dataRootMemo.aliases)) return _dataRootMemo.aliases;
@@ -72,7 +67,7 @@ function createWorkbenchDataRoots({ process }) {
   // 只在:直接运行、缺省命令 serve、没有任何数据根环境变量、新目录不存在、旧目录是真目录、旧目录里没有别的活实例
   // (runtime.json 的 pid 还活着就不动)时做。搬不动(被占用、跨卷、权限)就原样继续用旧目录,下次启动再试。
   function migrateLegacyDataRoot() {
-    if (process.env.RUYI_HOME || process.env.WIN_CLAUDE_WORKBENCH_HOME) return { moved: false, reason: 'env' };
+    if (process.env.RUYI_HOME) return { moved: false, reason: 'env' };
     const { next, legacy } = defaultDataRoots();
     if (lstatOrNull(next)) return { moved: false, reason: 'next-exists' };
     const old = lstatOrNull(legacy);

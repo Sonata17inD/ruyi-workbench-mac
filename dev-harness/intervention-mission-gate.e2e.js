@@ -23,7 +23,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      容器 id(没有会话文件)同样 not_found;两次越权尝试都没把待决消费掉,自身 id 仍答得进。
 //
 // 端口用 getFreePort()。判定行:`INTERVENTION MISSION GATE E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -85,7 +85,7 @@ function streamChat(body, token, cbs = {}) {
 
 function spawnFake(env) {
   const p = cp.spawn(process.execPath, [path.join(__dirname, 'fake-openai.js')], {
-    env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env }, windowsHide: true,
+    env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...env },
   });
   p.stderr.on('data', d => String(d).trim() && console.error('[fake!] ' + String(d).trim()));
   return p;
@@ -122,7 +122,7 @@ try {
   await restartFake({ FAKE_TOOL_SEQUENCE: JSON.stringify([{ name: 'request_user_input', args: { questions: [{ header: 'Framework', question: 'Which framework?', options: [{ label: 'React' }, { label: 'Vue' }], multiSelect: false }] } }]) });
 
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true, stdio: 'ignore',
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, stdio: 'ignore',
   });
   let token = '';
   for (let i = 0; i < 300 && !token; i++) { // 117q:预算 100×120ms=12s 余量对本机冷启动实测 4.6-6.3s 偏窄,是「FAIL workbench up」假红的根(30 号文 P1-31)

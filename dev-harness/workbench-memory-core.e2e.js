@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 // Workbench Memory is the sole model-facing memory surface: ACC import, native tools, and prompt wiring.
 const fs = require('fs');
 const os = require('os');
@@ -7,13 +7,13 @@ const path = require('path');
 
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-memory-core-'));
 const DATA = path.join(ROOT, 'workbench');
-const LOCAL = path.join(ROOT, 'localappdata');
-fs.mkdirSync(path.join(LOCAL, 'ai-computer-control', 'data'), { recursive: true });
-fs.writeFileSync(path.join(LOCAL, 'ai-computer-control', 'data', 'memory.json'), JSON.stringify({ entries: {
+const accData = path.join(ROOT, 'acc-data');
+fs.mkdirSync(accData, { recursive: true });
+fs.writeFileSync(path.join(accData, 'memory.json'), JSON.stringify({ entries: {
   'preferred-output': { content: 'Keep final answers concise.', tags: 'preference,format', updated: '2026-08-01T00:00:00Z' },
 } }), 'utf8');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
-process.env.LOCALAPPDATA = LOCAL;
+process.env.RUYI_HOME = DATA;
+process.env.WCW_DATA_DIR = accData;
 
 const S = require(path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js'));
 let failures = 0;

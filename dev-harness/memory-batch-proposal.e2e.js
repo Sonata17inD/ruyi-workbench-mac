@@ -39,7 +39,6 @@ const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 // [A] 用的临时数据根:必须在 require(server.js) 之前定(paths.memory 在模块加载时定型)。
 const HOME_A = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-mem-batch-a-'));
 process.env.RUYI_HOME = HOME_A;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME_A;
 const srv = require(path.join(WB, 'app', 'server.js'));
 
 // 夹具的名称/描述用每条独有的合成词:去重判据按 name+description 的词面相似度(≥0.72 算同一条),只差一个数字的
@@ -246,8 +245,8 @@ try {
     activeProvider: 'fake',
   }));
   const WP = await getFreePort();
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, stdio: 'ignore',
-    env: { ...process.env, RUYI_HOME: HOME_H, WIN_CLAUDE_WORKBENCH_HOME: HOME_H } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: HOME_H } });
   const requestJson = (method, route, payload) => new Promise((resolve, reject) => {
     const data = payload == null ? '' : JSON.stringify(payload);
     const r = http.request({ host: '127.0.0.1', port: WP, path: route, method, timeout: 20000, headers: data ? { 'content-type': 'application/json', 'content-length': Buffer.byteLength(data) } : {} }, res => {

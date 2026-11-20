@@ -31,7 +31,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-walk-tools-'));
 const home = path.join(root, 'home');
 const dataRootDir = path.join(home, '.ruyi-workbench');
 fs.mkdirSync(dataRootDir, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.RUYI_HOME = dataRootDir;
 const srv = require(process.env.WALK_TEST_SERVER || path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
 after(() => { try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* best-effort */ } });
@@ -619,24 +618,23 @@ describe('[W10] 深度 / 隐藏 / gitignore 两个引擎同口径', () => {
   });
 });
 
-describe('[W10] file_list pattern 按 "/" 归一路径(Windows)', () => {
-  it('[W10] 路径分隔符是反斜杠时 ^src/.*\\.ts$ 仍匹配(path.sep 模拟 Windows)', async () => {
-    const ws = freshWs();
-    put(path.join(ws, 'src', 'a.ts'), 'x');
-    put(path.join(ws, 'src', 'deep', 'b.ts'), 'x');
-    put(path.join(ws, 'other', 'c.ts'), 'x');
-    // 别处(护栏 guardFileToolPath / isSensitiveDataPath)也读 path.sep,整个调用都改会被它们当成非法路径;
-    // 所以只对 walkFiles / toSlash 自己的读取返回 '\\'(按调用栈判定),模拟 Windows 上 rel 用反斜杠拼接。
-    // 真 Windows 上 path.sep 本来就是 '\\',不用模拟 —— 模拟时其余调用拿到的 '/' 反而会让护栏误判真 Windows 路径。
-    const simulate = process.platform !== 'win32';
-    const realSepDesc = Object.getOwnPropertyDescriptor(path, 'sep');
-    if (simulate) Object.defineProperty(path, 'sep', { get: () => (/^\s*at (?:async )?(?:toSlash|walkFiles)\b/.test(String(new Error().stack).split('\n')[2] || '') ? '\\' : '/'), configurable: true });
-    let r;
-    try { r = await srv.toolCall('file_list', { root: ws, pattern: '^src/.*\\.ts$' }, ctxFor(ws)); }
-    finally { if (simulate) Object.defineProperty(path, 'sep', realSepDesc); }
-    assert.equal(r.ok, true, JSON.stringify(r).slice(0, 300));
-        assert.deepEqual(rels(r.files).sort(), ['src/a.ts', 'src/deep/b.ts']);
-  });
+it('Mac workspace aliases preserve the selected path and exact search text', async () => {
+  const ws = freshWs();
+  const alias = ws + '-alias';
+  fs.symlinkSync(ws, alias);
+  const physical = fs.realpathSync(ws);
+  const line = physical + '/original-source';
+  put(path.join(ws, 'src', 'a.ts'), line);
+  put(path.join(ws, 'other', 'b.ts'), 'other');
+  const ctx = ctxFor(alias);
+  const listed = await srv.toolCall('file_list', { root: alias, pattern: '^src/.*\\.ts$', absolute: true }, ctx);
+  assert.deepEqual(listed.files.map(f => f.path), [path.join(alias, 'src/a.ts')]);
+  for (const group of [false, true]) {
+    const result = await srv.toolCall('file_search', { root: alias, pattern: 'original-source', group }, ctx);
+    const [hit] = result.matches;
+    assert.equal(hit.path, path.join(alias, 'src/a.ts'));
+    assert.equal(group ? hit.matches[0].text : hit.text, line);
+  }
 });
 
 describe('[W10] zip 条目上限 / data_profile 流式数组', () => {

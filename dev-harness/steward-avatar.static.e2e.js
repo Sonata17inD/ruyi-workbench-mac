@@ -73,10 +73,6 @@ ok(/data-i18n-attr="aria-label:stewardShell\.avatarLabel"/.test(header), 'C7 ava
 // ─── D 零 innerHTML、模块内零第三方 import ────────────────────────────────────────
 ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(stewardShell),
   'D1 steward-shell.js 零 innerHTML/insertAdjacentHTML/document.write');
-// 117c／117d 重钉（语义不变，只是本域内又多了一个子模块）：steward-shell.js 组装 117c 的对话区与
-// 输入区、117d 的线程抽屉、117e 的设置页，import 由 1 条 → 3 条 → 4 条 → 5 条。断言仍是「只从【本域内】的相对路径取值、
-// 零第三方库、零裸包名」—— 每条 import 的来源必须逐字落在这份白名单里
-// （来源：117c／117d 交付，27 号文 §5 117c／117d 行）。
 const importLines = [...stewardShell.matchAll(/^import .*$/gm)].map(match => match[0]);
 ok(JSON.stringify(importLines) === JSON.stringify([
   "import { createDeadlinePoll } from './deadline-poll.js';",
@@ -87,12 +83,6 @@ ok(JSON.stringify(importLines) === JSON.stringify([
   // 117e：设置页「管家」页签 + 头部盾牌与常驻停机键。白名单加第五条（只加，形态不变：仍是
   // 本域内的相对路径、零第三方库、零裸包名）。
   "import { createStewardSettingsDomain } from './steward-settings.js';",
-  // 117g／117h（重钉来源：本波交付，27 号文 §5 117g／117h 行）：白名单加第六、七条 —— 一行状态与
-  // 看板与「现在这一件」、2.0 视窗与返回带。形态仍然不变：本域内相对路径、零第三方库、零裸包名。
-  // 2026-09-24 重钉（用户：「打开线程……默认直接打开工作台里的对应线程」的回程）：这一条多带一个名字
-  // STEWARD_FOCUS_THREAD_EVENT —— 工作台线程头「回到管家」派的焦点事件名从【同一条】import 取
-  // （事件名的登记只有 steward-board.js 那一份；本仓已登记过「同模块两条 import 行绕开锁」是债，
-  // 所以不另起第二条）。形态仍然不变：本域内相对路径、零第三方库、零裸包名。
   "import { createStewardBoard, STEWARD_FOCUS_THREAD_EVENT } from './steward-board.js';   // 2026-09-24：线程头「回到管家」派的焦点事件名从同一条 import 取（同一份登记，不另起第二条 import 行）",
   // 121-K5（34 号文 §2.5／§3）：「2.0 视窗与返回带」那一片（steward-classic-window.js）退役，
   // 位置由工作台线程头接手（一套 chip ＋「任务 › 线程」＋ 管家条）。形态仍然不变：本域内相对
@@ -106,27 +96,7 @@ ok(JSON.stringify(importLines) === JSON.stringify([
   // 一句（成功才收卡）。toast 住 util.js（零 import 的叶子）。形态仍然不变：本域内相对路径、
   // 零第三方库、零裸包名。
   "import { toast } from './util.js';   // 123-M2：安静卡「稍后」建不成那条 reminder 时的一句提示",
-  // 117j UX-F3（重钉来源：本波交付，27 号文 §11.7 走查 P2）：白名单加第八条 —— Esc 逐层的那个栈。
-  // 它住 steward-chips.js（零 import 的叶子），壳层 import 它是为了出【那一处】 document keydown。
-  // 形态仍然不变：本域内相对路径、零第三方库、零裸包名。
-  // 33 号文 §4 再重钉（本波交付）：白名单第八条这次多带了三个名字 —— 管家三处轮询（壳层／看板／
-  // 抽屉）那一组逐字相同的常量（下限／默认／容差）收进了 steward-chips.js 叶子，壳层从【同一条】
-  // import 取，不另起第二条（本仓已登记过「同模块两条 import 行绕开锁」是债）。形态仍然不变：
-  // 本域内相对路径、零第三方库、零裸包名。反向验证过：往 steward-shell.js 里加一条
-  // `import x from 'lodash';` 立刻真红，删掉即绿。
-  // 121-K2b（34 号文 §6.2）重钉：白名单第八条又多带一个名字 STEWARD_POLL_MS_CONNECTED —— 事件流连着时
-  // 四处兜底轮询的节拍（30 s）也收进了 steward-chips.js 那一份，壳层从【同一条】import 取。形态仍然不变：
-  // 本域内相对路径、零第三方库、零裸包名（反向验证过：往 steward-shell.js 里加一条 `import x from 'lodash';` 立刻真红）。
-  // 轮询生命周期收编（前端架构债第一批）重钉：白名单第八条再多带一个名字 createPollLifecycle —— 三处手写的
-  // pollTimer ＋ start/stop/syncPolling 收进 steward-chips.js 那一份，壳层仍从【同一条】import 取。形态不变。
   "import { stewardEscapeStack, byId, STEWARD_POLL_MS_MIN, STEWARD_POLL_MS_DEFAULT, STEWARD_POLL_MS_CONNECTED, STEWARD_POLL_DUE_SLACK_MS as POLL_DUE_SLACK_MS } from './steward-chips.js';   // 117j UX-F3：Esc 逐层的唯一监听点；33 号文 §4：轮询常量（下限/默认/容差）也只有那一份；121-K2b：事件流连着时的兜底节拍同源；轮询生命周期（启停／门控）同一份",
-  // 33 号文 §4 重钉（117 波交付）：白名单加第九条 —— 视角模式本机偏好的那一枚键。原来
-  // steward-shell.js 自带一份 byId 与两个 'wcw.shellMode' 字面量，与那份定义逐字重复；现在两样都
-  // 只留一份定义（byId 归上一条 steward-chips.js）。
-  // 121-K1（34 号文 §8.2）重钉：那份定义随交办台退役从 preview-shell.js 搬进叶子 js/shell-mode.js
-  // ——【取法一个字未变】，只换来源，而且新来源是一片零 import 的叶子，连「跨壳反向 import」这笔
-  // 债都一并还了（shell-mode.js 不 import 任何 steward-* 模块，故不构成循环）。
-  // 形态仍然不变：相对路径、零第三方库、零裸包名。
   "import { SHELL_MODE_STORAGE_KEY } from './shell-mode.js';",
 ]), `D2 steward-shell.js 的 import 只有本域内相对路径、零第三方库、零裸包名：实测 ${JSON.stringify(importLines)}`);
 ok(stewardShell.includes("import { derivePresence, presenceLabelKey } from './steward-presence.js';"),

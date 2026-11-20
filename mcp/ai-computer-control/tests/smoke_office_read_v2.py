@@ -503,22 +503,16 @@ def section_excel():
     xl = P("fmt.xlsx")
     wb.save(xl)
 
-    calls = []
-    real = oread._load_workbook_bounded
+    from unittest.mock import patch
 
-    def spy(path, timeout=20, **kw):
-        calls.append(dict(kw))
-        return real(path, timeout=timeout, **kw)
-
-    oread._load_workbook_bounded = spy
-    try:
-        r = _FNS["excel_read"](path=xl, max_rows=50)
-    finally:
-        oread._load_workbook_bounded = real
+    with patch.object(openpyxl, "load_workbook", wraps=openpyxl.load_workbook) as loader:
+        parsed = oread.office_reader.excel_read(path=xl, max_rows=50)
+    loader.assert_called_once_with(xl, read_only=True, data_only=True)
+    r = _FNS["excel_read"](path=xl, max_rows=50)
+    check(r["data"] == parsed["data"] and isinstance(r["data"][0][2], datetime.datetime),
+          "工作进程保留日期和数值类型")
     check(r.get("ok") is True and r.get("number_formats") == {"B": "¥#,##0.00", "C": "yyyy-mm-dd"},
           f"数字格式读到 (got {r.get('number_formats')})")
-    check(len(calls) == 1 and calls[0].get("read_only") is True,
-          f"只开一次工作簿且是 read_only (回归: 曾再整本非只读重开) calls={calls}")
     check(r.get("truncated", {}).get("rows_total") == 301 and r["truncated"].get("next_range") == "A51:C301",
           f"截断信息带 next_range (got {r.get('truncated')})")
 

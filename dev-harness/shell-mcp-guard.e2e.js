@@ -5,7 +5,7 @@ const { shellTool, echo, delay } = require('./lib/platform-shell-fixture');
 // tools must (a) still be LISTED (so the CLI-side model can see them + their guiding description) but
 // (b) return a guiding error with isError:true when actually called. Drives the child over stdio
 // JSON-RPC (same handshake as the real MCP client), no HTTP server involved. Offline.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), path = require('path'), os = require('os'), fs = require('fs');
 const SERVER = path.resolve(__dirname, '..', 'ruyi-workbench', 'app', 'server.js');
 const HOME = path.join(os.tmpdir(), 'wcw-shell-mcp-guard-e2e');
@@ -15,7 +15,7 @@ const HOME = path.join(os.tmpdir(), 'wcw-shell-mcp-guard-e2e');
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
 
-  const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const child = cp.spawn(process.execPath, [SERVER, 'mcp'], { env: { ...process.env, RUYI_HOME: HOME } });
   child.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[mcp!] ' + l.trim())));
   const pending = new Map();
   let buf = '';

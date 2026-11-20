@@ -1,6 +1,6 @@
 'use strict';
 // Actual config persistence and administration handlers, synthetic key wrapping only.
-// No listener, model request, CLI, browser or DPAPI subprocess is started.
+// No listener, model request, CLI, browser or Keychain subprocess is started.
 require('../lib/self-isolate-home');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -181,6 +181,6 @@ test('unsupported platforms refuse real encryption handlers before any config, b
 
 test('test platform facade remains module-local and rejects arbitrary process replacements', () => {
   const original = process.platform;
-  for (const testPlatform of ['', 'windows', { platform: 'win32' }]) assert.throws(() => loadServerInternals(['defaultConfig'], { testPlatform }), /invalid testPlatform/);
+  for (const testPlatform of ['', 'invalid', { platform: 'darwin' }]) assert.throws(() => loadServerInternals(['defaultConfig'], { testPlatform }), /invalid testPlatform/);
   assert.equal(process.platform, original); assert.equal(require('node:process').platform, original);
 });

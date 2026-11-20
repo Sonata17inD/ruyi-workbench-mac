@@ -13,7 +13,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-network-anchors-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 delete process.env.WCW_TEST_NO_NET_ANCHORS;
 delete process.env.WCW_TEST_LOCAL_PROVIDER_ANCHOR;

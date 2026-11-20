@@ -8,7 +8,6 @@ const { fixtureChildEnv } = require('../lib/fixture-home');
 Object.assign(process.env, fixtureChildEnv());
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-owner-unit-'));
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 const { ServerOwnership: ownership } = require('../../ruyi-workbench/app/backend/server-ownership.cjs');
 const { guardFileToolPath, isSensitiveDataPath, sensitiveGlobsForRg } =
   require('../lib/server-internals').loadServerInternals(['guardFileToolPath', 'isSensitiveDataPath', 'sensitiveGlobsForRg']);
@@ -42,10 +41,9 @@ test('canonical roots collapse junctions and missing leaves without creating dir
   const missing = path.join(alias, 'not-created', 'child');
   assert.equal(await ownership.canonicalRoot(missing), path.join(await ownership.canonicalRoot(real), 'not-created', 'child'));
   assert.equal(fs.existsSync(missing), false);
-  if (process.platform === 'win32') assert.equal(await ownership.canonicalRoot(real.toUpperCase()), await ownership.canonicalRoot(real));
 });
 
-test('protocol selection retains Node 20.0 and non-Linux POSIX compatibility', () => {
+test('macOS uses a per-user lock and a legacy socket', () => {
   assert.throws(() => ownership.endpointFor('root', 'win32'), /macOS/);
   assert.match(ownership.endpointFor('root', 'darwin', '24.0.0'), /^\/private\/tmp\/ruyi-serve-v1-\w+\/[a-f0-9]{32}\.lock$/);
   assert.match(ownership.legacyEndpointFor('root'), /\.sock$/);

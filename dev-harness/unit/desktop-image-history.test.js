@@ -4,7 +4,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-image-history-'));
 for (const key of ['HOME','USERPROFILE','APPDATA','LOCALAPPDATA','TMPDIR']) { process.env[key] = path.join(root,key); fs.mkdirSync(process.env[key]); }
-process.env.RUYI_HOME = path.join(root,'data'); process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
+process.env.RUYI_HOME = path.join(root,'data');
 process.env.RUYI_DESKTOP_EXECUTION_RECEIPTS = '1';
 fs.mkdirSync(process.env.RUYI_HOME); fs.writeFileSync(path.join(process.env.RUYI_HOME,'config.json'), JSON.stringify({configSchema:9,credentialEncryptionV1:false,includeWorkbenchMcp:false,autoImportClaudeCodeMcp:false,enableMcpDropIn:false}));
 const internals = require('../lib/server-internals').loadServerInternals(['DesktopExecutionRuntime','McpStdioClient','McpHttpClient','createSession','loadSession','saveSession','sessionBodyPaths','sessionPath'], { withEval:true, testPlatform:'darwin' });

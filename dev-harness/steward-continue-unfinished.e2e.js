@@ -149,7 +149,7 @@ try {
     req.end();
   });
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   ok(await waitFor(async () => (await request('GET', '/api/status')).status === 200, 20000, 150), 'A0 工作台起来了');
@@ -224,7 +224,6 @@ await sleep(400);
 /* ═════════════════════ (B) 进程内:判据与闸 ═════════════════════ */
 console.log('── (B) 进程内:判据与闸 ──');
 process.env.RUYI_HOME = HOME;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 writeConfig({});
 const srv = require(SERVER);
 {

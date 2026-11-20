@@ -18,7 +18,6 @@
 //   env: RUYI_REAL_CONFIG（provider 来源，默认 <数据根>/config.json,数据根见 lib/real-data-root.js）
 //        RUYI_REAL_MODEL（模型覆盖）  RUYI_BATCH_REPS（每臂重复次数，默认 2）
 
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -29,7 +28,7 @@ const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
 const DEFAULT_CONFIG = path.join(require('./lib/real-data-root.js').defaultDataRootIn(os.homedir()), 'config.json');
 const CONFIG_PATH = process.env.RUYI_REAL_CONFIG || DEFAULT_CONFIG;
-const OUT = process.argv[2] || process.env.RUYI_REAL_OUT || path.join(ROOT, 'docs', 'optimization-plan', '106-batch-output-gate-report.json');
+const OUT = process.argv[2] || process.env.RUYI_REAL_OUT || path.join(require('node:os').tmpdir(), '106-batch-output-gate-report.json');
 // 断点续跑：每个 run 完成即追加一行到 PROGRESS；进程被杀后重跑只补未完成的 (arm,rep)。
 // 报告成功落盘后 PROGRESS 删除；runKey 不匹配（换了 provider/model/reps）的旧进度一律忽略。
 const PROGRESS = OUT.replace(/\.json$/i, '') + '.progress.jsonl';
@@ -124,8 +123,7 @@ function health(port) {
 function kill(proc) {
   if (!proc || !proc.pid) return;
   try {
-    if (process.platform === 'win32') killOwnTree(proc);
-    else proc.kill('SIGTERM');
+    proc.kill('SIGTERM');
   } catch { /* already exited */ }
 }
 function get(port, p, headers = {}) {
@@ -189,7 +187,7 @@ async function runArm(arm, rep, provider, workspace) {
   };
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify(cfg, null, 2));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
-    cwd: WB, windowsHide: true, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home, RUYI_HOME: home },
+    cwd: WB, env: { ...process.env, RUYI_HOME: home },
   });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   const rec = { arm, rep, ok: false, wallMs: 0, nodes: [], calls: 0, inTok: 0, outTok: 0, cachedInTok: 0, cost: 0, currency: '', errors: [] };

@@ -1,6 +1,6 @@
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs=require('fs'),os=require('os'),path=require('path'),http=require('http'),cp=require('child_process');
 const WB=path.resolve(__dirname,'..','ruyi-workbench'),HOME=path.join(os.tmpdir(),'ruyi-multi-session-parallel'),FP=9080,WP=9081;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));let failures=0;const ok=(v,l)=>{if(v)console.log('PASS '+l);else{failures++;console.error('FAIL '+l);}};
@@ -14,7 +14,7 @@ async function waitUp(){ // 117q:预算 50×100ms=5s 小于本机冷启动实测
 // 121 波 K0(34 号文 §8.4):stewardEnabledV1 默认翻成 true。本件第 2/4 条断言逐字写着「steward 关时
 // 两条并行会话回合零仲裁事件」,开着时仲裁器会给并发排队,「真重叠」当场没了 —— 显式关掉。
 stewardEnabledV1:false}));
-const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js')],{env:{...process.env,FAKE_OPENAI_PORT:String(FP),FAKE_STREAM_DELAY_MS:'80'},windowsHide:true});const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WP)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME},windowsHide:true});
+const fake=cp.spawn(process.execPath,[path.join(__dirname,'fake-openai.js')],{env:{...process.env,FAKE_OPENAI_PORT:String(FP),FAKE_STREAM_DELAY_MS:'80'}});const wb=cp.spawn(process.execPath,['app/server.js','serve','--port',String(WP)],{cwd:WB,env:{...process.env,RUYI_HOME:HOME}});
 try{ok(await waitUp(),'workbench starts');const html=await new Promise(resolve=>http.get({host:'127.0.0.1',port:WP,path:'/'},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>resolve(b));}));const token=(html.match(/name="wcw-token"\s+content="([a-f0-9]+)"/)||[])[1],hdr={'x-wcw-token':token};
 const s1=(await post('/api/sessions',{title:'one',cwd:HOME},hdr)).session.id;const p1=stream({sessionId:s1,message:'first long turn',cwd:HOME},hdr);await sleep(120);const s2=(await post('/api/sessions',{title:'two',cwd:HOME},hdr)).session.id;const p2=stream({sessionId:s2,message:'second long turn',cwd:HOME},hdr);const [e1,e2]=await Promise.all([p1,p2]);
 ok(e1.some(e=>e.type==='result'&&e.ok===true)&&e2.some(e=>e.type==='result'&&e.ok===true),'both session turns complete without superseding each other');const start2=Date.parse((e2.find(e=>e.type==='process'&&e.state==='running')||{}).ts||0),end1=Date.parse((e1.find(e=>e.type==='result')||{}).ts||0);ok(start2>0&&end1>0&&start2<end1,'second session starts before the first session finishes (real overlap)');

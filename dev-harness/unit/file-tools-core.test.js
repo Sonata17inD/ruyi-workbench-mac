@@ -22,7 +22,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-file-tools-core-'));
 const home = path.join(root, 'home');
 const dataRootDir = path.join(home, '.ruyi-workbench');
 fs.mkdirSync(dataRootDir, { recursive: true });
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 process.env.RUYI_HOME = dataRootDir;
 const repo = path.resolve(__dirname, '../..');
 // RUYI_TEST_SERVER_JS 仅用于「改前/改后」对照跑(指向另一份构建产物);缺省就是本仓产物。

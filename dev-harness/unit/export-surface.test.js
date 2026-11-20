@@ -1,31 +1,23 @@
 'use strict';
-// 架构还债批 3·C:server.js 的导出面(14-main.js 的 module.exports)。
-//   [X1] 每个导出都至少被 dev-harness/ 或 ruyi-workbench/tools/ 下一个代码文件按词边界提到 —— 导出只为
-//        测试/工具直调而存在,没人用的导出就是死面积(批 3 清掉了 73 条)。要把某个名字当作刻意的公共
-//        接口留着(MCP/CLI 入口、打包脚本会用),登记进 PUBLIC_API 并写明理由。
-//   [X2] 导出总数只减不增。上限随每次清理往下调;调上去 = 又在往 module.exports 里加东西,请先确认真有
-//        测试要直调它(那条测试会让 [X1] 通过),再把上限跟着改成实数。
-//   [X3] PUBLIC_API 里的名字必须真的还在导出里(过期的豁免要删掉)。
-// 判据故意粗:注释里提到也算引用;它只防「没人用」,不替代各件自己的行为断言。
+// 入口导出须在测试或工具源码中有使用线索。允许刻意公开的接口登记理由。
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-export-surface-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '../..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));
 
-const EXPORT_CEILING = 547;
+const EXPORT_CEILING = 520;
 
 // 刻意的公共接口:名字 → 理由。目前为空 —— 现有每个导出都有测试或工具在用。
 const PUBLIC_API = {};
 
 const CORPUS_ROOTS = ['dev-harness', path.join('ruyi-workbench', 'tools')];
-const CODE_EXT = /\.(?:js|mjs|cjs|ps1|cmd|py)$/i;
-const SKIP_DIRS = new Set(['node_modules', '.git', '__pycache__', 'visual-baselines']);
+const CODE_EXT = /\.(?:js|mjs|cjs|py)$/i;
+const SKIP_DIRS = new Set(['node_modules', '.git', '__pycache__', 'visual-baselines', 'manual-ruyi-full']);
 const SELF = path.resolve(__filename);
 
 function corpusIdentifiers() {
@@ -37,7 +29,11 @@ function corpusIdentifiers() {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) { if (!SKIP_DIRS.has(e.name)) walk(p); continue; }
       if (!CODE_EXT.test(e.name) || path.resolve(p) === SELF) continue;
-      for (const tok of fs.readFileSync(p, 'utf8').split(/[^A-Za-z0-9_$]+/)) if (tok) seen.add(tok);
+      const source = fs.readFileSync(p, 'utf8');
+      for (const line of source.split(/\r?\n/)) {
+        if (/^\s*(?:\/\/|\/\*|\*|#)/.test(line)) continue;
+        for (const token of line.split(/[^A-Za-z0-9_$]+/)) if (token) seen.add(token);
+      }
     }
   };
   for (const r of CORPUS_ROOTS) walk(path.join(repo, r));

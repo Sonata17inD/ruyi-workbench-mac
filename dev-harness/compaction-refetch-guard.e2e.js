@@ -101,7 +101,7 @@ async function waitFor(fn, tries = 100, gap = 120) {
   }));
   const WP = await getFreePort();
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME },
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   try {
     ok(!!(await waitFor(() => request(WP, 'GET', '/health').then(r => r.json).catch(() => null))), 'workbench starts');

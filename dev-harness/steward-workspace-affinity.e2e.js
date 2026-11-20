@@ -108,7 +108,6 @@ fs.writeFileSync(path.join(DATA, 'config.json'), JSON.stringify({
 }, null, 2), 'utf8');
 
 process.env.RUYI_HOME = DATA;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = DATA;
 const srv = require(SERVER);
 
 // ── 小工具 ──

@@ -1,9 +1,9 @@
-﻿require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+﻿require('./lib/self-isolate-home.js');
 // E2E (v0.7d line 1): the generated .mcp.json for the Claude CLI must include the desktop MCP server
 // `ai-computer-control` when desktopMcp.enabled with an explicit command; and must OMIT it (back-compat:
 // identical to pre-0.7d) when disabled. We drive it via a temp HOME + GET /api/status, and also read
 // the generated config file on disk.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 const WB = require('path').resolve(__dirname, '..', 'ruyi-workbench');
@@ -15,11 +15,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function getJson(port, p) { return new Promise(res => { const r = http.get({ host: '127.0.0.1', port, path: p, timeout: 1500 }, resp => { let b = ''; resp.on('data', c => (b += c)); resp.on('end', () => { try { res(JSON.parse(b)); } catch { res(null); } }); }); r.on('error', () => res(null)); r.on('timeout', () => { r.destroy(); res(null); }); }); }
 
 async function runCase(label, desktopMcp, wantPresent, port) {
-  const HOME = path.join(os.tmpdir(), 'wcw-mcpcfg-e2e-' + label);
-  fs.rmSync(HOME, { recursive: true, force: true });
-  fs.mkdirSync(HOME, { recursive: true });
-  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 4, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, desktopMcp }, null, 2));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-mcpcfg-e2e-' + label + '-'));
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: true, configSchema: 4, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, desktopMcp }, null, 2));
+  const wb = cp.spawn(NODE, [keychain.entry, 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   const out = { pass: 0, fail: 0 };
   const ok = (c, l) => { if (c) { out.pass++; console.log('PASS [' + label + '] ' + l); } else { out.fail++; console.log('FAIL [' + label + '] ' + l); } };
   try {
@@ -68,10 +67,9 @@ const sleep2 = ms => new Promise(r => setTimeout(r, ms));
 async function runImportFolder(port) {
   const out = { pass: 0, fail: 0 };
   const ok = (c, l) => { if (c) { out.pass++; console.log('PASS [import] ' + l); } else { out.fail++; console.log('FAIL [import] ' + l); } };
-  const HOME = path.join(os.tmpdir(), 'wcw-mcpimport-e2e');
-  fs.rmSync(HOME, { recursive: true, force: true });
-  fs.mkdirSync(HOME, { recursive: true });
-  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: process.platform === 'win32', configSchema: 7, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [] }, null, 2));
+  const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-mcpimport-e2e' + '-'));
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
+  fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({ credentialEncryptionV1: true, configSchema: 7, version: '1.0.0', permissionMode: 'bypass', autoImportClaudeCodeMcp: false, externalMcpServers: [] }, null, 2));
   // 一个带合法清单的文件夹。
   const FOLDER = path.join(HOME, 'my-mcp');
   fs.mkdirSync(FOLDER, { recursive: true });
@@ -84,7 +82,7 @@ async function runImportFolder(port) {
   const physicalHasNoSecrets = secrets => ['config.json', 'config.json.prev', 'credential-vault-v1.json']
     .filter(name => fs.existsSync(path.join(HOME, name)))
     .every(name => secrets.every(secret => !fs.readFileSync(path.join(HOME, name), 'utf8').includes(secret)));
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, [keychain.entry, 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   try {
     let st = null; for (let i = 0; i < 40 && !st; i++) { await sleep2(150); st = await getJson(port, '/api/status'); }
     ok(!!st, 'status reachable');
@@ -103,14 +101,14 @@ async function runImportFolder(port) {
     // 掩码:env 值不回明文。
     ok(r1.json && r1.json.server && r1.json.server.env && r1.json.server.env.TOKEN && !/super-secret-token-123456/.test(JSON.stringify(r1.json.server.env)), '① 响应 env 值被掩码(不回明文 token)');
     // config 落盘含该条。
-    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME);
+    configReader = await require('./lib/privacy-backup-fixture').createConfigRecoveryReader(HOME, keychain.helper);
     const rawDisk1 = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
     const disk1 = configReader.recover(rawDisk1);
     const ext1 = disk1.externalMcpServers || [];
     ok(ext1.length === 1 && ext1[0].id === 'demo-mcp' && ext1[0].command === './server.exe', '① config.json 落盘含 demo-mcp(真值 command)');
     ok(ext1[0].env && ext1[0].env.TOKEN === 'super-secret-token-123456', '① 持久 env 解密为精确原值(掩码只在响应)');
-    if (process.platform === 'win32') ok(rawDisk1.credentialRefsV1?.version === 1 && rawDisk1.externalMcpServers[0].env === ''
-      && physicalHasNoSecrets(['super-secret-token-123456']), '① Windows 主配置、备份和凭据库使用密文引用,无 env 明文');
+    ok(rawDisk1.credentialRefsV1?.version === 1 && rawDisk1.externalMcpServers[0].env === ''
+      && physicalHasNoSecrets(['super-secret-token-123456']), '① Mac 主配置、备份和凭据库使用密文引用,无 env 明文');
     // 生成的 .mcp.json 含该条。
     let gen = null; try { gen = JSON.parse(fs.readFileSync(path.join(HOME, 'generated', 'workbench.mcp.json'), 'utf8')); } catch { /* ignore */ }
     ok(gen && gen.mcpServers && gen.mcpServers['demo-mcp'], '① generateMcpConfig 再生成 → .mcp.json 含 demo-mcp');
@@ -140,9 +138,9 @@ async function runImportFolder(port) {
     const rawDiskR = JSON.parse(fs.readFileSync(path.join(HOME, 'config.json'), 'utf8'));
     const diskR = (configReader.recover(rawDiskR).externalMcpServers || []).find(s => s.id === 'remote-mcp');
     ok(diskR && diskR.headers.Authorization === 'Bearer ' + R_BEARER && diskR.headers.Stale === '', '① 持久 headers 解密为精确原值、清单里残留的掩码被清空(107-S0b)');
-    if (process.platform === 'win32') ok(rawDiskR.credentialRefsV1?.version === 1
+    ok(rawDiskR.credentialRefsV1?.version === 1
       && rawDiskR.externalMcpServers.find(s => s.id === 'remote-mcp')?.headers === ''
-      && physicalHasNoSecrets(['super-secret-token-123456', R_BEARER]), '① Windows 主配置、备份和凭据库无 env/header 明文');
+      && physicalHasNoSecrets(['super-secret-token-123456', R_BEARER]), '① Mac 主配置、备份和凭据库无 env/header 明文');
 
     // ⑤ 超 10 条被拒:填满到 10(含 demo-mcp), 再导入第 11 个不同 id → 拒。
     // 直接写 config 到 10 条, 重启不便;改为连续导入 9 个新文件夹凑到 10, 第 11 个拒。
@@ -188,9 +186,8 @@ function postStream(port, payload) {
 async function runDropIn(fakePort, wbPort) {
   const out = { pass: 0, fail: 0 };
   const ok = (c, l) => { if (c) { out.pass++; console.log('PASS [dropin] ' + l); } else { out.fail++; console.log('FAIL [dropin] ' + l); } };
-  const HOME = path.join(os.tmpdir(), 'wcw-mcpdropin-e2e');
-  fs.rmSync(HOME, { recursive: true, force: true });
-  fs.mkdirSync(HOME, { recursive: true });
+  const HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'wcw-mcpdropin-e2e' + '-'));
+  const keychain = require('./lib/isolated-keychain-fixture').createIsolatedKeychainServer(HOME);
   const MARKER = 'DROPIN_ECHO_42';
   // ① 合法 drop-in：<dataRoot>/mcp/foo/ruyi-mcp.json 指向 fake-mcp.js（id → 前缀 foo_dropin）。
   const dropFolder = path.join(HOME, 'mcp', 'foo');
@@ -205,7 +202,7 @@ async function runDropIn(fakePort, wbPort) {
   fs.mkdirSync(conflFolder, { recursive: true });
   fs.writeFileSync(path.join(conflFolder, 'ruyi-mcp.json'), JSON.stringify({ id: 'confl-mcp', label: 'Drop-in Loser', command: 'DROPIN_SHOULD_LOSE.exe' }, null, 2));
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
-    credentialEncryptionV1: process.platform === 'win32', configSchema: 7, version: '1.0.0', permissionMode: 'bypass',
+    credentialEncryptionV1: true, configSchema: 7, version: '1.0.0', permissionMode: 'bypass',
     providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: 'http://127.0.0.1:' + fakePort, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }], reasoning: false }],
     activeProvider: 'fake',
     // 显式条目 confl-mcp（config 优先）→ 与 drop-in 同 id，合并后应取这一个（command=NODE，真的能启动）。
@@ -213,9 +210,9 @@ async function runDropIn(fakePort, wbPort) {
     desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
   }, null, 2));
 
-  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_NAME: 'foo_dropin__echo', FAKE_TOOL_ARGS: JSON.stringify({ message: MARKER }) }, windowsHide: true });
+  const fake = cp.spawn(NODE, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), FAKE_TOOL_NAME: 'foo_dropin__echo', FAKE_TOOL_ARGS: JSON.stringify({ message: MARKER }) } });
   fake.stdout.on('data', () => {});
-  const wb = cp.spawn(NODE, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(NODE, [keychain.entry, 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   try {
     let h = null; for (let i = 0; i < 300 && !h; i++) { await sleep(150); h = await getJson(wbPort, '/health'); } // 117q:预算 40×150ms=6s 小于本机冷启动实测 4.6-6.3s,是「FAIL workbench up」假红的根(30 号文 P1-31)

@@ -25,7 +25,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //     priced from the provider pricing (11/7 tokens), and totals.auxCalls === 1.
 // Judgement line (exact): USAGE-SUBAGENT-LEDGER E2E: ALL PASS
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const http = require('http');
 const path = require('path');
@@ -107,12 +107,12 @@ const isTerminal = s => s === 'succeeded' || s === 'failed' || s === 'partial' |
   fs.mkdirSync(HOME, { recursive: true });
   writeConfig();
 
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE) }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE) } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   // Clear any Anthropic endpoint env the dev machine may carry: claudeLedgerSource now consults process.env
   // ANTHROPIC_BASE_URL/ANTHROPIC_BASE (a nonempty one makes the Claude ledger cost UNtrusted), so a stray value
   // would flip the claude sub-agent row's costTrusted/provider and flake this test. Empty string = 官方直连.
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, ANTHROPIC_BASE_URL: '', ANTHROPIC_BASE: '', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: '', WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, ANTHROPIC_BASE_URL: '', ANTHROPIC_BASE: '', ANTHROPIC_AUTH_TOKEN: '', ANTHROPIC_API_KEY: '', RUYI_HOME: HOME, WCW_FAKE_CLAUDE: FAKE_CLAUDE } });
   wb.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
 

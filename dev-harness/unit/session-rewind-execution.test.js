@@ -107,7 +107,7 @@ test('the actual turn entry refuses admission while guarded rewind awaits storag
   const { runSessionTurn } = createSessionTurnRuntime({
     readConfig: async () => ({}),
     sessions: { loadSession: async () => ({ id: 's', todos: [] }), sessionTodosSignature: () => '' },
-    routing: { configForSessionEngineRoute: config => config, sessionEngineRouteScopeOverrides: new Map() },
+    routing: { inferSessionEngineRoute: () => ({ engine: 'agent', agentCliType: 'claude' }), configForSessionEngineRoute: config => config, sessionEngineRouteScopeOverrides: new Map() },
     execution: f.ctx, engines: {}, steward: {}, EventStreamHooks: {},
     makeId: () => { registered++; return 'B'; },
     mission: { bindDriverRun: () => { registered++; } },

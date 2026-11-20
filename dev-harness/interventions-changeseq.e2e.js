@@ -8,7 +8,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      断言:回合后 mission.changeSeq >= 1(若 clobber 会回到 0)。
 //  (b) 单调:连续 transition(CAS 原语)每次推进 changeSeq;POST /api/mission update 后保留(不回写旧值)。
 //  (c) 静态锁:bumpMissionChangeSeq / missionChangeSeqHighWater / changeSeq 字段在 server.js。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -47,7 +47,7 @@ function seedPending(sid, ivId) {
   fs.writeFileSync(ivFile(sid), JSON.stringify(rec) + '\n', 'utf8');
 }
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME, RUYI_TEST_HOOKS: '1' } });
 }
 function startProvider() {
   const server = http.createServer(async (req, res) => {

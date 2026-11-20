@@ -5,7 +5,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // Offline; drives the native provider engine via the
 // fake OpenAI server. Each sub-test spawns its own fake (FAKE_TOOL_SEQUENCE differs per case) + a fresh
 // workbench, asserts on the streamed tool_result, then tears both down. Uses ports 8961-8962.
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const WB = path.resolve(__dirname, '..', 'ruyi-workbench');
 const HERE = __dirname;
@@ -36,9 +36,9 @@ function writeConfig(home, fakePort, providerOptions = {}) {
   const ok = (c, l) => { if (c) console.log('PASS ' + l); else { fail++; console.log('FAIL ' + l); } };
   const procs = [];
   const spawnPair = (fakeEnv, fakePort, wbPort, home) => {
-    const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), ...fakeEnv }, windowsHide: true });
+    const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(fakePort), ...fakeEnv } });
     fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
-    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: home }, windowsHide: true });
+    const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(wbPort)], { cwd: WB, env: { ...process.env, RUYI_HOME: home } });
     wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     procs.push(fake, wb);
     return { fake, wb };

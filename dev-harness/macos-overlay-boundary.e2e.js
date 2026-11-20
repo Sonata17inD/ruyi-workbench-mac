@@ -30,7 +30,7 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const port = await getFreePort();
     const base = 'http://127.0.0.1:' + port;
     child = cp.spawn(process.execPath, ['--require', preload, path.resolve(__dirname, '../ruyi-workbench/app/server.js'), 'serve', '--port', String(port)], {
-      cwd: root, env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: root, env: { ...process.env, ...fixtureChildEnv(), RUYI_HOME: data }, stdio: ['ignore', 'pipe', 'pipe'],
     });
     let output = ''; for (const stream of [child.stdout, child.stderr]) stream.on('data', b => { output = (output + b).slice(-12000); });
     const deadline = Date.now() + 30000;

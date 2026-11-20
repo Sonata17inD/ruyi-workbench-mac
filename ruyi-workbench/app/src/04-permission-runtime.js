@@ -15,11 +15,6 @@ const turnOutcomePending = new Set();
 
 const driverAutoSessions = new Set();
 
-const { kimiModelList, discoverKimiModels, kimiContextWindow } = require('./backend/kimi-model-discovery.cjs').createKimiModelDiscovery({
-  ProcessRuntime, selectedAgentCli, prepareAgentCliSpawn, killChildTree, redact, safeJsonParse,
-});
-const AGENT_CLI_CONTEXT_WINDOW_PROBES = Object.freeze({ kimi: kimiContextWindow });
-
 const AgentLoopHooks = require('./backend/agent-loop-hooks.cjs').createAgentLoopHooks({
   makeId, logEvent: (...args) => logEvent(...args), redact,
 });
@@ -88,8 +83,7 @@ const {
 });
 
 const {
-  nativeClaudeAgentResultInfo, parseAgentCliEvent, parseClaudeEvent, parseClaudeTaskNotification,
-  parseKimiStreamJsonEvent,
+  nativeClaudeAgentResultInfo, parseClaudeEvent, parseClaudeTaskNotification,
 } = require('./backend/agent-cli-events.cjs').createAgentCliEvents({
   safeJsonParse,
 });

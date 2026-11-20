@@ -1,20 +1,3 @@
-// Unit：117q-B1（30 号文 §4.1「子进程 NDJSON 逐块解码」）——createNdjsonLineFeeder 的 chunk 边界真值表。
-//
-// 为什么要单测：三条子进程 NDJSON 主干道（05-claude-engine.js 主回合、07-autonomy.js 子代理、
-// 05b-kimi-bridge.js ACP）原来都对【每个 chunk 单独】 chunk.toString('utf8') 再拼接。CJK 是 3 字节，
-// 一旦某个汉字被 OS 管道切在两个 data 事件之间，前半段解码成 U+FFFD，后续续接字节也解码成垃圾——
-// 静默腐化，没有任何报错。现有 e2e 一条都没测过 chunk 边界（本仓自己 grep 过），这条断言是纯新增的
-// 保护面。修法是走 StringDecoder（00-boot.js 已经 require 好），本件直接 require 真身 server.js，
-// 不测复制重实现的副本。
-//
-// 覆盖：
-//   ① 3 字节汉字被拆成两次 push()（先 2 字节、再 1 字节）→ 拼出来的行里 � 出现 0 次，内容逐字正确
-//   ② 一行被切成三段跨三次 push，且切点两次都落在多字节字符中间 → 同样零 U+FFFD、内容逐字正确
-//   ③ flush() 交出最后那半行（无尾随换行的残留）；空残留时 flush() 不调 onLine
-//   ④ \r\n 与 \n 混排都能正确切行
-//
-// 与既有 dev-harness/unit 件同款约定（见 session-head-read.test.js）：require server.js 前先把
-// WIN_CLAUDE_WORKBENCH_HOME 覆盖到临时目录；用 node:test 的 describe/it + assert。
 'use strict';
 const assert = require('assert');
 const fs = require('fs');
@@ -23,7 +6,6 @@ const path = require('path');
 const { describe, it } = require('node:test');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-ndjson-feeder-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const repo = path.resolve(__dirname, '..', '..');
 const srv = require(path.join(repo, 'ruyi-workbench', 'app', 'server.js'));

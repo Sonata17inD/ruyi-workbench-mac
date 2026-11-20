@@ -146,27 +146,11 @@ ok(/<option value="steward" data-i18n="shell\.settingSteward">/.test(selectorMar
 // ─── C 管家壳模块：零 innerHTML、零轮询、三分支 fail-closed ─────────────────────
 ok(!/\.innerHTML\s*=|insertAdjacentHTML|document\.write/.test(stewardShell),
   'C1 管家壳模块零 innerHTML/insertAdjacentHTML/document.write');
-// 117b 重钉(语义收紧,不是放宽):avatar 的状态轮询需要一个 timer 与一次请求，「零 timer／零请求」
-// 改判「timer／请求只能活在模式门控里」——setInterval/clearInterval/api() 各自全文件恰好一处，
-// 分别锁死在 startPolling/stopPolling/pollStewardState 里，且唯一入口 syncPolling 先判
-// isStewardMode()（非管家模式恒 stopPolling，不产生任何后台活动，跟 117a 的红线同一句意思）。
 const setIntervalSites = (stewardShell.match(/setInterval\(/g) || []).length;
 const clearIntervalSites = (stewardShell.match(/clearInterval\(/g) || []).length;
 const apiCallSites = (stewardShell.match(/\bapi\(/g) || []).length;
 ok(setIntervalSites === 0 && clearIntervalSites === 0, 'C2a 壳层无常驻 interval');
-// 117j W2-4 重钉：表按 5s 下限起（不再等于 config.stewardPollMs），真要不要拉由 pollStewardTick
-// 自己判。「setInterval 只住在 startPolling 里」这条契约本身一个字没变，变的只是它的两个参数。
-// 轮询生命周期收编（前端架构债第一批）重钉 C2b／C2c／C2d／C3c：三处手写的 pollTimer ＋ startPolling／
-// stopPolling／syncPolling 收成 steward-chips.js 的 createPollLifecycle 一份。钉的事一个字没变：
-// ① setInterval 只住在起表那一处（现在是交给工厂的 arm），且起表前先当场拉一次（onStart）；
-// ② clearInterval 只住在停表那一处（disarm）；③ 唯一入口 syncPolling 的门控先判 isStewardMode()
-// 与页面可见；④ 工厂自己的启停语义（幂等、先 onStart 再 arm、停表归零）由下面 C2g 真跑一遍验证。
 ok(stewardShell.includes('createDeadlinePoll({') && stewardShell.includes('tick: pollStewardTick'), 'C2b 壳层复用期限调度器');
-// 121-K2b（34 号文 §6.2／§6.4）**重钉 C2b2**：这一拍多了最外面一档 —— 事件流连着时它只是兜底
-// 心跳（STEWARD_POLL_MS_CONNECTED＝30 s，常量在 steward-chips.js 那一份），断开才回到今天那两档
-// （真有事在跑 5 s，否则 config.stewardPollMs）。被钉的两件事一个字没变：①「表按下限起、真要不要拉
-// 由这一拍自己判」；②后端下限没动（pollIntervalMs 仍在最里层）。反向验证：把 STEWARD_POLL_MS_CONNECTED
-// 换成 STEWARD_POLL_MS_MIN 立刻真红。
 ok(/function pollStewardTick\(\) \{\s*const due = streamConnected \? STEWARD_POLL_MS_CONNECTED : \(stewardPollFast\(\) \? STEWARD_POLL_MS_MIN : pollIntervalMs\(\)\);/.test(stewardShell)
   && /if \(presenceInputs\.inflight\) return true;/.test(stewardShell),
   'C2b2 节拍由 pollStewardTick 判：连接时 30 s 兜底，断开时「壳可见且真有事在跑」才用 5s、否则仍按 config.stewardPollMs（后端下限未动）');

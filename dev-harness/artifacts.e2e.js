@@ -1,6 +1,6 @@
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { getFreePort } = require('./free-port.js');
 ﻿// E2E for v0.9-S4 (C4 / §0.9-S4): 产物画廊 + 本地文件预览端点.
 // Ports 9005 (fake-openai) + 9006 (workbench).
@@ -194,7 +194,7 @@ const PNG_1x1 = Buffer.from(
     { name: 'file_write', args: { path: path.join(WS, 'data.csv'), content: 'a,b,c\n1,2,3\n4,5,6' } },
     { name: 'file_write', args: { path: path.join(WS, 'pic.png'), content: PNG_1x1.toString('base64'), encoding: 'base64' } },
   ]);
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq }, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), FAKE_TOOL_SEQUENCE: seq } });
   fake.stdout.on('data', d => String(d).trim() && console.log('[fake] ' + String(d).trim()));
   const revealRecord = path.join(HOME, 'reveal-launch.jsonl');
   const revealPreload = path.join(HOME, 'record-reveal.cjs');
@@ -207,7 +207,7 @@ const PNG_1x1 = Buffer.from(
     "fs.appendFileSync(" + JSON.stringify(revealRecord) + ",JSON.stringify({command,args})+'\\n');return original(process.execPath,['-e',''],options);}",
     "return original.apply(this,arguments);};",
   ].join('\n'));
-  const wb = cp.spawn(process.execPath, [...(process.platform === 'darwin' ? ['--require', revealPreload] : []), 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, [...(process.platform === 'darwin' ? ['--require', revealPreload] : []), 'app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(fake, wb);
 
@@ -346,8 +346,8 @@ const PNG_1x1 = Buffer.from(
         { name: 'fake__write_docx', args: { path: docxPath, content: 'FIRST' } },
         { name: 'fake__write_docx', args: { path: docxPath, content: 'SECOND' } },
       ]);
-      const gfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(G_FAKE_PORT), FAKE_TOOL_SEQUENCE: gseq }, windowsHide: true });
-      const gwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(G_WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: G_HOME }, windowsHide: true });
+      const gfake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(G_FAKE_PORT), FAKE_TOOL_SEQUENCE: gseq } });
+      const gwb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(G_WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: G_HOME } });
       gwb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[gwb!] ' + l.trim())));
       procs.push(gfake, gwb);
       try {

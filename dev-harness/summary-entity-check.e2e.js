@@ -18,7 +18,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //       场景2 修补稿结构非法 → 保留原稿,总摘要调用恰好 2 次(不无界重试)
 //       场景3 显式关闭 → 总摘要调用恰好 1 次,原样采用首稿(可回退旧行为)
 // ─────────────────────────────────────────────────────────────────────────────
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const fs = require('fs');
 const http = require('http');
@@ -37,7 +37,6 @@ const skip = l => { skips++; console.log('SKIP ' + l); };
 
 // ═══ [U] 白盒:开关 / 抽取 / 检查 ═══
 const UHOME = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-w105c-u-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = UHOME;
 process.env.RUYI_HOME = UHOME;
 const srv = require(path.join(WB, 'app', 'server.js'));
 
@@ -199,10 +198,9 @@ const REPAIRED = FLAWED.replace('支付相关代码与配置',
     }, null, 2));
     const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js'), String(FAKE_PORT)], {
       env: { ...process.env, FAKE_RECORD_SUMMARY_DIR: SUMDIR, FAKE_SUMMARY_SEQUENCE: JSON.stringify(sequence) },
-      windowsHide: true,
     });
     const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-      cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true,
+      cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
     });
     const out = { label, ok: false, requests: [], ph0: '', events: [], log: '' };
     wb.stdout.on('data', d => { out.log += String(d); });

@@ -48,35 +48,23 @@ function createMemoryMigrations({ paths, store, removeMemoryRelationsFor, atomic
     return { ok: true, memory: saved.memory, moved: { from, to: toScope, relationsDropped, usageMoved: !!prevUsage } };
   }
 
-  function legacyAccMemoryCandidates() {
-    const candidates = [];
-    const add = p => { if (p && !candidates.includes(path.resolve(p))) candidates.push(path.resolve(p)); };
-    // ACC 的 paths.py 把 WCW_DATA_DIR 视为绝对覆盖而非第一候选；迁移必须同形，否则测试/便携部署
-    // 明明把 ACC 指到隔离目录，工作台却会继续误扫宿主机 LOCALAPPDATA。
-    if (process.env.WCW_DATA_DIR) { add(path.join(process.env.WCW_DATA_DIR, 'memory.json')); return candidates; }
-    if (process.env.LOCALAPPDATA) add(path.join(process.env.LOCALAPPDATA, 'ai-computer-control', 'data', 'memory.json'));
-    add(path.join(os.homedir(), '.ai-computer-control', 'memory.json'));
-    return candidates;
-  }
   async function migrateLegacyAccMemory() {
     if (legacyAccMemoryMigrationComplete()) return { ok: true, alreadyDone: true };
-    let source = '';
-    for (const candidate of legacyAccMemoryCandidates()) {
-      try { const st = await fsp.stat(candidate); if (st.isFile()) { source = candidate; break; } } catch { /* try next standard location */ }
-    }
-    if (!source) {
-      await accMemoryImportStore.write({ schema: ACC_MEMORY_IMPORT_SCHEMA, status: 'complete', result: 'no-source', imported: 0, skipped: 0, completedAt: nowIso() });
-      return { ok: true, imported: 0, skipped: 0, noSource: true };
-    }
+    const root = process.env.WCW_DATA_DIR || path.join(os.homedir(), '.ai-computer-control');
+    const source = path.resolve(root, 'memory.json');
     let store;
     try {
       const st = await fsp.stat(source);
-      if (!st.isFile() || st.size > 8 * 1024 * 1024) throw new Error('legacy ACC memory file is too large');
+      if (!st.isFile() || st.size > 8 * 1024 * 1024) throw new Error('invalid legacy ACC memory file or size');
       store = safeJsonParse(await fsp.readFile(source, 'utf8'), null);
       if (!store || typeof store !== 'object' || !store.entries || typeof store.entries !== 'object' || Array.isArray(store.entries)) throw new Error('legacy ACC memory file has an invalid schema');
     } catch (e) {
-      logEvent({ kind: 'acc_memory_import_failed', source, error: (e && e.message) || String(e) });
-      return { ok: false, error: (e && e.message) || String(e), source };
+      if (e.code === 'ENOENT') {
+        await accMemoryImportStore.write({ schema: ACC_MEMORY_IMPORT_SCHEMA, status: 'complete', result: 'no-source', imported: 0, skipped: 0, completedAt: nowIso() });
+        return { ok: true, imported: 0, skipped: 0, noSource: true };
+      }
+      logEvent({ kind: 'acc_memory_import_failed', source, error: e.message });
+      return { ok: false, error: e.message, source };
     }
     let imported = 0, skipped = 0;
     for (const [key, raw] of Object.entries(store.entries)) {

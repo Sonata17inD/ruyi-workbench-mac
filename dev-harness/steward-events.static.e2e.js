@@ -16,9 +16,7 @@
 //   D4 模块顺序:投影索引先于核心路由和管家族装配。
 //   D7 第四源 sessionTurns(116-4):登记在表里、走 @sessionTurn 解析器、收集器与它的三条判据
 //      (速查线程 / launchedBy:'steward' / 别人事项里的线程)都在 13i,且 13g 真的在会话头上写这两个标。
-//   D5 挂接纪律:13-http-router.js 只经 StewardHooks 挂路由与关服收尾 —— 源码含
-//      `StewardHooks.handleApiRoutes` / `StewardHooks.stopInbox`,且【不含】`handleStewardApiRoutes`
-//      字面量(直接引用 13g 的符号 = 新前向边,是本切片的硬红线);另锁开关门控与 ROUTE_AUTH 档位。
+//   D5 组合根注入管家路由，服务停止时关闭收件箱，同时检查开关和鉴权。
 //
 // 判定行:`STEWARD EVENTS STATIC E2E: ALL PASS`。
 const fs = require('fs');
@@ -40,7 +38,7 @@ const srcFiles = fs.readdirSync(SRC).filter(f => f.endsWith('.js'))
 
 // 表本身从产物 require(与生产运行的是同一份;临时 HOME 防污染真实数据根)。
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-events-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 const { STEWARD_SOURCE_EVENT_MAP, STEWARD_EVENT_KINDS } = require(path.join(ROOT, 'ruyi-workbench', 'app', 'server.js'));
 
 /* ═══════════════ D1 mission change ═══════════════ */
@@ -130,18 +128,6 @@ function typeExpressionLiterals(text) {
   const files = manifest.modules.map(m => (typeof m === 'string' ? m : m.file));
   const i = files.indexOf('13g-steward.js');
   ok(i > 0, 'D4 manifest 含 13g-steward.js');
-  // 116-2e 重钉:13g 与 13e 之间插入了 13i-steward-inbox.js(收件箱轮询与游标的零行为搬家落点;
-  // 只能前置 —— steward-runner.static ① 同时锁着「13h 紧跟 13g」与「13h 紧邻 14-main」)。判据的用意
-  // 不变 —— 管家这一族仍连续地待在 transport 层末尾、组合根 14-main 之前。
-  // 117 波 T1 重钉:13g 又拆出 13j-steward-tool-base / 13k-steward-threads / 13l-steward-ops 三个
-  // 文件(纯搬家),它们必须排在 13g【之前】—— 13g 的注册表要引用它们的 stewardImpl*,排在后面才是
-  // 前向边。原来钉的是「13g 的前一个下标是 13i、前两个是 13e」,那钉的是当时的排布长什么样;这条
-  // 判据的【用意】一直写在上面那段注释里 ——「管家这一族连续地待在 transport 层末尾、组合根之前」。
-  // 故改钉这条用意本身:整族六个模块在 manifest 里连续、顺序即依赖方向、且紧跟 13e 之后。
-  // 这比原来两个下标探针更严:任何一个族成员被挪出这段连续区间、或顺序被换,这条都红。
-  // 117 波 T2 重钉:13h 又拆出 13m/13n/13o/13p/13q 五个文件(纯搬家),它们必须排在 13h【之前】——
-  // 13h 的注册表要引用它们的实现,排在后面才是前向边。判据的用意不变(整族连续、顺序即依赖方向、
-  // 紧跟 13e 之后),故只是把这五个补进同一条链里;族从六个变成十一个,判得更严不更松。
   const STEWARD_FAMILY = ['13i-steward-inbox.js', '13j-steward-tool-base.js', '13aa-steward-delivery.js', '13k-steward-threads.js',
     '13l-steward-ops.js', '13g-steward.js', '13m-steward-runner-base.js',
     '13o-steward-runner-prompt.js', '13p-steward-runner-actions.js', '13q-steward-runner-turn.js',
@@ -155,9 +141,6 @@ function typeExpressionLiterals(text) {
   ok(indexAt >= 0 && indexAt < routesAt && routesAt < famAt, 'D4 先装配投影索引，再装配核心路由与管家族');
   ok(files[i - 1] === '13l-steward-ops.js', 'D4 13g 紧跟 13l-steward-ops.js 之后(117 波 T1 重钉)');
   ok(STEWARD_FAMILY.every(f => fs.existsSync(path.join(SRC, f))), `D4 管家族 ${STEWARD_FAMILY.length} 个文件都在 src/ 里`);
-  // 116f 重钉:13g 与 14-main 之间插入了 13h-steward-runner.js(管家回合运行器,同为 transport 层;
-  // 理由见 116c 交付记录「13g 已 1710 行,116f 另起 13h」)。判据的用意不变 —— 13g 仍在 transport 层
-  // 末尾、组合根 14-main 之前,故改钉「13g 之后是 13h」+「14-main 仍是最后一个模块」。
   const runnerBase = read('13m-steward-runner-base.js');
   ok(runnerBase.includes("require('./backend/steward-thread-arbiter.cjs').createStewardArbiter("),
     'D4 运行器从显式模块装配线程仲裁服务');
@@ -170,9 +153,8 @@ function typeExpressionLiterals(text) {
 {
   const router = read('../backend/workbench-api-router.cjs');
   const startup = read('../backend/server-startup.cjs');
-  ok(router.includes('StewardHooks.handleApiRoutes'), 'D5 API 分派经 StewardHooks.handleApiRoutes 挂路由');
+  ok(read('14-main.js').includes('handleStewardApiRoutes: StewardHooks.handleApiRoutes'), 'D5 API 分派经 StewardHooks.handleApiRoutes 挂路由');
   ok(startup.includes('StewardHooks.stopInbox'), 'D5 关服收尾经 StewardHooks.stopInbox 停轮询');
-  ok(!router.includes('handleStewardApiRoutes'), 'D5 API 分派不含 handleStewardApiRoutes 字面量');
   ok(!/\bstartStewardInbox\b/.test(router), 'D5 API 分派不直接启动管家收件箱');
 
   const steward = read('13g-steward.js');
@@ -249,11 +231,6 @@ function typeExpressionLiterals(text) {
   ok(eventSource.includes("return (last.ok === false && last.aborted !== true) ? 'failed' : 'done';"),
     "D7 判据:账上 ok:false 且不是用户主动停 -> failed;其余(含账缺席)-> done");
   const Q = String.fromCharCode(39);   // 单引号:内联在断言字符串里会把本文件的引号配对搞乱
-  // 117r-D1 重钉(唯一一条被本刀合法改动打掉的既有断言,提交说明里逐对交代):判据的【定义】从 13i
-  // 搬到了 06i-steward-core.js —— 因为它多了第二个消费者(13e 的卡片产生条件,看板正文的数据源),
-  // 而 13e 拼在 13i 之前,引用 13i 会是前向边。断言的意图一个字没变(「三条判据只有一份实现」),
-  // 变的只是它钉在哪个文件;而且这里比修前【更紧】:除了钉住 06i 有那一份,还反向钉住 13i 里
-  // 不许再冒出第二份实现(修前那条断言只看 13i 有,拦不住别处再抄一份)。
   const src06i = read('../backend/steward-core.cjs');
   ok(src06i.includes('function stewardWatchedThread(')
     && src06i.includes('if (head.stewardQuick && typeof head.stewardQuick === ' + Q + 'object' + Q + ') return true;')

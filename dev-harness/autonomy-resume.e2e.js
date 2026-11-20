@@ -6,7 +6,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 // [H] Live 三次 boot:①默认关=零行为变化(interrupted 停住,只盖分级戳);②开=安全 run 自动续跑到 succeeded +
 //     危险 run 停 paused(manual_resume_required)+ run_resume_deferred 事件;③崩溃环 autoResumeCount≥2 → 降 manual。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const { readServerSource } = require('./src-reader');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');

@@ -31,7 +31,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   stewardEnabledV1: true, stewardPollMs: 120000,
   stewardNotifyPerHour: 3,   // 压到 3,熔断那一条不必叫六次
 }, null, 2), 'utf8');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 

@@ -7,7 +7,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   c) 代理挂掉、重启 workbench 后,/api/models 与 /api/status 仍含缓存模型(离线兜底,proxyCount=0 佐证非 live)
 //   d) POST /api/config 清空 extraModels/knownModels(= 前端行内 × 的后端半)→ 自定义条目消失、缓存条目保留
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -73,7 +73,7 @@ const fake = http.createServer((q, res) => {
 await new Promise(r => fake.listen(FAKE_PORT, '127.0.0.1', r));
 
 function startWb(port) {
-  const w = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const w = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   w.stdout.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb] ' + l.trim())));
   w.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   w.on('error', e => console.log('[wb!] spawn error: ' + (e && e.message || e)));

@@ -21,7 +21,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //  (I) 关开关后再起服务:inbox 文件字节数不再增长(即便期间又造了新的任务账本变更)。
 //
 // 端口:全部 getFreePort() 动态取,不带内字面量端口(run-all 端口审计口径)。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 const { readServerSource } = require('./src-reader');
@@ -88,7 +88,7 @@ function writeConfig(stewardOn) {
 
 function spawnWb() {
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME },
   });
   child.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
   return child;

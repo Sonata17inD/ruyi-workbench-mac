@@ -1,5 +1,5 @@
 'use strict';
-require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离，防 fake-mcp 夹具经 claude mcp add-json／Kimi 同步漏进真机 ~/.claude.json 与 ~/.kimi-code/mcp.json（见 lib 头注）
+require('./lib/self-isolate-home.js');
 /*
  * E2E (第47波47b): 桥 cancel/超时契约 —— 消灭"桥先超时、ACC 僵尸执行"的契约错位。
  *
@@ -8,14 +8,13 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *   ② fake__echo —— 超时杀客户端后的【下一次调用】,验证惰性重 spawn 恢复服务。
  * 断言:
  *   A ①的工具结果错误文本如实告知"桥接进程树已终止"(不再裸 'tool timed out' 留僵尸);
- *   B fake-mcp 收到 notifications/cancelled(MCP 标准取消通知,requestId 为数字);
- *   C fake-mcp 进程在超时后真的死了(tasklist 查 pid 不在);
+ *   C fake-mcp 进程在超时后真的死了(进程表中已无原 pid);
  *   D ②的 echo 成功(新客户端重连并恢复服务);
  *   E 静态锁:声明式超时表 / cancelled 通知点 / catch 内 kill / env 测试缝。
  *
  * Run: node dev-harness/bridge-cancel-timeout.e2e.js
  */
-const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -28,7 +27,7 @@ const BACKEND = path.join(WB, 'app', 'backend');
 const HERE = __dirname;
 const FAKE_MCP = path.join(HERE, 'fake-mcp.js');
 const HOME = path.join(os.tmpdir(), 'ruyi-bridge-cancel');
-const NOTIFY_CAPTURE = path.join(HOME, 'notify.jsonl');
+const NOTIFY_CAPTURE = path.join(HOME, 'notifications.jsonl');
 const PID_CAPTURE = path.join(HOME, 'fake-mcp.pid');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let failures = 0;
@@ -90,7 +89,6 @@ function pidAlive(pid) {
   const transport = fs.readFileSync(path.join(BACKEND, 'mcp-transports.cjs'), 'utf8');
   const stdio = transport.slice(transport.indexOf('class McpStdioClient'), transport.indexOf('class McpHttpClient'));
   ok(/const BRIDGED_TOOL_TIMEOUTS = \{/.test(timeouts) && /run_command: 650000/.test(timeouts), 'E1 声明式按工具超时表在(run_command/launch_application 650s)');
-  ok(stdio.includes("notifications/cancelled"), 'E2 tools/call 超时发 notifications/cancelled(MCP 标准取消)');
   // 走查 W1·F7 起超时认【标记】err.mcpTimeout 而不是去匹配 e.message 里的 'timed out'(服务端自己回的「upstream API timed out」
   // 不该被当成桥超时去杀进程树)—— 钉的事实不变:callTool 的 catch 里,超时那一支杀客户端进程树。
   ok(/catch \(e\) \{[\s\S]{0,400}e\.mcpTimeout[\s\S]{0,600}this\.kill\(\)/.test(stdio), 'E3 stdio callTool catch 内超时即 kill 客户端进程树');
@@ -114,14 +112,14 @@ function pidAlive(pid) {
     activeProvider: 'fake',
     externalMcpServers: [{
       id: 'fake', label: 'Fake MCP', command: process.execPath, args: [FAKE_MCP], enabled: true,
-      env: { FAKE_MCP_NOTIFY_CAPTURE: NOTIFY_CAPTURE, FAKE_MCP_PID_CAPTURE: PID_CAPTURE },
+      env: { FAKE_MCP_PID_CAPTURE: PID_CAPTURE, FAKE_MCP_NOTIFY_CAPTURE: NOTIFY_CAPTURE },
     }],
     bridgeExternalToolsToProvider: true,
     desktopMcp: { enabled: false, command: '', args: [], cwd: '', autodetect: false },
   }));
-  const fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_TOOL_SEQUENCE: seq }, windowsHide: true });
+  const fakeProvider = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env: { ...process.env, FAKE_OPENAI_PORT: String(FP), FAKE_TOOL_SEQUENCE: seq } });
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true,
+    cwd: WB,
     env: { ...process.env, RUYI_HOME: HOME, WCW_BRIDGED_TIMEOUT_OVERRIDE: 'slow_task:1500' },
   });
   const observer = setInterval(rememberPids, 50);
@@ -150,18 +148,6 @@ function pidAlive(pid) {
       && slowResult.content.cleanupUnconfirmed === 0 : /桥接进程树已终止/.test(slowText),
       'A2 timeout reports the actual verified cleanup scope without claiming unobserved descendants');
 
-    // B: cancelled 通知(可能在进程被杀前落盘 —— 通知先于 kill 发出)
-    let notifyLines = [];
-    for (let i = 0; i < 20 && !notifyLines.length; i++) {
-      await sleep(200);
-      if (fs.existsSync(NOTIFY_CAPTURE)) notifyLines = fs.readFileSync(NOTIFY_CAPTURE, 'utf8').split(/\r?\n/).filter(Boolean);
-    }
-    const cancelled = notifyLines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)
-      .find(m => m.method === 'notifications/cancelled');
-    ok(!!cancelled, 'B1 fake-mcp 收到 notifications/cancelled');
-    ok(!!cancelled && Number.isFinite(cancelled.params && cancelled.params.requestId), 'B2 cancelled 带数字 requestId(MCP 标准形)');
-    ok(!!cancelled && cancelled.params && cancelled.params.reason === 'timeout', 'B3 cancelled reason=timeout');
-
     // C: pid 日志一行一个(首个=被杀的旧客户端,末个=重连的新客户端)。
     const pids = fs.existsSync(PID_CAPTURE) ? fs.readFileSync(PID_CAPTURE, 'utf8').split(/\r?\n/).filter(Boolean).map(Number) : [];
     ok(pids.length === 2, 'C0 fake-mcp 先后两个 pid(被杀 + 重连) (got ' + pids.join(',') + ')');
@@ -170,7 +156,7 @@ function pidAlive(pid) {
     const firstPid = pids[0] || 0;
     let firstAlive = true;
     for (let i = 0; i < 30 && firstAlive; i++) { await sleep(300); firstAlive = pidAlive(firstPid); }
-    ok(firstPid > 0 && !firstAlive, 'C1 超时后旧 fake-mcp 进程树被杀(tasklist 查不到 pid ' + firstPid + ')');
+    ok(firstPid > 0 && !firstAlive, 'C1 超时后旧 fake-mcp 进程树被杀(进程表中查不到 pid ' + firstPid + ')');
     ok(pids.length === 2 && pidAlive(pids[1]), 'C2 重连的新 fake-mcp 活着(pid ' + (pids[1] || 0) + ',回合并发期间应在线)');
 
     // D: echo 成功(新客户端重连)
@@ -179,6 +165,10 @@ function pidAlive(pid) {
     const echoResult = events.find(e => e.type === 'tool_result' && echoTool && e.id === echoTool.id);
     const echoText = JSON.stringify((echoResult && echoResult.content) || '');
     ok(!!echoResult && /alive-after-kill/.test(echoText), 'D1 ②的 echo 成功 —— 新客户端惰性重连恢复服务 (got ' + echoText.slice(0, 100) + ')');
+    const notifications = fs.readFileSync(NOTIFY_CAPTURE, 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
+    const cancelled = notifications.filter(message => message.method === 'notifications/cancelled');
+    ok(cancelled.length === 1 && Number.isInteger(cancelled[0].params.requestId)
+      && cancelled[0].params.reason === 'timeout', '超时的工具调用向 MCP 子进程发送一次取消通知');
     const turnSummary = events.find(e => e.type === 'turn_summary');
     ok(!!turnSummary, '回合正常收尾(turn_summary 在)');
   } catch (e) { console.error('ERROR ' + (e && e.stack || e)); failures++; }

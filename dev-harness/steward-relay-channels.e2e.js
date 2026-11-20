@@ -1,35 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自隔离——服务启动会从真机 ~/.claude.json 导入 MCP 并把 externalMcpServers 同步回真机 CLI 配置，两个方向都要断（见 lib 头注）
-// E2E(第 117 波 117l-A1 · 27 号文 §11.9 D2/D3/D7 + liveTail/asksYou):
-// 「递话按目标状态选通道」的四条路 + 用户撞用户真串行 + 新线程模型分档 + liveTail/asksYou。
-//
-// 用户第四轮走查的 ①⑥ 是同一起事故:线程挂在 request_user_input 上等用户回答,管家把一句新话
-// 递过去 —— 修前要么当场 `steward.busy`(文案还说成「我正忙着上一件」= 管家忙,其实是线程忙),
-// 要么直接起一个新回合 supersede 掉那个等回答的回合,把用户还没答的问题杀成 failed。
-//
-// 覆盖:
-//   (A) answer 通道:线程挂着正式待决 question → 递话 = 回答。待决消失、该线程【没有】turn_kill、
-//       request_user_input 的工具结果 ok、回合正常收尾。
-//   (B) permission 通道:线程挂着 permission 待决 → 不代答,propose_required(reason:'pending_permission')。
-//   (C) steer 通道:线程在跑且无待决 → 插话入队(不新起回合、不 supersede)。
-//   (D) turn 通道:线程空闲 → 起新回合。
-//   (E) HTTP 面 POST /api/steward/relay 与工具面同一条核心(四通道一致)。
-//   (F) 用户撞用户真串行:两次并发 POST /api/steward/message,第二次严格等第一次收尾后才开跑,
-//       两条 assistant 消息各自完整、顺序正确、零并跑。
-//   (G) 新线程模型分档:strong/fast 各建一条线程后 engineRoute 对得上;provider 不存在时回落 + 审计;
-//       速查线程恒 fast。
-//   (H) liveTail:活回合时 GET /api/sessions/:id 的信封里有尾巴,回合结束后消失。
-//   (I) asksYou 三态(question / soft / null)。
-//   (K) 117o-A7:一条线程 = 一个 2.0 会话。用户原话「我希望 3.0 的每一条线程,都能对应 2.0 的一个会话」——
-//       架构上一直成立(steward_thread_new 走的就是 createSession),但从来没有断言看着它。
-//       这一条把它钉死:管家开出来的线程 ① 出现在 GET /api/sessions 的列表里(经典壳侧栏读的就是这一份)、
-//       ② GET /api/sessions/:id 打得开(「看全文」走的就是这条路)、③ 它的 kind='mission' 不是把它从
-//       2.0 会话面赶出去的理由。以后谁给列表加 kind 过滤,这条当场红。
-//
-// 判定行:`STEWARD RELAY CHANNELS E2E: ALL PASS`。
+// 验证待决问题、权限、插话与新回合通道，以及并发消息的顺序。
 (async () => {
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -203,7 +177,7 @@ let wsTopSeq = 0;
 const mkwsTop = () => { const c = path.join(HOME, 'ws', 'top' + (++wsTopSeq)); fs.mkdirSync(c, { recursive: true }); return c; };
 try {
   wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-    cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   wb.stdout.on('data', () => {});
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
@@ -630,7 +604,6 @@ await sleep(500);
 // 与 steward-guardrails.e2e.js 同款。读类工具(steward_thread_status)与 steward_quick_ask 不在
 // POST /api/steward/act 的白名单里(那张表只收写类动作),所以这两段在进程内直调。
 console.log('── 进程内阶段(工具面直调)──');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(path.join(WB, 'app', 'server.js'));
 const stewardCtx = () => ({ session: { id: 'steward', kind: 'steward', providerHistory: [] } });

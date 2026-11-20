@@ -17,7 +17,7 @@ import { createHelpMenuDomain } from './help-menu.js';
 import { openSharedHelpDoc } from './help-viewer.js';
 import { openSharedOnboarding } from './onboarding-wizard.js';
 // 每个 Agent CLI 的思考强度档位、压缩缺省项文案、原生用量接口只问这一张登记表（ENGINEERING-SPEC §11.1）。
-import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_THINKING_EFFORT_VALUES, agentCliMeta, normalizeAgentCliType } from './agent-cli-registry.js';
+import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_THINKING_EFFORT_VALUES, agentCliMeta } from './agent-cli-registry.js';
 
 export function createNavigationControlsDomain({
   apiErrText = error => String(error && error.message || error || ''),
@@ -63,7 +63,6 @@ export function createNavigationControlsDomain({
   focusFirstInteractive = () => null,
   loadAgentRoles = async () => {},
   refreshMcpOps = async () => {},
-  updateShellPolling = () => {},
   loadFileTree = async () => {},
   renderArtifactsGallery = () => {},
   loadChanges = async () => {},
@@ -122,16 +121,6 @@ function paletteActions() {
     { label: t('palette.memories'), hint: 'memory', run: openMemoryPanel },
   ];
   for (const template of getTemplates()) acts.push({ label: t('palette.template', { name: template.name }), hint: 'template', run: () => insertTemplate(template.text) });
-  // Engine/model actions across ALL engines (C4): Claude CLI group + every provider. Each row switches
-  // engine AND model in one setEngineModel call. Label reads "引擎 → {engineLabel} · {model}".
-  // 124（用户 2026-09-14 走查「前后端还没完全对上」的第三处，与前两处同族）：这一组列的【永远】是
-  // Agent CLI 的候选（点它 = setEngineModel('', id) = 把这条线程切到 CLI 路由），可修前印的名字用的是
-  // engineLabel() —— 那个函数跟着【这条会话的路由】走。于是线程头把这条线程切到某个 provider 之后，
-  // 这里长出「引擎 → Qwen · kimi-code/k3-256k」这种话：名字是 Qwen 的，id 是 Kimi 的，点下去还会把线程
-  // 从 Qwen 切回 CLI。名字改成按【服务端造这份列表时用的那个 CLI】印（/api/status 的判据是
-  // conversationConfig.agentCliType，provider 路由不改它 = 全局那一个）；顺带把 curPid 也从
-  // 「全局 activeProvider」改成「这条会话路由到的 provider」—— 修前线程切到 B 而全局是 A 时，
-  // 下面 provider 那一组的「当前」标记要么标错要么一个都不标（与 121 走查1-⑤ 修状态行 title 同一条账）。
   const curPid = isProviderMode() ? String(currentEngineMeta().providerId || '') : '';
   const curModel = currentModelId();
   const cliGroupLabel = String(currentEngineMeta().agentCliLabel || '') || engineLabel();
@@ -234,12 +223,9 @@ async function setEngineModel(providerId, modelId, opts = {}) {
   const scope = opts.scope || 'global';
   const pid = providerId || '';
   const previousRoute = state.currentSession?.engineRoute ? { ...state.currentSession.engineRoute } : null;
-  const agentMeta = currentEngineMeta();
-  // 路由上是非缺省 CLI 就用它，否则落到全局那一个（修前逐字：路由是 kimi → kimi；否则全局是 kimi → kimi；否则 claude）。
-  const routeCli = normalizeAgentCliType(agentMeta.agentCliType), globalCli = normalizeAgentCliType(state.config?.agentCliType);
   const engineRoute = pid && pid !== 'claude-cli'
     ? { engine: 'openai', providerId: pid, model: modelId || '' }
-    : { engine: 'agent', agentCliType: routeCli !== AGENT_CLI_DEFAULT_ID ? routeCli : globalCli, model: modelId || '' };
+    : { engine: 'agent', agentCliType: AGENT_CLI_DEFAULT_ID, model: modelId || '' };
   // 全局 config 的装配：只有 scope==='global' 才做（会话级选择只活在 engineRoute 里，不动新会话默认值）。
   let patch = null;
   if (scope === 'global') {
@@ -478,12 +464,12 @@ function openContextPopover() {
     const manual = ctxWindowManual();
     const srcLabel = ctxWindowSourceLabel();
     const pct = win > 0 && used != null ? Math.round((used / win) * 100) : 0;
-    wrap.appendChild(el('div', 'ctx-pop-row ctx-pop-usage', used != null ? t('ctx.pop.usage', { used: fmtTokens(used), limit: fmtTokens(win), pct }) : t('ctx.pop.usageUnknown', { limit: fmtTokens(win) })));
+    wrap.appendChild(el('div', 'ctx-pop-row ctx-pop-usage', used != null && !win ? t('ctx.usedOnly', { used: fmtTokens(used) }) : used != null ? t('ctx.pop.usage', { used: fmtTokens(used), limit: fmtTokens(win), pct }) : t('ctx.pop.usageUnknown', { limit: fmtTokens(win) })));
     // Percent bar in the meter color.
     const bar = el('div', 'ctx-pop-bar'); const barIn = el('div', 'ctx-pop-bar-in');
     barIn.style.width = Math.max(0, Math.min(100, pct)) + '%';
     if (pct >= 90) barIn.style.background = 'var(--danger)'; else if (pct >= 70) barIn.style.background = 'var(--warn)'; else barIn.style.background = 'var(--ok)';
-    bar.appendChild(barIn); wrap.appendChild(bar);
+    bar.appendChild(barIn); if (win && used != null) wrap.appendChild(bar);
     wrap.appendChild(el('div', 'ctx-pop-src muted', `${t('ctx.currentModel', {model: currentModelId() || t('common.default')})} · ${t('ctx.limitSource', {src: srcLabel})}`));
     // v1.4.1: 端点未报告真实上限时(名称推测),明确提示可能不准 + 手动锁定仅对当前模型生效。
     if (manual <= 0 && srcLabel === t('ctx.sourceLabel.guessed')) {
@@ -511,8 +497,6 @@ function openContextPopover() {
       if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); const v = custom.value.replace(/[,\s]/g, ''); const n = parseInt(v, 10); if (v === '') applyWin(0); else if (Number.isFinite(n) && n > 0) applyWin(n); }
     });
     wrap.appendChild(custom);
-    // Universal compaction model: default follows the current access mode (Claude/Kimi native or active
-    // Provider); every explicitly configured Provider/Ollama model is available across all three modes.
     const compactLabel = el('label', 'ctx-compact-model-label muted', t('ctx.compact.label'));
     const compactSelect = el('select', 'ctx-compact-model');
     const defaultName = isProviderMode() ? t('ctx.compact.defaultProvider')
@@ -574,23 +558,6 @@ function openContextPopover() {
       for (const mu of muts) { for (const n of mu.removedNodes) { if (n === handle.node) { parkHost(); obs.disconnect(); return; } } }
     });
     obs.observe(document.body, { childList: true });
-  }
-  // Existing Kimi sessions (any CLI whose registry row has a statusEndpoint) may predate usage synchronization. Refresh the authoritative native status
-  // whenever the meter is opened and patch both the battery and this popover without requiring a restart.
-  if (handle && !isProviderMode() && agentCliMeta(currentEngineMeta().agentCliType).statusEndpoint && state.currentSession?.id) {
-    const sid = state.currentSession.id;
-    api(`${agentCliMeta(currentEngineMeta().agentCliType).statusEndpoint}?sessionId=${encodeURIComponent(sid)}`).then(r => {
-      if (!r || !r.ok || !r.usage || state.currentSession?.id !== sid) return;
-      state.shownUsage = r.usage;
-      updateContextMeter();
-      if (!handle.node.isConnected) return;
-      const usedNow = ctxTokensOf(r.usage), winNow = ctxWindow();
-      const pctNow = winNow > 0 && usedNow != null ? Math.round((usedNow / winNow) * 100) : 0;
-      const row = handle.node.querySelector('.ctx-pop-usage');
-      if (row) row.textContent = usedNow != null ? t('ctx.pop.usage', { used: fmtTokens(usedNow), limit: fmtTokens(winNow), pct: pctNow }) : t('ctx.pop.usageUnknown', { limit: fmtTokens(winNow) });
-      const bar = handle.node.querySelector('.ctx-pop-bar-in');
-      if (bar) { bar.style.width = Math.max(0, Math.min(100, pctNow)) + '%'; bar.style.background = pctNow >= 90 ? 'var(--danger)' : (pctNow >= 70 ? 'var(--warn)' : 'var(--ok)'); }
-    }).catch(() => {});
   }
 }
 
@@ -1044,7 +1011,6 @@ function switchTab(tab) {
   // Raw tool output is intentionally never exposed in the workspace pane.
   { const to = $('toolOutput'); if (to) to.classList.toggle('toolout-hidden', !TOOLOUT_TABS.has(tab)); }
   // v0.8-S2: only poll the shell-session list while its tab is showing.
-  updateShellPolling();
   // v0.9-S3 (C3): (re)load the file tree when the files tab is opened, if empty.
   if (tab === 'files' && $('fileTree') && !$('fileTree').childElementCount) loadFileTree();
   // v0.9-S4 (C4): render the artifacts gallery from this session's turn summaries when its tab opens.

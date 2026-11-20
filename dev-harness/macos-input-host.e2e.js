@@ -119,7 +119,7 @@ async function cleanupOwned() {
       const image = cp.spawnSync(receiver, ['--image', ocrImage], { env: fixtureChildEnv(), timeout: 5000 });
       if (image.status !== 0) throw new Error('Cannot generate owned App OCR image');
     }
-    fixture = cp.spawn(receiver, [], { env: { ...fixtureChildEnv(), ...(paste ? { RUYI_P5_CLIPBOARD_FIXTURE: '1' } : {}) }, stdio: ['pipe', 'pipe', 'pipe'] });
+    fixture = cp.spawn(receiver, [], { env: { ...fixtureChildEnv(), RUYI_P5_POINTER_COUNTS: '1', ...(paste ? { RUYI_P5_CLIPBOARD_FIXTURE: '1' } : {}) }, stdio: ['pipe', 'pipe', 'pipe'] });
     let buffer = '';
     fixture.stdout.on('data', chunk => {
       buffer += chunk;
@@ -249,9 +249,9 @@ const collected=${recording}&&recordStarted?.ok?await invoke('record_stop',{save
 const current=${recording}&&collected?.complete?await invoke('get_active_window'):null;
 const replayed=current?.ok?await invoke('macro_run',{recording:collected.recording,target:current.window.target}):null;
 return {capabilities,focused,typed,clicked,scrolled,ax,recording:${recording}?{started:recordStarted,collected,replayed}:null};`);
-    const env = { ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_NODE_PATH: process.execPath };
+    const env = { ...fixtureChildEnv(), RUYI_HOME: data, RUYI_NODE_PATH: process.execPath };
     const launchEnv = { HOME: env.HOME, USERPROFILE: env.USERPROFILE, LOCALAPPDATA: env.LOCALAPPDATA, APPDATA: env.APPDATA,
-      RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data, RUYI_NODE_PATH: process.execPath };
+      RUYI_HOME: data, RUYI_NODE_PATH: process.execPath };
     if (manual) {
       const S = loadServerInternals(['McpStdioClient', 'ProcessRuntime']);
       manualRuntime = S.ProcessRuntime;
@@ -334,7 +334,7 @@ return {capabilities,focused,typed,clicked,scrolled,ax,recording:${recording}?{s
         servicePID: result.servicePID, launch: 'LaunchServices', serviceInvocation, ...runtime, nativeHelper, ...extra,
         manualDemonstration: manual ? { kind: 'independent synthetic input through a real event tap', before: manualBefore } : null,
         observedProcesses: ownedTree.map(row => ({ pid: row.pid, ppid: row.ppid, created: row.created.toString() })),
-        receiver: { textMatches: state.text === sample, counts: state.counts, pad: state.pad,
+        receiver: { textMatches: state.text === sample, counts: state.counts, pointerCountsByPID: state.pointerCountsByPID, pad: state.pad,
           leftHeld: state.leftHeld, modifierFlags: visual ? state.modifiers : state.modifierFlags, clipboardPreserved: state.clipboardPreserved } }, null, 2) + '\n');
     }
     t.ok(result.nativePID > 0 && result.servicePID > 0, 'LaunchServices Ruyi App owns the actual workbench service');
@@ -359,7 +359,15 @@ return {capabilities,focused,typed,clicked,scrolled,ax,recording:${recording}?{s
     if (!ax && !visual && !manual) {
       t.ok(extra.clicked?.ok && extra.scrolled?.ok, 'App launch chain sends guarded pointer and wheel events');
       t.ok(state.text === sample && state.counts.key_down > 0, 'real receiver confirms the App-originated Chinese text');
-      t.ok(state.counts.left_down === (recording ? 4 : 1) && state.counts.left_up === (recording ? 4 : 1) && state.counts.vertical_scroll > 0,
+      const appPIDs = new Set(ownedTree.map(row => String(row.pid)));
+      let down = 0, up = 0, scroll = 0;
+      for (const [pid, counts] of Object.entries(state.pointerCountsByPID)) {
+        if (!appPIDs.has(pid)) continue;
+        down += counts.left_down || 0;
+        up += counts.left_up || 0;
+        scroll += counts.vertical_scroll || 0;
+      }
+      t.ok(down === (recording ? 4 : 1) && up === down && scroll > 0,
         'real receiver confirms the App-originated balanced click and wheel events');
     }
     if (manual) {

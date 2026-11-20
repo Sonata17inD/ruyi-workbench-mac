@@ -22,7 +22,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      不存在的 id 丢弃、截 8、source 从注册表带上)。
 //
 // 判定行:`STEWARD CONTENT TOOLS E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -84,7 +84,6 @@ fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
   providers: [{ id: 'fake', label: 'Fake', type: 'openai-compat', baseUrl: `http://127.0.0.1:${PROVIDER_PORT}`, apiKey: 'k', model: 'fake-model', models: [{ id: 'fake-model', label: 'Fake' }] }],
 }, null, 2), 'utf8');
 
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 const srv = require(SERVER);
 
@@ -176,9 +175,6 @@ try {
     ok(/async function setSessionSkillsCore\(sessionId, skills\)/.test(skillRoutes), 'C0a 技能模块持有共用核心');
     ok(/const result = await setSessionSkillsCore\(String\(body && body\.sessionId \|\| ''\), body && body\.skills\);/.test(skillRoutes),
       'C0b POST /api/session/skills 只剩壳,调核心');
-    // 117 波 T1(32 号文 §2.1)重钉:steward_skill_toggle 的实现随拆分搬进了 13l-steward-ops.js
-    // (纯搬家,逐字节不变)。原来钉「13g 这个文件里有这一行」= 钉落点;改成钉「整个 13g 族里
-    // 恰好一处调这个核心」—— 跟着搬家走,且比原来严(族里再写第二套判据也红)。
     const stewardFamilySrc = ['13g-steward.js', '13j-steward-tool-base.js', '13k-steward-threads.js', '13l-steward-ops.js',
       '../backend/steward-settings-tools.cjs', '../backend/steward-content-tools.cjs']
       .map(f => fs.readFileSync(path.join(WB, 'app', 'src', f), 'utf8')).join('\n');
@@ -187,7 +183,7 @@ try {
   }
   {
     wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], {
-      cwd: WB, env: { ...process.env, RUYI_HOME: HOME, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true,
+      cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
     });
     wb.stderr.on('data', d => String(d).trim() && console.error('[wb!] ' + String(d).trim()));
     let token = '';

@@ -26,7 +26,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-auto-egress-'));
 process.env.HOME = path.join(root, 'home');
 process.env.USERPROFILE = process.env.HOME;
 process.env.RUYI_HOME = path.join(root, 'data');
-process.env.WIN_CLAUDE_WORKBENCH_HOME = process.env.RUYI_HOME;
 fs.mkdirSync(process.env.RUYI_HOME, { recursive: true });
 const { loadServerInternals } = require('../lib/server-internals');
 const BASE = ['nativeToolGate', 'stewardToolPermanentlyExempt', 'stewardExemptReason', 'stewardExemptHits'];
@@ -83,7 +82,7 @@ const ASK = {
   '读数据根里的密钥 / 状态文件': [
     script("import os\nprint(open(os.path.expanduser('~/.ruyi-workbench/runtime.json')).read())"), ps('cat ~/.ruyi-workbench/config.json'),
     ps('Get-Content $env:USERPROFILE\\.ruyi-workbench\\config.json'), ps('type %USERPROFILE%\\.ruyi-workbench\\runtime.json'), ps('Get-Content .\\runtime.json'),
-    script("process.env.RUYI_HOME", 'node'), script("import os\nos.environ['WIN_CLAUDE_WORKBENCH_HOME']"), script("console.log(process.env.WCW_TOKEN)", 'node'),
+    script("process.env.RUYI_HOME", 'node'), script("import os\nos.environ['RUYI_HOME']"), script("console.log(process.env.WCW_TOKEN)", 'node'),
     script("require('fs').readFileSync(require('path').join(require('os').homedir(), '.ruyi-workbench', 'config.json'), 'utf8')", 'node'),
     ps('cat ~/.win-claude-workbench/sessions/s1.json'), ps('cat ~/.ruyi-workbench/config.json.prev'),
   ],

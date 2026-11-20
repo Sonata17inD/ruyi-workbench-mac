@@ -27,7 +27,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
  *   R 历史改写:原地改写前缀(条数不变)、撤回截断、撤回后再补回条数 → 落回全量;账本合并与压缩(只往末尾追加)→ 增量照样对,
  *     且可以拿增量回的新戳链式接着增量。
  */
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -90,7 +90,7 @@ function kill(proc) { if (proc && proc.pid) try { killOwnTree(proc); } catch { /
     activeProvider: 'fake',
   }));
   const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], {
-    cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME },
+    cwd: WB, env: { ...process.env, RUYI_HOME: HOME },
   });
   try {
     ok(!!(await waitFor(() => request(WP, 'GET', '/health').then(r => r.json).catch(() => null), 100, 120)), 'workbench starts');

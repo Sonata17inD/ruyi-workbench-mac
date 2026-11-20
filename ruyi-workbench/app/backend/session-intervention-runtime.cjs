@@ -136,10 +136,6 @@ function createSessionInterventionRuntime({
     for (const [, q] of pendingQuestions) if (q.sessionId === sessionId) return true;
     return false;
   }
-  // 128f-⑪:权限请求挂着时同样豁免回合的 idle 看门狗(三处:09 provider、05 Claude CLI、05b Kimi)。修前权限窗口 120 s
-  // 恒短于看门狗(默认 600 s),豁不豁免无所谓;定时线程的 30 分钟窗口早就被看门狗在 10 分钟处截断过(回合被当成「空闲」
-  // 杀掉,而不是按拒绝收尾让模型接着说),管家盯着的线程 600 s 窗口则与看门狗同长、谁先到算谁。权限自己的计时器到点
-  // 一定按拒绝落定,所以豁免不会让回合永远挂着。
   function hasPendingPermissionForSession(sessionId) {
     const sid = String(sessionId || '');
     for (const [, p] of pendingPermissions) if (p && p.sessionId === sid) return true;

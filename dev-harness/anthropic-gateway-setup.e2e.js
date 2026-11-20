@@ -94,7 +94,7 @@ function streamChat(body) {
   fs.writeFileSync(path.join(HOME, 'config.json'), JSON.stringify({
     configSchema: 12, permissionMode: 'bypass', toolLoadingMode: 'full', defaultWorkspace: WORK, providers: [provider], activeProvider: 'gw',
   }));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, windowsHide: true, env: { ...process.env, RUYI_HOME: HOME } });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WP)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).trim() && console.log('[wb!] ' + String(d).trim()));
   try {
     let healthy = false; for (let i = 0; i < 300 && !healthy; i++) { await sleep(120); healthy = !!(await request('GET', '/health').catch(() => null)); }

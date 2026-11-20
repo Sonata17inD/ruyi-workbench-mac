@@ -79,7 +79,6 @@ function writeConfig(patch) {
 writeConfig({});
 
 // ── 进程内直调:env 四处都指向临时 HOME(与 guardrails 同一道守卫) ──────────────────────────
-process.env.WIN_CLAUDE_WORKBENCH_HOME = HOME;
 process.env.RUYI_HOME = HOME;
 process.env.USERPROFILE = HOME;
 process.env.HOME = HOME;

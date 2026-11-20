@@ -24,7 +24,7 @@ function spawn(root, port) {
   if (!fs.existsSync(path.join(root, 'config.json'))) fs.writeFileSync(path.join(root, 'config.json'), JSON.stringify({ configSchema: CURRENT_CONFIG_SCHEMA, autoImportClaudeCodeMcp: false, includeWorkbenchMcp: false, desktopMcp: { enabled: false, autodetect: false } }));
   const child = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(port)], {
     // Retain runner-injected environment, then override every user location with the fixture home.
-    cwd: WB, windowsHide: true, env: { ...process.env, ...baseEnv, RUYI_HOME: root, WIN_CLAUDE_WORKBENCH_HOME: root },
+    cwd: WB, env: { ...process.env, ...baseEnv, RUYI_HOME: root },
   });
   child.output = ''; for (const s of [child.stdout, child.stderr]) s.on('data', d => { child.output = (child.output + d).slice(-8000); });
   child.completed = new Promise(resolve => child.once('close', resolve));
@@ -57,7 +57,7 @@ async function ready(child, root) {
     ok(rtC.port > port && rtC.port <= port + 9 && (await health(rtC.port))?.ok, 'another data root uses a fallback port and serves normally');
     ok(a.exitCode === null && (await health(port))?.overlayId === first.overlayId, 'a different-root workbench never kills the original workbench');
 
-    const innocent = cp.spawn(process.execPath, ['-e', 'const h=require("http").createServer((q,s)=>s.end("hello"));h.listen(0,"127.0.0.1",()=>console.log(h.address().port));'], { windowsHide: true, env: baseEnv });
+    const innocent = cp.spawn(process.execPath, ['-e', 'const h=require("http").createServer((q,s)=>s.end("hello"));h.listen(0,"127.0.0.1",()=>console.log(h.address().port));'], { env: baseEnv });
     innocent.completed = new Promise(resolve => innocent.once('close', resolve)); children.push(innocent);
     let innocentPort = 0; innocent.stdout.on('data', d => { innocentPort = Number(String(d).trim()); });
     if (!await until(() => innocentPort)) throw new Error('innocent service failed to listen');

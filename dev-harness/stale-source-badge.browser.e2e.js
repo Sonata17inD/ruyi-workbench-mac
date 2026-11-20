@@ -26,7 +26,7 @@ require('./lib/self-isolate-home.js'); // 换机器：直跑时家目录自隔�
 //     （live 与回放两条路各证各的，实得如此）。
 //
 // 判定行：`STALE SOURCE BADGE BROWSER E2E: ALL PASS`。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -34,8 +34,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { getFreePort } = require('./free-port.js');
-const { stopRuyiTestBrowsers } = require('./lib/browser-cleanup');
-const { findBrowserExecutable } = require('./lib/browser-path');
+const { findBrowserExecutable, headlessBrowserArgs } = require('./lib/browser-path');
 
 const ROOT = path.resolve(__dirname, '..');
 const WB = path.join(ROOT, 'ruyi-workbench');
@@ -81,13 +80,6 @@ async function waitForHttp(port, method, pathname, predicate, token, attempts = 
     await sleep(80);
   }
   return null;
-}
-function killTree(child) {
-  if (!child || !child.pid) return;
-  try {
-    if (process.platform === 'win32') killOwnTree(child);
-    else child.kill('SIGKILL');
-  } catch { /* already exited */ }
 }
 
 class CdpClient {
@@ -237,14 +229,14 @@ try {
         { name: 'web_fetch', args: { url: 'http://127.0.0.1:1/blocked' } },
       ]),
     },
-    windowsHide: true, stdio: 'ignore',
+    stdio: 'ignore',
   });
   await sleep(600);
 
   server = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(appPort)], {
     cwd: WB,
-    env: { ...process.env, RUYI_HOME: home, WIN_CLAUDE_WORKBENCH_HOME: home, HOME: home, USERPROFILE: home },
-    windowsHide: true, stdio: 'ignore',
+    env: { ...process.env, RUYI_HOME: home, HOME: home, USERPROFILE: home },
+    stdio: 'ignore',
   });
   ok(Boolean(await waitForHttp(appPort, 'GET', '/health', result => result.status === 200)), 'A1 workbench started');
 
@@ -260,12 +252,11 @@ try {
   ok(Boolean(browserPath), 'A3 找得到 Edge/Chrome');
   if (!browserPath) throw new Error('browser unavailable');
   browser = cp.spawn(browserPath, [
-    ...(/msedge\.exe$/i.test(browserPath) ? ['--edge-skip-compat-layer-relaunch'] : []),
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    ...headlessBrowserArgs,
     '--disable-extensions', '--disable-sync', '--disable-background-networking',
     `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`,
     '--window-size=1440,1000', appUrl,
-  ], { windowsHide: true, stdio: 'ignore' });
+  ], { stdio: 'ignore' });
   const target = await waitForTarget(debugPort, appUrl);
   ok(Boolean(target), 'A4 browser target available');
   if (!target) throw new Error('CDP target unavailable');
@@ -339,10 +330,9 @@ try {
   console.log('FAIL 夹具自身抛了:' + String((error && error.stack) || error));
 } finally {
   if (cdp) cdp.close();
-  killTree(browser);
-  killTree(server);
-  killTree(provider);
-  try { await stopRuyiTestBrowsers(profile); } catch { /* best effort */ }
+  killOwnTree(browser);
+  killOwnTree(server);
+  killOwnTree(provider);
   await sleep(200);
   try { fs.rmSync(root, { recursive: true, force: true }); } catch { /* 临时目录 */ }
 }

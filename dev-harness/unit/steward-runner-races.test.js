@@ -18,7 +18,6 @@ const path = require('path');
 const { startFakeProvider, textFrames, usageFrame } = require('../lib/fake-openai-provider');
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-steward-races-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 
 // 假 provider 的行为按测试切换:reply(结构化契约 JSON)/ fail(HTTP 500)。

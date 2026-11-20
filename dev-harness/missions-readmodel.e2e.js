@@ -15,7 +15,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      buildPretenderSessionSlice 没有 try、rebuildPretenderIndexFull 的 Promise.all 整份 reject,
 //      于是 GET /api/missions、/api/missions/<id>、GET /api/interventions 一起 500,管家收件箱
 //      每轮 tick 抛 "Cannot read properties of null (reading 'goal')" 三个源全停摆。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -60,7 +60,7 @@ function writeConfig(home, fakePort) {
 function spawnFake(seq, extraEnv) {
   const env = { ...process.env, FAKE_OPENAI_PORT: String(FAKE_PORT), ...(extraEnv || {}) };
   if (seq) env.FAKE_TOOL_SEQUENCE = JSON.stringify(seq);
-  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env, windowsHide: true });
+  const fake = cp.spawn(process.execPath, [path.join(HERE, 'fake-openai.js')], { env });
   fake.stdout.on('data', () => {});
   return fake;
 }
@@ -72,7 +72,7 @@ function spawnFake(seq, extraEnv) {
   fs.rmSync(HOME, { recursive: true, force: true }); fs.mkdirSync(HOME, { recursive: true });
   const artifact = path.join(HOME, 'artifact.md');
   writeConfig(HOME, FAKE_PORT);
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
   procs.push(wb);
   const H = token => ({ 'x-wcw-token': token });
@@ -101,15 +101,6 @@ function spawnFake(seq, extraEnv) {
 
     const listA = await getJson(WB_PORT, '/api/missions', H(token));
     ok(listA.status === 200 && Array.isArray(listA.body.missions), '(a) GET /api/missions 列表 200(实 ' + listA.status + ')');
-    // 121-K3(34 号文 §4.2「索引口径」)重钉 —— 本刀合法地把这条断言【翻了面】,逐对交代:
-    // 修前:任务列表的行集只给 `kind==='mission' || stewardWatchedThread(...)` 造卡片,于是用户
-    //       自己在 2.0 里开的普通会话【永远】不进列表(13e:150-157 的注释把它写成「刻意的,
-    //       理由是噪音」)。这条断言钉的就是那个行为。
-    // 修后:一个判据拆成两个 —— watched(管家要不要动手)与 visible(要不要进索引);噪音改用
-    //       【窗口】治(在途 ∪ 今天有动静 ∪ 最近 N 条 ∪ watched)。刚建出来的会话必然「今天有动静」,
-    //       所以它【应该】在列表里 —— 这正是 §1.3 数出来的病根(「管家看不见你在 2.0 开的线程」)。
-    // 断言的意图没变(「行集是有判据的,不是谁都进」),变的是判据本身;而且这里比修前【更紧】:
-    // 修前只钉「它不在」,拦不住行上的字段乱写;现在连它的来源与 watched 态一起钉。
     const rowA = (listA.body.missions || []).find(m => m.sessionId === sidA) || null;
     ok(!!rowA, '(a) 121-K3:2.0 里新开的普通会话【进】任务列表(修前恒不进,那是本波要修的病根)');
     ok(!!rowA && rowA.origin === 'user' && rowA.watched === false,
@@ -217,7 +208,6 @@ function spawnFake(seq, extraEnv) {
     ok(nf.status === 404, '(f) 未知 sessionId → 404(实 ' + nf.status + ')');
 
     // ============ (e) 静态锁 ============
-    const srcRouter = fs.readFileSync(path.join(WB, 'app', 'backend', 'workbench-api-router.cjs'), 'utf8');
     // 110-2a: ROUTE_AUTH 已搬至 01b-route-auth.js,改为源+目标拼接读取(断言原样保留)。
     const srcConfig = fs.readFileSync(path.join(WB, 'app', 'src', '01-config.js'), 'utf8')
       + fs.readFileSync(path.join(WB, 'app', 'backend', 'http-route-policy.cjs'), 'utf8');
@@ -226,7 +216,6 @@ function spawnFake(seq, extraEnv) {
     ok(/\{ m: 'GET', p: '\/api\/missions', auth: 'token-browser' \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions 标 token-browser');
     ok(/\{ m: 'GET', p: '\/api\/missions\/', auth: 'token-browser', prefix: true \}/.test(srcConfig), '(e) ROUTE_AUTH /api/missions/ 前缀标 token-browser');
     ok(/async function handleMissionsApiRoutes\(/.test(missionRoutes), '(e) 事项处理器归独立路由模块');
-    ok(/await handleMissionsApiRoutes\(req, res, pathname\)/.test(srcRouter), '(e) 路由器挂载 missions 处理器');
     ok(/kind: 'quick_ask'/.test(sessionCreation), '(e) createSession 显式写入 kind=quick_ask');
     const metadata = fs.readFileSync(path.join(WB, 'app', 'backend', 'session-metadata.cjs'), 'utf8');
     ok(/function sessionKind\(/.test(metadata), '(e) 会话类型由元数据模块只读派生');

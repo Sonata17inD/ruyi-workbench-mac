@@ -17,7 +17,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-wire-anthropic-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 after(() => fs.rmSync(root, { recursive: true, force: true }));
 const srv = require(path.resolve(__dirname, '../../ruyi-workbench/app/server.js'));
@@ -101,10 +100,10 @@ test('[A2] 请求编码', () => {
   assert.equal(think('claude-sonnet-4-5', GATEWAY), undefined, '4.5 及更早不认 adaptive');
   assert.equal(think('claude-haiku-4-5', GATEWAY), undefined);
   assert.equal(think('claude-sonnet-4-20250514', GATEWAY), undefined, '日期后缀不当次版本号');
-  assert.equal(think('kimi-k2', GATEWAY), undefined);
+  assert.equal(think('fixture-proxy-model', GATEWAY), undefined);
   // 2026-10(用户报 DeepSeek /anthropic 接入):网关上的非 Claude 模型「思考:开」发经典形 {type:'enabled', budget_tokens} ——
   // adaptive 只有官方新 Claude 认,网关回 400 后被 retryOn400 整个去掉思考,修前这里钉的 adaptive 在网关上等于静默关。
-  assert.deepEqual(think('kimi-k2', { ...GATEWAY, anthropicThinking: 'adaptive' }), { type: 'enabled', budget_tokens: 16000 });
+  assert.deepEqual(think('fixture-proxy-model', { ...GATEWAY, anthropicThinking: 'adaptive' }), { type: 'enabled', budget_tokens: 16000 });
   assert.equal(think('deepseek-reasoner', { ...GATEWAY, reasoning: true }), undefined, 'Anthropic 协议只认 anthropicThinking 一个开关(通用的 reasoning 不串进来)');
   assert.deepEqual(think('claude-sonnet-4-5', { ...GATEWAY, anthropicThinking: 'adaptive' }), { type: 'enabled', budget_tokens: 16000 }, '不认 adaptive 的旧 Claude 同样走经典形');
   assert.equal(think('claude-opus-5-5', { ...OFFICIAL, anthropicThinking: 'off' }), undefined);

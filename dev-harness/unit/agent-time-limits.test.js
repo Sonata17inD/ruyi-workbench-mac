@@ -15,7 +15,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-time-limits-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 process.env.HOME = root;
 process.env.USERPROFILE = root;
@@ -117,15 +116,12 @@ test('[S1] 设置页:自动收尾的占位值与回填默认值跟出厂一致(3
   assert.match(settings, /clampedInt\('cfgAgentNodeWrapUpMinutes', 30, 0, 120\)/);
   for (const loc of ['zh-CN', 'en-US']) {
     const dict = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../ruyi-workbench/app/public/locales/${loc}.json`), 'utf8'));
-    const mirror = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../docs/i18n/locales/${loc}.json`), 'utf8'));
     for (const key of ['settings.advanced.agentNodeWrapUp.hint', 'settings.limits.turnIdleHint']) {
       assert.ok(dict[key] && /30|10/.test(dict[key]), `${loc} ${key} 存在且带默认值`);
-      assert.equal(mirror[key], dict[key], `${loc} ${key} 与 docs/i18n 镜像逐字一致`);
     }
     // 工作流卡的状态行按中止原因说话(hard_cap / quiet),两份 locale 与镜像齐备,且都点明「设置里调大」。
     for (const key of ['workflow.run.wrapUpForcedCap', 'workflow.run.wrapUpForcedQuiet']) {
       assert.ok(dict[key] && dict[key].includes('{{nodeId}}'), `${loc} ${key} 存在`);
-      assert.equal(mirror[key], dict[key], `${loc} ${key} 与 docs/i18n 镜像逐字一致`);
     }
   }
   const prompts = fs.readFileSync(path.resolve(__dirname, '../../ruyi-workbench/app/public/js/interaction-prompts.js'), 'utf8');

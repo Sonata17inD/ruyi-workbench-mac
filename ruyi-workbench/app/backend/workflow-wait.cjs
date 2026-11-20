@@ -39,13 +39,16 @@ function createWorkflowWait({
     return { done: false, failed: false };
   }
 
-  // Agent-team default routing is resolved by the runtime, not guessed by the parent model. A configured
-  // sub-agent endpoint/model is useful only while BOTH are callable together. Probe a non-current route through
-  // its OpenAI-compatible /models endpoint before launching the DAG; if the endpoint disappeared, the probe
-  // fails, or the preferred model is absent, fall back to the model that is already serving the parent turn.
-  // The current route is treated as live without another network round-trip because the parent is using it now.
-
   return { evalWaitCondition };
 }
 
-module.exports = { createWorkflowWait };
+// Timer nodes have one deadline. External conditions need a fresh probe at their own cadence.
+function nextWaitCheckAt(node, now) {
+  const w = node.wait;
+  const start = Date.parse(node.waitStartedAt) || now;
+  const probe = w.mode === 'timer' ? start + w.durationMs
+    : node.lastWaitPollAt ? node.lastWaitPollAt + w.pollMs : now;
+  return Math.min(start + w.timeoutMs, probe);
+}
+
+module.exports = { createWorkflowWait, nextWaitCheckAt };

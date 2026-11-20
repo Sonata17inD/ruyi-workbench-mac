@@ -8,7 +8,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //      断言:回合后 mission.milestones 含 m2(若盖回则丢失)。
 //  (b) 对照:update 在回合外(无活动回合)正常落盘(基线,非 C4 路径)。
 //  (c) 静态锁:C4 同步块(action === 'update' && reg.session.mission -> applyMissionUpdate)在 server.js。
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), fs = require('fs'), os = require('os'), path = require('path');
 const { getFreePort } = require('./free-port.js');
 
@@ -41,7 +41,7 @@ async function waitToken() {
 function headPath(sid) { return path.join(HOME, 'sessions', sid + '.json'); }
 function readMission(sid) { try { return JSON.parse(fs.readFileSync(headPath(sid), 'utf8')).mission || null; } catch { return null; } }
 function spawnWb() {
-  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME }, windowsHide: true });
+  return cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME, HOME, USERPROFILE: HOME } });
 }
 function startProvider() {
   const server = http.createServer(async (req, res) => {

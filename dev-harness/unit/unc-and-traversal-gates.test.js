@@ -31,7 +31,7 @@ if (NO_RG) {   // PATH 里摘掉放着 rg 的目录:系统 PATH 里的 rg 看不
   // Windows CI 修(607e4a7 红):Windows 的 process.env 不分大小写 —— 修前先设 PATH 再 delete Path,等于把 PATH 整个删了,
   // 子进程里 PowerShell 等系统程序全找不到;也不再整个换掉 PATH,只摘掉含 rg 的目录。node 恰好与 rg 同目录时才给它单开一个 bin。
   // Windows 上工作台优先用随仓的 app/vendor-bin/rg.exe(与 PATH 无关),所以下面加载后还把 rg 探测缓存钉成「没有」。
-  const rgName = process.platform === 'win32' ? 'rg.exe' : 'rg';
+  const rgName = 'rg';
   const keep = String(process.env.PATH || process.env.Path || '').split(path.delimiter)
     .filter(d => d && !fs.existsSync(path.join(d, rgName)));
   const bin = path.join(root, 'bin');
@@ -49,7 +49,6 @@ if (NO_RG) {   // PATH 里摘掉放着 rg 的目录:系统 PATH 里的 rg 看不
 process.env.HOME = home;
 process.env.USERPROFILE = home;
 process.env.RUYI_HOME = dataRootDir;
-process.env.WIN_CLAUDE_WORKBENCH_HOME = dataRootDir;
 delete process.env.WCW_SESSION_ID;
 const { loadServerInternals } = require('../lib/server-internals');
 const { remoteUncDenial, uncHostAndPath } = require('../../ruyi-workbench/app/backend/workspace-unc-policy.cjs');
@@ -128,15 +127,6 @@ describe('W1 · guardFileToolPath:读 / 写 / 任何档位 / 逃生舱都拒非�
     const wide = await I.guardFileToolPath(TARGETS[0], ctxFor(ws, 'bypass', { allowOutsideWorkspace: true }), { tool: 'file_write', write: true });
     assert.equal(wide.error, I.UNC_DENIED_ERROR, dump(wide));
   });
-  it('端到端:file_read / file_write 对 UNC 路径返回 not-allowed,不抛、不落盘', async (t) => {
-    // 工具层的路径解析按宿主 path.isAbsolute 判:`\\\\主机\\共享` 只有 Windows 认作绝对路径,POSIX 上会被接到工作区下当成一个怪文件名 ——
-    // 所以端到端只在 Windows 上有意义(Linux 上闸本身已由上面的直测覆盖)。
-    if (process.platform !== 'win32') return t.skip('UNC absolute paths exist only on Windows hosts');
-    for (const [tool, args] of [['file_read', { path: TARGETS[0] }], ['file_write', { path: TARGETS[0], content: 'x' }], ['file_list', { root: TARGETS[0] }], ['file_copy', { from: path.join(ws, 'nope.txt'), to: TARGETS[0] }]]) {
-      const r = await I.toolCall(tool, args, ctxFor(ws, 'bypass'));
-      assert.equal(r.ok, false, tool + ' ' + dump(r));
-    }
-  });
   it('本机 UNC 与普通本地路径不受 UNC 闸影响(报错不是 UNC 拒绝)', async () => {
     const g = await I.guardFileToolPath('\\\\localhost\\C$\\Windows\\Temp\\x.txt', ctxFor(ws, 'default'), { tool: 'file_read', write: false });
     assert.notEqual(g.error, I.UNC_DENIED_ERROR, dump(g));
@@ -168,7 +158,7 @@ for (const [rel, body] of [
   fs.writeFileSync(path.join(dataRootDir, rel), JSON.stringify(body));
 }
 function tryLink(target, linkPath, kind) {
-  try { fs.symlinkSync(target, linkPath, process.platform === 'win32' ? (kind === 'dir' ? 'junction' : 'file') : undefined); return true; }
+  try { fs.symlinkSync(target, linkPath); return true; }
   catch (e) { if (e && (e.code === 'EPERM' || e.code === 'EACCES')) return false; throw e; }
 }
 const SECRETS = [API_KEY, TOKEN, STEWARD, 'SECRETKEY', 'WCWTOKEN', 'STEWARDMEMORY'];

@@ -116,7 +116,7 @@ function logRows(kind) {
       ],
       activeProvider: 'llm', asrProviderId: 'asr', asrModel: 'whisper-1', asrStreamProviderId: 'st', asrStreamModel: 'zip', asrFixMode: 'auto',
     }, null, 2));
-    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME, RUYI_HOME: HOME }, windowsHide: true });
+    wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
     wb.stdout.on('data', () => {}); wb.stderr.on('data', d => String(d).split(/\r?\n/).forEach(l => l.trim() && console.log('[wb!] ' + l.trim())));
     ok(Boolean(await waitFor(async () => (await reqRaw('GET', '/api/status')).status === 200)), '0 工作台起来了');
     TOKEN = await getToken();

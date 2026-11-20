@@ -10,7 +10,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   ① 无人值守完成率 ≥2/3   ② 人工干预 ≤1 次/任务   ③ 无进展自动暂停触发率 100%   ④ token 不破预算
 // 纪律:复用第26波b mission-driver 的 fake SSE + /api/mission 基建;验收主会话亲自实跑。
 'use strict';
-const { killOwnTree } = require('./lib/kill-own-tree'); // 128c:只杀自己的树(核创建时间),取代 taskkill /T
+const { killOwnTree } = require('./lib/kill-own-tree');
 const cp = require('child_process'), http = require('http'), path = require('path'), fs = require('fs'), os = require('os');
 const { getFreePort } = require('./free-port.js');
 
@@ -134,7 +134,7 @@ const fake = http.createServer((rq, rs) => {
     activeProvider: 'fake',
   }, null, 2));
   await new Promise(r => fake.listen(FAKE_PORT, '127.0.0.1', r));
-  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, WIN_CLAUDE_WORKBENCH_HOME: HOME }, windowsHide: true });
+  const wb = cp.spawn(process.execPath, ['app/server.js', 'serve', '--port', String(WB_PORT)], { cwd: WB, env: { ...process.env, RUYI_HOME: HOME } });
   wb.stdout.on('data', () => {}); wb.stderr.on('data', () => {});
   // 产品指标累计
   const results = [];

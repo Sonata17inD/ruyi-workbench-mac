@@ -4,7 +4,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-required-save-'));
-process.env.RUYI_HOME = home; process.env.WIN_CLAUDE_WORKBENCH_HOME = home;
+process.env.RUYI_HOME = home;
 const { loadServerInternals } = require('../lib/server-internals');
 const { TOOL_RESULT_DISPLAY_CAP } = require('../../ruyi-workbench/app/backend/tool-result-view.cjs');
 const s = loadServerInternals(['createSession', 'loadSession', 'saveSession', 'deleteSession', 'recordSessionExecutionOwner', 'sessionWriteChains', 'runSessionTurn', 'stopSession', 'activeChildren'], { withEval: true });

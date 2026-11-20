@@ -31,7 +31,7 @@ against a baseline artifact. No request bodies, provider URLs, or credentials ar
 }
 const realRoot = require('./lib/real-data-root').realDataRoot();
 const isolated = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-summary-task-live-'));
-process.env.RUYI_HOME = isolated; process.env.WIN_CLAUDE_WORKBENCH_HOME = isolated;
+process.env.RUYI_HOME = isolated;
 const serverPath = path.resolve(arg('server', process.env.RUYI_TEST_SERVER_JS || path.resolve(__dirname, '../ruyi-workbench/app/server.js')));
 process.env.RUYI_TEST_SERVER_JS = serverPath;
 const { loadServerInternals } = require('./lib/server-internals');

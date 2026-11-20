@@ -13,7 +13,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-auto-indirect-'));
-process.env.WIN_CLAUDE_WORKBENCH_HOME = root;
 process.env.RUYI_HOME = root;
 const { nativeToolGate } = require(path.join(__dirname, '..', '..', 'ruyi-workbench', 'app', 'server.js'));
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));

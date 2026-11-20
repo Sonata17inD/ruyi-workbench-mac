@@ -33,8 +33,7 @@ const sample = JSON.parse(fs.readFileSync(path.join(acc, 'tests/fixtures/macos-o
   const files = Object.fromEntries(['report.docx', 'data.xlsx', 'slides.pptx', 'summary.pdf', 'chart.png'].map(n => [n, path.join(workspace, n)]));
   const before = Buffer.from('P3 existing file: restore these exact bytes after overwrite.\n');
   fs.writeFileSync(files['report.docx'], before);
-  const env = { ...fixtureChildEnv(), RUYI_HOME: data, WIN_CLAUDE_WORKBENCH_HOME: data,
-    WCW_DATA_DIR: auditDir, MPLCONFIGDIR: path.join(root, 'mpl-cache'), PYTHONUTF8: '1' };
+  const env = { ...fixtureChildEnv(), RUYI_HOME: data, WCW_DATA_DIR: auditDir, MPLCONFIGDIR: path.join(root, 'mpl-cache'), PYTHONUTF8: '1' };
   const config = {
     configSchema: 7, version: '3.0.1', permissionMode: 'bypass', defaultWorkspace: workspace,
     autoImportClaudeCodeMcp: false, enableMcpDropIn: false, includeWorkbenchMcp: false,
