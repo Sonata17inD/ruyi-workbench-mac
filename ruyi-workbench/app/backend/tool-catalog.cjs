@@ -2,7 +2,7 @@
 
 const { resolveBridge, bridgedToolTier, dropPolicyDisabledBridgedTools } = require('./bridged-tool-policy.cjs');
 const { nativeToolTier } = require('./native-tool-tiers.cjs');
-const { TOOL_PACK_DESCRIPTIONS } = require('./tool-access-policy.cjs');
+const { TOOL_PACK_DESCRIPTIONS, DESKTOP_MCP_SERVER_ID } = require('./tool-access-policy.cjs');
 const { appendOnlyToolSchemasEnabled } = require('./runtime-policy.cjs');
 const { hashRuntimeToolEvidence } = require('./runtime-tool-telemetry.cjs');
 
@@ -13,6 +13,8 @@ const { hashRuntimeToolEvidence } = require('./runtime-tool-telemetry.cjs');
 // (实测命中率 97%→3%、94%→8%,下一发几乎整段上下文按未缓存计);三个合计约 630 token,每发基本都命中缓存,比中途断一次便宜。
 // file_read 不进:分包对文件类说法的召回本就高(文件/目录/路径/代码/项目/查看/搜索…),tool-loading e2e 也用它钉「按需注入」。
 const PROVIDER_STARTER_TOOLS = Object.freeze(['web_search', 'web_fetch', 'shell_run']);
+const DESKTOP_STARTERS = new Set(['list_windows', 'focus_window', 'observe', 'ui_find', 'mouse_click', 'press_key', 'batch_actions']);
+const BROWSER_STARTERS = new Set(['browser_open', 'browser_get_elements', 'browser_get_text', 'browser_click', 'browser_type', 'browser_navigate']);
 const NATIVE_TOOL_PACKS = Object.freeze({
   threads_search: 'memory', thread_read: 'memory',
   permission_prompt: 'core', request_user_input: 'core', todo_write: 'core', mission_update: 'core',
@@ -712,6 +714,19 @@ function createToolLoader({ logEvent }) {
     if (!full) for (const n of PROVIDER_STARTER_TOOLS) {
       const item = catalog.find(x => x && x.name === n);
       if (item && !item.bridged) { activeNames.add(n); reasonOf.set(n, 'starter'); }
+    }
+    if (!full) {
+      // Use the policy-filtered routes so a third-party MCP with a matching tool name stays on demand.
+      const browserTask = /浏览器|网页|网站|Chromium|browser|Playwright/i.test(message);
+      const desktopTask = (!browserTask && activePacks.has('desktop')) || /桌面控制|原生窗口|原生界面|真实桌面|访达|Finder|GitHub Desktop|Preview\.app|desktop control|native (window|app)|macOS.{0,6}(股市|预览)/i.test(message);
+      for (const item of catalog) {
+        const route = bridgedRoute?.[item.name];
+        if (route?.serverId !== DESKTOP_MCP_SERVER_ID) continue;
+        if ((browserTask && BROWSER_STARTERS.has(route.toolName)) || (desktopTask && DESKTOP_STARTERS.has(route.toolName))) {
+          activeNames.add(item.name);
+          reasonOf.set(item.name, 'starter');
+        }
+      }
     }
     // 106 #1 G2: 冻结仅在有会话权属的主循环启用(freezeKey = session.id);子代理/一次性调用不传,
     // 保持现状逐字节一致。

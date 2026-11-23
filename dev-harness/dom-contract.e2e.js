@@ -127,7 +127,6 @@ const CRITICAL_CLASSES = [
   'wp-pop',             // 工作文件夹选择小弹层(G6)
   'diff-view',          // git.e2e:renderDiffView 逐行 textContent 构建
   'onboard-drop',       // onboard.e2e:首跑引导拖放区
-  'empty-logo',         // theme.e2e:空态如意标容器
   'batt-fill',          // ctx-meter:电量填充
   'ctx-text',           // ctx-meter:读数文本
   'ctx-chip',           // ctx-meter:上限预设 chip
@@ -155,7 +154,6 @@ const CRITICAL_FUNCS = [
   // ia.e2e 断言。122-L1b: 'openMoreMenu' 随「更多」退役(ia ⑥c 反过来钉它零残留)。
   'openPermPopover',
   // theme.e2e 断言
-  'buildRuyiLogo',
   // git.e2e 断言
   'renderDiffView',
   // perf.e2e 断言(窗口化)

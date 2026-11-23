@@ -121,8 +121,6 @@ export function createThreadHead({
   // 就悄悄变成另一张脸。现在收成一处:形状的唯一定义仍是 index.html 那一份,本函数只克隆它。
   //   · 为什么不是 <symbol> + <use>:七态是 `.steward-avatar[data-state=x] .sa-ring{…}` 这样
   //     从祖先选进去的规则,而 <use> 的内容在影子树里,文档 CSS 选不中 —— 换成 use 会当场丢七态。
-  //   · <defs> 必须摘掉:里面那条渐变的 id 是文档级唯一,克隆一份就撞 id;.sa-body 的
-  //     fill:url(#stewardAvatarGrad) 引的仍然是原件那一份,所以摘掉之后颜色照旧。
   function buildAvatar() {
     const document_ = doc();
     if (!document_) return null;
@@ -314,7 +312,7 @@ export function createThreadHead({
 
   function bindThreadHead() {
     const host = byId('threadChips');
-    if (host) chips.mount(host);
+    if (host) chips.mount(host, byId('composerModel'), byId('composerEffort'));
     // 换会话的信号：#sessionTitle 的文本由 session-experience.js 的 renderCurrentSession 单点写入，
     // 观察它即可 —— 不必也不该在这里缓存第二份会话，更不必给组合根加第二条接线（117g 的先例）。
     const title = byId('sessionTitle');

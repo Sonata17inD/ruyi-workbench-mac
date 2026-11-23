@@ -62,10 +62,8 @@ ok(/<button type="button" id="stewardAvatar" class="steward-avatar" data-state="
   'C1 #stewardAvatar 是可聚焦的 <button>，初始 data-state="idle"');
 ok(/<svg viewBox="0 0 100 100" aria-hidden="true">/.test(header), 'C2 SVG viewBox 100，装饰性(aria-hidden)');
 ok(/<circle class="sa-ring" cx="50" cy="50" r="44">/.test(header), 'C3 环：circle.sa-ring r=44');
-ok(/<circle class="sa-body" cx="50" cy="50" r="31">/.test(header), 'C4 主体：circle.sa-body r=31');
-const eyesMatch = header.match(/<g class="sa-eyes">([\s\S]*?)<\/g>/);
-ok(Boolean(eyesMatch) && (eyesMatch[1].match(/<ellipse class="sa-eye"/g) || []).length === 2,
-  'C5 一对眼睛：g.sa-eyes 内两个 ellipse.sa-eye');
+ok(header.includes('<g class="sa-body">') && header.includes('<path class="sa-slash"'), 'C4 头像保留动作主体与品牌斜杠');
+ok(header.includes('<path fill-rule="evenodd"'), 'C5 字母 R 使用镂空字腔');
 ok(/id="stewardPresenceText" class="steward-presence-text" aria-live="polite"/.test(header),
   'C6 #stewardPresenceText 是 aria-live="polite" 的状态文字（avatar 不可用时的文字等价）');
 ok(/data-i18n-attr="aria-label:stewardShell\.avatarLabel"/.test(header), 'C7 avatar 的 aria-label 走 i18n');

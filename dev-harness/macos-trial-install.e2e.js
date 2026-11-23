@@ -6,7 +6,7 @@ const fs = require('node:fs'), path = require('node:path'), os = require('node:o
 const { createRunner } = require('./lib/harness');
 const { fixtureChildEnv } = require('./lib/fixture-home');
 const { killOwnTree, snapshotProcessTable } = require('./lib/kill-own-tree');
-const { run, sha256, verifyPackage, inventory, treeDigest, FULL_APP_NAME } = require('../ruyi-workbench/tools/macos-offline-lib');
+const { run, sha256, verifyPackage, inventory, treeDigest } = require('../ruyi-workbench/tools/macos-offline-lib');
 const { attachTrial, detachTrial, verifyTrialDirectory, verifyDistribution, installTrial, verifyInstalledApp, signatureTarget } = require('../ruyi-workbench/tools/package-macos-trial');
 const t = createRunner('MACOS TRIAL INSTALL'); const { ok } = t;
 const distribution = process.env.RUYI_TRIAL_DISTRIBUTION;
@@ -46,7 +46,7 @@ async function until(fn, timeout = 90000) { const end = Date.now() + timeout; wh
     ok(refused && treeDigest(inventory(installed)) === manifest.treeSha256, 'existing installation is refused without replacing its bytes');
     for (const name of ['package-manifest.json', 'SHA256SUMS']) fs.copyFileSync(path.join(mount, name), path.join(applications, name));
     detachTrial(mount); attached = false;
-    const standaloneFull = manifest.app === FULL_APP_NAME;
+    const standaloneFull = manifest.variant === 'full';
     const data = path.join(fixture.home, standaloneFull ? '.ruyi-workbench-full' : 'data');
     const workspace = path.join(fixture.home, 'workspace'); fs.mkdirSync(data); fs.mkdirSync(workspace);
     fs.writeFileSync(path.join(data, 'config.json'), JSON.stringify({ configSchema: 14, defaultWorkspace: workspace,

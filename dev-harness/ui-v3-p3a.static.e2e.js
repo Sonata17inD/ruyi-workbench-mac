@@ -136,7 +136,7 @@ ok(has(empty, "t('workflow.empty.title')", "t('workflow.empty.goChat')", "t('wor
   zh['workflow.empty.goChat'] === '回到对话' &&
   zh['workflow.empty.runTemplate'] === '从模板运行',
   'G 空态引导卡(标题 + 两个引导按钮，代码与中文 locale 双向锁)');
-ok(has(empty, "'wb-empty-cloud'") && /\.wb-empty-cloud\s*\{[^}]*var\(--ruyi-cloud\)/.test(css), 'G 云纹水印(--ruyi-cloud mask)');
+ok(has(empty, "'wb-empty-cloud'") && /\.wb-empty-cloud\s*\{[^}]*var\(--ruyi-silhouette\)/.test(css), 'G 云纹水印(--ruyi-silhouette mask)');
 ok(/function renderWorkbench\(runs, force\)/.test(src) && has(fnBody('renderWorkbench'), 'renderWorkbenchEmpty()'), 'G 无 run 分派到空态(renderWorkbench;对抗轮P2:新增签名跳过的 force 参数)');
 
 // ═══════════ H. 轮询复用 + XSS 纪律 + 零硬编码色/零裸 px 字号 ═══════════

@@ -566,7 +566,7 @@ function turnSummaryCard(summary) {
   card.append(head);
   const body = el('div', 'turn-summary-body');
   if (!files.length && commands === 0) {
-    body.append(el('div', 'turn-summary-empty', t('changes.empty')));
+    card.hidden = true;
   } else {
     for (const f of files) {
       if (!f) continue;
@@ -1548,33 +1548,10 @@ function buildHealthSummaryChip() {
   chip.onclick = () => { openModal('settingsModal'); switchSettingsTab('doctor', true); };
   return chip;
 }
-// v1.0-S1 收官补:如意标(SVG)——JS 重建空状态时与 index.html 静态版完全同参(路径/填色/viewBox),
-// 不再回退到旧 Claude 字母 "C"。theme.e2e.js 守着此模式不得回潮。
-function buildRuyiLogo() {
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 120 120'); svg.setAttribute('width', '48'); svg.setAttribute('height', '48');
-  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', t('brand.name'));
-  const g = document.createElementNS(NS, 'g');
-  g.setAttribute('transform', 'rotate(42 60 60)');
-  const head = document.createElementNS(NS, 'path');
-  head.setAttribute('fill', 'var(--brand-qh)');
-  head.setAttribute('d', 'M60 62 C46 55 30 44 30 32 A13 13 0 0 1 53 24 A7.5 7.5 0 1 1 67 24 A13 13 0 0 1 90 32 C90 44 74 55 60 62 Z');
-  const stem = document.createElementNS(NS, 'path');
-  stem.setAttribute('fill', 'none'); stem.setAttribute('stroke', 'var(--brand-qh)');
-  stem.setAttribute('stroke-width', '11'); stem.setAttribute('stroke-linecap', 'round');
-  stem.setAttribute('d', 'M60 57 C53.5 73.7 66.5 90.3 57.7 107');
-  const star = document.createElementNS(NS, 'circle');
-  star.setAttribute('fill', 'var(--brand-au)'); star.setAttribute('cx', '27'); star.setAttribute('cy', '21'); star.setAttribute('r', '7.5');
-  g.append(head, stem); svg.append(g, star);
-  const box = el('div', 'empty-logo'); box.setAttribute('aria-hidden', 'true'); box.appendChild(svg);
-  return box;
-}
 function buildEmptyState() {
   // v1.0-S3 (A): 首跑引导变体 —— 会话空 && 无最近工作区时渲染，否则走常规空状态。
   if (isFirstRun()) return buildFirstRunState();
   const wrap = el('div', 'empty-state');
-  wrap.appendChild(buildRuyiLogo());
   wrap.appendChild(el('h2', '', t('emptyState.title')));
   // Engine line: "当前引擎：{engineLabel} · {model}" with a colored engine dot.
   const meta = currentEngineMeta();
@@ -1593,12 +1570,11 @@ function buildEmptyState() {
   if (pbSection) wrap.appendChild(pbSection);
   return wrap;
 }
-// v1.0-S3 (A): 首跑引导变体。自上而下：如意标（buildRuyiLogo，与 index.html 静态版同参）；大拖放引导区；
+// v1.0-S3 (A): 首跑引导变体。自上而下：大拖放引导区；
 // 引擎状态一眼判断；任务卡（既有 playbook 首页渲染，保留在引导变体下方，不动其逻辑）。DOM 全走
 // createElement/textContent（禁 innerHTML）。
 function buildFirstRunState() {
   const wrap = el('div', 'empty-state onboard');
-  wrap.appendChild(buildRuyiLogo());
   wrap.appendChild(el('h2', '', t('onboarding.title')));
   wrap.appendChild(el('p', '', t('onboarding.description')));
   // 118a: 首跑卡的主行动是走一遍向导(语言/引擎/密钥/文件夹/安全档/试跑),拖放区与引擎卡留作老手直达路径。

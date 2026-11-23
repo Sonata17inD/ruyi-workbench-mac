@@ -25,7 +25,7 @@ const PCT = 0.01;
 export const SETTINGS_CATALOG = Object.freeze([
   // ── 基础 ──
   {
-    id: 'setcatAppearance', tab: 'basic', titleKey: 'settings.catalog.appearance.title',
+    id: 'setcatAppearance', tab: 'appearance', titleKey: 'settings.catalog.appearance.title',
     fields: [
       { key: 'theme', type: 'select', options: ['system', 'light', 'dark'], optionKeyPrefix: 'settings.catalog.theme.', fallback: 'system' },
     ],
@@ -384,6 +384,7 @@ function renderSection(doc, section, t) {
   let body = node;
   if (section.fold) {
     const fold = make(doc, 'details', 'settings-fold setcat-fold');
+    fold.open = true;
     const summary = make(doc, 'summary');
     summary.appendChild(heading);
     fold.appendChild(summary);

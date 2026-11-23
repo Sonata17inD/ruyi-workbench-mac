@@ -52,18 +52,35 @@ function buildMacDesktop(output, { bundled = false, variant } = {}) {
       flags.push('-vfsoverlay', overlay, '-Xcc', '-ivfsoverlay', '-Xcc', overlay);
     }
     const sources = ['DesktopService.swift', 'MacHostBridge.swift', 'RuyiDesktop.swift', 'main.swift'].map(name => path.join(root, 'desktop-macos', name));
-    const inputs = [...sources, path.join(root, 'desktop-macos', 'service-lease.cjs'), __filename];
+    const brand = path.join(root, 'app/public/brand');
+    const tile = path.join(brand, 'tile-light.svg');
+    const menuMark = path.join(brand, 'mark-mono.svg');
+    const inputs = [tile, menuMark, ...sources, path.join(root, 'desktop-macos', 'service-lease.cjs'), __filename];
     const fingerprints = () => Object.fromEntries(inputs.map(file => [path.relative(root, file),
       crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
     const sourceFingerprint = fingerprints();
+    const resources = path.join(contents, 'Resources');
+    const iconset = path.join(work, 'Ruyi.iconset');
+    fs.mkdirSync(iconset);
+    const master = path.join(work, 'Ruyi-1024.png');
+    run('/usr/bin/sips', ['-s', 'format', 'png', tile, '--out', master]);
+    for (const points of [16, 32, 128, 256, 512]) {
+      for (const scale of [1, 2]) {
+        const pixels = String(points * scale);
+        const filename = 'icon_' + points + 'x' + points + (scale === 2 ? '@2x' : '') + '.png';
+        run('/usr/bin/sips', ['-z', pixels, pixels, master, '--out', path.join(iconset, filename)]);
+      }
+    }
+    run('/usr/bin/iconutil', ['-c', 'icns', iconset, '-o', path.join(resources, 'Ruyi.icns')]);
+    run('/usr/bin/sips', ['-s', 'format', 'png', '-z', '33', '54', menuMark, '--out', path.join(resources, 'RuyiMenu.png')]);
     run(compiler, [...flags, ...sources, '-o', binary]);
     if (JSON.stringify(sourceFingerprint) !== JSON.stringify(fingerprints())) throw new Error('Desktop sources changed during compilation. Rebuild the App');
     const escape = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const full = bundled && variant === 'full';
-    const name = full ? 'Ruyi Full' : '如意工作台';
+    const name = full ? 'Ruyi' : bundled ? 'Ruyi Slim' : '如意工作台';
     const info = { CFBundleExecutable: 'RuyiDesktop', CFBundleIdentifier: full ? FULL_APP_ID : 'org.ruyi.workbench.development',
-      CFBundleName: name, CFBundleDisplayName: name, CFBundlePackageType: 'APPL',
-      CFBundleShortVersionString: '3.0.1', CFBundleVersion: '3.0.1', LSMinimumSystemVersion: '14.0',
+      CFBundleIconFile: 'Ruyi.icns', CFBundleName: name, CFBundleDisplayName: name, CFBundlePackageType: 'APPL',
+      CFBundleShortVersionString: require('../package.json').version, CFBundleVersion: require('../package.json').version, LSMinimumSystemVersion: '14.0',
       NSMicrophoneUsageDescription: '将语音转换为工作台输入文字。',
       NSDocumentsFolderUsageDescription: '读取文稿目录中的本地工作台程序文件和你选择的工作区。',
       ...(bundled ? { RuyiBundledWorkbench: 'true' } : { RuyiWorkbenchRoot: root }),

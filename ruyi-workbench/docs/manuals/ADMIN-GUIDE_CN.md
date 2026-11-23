@@ -6,7 +6,7 @@ Ruyi for Mac 面向 Apple Silicon，部署目标为 macOS 14。核对同批 DMG 
 
 | 版本 | 随包能力 | 默认业务数据目录 |
 | --- | --- | --- |
-| Ruyi Full | Node 工作台、ripgrep、Python、Office/PDF、Chromium 和桌面自动化 | `~/.ruyi-workbench-full` |
+| Ruyi | Node 工作台、ripgrep、Python、Office/PDF、Chromium 和桌面自动化 | `~/.ruyi-workbench-full` |
 | Ruyi Slim | Node 工作台、ripgrep、原生宿主 | `~/.ruyi-workbench` |
 
 两个版本均需配置模型。云端模型需要网络，本机或内网模型须先启动服务。系统浏览器模式可以交接网址；要控制网页内容，Full 中选择内置浏览器。

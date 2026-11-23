@@ -1,5 +1,7 @@
 Ruyi Workbench for Mac — local/internal trial
 
+When upgrading, quit and move the old Slim Ruyi.app out of Applications before installing Ruyi.app (formerly Ruyi Full) and Ruyi Slim.app. Each edition keeps its existing data directory.
+
 This trusted-source trial uses ad-hoc signing. It has no Developer ID and is not notarized by Apple. Checksums verify matching bytes, not publisher identity.
 
 Installation

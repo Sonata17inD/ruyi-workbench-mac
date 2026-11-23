@@ -141,6 +141,7 @@ function createMissionCardProjection({
       // (public/js/steward-board.js 读 row.kind)就靠它。谎报的后果从「状态说错」变成「身份说错」,
       // 如实取 sessionKind 这件事因此比修前更要紧,不是更松。
       sessionId: head.id, missionId: sessionMissionId(head), title: head.title || '', cwd: head.cwd || '', kind: sessionKind(head),
+      ...(head.pinned === true ? { pinned: true } : {}),
       // 121-K3(34 号文 §4.2):`kind` 与「这是不是一条速查线程」**从这一刀起不再是同一件事**。
       // 修前 13e 只给 mission 与【管家关心的】线程造卡片,于是「有卡片 + kind==='quick_ask'」恰好等价于
       // 「管家用 steward_quick_ask 开的速查线程」—— 117r-D5 那段注释就是建立在这个巧合上的。

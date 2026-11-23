@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-ui-mode="pro" data-density="compact">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,11 +11,10 @@
          换行归一后的 UTF-8 字节)的 SHA-256。【改动那段内联脚本的任何字符,都要同步重算这个哈希】,否则浏览器会拒跑预绘、
          首帧闪错主题;静态锁 inline-script-csp-hash.static.e2e.js 会在不一致时变红,并给出新值。
          style-src 仍保留 'unsafe-inline'(界面里大量 style= 属性与动态 style,不属本次收紧范围)。 -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-cEZAaMEoutk22UQJv1fdgsnXprYXVfAvyBZqNZBTt7I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dDa74vNlHevcfAZlPKNEgb2fTvgA1APH8qJCPHEOID8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
     <meta name="wcw-token" content="__WCW_TOKEN__" />
     <title data-i18n="app.title">如意工作台</title>
-    <!-- v0.8-S8 favicon:内联如意 tile 主标(藏蓝墨底 + 固定深色版青花/鎏金 #6b8ff2/#f2c14e)。data-URI,无外链。 -->
-    <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%20120'%3E%3Crect%20x='2'%20y='2'%20width='116'%20height='116'%20rx='26'%20fill='%230e1526'/%3E%3Cg%20transform='translate(10,10)%20scale(0.84)'%3E%3Cg%20transform='rotate(42%2060%2060)'%3E%3Cpath%20fill='%236b8ff2'%20d='M60%2062%20C46%2055%2030%2044%2030%2032%20A13%2013%200%200%201%2053%2024%20A7.5%207.5%200%201%201%2067%2024%20A13%2013%200%200%201%2090%2032%20C90%2044%2074%2055%2060%2062%20Z'/%3E%3Cpath%20fill='none'%20stroke='%236b8ff2'%20stroke-width='9.5'%20stroke-linecap='round'%20d='M60%2057%20C53.5%2073.7%2066.5%2090.3%2057.7%20107'/%3E%3C/g%3E%3Cpath%20fill='%23f2c14e'%20d='M28%2016%20C29.8%2022%2031.6%2023.8%2037%2025.5%20C31.6%2027.2%2029.8%2029%2028%2035%20C26.2%2029%2024.4%2027.2%2019%2025.5%20C24.4%2023.8%2026.2%2022%2028%2016%20Z'/%3E%3C/g%3E%3C/svg%3E" />
+    <link id="ruyiFavicon" rel="icon" type="image/svg+xml" href="/brand/tile-light.svg" />
     <!-- EC-D CSS physical layers. Order is the original monolith cascade; keep synchronized with styles.css. -->
     <link rel="stylesheet" href="/css/tokens.css" />
     <link rel="stylesheet" href="/css/themes/color-schemes.css" />
@@ -43,6 +42,7 @@
     <link rel="stylesheet" href="/css/views/prompt-dock.css" />
     <link rel="stylesheet" href="/css/views/background-tray.css" />
     <link rel="stylesheet" href="/css/views/migration.css" />
+    <link rel="stylesheet" href="/css/views/archive-workbench.css" />
     <link id="hljs-dark" rel="stylesheet" href="/vendor/github-dark.min.css" />
     <link id="hljs-light" rel="stylesheet" href="/vendor/github.min.css" disabled />
     <script>
@@ -56,37 +56,15 @@
           document.documentElement.setAttribute('data-theme', t);
         } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
       })();
-      // v0.9-S1 (C1): pre-paint uiMode too (simple|pro) so the CSS-driven hides don't flash. Refined from
-      // config on boot.
-      // v1.0.2 (F5): 新装机 localStorage 为空时,默认必须与 server defaultConfig().uiMode 一致('simple'),
-      // 否则先按 pro 绘 → config(simple) 到达再切 = 首屏弹闪。localStorage 有值(老用户)则一律尊重其值。
-      // v1.5 (§3.4): pre-paint data-density too, coupled to uiMode (simple→comfortable / pro→compact),
-      // so the density-driven spacing tokens don't flash on first paint. Refined from config on boot.
-      (function () {
-        try {
-          var m = localStorage.getItem('wcw.uiMode') || 'simple';
-          var mode = m === 'simple' ? 'simple' : 'pro';
-          document.documentElement.setAttribute('data-ui-mode', mode);
-          document.documentElement.setAttribute('data-density', mode === 'simple' ? 'comfortable' : 'compact');
-        } catch (e) {
-          document.documentElement.setAttribute('data-ui-mode', 'simple');
-          document.documentElement.setAttribute('data-density', 'comfortable');
-        }
-      })();
       // 只恢复本机视角偏好，不触碰 Session/Mission 事实。预绘只认显式白名单。
-      // 第121波 K0/K1（34 号文 §2.7／§8.4）：一台两视 —— data-shell-mode 只剩 steward | classic。
-      // 没存过偏好、存了未知值、localStorage 抛异常，一律落 steward；显式存 classic 的落 classic；
-      // 老用户存的已退役的 'preview'（117 波那个已删的第三种壳）也落 steward。这三条与 js/shell-mode.js 的
-      // normalizeShellMode 必须【同构】（静态锁 steward-shell.static.e2e.js A3 钉着）；这里是同一条
-      // 规则的另一份实现，因为预绘必须跑在任何模块加载之前，没法 import。
-      // 管家的准入（开关 stewardEnabledV1 + 骨架齐备）仍在 config 到达后再判，判不过由
-      // recoverStewardShell 回工作台视角。
+      // 新安装从工作台开始；显式管家偏好与旧版 preview 偏好都恢复到管家。
+      // 与 js/shell-mode.js 的 normalizeShellMode 同步。管家的准入在配置到达后判定。
       (function () {
         try {
           var stored = localStorage.getItem('wcw.shellMode');
-          var shellMode = (stored === 'classic') ? stored : 'steward';
+          var shellMode = (stored === 'steward' || stored === 'preview') ? 'steward' : 'classic';
           document.documentElement.setAttribute('data-shell-mode', shellMode);
-        } catch (e) { document.documentElement.setAttribute('data-shell-mode', 'steward'); }
+        } catch (e) { document.documentElement.setAttribute('data-shell-mode', 'classic'); }
       })();
     </script>
   </head>
@@ -111,16 +89,8 @@
            【不印】费用、线程总数、模型名 —— 那三样分别归「用量」页签、左栏组头计数与配置控件。 -->
       <header class="app-topbar" id="appTopbar">
         <div class="tb-left">
-          <!-- 123-S3（2026-09-14 用户走查）：品牌标（121-K8 云头 ＋「如意」字）从顶栏撤下 —— 窗口
-               标题栏已印「如意工作台 Ruyi Workbench」，顶栏再印一遍属重复。云头形状仍在
-               tokens.css 的 --ruyi-cloud（空状态水印）与引导页 48px 品牌标（下方 data-i18n-attr=
-               aria-label:brand.name 那枚）里服役；shell.brand 键留在词表备用。.tb-left 槽位保留，
-               维持顶栏三列栅格。连接态 #statusLine 仍在线程头第二行右端（121-K5）。 -->
-        </div>
-        <!-- 视角切换（§2.2）：滑块式分段钮，快捷键 Ctrl+`。它是【唯一】的切换入口 —— 原来散在
-             管家壳输入区（#stewardClassicBtn）与看板顶部（#stewardBoardClassicBtn）的两枚「整体切到
-             2.0」都退役，data-shell-mode 仍只由 shell-mode.js 的 applyShellMode 一处写。 -->
-        <div class="tb-mid">
+          <button id="railIndexToggle" type="button" class="icon-btn" data-icon="menu" aria-controls="sidebar" aria-expanded="false" data-i18n-attr="aria-label:archive.threadList;title:archive.threadList"></button>
+          <span class="archive-wordmark" aria-label="Ruyi"><i aria-hidden="true"></i>Ruyi</span>
           <div class="lens-seg" id="lensSeg" data-on="steward" role="group"
                aria-label="视角" data-i18n-attr="aria-label:shell.lens.label">
             <span class="lens-thumb" aria-hidden="true"></span>
@@ -128,6 +98,67 @@
                     aria-pressed="true"><span data-i18n="shell.lens.steward">管家</span></button>
             <button type="button" class="lens-btn" data-lens="classic" data-icon="lensWork" data-icon-size="15"
                     aria-pressed="false"><span data-i18n="shell.lens.classic">工作台</span></button>
+          </div>
+        </div>
+        <div class="tb-mid">
+          <button id="workspacePicker" class="workspace-picker" title="工作文件夹" aria-label="选择工作文件夹" data-i18n-attr="aria-label:workspace.select">
+            <span class="wp-icon" aria-hidden="true" data-icon="folder" data-icon-size="15"></span>
+            <span class="wp-name">工作台</span>
+          </button>
+          <div class="topbar thread-head" id="threadHead">
+            <div class="th-row th-row-main">
+              <!-- 3px 色条：只说「这是哪条线程」，一个状态字面量都不认（F1「两套信号不混用」）。
+                   色号问全仓那一张登记表要（steward-conversation.js 的 stewardThreadHueFor）。 -->
+              <span class="th-hue" id="threadHue" aria-hidden="true"></span>
+              <div class="topbar-title">
+                <!-- 「任务 › 线程」面包屑读的就是一行：任务名与线程名并排，中间一个 ›（分隔符由
+                     样式层的 ::after 出，不进文案）。只在【多线程任务】时出现（§2.3／§2.5：
+                     单线程任务只印一个名）。工作区路径仍是它下面那一行（#sessionMeta）。 -->
+                <span class="th-crumb">
+                  <span id="threadMission" class="th-mission" hidden></span>
+                  <strong id="sessionTitle" data-i18n="session.untitled">未命名线程</strong>
+                </span>
+                <span id="sessionMeta"></span>
+              </div>
+              <span id="threadState" class="steward-board-pill th-state" hidden></span>
+              <span id="threadOrigin" class="th-origin" hidden></span>
+
+              <div class="topbar-actions">
+                <details class="thread-options">
+                  <summary data-i18n-attr="title:archive.threadOptions"><span data-i18n="archive.threadOptions">线程选项</span></summary>
+                  <div class="thread-options-body">
+                    <div class="wb-mainview-tabs" role="tablist" aria-label="中栏主视图" data-i18n-attr="aria-label:navigation.mainViewTabs">
+                      <button id="mainViewTabChat" class="wb-mv-tab active" role="tab" aria-selected="true" data-main-view="chat" data-i18n="navigation.conversation">对话</button>
+                      <button id="mainViewTabCanvas" class="wb-mv-tab" role="tab" aria-selected="false" data-main-view="canvas"><span data-i18n="navigation.crew">班组</span><span class="wb-mv-dot" aria-hidden="true"></span></button>
+                      <span class="wb-mv-spacer"></span>
+                    </div>
+                    <div id="threadStewardBand" class="th-steward" hidden>
+                      <span id="threadStewardAvatar" class="th-steward-avatar" aria-hidden="true"></span>
+                      <span id="threadStewardText" class="th-steward-text"></span>
+                      <label class="th-steward-toggle" data-i18n-attr="title:threadHead.watch">
+                        <input type="checkbox" id="threadStewardWatch" />
+                        <span data-i18n="threadHead.watch">交给管家盯</span>
+                      </label>
+                    </div>
+                    <div class="th-row th-row-config">
+                      <div id="threadChips" class="steward-chips" aria-label="线程配置"
+                        data-i18n-attr="aria-label:threadHead.chips"></div>
+                        <div id="contextMeter" class="ctx-meter" title="上下文用量（点击查看/设置）" aria-haspopup="dialog" role="button" tabindex="0"
+                          aria-label="上下文用量" aria-describedby="contextMeterText" data-i18n-attr="aria-label:ctx.meter.aria">
+                          <svg class="ctx-batt" viewBox="0 0 26 13" width="26" height="13" aria-hidden="true">
+                            <rect class="batt-body" x="0.6" y="1.6" width="21.8" height="9.8" rx="2.2" fill="none" stroke-width="1"/>
+                            <rect class="batt-cap" x="23" y="4.4" width="2.4" height="4.2" rx="1"/>
+                            <rect class="batt-fill" x="2" y="3.1" width="17.8" height="6.8" rx="1"/>
+                          </svg>
+                          <span class="ctx-text" id="contextMeterText"></span>
+                        </div>
+                        <p id="statusLine" class="th-conn" data-i18n="status.connecting">正在连接本地服务…</p>
+                      </div>
+                    </div>
+                  </details>
+                <button id="toggleToolsBtn" class="icon-btn" title="工具面板" aria-label="工具面板" data-i18n-attr="title:navigation.toggleTools;aria-label:navigation.toggleTools" data-icon="toolbox"></button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="tb-right">
@@ -147,30 +178,15 @@
                   title="右栏" aria-label="右栏" aria-expanded="false"
                   data-i18n-attr="title:shell.side;aria-label:shell.side"></button>
           <div class="app-gear-wrap">
-            <button type="button" id="appGearBtn" class="icon-btn" data-icon="settings" data-icon-size="17"
-                    aria-haspopup="menu" aria-controls="appGearMenu" aria-expanded="false" title="设置" aria-label="设置"
-                    data-i18n-attr="title:navigation.settings;aria-label:navigation.settings"></button>
-            <!-- 齿轮菜单（§2.2）：2.0 侧栏栏底四钮（清理历史／设置／帮助／快捷键）与顶栏的
-                 「⋯」一起收进来。每一枚都是【原来那个按钮本身】（id、i18n、handler 一个没动），
-                 只是换了住处。
-                 122-L1b（36 号文 §2.12，34 号文 §13.14 ⑥）：**齿轮菜单收成一层七项**。原先这里还有
-                 一枚 #moreMenuBtn「更多」，点开又是一层浮层（主题／界面／能力矩阵／快捷键）——
-                 而那四样里，快捷键就是旁边的 #helpBtn，另外三个的状态载体（#themeToggle／
-                 #uiModeToggle／#capBadge）本来就以 display:none 住在同一个菜单里。于是把三枚
-                 载体【显出来】当菜单项用（文案由 navigation-controls.js 的 syncMoreMenuLabels
-                 写进各自的 .mm-label），#moreMenuBtn 与 openMoreMenu() 整个退役。
-                 顺序＝设置／帮助／快捷键／主题／界面／能力矩阵 ‖ 清理历史（体验走查 #21：破坏性那一项隔开放最后），
-                 每项一枚 role="menuitem"。 -->
+            <button type="button" id="appGearBtn" class="icon-btn" data-icon="more" data-icon-size="17"
+                    aria-haspopup="menu" aria-controls="appGearMenu" aria-expanded="false" title="更多" aria-label="更多"
+                    data-i18n-attr="title:common.more;aria-label:common.more"></button>
             <div id="appGearMenu" class="app-gear-menu" role="menu" hidden>
-              <button id="openSettingsBtn" class="ghost btn-ic" data-icon="settings" role="menuitem"><span data-i18n="navigation.settings">设置</span></button>
               <!-- 118d: 常驻帮助入口。聚合使用手册 / 管理员手册 / 重新打开引导 / 查看日志 / 打开数据目录，
                    每一项都是应用内的真动作，不显示任何路径。旁边的 #helpBtn 仍只管快捷键弹层。 -->
               <button id="helpMenuBtn" class="ghost btn-ic" data-icon="ledger" aria-haspopup="menu" role="menuitem" title="帮助" data-i18n-attr="title:help.menu.title"><span data-i18n="help.menu.title">帮助</span></button>
               <button id="helpBtn" class="ghost btn-ic" data-icon="help" role="menuitem" title="快捷键 (?)" aria-label="快捷键" data-i18n-attr="title:navigation.help;aria-label:navigation.help"><span data-i18n="navigation.shortcuts">快捷键</span></button>
-              <!-- 主题／界面：图标由 applyTheme／applyUiMode 的 iconTextBtn 换（它会清空按钮内容），
-                   所以文案不写死在这里，由 syncMoreMenuLabels() 每次补出 .mm-label（见 navigation-controls.js）。 -->
               <button id="themeToggle" class="ghost btn-ic" role="menuitem" title="切换深/浅色" aria-label="切换深/浅色" data-i18n-attr="title:navigation.switchTheme;aria-label:navigation.switchTheme" data-icon="theme"></button>
-              <button id="uiModeToggle" class="ghost btn-ic" role="menuitem" title="切换到精简界面" aria-label="切换界面模式" data-i18n-attr="title:navigation.switchToSimple;aria-label:navigation.toggleUiMode" data-icon="toolbox"></button>
               <!-- v0.8-S6: capability badge. ●在线/○离线/◐未知 + count of "configured but unavailable" gaps.
                    v1.0-S2 (IA): 只作 renderCapBadge 的状态载体 + openCapPopover 的锚点/click 复用。
                    122-L1b：id 与两个状态 span 一个不动（renderCapBadge 写的就是它们），只补一枚人话标签
@@ -199,19 +215,17 @@
            等你／在跑／排队／今天收工／更早，行由 js/steward-board.js 用 createElement 填（零 innerHTML）。
            它是【两视角共用的同一份 DOM】：管家视角点行＝换焦点，工作台视角点行＝打开那条线程。 -->
       <aside class="sidebar task-rail" id="sidebar" data-testid="sidebar">
+        <div class="classic-sidebar-primary-actions">
+          <button id="newSessionBtn" class="primary full btn-ic" data-icon="plus" data-testid="newSessionBtn"><span id="newSessionBtnLabel" data-i18n="rail.newThread">新对话</span></button>
+        </div>
         <div class="rail-head">
           <h2 class="rail-title"><span data-i18n="rail.title">任务</span><span id="railCount" class="rail-count num"></span></h2>
+          <div class="search-wrap">
+            <input id="sessionSearch" type="search" placeholder="搜索线程" aria-label="搜索线程" data-i18n-attr="placeholder:session.search;aria-label:session.search" autocomplete="off" />
+          </div>
           <button type="button" id="railBoardBtn" class="icon-btn rail-board-btn" data-icon="columns" data-icon-size="15"
                   aria-pressed="false" title="看板密度" aria-label="看板密度"
                   data-i18n-attr="title:rail.board;aria-label:rail.board"></button>
-        </div>
-
-        <div class="search-wrap">
-          <input id="sessionSearch" type="search" placeholder="搜索线程" data-i18n-attr="placeholder:session.search" autocomplete="off" />
-        </div>
-
-        <div class="classic-sidebar-primary-actions">
-          <button id="newSessionBtn" class="primary full btn-ic" data-icon="plus" data-testid="newSessionBtn"><span id="newSessionBtnLabel" data-i18n="rail.newThread">新线程</span></button>
         </div>
 
         <!-- 看板密度的栏头（§2.3 末段）：并发上限就地可调 ＋ 在跑／排队计数 ＋「全部暂停」。
@@ -235,85 +249,14 @@
         <p id="stewardBoardNote" class="steward-board-note" role="status" aria-live="polite"></p>
 
         <!-- 口袋（§2.3）：定时任务／行动流水／记得的关于你／体检 · 用量四项归 K7，这里只留空槽位。 -->
-        <nav id="railPocket" class="rail-pocket" aria-label="口袋" data-i18n-attr="aria-label:rail.pocket"></nav>
+        <div class="archive-rail-foot"><details class="archive-pocket"><summary data-i18n="archive.tools">更多工具</summary><nav id="railPocket" class="rail-pocket" aria-label="口袋" data-i18n-attr="aria-label:rail.pocket"></nav></details>
+          <button type="button" class="archive-settings-link btn-ic" id="openSettingsBtn" data-icon="settings"><span data-i18n="navigation.settings">设置</span></button></div>
       </aside>
 
       <div class="app-views" id="appViews">
       <div class="app-shell">
       <!-- ============ CHAT PANE ============ -->
       <main class="chat-pane" data-main-view="chat">
-        <!-- ============ 线程头（121-K5，34 号文 §2.5／§3）============ -->
-        <!-- 「一份数据一处控件」（§2.1 第 10 条）：117g 的返回带 #stewardReturnBand 与顶栏那两枚
-             #permChip／#modelChip 一起退役 —— 同屏两套线程配置、两种写回语义（一条只改本会话、
-             一条顺带改全局默认）是 33 号文 §0 记下的那笔账。线程的权限／模型／引擎自此【只有】
-             js/steward-chips.js 那一份工厂（createQuickSwitchChips，唯一写口 PATCH /api/sessions/:id
-             ＝ 天然会话级）；「新任务默认」是模型菜单里那一项显式的「设为新任务默认」，权限默认在
-             外框顶栏的盾牌上，两个默认都只在那两处改。
-             两行是【结构】不是换行（§13.7 登记①：单行在 1200 宽会把引擎 chip 挤下去）：
-               第一行＝这是哪条线程（色条 · 任务 › 线程 · 五态 · 来源 · 工作区 · 管家条）；
-               第二行＝这条线程怎么跑（权限／模型／引擎 ＋ 上下文电量）。 -->
-        <header class="topbar thread-head" id="threadHead">
-          <div class="th-row th-row-main">
-            <!-- 3px 色条：只说「这是哪条线程」，一个状态字面量都不认（F1「两套信号不混用」）。
-                 色号问全仓那一张登记表要（steward-conversation.js 的 stewardThreadHueFor）。 -->
-            <span class="th-hue" id="threadHue" aria-hidden="true"></span>
-            <div class="topbar-title">
-              <!-- 「任务 › 线程」面包屑读的就是一行：任务名与线程名并排，中间一个 ›（分隔符由
-                   样式层的 ::after 出，不进文案）。只在【多线程任务】时出现（§2.3／§2.5：
-                   单线程任务只印一个名）。工作区路径仍是它下面那一行（#sessionMeta）。 -->
-              <span class="th-crumb">
-                <span id="threadMission" class="th-mission" hidden></span>
-                <strong id="sessionTitle" data-i18n="session.untitled">未命名线程</strong>
-              </span>
-              <span id="sessionMeta"></span>
-            </div>
-            <span id="threadState" class="steward-board-pill th-state" hidden></span>
-            <span id="threadOrigin" class="th-origin" hidden></span>
-            <!-- 管家条（§2.5／§4.4）：工作台里管家在场的唯一表达。小 avatar 与七态同源
-                 （js/steward-avatar.js 的 renderStewardAvatar），一句话随 watched／seatedBy 变，
-                 开关写 PATCH /api/sessions/:id {stewardWatch}（02:1114 认它，写 true 派 thread.adopted）。 -->
-            <div id="threadStewardBand" class="th-steward" hidden>
-              <span id="threadStewardAvatar" class="th-steward-avatar" aria-hidden="true"></span>
-              <span id="threadStewardText" class="th-steward-text"></span>
-              <label class="th-steward-toggle" data-i18n-attr="title:threadHead.watch">
-                <input type="checkbox" id="threadStewardWatch" />
-                <span data-i18n="threadHead.watch">交给管家盯</span>
-              </label>
-            </div>
-            <div class="topbar-actions">
-              <!-- v0.9-S3 (C3): 常驻工作文件夹选择器。显示当前会话 cwd 短名 + 完整路径 title;点击弹原生选择器。 -->
-              <button id="workspacePicker" class="workspace-picker" title="工作文件夹" aria-label="选择工作文件夹" data-i18n-attr="aria-label:workspace.select">
-                <span class="wp-icon" aria-hidden="true" data-icon="folder" data-icon-size="15"></span>
-                <span class="wp-name">工作台</span>
-              </button>
-              <!-- 121-K4（§2.2）：能力矩阵徽标、界面模式与主题三枚状态载体，连同它们的「⋯」菜单，
-                   一起搬进外框顶栏的齿轮菜单（#appGearMenu）。#toggleToolsBtn【留在这里】——
-                   它是右栏自己的折叠钮，不是全局控件（§2.2 原话）。 -->
-              <button id="toggleToolsBtn" class="icon-btn" title="工具面板" aria-label="工具面板" data-i18n-attr="title:navigation.toggleTools;aria-label:navigation.toggleTools" data-icon="toolbox"></button>
-            </div>
-          </div>
-          <div class="th-row th-row-config">
-            <!-- 权限／模型／引擎三枚 chip 的宿主。控件本体由 js/thread-head.js 用
-                 createQuickSwitchChips({compact:false}) 挂进来 —— 与焦点栏、左栏看板密度同一份工厂。 -->
-            <div id="threadChips" class="steward-chips" aria-label="线程配置"
-                 data-i18n-attr="aria-label:threadHead.chips"></div>
-            <div id="contextMeter" class="ctx-meter" title="上下文用量（点击查看/设置）" aria-haspopup="dialog" role="button" tabindex="0"
-                 aria-label="上下文用量" aria-describedby="contextMeterText" data-i18n-attr="aria-label:ctx.meter.aria">
-              <svg class="ctx-batt" viewBox="0 0 26 13" width="26" height="13" aria-hidden="true">
-                <rect class="batt-body" x="0.6" y="1.6" width="21.8" height="9.8" rx="2.2" fill="none" stroke-width="1"/>
-                <rect class="batt-cap" x="23" y="4.4" width="2.4" height="4.2" rx="1"/>
-                <rect class="batt-fill" x="2" y="3.1" width="17.8" height="6.8" rx="1"/>
-              </svg>
-              <span class="ctx-text" id="contextMeterText"></span>
-            </div>
-            <!-- 连接态（§13.7 登记⑦）：setStatus() 全仓唯一的落点，从顶栏那个 sr-only 的
-                 #statusLine 搬到这里 —— 线程头第二行右端一颗点 ＋ 一句话，是【真看得见】的位置。
-                 它只说「连上没连上」：模型名与服务商由 renderStatusLine 写进 title（悬停才出），
-                 §2.2 末条「顶栏不印模型名」在可见层因此仍然成立。 -->
-            <p id="statusLine" class="th-conn" data-i18n="status.connecting">正在连接本地服务…</p>
-          </div>
-        </header>
-
         <!-- 118c: 启动提示条。两类一次性提示共用同一条:①上次启动【失败】的人话(服务端写在
              last-start-error.json,下次成功启动读出即删) ②本次因原端口被占而【自动改用】的端口。
              默认隐藏,由 renderStartNotice() 按 GET /api/status 的 startNotice 字段填。 -->
@@ -325,11 +268,7 @@
 
         <!-- UI v3 P3a: 中栏主视图 Tab(对话 | 工作台)。data-main-view 状态机切中栏内容;工作台在有活动 run
              时亮点标(.has-activity 显 .wb-mv-dot)。tab 点击 wire 到 switchMainView(见 app.js P3a 模块)。 -->
-        <div class="wb-mainview-tabs" role="tablist" aria-label="中栏主视图" data-i18n-attr="aria-label:navigation.mainViewTabs">
-          <button id="mainViewTabChat" class="wb-mv-tab active" role="tab" aria-selected="true" data-main-view="chat" data-i18n="navigation.conversation">对话</button>
-          <button id="mainViewTabCanvas" class="wb-mv-tab" role="tab" aria-selected="false" data-main-view="canvas"><span data-i18n="navigation.crew">班组</span><span class="wb-mv-dot" aria-hidden="true"></span></button>
-          <span class="wb-mv-spacer"></span>
-        </div>
+
 
         <!-- 第26波b: 任务账本进度条。仅当会话有活动 Mission 时显示;里程碑进度 + autoMode 状态。 -->
         <div id="missionBar" class="mission-bar hidden" role="status" aria-live="polite">
@@ -417,13 +356,6 @@
 
         <section id="messages" class="messages" data-testid="messages" role="log" aria-live="polite" aria-relevant="additions text" aria-atomic="false" aria-label="对话" data-i18n-attr="aria-label:chat.conversationAria">
           <div class="empty-state" id="emptyState">
-            <!-- 第89波:如意云标(48px),24×24 几何,随主题走 --brand-* 变量(123-S3 后顶栏品牌标已撤,它是硕果仅存的一枚)。 -->
-            <div class="empty-logo" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="48" height="48" role="img" aria-label="如意 Ruyi" data-i18n-attr="aria-label:brand.name">
-                <path fill="none" stroke="var(--brand-qh)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-                <circle fill="var(--brand-au)" cx="19.4" cy="3.4" r="1.5"/>
-              </svg>
-            </div>
             <h2 data-i18n="emptyState.title">直接开始工作</h2>
             <p data-i18n="emptyState.description">发送需求、拖入文件、选择项目目录。对话与本机工具会交给当前引擎处理。</p>
             <div class="starters" id="starters"></div>
@@ -442,14 +374,17 @@
                id 一个字没动，chat-stream-runtime.js／interaction-prompts.js 仍按 id 找它。 -->
           <span id="composerHint" class="composer-hint"></span>
           <div class="composer-box">
-            <textarea id="promptInput" rows="1" placeholder="说你想做什么" data-i18n-attr="placeholder:chat.placeholder" data-testid="promptInput"></textarea>
+            <div id="composerEffort" class="composer-effort" role="group" data-i18n-attr="aria-label:archive.effort" hidden></div>
+            <textarea id="promptInput" rows="1" placeholder="继续对话…" data-i18n-attr="placeholder:chat.placeholder" data-testid="promptInput"></textarea>
             <div class="composer-actions">
-              <button id="composerMoreBtn" class="file-label btn-ic" title="更多" aria-label="更多操作" aria-haspopup="menu" data-i18n-attr="title:common.more;aria-label:common.more" data-icon="plus" data-testid="composerMoreBtn"></button>
+
               <button id="agentTeamBtn" class="file-label agent-team-btn" type="button" aria-pressed="false" title="Agent 团队" aria-label="Agent 团队" data-testid="agentTeamBtn"></button>
               <button id="skillBtn" class="file-label btn-ic" title="技能库：启用技能 / 命令 / 一键任务 (/)" aria-label="技能库" data-i18n-attr="title:skills.button.title;aria-label:skills.title"></button>
               <label class="file-label composer-file btn-ic" title="添加文件" data-i18n-attr="title:composer.attachFile" data-icon="paperclip">
                 <input id="fileInput" type="file" multiple />
               </label>
+              <div id="composerModel" class="steward-chips"></div>
+              <button id="composerMoreBtn" class="file-label btn-ic" title="更多" aria-label="更多操作" aria-haspopup="menu" data-i18n-attr="title:common.more;aria-label:common.more" data-icon="more" data-testid="composerMoreBtn"></button>
               <button id="sendBtn" class="primary btn-ic composer-send" data-icon="send" data-testid="sendBtn" data-i18n="chat.send">发送</button>
             </div>
           </div>
@@ -492,7 +427,7 @@
           <button type="button" role="tab" aria-selected="false" data-tab="artifacts"><span class="tool-tab-mark" aria-hidden="true">◇</span><span data-i18n="tool.artifacts">产物</span></button>
           <button type="button" role="tab" aria-selected="false" data-tab="changes"><span class="tool-tab-mark" aria-hidden="true">±</span><span data-i18n="tool.changes">改动</span></button>
           <button type="button" role="tab" aria-selected="false" data-tab="memory"><span class="tool-tab-mark" aria-hidden="true">◉</span><span data-i18n="memory.toolbox.tab">记忆</span></button>
-          <button type="button" role="tab" aria-selected="false" data-tab="agent-runs"><span class="tool-tab-mark" aria-hidden="true">⊙</span><span data-i18n="workflow.shortTitle">工作流</span></button>
+          <button type="button" role="tab" aria-selected="false" data-tab="agent-runs"><span class="tool-tab-mark" aria-hidden="true">⊙</span><span data-i18n="workflow.title">Agent 工作流</span></button>
           <button type="button" role="tab" aria-selected="false" data-tab="usage"><span class="tool-tab-mark" aria-hidden="true">∿</span><span data-i18n="tool.usage">用量</span></button>
           <button type="button" role="tab" aria-selected="false" data-tab="audit"><span class="tool-tab-mark" aria-hidden="true">◷</span><span data-i18n="tool.activity">记录</span></button>
         </div>
@@ -653,19 +588,12 @@
         <button type="button" id="stewardAvatar" class="steward-avatar" data-state="idle"
                 data-i18n-attr="aria-label:stewardShell.avatarLabel" aria-label="如意的头像">
           <svg viewBox="0 0 100 100" aria-hidden="true">
-            <!-- 117i：主体渐变（原型 #avg）。两端的 stop-color 由 css/views/steward-avatar.css
-                 用 --accent / --accent-2 上色，所以这里不写任何色值。 -->
-            <defs>
-              <linearGradient id="stewardAvatarGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop class="sa-stop-a" offset="0"></stop>
-                <stop class="sa-stop-b" offset="1"></stop>
-              </linearGradient>
-            </defs>
             <circle class="sa-ring" cx="50" cy="50" r="44"></circle>
-            <circle class="sa-body" cx="50" cy="50" r="31"></circle>
-            <g class="sa-eyes">
-              <ellipse class="sa-eye" cx="41.5" cy="49" rx="3.1" ry="5.2"></ellipse>
-              <ellipse class="sa-eye" cx="58.5" cy="49" rx="3.1" ry="5.2"></ellipse>
+            <g transform="translate(16 29) scale(.1485)">
+              <g class="sa-body">
+                <path class="sa-slash" d="M0 283 90 75h61L62 283Z"></path>
+                <path fill-rule="evenodd" d="M89 283 206 0h201l51 62-43 104-51 33 68 84H325l-64-78h-61l-32 78ZM222 144h113l32-78H251Z"></path>
+              </g>
             </g>
           </svg>
         </button>
@@ -935,56 +863,50 @@
     <div class="modal-backdrop hidden" id="settingsModal">
       <div class="modal" role="dialog" aria-modal="true" aria-label="设置" data-i18n-attr="aria-label:settings.title">
         <div class="modal-head"><h3 data-i18n="settings.title">设置</h3><button class="icon-btn" data-close-modal aria-label="关闭" data-i18n-attr="aria-label:common.close" data-icon="close"></button></div>
-        <!-- 123-S1 设置弹窗重设计：左侧竖排分组导航（#settingsTabs）＋ 右侧内容面板（#settingsBody），包进 .settings-main。 -->
-        <!-- 布局规则全部在新层 css/views/settings.css；页签仍是 button[data-stab]、面板仍是 #settingsBody 里的 .settings-tab#stab-*， -->
-        <!-- 页签接线（navigation-controls.js switchSettingsTab）与简易模式隐藏（ui-modes.css）的契约不变。 -->
-        <!-- 123-S2：分组标签是可折叠二级菜单 —— 每组一个 <section class="settings-nav-group">，组头是 -->
-        <!-- button.settings-nav-label（带 aria-expanded 与 chevron，【没有】data-stab，不是页签）；默认只展开「通用」， -->
-        <!-- 切页签自动展开其所在组，折叠态存 localStorage（wcw.settingsNavGroups），JS 全部在 navigation-controls.js。 -->
-        <!-- W6 设置重组（用户 2026-09-24「设置里的内容有点乱，把重复／类似的统一成公用的设置」）：散在各页签的同类项收成公用页 —— -->
-        <!-- 「权限与安全」（全局默认权限从管家页搬来＋两条等待时限）、「用量与限额」（预算／花费上限／回合／并发）、「模型分配」 -->
-        <!-- （谁用哪个模型一张表，引擎三处选择合成一处）；「集成」与「MCP 运维」并成一页（#stab-integrations 的 id 不变）。 -->
-        <!-- 控件 id 一个没改，只挪了位置；除服务商卡片外全部改了就存（服务商卡片仍是草稿 ＋「保存服务商」）。 -->
+        <!-- A full-page settings index scrolls the existing controls into view. -->
         <div class="settings-main">
-          <div class="tool-tabs settings-tabs" id="settingsTabs">
-            <section class="settings-nav-group is-open" data-group="general">
-              <button type="button" class="settings-nav-label" data-group="general" aria-expanded="true"><span class="settings-nav-chevron" aria-hidden="true"></span><span data-i18n="settings.group.general">通用</span></button>
-              <button type="button" data-stab="basic" class="active" data-i18n="settings.general">基础</button>
-              <button type="button" data-stab="security" data-i18n="settings.security.tab">权限与安全</button>
-              <button type="button" data-stab="limits" data-i18n="settings.limits.tab">用量与限额</button>
-            </section>
-            <section class="settings-nav-group" data-group="steward">
-              <button type="button" class="settings-nav-label" data-group="steward" aria-expanded="false"><span class="settings-nav-chevron" aria-hidden="true"></span><span data-i18n="settings.group.steward">管家</span></button>
-              <!-- 117e：管家页签排在「通用」一组之后、「模型」一组之前（27 号文 §5 117e 行；W6 起通用组有三页）。 -->
-              <button type="button" data-stab="steward" data-i18n="settings.steward.tab">管家</button>
-            </section>
-            <section class="settings-nav-group" data-group="models">
-              <button type="button" class="settings-nav-label" data-group="models" aria-expanded="false"><span class="settings-nav-chevron" aria-hidden="true"></span><span data-i18n="settings.group.models">模型与服务</span></button>
-              <button type="button" data-stab="models" data-i18n="settings.models.tab">模型分配</button>
-              <button type="button" data-stab="providers" data-i18n="settings.providers">服务商</button>
-              <button type="button" data-stab="voice" data-i18n="settings.nav.voice">语音识别</button>
-              <button type="button" data-stab="claude" data-i18n="settings.agentCli.tab">Agent CLI</button>
-              <button type="button" data-stab="agents" data-i18n="settings.agents">Agent 角色</button>
-            </section>
-            <section class="settings-nav-group" data-group="integrations">
-              <button type="button" class="settings-nav-label" data-group="integrations" aria-expanded="false"><span class="settings-nav-chevron" aria-hidden="true"></span><span data-i18n="settings.group.integrations">工具与集成</span></button>
-              <button type="button" data-stab="network" data-i18n="settings.network">联网搜索</button>
-              <button type="button" data-stab="integrations" data-i18n="settings.integrations">集成与 MCP</button>
-              <button type="button" data-stab="toolbox" data-i18n="settings.nav.toolbox">扩展组件</button>
-              <button type="button" data-stab="skills" data-i18n="settings.nav.skills">技能与模板</button>
-              <button type="button" data-stab="migration" data-i18n="settings.nav.migration">迁移中心</button>
-            </section>
-            <section class="settings-nav-group" data-group="system">
-              <button type="button" class="settings-nav-label" data-group="system" aria-expanded="false"><span class="settings-nav-chevron" aria-hidden="true"></span><span data-i18n="settings.group.system">系统</span></button>
-              <button type="button" data-stab="doctor" data-i18n="navigation.doctor">体检</button>
-              <button type="button" data-stab="storage" data-i18n="settings.nav.storage">存储与数据</button>
-              <button type="button" data-stab="advanced" data-i18n="settings.advanced">高级</button>
-              <button type="button" data-stab="update" data-i18n="settings.update">更新中心</button>
-            </section>
+          <nav class="tool-tabs settings-tabs" id="settingsTabs" aria-label="设置" data-i18n-attr="aria-label:settings.title">
+            <div class="settings-index-head"><span class="archive-wordmark" aria-label="Ruyi"><i aria-hidden="true"></i>Ruyi</span><button class="archive-back btn-ic" type="button" data-close-modal data-icon="back"><span data-i18n="archive.return">返回对话</span></button>
+            <input type="search" id="settingsSearch" data-i18n-attr="placeholder:archive.search;aria-label:archive.search" /></div>
+            <button type="button" data-stab="overview" data-i18n="archive.capabilities">模型与能力</button>
+            <button type="button" data-stab="appearance" data-i18n="settings.catalog.appearance.title">外观</button>
+            <button type="button" data-stab="providers" data-i18n="archive.connections">连接与工具</button>
+            <button type="button" hidden data-parent="providers" data-stab="models" data-i18n="settings.models.tab">模型分配</button>
+            <button type="button" hidden data-parent="providers" data-stab="voice" data-i18n="settings.nav.voice">语音识别</button>
+            <button type="button" hidden data-parent="providers" data-stab="claude" data-i18n="settings.agentCli.tab">Agent CLI</button>
+            <button type="button" hidden data-parent="providers" data-stab="agents" data-i18n="settings.agents">Agent 角色</button>
+            <button type="button" hidden data-parent="providers" data-stab="network" data-i18n="settings.network">联网搜索</button>
+            <button type="button" hidden data-parent="providers" data-stab="integrations" data-i18n="settings.integrations">集成与 MCP</button>
+            <button type="button" hidden data-parent="providers" data-stab="toolbox" data-i18n="settings.nav.toolbox">扩展组件</button>
+            <button type="button" hidden data-parent="providers" data-stab="skills" data-i18n="settings.nav.skills">技能与模板</button>
+            <button type="button" data-stab="security" data-i18n="settings.security.tab">权限与安全</button>
+            <button type="button" data-stab="limits" data-i18n="settings.limits.tab">用量与限额</button>
+            <button type="button" data-stab="steward" data-i18n="settings.steward.tab">管家</button>
+            <button type="button" data-stab="basic" data-i18n="archive.general">通用与维护</button>
+            <button type="button" hidden data-parent="basic" data-stab="migration" data-i18n="settings.nav.migration">迁移中心</button>
+            <button type="button" hidden data-parent="basic" data-stab="doctor" data-i18n="navigation.doctor">体检</button>
+            <button type="button" hidden data-parent="basic" data-stab="storage" data-i18n="settings.nav.storage">存储与数据</button>
+            <button type="button" hidden data-parent="basic" data-stab="advanced" data-i18n="settings.advanced">高级</button>
+            <button type="button" hidden data-parent="basic" data-stab="update" data-i18n="settings.update">更新中心</button>
             <!-- 118d: 上下文帮助。没有 data-stab，所以不参与页签接线与 active 切换；点击按当前页签打开应用内手册的对应小节（锚点表见 js/help-menu.js 的 SETTINGS_TAB_HELP_ANCHORS）。 -->
             <button type="button" id="settingsHelpBtn" class="settings-tab-help" title="这一页怎么用？" aria-label="这一页怎么用？" data-i18n-attr="title:help.tabHelp;aria-label:help.tabHelp">?</button>
-          </div>
+          </nav>
           <div class="modal-body" id="settingsBody">
+          <div class="settings-tab" id="stab-overview"><h2 class="archive-settings-title" data-i18n="settings.title">设置</h2><h3 class="archive-section-name" data-i18n="archive.capabilities">模型与能力</h3><div class="archive-model-settings"><div class="model-assign-row" data-assign="main">
+                  <div class="model-assign-label">
+                    <label for="cfgMainProvider" data-i18n="settings.models.row.main">对话主模型</label>
+                    <p id="mainEngineHint" class="field-help muted"></p>
+                  </div>
+                  <div class="model-assign-pick">
+                    <select id="cfgMainProvider"></select>
+                    <select id="cfgMainModel" aria-labelledby="cfgMainProvider"></select>
+                  </div>
+                </div>
+                <label class="archive-setting-row"><span data-i18n="archive.defaultEffort">默认推理等级</span><select id="archiveDefaultEffort" class="prov-effort-select"></select></label>
+            <label class="archive-setting-row"><span data-i18n="provider.reasoning">推理链</span><span class="archive-switch-state" aria-hidden="true"></span><input id="archiveReasoning" type="checkbox" role="switch"></label>
+            <label class="archive-setting-row"><span data-i18n="archive.vision">支持视觉</span><span class="archive-switch-state" aria-hidden="true"></span><input id="archiveVision" type="checkbox" role="switch"></label>
+            <p id="archiveCapabilityNote" class="muted"></p></div></div>
+          <div class="settings-tab" id="stab-appearance"><h3 class="archive-section-name" data-i18n="settings.catalog.appearance.title">外观</h3></div>
 
           <!-- ===== 基础 ===== -->
           <div class="settings-tab active" id="stab-basic">
@@ -1000,29 +922,19 @@
                 <option value="en-US" data-i18n="settings.language.enUS">English</option>
               </select>
             </div>
-            <!-- v0.9-S1 (C1): 界面模式 + 输出风格 -->
-            <div class="field-grid">
-              <div class="field-block">
-                <label for="cfgUiMode" data-i18n="settings.uiMode">界面模式</label>
-                <select id="cfgUiMode">
-                  <option value="pro" data-i18n="settings.uiMode.pro">专家（完整三栏 / 调试面板）</option>
-                  <option value="simple" data-i18n="settings.uiMode.simple">精简（对话里说人话、收起开发者细节）</option>
-                </select>
-              </div>
-              <div class="field-block">
-                <label for="cfgOutputStyle" data-i18n="settings.outputStyle">输出风格</label>
-                <select id="cfgOutputStyle">
-                  <option value="detailed" data-i18n="settings.outputStyle.detailed">详细（默认）</option>
-                  <option value="concise" data-i18n="settings.outputStyle.concise">简洁（直接给结果）</option>
-                </select>
-              </div>
+            <div class="field-block">
+              <label for="cfgOutputStyle" data-i18n="settings.outputStyle">输出风格</label>
+              <select id="cfgOutputStyle">
+                <option value="detailed" data-i18n="settings.outputStyle.detailed">详细（默认）</option>
+                <option value="concise" data-i18n="settings.outputStyle.concise">简洁（直接给结果）</option>
+              </select>
             </div>
             <div class="field-block">
               <label for="cfgShellMode" data-i18n="shell.settingLabel">启动默认视角</label>
               <select id="cfgShellMode">
-                <!-- 121-K1（34 号文 §2.7）：一台两视，选项顺序与 SHELL_MODES 同序（默认在前）；管家开关关时由 steward-shell.js 置 disabled 并显示下面那句提示。 -->
-                <option value="steward" data-i18n="shell.settingSteward">管家（默认）</option>
-                <option value="classic" data-i18n="shell.settingClassic">工作台</option>
+                <!-- 121-K1（34 号文 §2.7）：一台两视，选项顺序与 SHELL_MODES 同序；管家开关关时由 steward-shell.js 置 disabled 并显示下面那句提示。 -->
+                <option value="steward" data-i18n="shell.settingSteward">管家</option>
+                <option value="classic" data-i18n="shell.settingClassic">工作台（默认）</option>
               </select>
               <p class="field-help muted" data-i18n="shell.settingHint">切换只改变本机界面，不迁移或改写任务与线程数据；可随时切回。</p>
               <p class="field-help muted" id="stewardShellModeHint" data-i18n="stewardShell.settingDisabledHint" hidden>要用管家壳，先在设置里打开管家。</p>
@@ -1565,16 +1477,6 @@
               <h4 id="modelAssignHeading" class="settings-subhead" data-i18n="settings.models.title">谁用哪个模型</h4>
               <p class="muted prov-hint" data-i18n="settings.models.hint">每一行管一件事，选中即保存。「跟随」＝这一行不单独指定。服务商的地址、密钥与模型清单在「服务商」页里管。</p>
               <div class="model-assign-list" id="modelAssignList">
-                <div class="model-assign-row" data-assign="main">
-                  <div class="model-assign-label">
-                    <label for="cfgMainProvider" data-i18n="settings.models.row.main">对话主模型</label>
-                    <p id="mainEngineHint" class="field-help muted"></p>
-                  </div>
-                  <div class="model-assign-pick">
-                    <select id="cfgMainProvider"></select>
-                    <select id="cfgMainModel" aria-labelledby="cfgMainProvider"></select>
-                  </div>
-                </div>
                 <!-- 123-N2：新线程默认引擎（last / global）。W6：从 Agent CLI 页搬来，与主模型同一处。 -->
                 <div class="model-assign-row model-assign-sub" data-assign="newThread">
                   <div class="model-assign-label">
@@ -1922,7 +1824,7 @@
           </div>
 
           <!-- ===== 体检 ===== -->
-          <div class="settings-tab" id="stab-doctor">
+          <div class="settings-tab" id="stab-doctor"><p id="archivePortDetail" class="muted"></p>
             <div class="settings-section-head">
               <div>
                 <h4 class="settings-subhead" data-i18n="settings.doctor.title">运行环境体检</h4>

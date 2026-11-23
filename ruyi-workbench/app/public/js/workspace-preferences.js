@@ -12,7 +12,6 @@ export function createWorkspacePreferencesDomain({
   saveConfigPartial = async () => false,
   iconTextBtn = () => {},
   syncMoreMenuLabels = () => {},
-  normalizeTabsForUiMode = () => {},
   newSession = async () => {},
   patchSession = async () => {},
   loadFileTree = async () => {},
@@ -36,9 +35,10 @@ function applyTheme(theme) {
   const forced = themeOverrideFromUrl();
   const pref = forced || (theme === 'light' || theme === 'dark' ? theme : 'system');   // 体验走查 #17：没存过／未知值＝跟随系统
   const eff = effectiveTheme(pref);
-  // v1.0.2 (F5): 同 applyUiMode —— 值未变不重写 data-theme,避免 config 到达后与预绘同值时的无谓重排。
   // 主题预绘(index.html)默认 'system',与 server defaultConfig().theme 一致(体验走查 #17),新装机无闪;此处仅回写 localStorage。
   if (document.documentElement.getAttribute('data-theme') !== eff) document.documentElement.setAttribute('data-theme', eff);
+  const favicon = $('ruyiFavicon');
+  if (favicon) favicon.setAttribute('href', '/brand/tile-' + eff + '.svg');
   $('hljs-dark').disabled = eff !== 'dark';
   $('hljs-light').disabled = eff === 'dark';
   const tbtn = $('themeToggle');
@@ -58,47 +58,13 @@ function applyTheme(theme) {
     } catch { /* ignore */ }
   }
   if (!forced) { try { localStorage.setItem('wcw.theme', pref); } catch { /* ignore */ } }
+  syncMoreMenuLabels();
 }
 function toggleTheme() {
   const cur = (() => { try { return localStorage.getItem('wcw.theme') || 'system'; } catch { return 'system'; } })();
   const next = cur === 'dark' ? 'light' : cur === 'light' ? 'system' : 'dark';
   applyTheme(next);
   saveConfigPartial({ theme: next });
-}
-
-/* ---------------- v0.9-S1 (C1): uiMode simple/pro ---------------- */
-// Mirrors applyTheme: sets [data-ui-mode] (CSS drives the simple-mode hides + font bump), swaps the toggle
-// glyph/title, and caches to localStorage so the head pre-paint avoids a flash on next load.
-function applyUiMode(mode) {
-  const m = mode === 'simple' ? 'simple' : 'pro';
-  // v1.0.2 (F5): 值未变时不写 DOM 属性(避免无谓的样式重算/重排 —— 尤其 config 到达后 applyUiMode 常与
-  // 预绘值相同)。localStorage 仍回写以保证下次预绘一致。
-  const cur = document.documentElement.getAttribute('data-ui-mode');
-  if (cur !== m) document.documentElement.setAttribute('data-ui-mode', m);
-  // v1.5 (§3.4): 密度随分级联动 —— 简易=舒适(更大点击区/留白)、专家=紧凑(信息密度高)。data-density
-  // 驱动间距/点击区 token 缩放(styles.css [data-density] 块)。与 data-ui-mode 同步写,避免脱钩。
-  const dens = m === 'simple' ? 'comfortable' : 'compact';
-  if (document.documentElement.getAttribute('data-density') !== dens) document.documentElement.setAttribute('data-density', dens);
-  // v3 (§B2): agent-runs 页签在简易模式显示「AI 工作」(聚合工作流+用量/审计 mini 入口),专家模式保留「Agent 工作流」。
-  { const tab = document.querySelector('.tool-pane .tool-tabs button[data-tab="agent-runs"]'); if (tab) tab.textContent = (m === 'simple' ? t('workflow.simpleTitle') : t('workflow.title')); }
-  const btn = $('uiModeToggle');
-  if (btn) {
-    // 第89波 emoji 清零:界面模式切换与 themeToggle 同走 icons.js(精简=sparkles / 专家=toolbox)。
-    iconTextBtn(btn, m === 'simple' ? 'sparkles' : 'toolbox', '');
-    btn.title = t(m === 'simple' ? 'navigation.switchToExpert' : 'navigation.switchToSimple');
-    btn.setAttribute('aria-label', t('navigation.toggleUiMode'));
-  }
-  try { localStorage.setItem('wcw.uiMode', m); } catch { /* ignore */ }
-  // v1.0-S2 (IA): 更新「⋯」菜单里的界面模式项文案（若菜单当前打开）。
-  syncMoreMenuLabels();
-  normalizeTabsForUiMode(m);
-}
-function toggleUiMode() {
-  const next = document.documentElement.getAttribute('data-ui-mode') === 'simple' ? 'pro' : 'simple';
-  applyUiMode(next);
-  if (state.config) state.config.uiMode = next;
-  saveConfigPartial({ uiMode: next });
-  toast(next === 'simple' ? t('toast.uiModeSimple') : t('toast.uiModeExpert'), 'ok');
 }
 
 /* ---------------- v0.9-S3 (C3): working-folder ---------------- */
@@ -423,7 +389,6 @@ function pickWorkspace(anchor) {
 /* ---------------- sessions ---------------- */
   return Object.freeze({
     applyTheme,
-    applyUiMode,
     currentWorkspace,
     pickWorkspace,
     pickWorkspaceNative,
@@ -431,6 +396,5 @@ function pickWorkspace(anchor) {
     renderWorkspacePicker,
     setWorkspace,
     toggleTheme,
-    toggleUiMode,
   });
 }

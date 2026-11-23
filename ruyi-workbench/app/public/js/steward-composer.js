@@ -16,7 +16,7 @@
 // 纪律）；本模块唯一的 timer 是去抖 setTimeout（一处 setTimeout ＋ 一处 clearTimeout，都锁在
 // schedulePreroute/cancelPreroute 里）。
 
-import { stewardEscapeStack, doc, byId, el, isSubmitEnter } from './steward-chips.js';   // 117j UX-F3：候选列表走同一个 Esc 栈；117n-M1：DOM 基础件复用（doc/byId/el 不再本地重复）；33 号文 §4：回车发送的输入法守卫也只有那一条
+import { stewardEscapeStack, doc, byId, el, bindEnterToSubmit } from './steward-chips.js';   // 117j UX-F3：候选列表走同一个 Esc 栈；117n-M1：DOM 基础件复用（doc/byId/el 不再本地重复）；33 号文 §4：回车发送的输入法守卫也只有那一条
 // 32 号文 §4（M2）：候选列表的开合（Esc／点外／焦点归还／同一时刻只允许一个浮层）交给两壳共用的
 // 浮层原语。它住在 js/popover.js，本模块只取那一套【开合】，把 3.0 自己的 .steward-target-picker
 // 经 opts.layer 交给它 —— 容器、id、类名、role、[hidden] 与「就地在 .stewardComposer 里」一个字不改。
@@ -659,10 +659,9 @@ export function createStewardComposer({
     // 都天然满足 W2-2 那条次序要求：撤回之后的「换一条」在【别的按钮的 click 处理器里】打开列表，
     // 而那一刻（mousedown 已成过去、栈里还没有这一层）谁都还没动手，目标处理器随后才把它打开 ——
     // 不会刚开就被自己关掉（实测 G2a 曾经退化成 0 项，就是这个次序问题）。
+    bindEnterToSubmit(input, () => submit());
     input.addEventListener('keydown', event => {
-      // 33 号文 §4：回车发送的判据（Enter ＋ 非 Shift ＋ 非输入法组合中）全仓只有 steward-chips.js
-      // 一份；这个监听器还兼管 Esc 与 Tab，所以读判据、不换整框接线。
-      if (isSubmitEnter(event)) { event.preventDefault(); submit(); return; }
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === 'Escape') { closePicker(); return; }
       if (event.key === 'Tab' && !event.shiftKey && cycleTarget()) event.preventDefault();
     });

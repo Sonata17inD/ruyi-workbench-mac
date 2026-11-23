@@ -106,3 +106,18 @@ test('[C4] 中途装载只追加在尾部,frozenNames 跟着变', () => {
   assert.deepEqual(afterNames.slice(0, before.length), before, '已有的不挪位(只追加)');
   assert.deepEqual(st.frozenNames(), afterNames);
 });
+
+test('GUI starters come from the built-in bridge and respect desktop access', () => {
+  const routes = {
+    ai_computer_control__observe: { serverId: 'ai-computer-control', toolName: 'observe' },
+    ai_computer_control__browser_click: { serverId: 'ai-computer-control', toolName: 'browser_click' },
+    other__observe: { serverId: 'other', toolName: 'observe' },
+  };
+  const tools = Object.keys(routes).map(name => ({ type: 'function', function: { name, parameters: { type: 'object' } } }));
+  const offeredNames = (message, desktopOverride = true) =>
+    names(srv.createToolLoadingState(cfg, message, [], tools, routes, null, { desktopOverride }));
+  assert.deepEqual(offeredNames('通过桌面控制读取窗口'), ['ai_computer_control__observe']);
+  assert.deepEqual(offeredNames('在浏览器里点击按钮'), ['ai_computer_control__browser_click']);
+  assert.deepEqual(offeredNames('通过桌面控制读取窗口', false), []);
+  assert.deepEqual(offeredNames('你好'), []);
+});

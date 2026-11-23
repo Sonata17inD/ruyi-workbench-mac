@@ -1,14 +1,16 @@
 # Mac 本地／内部试用部署、升级与恢复
 
+从旧版升级时，请先退出并移走旧 Slim 的 Ruyi.app，再分别安装 Ruyi.app（原 Ruyi Full）和 Ruyi Slim.app。两版沿用各自的数据目录。
+
 适用版本：如意3.0.1，Apple Silicon arm64，本地／内部试用渠道。当前实测主机为macOS27.0.1；macOS14是最低目标，尚未完成实际运行验证。本渠道使用ad-hoc签名，无Developer ID、Apple公证或票据，校验值不证明发布者身份。
 
 ## 安装和首次运行
 
-从可信发送方获取同一批DMG及SHA256。核对校验值，打开DMG，将完整应用（Full 为 `Ruyi Full.app`，Slim 为 `Ruyi.app`）复制到`/Applications`或个人`~/Applications`，等复制结束，推出镜像，再打开安装位置的App。目标机不需要另装Node、Python、Homebrew或Xcode。
+从可信发送方获取同一批DMG及SHA256。核对校验值，打开DMG，将完整应用（Full 为 `Ruyi.app`，Slim 为 `Ruyi Slim.app`）复制到`/Applications`或个人`~/Applications`，等复制结束，推出镜像，再打开安装位置的App。目标机不需要另装Node、Python、Homebrew或Xcode。
 
 下载来源可能触发Gatekeeper。确认来源和校验值后，按系统“隐私与安全性”中实际提供的“仍要打开”流程处理；组织策略不允许时联系设备管理员。不要移除quarantine、关闭Gatekeeper或SIP。当前账号的本地安装成功，不代表真实下载来源首次允许已经验证。
 
-Ruyi Full 首次在前台打开时会向 macOS 请求缺少的屏幕录制和辅助功能权限，并为仍缺少的权限显示设置入口。按系统提示确认即可。稍后可以从应用菜单「桌面权限」重试。Full 使用独立的应用标识 `org.ruyi.workbench.full`，与 Slim 分开登记权限。麦克风在使用语音功能时请求。
+Ruyi 首次在前台打开时会向 macOS 请求缺少的屏幕录制和辅助功能权限，并为仍缺少的权限显示设置入口。按系统提示确认即可。稍后可以从应用菜单「桌面权限」重试。Full 使用独立的应用标识 `org.ruyi.workbench.full`，与 Slim 分开登记权限。麦克风在使用语音功能时请求。
 
 ## 发行变体与兼容清单
 

@@ -386,7 +386,7 @@ export function createChatRenderPrimitives(deps = {}) {
       // Badge = colored dot + engine name; the dot/tint color comes from --eng-color set inline here.
       const badge = el('span', 'eng-badge', vis.label);
       badge.style.setProperty('--eng-color', vis.colorVar);
-      head.appendChild(badge);
+      head.append(el('span', 'archive-author', 'Ruyi'), badge);
       const model = meta && meta.model;
       if (model) head.append(el('span', 'eng-model', model));
     } else {
@@ -401,13 +401,7 @@ export function createChatRenderPrimitives(deps = {}) {
   function buildMsgAvatar(box, role) {
     const NS = 'http://www.w3.org/2000/svg';
     if (role === 'assistant') {
-      // 如意云头(与 --ruyi-cloud 同一三瓣路径),fill=currentColor(=--accent-ink 白);底色由调用处按引擎色设。
-      const svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', '0 0 120 70'); svg.setAttribute('width', '22'); svg.setAttribute('height', '13');
-      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('fill', 'currentColor');
-      const cloud = document.createElementNS(NS, 'path');
-      cloud.setAttribute('d', 'M60 62 C46 55 30 44 30 32 A13 13 0 0 1 53 24 A7.5 7.5 0 1 1 67 24 A13 13 0 0 1 90 32 C90 44 74 55 60 62 Z');
-      svg.appendChild(cloud); box.appendChild(svg);
+      box.appendChild(el('i', 'ruyi-avatar-mark'));
     } else if (role === 'user') {
       // 中性人形剪影(头 + 肩),fill=currentColor(=--ink)。
       const svg = document.createElementNS(NS, 'svg');

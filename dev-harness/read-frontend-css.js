@@ -34,11 +34,12 @@ const CSS_PAYLOAD_GROUPS = Object.freeze([
   'css/views/prompt-dock.css',
   'css/views/background-tray.css',
   'css/views/migration.css',
+  'css/views/archive-workbench.css',
 ]);
 const CSS_ROUTES = Object.freeze(CSS_PAYLOAD_GROUPS.flatMap(group => Array.isArray(group) ? group : [group]));
 const CSS_COMPAT_ROUTES = Object.freeze(['css/views/chat.css']);
 // frontend-domains and live-full-text verify the assembled stylesheet against this digest.
-const LEGACY_STYLES_SHA256 = 'b98aab331819db3353d3feb1be5447a2b1f25821432199a9f25b2b34fa66ad04';
+const LEGACY_STYLES_SHA256 = '0f0bea9c7f442d909f3d3bc5a0f66b852957bc94cf38919cfcf7e202ae4a1746';
 
 function cssSourceFiles() {
   return CSS_ROUTES.map(route => path.join(PUBLIC, ...route.split('/')));

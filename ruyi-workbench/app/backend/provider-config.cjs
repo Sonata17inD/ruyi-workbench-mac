@@ -15,17 +15,17 @@ const PROVIDER_PRESETS = [
   // defaultModel/models 刻意留空:本机装了哪些模型只有探测才知道,预填一个不存在的名字反而误导。
   {
     id: 'ollama', label: 'Ollama (本机模型,免 Key)', type: 'openai-compat',
-    baseUrl: 'http://127.0.0.1:11434/v1', reasoning: false, defaultModel: '', models: [],
+    baseUrl: 'http://127.0.0.1:11434/v1', reasoning: true, vision: true, defaultModel: '', models: [],
     keyOptional: true,
   },
   {
     id: 'lmstudio', label: 'LM Studio (本机模型,免 Key)', type: 'openai-compat',
-    baseUrl: 'http://127.0.0.1:1234/v1', reasoning: false, defaultModel: '', models: [],
+    baseUrl: 'http://127.0.0.1:1234/v1', reasoning: true, vision: true, defaultModel: '', models: [],
     keyOptional: true,
   },
   {
     id: 'openai-compatible', label: '自定义 (OpenAI 兼容 / 内网自建)', type: 'openai-compat',
-    baseUrl: '', reasoning: false, defaultModel: '', models: [],
+    baseUrl: '', reasoning: true, vision: true, defaultModel: '', models: [],
   },
 ];
 
@@ -170,7 +170,7 @@ function createProviderConfigNormalizer({
       model: str(raw.model, 120).trim(),
       models,
       ...(hiddenModels.length ? { hiddenModels } : {}),
-      reasoning: raw.reasoning === true,
+      reasoning: raw.reasoning === undefined || raw.reasoning === true,
       reasoningEffort: providerReasoningEffort(raw),
       // v1.7: apiStyle — protocol preference for this provider: 'chat' (default, OpenAI Chat Completions) or
       // 'responses' (OpenAI Responses API; DeepSeek added it for Codex/agent loops, v4-flash now + v4-pro from
@@ -188,9 +188,9 @@ function createProviderConfigNormalizer({
       ...(normalizeAnthropicAuth(raw.anthropicAuth) ? { anthropicAuth: normalizeAnthropicAuth(raw.anthropicAuth) } : {}),
       ...(normalizeAnthropicThinking(raw.anthropicThinking) ? { anthropicThinking: normalizeAnthropicThinking(raw.anthropicThinking) } : {}),
       ...(normalizeAnthropicFallbacks(raw.anthropicFallbacks) ? { anthropicFallbacks: normalizeAnthropicFallbacks(raw.anthropicFallbacks) } : {}),
-      // v0.8-S6: vision (boolean, default false) — the gate for the v0.9 vision回路 (image parts to the model).
+      // v0.8-S6: vision (boolean, default true) — the gate for the v0.9 vision回路 (image parts to the model).
       // Passed through untouched by sanitizeProvider; surfaced in the capability matrix (provider.vision).
-      vision: raw.vision === true,
+      vision: raw.vision === undefined || raw.vision === true,
       // v0.9-S6 (D4): subagentModel — optional model id runSubAgent uses for spawn_agent sub-turns on THIS
       // provider. Empty ('') = fall back to the main model. Trimmed + length-capped (same shape as `model`).
       subagentModel: str(raw.subagentModel, 120).trim(),

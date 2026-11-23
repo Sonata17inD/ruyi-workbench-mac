@@ -278,7 +278,7 @@ kbd { background: var(--panel-2); border: 1px solid var(--line-2); border-bottom
 .sk-group-t .cnt { font-size: var(--fs-xs); color: var(--muted); background: var(--panel-3); padding: 0 7px; border-radius: var(--r-pill); line-height: 18px; font-variant-numeric: tabular-nums; }
 .sk-group-t .line { flex: 1; height: 1px; min-width: 12px; background: linear-gradient(90deg, var(--line-2), transparent); }
 .sk-group-t .cloud { width: 18px; height: 11px; flex: none; background: var(--muted); opacity: .45;
-  -webkit-mask: var(--ruyi-cloud) center/contain no-repeat; mask: var(--ruyi-cloud) center/contain no-repeat; }
+  -webkit-mask: var(--ruyi-silhouette) center/contain no-repeat; mask: var(--ruyi-silhouette) center/contain no-repeat; }
 .sk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .sk-card { position: relative; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel-2); padding: 12px 13px 11px; display: flex; flex-direction: column; gap: 6px; cursor: pointer;
   transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }

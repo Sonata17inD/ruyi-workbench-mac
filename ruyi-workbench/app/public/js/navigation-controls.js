@@ -17,7 +17,7 @@ import { createHelpMenuDomain } from './help-menu.js';
 import { openSharedHelpDoc } from './help-viewer.js';
 import { openSharedOnboarding } from './onboarding-wizard.js';
 // 每个 Agent CLI 的思考强度档位、压缩缺省项文案、原生用量接口只问这一张登记表（ENGINEERING-SPEC §11.1）。
-import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_THINKING_EFFORT_VALUES, agentCliMeta } from './agent-cli-registry.js';
+import { AGENT_CLI_DEFAULT_ID, agentCliMeta } from './agent-cli-registry.js';
 
 export function createNavigationControlsDomain({
   apiErrText = error => String(error && error.message || error || ''),
@@ -59,7 +59,6 @@ export function createNavigationControlsDomain({
   fillSettings = () => {},
   openSkillPanel = async () => {},
   patchSession = async () => {},
-  toggleUiMode = () => {},
   focusFirstInteractive = () => null,
   loadAgentRoles = async () => {},
   refreshMcpOps = async () => {},
@@ -163,56 +162,6 @@ function renderPalette() {
 // 32 号文 §4（M1-b）：原语本体已搬进 js/popover.js（叶子模块）—— 本域各弹层（模型 chip / 上下文电池 /
 // 会话改名 / 更多菜单）仍从同一条 import 取它，类的用法与 DOM/关闭路径逐字未变。
 
-/* ---------------- 线程配置的两件全局事实（121-K5，34 号文 §3.1）---------------- */
-// 顶栏那枚 #modelChip 与它的弹层（renderModelChip / openModelChipPopover）整段退役：线程的
-// 权限／模型／引擎自此只有 js/steward-chips.js 那一份工厂画一次（写口恒为 PATCH /api/sessions/:id）。
-// 留在本域的是它【独有】的那几件 —— 它们动的是全局配置，不是这条线程：
-//   · 思考强度 / 推理强度（setClaudeThinkingEffort / setProviderReasoningEffort）
-//   · 删模型行（deleteCustomModel ／ deleteProviderModel）
-//   · 刷新模型列表、管理服务商…
-// 三者经本文件末尾导出的 modelMenuExtras 挂进 chips 模型菜单的尾部（组合根一处接线）。
-const PROVIDER_REASONING_EFFORTS_UI = ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
-function activeProvider() {
-  const id = isProviderMode() ? String(currentEngineMeta().providerId || '') : '';
-  return id && id !== 'claude-cli' ? (state.config?.providers || []).find(p => p.id === id) || null : null;
-}
-async function setClaudeThinkingEffort(value) {
-  const effort = AGENT_CLI_THINKING_EFFORT_VALUES.includes(value) ? value : '';
-  const previous = state.config?.claudeThinkingEffort || '';
-  if (effort === previous) return true;
-  state.config.claudeThinkingEffort = effort;
-  onEngineConfigChanged();
-  const saved = await saveConfigPartial({ claudeThinkingEffort: effort });
-  if (!saved) {
-    state.config.claudeThinkingEffort = previous;
-    onEngineConfigChanged();
-    return false;
-  }
-  onEngineConfigChanged();
-  toast(state.streaming
-    ? t('modelMenu.effortChangedNextTurn', { effort: t(`thinkingEffort.${effort || 'default'}`) })
-    : t('modelMenu.effortChanged', { effort: t(`thinkingEffort.${effort || 'default'}`) }), 'ok');
-  return true;
-}
-async function setProviderReasoningEffort(providerId, value) {
-  const effort = PROVIDER_REASONING_EFFORTS_UI.includes(value) ? value : '';
-  const previousProviders = state.config?.providers || [];
-  const current = previousProviders.find(p => p.id === providerId);
-  if (!current || String(current.reasoningEffort || '') === effort) return true;
-  const providers = previousProviders.map(p => p.id === providerId ? { ...p, reasoningEffort: effort } : p);
-  state.config.providers = providers;
-  onEngineConfigChanged();
-  const saved = await saveConfigPartial({ providers });
-  if (!saved) {
-    state.config.providers = previousProviders;
-    onEngineConfigChanged();
-    return false;
-  }
-  toast(state.streaming
-    ? t('modelMenu.effortChangedNextTurn', { effort: t(`provider.reasoningEffort.${effort || 'default'}`) })
-    : t('modelMenu.effortChanged', { effort: t(`provider.reasoningEffort.${effort || 'default'}`) }), 'ok');
-  return true;
-}
 // Write activeProvider + model in ONE POST /api/config, then refresh chip + dependent UI + meter +
 // (silently) the live model list. providerId ''(or 'claude-cli') selects the Claude engine; a provider
 // id writes the model INTO that provider's entry, Claude writes config.model.
@@ -381,35 +330,6 @@ function customModelIdSet() {
   for (const id of (state.config.knownModels || [])) { const v = String(id || '').trim(); if (v) ids.add(v); }
   return ids;
 }
-function appendEffortControl(container, close) {
-  const providerMode = isProviderMode();
-  const provider = activeProvider();
-  if (providerMode && !provider) return;
-  const control = el('label', 'mc-effort-control');
-  control.appendChild(el('span', 'mc-effort-label', t(providerMode ? 'provider.reasoningEffort' : 'modelMenu.thinkingEffort')));
-  const select = el('select', 'mc-effort-select');
-  const values = providerMode
-    ? PROVIDER_REASONING_EFFORTS_UI
-    : agentCliMeta(state.config?.agentCliType).thinkingEfforts;
-  const keyOf = value => (providerMode ? `provider.reasoningEffort.${value || 'default'}` : `thinkingEffort.${value || 'default'}`);
-  for (const value of values) {
-    const option = el('option');
-    option.value = value;
-    option.textContent = t(keyOf(value));
-    select.appendChild(option);
-  }
-  const current = providerMode ? String(provider.reasoningEffort || '') : String(state.config?.claudeThinkingEffort || '');
-  select.value = values.includes(current) ? current : '';
-  select.onchange = async () => {
-    select.disabled = true;
-    const saved = providerMode
-      ? await setProviderReasoningEffort(provider.id, select.value)
-      : await setClaudeThinkingEffort(select.value);
-    if (saved) close(); else select.disabled = false;
-  };
-  control.appendChild(select);
-  container.appendChild(control);
-}
 // 尾部动作用的是 chips 自己的行类名（.steward-chip-option）——它们因此天然进那张菜单的 ↑↓ 行序
 // （steward-chips.js 的 stewardVisibleOptions 只认这一个类名），不必在 chips 那边为它们开第二条键盘路。
 function chipMenuAction(labelKey, action, onClick) {
@@ -438,7 +358,6 @@ const modelMenuExtras = Object.freeze({
   appendTail: (menu, ctx) => {
     const close = (ctx && typeof ctx.close === 'function') ? ctx.close : () => {};
     const redraw = () => { if (ctx && typeof ctx.redraw === 'function') ctx.redraw(); };
-    appendEffortControl(menu, close);
     // 用户走查①：「刷新模型列表」不该把选择界面关掉 —— 关完还得重开一次才能切到刚刷出来的那个模型。
     // 现在：数据刷完就地重画这张菜单（新出现的行当场可点），期间把这一行禁用，防连点发两发请求。
     menu.appendChild(chipMenuAction('modelMenu.refreshModels', 'refreshModels', async event => {
@@ -750,11 +669,20 @@ function openComposerMorePopover() {
     const attach = el('button', 'cm-item'); attach.type = 'button'; attach.append(icon('paperclip', 16), document.createTextNode(t('composer.attachFile')));
     attach.onclick = () => { close(); $('fileInput')?.click(); };
     wrap.appendChild(attach);
-    // 技能 — Claude mode only.
-    if (!isProviderMode()) {
-      const skill = el('button', 'cm-item'); skill.type = 'button'; skill.append(icon('sparkles', 16), document.createTextNode(t('skills.menuLabel')));
-      skill.onclick = () => { close(); openSkillPanel(); };
-      wrap.appendChild(skill);
+    const skills = el('button', 'cm-item');
+    skills.type = 'button';
+    skills.append(icon('sparkles', 16), document.createTextNode(t('skills.menuLabel')));
+    skills.onclick = () => { close(); openSkillPanel(); };
+    wrap.appendChild(skills);
+    const team = $('agentTeamBtn');
+    if (team) {
+      const toggle = el('button', 'cm-item');
+      toggle.type = 'button';
+      toggle.disabled = team.disabled;
+      toggle.setAttribute('aria-pressed', team.getAttribute('aria-pressed') || 'false');
+      toggle.append(icon('agents', 16), document.createTextNode(team.textContent));
+      toggle.onclick = () => { close(); team.click(); };
+      wrap.appendChild(toggle);
     }
     // 🗜 压缩 — both engines (provider goes through the server summary endpoint).
     const compact = el('button', 'cm-item'); compact.type = 'button'; compact.append(icon('compress', 16), document.createTextNode(t('composer.compactContext')));
@@ -765,22 +693,12 @@ function openComposerMorePopover() {
   }, { placement: 'bottom-start', onOpen: node => { const first = node.querySelector('.cm-item'); if (first) first.focus(); } });
 }
 
-/* ---------------- 齿轮菜单里「主题／界面」两项的文案 ---------------- */
-// 122-L1b（36 号文 §2.12）：v1.0-S2 那个顶栏「⋯」更多菜单（openMoreMenu，一层 popover 里放
-// 主题／界面／能力矩阵／快捷键）**整个退役** —— 它的四项在齿轮菜单里本来就各有一枚真控件
-// （#themeToggle／#uiModeToggle／#capBadge 三枚状态载体 ＋ 旁边的 #helpBtn 就是快捷键），
-// 「更多」只是把它们又画了一遍。留下的只有下面这两个纯文案函数：现在它们写的是**那三枚真
-// 按钮自己**的标签，不再是 popover 里的影子项。
-// 为什么标签要每次「补出来」而不是写死在 index.html 里：applyTheme／applyUiMode 用
-// iconTextBtn 换图标，那个函数第一句就是 `btn.textContent = ''` —— 写死的 span 会被它清掉。
 function themeMenuLabel() {
   // 第50波三态:菜单项显示当前偏好(含 system),不再只看有效值。
   let pref = 'dark'; try { pref = localStorage.getItem('wcw.theme') || 'dark'; } catch { /* ignore */ }
   return t('navigation.theme.' + (pref === 'light' || pref === 'system' ? pref : 'dark'));
 }
-function uiModeMenuLabel() { return document.documentElement.getAttribute('data-ui-mode') === 'simple' ? t('navigation.uiMode.simple') : t('navigation.uiMode.expert'); }
 // 把一段文案写进齿轮菜单里某枚按钮的 .mm-label 上；span 不在（被 iconTextBtn 清过）就补一枚。
-// 名字沿用原「⋯」菜单那两个 id（mm-theme-label／mm-uimode-label），别处的引用因此一个不用改。
 function setGearItemLabel(hostId, spanId, text) {
   const host = document.getElementById(hostId);
   if (!host) return null;
@@ -793,10 +711,8 @@ function setGearItemLabel(hostId, spanId, text) {
   span.textContent = text;
   return span;
 }
-// 主题／界面被切换（或语言变了）之后更新两项文案（无 DOM 时静默）。
 function syncMoreMenuLabels() {
   setGearItemLabel('themeToggle', 'mm-theme-label', themeMenuLabel());
-  setGearItemLabel('uiModeToggle', 'mm-uimode-label', uiModeMenuLabel());
 }
 
 /* ---------------- modals ---------------- */
@@ -808,7 +724,11 @@ function openModal(id) {
   _modalTriggers.set(bd, document.activeElement);
   bd.classList.remove('hidden');
   if (id === 'settingsModal') {
-    fillSettings(); switchSettingsTab(state._settingsTab || 'basic');
+    fillSettings();
+    ensureSettingsIndex();
+    $('settingsSearch').value = '';
+    $('settingsSearch').oninput();
+    switchSettingsTab('overview');
     void refreshStatus().catch(() => toast(t('settingsReceipt.refreshFailed'), 'err'));
   }
   const panel = bd.querySelector('.modal, .palette');
@@ -820,6 +740,8 @@ function openModal(id) {
 // (aria-controls 指向菜单的那一枚,就是齿轮钮)。
 function modalReturnTarget(trigger) {
   if (!trigger || typeof trigger.focus !== 'function') return null;
+  const railToggle = $('railIndexToggle');
+  if (trigger.closest('#sidebar') && railToggle?.offsetParent && railToggle.getAttribute('aria-expanded') === 'false') return railToggle;
   if (trigger.isConnected && trigger.offsetParent !== null) return trigger;
   const menu = trigger.closest ? trigger.closest('[role="menu"]') : null;
   const owner = menu && menu.id ? document.querySelector(`[aria-controls="${menu.id}"]`) : null;
@@ -838,126 +760,105 @@ function anyModalOpen() { return [...document.querySelectorAll('.modal-backdrop'
 // 简易模式现在只管对话区与右栏的呈现（工具卡人话、开发者页签），设置里的每一项对所有人都看得见、改得了。
 // W6：「MCP 运维」并进「集成与 MCP」。旧页签名（程序化入口、state._settingsTab 里记着的上一次）一律改投新家，不落空。
 const SETTINGS_TAB_ALIASES = Object.freeze({ mcp: 'integrations' });
-// 123-S2 设置弹窗左侧导航：五枚分组升级为可折叠二级菜单。全部纯新增 ——
-// 折叠态存 localStorage（wcw.* 前缀，与 stewardDetails 同一惯例），缺省只展开「通用」；
-// 切页签（含 openModal 恢复上次页签）自动展开其所在组并落盘；组头点击走一次事件委托，
-// 零定时器、不改任何既有函数签名。组头没有 data-stab，页签接线与简易模式隐藏的规则不受影响。
-const SETTINGS_NAV_STORE_KEY = 'wcw.settingsNavGroups';
-function readSettingsNavOpen() {
-  try {
-    const value = JSON.parse(localStorage.getItem(SETTINGS_NAV_STORE_KEY) || 'null');
-    return Array.isArray(value) ? value.filter(item => typeof item === 'string') : null;
-  } catch { return null; }
-}
-function persistSettingsNavOpen() {
-  const open = [...document.querySelectorAll('#settingsTabs .settings-nav-group.is-open')]
-    .map(group => group.dataset.group).filter(Boolean);
-  try { localStorage.setItem(SETTINGS_NAV_STORE_KEY, JSON.stringify(open)); } catch { /* ignore */ }
-}
-function setSettingsNavGroup(group, open, persist) {
-  if (!group) return;
-  group.classList.toggle('is-open', open);
-  const head = group.querySelector('.settings-nav-label');
-  if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (persist) persistSettingsNavOpen();
-}
-function syncSettingsNavFromStore() {
-  const stored = readSettingsNavOpen();
-  document.querySelectorAll('#settingsTabs .settings-nav-group').forEach(group => {
-    const open = stored ? stored.includes(group.dataset.group) : group.dataset.group === 'general';
-    setSettingsNavGroup(group, open, false);
-  });
-}
-function openSettingsNavGroupFor(stabName) {
-  const tab = document.querySelector(`#settingsTabs button[data-stab="${stabName}"]`);
-  const group = tab && tab.closest ? tab.closest('.settings-nav-group') : null;
-  if (group && !group.classList.contains('is-open')) setSettingsNavGroup(group, true, true);
-}
-let _settingsNavWired = false;
-function ensureSettingsNavWiring() {
-  if (_settingsNavWired) return;
-  const tabs = document.getElementById('settingsTabs');
-  if (!tabs) return;
-  _settingsNavWired = true;
-  syncSettingsNavFromStore();
-  tabs.addEventListener('click', event => {
-    const head = event.target && event.target.closest ? event.target.closest('.settings-nav-label') : null;
-    if (!head || !tabs.contains(head)) return;
-    const group = head.closest('.settings-nav-group');
-    if (group) setSettingsNavGroup(group, !group.classList.contains('is-open'), true);
-  });
-}
-// 123-S2 长面板段内锚点 chip 条：从【已翻译的】段标题现取文案（零新增 i18n 键），每次切页签
-// 重建（语言切换后标签不会留在旧语言）。候选段：basic 的四个折叠分组 / steward 的九张
-// section / claude 的两枚段标题；缺 id 的段标题按「面板 id-sec-N」补一个确定性 id。
-// W6：三枚公用页与合并后的「集成与 MCP」也按段出锚点（段是 section.settings-section，权限页里还有一段搬来的
-// section.steward-settings-group）；只有一段的页（模型分配）不出（下面 targets.length < 2 自动跳过）。
-const SETTINGS_SECTION_SELECTOR = 'section.settings-section, section.steward-settings-group';
-// 2026-10 设置补全：settings-catalog.js 补进来的段（section.settings-section.setcat-section）也进锚点条；
-// 段数够两段的页（高级、存储与数据、联网搜索、管家……）都出 chip 条。
-const SETTINGS_JUMP_PANELS = Object.freeze({
-  'stab-basic': 'details.settings-fold, section.settings-section',
-  'stab-security': SETTINGS_SECTION_SELECTOR,
-  'stab-limits': SETTINGS_SECTION_SELECTOR,
-  'stab-steward': SETTINGS_SECTION_SELECTOR,
-  'stab-claude': SETTINGS_SECTION_SELECTOR,
-  'stab-network': SETTINGS_SECTION_SELECTOR,
-  'stab-integrations': SETTINGS_SECTION_SELECTOR,
-  'stab-storage': SETTINGS_SECTION_SELECTOR,
-  'stab-skills': SETTINGS_SECTION_SELECTOR,
-  'stab-advanced': SETTINGS_SECTION_SELECTOR,
-});
-function jumpTargetLabel(node) {
-  if (node.matches('details.settings-fold')) return node.querySelector('summary')?.textContent.trim() || '';
-  if (node.matches(SETTINGS_SECTION_SELECTOR)) return node.querySelector('h4')?.textContent.trim() || '';
-  return node.textContent.trim();
-}
-function buildSettingsJumpList(panelId) {
-  const panel = document.getElementById(panelId);
-  const selector = SETTINGS_JUMP_PANELS[panelId];
-  if (!panel || !selector) return;
-  panel.querySelector('.settings-jumplist')?.remove();
-  const targets = [...panel.querySelectorAll(selector)]
-    .map((node, index) => {
-      if (!node.id) node.id = `${panelId}-sec-${index + 1}`;
-      return { id: node.id, label: jumpTargetLabel(node) };
-    })
-    .filter(item => item.label);
-  if (targets.length < 2) return;
-  const nav = document.createElement('nav');
-  nav.className = 'settings-jumplist';
-  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  for (const item of targets) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'settings-jump-chip';
-    chip.textContent = item.label;
-    chip.addEventListener('click', () => {
-      document.getElementById(item.id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-    });
-    nav.appendChild(chip);
-  }
-  panel.insertBefore(nav, panel.firstChild);
-}
-// Settings tab switcher (§4.5): toggles the tab-bar button + the matching .settings-tab panel.
-// v1.5 (§1.2): 简易模式下,非白名单页签一律落回「基础」;force=true 供明确的开发者入口(如引导页
-// 「配置 Claude CLI」逃生门)绕过收敛,直达目标页签。
-function switchSettingsTab(name, force) {
-  if (Object.prototype.hasOwnProperty.call(SETTINGS_TAB_ALIASES, name)) name = SETTINGS_TAB_ALIASES[name];
-  state._settingsTab = name;
-  { const sw = $('stab-steward'); if (sw && sw.dataset.only) { delete sw.dataset.only; const bar = sw.querySelector(':scope > .steward-only-bar'); if (bar) bar.remove(); } }   // 走查 #6：「只看这一块」只活到下一次切页签／重开设置
-  ensureSettingsNavWiring();        // 123-S2：首挂事件委托 ＋ 按 localStorage 还原各组折叠态
-  openSettingsNavGroupFor(name);    // 123-S2：切到哪个页签就展开它所在的组（含 openModal 恢复上次页签）
-  buildSettingsJumpList(`stab-${name}`); // 123-S2：长面板顶部重建段内锚点 chip 条（无候选段的面板自动跳过）
-  document.querySelectorAll('#settingsTabs button[data-stab]').forEach(b => b.classList.toggle('active', b.dataset.stab === name)); // 118d: 排尾的「?」不是页签
-  { // 第三波 H6：≤640 页签条是横向滚动条（约 3000px 宽、只看得见三五枚），切页后把激活页签滚进视野正中；竖排侧栏时 scrollWidth==clientWidth，直接跳过
-    const strip = $('settingsTabs'); const cur = strip && strip.querySelector('button[data-stab].active');
-    if (strip && cur && strip.scrollWidth > strip.clientWidth + 1) {
-      const a = cur.getBoundingClientRect(); const b = strip.getBoundingClientRect();
-      strip.scrollLeft += (a.left + a.width / 2) - (b.left + b.width / 2);
+// The index and its targets use the existing tab IDs so links from tools, help and
+// onboarding can still open a particular section of the scrollable document.
+let settingsIndexReady = false;
+let trackSettingsScroll = false;
+function ensureSettingsIndex() {
+  const index = $('settingsTabs'), body = $('settingsBody');
+  if (settingsIndexReady || !index || !body) return;
+  settingsIndexReady = true;
+  const buttons = [...index.querySelectorAll('button[data-stab]')];
+  for (const button of buttons) {
+    const panel = $('stab-' + button.dataset.stab);
+    if (!panel) continue;
+    body.appendChild(panel);
+    if (!panel.querySelector(':scope > .archive-section-name')) {
+      const heading = el('h3', 'archive-section-name', button.textContent);
+      heading.dataset.i18n = button.dataset.i18n;
+      panel.prepend(heading);
     }
   }
-  document.querySelectorAll('.settings-tab').forEach(s => s.classList.toggle('active', s.id === `stab-${name}`));
+  // Load expensive sections when the user reaches them by scrolling as well as by link.
+  for (const event of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+    body.addEventListener(event, () => { trackSettingsScroll = true; }, {passive: true});
+  }
+  let frame = 0;
+  body.addEventListener('scroll', () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (!trackSettingsScroll || $('settingsModal').classList.contains('hidden')) return;
+      const top = body.getBoundingClientRect().top + 48;
+      const panels = [...body.querySelectorAll(':scope > .settings-tab')];
+      const active = panels.filter(panel => panel.getBoundingClientRect().top <= top).pop();
+      if (active && state._settingsTab !== active.id.slice(5)) activateSettingsSection(active.id.slice(5));
+    });
+  });
+  const search = $('settingsSearch');
+  const empty = el('p', 'muted');
+  empty.setAttribute('role', 'status');
+  index.appendChild(empty);
+  function findMatch(button, query) {
+    const panel = $('stab-' + button.dataset.stab);
+    if (!query || button.textContent.toLowerCase().includes(query)) return panel;
+    if (button.dataset.stab === 'providers' && t('settings.providers').toLowerCase().includes(query)) return panel;
+    return [...panel.querySelectorAll('h4, label, summary, .setcat-label')].find(node => node.textContent.toLowerCase().includes(query));
+  }
+  search.oninput = () => {
+    const query = search.value.trim().toLowerCase();
+    for (const button of buttons) button.hidden = query ? !findMatch(button, query) : !!button.dataset.parent;
+    highlightSettingsIndex(state._settingsTab);
+    empty.textContent = buttons.every(button => button.hidden) ? t('archive.noSettings') : '';
+  };
+  search.onkeydown = event => {
+    if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {
+      event.preventDefault();
+      const query = search.value.trim().toLowerCase();
+      const visible = buttons.filter(button => !button.hidden);
+      const first = visible.find(button => button.textContent.toLowerCase() === query) || visible[0];
+      if (first) first.click();
+    }
+  };
+  index.addEventListener('click', event => {
+    const button = event.target.closest('[data-stab]');
+    if (!button || !search.value.trim()) return;
+    const match = findMatch(button, search.value.trim().toLowerCase());
+    if (match) match.scrollIntoView({block:'start'});
+  });
+}
+function switchSettingsTab(name) {
+  ensureSettingsIndex();
+  name = SETTINGS_TAB_ALIASES[name] || name;
+  const panel = $('stab-' + name);
+  if (!panel) return;
+  const steward = $('stab-steward');
+  if (steward?.dataset.only) {
+    delete steward.dataset.only;
+    steward.querySelector(':scope > .steward-only-bar')?.remove();
+  }
+  trackSettingsScroll = false;
+  activateSettingsSection(name);
+  const body = $('settingsBody');
+  body.scrollTop += panel.getBoundingClientRect().top - body.getBoundingClientRect().top;
+}
+function highlightSettingsIndex(name) {
+  const links = [...$('settingsTabs').querySelectorAll('button[data-stab]')];
+  const target = links.find(link => link.dataset.stab === name);
+  const current = target?.hidden ? target.dataset.parent : name;
+  for (const link of links) {
+    const active = !link.hidden && link.dataset.stab === current;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  }
+}
+function activateSettingsSection(name) {
+  state._settingsTab = name;
+  highlightSettingsIndex(name);
+  for (const panel of $('settingsBody').querySelectorAll(':scope > .settings-tab')) {
+    panel.classList.toggle('active', panel.id === 'stab-' + name);
+  }
   if (name === 'agents') loadAgentRoles();
   if (name === 'doctor') {
     refreshStatus();
@@ -965,7 +866,7 @@ function switchSettingsTab(name, force) {
   }
   if (name === 'storage') openStorageTab();   // 2026-10：占用／清理／保留策略从体检页搬到「存储与数据」
   // 技能与模板页的三段是 open() 首次拉到数据后才挂上的 —— 挂完再重建一次锚点条，首次进页也有段内跳转。
-  if (name === 'skills') Promise.resolve(openSettingsSkills()).then(() => { if (state._settingsTab === 'skills') buildSettingsJumpList('stab-skills'); }).catch(() => {});
+  if (name === 'skills') Promise.resolve(openSettingsSkills()).catch(() => {});
   if (name === 'integrations') refreshMcpOps(false); // 55c:打开页签先取清单(不 probe);「全部重测」按钮才 probe=1。W6:连接器清单并进了「集成与 MCP」
 }
 
@@ -976,7 +877,6 @@ function switchSettingsTab(name, force) {
 
 // The right pane is a user-facing workspace surface. Model-only execution tools have no tabs here;
 // raw output remains a hidden compatibility sink for internal actions such as "open data directory".
-const DEV_TABS = new Set([]);
 const TOOLOUT_TABS = new Set([]);
 // v2.7.2: 每轮对话结束自动刷新工具面板——只刷新「打开过」的页签,未打开过的保持懒加载;memory 为跨会话
 // 内容不随单轮结果刷新;files 为默认激活页签恒在集合。主动点击页签由 noteToolTabOpened 纳入集合。
@@ -995,8 +895,6 @@ function refreshToolPane() {
 }
 function noteToolTabOpened(tab) { if (tab) toolTabsOpened.add(tab); }
 function switchTab(tab) {
-  // Old saved developer-tab ids are normalized to the safe workspace default.
-  if (DEV_TABS.has(tab) && document.documentElement.getAttribute('data-ui-mode') === 'simple') tab = 'files';
   const pane = $('toolPane');
   const previous = pane?.querySelector('.tool-tabs button.active')?.dataset.tab;
   if (pane && previous !== tab) pane.scrollTop = 0;
@@ -1052,7 +950,7 @@ function restoreToolsCollapsed() {
   try { v = localStorage.getItem('wcw.toolsCollapsed'); } catch { /* ignore */ }
   if (v === '1') { shell.classList.add('tools-collapsed'); return; }
   if (v === '0') return;
-  if (window.__ruyiDesktop) shell.classList.add('tools-collapsed');
+  shell.classList.add('tools-collapsed');
 }
 // Ensure the tool pane is visible (used by "open MCP inspector" / "体检" entry points), respecting
 // which mechanism applies at the current width.
@@ -1161,12 +1059,6 @@ function initRightResize() {
     handle.addEventListener('pointerup', onUp);
   });
 }
-  function normalizeTabsForUiMode(mode) {
-    if (mode !== 'simple') return;
-    const active = document.querySelector('.tool-pane .tool-tabs button.active');
-    if (active && DEV_TABS.has(active.dataset.tab)) switchTab('files');
-  }
-
   return Object.freeze({
     closeModal,
     closeToolDrawer,
@@ -1174,7 +1066,6 @@ function initRightResize() {
     fetchCapabilities,
     initHelpEntries,
     initRightResize,
-    normalizeTabsForUiMode,
     noteToolTabOpened,
     openCapPopover,
     openComposerMorePopover,

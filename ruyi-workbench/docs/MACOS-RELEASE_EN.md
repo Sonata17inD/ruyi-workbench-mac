@@ -1,14 +1,16 @@
 # Mac local/internal trial deployment, upgrade and recovery
 
+When upgrading, quit and move the old Slim Ruyi.app out of Applications before installing Ruyi.app (formerly Ruyi Full) and Ruyi Slim.app. Each edition keeps its existing data directory.
+
 Applies to Ruyi3.0.1, Apple Silicon arm64, local/internal trial channel. The current tested host runs macOS27.0.1. macOS14 remains a target pending runtime qualification. This channel uses ad-hoc signing without Developer ID, Apple notarization or stapling; a checksum does not authenticate the publisher.
 
 ## Installation and first launch
 
-Obtain a matching DMG and SHA256 from a trusted sender. Verify the checksum, open the image, copy the complete App (`Ruyi Full.app` for Full or `Ruyi.app` for Slim) to `/Applications` or personal `~/Applications`, wait for completion, eject the image, then open the installed App. The target machine needs no separate Node, Python, Homebrew or Xcode installation.
+Obtain a matching DMG and SHA256 from a trusted sender. Verify the checksum, open the image, copy the complete App (`Ruyi.app` for Full or `Ruyi Slim.app` for Slim) to `/Applications` or personal `~/Applications`, wait for completion, eject the image, then open the installed App. The target machine needs no separate Node, Python, Homebrew or Xcode installation.
 
 Downloaded applications may trigger Gatekeeper. After checking the source and checksum, follow the actual Open Anyway workflow offered in Privacy & Security, subject to device-management policy. Do not remove quarantine or disable Gatekeeper/SIP. Successful local installation under the current account does not qualify first approval of a downloaded application.
 
-At its first foreground launch, Ruyi Full asks macOS for any missing Screen Recording and Accessibility permissions and offers a System Settings shortcut for permissions still missing. Use the Desktop Permissions menu to retry. Full has the dedicated bundle ID `org.ruyi.workbench.full` and separate permission entries from Slim. The app requests microphone access when voice features are used.
+At its first foreground launch, Ruyi asks macOS for any missing Screen Recording and Accessibility permissions and offers a System Settings shortcut for permissions still missing. Use the Desktop Permissions menu to retry. Full has the dedicated bundle ID `org.ruyi.workbench.full` and separate permission entries from Slim. The app requests microphone access when voice features are used.
 
 ## Variants and compatibility
 

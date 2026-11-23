@@ -8,8 +8,8 @@
   font-size: 14px;
   --radius: var(--r-md);   /* 双轨合一(§1.2):别名 → --r-md(10px) */
   --radius-sm: var(--r-sm); /* 双轨合一(§1.2):别名 → --r-sm(6px,7→6 全站微变可接受) */
-  --font: "Segoe UI", "Microsoft YaHei", system-ui, Arial, sans-serif;
-  --mono: "Cascadia Mono", Consolas, "Courier New", monospace;
+  --font: "Avenir Next", "PingFang SC", system-ui, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
   /* 如意 Ruyi 青花:default-theme fallbacks (dark 墨夜 values). Real per-theme tokens live in the
      [data-theme] blocks below; these only matter before data-theme is set (pre-paint sets it immediately). */
   --accent: #4a6cd9;
@@ -68,10 +68,7 @@
   --glass-blur-1: blur(8px) saturate(1.2);
   --glass-blur-2: blur(16px) saturate(1.3);
   --glass-blur-3: blur(24px) saturate(1.4);
-  /* 如意云纹(§3.3):内联 SVG 云头(复用 docs/branding/ruyi-mark.svg 的三曲瓣云头路径),作空状态/故障卡
-     极淡水印。用作 mask-image:形状取 alpha,颜色由使用处 --brand-qh 上色(随主题走,不硬编码),opacity≤0.05。
-     离线内联 data-URI,不引外部资源。 */
-  --ruyi-cloud: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%2070'%3E%3Cpath%20fill='%23000'%20d='M60%2062%20C46%2055%2030%2044%2030%2032%20A13%2013%200%200%201%2053%2024%20A7.5%207.5%200%201%201%2067%2024%20A13%2013%200%200%201%2090%2032%20C90%2044%2074%2055%2060%2062%20Z'/%3E%3C/svg%3E");
+  --ruyi-silhouette: url("/brand/mark-mono.svg");
 }
 /* 121-K8(§2.10.2):simple 模式的 +1px。字阶改 px 之后 :root 的 font-size 不再带得动它,
    所以在这里把五档各 +1 —— 分档关系(12/13/14/15/17 → 13/14/15/16/18)一格不变,

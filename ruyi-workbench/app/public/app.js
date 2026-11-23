@@ -1,4 +1,5 @@
 'use strict';
+import { bindEnterToSubmit, pendingThreadPreference } from './js/steward-chips.js';
 /* ============================================================
    如意 Ruyi — client (overlay v0.3;原 Win Claude Workbench,v0.8-S8 品牌落地)
    ============================================================ */
@@ -235,7 +236,6 @@ const {
   refreshMcpOps: probe => refreshMcpOps(probe),   // 128f-⑫（审计 D）
   updateAgentTeamButton: () => updateAgentTeamButton(),
   applyTheme: theme => applyTheme(theme),
-  applyUiMode: mode => applyUiMode(mode),
   renderWorkspacePicker: () => renderWorkspacePicker(),
   fetchCapabilities: force => fetchCapabilities(force),
   updateSkillBadge: () => updateSkillBadge(),
@@ -345,6 +345,7 @@ const {
   updateAgentTeamButton,
   updateSendBtn,
 } = createChatStreamRuntime({
+  pendingThreadPreference,
   $,
   api,
   apiErrText,
@@ -466,7 +467,6 @@ const {
   fetchCapabilities,
   initHelpEntries, // 118d: 侧栏「帮助」菜单 + 设置页「?」的接线
   initRightResize,
-  normalizeTabsForUiMode,
   noteToolTabOpened,
   refreshToolPane,
   openCapPopover,
@@ -521,7 +521,6 @@ const {
   refreshStatus: () => refreshStatus(),
   openSkillPanel: () => openSkillPanel(), openSettingsSkills: () => settingsSkillsDomain.open(),
   patchSession: (id, patch) => patchSession(id, patch),
-  toggleUiMode: () => toggleUiMode(),
   focusFirstInteractive: container => focusFirstInteractive(container),
   loadAgentRoles: () => loadAgentRoles(),
   refreshMcpOps: probe => refreshMcpOps(probe),
@@ -584,20 +583,17 @@ const {
 
 const {
   applyTheme,
-  applyUiMode,
   currentWorkspace,
   pickWorkspace,
   pickWorkspaceNative,
   renderWorkspacePicker,
   setWorkspace,
   toggleTheme,
-  toggleUiMode,
 } = createWorkspacePreferencesDomain({
   apiErrText,
   saveConfigPartial: patch => saveConfigPartial(patch),
   iconTextBtn: (...args) => iconTextBtn(...args),
   syncMoreMenuLabels: () => syncMoreMenuLabels(),
-  normalizeTabsForUiMode: mode => normalizeTabsForUiMode(mode),
   newSession: () => newSession(),
   patchSession: (id, patch) => patchSession(id, patch),
   loadFileTree: () => loadFileTree(),
@@ -648,7 +644,7 @@ window.addEventListener('i18n:change', event => {   // detail.changed:语言真�
   renderSessions();
   renderWorkspacePicker();
   renderResumeBanner();
-  applyUiMode(document.documentElement.getAttribute('data-ui-mode') || 'pro');
+  syncMoreMenuLabels();
   renderProviders();
   renderThreadHead();   // 121-K5：线程头那一组 chip（权限／模型／引擎）与管家条
   renderCapBadge();
@@ -1050,10 +1046,8 @@ function bindEvents() {
   // 菜单里真能点的第七项，必须包一层。
   { const cb = $('capBadge'); if (cb) cb.onclick = () => openCapPopover(); }
   // 122-L1b（36 号文 §2.12）：这两枚现在是齿轮菜单里【看得见】的两项，切完要把自己的文案对上
-  // （applyTheme／applyUiMode 的 iconTextBtn 会清空按钮内容，syncMoreMenuLabels 负责补回来）。
   // 「更多」#moreMenuBtn 与 openMoreMenu 已整枚退役。
-  $('themeToggle').onclick = () => { toggleTheme(); syncMoreMenuLabels(); };
-  { const um = $('uiModeToggle'); if (um) um.onclick = () => { toggleUiMode(); syncMoreMenuLabels(); }; } // v0.9-S1 (C1)
+  $('themeToggle').onclick = toggleTheme;
   { const wp = $('workspacePicker'); if (wp) wp.onclick = pickWorkspace; } // v0.9-S3 (C3)
   $('toggleToolsBtn').onclick = toggleToolPane;
   // v0.8-S3 step-bar: click the head to expand/collapse the full task list.
@@ -1076,9 +1070,7 @@ function bindEvents() {
   // composer
   const ta = $('promptInput');
   ta.addEventListener('input', () => { autoGrow(ta); try { localStorage.setItem('wcw.draft', ta.value); } catch { /* ignore */ } updateSendBtn(); }); // 50-fix:输入变化即时切「插话/停止」
-  ta.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendPrompt(); }
-  });
+  bindEnterToSubmit(ta, () => sendPrompt());
   $('sendBtn').onclick = () => sendPrompt();
   createComposerVoice({ state, t, id: 'composerVoiceBtn', input: () => $('promptInput'), anchor: () => $('sendBtn') }); // 127-⑦：只回填不发送
   // 128f-⑭：两个视角的待开启麦克风都派这一帧。定位排在 openModal 自己那一拍「聚焦第一个可交互件」（setTimeout 0）之后，否则被它抢走。
@@ -1176,6 +1168,11 @@ function bindEvents() {
       // 一次 Esc 只关【最上面一层】:动态弹窗追加在 body 末尾,DOM 顺序即叠放顺序(help-viewer 为自己打过同类补丁)。
       // 修前对每一个打开的 backdrop 都 cancel —— 设置页上叠一张「确认」,按一下 Esc 两层全关,设置页也没了。
       if (open.length) { const top = open[open.length - 1]; if (top.__cancel) top.__cancel(); else if (top.id) closeModal(top.id); else top.classList.add('hidden'); }
+      else if (document.querySelector('#threadHead .thread-options[open]')) {
+        const options = document.querySelector('#threadHead .thread-options');
+        options.open = false;
+        options.querySelector('summary').focus();
+      }
       // v3 (§2.7 P2): 无模态时 Esc 先退出右栏全屏档,再关抽屉,再停止回合。
       else if (exitRightFullscreen()) { /* 已退出全屏 */ }
       // A5: with no modal open, Esc first closes the narrow-screen tool drawer, then stops a turn.
@@ -1211,7 +1208,6 @@ async function boot() {
   bindEvents();
   bindHostActions({ newThread: () => newSession(), chooseWorkspace: () => pickWorkspaceNative(), settings: () => openModal('settingsModal') });
   applyTheme((() => { try { return localStorage.getItem('wcw.theme') || 'dark'; } catch { return 'dark'; } })());
-  applyUiMode((() => { try { return localStorage.getItem('wcw.uiMode') || 'simple'; } catch { return 'simple'; } })()); // v0.9-S1 (C1) / v1.0.2 (F5): 默认 simple 对齐 server
   restoreToolsCollapsed(); // 桌面外壳首启默认收起工具面板；用户偏好优先
   restoreRightWidth(); initRightResize(); // v3 (§2.7 P2): 恢复右栏三档宽 + 绑定拖拽手柄
   restoreMainView(); // v3 P3a: 恢复中栏主视图(对话/工作台)记忆

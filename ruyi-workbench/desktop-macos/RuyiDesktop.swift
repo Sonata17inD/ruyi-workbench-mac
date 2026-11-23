@@ -291,7 +291,13 @@ final class RuyiDesktop: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     private func buildStatusMenu() {
         guard statusItem == nil else { return }
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: appName)
+        if let url = Bundle.main.url(forResource: "RuyiMenu", withExtension: "png"),
+           let mark = NSImage(contentsOf: url) {
+            mark.size = NSSize(width: 18, height: 11)
+            mark.isTemplate = true
+            item.button?.image = mark
+        }
+        item.button?.setAccessibilityLabel(appName)
         item.button?.toolTip = appName
         let menu = NSMenu()
         menu.addItem(withTitle: "显示工作台", action: #selector(activateWindow), keyEquivalent: "").target = self

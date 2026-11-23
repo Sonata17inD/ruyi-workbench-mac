@@ -3,7 +3,10 @@
 本文件记录面向用户的重要发行变化，不替代完整的 Git 提交历史。版本遵循 `ruyi-workbench/package.json`。
 This file records user-facing release highlights; it does not replace the complete Git history. Versions follow `ruyi-workbench/package.json`.
 
-## 未发布 / Unreleased
+## 3.0.2 · 2026-11-23
+
+- 完整版更名为 Ruyi，轻量版更名为 Ruyi Slim。两版使用新版图标和对话布局，支持在输入区调整推理强度，并修复中文输入法确认候选时误发送的问题。
+- The two Mac editions are now named Ruyi and Ruyi Slim. Both include the new icon, revised chat layout, composer reasoning controls and IME-aware sending.
 
 - Mac 版以 Full 和 Slim 两种 DMG 分发，均随附双语使用与管理手册。工作流从暂停恢复后可立即派发就绪节点；聊天界面在消息包含图表时载入 Mermaid。
 - The Mac Full and Slim DMGs include the user and administrator guides in both languages. Resuming a workflow dispatches ready nodes immediately. Chat loads Mermaid when a message contains a diagram.

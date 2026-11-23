@@ -1,6 +1,7 @@
 'use strict';
 
 // EC-D：运行时引擎状态、Provider 配置、设置保存与诊断领域。
+import { effortOptions } from './reasoning-control.js';
 import { state } from './state.js';
 import { mountPrivacySettings, renderPrivacyIndicators as renderSavedPrivacyIndicators } from './privacy-settings.js';
 import { bindModelSelect, providerModels, agentModels, publishProviderModels, publishAgentModels, refreshModelSelects } from './model-catalog.js';
@@ -46,7 +47,7 @@ export function providerDraftFromPreset(preset, existingIds = []) {
     baseUrl: preset.baseUrl || '', apiKey: '',
     model: preset.defaultModel || (preset.models && preset.models[0] && preset.models[0].id) || '',
     models: (preset.models || []).map(m => ({ id: m.id, label: m.label || m.id })),
-    reasoning: !!preset.reasoning, systemPrompt: '', temperature: '',
+    reasoning: preset.reasoning !== false, vision: preset.vision !== false, systemPrompt: '', temperature: '',
     // v1.7: DeepSeek 预设模板带 apiStyle:'responses'(走官方新增的 Responses API, Codex/agent 工具循环)。
     // 其它预设不带 → providerCard 里默认 chat, 行为与旧版完全一致。
     ...(preset.apiStyle ? { apiStyle: preset.apiStyle } : {}),
@@ -96,7 +97,6 @@ export function createProviderSettingsDomain({
   refreshMcpOps = async () => {},
   updateAgentTeamButton = () => {},
   applyTheme = () => {},
-  applyUiMode = () => {},
   renderWorkspacePicker = () => {},
   fetchCapabilities = async () => null,
   updateSkillBadge = () => {},
@@ -179,7 +179,6 @@ async function refreshStatus() {
   renderPrivacyIndicators();
   for (const provider of state.config.providers || []) provider.models = providerModels(provider);
   applyTheme(state.config.theme || 'dark');
-  applyUiMode(state.config.uiMode || 'pro'); // v0.9-S1 (C1)
   renderWorkspacePicker(); // v0.9-S3 (C3): reflect the default/session workspace once config is loaded
   // 121-K5：顶栏那两枚 chip（#modelChip / #permChip）与隐藏的 #permSelect 一起退役 —— 线程的
   // 权限／模型／引擎由线程头那一组 chip 画（会话级），新任务的两个默认值在盾牌与模型菜单里改。
@@ -334,7 +333,83 @@ function parseMainEngineValue(value) {
   }
   return raw ? { cli: '', providerId: raw } : { cli: settingsAgentCliType(), providerId: '' };
 }
+let savingCapabilities = false;
+function fillDefaultCapabilities() {
+  const config = state.config || {};
+  const reasoning = $('archiveReasoning'), vision = $('archiveVision'), effort = $('archiveDefaultEffort');
+  if (!effort || !reasoning || !vision) return;
+  const providerId = config.activeProvider;
+  const route = providerId && providerId !== 'claude-cli' ? { engine: 'openai', providerId }
+    : { engine: 'agent', agentCliType: storedAgentCliType(config.agentCliType) };
+  const spec = effortOptions(route, config);
+  const provider = spec.provider;
+  const anthropic = providerApiStyleMeta(provider?.apiStyle).anthropicOptions;
+  reasoning.checked = !!provider && spec.enabled !== false;
+  vision.checked = !!provider?.vision;
+  for (const node of [reasoning, vision]) {
+    const label = node.closest('label');
+    label.hidden = !provider;
+    label.querySelector('.archive-switch-state').textContent = t(node.checked ? 'archive.switchOn' : 'archive.switchOff');
+    node.disabled = savingCapabilities;
+  }
+  $('archiveCapabilityNote').textContent = route.engine === 'agent' ? t('archive.cliCapabilities') : '';
+  effort.replaceChildren(...spec.values.map(value => new Option(t('provider.reasoningEffort.' + (value || 'default')), value)));
+  effort.value = spec.current;
+  effort.disabled = savingCapabilities || spec.enabled === false || !spec.values.length;
+  async function save(fields) {
+    if (savingCapabilities) return;
+    savingCapabilities = true;
+    effort.disabled = reasoning.disabled = vision.disabled = true;
+    try {
+      const patch = provider ? { providers: state.config.providers.map(p => p.id === provider.id ? {...p, ...fields} : p) } : fields;
+      await saveConfigPartial(patch);
+    } finally {
+      savingCapabilities = false;
+      fillDefaultCapabilities();
+    }
+  }
+  effort.onchange = () => save(provider ? { reasoningEffort: effort.value } : { claudeThinkingEffort: effort.value });
+  reasoning.onchange = () => save(anthropic ? { anthropicThinking: reasoning.checked ? 'adaptive' : 'off' } : { reasoning: reasoning.checked });
+  vision.onchange = () => save({ vision: vision.checked });
+}
+let savingTheme = false;
+function fillThemeChoices() {
+  const select = $('setcat_theme');
+  if (!select) return;
+  let choices = $('archiveThemeChoices');
+  if (!choices) {
+    choices = el('div', 'archive-theme-choices');
+    choices.id = 'archiveThemeChoices';
+    choices.setAttribute('role', 'group');
+    choices.setAttribute('aria-label', t('settings.catalog.theme'));
+    for (const option of select.options) {
+      const button = el('button', '', option.textContent);
+      button.type = 'button';
+      button.dataset.themeChoice = option.value;
+      button.onclick = async () => {
+        if (savingTheme || state.config.theme === option.value) return;
+        savingTheme = true;
+        for (const item of choices.children) item.disabled = true;
+        try {
+          if (await saveConfigPartial({theme: option.value})) applyTheme(option.value);
+        } finally {
+          savingTheme = false;
+          fillThemeChoices();
+        }
+      };
+      choices.appendChild(button);
+    }
+    select.after(choices);
+  }
+  select.hidden = true;
+  for (const button of choices.children) {
+    button.disabled = savingTheme;
+    button.textContent = [...select.options].find(option => option.value === button.dataset.themeChoice)?.textContent || button.textContent;
+    button.setAttribute('aria-pressed', String(button.dataset.themeChoice === (state.config.theme || 'system')));
+  }
+}
 function fillMainEngineSelects() {
+  fillDefaultCapabilities();
   const provSel = $('cfgMainProvider'), modelSel = $('cfgMainModel'), hint = $('mainEngineHint');
   if (!provSel || !modelSel) return;
   const c = state.config || {};
@@ -381,6 +456,7 @@ async function setGlobalEngineDefault(engineValue, modelId) {
   const saved = await saveConfigPartial(patch);
   if (provSel) provSel.disabled = false; if (modelSel) modelSel.disabled = false;
   if (!saved) { fillMainEngineSelects(); return false; }
+  fillDefaultCapabilities();
   if (cliChanged) {
     updateAgentCliSettingsVisibility();
     void refreshModels();
@@ -536,12 +612,11 @@ let startNoticeDismissed = false;
 function startNoticeEntries() {
   const notice = state.status && state.status.startNotice;
   const out = [];
-  if (!notice || typeof notice !== 'object') return out;
-  const fallback = notice.portFallback;
-  if (fallback && Number.isFinite(Number(fallback.actual)) && Number.isFinite(Number(fallback.requested))) {
-    out.push({ text: t('startNotice.portFallback', { actual: String(fallback.actual), requested: String(fallback.requested) }), next: '' });
-  }
-  const failure = notice.lastError;
+  const fallback = notice?.portFallback;
+  const detail = $('archivePortDetail');
+  if (detail) detail.textContent = fallback && Number.isFinite(fallback.actual) && Number.isFinite(fallback.requested)
+    ? t('startNotice.portFallback', { actual: String(fallback.actual), requested: String(fallback.requested) }) : '';
+  const failure = notice?.lastError;
   if (failure && typeof failure === 'object' && failure.kind) {
     const key = START_NOTICE_ERROR_KEYS[failure.kind];
     // 未知 kind(旧版本写的文件/手工改过)时退回服务端写在文件里的那句话 -- 它本来就是给用户看的人话。
@@ -788,7 +863,6 @@ function fillSettings() {
   $('workspaceInput').value = c.defaultWorkspace || '';
   renderWorkspacePerms(); // v2.7 workspace permissions
   { const el0 = $('cfgLocale'); if (el0) el0.value = ['auto', 'zh-CN', 'en-US'].includes(c.locale) ? c.locale : 'auto'; }
-  { const el0 = $('cfgUiMode'); if (el0) el0.value = (c.uiMode === 'simple' ? 'simple' : 'pro'); } // v0.9-S1
   { const el0 = $('cfgOutputStyle'); if (el0) el0.value = (c.outputStyle === 'concise' ? 'concise' : 'detailed'); } // v0.9-S1
   $('claudePathInput').value = c.claudePath || state.status?.detectedClaudePath || '';
   // W6：权限与安全页的两条等待时限；用量与限额页的回合看门狗（turnIdleTimeoutMs，按分钟显示）。
@@ -1401,6 +1475,7 @@ function renderAsrSettings() {
   const fixBlock = buildAsrFixBlock();         // 131b：句尾改错最后（说完一句之后怎么改）
   // 133c：三栏收进折叠的「高级」区；档位对不上任何一档（自定义）时默认展开，否则记住用户刚才开没开
   const advanced = el('details', 'asr-advanced');
+  advanced.open = true;
   advanced.appendChild(el('summary', '', t('settings.asrPreset.advanced')));
   const presetBlock = buildAsrPresetBlock(advanced);
   advanced.open = wasOpen || asrCurrentPreset(state.config, asrPresetTargets()) === 'custom';
@@ -1667,7 +1742,6 @@ function claudeEndpointPatch() {
 const INSTANT_SETTINGS = Object.freeze([
   // ── 基础 ──
   { ids: ['cfgLocale'], patch: async () => ({ locale: await setLocale($('cfgLocale').value || 'auto') }), after: () => fillSettings() },
-  { ids: ['cfgUiMode'], patch: () => ({ uiMode: $('cfgUiMode').value === 'simple' ? 'simple' : 'pro' }), after: patch => applyUiMode(patch.uiMode) },   // v0.9-S1 (C1)
   { ids: ['cfgOutputStyle'], patch: () => ({ outputStyle: $('cfgOutputStyle').value === 'concise' ? 'concise' : 'detailed' }) },
   { ids: ['workspaceInput', 'cfgAllowOutsideWorkspace'], patch: () => { sanitizePrimaryWorkspaceInput(); return workspacePatch(); }, after: () => { renderWorkspacePerms(); renderWorkspacePicker(); } },
   { ids: ['cfgKillDisc'], patch: () => ({ killOnDisconnect: $('cfgKillDisc').checked }) },
@@ -1772,6 +1846,7 @@ async function saveCatalogField(field, stored) {
 function refreshSettingsCatalog() {
   mountSettingsCatalog({ t, onSave: saveCatalogField });
   fillSettingsCatalog({ t, config: state.config || {}, onSave: saveCatalogField });
+  fillThemeChoices();
 }
 let instantSettingsBound = false;
 function bindInstantSettings() {
@@ -1926,7 +2001,7 @@ function providerCard(p, idx) {
   // / card.append(...priceB) )全部保留,不破坏前端契约断言。
   const cap = el('details', 'prov-cap'); cap.append(el('summary', '', t('provider.capabilities')));
   // 对抗轮(critic B):重绘后恢复 open 状态;toggle 时写入记忆 Map(按 provider id)。
-  if (providerCapOpen.get(p.id)) cap.open = true;
+  cap.open = providerCapOpen.get(p.id) !== false;
   cap.addEventListener('toggle', () => providerCapOpen.set(p.id, cap.open));
   const reason = el('label', 'check prov-reason'); const rc = el('input'); rc.type = 'checkbox'; rc.checked = !!p.reasoning;
   reason.appendChild(rc); reason.appendChild(document.createTextNode(' ' + t('provider.reasoning')));
@@ -2041,7 +2116,8 @@ function providerCard(p, idx) {
     v => ({ '': 'provider.anthropicThinking.auto', adaptive: 'provider.anthropicThinking.adaptive', off: 'provider.anthropicThinking.off' })[v], 'anthropicThinking');
   const thinkingSel = thinkingField.querySelector('select');
   thinkingSel.addEventListener('change', () => syncEffortEnabled());
-  const more = el('details', 'prov-anthropic-more'); more.append(el('summary', '', t('provider.anthropic.more')));
+  const more = el('details', 'prov-anthropic-more');
+  more.open = true; more.append(el('summary', '', t('provider.anthropic.more')));
   more.append(choiceField('prov-anthropic-auth', 'provider.anthropicAuth', 'provider.anthropicAuth.hint', ANTHROPIC_AUTH_CHOICES,
     v => ({ '': 'provider.anthropicAuth.auto', 'x-api-key': 'provider.anthropicAuth.xApiKey', bearer: 'provider.anthropicAuth.bearer' })[v], 'anthropicAuth'));
   const fbLbl = el('label', 'check prov-cap-field prov-anthropic-fallbacks');
@@ -2206,6 +2282,7 @@ function providerCard(p, idx) {
   priceB.append(el('p', 'field-help muted', t('provider.pricing.help')));
 
   const modelPricing = el('details', 'prov-model-pricing');
+  modelPricing.open = true;
   const modelSummary = el('summary', '', '');
   const modelSummaryLabel = el('span', '', t('provider.pricing.modelOverrides'));
   const modelSummaryCount = el('span', 'prov-model-pricing-count', '0');
@@ -2259,7 +2336,8 @@ function providerCard(p, idx) {
   inI.oninput = syncPricing; cachedI.oninput = syncPricing; outI.oninput = syncPricing; curSel.onchange = syncPricing;
   modelSummaryCount.textContent = String(initialModelPrices.length);
 
-  const adv = el('details', 'prov-adv'); adv.append(el('summary', '', t('provider.advanced')));
+  const adv = el('details', 'prov-adv');
+  adv.open = true; adv.append(el('summary', '', t('provider.advanced')));
   const sb = el('div', 'field-block'); sb.append(el('label', '', t('provider.systemPrompt')));
   const st = el('textarea'); st.rows = 2; st.value = p.systemPrompt || ''; st.oninput = () => { p.systemPrompt = st.value; }; sb.append(st);
   const tb = el('div', 'field-block'); tb.append(el('label', '', t('provider.temperature')));

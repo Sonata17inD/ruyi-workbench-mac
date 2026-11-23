@@ -14,7 +14,7 @@ See also: [Chinese edition](USER-GUIDE_CN.md) · [administrator guide](ADMIN-GUI
 
 ### Open the workbench
 
-Open Ruyi Full or Ruyi from Applications. The top bar has a **Steward | Workbench** view control. Full includes Office, browser and desktop tools. Slim includes the core workbench. Configure a model to start chatting.
+Open Ruyi or Ruyi Slim from Applications. The top bar has a **Steward | Workbench** view control. Full includes Office, browser and desktop tools. Slim includes the core workbench. Configure a model to start chatting.
 
 ### Complete first-run setup
 
@@ -152,9 +152,6 @@ top bar and the left rail are shared by both views, while the middle and the rig
   A single thread can be tightened from its own permission chip.
 - **The power button, "Stop the steward"**: halts the steward's own polling and in-flight turns (threads already
   running carry on); once stopped, the same button reads "Wake the steward".
-- **The gear**: Settings, Help (user manual, administrator manual, reopen the setup guide, view logs), keyboard
-  shortcuts, dark / light theme, interface (simple / pro), the capability matrix, and, last, the destructive
-  "Clean up history".
 
 ### Left rail: the thread list (shared)
 
@@ -207,9 +204,7 @@ The seven tabs on the right:
 - **Usage**: token consumption and cost for the current turn.
 - **Activity**: a filterable timeline of everything the AI did; click a row for the full record.
 
-Simple mode emphasizes files, artifacts, changes, and progress with plain-language labels. Pro mode adds richer
-status and configuration, while low-level terminal, desktop, MCP, search, and read operations remain model tools
-governed by permissions rather than manual runners. Connector management lives in Settings → Tools &
+Connector management lives in Settings → Tools &
 integrations → Integrations and MCP; diagnostics, storage, metrics, and raw logs live in Settings → System →
 Diagnostics.
 
@@ -219,8 +214,7 @@ The right tool panel can be closed and reopened; its category tabs remain at the
 
 The composer supports attachments, task cards, slash commands, and ordinary natural-language requests, and it
 exists in both views (with a microphone beside Send; until speech recognition is configured it is a grey "set up" button).
-Switch between simple and pro mode from the gear menu, under "Interface" (also under Settings → General →
-General).
+Choose reasoning effort above the composer. Enter confirms an active IME candidate. After composition, Enter sends and Shift+Enter inserts a line break.
 
 ## 5. Settings
 
@@ -228,7 +222,7 @@ Steward setting receipts show actual values, scope and effective timing in chat 
 
 Choose a model in the task’s top menu for this task only. It applies from the next turn, preserves current execution and does not change new-task defaults, including the last-used route. Use the separate **Set as new-task default** action to change future defaults. Waiting limits apply to waits created with fresh configuration; existing waits keep their timers and current turns may retain old configuration. Global default permissions also affect existing tasks without an override. The proactive notification cap has no separate error exemption.
 
-Open the **gear** at the top right of the top bar and choose Settings. The left side has five groups: **General**
+Open **Settings** at the bottom of the left sidebar. The left side has five groups: **General**
 (General / Permissions & safety / Usage & limits), **Steward**, **Models & Services** (Model assignment / Model
 providers / Speech recognition / Agent CLI / Agent roles), **Tools & integrations** (Web search / Integrations and
 MCP / Add-on components / Skills & templates / Migration center) and **System** (Diagnostics / Storage & data /

@@ -39,7 +39,7 @@ export function mountPrivacySettings({ onSaved = async () => {} } = {}) {
   const node = (tag, key, className) => { const element = document.createElement(tag); if (key) { element.textContent = t('privacy.' + key); element.dataset.i18n = 'privacy.' + key; } if (className) element.className = className; return element; };
   const field = (key, control) => { const row = node('div', null, 'field-block'); const label = node('label', key); label.htmlFor = control.id; row.append(label, control); return row; };
   const check = (key, input) => { const label = node('label', null, 'check privacy-check'); label.append(input, node('span', key)); return label; };
-  const fold = (key, id) => { const details = node('details', null, 'privacy-fold'); details.id = id; details.append(node('summary', key)); return details; };
+  const fold = (key, id) => { const details = node('details', null, 'privacy-fold'); details.id = id; details.open = true; details.append(node('summary', key)); return details; };
   const button = (key, id, handler) => { const element = node('button', key, 'btn'); element.id = id; element.type = 'button'; element.onclick = () => action(handler); return element; };
   let busy = false, saved = null, liveSaved = null, loaded = false, ticket = '', supported = false, manualEncryption = false, conflict = false, summaryUnknown = false;
   const summary = node('div', null, 'privacy-summary'); summary.id = 'privacySavedSummary'; summary.setAttribute('role', 'status'); summary.setAttribute('aria-live', 'polite');

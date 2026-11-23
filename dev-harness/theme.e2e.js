@@ -8,7 +8,7 @@ require('./lib/self-isolate-home.js'); // 121 换机器：直跑时家目录自�
 //   (b) 旧赤陶橙隔离:#d97757 与 #c96442(大小写不敏感)在 styles.css 中只允许出现在含 --eng-claude 的行。
 //   (c) 对比度红线(WCAG 相对亮度):两主题各自 ink/bg>=7、muted/panel>=4.5、accent-ink/accent>=4.5、
 //       link/bg>=4.5。实现标准 WCAG 2.x 相对亮度 + 对比度公式。
-//   (d) 空状态:index.html 不含 `empty-logo">C<` 残留,且 .empty-logo 内含内联 <svg>。
+//   (d) 空状态:index.html 与动态渲染均移除前景标志。
 //
 // 末行判定固定为 `THEME E2E: ALL PASS`(任何失败打印明细并以非零码退出)。
 'use strict';
@@ -106,6 +106,7 @@ function parseTokenBlock(css, selector) {
 
   // ══════════ (c) 对比度红线(WCAG),两主题各自达标 ══════════
   const CHECKS = [
+    { name: 'user-ink/user-bubble', a: '--user-ink', b: '--user-bubble', min: 4.5 },
     { name: 'ink/bg', a: '--ink', b: '--bg', min: 7 },
     { name: 'muted/panel', a: '--muted', b: '--panel', min: 4.5 },
     { name: 'accent-ink/accent', a: '--accent-ink', b: '--accent', min: 4.5 },
@@ -128,18 +129,11 @@ function parseTokenBlock(css, selector) {
     }
   }
 
-  // ══════════ (d) 空状态残留 + 内联 svg ══════════
-  ok(!/empty-logo">C</.test(html), '(d) index.html 无 empty-logo">C< 残留');
-  // v1.0-S3 收官补:app.js 动态重建空状态也不得回退到字母 "C"(须走 buildRuyiLogo 的如意标)。
-  ok(!/'empty-logo',\s*'C'/.test(appjs), "(d) app.js 无 el('empty-logo','C') 字母兜底残留");
-  ok(/function buildRuyiLogo\(/.test(appjs), '(d) app.js 定义 buildRuyiLogo(JS 侧如意标)');
-  // .empty-logo 容器内含内联 <svg>(取 class="empty-logo" 起到其闭合 </div> 的片段做检查)。
-  const emIdx = html.indexOf('class="empty-logo"');
-  ok(emIdx >= 0, '(d) index.html 存在 .empty-logo 容器');
-  if (emIdx >= 0) {
-    const tail = html.slice(emIdx, emIdx + 800);
-    ok(/<svg[\s>]/.test(tail), '(d) .empty-logo 内含内联 <svg>');
-    ok(/var\(--brand-qh\)/.test(tail) && /var\(--brand-au\)/.test(tail), '(d) 内联 svg 走 --brand-qh/--brand-au 填色');
+  ok(!html.includes('class="empty-logo"') && !appjs.includes('buildRuyiLogo'), '(d) 空状态只保留背景水印');
+  for (const [theme, tokens] of [['dark', dark], ['light', light]]) {
+    const asset = 'brand/mark-' + theme + '.svg';
+    ok(tokens?.['--ruyi-mark'] === 'url("/' + asset + '")' && fs.existsSync(path.join(PUB, asset)),
+      '(d) 主题载入对应的品牌标志 ' + theme);
   }
 
   console.log('\nTHEME E2E: ' + (fail ? 'FAIL (' + fail + ')' : 'ALL PASS'));

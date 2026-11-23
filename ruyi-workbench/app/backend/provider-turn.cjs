@@ -6,7 +6,7 @@ const { appendPromptToLastUserMessage } = require('./provider-history.cjs');
 const { truncateToolResult } = require('./tool-result-view.cjs');
 const { toolDisabledByPolicy } = require('./tool-access-policy.cjs');
 const { normalizeCwd } = require('./path-containment.cjs');
-const { bridgedWriteRelativePathArg } = require('./bridged-write-targets.cjs');
+const { producedUserFile, bridgedWriteRelativePathArg } = require('./bridged-write-targets.cjs');
 const { redact } = require('./secret-redaction.cjs');
 const { neutralizeFenceTag } = require('./prompt-budget.cjs');
 const { cachedInputTokensFromUsage, computeProviderCost } = require('./provider-pricing.cjs');
@@ -2301,21 +2301,13 @@ function createProviderTurn({
         }
         // O3 (hb360): 产物类任务完成前自检 -- 对照任务要求逐项核对产物覆盖/数值自洽,漏项补全(只跑一次)。
         // 标 073(漏 gap 类别)/077(大小写当重复)/091(金额归位)/092(drift 标识错) 类「框架对、细节失守」。
-        if (!selfCheckDone && toolCalls.length > 0 && /生成|输出|创建|写出|列出|csv|报告|清单|manifest|核对|修复|审计|对账|reconciliation|report|list|generate/i.test(fullPrompt)) {
-          const wroteProduct = toolCalls.some(tc => {
-            const n = String((tc && tc.name) || '');
-            return /^(file_write|file_edit|archive_zip|archive_unzip|http_download)/.test(n)
-              || n.startsWith('tool_invoke_edit') || n.startsWith('tool_invoke_exec')
-              || /write|edit|save|create|docx|xlsx|pdf|pptx/i.test(n);
-          });
-          if (wroteProduct) {
-            selfCheckDone = true;
-            const selfCheckPrompt = '【产物自检】请对照原任务的每一项显式要求，逐项核对你已生成的产物：(1) 是否覆盖所有要求项（清单/字段/类别/行）？(2) 数值与格式是否自洽（CSV 列与摘要一致、金额归位正确、大小写不同的文件名未误判重复）？若发现漏项或不一致，用最小步骤补全；若全部满足，简短确认完成即可。不要重复已完成的步骤。';
-            session.providerHistory.push({ role: 'user', content: selfCheckPrompt });
-            onEvent({ type: 'self_check', state: 'invoked', turnSeq: session.turnSeq });
-            separateNextIterationText();
-            continue;
-          }
+        if (!selfCheckDone && /生成|输出|创建|写出|列出|csv|报告|清单|manifest|核对|修复|审计|对账|reconciliation|report|list|generate/i.test(message) && toolCalls.some(producedUserFile)) {
+          selfCheckDone = true;
+          const selfCheckPrompt = '【产物自检】请对照原任务的每一项显式要求，逐项核对你已生成的产物：(1) 是否覆盖所有要求项（清单/字段/类别/行）？(2) 数值与格式是否自洽（CSV 列与摘要一致、金额归位正确、大小写不同的文件名未误判重复）？若发现漏项或不一致，用最小步骤补全；若全部满足，简短确认完成即可。不要重复已完成的步骤。';
+          session.providerHistory.push({ role: 'user', content: selfCheckPrompt });
+          onEvent({ type: 'self_check', state: 'invoked', turnSeq: session.turnSeq });
+          separateNextIterationText();
+          continue;
         }
         if (reg.state === 'running' && Array.isArray(reg.steerQueue) && reg.steerQueue.length) { separateNextIterationText(); continue; }
         // 空回复(正常结束、没有文字也没有工具调用):修前回合就这么静悄悄地结束,界面上只剩一个空气泡,用户分不清是

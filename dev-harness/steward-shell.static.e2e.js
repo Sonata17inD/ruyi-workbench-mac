@@ -42,19 +42,18 @@ const shellModeMod = await import(pathToFileURL(path.join(PUBLIC, 'js', 'shell-m
 const declaredModes = shellModeMod.SHELL_MODES;
 ok(Array.isArray(declaredModes) && Object.isFrozen(declaredModes)
   && JSON.stringify(declaredModes) === JSON.stringify(['steward', 'classic']),
-  'A1 SHELL_MODES 是冻结两值且顺序固定 steward/classic（默认在前）'
+  'A1 SHELL_MODES 是冻结两值且顺序固定 steward/classic'
   + `（实测 ${JSON.stringify(declaredModes)}）`);
-// A2 钉的是【归一化的落点】，不是它怎么写的。121-K1（34 号文 §2.7）：一台两视 —— 显式 classic 落
-// classic；其余一切（没存过／空串／未知值／已退役的 preview）一律落 steward。
+// 预绘与运行时共享同一组启动偏好用例。
 const NORMALIZE_TRUTH = [
-  [undefined, 'steward'], [null, 'steward'], ['', 'steward'],
+  [undefined, 'classic'], [null, 'classic'], ['', 'classic'],
   ['classic', 'classic'], ['steward', 'steward'],
   ['preview', 'steward'],            // 退役的交办台偏好
-  ['bogus', 'steward'], ['CLASSIC', 'steward'],
+  ['bogus', 'classic'], ['CLASSIC', 'classic'], ['constructor', 'classic'],
 ];
 const normalizeBad = NORMALIZE_TRUTH.filter(([input, want]) => shellModeMod.normalizeShellMode(input) !== want);
 ok(normalizeBad.length === 0,
-  'A2 normalizeShellMode 的落点：显式 classic → classic，其余（无偏好／未知值／退役的 preview）一律 steward'
+  'A2 normalizeShellMode 的落点：无偏好和未知值进入工作台，preview 迁移到管家'
   + (normalizeBad.length ? `（实测偏差 ${JSON.stringify(normalizeBad.map(([input]) => [input, shellModeMod.normalizeShellMode(input)]))}）` : ''));
 ok(shellModeMod.RETIRED_SHELL_MODES && shellModeMod.RETIRED_SHELL_MODES.preview === 'steward'
   && !declaredModes.includes('preview'),
@@ -71,8 +70,8 @@ const prePaintDecide = prePaintRule ? new Function('stored', `return ${prePaintR
 const isoBad = prePaintDecide
   ? NORMALIZE_TRUTH.filter(([input, want]) => prePaintDecide(input == null ? null : input) !== want)
   : [['<rule not found>', '?']];
-ok(prePaintRule && isoBad.length === 0 && prePaintCatch === 'steward',
-  'A3 index.html 预绘脚本与 normalizeShellMode 行为同构（同一真值表两份实现），localStorage 抛异常也落 steward'
+ok(prePaintRule && isoBad.length === 0 && prePaintCatch === 'classic',
+  'A3 index.html 预绘脚本与 normalizeShellMode 行为同构（同一真值表两份实现），localStorage 抛异常也落 classic'
   + `（实测 规则 '${prePaintRule}' / 异常 '${prePaintCatch}'`
   + (isoBad.length ? ` / 偏差 ${JSON.stringify(isoBad.map(([input]) => [input, prePaintDecide && prePaintDecide(input == null ? null : input)]))}` : '')
   + '）');

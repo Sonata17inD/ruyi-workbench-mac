@@ -22,16 +22,19 @@ npm run build:desktop
 ## 内部试用包
 
 ```bash
-npm run package:offline:full
-npm run package:offline:slim
-npm run package:trial:macos
+npm run package:offline:full -- --assets "$ASSETS" --output dist/full
+npm run package:offline:slim -- --assets "$ASSETS" --output dist/slim
+npm run package:trial:macos -- --package dist/full --output dist/images/full
+npm run package:trial:macos -- --package dist/slim --output dist/images/slim
 ```
+
+从旧版升级时，请先退出并移走旧 Slim 的 Ruyi.app，再分别安装 Ruyi.app（原 Ruyi Full）和 Ruyi Slim.app。两版沿用各自的数据目录。
 
 Full／Slim 使用本地离线运行时和资产锁。构建所需资产与验收要求见 [Mac 打包工具](ruyi-workbench/tools/package-macos-offline.js)。本分支处于 Mac 专用化实施中，命令存在不表示当前候选已通过发行验收。正式签名、公证不属于本轮内部试用交付。
 
 ## 数据与权限
 
-独立安装的 `Ruyi Full.app` 默认使用 `~/.ruyi-workbench-full`，在 macOS 中以 `Ruyi Full` 单独授权。Slim 和开发版默认使用 `~/.ruyi-workbench`。可用 `RUYI_HOME` 指定数据目录。开发测试使用隔离数据。
+独立安装的 `Ruyi.app` 默认使用 `~/.ruyi-workbench-full`，在 macOS 中以 `Ruyi` 单独授权。Slim 和开发版默认使用 `~/.ruyi-workbench`。可用 `RUYI_HOME` 指定数据目录。开发测试使用隔离数据。
 
 截图、屏幕 OCR、输入与辅助功能分别按原生诊断显示权限和就绪状态；本地图片 OCR 无需录屏权限。诊断失败显示未知，不视为已授权或已就绪。用户文件继续支持 GB18030、BOM 与 CRLF。
 

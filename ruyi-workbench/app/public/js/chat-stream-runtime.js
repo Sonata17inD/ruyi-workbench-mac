@@ -29,6 +29,7 @@ export function isThinkingNarrativeBoundary(evt) { // 批 3·D:导出只为 thin
 
 export function createChatStreamRuntime(deps = {}) {
   const {
+    pendingThreadPreference = () => null,
     $,
     api,
     apiErrText,
@@ -719,6 +720,10 @@ export function createChatStreamRuntime(deps = {}) {
     if (sendPreflight) return;
     sendPreflight = true;
     try {
+      // A send immediately following a model or effort click must use the saved thread route.
+      const preference = pendingThreadPreference(selectedId);
+      if (preference && !await preference) return;
+      if (sessionSelectionSeq() !== selectedSeq || (state.currentSession?.id || '') !== selectedId) return;
       // Migrate a browser-only manual window before the server decides whether this turn needs compacting.
       // On failure preserve the draft/attachments and do not send with a different context limit.
       try { await syncContextWindowManual(); }

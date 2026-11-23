@@ -44,6 +44,23 @@ test('legacy sessions infer their route from the latest assistant source', () =>
   assert.deepEqual(agentSession.engineRoute, { engine: 'agent', agentCliType: 'retired-cli', model: 'old-model' });
 });
 
+test('reasoning effort is scoped to a thread and clearing it restores the current engine default', () => {
+  const config = {
+    claudeThinkingEffort: 'medium',
+    providers: [{ id: 'local', model: 'm', reasoningEffort: 'low' }],
+  };
+  const route = { engine: 'openai', providerId: 'local', model: 'm' };
+  const effective = engineRoute => srv.configForSessionEngineRoute(config, { engineRoute });
+  assert.equal(effective({ ...route, reasoningEffort: 'high' }).providers[0].reasoningEffort, 'high');
+  assert.equal(effective({ ...route, reasoningEffort: '' }).providers[0].reasoningEffort, 'low');
+  assert.equal(effective({ ...route, reasoningEffort: 'unknown' }).providers[0].reasoningEffort, 'low');
+  const cli = { engine: 'agent', agentCliType: 'claude', model: '' };
+  assert.equal(effective({ ...cli, reasoningEffort: 'high' }).claudeThinkingEffort, 'high');
+  assert.equal(effective({ ...cli, reasoningEffort: 'minimal' }).claudeThinkingEffort, 'medium');
+  assert.equal(config.providers[0].reasoningEffort, 'low');
+  assert.equal(config.claudeThinkingEffort, 'medium');
+});
+
 test('a live turn stale save cannot overwrite a newer session route choice', async () => {
   const id = 'route_race';
   await srv.saveSession({

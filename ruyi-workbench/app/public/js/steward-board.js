@@ -496,6 +496,7 @@ export function createStewardBoard({
   // ── ① 左栏的登记表与小判据（§2.3）──────────────────────────────────────────────
   // 组头计数与「点开即滚到那一组」的去处都读这一张表，不在别处写第二份组名。
   const RAIL_GROUP_LABELS = Object.freeze({
+    pinned: 'archive.pinned', recent: 'archive.recent',
     needs_you: 'rail.group.needsYou',
     running: 'rail.group.running',
     queued: 'rail.group.queued',
@@ -785,6 +786,7 @@ export function createStewardBoard({
   // 它不是第二个过滤器，也不换焦点：只是把视线送到该看的地方。
   function jumpToGroup(key) {
     const target = key || (needsYouIds.length ? 'needs_you' : 'running');
+    if (!byId('appFrame')?.classList.contains('rail-board')) byId('railBoardBtn')?.click();
     railGroupClosed.set(target, false);
     renderRail();
     const section = doc() && doc().querySelector(`#railList .rail-group[data-group="${target}"]`);
@@ -1337,7 +1339,7 @@ export function createStewardBoard({
   // 一件：签名相同且每行 chip「印不印」没变 → 原样复用上一拍那几个节点（时间字变了就地改字）；否则照原样重建。
   function railUnit(group, selected, filter) {
     const multi = group.rows.length > 1;
-    const key = (multi ? 'm:' : 's:') + group.missionId;
+    const key = multi ? 'm:' + group.missionId : 's:' + group.rows[0].sessionId;
     const snippet = !multi && filter ? filter.snippets.get(String(group.rows[0].sessionId || '')) : '';
     const sig = railUnitSig(group, selected, snippet);
     const cached = railUnits.get(key);
@@ -1437,7 +1439,20 @@ export function createStewardBoard({
     const focusSnap = railFocusSnapshot(host);
     const filter = railFilter();
     loadSearchExtras(filter);
-    const groups = groupRows({ withSearchExtras: Boolean(filter) }).filter(group => group.rows.some(row => railRowMatches(row, filter)));
+    const board = byId('appFrame')?.classList.contains('rail-board');
+    const missions = groupRows({ withSearchExtras: Boolean(filter) });
+    const groups = board ? missions.filter(group => group.rows.some(row => railRowMatches(row, filter)))
+      : missions.flatMap(group => group.rows.filter(row => railRowMatches(row, filter)).map(row =>
+        ({ ...group, rows: [row], updatedAt: row.updatedAt })));
+    if (!board) {
+      // A pinned conversation can be older than the activity index's recent window.
+      const listed = new Set(groups.map(group => group.rows[0].sessionId));
+      for (const meta of railSessionMetadata.values()) {
+        if (!meta.pinned || listed.has(meta.id) || removalOf()?.done.has(meta.id)) continue;
+        const row = { ...meta, sessionId: meta.id, factsUnknown: true };
+        if (railRowMatches(row, filter)) groups.push({ missionId: meta.id, rows: [row], updatedAt: meta.updatedAt });
+      }
+    }
     const railCount = byId('railCount');
     const countText = groups.length ? String(groups.length) : '';
     if (railCount && railCount.textContent !== countText) railCount.textContent = countText;
@@ -1458,13 +1473,19 @@ export function createStewardBoard({
     const stamp = railLocaleStamp();
     if (stamp !== railStamp) { railStamp = stamp; railUnits = new Map(); railSections = new Map(); }
     const selected = railSelectedId();
-    const buckets = new Map(RAIL_GROUP_KEYS.map(key => [key, []]));
+    const keys = board ? RAIL_GROUP_KEYS : ['pinned', 'recent'];
+    const buckets = new Map(keys.map(key => [key, []]));
     const now = new Date();
-    for (const group of groups) buckets.get(railGroupFor(group.aggregateState, group.updatedAt, now, group.rows.some(threadLastTurnFailed), group.rows.length > 0 && group.rows.every(threadIsBlank))).push(group);
+    for (const group of groups) {
+      const pinned = group.rows.some(row => railSessionMetadata.get(String(row.sessionId))?.pinned ?? row.pinned);
+      const key = board ? railGroupFor(group.aggregateState, group.updatedAt, now, group.rows.some(threadLastTurnFailed), group.rows.length > 0 && group.rows.every(threadIsBlank))
+        : pinned ? 'pinned' : 'recent';
+      buckets.get(key).push(group);
+    }
     const units = new Map();
     const sections = new Map();
     let printed = 0;
-    for (const key of RAIL_GROUP_KEYS) {
+    for (const key of keys) {
       const list = buckets.get(key);
       if (!list.length) continue;
       list.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
@@ -2167,6 +2188,7 @@ export function createStewardBoard({
     // 117m-A2：「N 条等你」的去处（恰好 1 条直接开那条线程，多于 1 条滚到「等你」那一组）。
     const needsYouGo = byId('stewardStatusNeedsYouBtn');
     if (needsYouGo) { needsYouGo.hidden = true; needsYouGo.onclick = () => { goToNeedsYou(); }; }
+    doc()?.addEventListener('ruyi:rail-density', renderRail);
     const max = byId('stewardBoardMax');
     if (max) max.onchange = () => { void saveMaxParallel(max.value); };
     const pause = byId('stewardBoardPauseAllBtn');

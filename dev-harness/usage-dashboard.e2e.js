@@ -167,7 +167,7 @@ ok(/\.sr-only\b/.test(css), '⑫ .sr-only 视觉隐藏样式存在');
 {
   const usageCss = css.slice(css.indexOf('成本 / 用量看板'));
   ok(/tabular-nums/.test(usageCss), '⑫ 用量数字用 tabular-nums');
-  ok(!/#[0-9a-fA-F]{6}/.test(usageCss.replace(/--ruyi-cloud[^;]*;/g, '')), '⑫ 用量 CSS 走 token（无硬编码十六进制色）');
+  ok(!/#[0-9a-fA-F]{6}/.test(usageCss.replace(/--ruyi-silhouette[^;]*;/g, '')), '⑫ 用量 CSS 走 token（无硬编码十六进制色）');
 }
 
 if (fail === 0) console.log('\nUSAGE-DASHBOARD E2E: ALL PASS');

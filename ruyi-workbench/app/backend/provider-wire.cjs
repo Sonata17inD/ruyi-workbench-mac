@@ -60,7 +60,10 @@ function providerReasoningEffort(provider) {
 function applyProviderReasoningEffort(body, provider, apiStyle) {
   const effort = providerReasoningEffort(provider);
   if (!effort || !body || typeof body !== 'object') return body;
-  providerWireProtocol(apiStyle).applyEffort(body, effort);
+  const protocol = providerWireProtocol(apiStyle);
+  const disabled = protocol.id === 'anthropic' ? provider.anthropicThinking === 'off' : provider.reasoning === false;
+  if (disabled) return body;
+  protocol.applyEffort(body, effort);
   return body;
 }
 

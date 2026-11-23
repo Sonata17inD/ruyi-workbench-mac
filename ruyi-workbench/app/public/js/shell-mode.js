@@ -8,24 +8,16 @@
 // 反过来依赖交办台那 3657 行。交办台退役（§8.1）后它们搬到这片叶子上：零 DOM 业务、零 i18n、
 // 只认两件事 —— 现在是哪个视角、怎么体面地切过去。
 //
-// 一台两视（§2.7）：`data-shell-mode` 只剩两值。
-//   · steward = 管家视角（默认；34 号文 §8.4 拍板③）
-//   · classic = 工作台视角（原经典壳 .app-shell）
-// 三个归一化口径【必须同构】，这也是 K1 收掉的那笔账（K0 交付时预绘落 steward、normalizeShellMode
-// 落 classic，两边不同构，见 34 号文 §13.1 末尾）：
-//   · 没存过偏好 / 存了未知值 / localStorage 抛异常 → steward
-//   · 显式存了 classic → classic
-//   · 老用户存的 'preview'（已退役的交办台）→ steward，并【就地改写本机偏好】，不留死值
-// index.html 的预绘脚本是同一条规则的另一份实现（它必须在模块加载前跑，无法 import），
-// dev-harness/steward-shell.static.e2e.js 的 A3 钉着两边同构。
-//
+// 新安装从工作台开始。显式视角照旧，退役的 preview 偏好迁移到管家。
+// index.html 的首屏预绘遵循相同规则。
+
 // fail-closed 不在本文件：管家能不能进由 steward-shell.js 的 canEnterSteward() 判（开关
 // stewardEnabledV1 + 骨架齐备），进不去时由它的 recoverStewardShell() 回经典。本文件只在
 // applyShellMode 里问一次、拿到否定答复就把控制权交出去 —— 缺省注入即 fail-closed。
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SHELL_MODE_STORAGE_KEY = 'wcw.shellMode';
-// 顺序即语义顺序（默认在前），别重排。
+// 设置里的视角选择器与这个顺序一致。
 export const SHELL_MODES = Object.freeze(['steward', 'classic']);
 // 退役模式 → 现在该落在哪个视角。读到它的人负责把本机偏好一并改写（见 readStoredShellMode）。
 export const RETIRED_SHELL_MODES = Object.freeze({ preview: 'steward' });
@@ -33,7 +25,7 @@ export const RETIRED_SHELL_MODES = Object.freeze({ preview: 'steward' });
 export function normalizeShellMode(value) {
   const text = String(value == null ? '' : value);
   if (SHELL_MODES.includes(text)) return text;
-  return RETIRED_SHELL_MODES[text] || 'steward';
+  return Object.hasOwn(RETIRED_SHELL_MODES, text) ? RETIRED_SHELL_MODES[text] : 'classic';
 }
 
 // 读本机偏好。读到退役值/未知值时【就地改写】成归一化后的值：偏好里不留死值，

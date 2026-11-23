@@ -1,211 +1,179 @@
-/* Dark/light color schemes and transparency fallbacks. */
-:root[data-theme="dark"] {
-  /* 如意 Ruyi「墨夜」深色主题:青花蓝 + 鎏金点缀 + 藏蓝墨底(v1.0-S1 青花主题重铸)。 */
-  color-scheme: dark;
-  --bg: #0f1520;
-  --panel: #151d2b;
-  --panel-2: #1a2436;
-  /* off-table 抬升面(hover/elevation),并入藏蓝墨族,保持 panel-2 之上的明度台阶。 */
-  --panel-3: #24304a;
-  --ink: #e9edf5;
-  /* off-table 次级墨色,置于 ink 与 muted 之间,青花墨族。 */
-  --ink-2: #c4cee0;
-  --muted: #8fa0b8;
-  --line: #263349;
-  /* off-table 强分隔线,line 之上一档,青花墨族。 */
-  --line-2: #33425e;
-  --accent: #4a6cd9;
-  --accent-hover: #5b7ee8;
-  --accent-ink: #ffffff;
-  --accent-soft: #1c2a4a;
-  --link: #8fadf7;
-  /* 第50波:鎏金改香槟(mockup 第2轮);--gold-soft 零引用清障删除(键集对称,light 同删)。 */
-  --gold: #dcba75;
-  /* 117i：语义「极淡底」三枚（金/绿/红）—— 115 波管家壳原型（docs/mockups/steward-shell.html）
-     的状态胶囊与金色主动作要一层比 --gold 更淡的底色。第50波清障删过 --gold-soft（当时零引用），
-     117i 重新引入并补齐 ok/danger 两枚，两主题对称定义（theme.e2e 键集锁）。 */
-  --gold-soft: #2c2413;
-  /* 117i：金底上的字。墨夜的香槟金与月白的赭金都足够亮，白字反而不达标，两主题同取深褐。 */
-  --gold-ink: #1a1404;
-  --ok-soft: #173327;
-  --danger-soft: #3a1f22;
-  /* v0.8-S8 品牌标(如意 Ruyi)——青花 + 鎏金,随主题切换。暗色版。 */
-  --brand-qh: #6b8ff2; --brand-au: #f2c14e;
-  /* Preview 任务台:青花墨夜族(与 --bg/--panel 同宗的藏蓝墨底),青花蓝=正在干活,
-     鎏金专义「等你拿主意」(概念稿 §4),不再使用青绿/橙红外挂色。 */
-  --preview-bg: #0c1220;
-  --preview-surface: #131b2c;
-  --preview-surface-2: #1a2440;
-  --preview-ink: #e9eef8;
-  --preview-muted: #8fa0bd;
-  --preview-accent: #6b8ff2;
-  --preview-accent-strong: #8aa6f7;
-  --preview-hot: #dcba75;
-  --preview-line: rgba(107,143,242,.18);
-  --preview-shadow: 0 24px 72px rgba(2,6,16,.5);
-  --preview-secondary: #18243a;
-  --preview-secondary-hover: #21304b;
-  --preview-disabled-bg: #182133;
-  --preview-disabled-ink: #6f7f9a;
-  --preview-disabled-line: rgba(143,160,189,.15);
-  --user-bubble: #1c2740;
-  --user-line: #33456e;
-  --sys-bubble: #2e2916;
-  --sys-line: #54491f;
-  --danger: #e56060;
-  --ok: #53c08a;
-  --warn: #e3b054;
-  /* v1.5 (§3.1) 语义色补全:--info + 各语义色 -bg(极淡底)/-fg(前景)变体。节点状态/状态 chip 一律引这些,
-     不再硬编码。-bg/-fg 走 color-mix(引同名主题色 + --panel),两主题自动适配。--ok/--warn/--danger 保留
-     (上一波已从 --success/--warning 收敛,不回退)。 */
-  --info: #5b93e6;
-  --ok-bg: color-mix(in srgb, var(--ok) 16%, var(--panel)); --ok-fg: var(--ok);
-  --warn-bg: color-mix(in srgb, var(--warn) 16%, var(--panel)); --warn-fg: var(--warn);
-  --danger-bg: color-mix(in srgb, var(--danger) 16%, var(--panel)); --danger-fg: var(--danger);
-  /* 第40波: ghost-danger hover 的轻量红纱 —— 透明基底(ghost 按钮可坐在任意面上,不能用 --danger-bg 的
-     panel 不透明底),与 --panel-veil 同族命名。两主题对称。 */
-  --danger-veil: color-mix(in srgb, var(--danger) 12%, transparent);
-  --info-bg: color-mix(in srgb, var(--info) 16%, var(--panel)); --info-fg: var(--info);
-  --code-bg: #0b111b;
-  --shadow: 0 12px 32px rgba(0,0,0,.42);
-  /* v3 (§C1): 墨夜(深色)投影分层 —— 纯黑 alpha,深底合适。与 [data-theme="light"] 的冷调版对齐键集。 */
-  --elev-1: 0 1px 2px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.10);
-  --elev-2: 0 6px 20px rgba(0,0,0,.20);
-  --elev-3: 0 16px 40px rgba(0,0,0,.28);
-  --scroll: #35425c;
-  /* r2 视觉跃升(UI-DESIGN-R2-NOTES §2)新 token,墨夜值。四枚均两主题分别定值,保持键集对称。 */
-  --canvas-bg: #0c1119;
-  --panel-veil: color-mix(in srgb, var(--panel) 78%, transparent);
-  --glow-accent: 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent), 0 10px 30px -8px color-mix(in srgb, var(--accent) 38%, transparent);
-  --gold-line: color-mix(in srgb, var(--gold) 55%, transparent);
-  /* 第50波(UI-DESIGN-V4 · mockup 第2轮质感迭代回写):黛紫渐变搭档(青花点色化的高级感拍档)。
-     注:mockup 的 accent #6e86f2 对 accent-ink 白字对比仅 3.3,不过 theme.e2e 的 WCAG 4.5 红线,
-     故 --accent 保留 #4a6cd9;蓝紫渐变只作装饰面(品牌标/头像/发光),不作文字底色。 */
-  --accent-2: #9a72f0;
-  /* — 底层有景:墨夜深空微渐变 + 蓝紫双色远景(玻璃之「景」)— */
-  --scene-bg:
-    radial-gradient(1080px 620px at 88% -14%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 64%),
-    radial-gradient(840px 520px at -10% 112%, color-mix(in srgb, var(--accent-2) 9%, transparent), transparent 62%),
-    radial-gradient(640px 420px at 32% 118%, color-mix(in srgb, var(--info) 6%, transparent), transparent 66%),
-    linear-gradient(160deg, #090d16 0%, #0b1120 48%, #0e1526 100%);
-  /* 微噪点纹理(仅暗主题):压大底色「塑料感」,body::before 以 .05 不透明度铺。 */
-  --noise: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='160'%3E%3Cfilter%20id='n'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'/%3E%3CfeColorMatrix%20type='saturate'%20values='0'/%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23n)'/%3E%3C/svg%3E");
-  /* — 玻璃材质:暗色调蓝玻璃(提亮路数),描边细、投影深而远 — */
-  --glass-bg-1: rgba(146,166,214,.065);   /* 框架族(顶栏/侧栏/右栏/composer) */
-  --glass-bg-2: rgba(158,178,224,.085);   /* 浮层族(modal/popover/toast/命令面板) */
-  --glass-bg-3: rgba(140,160,208,.05);    /* 卡片族 */
-  --glass-border: rgba(180,200,240,.09);
-  --glass-border-strong: rgba(190,208,248,.15);
-  --glass-highlight: inset 0 1px 0 rgba(210,225,255,.08);
-  --glass-shadow: 0 24px 60px rgba(2,6,16,.55);
-  --glass-shadow-soft: 0 10px 30px rgba(2,6,16,.35);
-  /* 全屏图片查看(mermaid 灯箱)的幕布:两套主题都压暗,白芯光标在上面才醒目。 */
-  --viewer-scrim: rgba(8,12,20,.78);
-}
-
+/* Archive Desk and Night Flight share the same geometry and semantic tokens. */
 :root[data-theme="light"] {
-  /* 如意 Ruyi「月白」浅色主题:青花蓝 + 鎏金 + 月白底(v1.0-S1 青花主题重铸)。 */
   color-scheme: light;
-  --bg: #f3f5f9;
-  --panel: #ffffff;
-  --panel-2: #f7f9fc;
-  /* off-table 抬升面(hover/elevation),并入月白/青花族,保持 panel-2 之下一档明度。 */
-  --panel-3: #eef2f8;
-  --ink: #1b2436;
-  /* off-table 次级墨色,置于 ink 与 muted 之间,藏蓝墨族。 */
-  --ink-2: #33405a;
-  --muted: #5f6c85;
-  --line: #dbe2ee;
-  /* off-table 强分隔线,line 之上一档,青花族。 */
-  --line-2: #c6d1e3;
-  --accent: #2050c8;
-  --accent-hover: #1a43ab;
-  --accent-ink: #ffffff;
-  --accent-soft: #e7edfa;
-  --link: #2050c8;
-  --gold: #a8822f;
-  /* 117i：语义「极淡底」三枚的月白值（与墨夜对称，见上）。 */
+  --bg: #faf8f1;
+  --panel: #fdfbf5;
+  --panel-2: #eeeade;
+  --panel-3: #e2ddce;
+  --ink: #211f1b;
+  --ink-2: #47463d;
+  --muted: #656153;
+  --line: #cec8b9;
+  --line-2: #928b7b;
+  --accent: #b7411b;
+  --accent-hover: #963416;
+  --accent-ink: #fffaf0;
+  --accent-soft: #eee2d3;
+  --link: #b7411b;
+  --gold: #a47d37;
   --gold-soft: #f6edd8;
   --gold-ink: #1a1404;
   --ok-soft: #e0f3e8;
   --danger-soft: #fbe4e1;
-  /* v0.8-S8 品牌标(如意 Ruyi)——青花 + 鎏金,随主题切换。亮色版。 */
-  --brand-qh: #2350a8; --brand-au: #d9a441;
-  /* 第100波:浅色任务台回到现有青花体系的清透白。纯白卡面 + 极浅蓝白只负责分层，
-     青花蓝负责主行动/当前进度，鎏金只负责待决；不再铺大面积米色或灰色。 */
-  --preview-bg: #f7f9fc;
-  --preview-surface: #ffffff;
-  --preview-surface-2: #f3f6fb;
-  --preview-ink: #1b2436;
-  --preview-muted: #5f6c85;
-  --preview-accent: #2050c8;
-  --preview-accent-strong: #1a43ab;
-  --preview-hot: #82631b;
-  --preview-line: rgba(32,80,200,.13);
-  --preview-shadow: 0 22px 60px rgba(20,28,48,.1);
-  --preview-secondary: #ffffff;
-  --preview-secondary-hover: #f3f6fb;
-  --preview-disabled-bg: #fbfcfe;
-  --preview-disabled-ink: #98a2b3;
-  --preview-disabled-line: rgba(32,80,200,.11);
-  --user-bubble: #eaf0fc;
-  --user-line: #c9d7f1;
+  --brand-qh: var(--accent);
+  --brand-au: var(--gold);
+  --preview-bg: #faf8f1;
+  --preview-surface: #fdfbf5;
+  --preview-surface-2: var(--panel-2);
+  --preview-ink: #211f1b;
+  --preview-muted: #656153;
+  --preview-accent: #b7411b;
+  --preview-accent-strong: var(--accent-hover);
+  --preview-hot: #825f24;
+  --preview-line: var(--line);
+  --preview-shadow: var(--shadow);
+  --preview-secondary: var(--panel-2);
+  --preview-secondary-hover: var(--panel-3);
+  --preview-disabled-bg: var(--panel-2);
+  --preview-disabled-ink: var(--muted);
+  --preview-disabled-line: var(--line);
+  --user-bubble: #51483b;
+  --user-ink: #fffaf0;
+  --slash-one: #dc582c;
+  --slash-two: #282824;
+  --slash-three: #b1ad9e;
+  --ruyi-mark: url("/brand/mark-light.svg");
+  --user-line: var(--line);
   --sys-bubble: #faf3df;
   --sys-line: #e7d5a8;
   --danger: #b42318;
   --ok: #22794e;
   --warn: #a1650f;
-  /* v1.5 (§3.1) 语义色补全(月白亮色版):--info 取深一档蓝以在浅底达对比;-bg/-fg 同 dark 用 color-mix。 */
   --info: #2b6cb0;
-  --ok-bg: color-mix(in srgb, var(--ok) 16%, var(--panel)); --ok-fg: var(--ok);
-  --warn-bg: color-mix(in srgb, var(--warn) 16%, var(--panel)); --warn-fg: var(--warn);
-  --danger-bg: color-mix(in srgb, var(--danger) 16%, var(--panel)); --danger-fg: var(--danger);
-  --danger-veil: color-mix(in srgb, var(--danger) 12%, transparent); /* 第40波: ghost hover 红纱,与 dark 对称 */
-  --info-bg: color-mix(in srgb, var(--info) 16%, var(--panel)); --info-fg: var(--info);
-  --code-bg: #f2f4f8;
-  /* off-table 阴影:暖棕 rgba 迁到藏蓝墨冷色调,并入青花族。明度/透明度关系不变。 */
+  --ok-bg: color-mix(in srgb, var(--ok) 16%, var(--panel));
+  --ok-fg: var(--ok);
+  --warn-bg: color-mix(in srgb, var(--warn) 16%, var(--panel));
+  --warn-fg: var(--warn);
+  --danger-bg: color-mix(in srgb, var(--danger) 16%, var(--panel));
+  --danger-fg: var(--danger);
+  --danger-veil: color-mix(in srgb, var(--danger) 12%, transparent);
+  --info-bg: color-mix(in srgb, var(--info) 16%, var(--panel));
+  --info-fg: var(--info);
+  --code-bg: #f1eee6;
   --shadow: 0 12px 30px rgba(20,28,48,.12);
-  /* v3 (§C1): 亮色投影分层 —— 冷调低透明度(同 --shadow 的暖→冷迁色逻辑),避免纯黑 elev 在月白底偏重。
-     暗色 elev 取 :root 默认(纯黑 alpha,深底合适),此处仅为亮色覆写。 */
   --elev-1: 0 1px 2px rgba(20,28,48,.08), 0 2px 8px rgba(20,28,48,.06);
   --elev-2: 0 6px 20px rgba(20,28,48,.12);
   --elev-3: 0 16px 40px rgba(20,28,48,.16);
-  --scroll: #c3cddd;
-  /* r2 视觉跃升(UI-DESIGN-R2-NOTES §2)新 token,月白值(更克制)。四枚两主题对称。 */
-  --canvas-bg: #edf1f8;
+  --scroll: var(--line-2);
+  --canvas-bg: var(--bg);
   --panel-veil: color-mix(in srgb, var(--panel) 82%, transparent);
-  --glow-accent: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 10px 26px -10px color-mix(in srgb, var(--accent) 25%, transparent);
+  --glow-accent: var(--ring);
   --gold-line: color-mix(in srgb, var(--gold) 60%, transparent);
-  /* 第50波(UI-DESIGN-V4):亮主题黛紫 + 晨雾 scene + 「留白+柔影」玻璃(与暗主题键集对称)。 */
-  --accent-2: #7a5fd0;
-  /* — 底层有景:月白晨雾微渐变 + 青花/黛色轻染 — */
-  --scene-bg:
-    radial-gradient(980px 540px at 88% -12%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 62%),
-    radial-gradient(800px 500px at -8% 112%, color-mix(in srgb, var(--accent-2) 5%, transparent), transparent 60%),
-    radial-gradient(600px 400px at 30% 118%, color-mix(in srgb, var(--info) 5%, transparent), transparent 65%),
-    linear-gradient(158deg, #f6f8fc 0%, #eef2f9 48%, #e9eef8 100%);
-  --noise: none; /* 键集对称:噪点仅暗主题 */
-  /* — 玻璃材质:亮主题靠「留白 + 柔影」— */
-  --glass-bg-1: rgba(255,255,255,.58);
-  --glass-bg-2: rgba(255,255,255,.72);
-  --glass-bg-3: rgba(255,255,255,.46);
-  --glass-border: rgba(20,28,48,.09);
-  --glass-border-strong: rgba(20,28,48,.14);
-  --glass-highlight: inset 0 1px 0 rgba(255,255,255,.75);
-  --glass-shadow: 0 18px 50px rgba(20,28,48,.15);
-  --glass-shadow-soft: 0 8px 28px rgba(20,28,48,.09);
+  --accent-2: var(--gold);
+  --scene-bg: var(--bg);
+  --noise: none;
+  --glass-bg-1: var(--panel-2);
+  --glass-bg-2: var(--panel);
+  --glass-bg-3: var(--panel);
+  --glass-border: var(--line);
+  --glass-border-strong: var(--line-2);
+  --glass-highlight: none;
+  --glass-shadow: var(--shadow);
+  --glass-shadow-soft: none;
   --viewer-scrim: rgba(20,28,44,.62);
-  /* engine accent colors, light variants (§3): slightly darker for contrast on the light surface. */
-  --eng-claude: #c96442; --eng-deepseek: #4059d8; --eng-qwen: #6d3fd8;
-  --eng-glm: #178f80; --eng-custom: #5c6570;
+  --eng-claude: #c96442;
+  --eng-deepseek: #4059d8;
+  --eng-qwen: #6d3fd8;
+  --eng-glm: #178f80;
+  --eng-custom: #5c6570;
+  --glass-blur-1: none;
+  --glass-blur-2: none;
+  --glass-blur-3: none;
 }
 
-/* 第50波(UI-DESIGN-V4 §3.2-E):无 backdrop-filter 环境 → token 级实色回退,布局零变化;
-   prefers-reduced-transparency → 关模糊(保留半透明底色,仍可读)。 */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root[data-theme="dark"] { --glass-bg-1: #151c2e; --glass-bg-2: #19213a; --glass-bg-3: #131a2b; }
-  :root[data-theme="light"] { --glass-bg-1: #f4f7fc; --glass-bg-2: #ffffff; --glass-bg-3: #f2f5fa; }
-}
-@media (prefers-reduced-transparency: reduce) {
-  :root { --glass-blur-1: none; --glass-blur-2: none; --glass-blur-3: none; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #19262b;
+  --panel: #202e33;
+  --panel-2: #111c20;
+  --panel-3: #28383c;
+  --ink: #f3edde;
+  --ink-2: #d6d5c9;
+  --muted: #aeb6ad;
+  --line: #3c4c50;
+  --line-2: #767568;
+  --accent: #edb958;
+  --accent-hover: #f4c97b;
+  --accent-ink: #192328;
+  --accent-soft: #343734;
+  --link: #edb958;
+  --gold: #d8ab5d;
+  --gold-soft: #2c2413;
+  --gold-ink: #1a1404;
+  --ok-soft: #173327;
+  --danger-soft: #3a1f22;
+  --brand-qh: var(--accent);
+  --brand-au: var(--gold);
+  --preview-bg: #19262b;
+  --preview-surface: #202e33;
+  --preview-surface-2: var(--panel-2);
+  --preview-ink: #f3edde;
+  --preview-muted: #aeb6ad;
+  --preview-accent: #edb958;
+  --preview-accent-strong: var(--accent-hover);
+  --preview-hot: #d8ab5d;
+  --preview-line: var(--line);
+  --preview-shadow: var(--shadow);
+  --preview-secondary: var(--panel-2);
+  --preview-secondary-hover: var(--panel-3);
+  --preview-disabled-bg: var(--panel-2);
+  --preview-disabled-ink: var(--muted);
+  --preview-disabled-line: var(--line);
+  --user-bubble: #354d54;
+  --user-ink: #fbf5e7;
+  --slash-one: #e8b259;
+  --slash-two: #c76f45;
+  --slash-three: #788d8b;
+  --ruyi-mark: url("/brand/mark-dark.svg");
+  --user-line: var(--line);
+  --sys-bubble: #2e2916;
+  --sys-line: #54491f;
+  --danger: #e56060;
+  --ok: #53c08a;
+  --warn: #e3b054;
+  --info: #5b93e6;
+  --ok-bg: color-mix(in srgb, var(--ok) 16%, var(--panel));
+  --ok-fg: var(--ok);
+  --warn-bg: color-mix(in srgb, var(--warn) 16%, var(--panel));
+  --warn-fg: var(--warn);
+  --danger-bg: color-mix(in srgb, var(--danger) 16%, var(--panel));
+  --danger-fg: var(--danger);
+  --danger-veil: color-mix(in srgb, var(--danger) 12%, transparent);
+  --info-bg: color-mix(in srgb, var(--info) 16%, var(--panel));
+  --info-fg: var(--info);
+  --code-bg: #101b20;
+  --shadow: 0 12px 32px rgba(0,0,0,.42);
+  --elev-1: 0 1px 2px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.10);
+  --elev-2: 0 6px 20px rgba(0,0,0,.20);
+  --elev-3: 0 16px 40px rgba(0,0,0,.28);
+  --scroll: var(--line-2);
+  --canvas-bg: var(--bg);
+  --panel-veil: color-mix(in srgb, var(--panel) 78%, transparent);
+  --glow-accent: var(--ring);
+  --gold-line: color-mix(in srgb, var(--gold) 55%, transparent);
+  --accent-2: var(--gold);
+  --scene-bg: var(--bg);
+  --noise: none;
+  --glass-bg-1: var(--panel-2);
+  --glass-bg-2: var(--panel);
+  --glass-bg-3: var(--panel);
+  --glass-border: var(--line);
+  --glass-border-strong: var(--line-2);
+  --glass-highlight: none;
+  --glass-shadow: var(--shadow);
+  --glass-shadow-soft: none;
+  --viewer-scrim: rgba(8,12,20,.78);
+  --glass-blur-1: none;
+  --glass-blur-2: none;
+  --glass-blur-3: none;
 }

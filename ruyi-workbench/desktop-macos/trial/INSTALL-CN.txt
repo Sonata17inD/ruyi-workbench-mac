@@ -1,5 +1,7 @@
 如意工作台 Mac 本地／内部试用版
 
+从旧版升级时，请先退出并移走旧 Slim 的 Ruyi.app，再分别安装 Ruyi.app（原 Ruyi Full）和 Ruyi Slim.app。两版沿用各自的数据目录。
+
 本包仅面向可信来源的本地使用和小范围内部试用，使用 ad-hoc 签名，没有 Developer ID，也没有 Apple 公证。校验值只能核对文件一致性，不能代替发布者身份认证。
 
 安装

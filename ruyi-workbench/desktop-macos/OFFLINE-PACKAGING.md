@@ -1,6 +1,6 @@
 # Mac arm64 离线候选包 / Offline candidates
 
-离线构建将 AppKit/WKWebView 宿主、Node/Web 程序、运行时与许可放在一个可搬移的应用中。Full 的应用名为 `Ruyi Full.app`，使用 `org.ruyi.workbench.full`；Slim 保留 `Ruyi.app`。当前为 **ad-hoc 开发签名、未公证的候选包**。
+离线构建将 AppKit/WKWebView 宿主、Node/Web 程序、运行时与许可放在一个可搬移的应用中。Full 的应用名为 `Ruyi.app`，使用 `org.ruyi.workbench.full`；Slim 使用 `Ruyi Slim.app`。当前为 **ad-hoc 开发签名、未公证的候选包**。
 
 目标为 Apple Silicon arm64/macOS14。原生文件的 arm64 架构、最低部署声明和动态库闭包会在构建时检查；**这不等于已在 macOS14 实际运行**。当前实测系统在证据记录中逐项注明，不宣传未验兼容。
 
@@ -46,7 +46,7 @@ Wheelhouse 只用于构建。打包器从已安装的 Python 依赖和 `ensurepi
 
 ```text
 Ruyi-full-candidate/
-  Ruyi Full.app/Contents/
+  Ruyi.app/Contents/
     MacOS/RuyiDesktop
     Resources/workbench/
       app/server.js, app/public/, app/vendor-bin/rg

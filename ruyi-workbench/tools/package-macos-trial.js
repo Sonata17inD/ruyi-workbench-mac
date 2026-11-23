@@ -4,7 +4,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { sha256, inventory, treeDigest, copyTree, run, safeChild, inside, verifyPackage, FULL_APP_NAME } = require('./macos-offline-lib');
+const { sha256, inventory, treeDigest, copyTree, run, safeChild, inside, verifyPackage } = require('./macos-offline-lib');
 const guideRoot = path.resolve(__dirname, '../desktop-macos/trial');
 const GUIDE_NAMES = ['INSTALL-CN.txt', 'INSTALL-EN.txt'];
 const ROOT_NAMES = ['Applications', 'package-manifest.json', 'SHA256SUMS', 'trial-manifest.json', ...GUIDE_NAMES];
@@ -194,7 +194,7 @@ function buildTrial({ package: source, output }) {
     const guideHashes = {};
     for (const name of GUIDE_NAMES) {
       const guide = fs.readFileSync(path.join(guideRoot, name), 'utf8');
-      const dataRoot = original.app === FULL_APP_NAME ? '~/.ruyi-workbench-full' : '~/.ruyi-workbench';
+      const dataRoot = original.variant === 'full' ? '~/.ruyi-workbench-full' : '~/.ruyi-workbench';
       const destination = path.join(imageRoot, name);
       fs.writeFileSync(destination, guide.replaceAll('{{app}}', original.app).replaceAll('{{dataRoot}}', dataRoot));
       guideHashes[name] = sha256(destination);
@@ -208,7 +208,7 @@ function buildTrial({ package: source, output }) {
       acceptanceScope: 'current-account isolated install; clean standard user and downloaded-origin Gatekeeper approval unverified' };
     writeJson(path.join(imageRoot, 'trial-manifest.json'), trial);
     verifyTrialDirectory(imageRoot);
-    const name = 'Ruyi-macos-arm64-' + original.variant + '-internal-trial.dmg';
+    const name = (original.variant === 'full' ? 'Ruyi' : 'Ruyi-Slim') + '-' + original.version + '-macos-arm64.dmg';
     const image = path.join(work, name);
     run('/usr/bin/hdiutil', ['create', '-quiet', '-srcfolder', imageRoot, '-fs', 'HFS+', '-format', 'UDZO',
       '-volname', 'Ruyi ' + original.variant + ' Internal Trial', image], { timeout: 300000 });

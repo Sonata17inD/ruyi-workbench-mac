@@ -773,7 +773,7 @@ const NATIVE_TOOL_SCHEMAS = [
   // write session files — see the todo_write case in toolCall()).
   {
     name: 'todo_write',
-    description: 'Record/replace the task list for the current turn (full replace each call). Use it to plan multi-step work and mark progress. items:[{id?,text,status:pending|in_progress|done}]. Drives the workbench step-bar.',
+    description: 'Record/replace the task list for the current turn (full replace each call). Use for a requested checklist or to track distinct milestones. items:[{id?,text,status:pending|in_progress|done}]. Drives the workbench step-bar.',
     inputSchema: {
       type: 'object',
       properties: {

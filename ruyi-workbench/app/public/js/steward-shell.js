@@ -369,21 +369,8 @@ export function createStewardShellDomain({
     syncConversation();
     if (canEnterSteward()) {
       clearStatusText();   // 117k：进得去就没有「回到经典」这回事，那句话不该再留在屏幕上
-      // 121 波 K0（34 号文 §8.4 拍板③「默认入口改管家视角」）：判据从「存了 steward」放宽成
-      // 「没存过显式的非管家偏好」——与 index.html 预绘脚本同一条规则（没存过／未知值 = steward）。
-      // 【为什么落点在这里而不是预绘脚本】：预绘写下的属性会被 bind 期那句
-      // applyShellMode(storedShellMode()) 再判一次（shell-mode.js 的 bindShellModeControl），
-      // 而那一拍 state.config 还没到、canEnterSteward() 恒 false，所以首开进哪个视角【只能】由
-      // config 到达后的这一处决定。只改预绘是空转（34 号文 §13.1 记过这次证伪）。
-      // 121-K1：'preview' 这一档随交办台退役（§8.1）—— shell-mode.js 的 readStoredShellMode 读到
-      // 老用户那份偏好时会就地改写成 'steward'，所以本条判据只剩 classic 一个值要认。下面
-      // fail-closed 那支【不动】——它仍只认显式存了 steward 的人，于是管家关着的存量用户既不会被
-      // 弹「已回到经典」的说明，也不会被写一条他没选过的本机偏好。
-      // 122-L1a（36 号文 §2.1）：这一句与用户在开机那两秒里点分段钮之间曾有一条真竞态
-      // （本处的写回调排在 View Transitions 队列里，用户那一次却走同步支，落地次序反过来 →
-      // 刚点好的工作台被翻回管家）。真根在 shell-mode.js 的 applyShellMode，已由那里的意图
-      // 序号（`intentSeq`）收口：**最后一次意图赢**。本处判据一个字不动 —— 它没错。
-      const prefersClassic = storedMode() === 'classic';
+      // 配置就绪后才可恢复显式的管家偏好；新安装从工作台开始。
+      const prefersClassic = storedMode() !== 'steward';
       if (!prefersClassic && !isStewardMode()) return applyShellMode('steward', { persist: false, focus: false });
       return isStewardMode() ? 'steward' : 'classic';
     }

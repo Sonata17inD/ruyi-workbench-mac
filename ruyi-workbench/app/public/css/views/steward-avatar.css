@@ -1,4 +1,4 @@
-/* 第117波 117b：管家 avatar（圆＋环＋一对眼睛，27 号文 §8.3）。独立所有权层——七态各一小段规则，
+/* 第117波 117b：管家 avatar（斜切 R 与状态环，27 号文 §8.3）。独立所有权层——七态各一小段规则，
    超过顺手加进 steward-shell.css 的量，故新开一层，随其后一并 @import / 直链 / 进离线包。
    状态即语义：data-state 由纯投影 steward-presence.js#derivePresence() 决定，本层只画每个状态的样子。
    全部用主题 token（无硬编码色值），动效只用 --dur-x 与 --ease-out，reduced-motion 下全部关掉动画。
@@ -22,7 +22,7 @@
 .steward-avatar:focus-visible { outline: none; box-shadow: var(--ring); }
 .steward-avatar svg { display: block; width: 100%; height: 100%; overflow: visible; }
 
-.sa-ring, .sa-body, .sa-eye, .sa-eyes {
+.sa-ring, .sa-body {
   transform-box: fill-box;
   transform-origin: center;
 }
@@ -34,14 +34,11 @@
   transition: stroke var(--dur-fast) var(--ease-out), opacity var(--dur-base) var(--ease-out),
     transform var(--dur-base) var(--ease-out);
 }
-.sa-stop-a { stop-color: var(--accent); }
-.sa-stop-b { stop-color: var(--accent-2); }
+.sa-slash { fill: var(--accent); }
 .sa-body {
-  fill: url("#stewardAvatarGrad") var(--accent);
+  fill: var(--ink);
   transition: fill var(--dur-base) var(--ease-out);
 }
-/* 117i：原型里眼睛恒为白（不随主题走），--accent-ink 两主题都是纯白，且不是硬编码色值。 */
-.sa-eye { fill: var(--accent-ink); }
 
 /* idle（§8.3）：常态色，环静止；呼吸 4s 循环，幅度极小。 */
 .steward-avatar[data-state="idle"] .sa-body { animation: sa-breathe 4s ease-in-out infinite; }

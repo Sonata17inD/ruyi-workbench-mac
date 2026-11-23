@@ -333,10 +333,8 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
       // v0.8-S6: TEST HOOK — enable the (otherwise inert) testOnly TOOL_REQUIRES entry so the capabilities
       // e2e can exercise the requires→filter→「当前不可用」 pipeline. Default false → zero production effect.
       enableToolRequiresProbe: false,
-      // v0.9-S1 (C1): UI density mode. 'pro' = full three-pane developer surface; 'simple' = the 人人可用
-      // surface (debug/mcp tabs + composer advanced buttons hidden via CSS, humanized tool cards, +1px font).
-      // Front-end drives it via document.documentElement[data-ui-mode]; normalizeConfig cleanses to the enum.
-      uiMode: 'simple',
+      // Kept for compatibility with existing config readers.
+      uiMode: 'pro',
       // v0.9-S1 (C1): reply verbosity style, injected as a prompt style layer (buildProviderSystemPrompt).
       // 'detailed' = current behavior (no injection); 'concise' = ask the model for short, direct answers.
       outputStyle: 'detailed',

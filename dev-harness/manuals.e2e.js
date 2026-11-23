@@ -22,7 +22,7 @@ for (const [lang, suffix] of [['zh-CN', 'CN'], ['en-US', 'EN']]) {
       }
     } else {
       const permissions = lang === 'en-US' ? ['Accessibility', 'Screen Recording', 'microphone'] : ['辅助功能', '屏幕录制', '麦克风'];
-      for (const value of ['Ruyi Full', 'Ruyi Slim', '~/.ruyi-workbench-full', '`~/.ruyi-workbench`', 'RUYI_HOME', ...permissions]) {
+      for (const value of ['| Ruyi |', 'Ruyi Slim', '~/.ruyi-workbench-full', '`~/.ruyi-workbench`', 'RUYI_HOME', ...permissions]) {
         ok(guide.includes(value), file + ' documents ' + value);
       }
     }

@@ -11,14 +11,17 @@ cd ruyi-workbench
 npm start
 npm run doctor
 npm run build:desktop
-npm run package:offline:full
-npm run package:offline:slim
-npm run package:trial:macos
+npm run package:offline:full -- --assets "$ASSETS" --output dist/full
+npm run package:offline:slim -- --assets "$ASSETS" --output dist/slim
+npm run package:trial:macos -- --package dist/full --output dist/images/full
+npm run package:trial:macos -- --package dist/slim --output dist/images/slim
 ```
+
+When upgrading, quit and move the old Slim Ruyi.app out of Applications before installing Ruyi.app (formerly Ruyi Full) and Ruyi Slim.app. Each edition keeps its existing data directory.
 
 Mac specialization is in progress: these commands do not establish release acceptance. Full/Slim packaging uses local offline assets. Formal signing and notarization are outside this internal trial iteration.
 
-Data remains in `~/.ruyi-workbench` or `RUYI_HOME`. Preserve Mac migration, sessions and credentials; tests use isolated data. Capture, screen OCR, input and accessibility report separate native permission states. Local-image OCR does not require screen recording permission. Failed diagnostics mean unknown. Opening a system browser URL is a handoff, not a DOM connection.
+Ruyi stores data in `~/.ruyi-workbench-full`, and Ruyi Slim uses `~/.ruyi-workbench`. Set `RUYI_HOME` to override the default. Preserve Mac migration, sessions and credentials; tests use isolated data. Capture, screen OCR, input and accessibility report separate native permission states. Local-image OCR does not require screen recording permission. Failed diagnostics mean unknown. Opening a system browser URL is a handoff, not a DOM connection.
 
 Edit current concatenated backend sources under `app/src/`, then run `node app/build.js`. Explicit modules live in `app/backend/`. Run targeted checks while developing; reserve complete Mac regression, exclusive performance benchmarks and Full/Slim package validation for integration.
 

@@ -114,7 +114,7 @@ ok(volatile.length > 100 && volatile.length < 5000, 'D6 volatile 长度合理(go
 ok(full.length >= stable.length + volatile.length - 5, 'D7 包装=stable+volatile(向后兼容,full ' + full.length + ' >= stable ' + stable.length + ' + volatile ' + volatile.length + ')');
 // C1b 请求装配:易变层用真实换行注入,且上下文治理预算必须包含 stable+volatile。
 ok(providerTurn.includes("turnVolatile + '\\n\\n'") && !providerTurn.includes("turnVolatile + '\\\\n\\\\n'"), 'D8 volatile 前缀使用真实换行,不向模型发送字面量 \\\\n');
-ok(typeof srv.PROMPT_PACK_VERSION === 'string' && /^20\d\d-w\d+-\d+$/.test(srv.PROMPT_PACK_VERSION), 'D9 PROMPT_PACK_VERSION 语义化版本(52d, got ' + srv.PROMPT_PACK_VERSION + ')');
+ok(typeof srv.PROMPT_PACK_VERSION === 'string' && /^20\d{2}-(?:w\d+-\d+|(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))$/.test(srv.PROMPT_PACK_VERSION), 'D9 PROMPT_PACK_VERSION 标识可追溯的提示词版本 (got ' + srv.PROMPT_PACK_VERSION + ')');
 ok(/let budgetPrompt = turnVolatile \? sys \+ '\\n\\n' \+ turnVolatile : sys;/.test(providerTurn), 'D9 可失效更新的上下文预算提示包含 stable+volatile');
 // 走查 #9:随每条消息变化的记忆回执 + 相关索引改投末条 user 尾部,不再在 turnVolatile 里;它们仍要计预算,所以上下文治理的几处调用
 // 改用 budgetPromptFull(= budgetPrompt + 记忆回合尾部)。D10 的意图(自动压缩与 fallback 估算都用「完整」预算提示)不变,只是完整的含义多了这一段。
@@ -254,9 +254,9 @@ const stablePad = srv.buildStableSystemPrompt(provider, model, cwd, toolsWithPad
 const padLineZh = zhPack.toolProtocol.scratchpad;
 ok(typeof padLineZh === 'string' && typeof enPack.toolProtocol.scratchpad === 'string', 'C2-1 中英两包的 toolProtocol 都有 scratchpad 一句(结构对齐)');
 ok(stablePad.includes(padLineZh) && !stable.includes(padLineZh), 'C2-2 只在工具表里有 scratchpad_write 时进稳定层');
-ok(/中间结论/.test(padLineZh) && /已确认的事实/.test(padLineZh) && /下一步计划/.test(padLineZh) && /压缩后仍然可见/.test(padLineZh) && /workbench_memory_propose/.test(padLineZh),
-  'C2-3 中文:何时用(中间结论 / 已确认的事实 / 下一步计划)、压缩后仍可见、长期偏好仍走 workbench_memory_propose');
-ok(/interim conclusions/.test(enPack.toolProtocol.scratchpad) && /compaction/.test(enPack.toolProtocol.scratchpad) && /workbench_memory_propose/.test(enPack.toolProtocol.scratchpad),
+ok(/后续阶段/.test(padLineZh) && /难以从工具结果恢复/.test(padLineZh) && /压缩后仍然可见/.test(padLineZh) && /workbench_memory_propose/.test(padLineZh),
+  'C2-3 中文:草稿仅用于后续难以恢复的事实、压缩后仍可见、长期偏好仍走 workbench_memory_propose');
+ok(/costly to recover/.test(enPack.toolProtocol.scratchpad) && /compaction/.test(enPack.toolProtocol.scratchpad) && /workbench_memory_propose/.test(enPack.toolProtocol.scratchpad),
   'C2-4 英文是同义翻译');
 ok(srv.buildStableSystemPrompt(provider, model, cwd, toolsWithPad, false, config) === stablePad, 'C2-5 同输入两次构建逐字节相同(稳定层缓存前提)');
 ok(stablePad.length - stable.length <= 260, `C2-6 增量 ≤ 260 字符(got ${stablePad.length - stable.length})`);

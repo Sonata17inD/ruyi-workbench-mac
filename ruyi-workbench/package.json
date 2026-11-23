@@ -1,6 +1,6 @@
 {
   "name": "ruyi-workbench",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "private": true,
   "description": "Ruyi for Mac — offline-first native agent workbench for Apple Silicon, with Node agents, Web UI and Python document tools.",
   "main": "app/server.js",

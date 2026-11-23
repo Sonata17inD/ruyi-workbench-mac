@@ -1,6 +1,7 @@
 'use strict';
 
 // EC-D 第60波：Workbench DAG 领域（视图状态、原生 Claude Agent 投影、画布与右板）。
+import { bindEnterToSubmit } from './steward-chips.js';
 import { state } from './state.js';
 import { $, el, fmtTokens, toast } from './util.js';
 import { getLocale, t } from './i18n.js';
@@ -952,8 +953,7 @@ function wbSteerBox(run, node) {
     };
     send.disabled = wbSteerPending.has(draftKey);
     send.onclick = submit;
-    // 对抗轮 P2: isComposing 守卫——中文输入法选字回车不再把半截拼音直接发出去(与主 composer 同款守卫)。
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submit(); } });
+    bindEnterToSubmit(input, submit);
   }
   boxrow.append(input, send); wrap.appendChild(boxrow);
   if (!elig.ok) wrap.appendChild(el('div', 'wb-steer-why', elig.msg));   // 禁用原因(与后端 409 文案一致)

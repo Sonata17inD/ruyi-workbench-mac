@@ -7,14 +7,18 @@ const { isAgentCliType } = require('./agent-cli-types.cjs');
 function normalizeSessionEngineRoute(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const model = String(raw.model || '').trim().slice(0, 256);
+  const effort = raw.reasoningEffort;
+  const commonEfforts = ['low', 'medium', 'high', 'xhigh', 'max'];
+  const override = commonEfforts.includes(effort) || (raw.engine === 'openai' && ['none', 'minimal'].includes(effort))
+    ? { reasoningEffort: effort } : {};
   if (raw.engine === 'openai') {
     const providerId = String(raw.providerId || '').trim().slice(0, 128);
-    return providerId ? { engine: 'openai', providerId, model } : null;
+    return providerId ? { engine: 'openai', providerId, model, ...override } : null;
   }
   if (raw.engine === 'agent' || raw.engine === 'claude') {
     const agentCliType = typeof raw.agentCliType === 'string' && raw.agentCliType.trim()
       ? raw.agentCliType.trim().slice(0, 128) : 'claude';
-    return { engine: 'agent', agentCliType, model };
+    return { engine: 'agent', agentCliType, model, ...override };
   }
   return null;
 }
@@ -62,7 +66,7 @@ function configForSessionEngineRoute(config, session) {
   if (!route) return config;
   if (route.engine === 'openai') {
     const providers = (config.providers || []).map(provider => provider && provider.id === route.providerId
-      ? { ...provider, model: route.model || provider.model || '' }
+      ? { ...provider, model: route.model || provider.model || '', ...(route.reasoningEffort && { reasoningEffort: route.reasoningEffort }) }
       : provider);
     return { ...config, activeProvider: route.providerId, providers };
   }
@@ -70,6 +74,7 @@ function configForSessionEngineRoute(config, session) {
     ...config,
     activeProvider: '',
     agentCliType: route.agentCliType,
+    ...(route.reasoningEffort && { claudeThinkingEffort: route.reasoningEffort }),
     model: route.model,
   };
 }
@@ -79,6 +84,7 @@ function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEven
     try {
       const clean = normalizeSessionEngineRoute(nextRoute);
       if (!clean) return false;
+      delete clean.reasoningEffort; // A thread override is never a new-chat preference.
       const wanted = JSON.stringify(clean);
       if (knownConfig && typeof knownConfig === 'object'
         && JSON.stringify(normalizeSessionEngineRoute(knownConfig.lastUsedEngineRoute)) === wanted) return false;

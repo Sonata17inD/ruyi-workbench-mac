@@ -6,7 +6,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { copyRuntimeFiles } = require('./macos-runtime-files');
 const { sha256, inventory, treeDigest, copyTree, run, verifyAssets, nativeAudit, verifyPackage,
-  FULL_APP_NAME, FULL_APP_ID } = require('./macos-offline-lib');
+  FULL_APP_NAME, SLIM_APP_NAME, FULL_APP_ID } = require('./macos-offline-lib');
 const { buildMacDesktop } = require('./build-macos-desktop');
 const { buildMacProcessHelper } = require('./build-macos-process-helper');
 const { buildMacKeychainHelper } = require('./build-macos-keychain-helper');
@@ -37,7 +37,7 @@ function buildMacOffline({ assets, output, variant = 'full' }) {
   fs.mkdirSync(path.dirname(output), { recursive: true });
   const staging = fs.mkdtempSync(path.join(path.dirname(output), '.ruyi-offline-'));
   const candidate = path.join(staging, 'candidate');
-  const app = variant === 'full' ? FULL_APP_NAME : 'Ruyi.app';
+  const app = variant === 'full' ? FULL_APP_NAME : SLIM_APP_NAME;
   const bundle = path.join(candidate, app);
   const workbench = path.join(bundle, 'Contents/Resources/workbench');
   const home = path.join(staging, 'home');

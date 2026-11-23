@@ -415,7 +415,7 @@ const srv = require(path.join(APP, 'server.js'));
 
 /* ═════════════ ④ 普通会话包零变化 ═════════════ */
 {
-  ok(srv.PROMPT_PACK_VERSION === '2026-w138-2', `④ PROMPT_PACK_VERSION 为 138 波值(普通包文字新增跨线程回读指引;管家段不单独 bump 普通包;got ${srv.PROMPT_PACK_VERSION})`);
+  ok(srv.PROMPT_PACK_VERSION === '2026-11-20', `④ PROMPT_PACK_VERSION 匹配本次常规工具提示词版本(got ${srv.PROMPT_PACK_VERSION})`);
   const provider = { id: 'fake', label: 'Fake端点', model: 'fake-model' };
   const tools = [{ function: { name: 'file_read' } }, { function: { name: 'tool_search' } }];
   const stable = srv.buildStableSystemPrompt(provider, 'fake-model', 'C:\\proj', tools, false, {});

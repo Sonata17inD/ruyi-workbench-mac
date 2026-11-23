@@ -1,4 +1,5 @@
 'use strict';
+import { effortOptions } from './reasoning-control.js';
 import { providerModels, agentModels } from './model-catalog.js';
 
 
@@ -164,11 +165,12 @@ export function permissionHintKey(mode) {
 // sessionEngineRouteFromConfig 同一判据；chip 只做展示，不落盘这个回落值）。
 export function resolveEngineRoute(session, config) {
   const raw = session && session.engineRoute;
+  const effort = raw?.reasoningEffort ? { reasoningEffort: raw.reasoningEffort } : {};
   if (raw && raw.engine === 'openai' && raw.providerId) {
-    return { engine: 'openai', providerId: String(raw.providerId), model: String(raw.model || '') };
+    return { engine: 'openai', providerId: String(raw.providerId), model: String(raw.model || ''), ...effort };
   }
   if (raw && (raw.engine === 'agent' || raw.engine === 'claude')) {
-    return { engine: 'agent', agentCliType: storedAgentCliType(raw.agentCliType), model: String(raw.model || '') };
+    return { engine: 'agent', agentCliType: storedAgentCliType(raw.agentCliType), model: String(raw.model || ''), ...effort };
   }
   const cfg = config && typeof config === 'object' ? config : {};
   const providerId = String(cfg.activeProvider || '').trim();
@@ -299,14 +301,26 @@ export const STEWARD_POLL_DUE_SLACK_MS = 250;
 export const STEWARD_POLL_MS_CONNECTED = 30000;
 
 export function isSubmitEnter(event) {
-  return Boolean(event) && event.key === 'Enter' && !event.shiftKey && !event.isComposing;
+  return Boolean(event) && event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229;
 }
 
 export function bindEnterToSubmit(node, handler) {
   if (!node || typeof node.addEventListener !== 'function') return false;
+  let composing = false;
+  let endedAt = -Infinity;
+  node.addEventListener('compositionstart', () => { composing = true; });
+  node.addEventListener('compositionend', event => {
+    composing = false;
+    endedAt = event.timeStamp;
+  });
+  // WebKit can finish composition before delivering the Return that confirmed it.
+  // Key release ends that press, even if the user immediately presses Return again.
+  node.addEventListener('keyup', () => { endedAt = -Infinity; });
+  node.addEventListener('blur', () => { composing = false; endedAt = -Infinity; });
   node.addEventListener('keydown', event => {
-    if (!isSubmitEnter(event)) return;
+    if (composing || !isSubmitEnter(event) || event.defaultPrevented) return;
     event.preventDefault();
+    if (event.repeat || event.timeStamp - endedAt < 50) return;
     handler(event);
   });
   return true;
@@ -494,6 +508,13 @@ const STEWARD_MODEL_ROW_CLASSES = Object.freeze({
 // setAsNewDefault），所以同步也只在这里做：改成功之后，同一条线程上的其它实例就地换上新会话并通知各自的宿主；
 // 改的是全局默认时，所有实例按新配置重画。登记表只增不减的上界 = 屏上画过 chip 的线程数（左栏每行一份）。
 const LIVE_CHIPS = new Set();
+const pendingWrites = new Map();
+export function pendingThreadPreference(id) {
+  return pendingWrites.get(id);
+}
+function renderThreadChips(id) {
+  for (const peer of LIVE_CHIPS) if (peer.sessionIdOf() === id) peer.rerender();
+}
 export function rerenderAllQuickSwitchChips() {
   for (const peer of LIVE_CHIPS) { try { peer.rerender(); } catch { /* 一份画不出来不该拖住其余 */ } }
   return LIVE_CHIPS.size;
@@ -593,10 +614,22 @@ export function createQuickSwitchChips({
   // ── 唯一的写口：PATCH /api/sessions/:id ────────────────────────────────────────
   // 权限档与引擎路由是【同一个端点、同一种形状】（13d 的 updateSessionMeta 一起处理），所以这里
   // 只有一个函数；抽屉与 117g/117h 都不许自己再写一条。
-  async function patchSession(patch) {
-    if (!sessionId) return null;
+  async function patchSession(patch, quiet = false) {
+    const targetId = sessionId;
+    if (!targetId || pendingWrites.has(targetId)) return null;
+    const write = saveThreadPreference(targetId, patch, quiet);
+    pendingWrites.set(targetId, write);
+    renderThreadChips(targetId);
+    try { return await write; }
+    finally {
+      pendingWrites.delete(targetId);
+      renderThreadChips(targetId);
+    }
+  }
+
+  async function saveThreadPreference(targetId, patch, quiet) {
     try {
-      const response = await api(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+      const response = await api(`/api/sessions/${encodeURIComponent(targetId)}`, {
         method: 'PATCH',
         body: JSON.stringify(patch.engineRoute ? { ...patch, engineRouteScope: 'thread' } : patch),
       });
@@ -604,9 +637,10 @@ export function createQuickSwitchChips({
         note(t('stewardShell.chips.changeFailed', { error: apiErrText((response && response.error) || 'failed') }), 'err');
         return null;
       }
+      if (targetId !== sessionId) return response.session || null;
       session = response.session || session;
       render();
-      note(patch.engineRoute ? t('settingsReceipt.threadSaved', { model: String(session.engineRoute?.model || t('stewardShell.chips.modelDefault')) }) : t('stewardShell.chips.changed'));
+      if (!quiet) note(patch.engineRoute ? t('settingsReceipt.threadSaved', { model: String(session.engineRoute?.model || t('stewardShell.chips.modelDefault')) }) : t('stewardShell.chips.changed'));
       try { onChanged(session); } catch { /* 宿主刷新失败不该把 chip 打回旧值 */ }
       for (const other of LIVE_CHIPS) if (other !== peer && other.sessionIdOf() === sessionId) other.adopt(session);
       return session;
@@ -1025,10 +1059,50 @@ export function createQuickSwitchChips({
       }
       return knownAgentCliMeta(route.agentCliType)?.label || t('engine.unavailable', { id: route.agentCliType });
     }
-    return route.model || t('stewardShell.chips.modelDefault');
+    return route.model || (route.engine === 'openai' && config().providers?.find(p => p.id === route.providerId)?.model) || t('stewardShell.chips.modelDefault');
+  }
+
+  let effortHost = null;
+  let effortSignature = '';
+  function renderEffort() {
+    if (!effortHost) return;
+    const route = resolveEngineRoute(session, config());
+    const spec = effortOptions(route, config());
+    const busy = pendingWrites.has(sessionId);
+    const selected = spec.values.includes(route.reasoningEffort) ? route.reasoningEffort : '';
+    const signature = JSON.stringify([sessionId, route, spec.values, spec.current, spec.enabled, busy, getLocale()]);
+    if (signature === effortSignature) return;
+    effortSignature = signature;
+    effortHost.replaceChildren();
+    effortHost.hidden = !sessionId || !spec.values.length;
+    if (effortHost.hidden) return;
+    effortHost.appendChild(el('span', 'effort-label', t('archive.effort')));
+    if (spec.enabled === false) {
+      effortHost.appendChild(el('span', 'effort-disabled', t('archive.off')));
+      return;
+    }
+    for (const value of spec.values) {
+      const labelKey = value ? 'provider.reasoningEffort.' + value : 'archive.default';
+      const button = el('button', 'effort-option', t(labelKey));
+      button.type = 'button';
+      button.dataset.effort = value;
+      button.setAttribute('aria-pressed', String(value === selected));
+      if (!value) button.title = t('archive.inheritEffort') + ' · ' + t('provider.reasoningEffort.' + (spec.current || 'default'));
+      button.disabled = busy;
+      button.onclick = async () => {
+        if (value === selected) return;
+        const owner = sessionId;
+        await patchSession({ engineRoute: { ...route, reasoningEffort: value } }, true);
+        if (sessionId === owner && doc().activeElement === doc().body) {
+          effortHost.querySelector('[aria-pressed="true"]')?.focus({ preventScroll: true });
+        }
+      };
+      effortHost.appendChild(button);
+    }
   }
 
   function render() {
+    renderEffort();
     for (const [kind, chip] of chips) {
       const value = valueFor(kind);
       // 值没变就不写：左栏复用行每拍都会 setSession 一次（steward-board.js 的 railRowChips），同值重写也是一次 DOM 变更。
@@ -1040,7 +1114,7 @@ export function createQuickSwitchChips({
       // U14 走查：kind 标签跟着一起刷新（见 buildChip 头注）——render() 本来就在换会话／改档位／
       // rerenderAllQuickSwitchChips() 时被调用，不必为它另起一条监听。
       if (chip.keyLabel && chip.labelKey && chip.keyLabel.textContent !== t(chip.labelKey)) chip.keyLabel.textContent = t(chip.labelKey);
-      chip.button.disabled = !sessionId;
+      chip.button.disabled = !sessionId || pendingWrites.has(sessionId);
       chip.button.classList.toggle('is-pinned', kind === 'permission' && Boolean(session && session.permissionMode));
     }
   }
@@ -1099,12 +1173,14 @@ export function createQuickSwitchChips({
     return wrap;
   }
 
-  function mount(container) {
+  function mount(container, composerModel, composerEffort) {
+    effortHost = composerEffort || null;
     if (!container || !doc()) return null;
     host = container;
     chips.clear();
     while (host.firstChild) host.removeChild(host.firstChild);
-    host.append(buildChip('permission', 'stewardShell.chips.permission'), buildChip('model', 'stewardShell.chips.model'));
+    host.appendChild(buildChip('permission', 'stewardShell.chips.permission'));
+    (composerModel || host).appendChild(buildChip('model', 'stewardShell.chips.model'));
     if (!compact) host.appendChild(buildChip('engine', 'stewardShell.chips.engine'));
     render();
     return host;

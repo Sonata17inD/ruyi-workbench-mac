@@ -54,13 +54,13 @@ async function up(port) { // 117q:预算 50×120ms=6s 小于本机冷启动实�
     const configPath = path.join(HOME, 'config.json');
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const modes = [];
-    for (const uiMode of ['simple', 'pro']) {
+    for (const theme of ['dark', 'light']) {
       const file = configPath + '.fixture-next';
-      fs.writeFileSync(file, JSON.stringify({ ...raw, uiMode, configExplicitKeysV1: [...new Set([...(raw.configExplicitKeysV1 || []), 'uiMode'])] }));
+      fs.writeFileSync(file, JSON.stringify({ ...raw, theme, configExplicitKeysV1: [...new Set([...(raw.configExplicitKeysV1 || []), 'theme'])] }));
       fs.renameSync(file, configPath);
-      modes.push((await get(WP, '/api/status', hdr))?.json?.config?.uiMode);
+      modes.push((await get(WP, '/api/status', hdr))?.json?.config?.theme);
     }
-    ok(modes.join(',') === 'simple,pro', 'P1 两次配置原子替换分别在下一请求可见');
+    ok(modes.join(',') === 'dark,light', 'P1 两次配置原子替换分别在下一请求可见');
 
     // ── P2 行为:缓存安全 ──
     console.log('── P2 行为: verifyManifest 缓存安全 ──');

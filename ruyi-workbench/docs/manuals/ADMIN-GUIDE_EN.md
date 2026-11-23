@@ -6,7 +6,7 @@ Ruyi for Mac targets Apple Silicon and macOS 14. Verify the SHA-256 checksum sup
 
 | Variant | Included capabilities | Default data directory |
 | --- | --- | --- |
-| Ruyi Full | Node workbench, ripgrep, Python, Office/PDF tools, Chromium and desktop automation | `~/.ruyi-workbench-full` |
+| Ruyi | Node workbench, ripgrep, Python, Office/PDF tools, Chromium and desktop automation | `~/.ruyi-workbench-full` |
 | Ruyi Slim | Node workbench, ripgrep and native host | `~/.ruyi-workbench` |
 
 Configure a model for either variant. Cloud models require connectivity. Start the model service for a local or intranet endpoint. System browser mode opens URLs. Select the bundled browser in Full to automate page contents.

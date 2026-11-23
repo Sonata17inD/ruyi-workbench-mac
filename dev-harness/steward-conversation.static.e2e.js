@@ -84,7 +84,7 @@ ok(/textContent/.test(conversation)
 // 33 号文 §4 重钉 A3c（反向验证过：把 isSubmitEnter 从 composer 的 import 里去掉立刻真红）：那次收编
 // 让本行又多了一个名字 isSubmitEnter。锁要钉的从来是「doc/byId/el 从 chips.js 来、零本地重复定义」，
 // 不是「那一行长什么样」——所以改成按名字集合判定（见头上 chipsImportNames）。
-ok(['stewardEscapeStack', 'doc', 'byId', 'el', 'isSubmitEnter'].every(name => chipsImportNames(composer).includes(name))
+ok(['stewardEscapeStack', 'doc', 'byId', 'el', 'bindEnterToSubmit'].every(name => chipsImportNames(composer).includes(name))
   && !/const doc = \(\) => globalThis\.document \|\| null;/.test(composerCode)
   && !/const byId = id => \(doc\(\) \? doc\(\)\.getElementById\(id\) : null\);/.test(composerCode)
   && !/function el\(tag, className, text\) \{/.test(composerCode),

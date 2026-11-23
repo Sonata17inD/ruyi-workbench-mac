@@ -1636,7 +1636,7 @@ const STEWARD_CONFIG_SECRET_PATTERN = /apiKey|token|secret|password/i;
 // 兜底正则(apiKey|token|secret|password)仍在最前判:含 Tokens 的三个键(stewardContextBudgetTokens /
 // summarySingleShotMaxTokensV1 / budgetGuardTurnTokensV1)因此不进表 —— 不给正则开例外,代价是它们只能在设置页改。
 const STEWARD_CONFIG_TIER_FREE = Object.freeze([
-  'locale', 'outputStyle', 'theme', 'uiMode',
+  'locale', 'outputStyle', 'theme',
   // 管家自身设置(§3.5「管家自身设置除默认权限与自理清单外」)。stewardEnabledV1 与 stewardAutoActions 不在这里:
   // 前者是总开关、后者是「管家可以自己做的事」清单,两个都属于「管家扩自己的权」,一律 confirm。
   'stewardProviderId', 'stewardModel', 'stewardPollMs', 'stewardMaxTurnsPerHour', 'stewardMaxCostPerDay',
@@ -1719,7 +1719,6 @@ const STEWARD_CONFIG_HELP = Object.freeze(Object.fromEntries([
   ['locale', '界面语言:auto / zh-CN / en-US', 'UI language: auto / zh-CN / en-US'],
   ['outputStyle', '回答风格:detailed(详细)/ concise(简洁)', 'Answer style: detailed / concise'],
   ['theme', '界面主题:dark / light / system', 'UI theme: dark / light / system'],
-  ['uiMode', '界面模式:simple(简洁)/ pro(专家,露出高级设置)', 'UI mode: simple / pro (shows advanced settings)'],
   ['stewardProviderId', '管家自己用哪个端点;空 = 跟随对话主端点', 'Endpoint the steward itself uses; empty = follow the main endpoint'],
   ['stewardModel', '管家自己用哪个模型;空 = 用这家服务商的默认模型', 'Model the steward itself uses; empty = that provider\'s default model'],
   ['stewardPollMs', '管家多久看一眼收件箱,毫秒(5000–600000)', 'How often the steward checks its inbox, ms (5000–600000)'],

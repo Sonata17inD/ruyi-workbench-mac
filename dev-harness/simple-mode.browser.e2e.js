@@ -1,20 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 require('./lib/self-isolate-home.js'); // 直跑时家目录自隔离(见 lib 头注)
-// 128d(48 号文 §1;47 号文 G3 缺口①):简易模式的真浏览器渲染件。
-//
-// 出厂默认就是 uiMode='simple'(01-config 的 defaultConfig),而在本件之前 20 件真浏览器测试【全部】把
-// uiMode 钉成 'pro' —— 新用户第一眼看到的那一档,零渲染覆盖。本件的配置【不写 uiMode】(走出厂默认),量:
-//   S1 出厂默认真的落成简易:<html data-ui-mode="simple">、根字号 15px(简易档 +1px);
-//   S2 两个视角都画得出来:宽窄两档视口都没有横向滚动,当前视角的输入框看得见;
-//   S3 工作台右栏:「用量」「记录」两枚页签藏起来,其余五枚看得见;原始输出槽 #toolOutput 不显示;
-//   S4 设置弹窗:2026-10 设置补全之后【所有】页签在简易档都看得见(修前只留九枚,迁移中心／MCP／扩展组件对出厂默认的
-//      简易档用户全部不可达);五组都没有空组头;逐枚点过去,面板真的切过去、不是空的;点「高级」就落在「高级」。
-//   S5 一个真回合(在简易档的输入框里打字、按 Enter 发送,假 provider 要一次 file_read):工具卡显示人话动词、
-//      藏起原始工具名,「详情」折叠头看得见;对照组:切到专家档,同一张卡反过来 —— 证明判据分得清两档;
-//   S6 齿轮菜单里的「界面」切换真的落盘(服务端配置 uiMode 跟着变),再切回来也落盘;
-//   S7 全程页面上没有未捕获异常、没有 console.error。
-// 判定行:`SIMPLE MODE BROWSER E2E: ALL PASS`。
+// Legacy simple preferences must start in the full workspace on both shells.
 const fs = require('fs');
 const path = require('path');
 const { startBrowserFixture, sleep } = require('./lib/browser-fixture');
@@ -32,8 +19,7 @@ const WIDE_W = 1440;
 const WIDE_H = 900;
 const NARROW_W = 640;
 const NARROW_H = 800;
-// 2026-10 设置补全：设置弹窗不再按界面模式藏页签 —— 简易档看得见的就是全部页签（修前只有九枚，迁移中心、MCP、扩展组件都够不着）。
-const SIMPLE_TABS = ['basic', 'security', 'limits', 'steward', 'models', 'providers', 'voice', 'claude', 'agents', 'network', 'integrations', 'toolbox', 'skills', 'migration', 'doctor', 'storage', 'advanced', 'update'];
+const SECTION_LINKS = ['overview', 'appearance', 'providers', 'security', 'limits', 'steward', 'basic'];
 
 (async () => {
   let fx = null;
@@ -44,8 +30,7 @@ const SIMPLE_TABS = ['basic', 'security', 'limits', 'steward', 'models', 'provid
       prefix: 'ruyi-simple-mode-',
       width: WIDE_W,
       height: WIDE_H,
-      // 刻意不写 uiMode:量的就是出厂默认。
-      config: { uiMode: undefined },
+      config: { uiMode: 'simple' },
       provider: async ctx => {
         if (!ctx.answered) { ctx.toolCall('file_read', { path: notePath }, 'call_simple_read'); return; }
         ctx.text(REPLY); ctx.stop();
@@ -60,11 +45,12 @@ const SIMPLE_TABS = ['basic', 'security', 'limits', 'steward', 'models', 'provid
     });
     const ev = expr => fx.evaluate(expr);
 
-    /* ═════════ S1 出厂默认落成简易 ═════════ */
-    const mode = await fx.waitForEval(`(() => document.documentElement.getAttribute('data-ui-mode') === 'simple'
-      ? { mode: 'simple', font: getComputedStyle(document.documentElement).fontSize, cfg: window.state.config.uiMode } : null)()`, 200);
-    ok(Boolean(mode) && mode.cfg === 'simple', `S1 配置里没写 uiMode,出厂默认落成简易(属性 ${mode && mode.mode}、服务端给的 ${mode && mode.cfg})`);
-    ok(Boolean(mode) && mode.font === '15px', `S1b 简易档根字号 15px(实 ${mode && mode.font})`);
+    const migrated = await fx.waitForEval(`window.state?.config?.uiMode === 'pro'
+      && document.documentElement.dataset.uiMode === 'pro' && document.documentElement.dataset.density === 'compact'`);
+    ok(Boolean(migrated), 'S1 历史精简配置进入专家界面');
+    ok(await ev(`document.querySelectorAll('#cfgUiMode, #uiModeToggle').length === 0
+      && !!document.querySelector('#sidebar #openSettingsBtn') && !document.querySelector('#appGearMenu #openSettingsBtn')
+      && !!document.querySelector('#appTopbar .tb-left #lensSeg')`), 'S1b 视角在品牌旁，设置在侧栏');
 
     /* ═════════ S2 两个视角、宽窄两档都画得出来 ═════════ */
     const fit = composerId => `(() => {
@@ -94,53 +80,36 @@ const SIMPLE_TABS = ['basic', 'security', 'limits', 'steward', 'models', 'provid
     const tabs = await ev(`(() => [...document.querySelectorAll('#toolPane .tool-tabs button[data-tab]')].map(b => ({
       tab: b.dataset.tab, display: getComputedStyle(b).display, shown: b.offsetParent !== null })))()`);
     const shownTabs = tabs.filter(t => t.shown).map(t => t.tab).sort();
-    const hiddenTabs = tabs.filter(t => t.display === 'none').map(t => t.tab).sort();
-    ok(JSON.stringify(hiddenTabs) === JSON.stringify(['audit', 'usage']),
-      `S3 简易档右栏藏起的页签恰好是「用量」「记录」(实藏 ${JSON.stringify(hiddenTabs)})`);
-    ok(['agent-runs', 'artifacts', 'changes', 'files', 'memory'].every(t => shownTabs.includes(t)),
-      `S3b 其余五枚看得见(实见 ${JSON.stringify(shownTabs)})`);
+    ok(['audit', 'usage', 'agent-runs', 'artifacts', 'changes', 'files', 'memory'].every(t => shownTabs.includes(t)),
+      'S3 完整工作台页签可见');
     const rawOut = await ev(`getComputedStyle(document.getElementById('toolOutput')).display`);
     ok(rawOut === 'none', `S3c 原始输出槽 #toolOutput 不显示(实 display:${rawOut})`);
 
     /* ═════════ S4 设置弹窗 ═════════ */
-    await ev(`(() => { document.getElementById('appGearBtn').click(); return true; })()`);
     await ev(`(() => { document.getElementById('openSettingsBtn').click(); return true; })()`);
     ok(Boolean(await fx.waitForEval(`(() => !document.getElementById('settingsModal').classList.contains('hidden') ? 1 : null)()`, 200)),
       'S4a 设置弹窗打开了');
-    // 分组导航默认只展开「通用」:先把所有组展开,量的才是「简易档藏了谁」而不是「哪组折着」。
-    await ev(`(() => { document.querySelectorAll('#settingsTabs .settings-nav-group').forEach(g => g.classList.add('is-open')); return true; })()`);
-    await sleep(150);
-    const stabs = await ev(`(() => ({
-      buttons: [...document.querySelectorAll('#settingsTabs button[data-stab]')].map(b => ({ stab: b.dataset.stab, shown: b.offsetParent !== null && getComputedStyle(b).display !== 'none' })),
-      emptyGroups: [...document.querySelectorAll('#settingsTabs .settings-nav-group')].filter(g => getComputedStyle(g).display !== 'none'
-        && ![...g.querySelectorAll('button[data-stab]')].some(b => b.offsetParent !== null && getComputedStyle(b).display !== 'none')).map(g => g.dataset.group),
-    }))()`);
-    const visibleStabs = stabs.buttons.filter(b => b.shown).map(b => b.stab).sort();
-    ok(JSON.stringify(visibleStabs) === JSON.stringify([...SIMPLE_TABS].sort()),
-      `S4 简易档看得见全部设置页签(实见 ${JSON.stringify(visibleStabs)})`);
-    ok(stabs.buttons.every(b => b.shown), `S4b 没有一枚页签被藏(实藏 ${JSON.stringify(stabs.buttons.filter(b => !b.shown).map(b => b.stab))})`);
-    ok(stabs.emptyGroups.length === 0, `S4c 没有空组头:每一组在简易档至少有一枚看得见的页签(实见空组 ${JSON.stringify(stabs.emptyGroups)})`);
-    const switched = [];
-    for (const stab of SIMPLE_TABS) {
+    const visibleStabs = await ev(`[...document.querySelectorAll('#settingsTabs button[data-stab]')].filter(b => b.offsetParent).map(b => b.dataset.stab)`);
+    ok(JSON.stringify(visibleStabs) === JSON.stringify(SECTION_LINKS), 'S4 设置导航按分类平铺');
+    for (const stab of SECTION_LINKS) {
       await ev(`(() => { document.querySelector('#settingsTabs button[data-stab="${stab}"]').click(); return true; })()`);
       const panel = await fx.waitForEval(`(() => {
         const active = document.querySelector('.settings-tab.active');
         if (!active || active.id !== 'stab-${stab}') return null;
-        return { id: active.id, text: (active.innerText || '').trim().length };
+        return { text: active.innerText.trim().length, themes: [...active.querySelectorAll('[data-theme-choice]')].map(b => b.dataset.themeChoice).sort() };
       })()`, 100);
-      switched.push(`${stab}:${panel ? panel.text : 'x'}`);
-      ok(Boolean(panel) && panel.text > 20, `S4d 点「${stab}」面板真的切过去且不是空的(${panel ? panel.text + ' 字' : '没切过去'})`);
+      ok(Boolean(panel) && (stab === 'appearance' ? panel.themes.join(',') === 'dark,light,system' : panel.text > 20), `S4d 点「${stab}」面板真的切过去且不是空的(${panel ? panel.text + ' 字' : '没切过去'})`);
     }
     // 修前简易档点「高级」会被 JS 兜底拦回「基础」;现在不拦 —— 点哪枚就是哪枚。
     await ev(`(() => { document.querySelector('#settingsTabs button[data-stab="advanced"]').click(); return true; })()`);
     await sleep(150);
     const landed = await ev(`(document.querySelector('.settings-tab.active') || {}).id || ''`);
-    ok(landed === 'stab-advanced', `S4e 简易档点「高级」就落在「高级」(实 ${landed})`);
+    ok(landed === 'stab-advanced', `S4e 工作台点「高级」就落在「高级」(实 ${landed})`);
     await fx.escape();
     ok(Boolean(await fx.waitForEval(`(() => document.getElementById('settingsModal').classList.contains('hidden') ? 1 : null)()`, 100)),
       'S4f Esc 关掉设置弹窗');
 
-    /* ═════════ S5 真回合:简易档的工具卡 ═════════ */
+    /* ═════════ S5 真回合:专家界面的工具卡 ═════════ */
     await ev(`(() => {
       const title = [...document.querySelectorAll('#railList .steward-board-thread-title')].find(n => (n.textContent || '').includes(${JSON.stringify(THREAD_TITLE)}));
       if (title) title.click();
@@ -159,36 +128,13 @@ const SIMPLE_TABS = ['basic', 'security', 'limits', 'steward', 'models', 'provid
       return { verb: show('.tc-verb'), name: show('.tc-name'), sum: show('.tc-detail > summary.tc-detail-sum') };
     })()`, 1500);
     ok(Boolean(card), 'S5b 回合跑完:工具卡与答复都上屏了');
-    ok(Boolean(card) && card.verb && card.verb.display !== 'none' && card.verb.text.length > 0 && card.verb.text !== 'file_read',
-      `S5 简易档工具卡显示人话动词(${card && JSON.stringify(card.verb)})`);
-    ok(Boolean(card) && card.name && card.name.display === 'none', `S5c 简易档藏起原始工具名(${card && JSON.stringify(card.name)})`);
-    ok(Boolean(card) && card.sum && card.sum.display !== 'none', `S5d 简易档「详情」折叠头看得见(${card && JSON.stringify(card.sum)})`);
+    ok(Boolean(card) && card.name?.display !== 'none' && card.name?.text === 'file_read', 'S5c 显示工具原名');
+    ok(Boolean(card) && card.verb?.display === 'none' && card.sum?.display === 'none', 'S5d 工具卡使用专家排版');
 
-    /* ═════════ S6 齿轮菜单里的「界面」切换落盘 ═════════ */
-    const flip = async expected => {
-      await ev(`(() => { document.getElementById('appGearBtn').click(); document.getElementById('uiModeToggle').click(); return true; })()`);
-      const attr = await fx.waitForEval(`(() => document.documentElement.getAttribute('data-ui-mode') === '${expected}' ? '${expected}' : null)()`, 100);
-      let saved = '';
-      for (let i = 0; i < 50 && saved !== expected; i++) {
-        const status = await fx.request('GET', '/api/status');
-        saved = status && status.json && status.json.config ? status.json.config.uiMode : '';
-        if (saved !== expected) await sleep(100);
-      }
-      return { attr, saved };
-    };
-    const toPro = await flip('pro');
-    ok(toPro.attr === 'pro' && toPro.saved === 'pro', `S6 齿轮菜单切到专家档:属性 ${toPro.attr}、服务端配置 ${toPro.saved}`);
-    // S5 的对照组:同一张卡在专家档反过来。
-    const proCard = await ev(`(() => {
-      const card = [...document.querySelectorAll('#messages .tool-card')].find(c => (c.querySelector('.tc-name') || {}).textContent === 'file_read');
-      if (!card) return null;
-      return { verb: getComputedStyle(card.querySelector('.tc-verb')).display, name: getComputedStyle(card.querySelector('.tc-name')).display };
-    })()`);
-    ok(Boolean(proCard) && proCard.verb === 'none' && proCard.name !== 'none',
-      `S5e 对照:专家档同一张卡反过来 —— 动词藏、原始名显(${JSON.stringify(proCard)})`);
-    const toSimple = await flip('simple');
-    ok(toSimple.attr === 'simple' && toSimple.saved === 'simple', `S6b 再切回简易档:属性 ${toSimple.attr}、服务端配置 ${toSimple.saved}`);
-
+    await ev(`localStorage.setItem('wcw.uiMode', 'simple')`);
+    await fx.cdp.send('Page.reload', { ignoreCache: true });
+    ok(Boolean(await fx.waitForEval(`window.state?.config?.uiMode === 'pro' && document.documentElement.dataset.uiMode === 'pro'`)),
+      'S6 刷新后忽略旧浏览器的精简偏好');
     /* ═════════ S7 全程无未捕获异常 ═════════ */
     ok(fx.exceptions.length === 0, `S7 全程页面上没有未捕获异常(实 ${fx.exceptions.length}${fx.exceptions.length ? ':' + fx.exceptions.slice(0, 3).join(' | ') : ''})`);
     ok(fx.consoleErrors.length === 0, `S7b 全程没有 console.error(实 ${fx.consoleErrors.length}${fx.consoleErrors.length ? ':' + fx.consoleErrors.slice(0, 3).join(' | ') : ''})`);

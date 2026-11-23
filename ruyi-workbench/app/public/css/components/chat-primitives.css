@@ -14,8 +14,6 @@
 .empty-state { max-width: 640px; margin: 8vh auto 0; text-align: center; }
 /* v1.0-S1: 如意 Ruyi 内联主标(青花/鎏金,走 --brand-* 随主题),取代旧 Claude 遗留字母 "C" tile。
    极淡青花底衬托品牌色(123-S3 后顶栏品牌标已撤,这是唯一在役的品牌标)。 */
-.empty-logo { width: 54px; height: 54px; border-radius: 14px; background: color-mix(in srgb, var(--brand-qh) 12%, transparent); display: grid; place-items: center; margin: 0 auto 16px; }
-.empty-logo svg { display: block; }
 .empty-state h2 { font-size: var(--fs-lg); margin: 0 0 10px; }
 .empty-state p { color: var(--muted); line-height: 1.7; }
 .empty-engine { display: inline-flex; align-items: center; gap: 7px; margin: 0 0 12px; padding: 5px 12px;
@@ -131,15 +129,15 @@ button.pb-card:hover { border-color: var(--accent); transform: translateY(-2px);
 
 /* v1.5 (§3.3): 如意云纹极淡水印 —— 空状态(空会话/首跑引导)与故障卡顶部。mask 取云头 alpha 形状,
    --brand-qh 上色(随主题走,不硬编码),opacity 0.04(≤0.05 红线)。不进正文、不干扰阅读:内容层 z-index
-   抬到水印之上。离线内联(--ruyi-cloud data-URI),不引外部资源。克制:仅顶部一枚云头。 */
+   抬到水印之上。离线内联(--ruyi-silhouette data-URI),不引外部资源。克制:仅顶部一枚云头。 */
 .empty-state, .boot-failure { position: relative; }
 .empty-state > *, .boot-failure > * { position: relative; z-index: 1; }
 .empty-state::before, .boot-failure::before {
   content: ''; position: absolute; left: 50%; top: 0; transform: translateX(-50%);
   width: 200px; height: 118px; pointer-events: none; z-index: 0;
   background: var(--brand-qh); opacity: .07; /* v3 (§C3): 品牌云纹从 .04 提到 .07 —— 仍克制但可见 */
-  -webkit-mask: var(--ruyi-cloud) no-repeat center top / contain;
-  mask: var(--ruyi-cloud) no-repeat center top / contain;
+  -webkit-mask: var(--ruyi-silhouette) no-repeat center top / contain;
+  mask: var(--ruyi-silhouette) no-repeat center top / contain;
 }
 
 /* v1.5 (§3.4): 密度联动点击区 —— 主画像入口面(起始 chip / 空状态 CTA)在 comfortable(简易)下更大更好点,

@@ -147,12 +147,12 @@ const SHORT_INSTR = '回答尽量简短，直接给结果，不解释过程除�
     }
     ok(/--ok\s*:/.test(css) && /--warn\s*:/.test(css) && /--danger\s*:/.test(css), '(S4) --ok/--warn/--danger 齐全');
     ok(!/--success\s*:/.test(css) && !/--warning\s*:/.test(css), '(S4) 未回退到 --success/--warning');
-    ok(/--ruyi-cloud\s*:\s*url\("data:image\/svg\+xml/.test(css), '(S4) --ruyi-cloud 内联 SVG data-URI token（离线，不引外部资源）');
-    ok(/\.empty-state::before[\s\S]{0,500}var\(--ruyi-cloud\)/.test(css), '(S4) 空状态/故障卡 ::before 用 --ruyi-cloud 作云纹水印');
-    ok(/mask:\s*var\(--ruyi-cloud\)/.test(css) && /background:\s*var\(--brand-qh\)/.test(css), '(S4) 云纹走 mask + --brand-qh 上色（随主题，不硬编码）');
+    ok(/--ruyi-silhouette\s*:\s*url\("\/brand\/mark-mono\.svg"\)/.test(css), '(S4) --ruyi-silhouette 本地 SVG token（离线，不引外部资源）');
+    ok(/\.empty-state::before[\s\S]{0,500}var\(--ruyi-silhouette\)/.test(css), '(S4) 空状态/故障卡 ::before 用 --ruyi-silhouette 作云纹水印');
+    ok(/mask:\s*var\(--ruyi-silhouette\)/.test(css) && /background:\s*var\(--brand-qh\)/.test(css), '(S4) 云纹走 mask + --brand-qh 上色（随主题，不硬编码）');
     // 第26波b 修存量过期断言: 品牌云纹 opacity 在 UI v3(§C3)已刻意从 .04 提到 .07(「仍克制但可见」),
     // 旧断言 ≤0.05 随之过期。放宽到 ≤0.09(仍是极淡水印,守住"克制"意图)。
-    ok(/opacity:\s*\.0[0-9]\b/.test(css.match(/::before\s*\{[^}]*var\(--ruyi-cloud\)[^}]*\}/)?.[0] || css), '(S4) 云纹水印 opacity ≤ 0.09(克制)');
+    ok(/opacity:\s*\.0[0-9]\b/.test(css.match(/::before\s*\{[^}]*var\(--ruyi-silhouette\)[^}]*\}/)?.[0] || css), '(S4) 云纹水印 opacity ≤ 0.09(克制)');
   }
 
   const HOME = path.join(os.tmpdir(), 'wcw-uimode-style-e2e');

@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('node:path');
-const { unprefixedBridgedName } = require('./turn-effect-kinds.cjs');
+const { unprefixedBridgedName, unwrapToolInvokeCall, isBridgedWriteTool, ARTIFACT_OUTPUT_PATH_KEYS } = require('./turn-effect-kinds.cjs');
 
 // v1.5-W1.5 (T3): bridged 写族工具的路径提取表 —— 裸工具名 → args 里的目标路径字段名。ACC 的
 // write_document/write_excel/write_pdf 入参都叫 `path`(见 document.py 函数签名);delete 类走 op:delete。
@@ -91,4 +91,17 @@ function collectBridgedWriteTarget(bridgedName, args) {
   return targets.length ? targets[0] : null;
 }
 
-module.exports = { BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg };
+const NATIVE_PRODUCT_TOOLS = new Set(['file_write', 'file_edit', 'file_copy', 'file_move', 'archive_zip', 'archive_unzip', 'http_download']);
+function producedUserFile(call) {
+  const { name, result, input } = unwrapToolInvokeCall(call);
+  if (!result || result.error || result.unchanged || result.ok === false || result.success === false) return false;
+  if (result.ok !== true && result.success !== true) return false;
+  if (NATIVE_PRODUCT_TOOLS.has(name)) return true;
+  // Some bridges return only path, which also occurs in read receipts. Require a write operation there.
+  if (collectBridgedWriteTargets(name, input).some(target => target.mode === 'write')) return true;
+  if (!isBridgedWriteTool(name)) return false;
+  return ARTIFACT_OUTPUT_PATH_KEYS.some(key => typeof result[key] === 'string' && result[key].trim())
+    || (typeof result.path === 'string' && !!result.path.trim());
+}
+
+module.exports = { producedUserFile, BRIDGED_WRITE_PATH_ARGS, collectBridgedWriteTargets, collectBridgedWriteTarget, bridgedWriteRelativePathArg };

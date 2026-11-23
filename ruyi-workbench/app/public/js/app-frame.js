@@ -143,6 +143,7 @@ export function createAppFrame({
     host.classList.toggle('rail-board', open);
     const button = byId('railBoardBtn');
     if (button) button.setAttribute('aria-pressed', open ? 'true' : 'false');
+    host.ownerDocument?.dispatchEvent?.(new Event('ruyi:rail-density'));
     return open;
   }
   function isRailBoard() {
@@ -212,6 +213,38 @@ export function createAppFrame({
     }
     const side = byId('appSideToggleBtn');
     if (side) side.onclick = () => setSideOpen(!isSideOpen());
+    const indexToggle = byId('railIndexToggle');
+    if (indexToggle) {
+      const rail = byId('sidebar');
+      function setIndex(open) {
+        frame().classList.toggle('index-open', open);
+        indexToggle.setAttribute('aria-expanded', String(open));
+      }
+      indexToggle.onclick = event => {
+        const open = !frame().classList.contains('index-open');
+        setIndex(open);
+        if (open && event.detail === 0) rail.querySelector('#newSessionBtn')?.focus();
+      };
+      document_.addEventListener('click', event => {
+        if (indexToggle.contains(event.target) || !frame().classList.contains('index-open')) return;
+        if (!rail.contains(event.target) || event.target.closest('.steward-board-thread-title, #openSettingsBtn, #newSessionBtn')) setIndex(false);
+      });
+      document_.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229 || !frame().classList.contains('index-open')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setIndex(false);
+        indexToggle.focus();
+      });
+    }
+    const threadOptions = byId('threadHead')?.querySelector('.thread-options');
+    if (threadOptions) {
+      document_.addEventListener('pointerdown', event => {
+        if (threadOptions.open && !threadOptions.contains(event.target) && !event.target.closest('.popover, .modal-backdrop')) {
+          threadOptions.open = false;
+        }
+      });
+    }
     const board = byId('railBoardBtn');
     if (board) board.onclick = () => setRailBoard(!isRailBoard());
     setGearOpen(false);

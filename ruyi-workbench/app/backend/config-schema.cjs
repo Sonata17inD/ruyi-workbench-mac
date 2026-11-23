@@ -520,11 +520,8 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
     // provider's baseUrl instead). No scheme validation here: getCapabilities guards the HEAD fetch itself.
     config.capabilityProbeUrl = typeof config.capabilityProbeUrl === 'string' ? config.capabilityProbeUrl.trim().slice(0, 400) : '';
     config.enableToolRequiresProbe = config.enableToolRequiresProbe === true;
-    // v0.9-S1 (C1): uiMode / outputStyle — cleanse to their enums. An unknown value falls back to the
-    // default ('simple' / 'detailed') so a corrupt config can never leave the UI in an undefined density/style.
-    // 第36波(v1.7): uiMode 回退值与 defaultConfig 对齐('simple' = 人人可用面是产品默认;此前回退 'pro' 与
-    // defaultConfig 的 'simple' 两处默认不一致,损坏配置会把普通用户扔进开发者面)。
-    config.uiMode = (config.uiMode === 'simple' || config.uiMode === 'pro') ? config.uiMode : 'simple';
+    // Normalize older installations that saved the retired simple interface.
+    config.uiMode = 'pro';
     config.outputStyle = (config.outputStyle === 'concise' || config.outputStyle === 'detailed') ? config.outputStyle : 'detailed';
     // Resident skills are a small, source-locked global set. Existence and capability are checked against
     // the current workspace registry at use time; normalization only protects the config shape.

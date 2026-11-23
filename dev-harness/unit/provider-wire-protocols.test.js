@@ -148,6 +148,11 @@ test('[M] 请求体编码、推理强度、工具、输出上限、短补全', (
   assert.deepEqual(chat.applyEffort({ model: 'm' }, ''), { model: 'm' });
   assert.deepEqual(srv.applyProviderReasoningEffort({ model: 'm' }, { reasoningEffort: 'low' }, 'responses'), { model: 'm', reasoning: { effort: 'low' } });
   assert.deepEqual(srv.applyProviderReasoningEffort({ model: 'm' }, { reasoningEffort: 'low' }, 'Responses'), { model: 'm', reasoning_effort: 'low' }, '未登记的协议值按缺省 chat');
+  for (const style of ['chat', 'responses', 'anthropic']) {
+    const body = { model: 'claude-sonnet-4-6' };
+    const provider = { reasoning: false, anthropicThinking: 'off', reasoningEffort: 'high' };
+    assert.deepEqual(srv.applyProviderReasoningEffort({ ...body }, provider, style), body, style);
+  }
 
   const tools = [{ type: 'function', function: { name: 'web_search', description: 'd', parameters: { type: 'object' } } }, { type: 'function', function: { name: 'file_read' } }];
   assert.deepEqual(chat.applyTools({}, tools, { serverWebSearch: true }), { tools, tool_choice: 'auto' });
