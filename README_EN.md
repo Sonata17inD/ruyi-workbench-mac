@@ -2,7 +2,11 @@
 
 [简体中文](README.md) · [Contributing](CONTRIBUTING.md) · [Implementation status](docs/mac-native/STATUS.md)
 
-An offline-first agent workbench for Apple Silicon. Node agents, a Web UI and Python document tools run inside an AppKit/WKWebView host, with native Mac system helpers. Supports Anthropic Messages and OpenAI-compatible providers, local Claude Code CLI, MCP tools, Office documents, session recovery and agent collaboration.
+An offline-first agent workbench for Apple Silicon. Node agents, a Web UI and Python document tools run inside an AppKit/WKWebView host, with native Mac system helpers. Supports Anthropic Messages and OpenAI-compatible providers, local Claude Code and Codex CLIs, MCP tools, Office documents, session recovery and agent collaboration.
+
+## Run Codex with a ChatGPT plan
+
+Install the Codex CLI (for example, `npm install -g @openai/codex`). In **Settings → Connections and tools → Agent CLI**, expand **Codex CLI · ChatGPT**, choose **Continue with ChatGPT**, and authorize plan usage in the system browser. Under **Models & capabilities**, select Codex CLI as the main conversation engine and choose a model available to the account. Use an ordinary workbench thread for streaming chat and Ruyi MCP tools. The Agent CLI settings also provide sign-out and a link to ChatGPT usage.
 
 Development uses Node.js 24, Python 3.12 and Xcode Command Line Tools. Full and Slim qualify on the local Apple Silicon Mac running macOS 27.0.1. The arm64 build retains its macOS 14 deployment target. The backend has zero npm runtime dependencies.
 

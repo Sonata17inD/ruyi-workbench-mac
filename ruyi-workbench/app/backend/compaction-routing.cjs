@@ -83,7 +83,7 @@ function createCompactionRouting({ resolveContextWindow, providerContextWindow, 
 
   async function agentConversationContextMeta(config, session) {
     const agentCliType = String(config && config.agentCliType || 'claude');
-    const model = String(config && config.model || session && session.claudeSessionModel || '').trim();
+    const model = String(config && config.model || (agentCliType === 'claude' ? session?.claudeSessionModel : session?.codexThread?.model) || '').trim();
     // An empty configured model is itself a route (the CLI default), not the previous concrete model.
     const manualModel = String(config && config.model || '').trim();
     let contextWindow = configuredConversationWindow(config, 'agent', agentCliType, manualModel);

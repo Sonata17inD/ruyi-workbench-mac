@@ -11,6 +11,10 @@ const THREAD_INDEX_RECENT_DEFAULT = 30;
 const THREAD_INDEX_RECENT_MIN = 10;
 const THREAD_INDEX_RECENT_MAX = 200;
 
+function managedWorkspacePath(root) {
+  return path.join(typeof root === 'string' && path.isAbsolute(root) ? root : path.join(os.homedir(), 'Ruyi'), 'workspace');
+}
+
 function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
   function defaultConfig() {
     return {
@@ -25,6 +29,7 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
       credentialEncryptionV1: false, // Opt-in platform-protected storage. Existing encrypted references retain their explicit enabled state.
       version: VERSION,
       agentCliType: 'claude',
+      codexPath: '', codexModel: '', codexThinkingEffort: 'high',
       newThreadEngine: 'last',      // last | global
       // 「上一次用的引擎路由」。**只记用户自己的选择与用户自己发起的回合**(线程头切引擎 = 02 的
       // applySessionMetaPatch;工作台发起的回合 = 10 的 runSessionTurn source==='http'),管家/调度器
@@ -32,7 +37,7 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
       // ({engine:'openai',providerId,model} | {engine:'agent',agentCliType,model});没有记录时是 null。
       lastUsedEngineRoute: null,
       claudePath: detectClaudePath(),
-      defaultWorkspace: os.homedir(),
+      defaultWorkspace: managedWorkspacePath(),
       // 2026-10 拍板:出厂档是「智能自动」。只管没有存过档的新配置 —— 老用户 config.json 里已有的档原样保留;
       // 「切到」智能自动 / 全自动仍要二次确认(01e PERMISSION_MODES_REQUIRING_CONFIRM),那道门防的是被悄悄放开,
       // 出厂值不是谁替用户切的。存了一个不认识的档时下面仍回落最保守的 'default',不回落到这里。
@@ -55,7 +60,7 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
       locale: 'auto',
       includePartialMessages: true, // real-time token streaming via --include-partial-messages
       thinkingBudget: '',           // sets MAX_THINKING_TOKENS when non-empty
-      claudeThinkingEffort: '',     // '' inherits the CLI config; otherwise passed via --effort
+      claudeThinkingEffort: 'high',     // '' inherits the CLI config; otherwise passed via --effort
       betaInterleavedThinking: false, // adds --betas interleaved-thinking (probe first; may be rejected by older CLI)
       mcpCommandMode: 'auto',       // Historical values are accepted; self MCP always uses Node.
       killOnDisconnect: false,      // 体验走查 #4:刷新／关窗／断网不再结束回合(待决的权限与提问留在服务端,页面回来接着等;停止走「停止」键)
@@ -519,4 +524,4 @@ function createConfigDefaults({ CONFIG_SCHEMA, VERSION, detectClaudePath }) {
   return defaultConfig;
 }
 
-module.exports = { createConfigDefaults, THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX };
+module.exports = { managedWorkspacePath, createConfigDefaults, THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX };

@@ -94,6 +94,7 @@ const {
 function detectClaudePath() { return AgentCliDiscovery.detectClaudePath(); }
 
 const AGENT_CLI_HOST = Object.freeze({
+  detectCodexPath: AgentCliDiscovery.detectCodexPath,
   detectClaudePath: () => detectClaudePath(),
   bundledNodeExe: () => bundledNodeExe(),
 });

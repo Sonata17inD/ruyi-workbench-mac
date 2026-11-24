@@ -306,7 +306,8 @@ function createInterventionRoutes({
       const bridgeGate = nativeToolGate(bridgeMode, bridgeTier, String(body.toolName || ''), body.input || {});
       // auto 档的低风险动作在原生引擎里已经不弹窗了,CLI 桥必须同口径 —— 否则同一个「全自动」在两个引擎
       // 下行为不一致。只对 auto 档短路(其余档位一行不变:read/bypass 的既有落点仍走下面那条路)。
-      if (bridgeMode === 'auto' && bridgeGate === 'allow') {
+      if (reg.kind === 'codex' && bridgeGate === 'block') return send(res, json({ behavior:'deny', message:'Blocked by permission mode' }));
+      if ((bridgeMode === 'auto' || reg.kind === 'codex') && bridgeGate === 'allow') {
         return send(res, json({ behavior: 'allow', updatedInput: body.input || {} }));
       }
       // 对抗轮 P3(天花板对称):与 native 主 gate 对齐 —— 仅当工作台自身权限模式对该档判定为 'ask' 时才允许授权书降级。

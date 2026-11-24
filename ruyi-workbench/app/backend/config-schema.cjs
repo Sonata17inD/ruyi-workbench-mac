@@ -8,7 +8,7 @@ const { configSecretValueOrCleared, configUrlOrCleared, sanitizeExternalMcpServe
 const { nativeToolTier } = require('./native-tool-tiers.cjs');
 const { normalizePricing } = require('./provider-pricing.cjs');
 const { normalizeStoragePolicy } = require('./storage-policy.cjs');
-const { createConfigDefaults, THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX } =
+const { managedWorkspacePath, createConfigDefaults, THREAD_INDEX_RECENT_DEFAULT, THREAD_INDEX_RECENT_MIN, THREAD_INDEX_RECENT_MAX } =
   require('./config-defaults.cjs');
 const { WORKSPACE_NOTE_MAX, WORKSPACE_TABLE_CAP } = require('./config-workspaces.cjs');
 
@@ -144,6 +144,28 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
         return true;
       },
     }),
+    Object.freeze({
+      to: 15,
+      apply(config, ctx) {
+        if (ctx.rawExplicit.has('defaultWorkspace')) return;
+        const rows = Array.isArray(config.workspaces) ? config.workspaces : [];
+        const first = rows[0];
+        if (ctx.rawKeys.has('defaultWorkspace') && config.defaultWorkspace !== os.homedir()) return;
+        if (first && (first.path !== os.homedir() || first.note || first.read === false || first.write === false || first.execute === false)) return;
+        const target = managedWorkspacePath(config.stewardWorkspaceRoot);
+        config.defaultWorkspace = target;
+        const existing = rows.find(row => row?.path === target);
+        config.workspaces = [existing || { path: target }, ...rows.filter(row => row !== existing)];
+      },
+    }),
+    Object.freeze({
+      to: 16,
+      apply(config) {
+        config.claudeThinkingEffort = 'high';
+        config.codexThinkingEffort = 'high';
+        for (const provider of config.providers) provider.reasoningEffort = 'high';
+      },
+    }),
   ]);
   // ctx = { fromSchema: 读进来的 configSchema(缺/坏为 0), rawExplicit: raw 里的显式键集合, rawKeys: raw 的顶层键集合
   // (无文件 / 空文件为空集) }。
@@ -190,7 +212,8 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
       }
     }
     if (Object.hasOwn(config, 'kimiPath')) { delete config.kimiPath; }
-    config.defaultWorkspace = normalizeWorkspacePathString(config.defaultWorkspace) || os.homedir();
+    const managedDefault = managedWorkspacePath(normalizeWorkspacePathString(config.stewardWorkspaceRoot));
+    config.defaultWorkspace = normalizeWorkspacePathString(raw?.defaultWorkspace) || managedDefault;
     // v1.4.3: accept CLI-native mode name 'bypassPermissions' as alias for 'bypass'
     if (PERMISSION_MODE_ALIASES[config.permissionMode]) {
       config.permissionMode = PERMISSION_MODE_ALIASES[config.permissionMode];
@@ -214,6 +237,7 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
     }
     // Claude CLI owns the concrete effort semantics. Keep the workbench value to the CLI's documented
     // enum so a malformed config can never turn into an invalid spawn argument.
+    if (!['', 'low', 'medium', 'high', 'xhigh'].includes(config.codexThinkingEffort)) config.codexThinkingEffort = '';
     if (!CLAUDE_THINKING_EFFORTS.includes(config.claudeThinkingEffort)) {
       config.claudeThinkingEffort = '';
     }
@@ -613,7 +637,7 @@ function createConfigSchema({ CONFIG_SCHEMA, VERSION, SKILL_ID_RE, samePathKey, 
         config.stewardManagedWorkspaces = split.managed;
       }
       config.workspaces = clean;
-      const primary = clean.length ? clean[0].path : (typeof config.defaultWorkspace === 'string' && config.defaultWorkspace.trim() ? config.defaultWorkspace : os.homedir());
+      const primary = clean.length ? clean[0].path : (typeof config.defaultWorkspace === 'string' && config.defaultWorkspace.trim() ? config.defaultWorkspace : managedDefault);
       if (config.defaultWorkspace !== primary) { config.defaultWorkspace = primary; }
       const ab = config.allowOutsideWorkspace === true;
       config.allowOutsideWorkspace = ab;

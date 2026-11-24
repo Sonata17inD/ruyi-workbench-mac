@@ -19,7 +19,7 @@ import { openSharedHelpDoc } from './help-viewer.js';
 // 事实源在 onboarding-wizard.js,设置页与向导共用同一口径,不各写一份。
 import { providerKeyOptional, localEndpointDownKey, LOCAL_MODELS_ANCHOR_KEY, ONBOARDING_MANUAL_DOC_ID, validateBaseUrlShape } from './onboarding-wizard.js';
 // 每个 Agent CLI 的知识（品牌名、路径键、思考强度档位、头像字母……）只问这一张登记表（ENGINEERING-SPEC §11.1）。
-import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_IDS, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
+import { AGENT_CLI_DEFAULT_ID, AGENT_CLI_IDS, cliModelKey, cliEffortKey, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
 // 服务商线协议(provider.apiStyle)只问这一张表(58 号方案批 1;键集合与服务端 04i PROVIDER_WIRE_PROTOCOLS 相同)。
 import { PROVIDER_API_STYLE_DEFAULT, PROVIDER_API_STYLES, normalizeProviderApiStyle, providerApiStyleMeta, PROVIDER_REASONING_EFFORT_CHOICES, ANTHROPIC_AUTH_CHOICES, ANTHROPIC_THINKING_CHOICES } from './provider-api-styles.js';
 import { stripProviderEndpointSuffix, inferProviderApiStyleFromUrl, isAnthropicOfficialUrl, stepAutoProviderStyle } from './provider-api-styles.js';
@@ -47,6 +47,7 @@ export function providerDraftFromPreset(preset, existingIds = []) {
     baseUrl: preset.baseUrl || '', apiKey: '',
     model: preset.defaultModel || (preset.models && preset.models[0] && preset.models[0].id) || '',
     models: (preset.models || []).map(m => ({ id: m.id, label: m.label || m.id })),
+    reasoningEffort: preset.reasoning === false ? '' : 'high',
     reasoning: preset.reasoning !== false, vision: preset.vision !== false, systemPrompt: '', temperature: '',
     // v1.7: DeepSeek 预设模板带 apiStyle:'responses'(走官方新增的 Responses API, Codex/agent 工具循环)。
     // 其它预设不带 → providerCard 里默认 chat, 行为与旧版完全一致。
@@ -245,7 +246,7 @@ function currentConversationRoute() {
     const provider = (state.config?.providers || []).find(item => item && item.id === providerId);
     return { engine: 'openai', providerId, model: String(provider?.model || '') };
   }
-  return { engine: 'agent', agentCliType: storedAgentCliType(state.config?.agentCliType), model: String(state.config?.model || '') };
+  return { engine: 'agent', agentCliType: storedAgentCliType(state.config?.agentCliType), model: String(state.config?.[cliModelKey(state.config?.agentCliType)] || '') };
 }
 // The model id currently in effect for the opened conversation. Global config is only the fallback used
 // before a session exists; switching sessions restores that session's pinned route.
@@ -280,16 +281,68 @@ function currentAgentCliPath() {
 function settingsAgentCliType() {
   return storedAgentCliType(state.config?.agentCliType);
 }
+let codexAccountTimer, codexCatalogAccount;
+async function showCodexAccount() {
+  const select = $('codexAccountSelect'), login = $('codexSignIn'), logout = $('codexSignOut'), note = $('codexAccountStatus');
+  const unlock = $('codexUnlock');
+  clearTimeout(codexAccountTimer);
+  unlock.hidden = true;
+  try {
+    const account = await api('/api/codex/account');
+    const active = account.accounts.find(a => a.id === account.active);
+    select.replaceChildren(new Option(t('settings.codex.newAccount'), ''), ...account.accounts.map(a => new Option(a.label + ' · ' + a.id.slice(-6), a.id)));
+    select.value = account.active;
+    note.textContent = account.error || t(account.pending ? 'settings.codex.pending' : active?.plan ? 'settings.codex.connected' : 'settings.codex.needsGrant');
+    login.disabled = account.pending;
+    logout.disabled = !active?.signedIn;
+    const catalogAccount = active?.plan ? account.active : '';
+    if (codexCatalogAccount !== catalogAccount || (catalogAccount && !agentModels('codex').length)) {
+      codexCatalogAccount = catalogAccount;
+      publishAgentModels('codex', []);
+      if (knownAgentCliMeta(state.status?.modelsAgentCliType)?.modelsEndpoint) state.status.models = [];
+      if (active?.plan) {
+        const result = await api('/api/codex/models');
+        if (codexCatalogAccount === catalogAccount) publishAgentModels('codex', result.models);
+      }
+    }
+    if (account.pending) codexAccountTimer = setTimeout(showCodexAccount, 1000);
+  } catch (error) {
+    const { code } = apiErrorInfo(error);
+    const requiresUnlock = ['local_crypto.permission_denied', 'local_crypto.permission_required', 'local_crypto.keychain_locked'].includes(code);
+    unlock.hidden = !requiresUnlock;
+    note.textContent = requiresUnlock ? t('settings.codex.unlockHint') : apiErrText(error);
+  }
+  unlock.onclick = async () => {
+    unlock.disabled = true;
+    try {
+      await api('/api/codex/unlock', { method: 'POST', body: '{}' });
+      await showCodexAccount();
+    } catch (error) { note.textContent = apiErrText(error); }
+    finally { unlock.disabled = false; }
+  };
+  login.onclick = async () => {
+    try { await api('/api/codex/login', {method:'POST', body:JSON.stringify({id:select.value})}); await showCodexAccount(); }
+    catch (error) { note.textContent = apiErrText(error); }
+  };
+  logout.onclick = async () => {
+    try { await api('/api/codex/logout', {method:'POST', body:'{}'}); await showCodexAccount(); }
+    catch (error) { note.textContent = apiErrText(error); }
+  };
+}
 function updateAgentCliSettingsVisibility() {
   const type = settingsAgentCliType();
   const meta = knownAgentCliMeta(type);
+  const details = $('codexAccountDetails');
+  details.ontoggle = () => { if (details.open) void showCodexAccount(); else clearTimeout(codexAccountTimer); };
+  if ($('codexPathInput').dataset.driver === type) details.open = true;
   { const note = $('agentCliCurrentHint'); if (note) note.textContent = t('settings.agentCli.current', { name: meta?.label || t('engine.unavailable', { id: type }) }); }
   document.querySelectorAll('[data-agent-cli-path]').forEach(node => node.classList.toggle('hidden', node.dataset.agentCliPath !== type));
   document.querySelectorAll('[data-agent-cli-only]').forEach(node => node.classList.toggle('hidden', node.dataset.agentCliOnly !== type));
   const effort = $('cfgThinkingEffort');
   if (effort) {
     effort.disabled = !meta;
-    if (!meta) effort.value = '';
+    for (const option of effort.options) option.hidden = !meta?.thinkingEfforts.includes(option.value);
+    effort.value = meta ? state.config?.[cliEffortKey(type)] || '' : '';
   }
   const hint = $('agentCliCapabilityHint');
   if (hint) hint.textContent = meta ? t(`settings.agentCli.hint.${type}`) : t('engine.unavailable', { id: type });
@@ -368,7 +421,7 @@ function fillDefaultCapabilities() {
       fillDefaultCapabilities();
     }
   }
-  effort.onchange = () => save(provider ? { reasoningEffort: effort.value } : { claudeThinkingEffort: effort.value });
+  effort.onchange = () => save(provider ? { reasoningEffort: effort.value } : { [cliEffortKey(route.agentCliType)]: effort.value });
   reasoning.onchange = () => save(anthropic ? { anthropicThinking: reasoning.checked ? 'adaptive' : 'off' } : { reasoning: reasoning.checked });
   vision.onchange = () => save({ vision: vision.checked });
 }
@@ -430,11 +483,10 @@ function fillMainEngineSelects() {
     }
     const provider = () => (state.config.providers || []).find(p => p.id === pick.providerId);
     // 换到另一个命令行引擎时，旧引擎的模型名对新引擎没有意义：清成它自己的缺省。
-    const sameCli = Boolean(pick.cli) && pick.cli === settingsAgentCliType();
     bindModelSelect(modelSel, {
       provider,
-      ...(pick.providerId ? {} : { models: () => agentModels(pick.cli, sameCli ? (state.status?.models || []) : []) }),
-      value: pick.providerId ? provider()?.model || '' : (sameCli ? state.config.model || '' : ''),
+      ...(pick.providerId ? {} : { models: () => agentModels(pick.cli, state.status?.modelsAgentCliType === pick.cli ? state.status.models : []) }),
+      value: pick.providerId ? provider()?.model || '' : (state.config[cliModelKey(pick.cli)] || ''),
       emptyLabel: () => (pick.providerId ? t('settings.models.firstInList') : t('settings.mainEngine.defaultModel', { name: agentCliMeta(pick.cli).label })),   // 服务商留空＝清单第一个；命令行引擎留空＝它自带的默认
     });
   };
@@ -449,7 +501,7 @@ async function setGlobalEngineDefault(engineValue, modelId) {
   const pid = pick.providerId, model = String(modelId || '');
   const patch = { activeProvider: pid };
   if (pid) patch.providers = (Array.isArray(state.config.providers) ? state.config.providers : []).map(p => (p && p.id === pid ? { ...p, model } : p));
-  else { patch.model = model; patch.agentCliType = pick.cli; }
+  else { patch[cliModelKey(pick.cli)] = model; patch.agentCliType = pick.cli; }
   const cliChanged = !pid && pick.cli !== settingsAgentCliType();
   const provSel = $('cfgMainProvider'), modelSel = $('cfgMainModel');
   if (provSel) provSel.disabled = true; if (modelSel) modelSel.disabled = true;
@@ -567,10 +619,12 @@ async function refreshModels(announce, context = {}) {
   const requestedEndpoint = requestedProvider ? { ...requestedProvider } : null;
   const routeQuery = routeSessionId ? `?sessionId=${encodeURIComponent(routeSessionId)}` : '';
   try {
-    const r = await api('/api/models' + routeQuery);
+    const route = context.route || currentConversationRoute();
+    const accountModelsEndpoint = route.engine === 'agent' && knownAgentCliMeta(route.agentCliType)?.modelsEndpoint;
+    const r = await api(accountModelsEndpoint || '/api/models' + routeQuery);
     const fresh = r && Array.isArray(r.models) ? r.models : [];
     if (r && r.ok === false && !fresh.length) throw new Error(apiErrText(r.error) || t('modelMenu.refreshUnchanged'));
-    if (fresh.length) {
+    if (fresh.length || accountModelsEndpoint) {
       if (r.engine === 'openai' && r.provider) {
         // Fold the live list into the ROUTED provider's models so the chip popover reflects it.
         // 修前 r.provider 是【全局 activeProvider】那一个，折回的也就是全局那一份；线程头把这条线程切到
@@ -581,7 +635,7 @@ async function refreshModels(announce, context = {}) {
         if (provider && requestedEndpoint?.id === provider.id && requestedEndpoint.baseUrl === provider.baseUrl && requestedEndpoint.apiKey === provider.apiKey) publishProviderModels(provider, fresh, state.providersDraft || []);
       } else if (state.status) {
         publishAgentModels(r.agentCliType || AGENT_CLI_DEFAULT_ID, fresh);
-        if (!routeSessionId || state.currentSession?.id === routeSessionId) state.status.models = fresh;
+        if (!routeSessionId || state.currentSession?.id === routeSessionId) { state.status.modelsAgentCliType = r.agentCliType; state.status.models = fresh; }
       }
       onEngineConfigChanged();
       if (announce) toast(r.proxyCount ? tCount('modelMenu.refreshSuccessProxy', r.proxyCount) : t('modelMenu.refreshSuccessBuiltin'), 'ok');
@@ -864,6 +918,7 @@ function fillSettings() {
   renderWorkspacePerms(); // v2.7 workspace permissions
   { const el0 = $('cfgLocale'); if (el0) el0.value = ['auto', 'zh-CN', 'en-US'].includes(c.locale) ? c.locale : 'auto'; }
   { const el0 = $('cfgOutputStyle'); if (el0) el0.value = (c.outputStyle === 'concise' ? 'concise' : 'detailed'); } // v0.9-S1
+  $('codexPathInput').value = c.codexPath || state.status?.detectedCodexPath || '';
   $('claudePathInput').value = c.claudePath || state.status?.detectedClaudePath || '';
   // W6：权限与安全页的两条等待时限；用量与限额页的回合看门狗（turnIdleTimeoutMs，按分钟显示）。
   fillWaitSelect('cfgPermissionTimeout', PERMISSION_WAIT_CHOICES, c.permissionTimeoutMs);
@@ -879,7 +934,7 @@ function fillSettings() {
   $('cfgBeta').checked = !!c.betaInterleavedThinking;
   $('cfgResume').checked = !!c.autoResumeClaudeSessions;
   $('cfgKillDisc').checked = !!c.killOnDisconnect;
-  { const el0 = $('cfgThinkingEffort'); if (el0) el0.value = ['', 'low', 'medium', 'high', 'xhigh', 'max'].includes(c.claudeThinkingEffort) ? c.claudeThinkingEffort : ''; }
+  { const el0 = $('cfgThinkingEffort'); if (el0) el0.value = ['', 'low', 'medium', 'high', 'xhigh', 'max'].includes(c[cliEffortKey(c.agentCliType)]) ? c[cliEffortKey(c.agentCliType)] : ''; }
   $('cfgThinkBudget').value = c.thinkingBudget || '';
   $('cfgMaxTurns').value = c.maxTurns || '';
   $('cfgExtraArgs').value = (c.extraClaudeArgs || []).join('\n');
@@ -1778,11 +1833,12 @@ const INSTANT_SETTINGS = Object.freeze([
   // 123-N2:新线程默认引擎。后端 normalizeConfig 再钳一次白名单(非法值回落 'last')。
   { ids: ['cfgNewThreadEngine'], patch: () => ({ newThreadEngine: $('cfgNewThreadEngine').value === 'global' ? 'global' : 'last' }), after: () => fillMainEngineSelects() },
   // ── Agent CLI（命令行引擎）──
+  { ids: ['codexPathInput'], patch: () => ({ codexPath: $('codexPathInput').value.trim() }), after: refreshAfterSave },
   { ids: ['claudePathInput'], patch: () => ({ claudePath: $('claudePathInput').value.trim() }), after: refreshAfterSave },
   { ids: ['cfgPartial'], patch: () => ({ includePartialMessages: $('cfgPartial').checked }) },
   { ids: ['cfgBeta'], patch: () => ({ betaInterleavedThinking: $('cfgBeta').checked }) },
   { ids: ['cfgResume'], patch: () => ({ autoResumeClaudeSessions: $('cfgResume').checked }) },
-  { ids: ['cfgThinkingEffort'], patch: () => ({ claudeThinkingEffort: $('cfgThinkingEffort').value }) },
+  { ids: ['cfgThinkingEffort'], patch: () => ({ [cliEffortKey(settingsAgentCliType())]: $('cfgThinkingEffort').value }) },
   { ids: ['cfgThinkBudget'], patch: () => digitsOrEmptyPatch('cfgThinkBudget', 'thinkingBudget') },
   { ids: ['cfgExtraArgs'], patch: () => ({ extraClaudeArgs: lineList('cfgExtraArgs') }) },
   { ids: ['cfgEngineMode'], patch: () => ({ engineMode: $('cfgEngineMode').value }) },

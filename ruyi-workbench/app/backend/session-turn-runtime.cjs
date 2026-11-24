@@ -9,7 +9,7 @@ function createSessionTurnRuntime({
   sessions: { createSession, loadSession, rememberLastUsedEngineRoute, sessionMessagesDelta, sessionMessagesStamp, sessionMissionId, sessionTodosSignature, updateSessionMeta },
   routing: { configForSessionEngineRoute, inferSessionEngineRoute, normalizeSessionEngineRoute, sessionEngineRouteFromConfig, sessionEngineRouteScopeOverrides },
   execution: { activeChildren, turnSettlers, turnOutcomePending, driverAutoSessions, assertSessionExecutionOwner, recordSessionExecutionOwner, requestSessionExecutionStop, sessionExecutionSnapshot, stopSession, SessionExecutionHooks, DesktopExecutionHooks },
-  engines: { runOpenAiTurn, runClaudeTurn, runProviderCompact, maybeWriteThreadBrief, settleThreadBrief },
+  engines: { runOpenAiTurn, runClaudeTurn, runCodexTurn, runProviderCompact, maybeWriteThreadBrief, settleThreadBrief },
   mission: { runMissionDriver, bindDriverRun, endDriverRun, revokeGrantsForRun },
   steward: { STEWARD_SESSION_ID, StewardHooks, stewardTaintToolCall, stewardWatchedThread },
   EventStreamHooks, PrivacyCore, PrivacyGateway,
@@ -137,6 +137,7 @@ function createSessionTurnRuntime({
     }
     const routeSource = routeOverride ? { ...session, engineRoute: routeOverride } : session;
     const config = configForSessionEngineRoute(permissionConfig, routeSource);
+
     // 123-N2 写入点②(实现在 02 的 rememberLastUsedEngineRoute,那里有完整头注):用户【自己】发起
     // 的这一回合实际跑在哪个引擎上,就是他「上一次用的」。记的是【解析后的实际路由】而不是请求体里
     // 的那一份 —— routeOverride 可能为空、会话头上可能钉着别的,只有 inferSessionEngineRoute 这一次
@@ -336,6 +337,9 @@ function createSessionTurnRuntime({
       }
       assertSessionExecutionOwner(session.id, settleEntry);
       const provider = activeOpenAiProvider(config);
+      if (!provider && config.agentCliType === 'codex' && session.mission?.autoMode === 'until-done') {
+        throw new Error('Codex CLI 当前支持普通线程，请先关闭任务自动续跑。');
+      }
       const pinnedRoute = inferSessionEngineRoute(routeSource);
       if (pinnedRoute?.engine === 'openai' && !provider) {
         throw new Error(`会话绑定的 Provider 不可用：${pinnedRoute.providerId}`);
@@ -356,8 +360,10 @@ function createSessionTurnRuntime({
           // CLI 引擎时在 13h 就返回 unsupported_engine;CLI 引擎的普通线程(管家递话、唤醒)照样把出身标落在用户消息上。
           const turnMessageMeta = driverAuto ? null : (body.messageMeta || null);
           await DesktopExecutionHooks.run(session, async () => {
-          if (provider) await runOpenAiTurn({ session, message: String(msg || ''), attachments: atts, cwd: body.cwd, onEvent: emit, provider, config, driverAuto, agentTeam: turnAgentTeam, messageMeta: turnMessageMeta, executionOwner: settleEntry, delegationPlan: !driverAuto && body.source === 'steward' ? body.delegationPlan : null });
-          else await runClaudeTurn({ session, message: String(msg || ''), attachments: atts, cwd: body.cwd, onEvent: emit, config, driverAuto, agentTeam: turnAgentTeam, messageMeta: turnMessageMeta, executionOwner: settleEntry });
+            const run = provider ? runOpenAiTurn : config.agentCliType === 'codex' ? runCodexTurn : runClaudeTurn;
+            await run({ session, message: String(msg || ''), attachments: atts, cwd: body.cwd, onEvent: emit,
+              provider, config, driverAuto, agentTeam: turnAgentTeam, messageMeta: turnMessageMeta, executionOwner: settleEntry,
+              delegationPlan: !driverAuto && body.source === 'steward' ? body.delegationPlan : null });
           });
         } finally { if (driverAuto) driverAutoSessions.delete(session.id); }
       };

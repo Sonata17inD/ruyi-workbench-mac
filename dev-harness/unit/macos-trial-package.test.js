@@ -9,14 +9,15 @@ const { verifyTrialDirectory, verifyDistribution, signatureTarget, installTrial,
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ruyi-trial-unit-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  const image = path.join(root, 'image'); fs.mkdirSync(path.join(image, 'Ruyi.app'), { recursive: true });
-  fs.writeFileSync(path.join(image, 'Ruyi.app/file'), 'payload');
+  const image = path.join(root, 'image'); fs.mkdirSync(path.join(image, 'Ruyi Slim.app', 'Contents'), { recursive: true });
+  fs.writeFileSync(path.join(image, 'Ruyi Slim.app', 'Contents', 'Info.plist'), '<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.ruyi.workbench.development</string></dict></plist>');
+  fs.writeFileSync(path.join(image, 'Ruyi Slim.app/file'), 'payload');
   const guideHashes = {};
   for (const name of ['INSTALL-CN.txt', 'INSTALL-EN.txt']) { fs.writeFileSync(path.join(image, name), name); guideHashes[name] = sha256(path.join(image, name)); }
   fs.symlinkSync('/Applications', path.join(image, 'Applications'));
-  const files = inventory(path.join(image, 'Ruyi.app'));
+  const files = inventory(path.join(image, 'Ruyi Slim.app'));
   const packaging = { packagerCommit: 'b'.repeat(40), packagerFingerprint: {}, inputPackageManifestSha256: 'c'.repeat(64), inputAppTreeSha256: 'd'.repeat(64), signatures: {} };
-  const manifest = { schemaVersion: 1, app: 'Ruyi.app', variant: 'slim', sourceCommit: 'a'.repeat(40), signing: 'ad-hoc-internal-trial',
+  const manifest = { schemaVersion: 1, app: 'Ruyi Slim.app', variant: 'slim', sourceCommit: 'a'.repeat(40), signing: 'ad-hoc-internal-trial',
     notarized: false, files, treeSha256: treeDigest(files), packaging };
   fs.writeFileSync(path.join(image, 'package-manifest.json'), JSON.stringify(manifest));
   fs.writeFileSync(path.join(image, 'SHA256SUMS'), sha256(path.join(image, 'package-manifest.json')) + '  package-manifest.json\n');
@@ -40,7 +41,7 @@ test('trial integrity binds guides, payload, policy, provenance and the one expl
 });
 test('new-location installation refuses existing directories and dangling links without changing them', t => {
   const { root, image } = fixture(t); const applications = path.join(root, 'Applications'); fs.mkdirSync(applications);
-  const destination = path.join(applications, 'Ruyi.app'); fs.mkdirSync(destination); fs.writeFileSync(path.join(destination, 'keep'), 'original');
+  const destination = path.join(applications, 'Ruyi Slim.app'); fs.mkdirSync(destination); fs.writeFileSync(path.join(destination, 'keep'), 'original');
   assert.throws(() => installTrial(image, applications), /EEXIST/); assert.equal(fs.readFileSync(path.join(destination, 'keep'), 'utf8'), 'original');
   fs.rmSync(destination, { recursive: true }); fs.symlinkSync('missing', destination);
   assert.throws(() => installTrial(image, applications), /EEXIST/); assert.equal(fs.readlinkSync(destination), 'missing');
@@ -64,8 +65,8 @@ test('distribution verification refuses corrupt images, sidecars and provenance 
 test('trial build refuses source overlap and cleans its exclusively reserved output on early failure', { skip: process.platform !== 'darwin' || process.arch !== 'arm64' }, t => {
   const { root, image } = fixture(t); const manifestPath = path.join(image, 'package-manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath)); manifest.signing = 'ad-hoc-development'; fs.writeFileSync(manifestPath, JSON.stringify(manifest));
-  assert.throws(() => buildTrial({ package: image, output: path.join(image, 'Ruyi.app', 'new') }), /overlap/);
-  assert.equal(fs.existsSync(path.join(image, 'Ruyi.app/new')), false);
+  assert.throws(() => buildTrial({ package: image, output: path.join(image, 'Ruyi Slim.app', 'new') }), /overlap/);
+  assert.equal(fs.existsSync(path.join(image, 'Ruyi Slim.app/new')), false);
   const original = fs.mkdtempSync, output = path.join(root, 'output');
   try {
     fs.mkdtempSync = () => { throw new Error('injected temp failure'); };

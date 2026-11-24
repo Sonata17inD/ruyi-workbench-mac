@@ -1,5 +1,5 @@
 'use strict';
-import { providerModels, bindModelSelect } from './model-catalog.js';
+import { agentModels, providerModels, bindModelSelect } from './model-catalog.js';
 
 // EC-D：命令面板、模型/能力弹层、模态、页签与工具栏布局领域。
 import { state } from './state.js';
@@ -17,7 +17,7 @@ import { createHelpMenuDomain } from './help-menu.js';
 import { openSharedHelpDoc } from './help-viewer.js';
 import { openSharedOnboarding } from './onboarding-wizard.js';
 // 每个 Agent CLI 的思考强度档位、压缩缺省项文案、原生用量接口只问这一张登记表（ENGINEERING-SPEC §11.1）。
-import { AGENT_CLI_DEFAULT_ID, agentCliMeta } from './agent-cli-registry.js';
+import { AGENT_CLI_DEFAULT_ID, cliModelKey, agentCliMeta } from './agent-cli-registry.js';
 
 export function createNavigationControlsDomain({
   apiErrText = error => String(error && error.message || error || ''),
@@ -123,8 +123,9 @@ function paletteActions() {
   const curPid = isProviderMode() ? String(currentEngineMeta().providerId || '') : '';
   const curModel = currentModelId();
   const cliGroupLabel = String(currentEngineMeta().agentCliLabel || '') || engineLabel();
-  const claudeModels = (state.status && state.status.models) || [{ id: '', label: t('palette.defaultModel') }];
-  for (const m of claudeModels) {
+  const cliType = currentEngineMeta().agentCliType || state.config.agentCliType || AGENT_CLI_DEFAULT_ID;
+  const cliModels = agentModels(cliType, state.status?.modelsAgentCliType === cliType ? state.status.models : []);
+  for (const m of cliModels) {
     // /api/status.models[0] 是 {id:'',label:'默认 (CLI 配置)'}(服务端中文):id 为空就是「默认」,名字走本地化键,别用服务端的 label。
     const isCur = curPid === '' && (m.id || '') === (curModel || '');
     acts.push({ label: t('palette.engine', { engine: cliGroupLabel, model: m.id ? (m.label || m.id) : t('palette.defaultModel') }), hint: isCur ? t('palette.current') : 'engine', run: () => setEngineModel('', m.id || '') });
@@ -174,7 +175,7 @@ async function setEngineModel(providerId, modelId, opts = {}) {
   const previousRoute = state.currentSession?.engineRoute ? { ...state.currentSession.engineRoute } : null;
   const engineRoute = pid && pid !== 'claude-cli'
     ? { engine: 'openai', providerId: pid, model: modelId || '' }
-    : { engine: 'agent', agentCliType: AGENT_CLI_DEFAULT_ID, model: modelId || '' };
+    : { engine: 'agent', agentCliType: opts.agentCliType || currentEngineMeta().agentCliType || state.config.agentCliType || AGENT_CLI_DEFAULT_ID, model: modelId || '' };
   // 全局 config 的装配：只有 scope==='global' 才做（会话级选择只活在 engineRoute 里，不动新会话默认值）。
   let patch = null;
   if (scope === 'global') {
@@ -182,7 +183,8 @@ async function setEngineModel(providerId, modelId, opts = {}) {
     if (pid && pid !== 'claude-cli') {
       patch.providers = (state.config.providers || []).map(p => (p.id === pid ? { ...p, model: modelId || '' } : p));
     } else {
-      patch.model = modelId || '';
+      patch.agentCliType = engineRoute.agentCliType;
+      patch[cliModelKey(engineRoute.agentCliType)] = modelId || '';
     }
   }
   // Pin the choice to the opened conversation before changing the global new-session default. This makes

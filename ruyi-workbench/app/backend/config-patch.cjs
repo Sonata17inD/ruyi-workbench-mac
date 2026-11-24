@@ -79,7 +79,13 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
         || (body && typeof body.modelsApiKey === 'string') || (body && typeof body.modelsApiBase === 'string')
         || (body && Array.isArray(body.externalMcpServers))) {
         const restored = unmaskSecrets(body, current);
-        if (Array.isArray(body.providers)) merged.providers = restored.providers;
+        if (Array.isArray(body.providers)) {
+          const known = new Set((current.providers || []).map(provider => provider.id));
+          merged.providers = restored.providers.map(provider =>
+            provider && !known.has(provider.id) && provider.reasoning !== false
+              && provider.reasoningEffort == null && provider.reasoning_effort == null
+              ? { ...provider, reasoningEffort: 'high' } : provider);
+        }
         if (body.searchBackend && typeof body.searchBackend === 'object') merged.searchBackend = restored.searchBackend;
         if (typeof body.modelsApiKey === 'string') merged.modelsApiKey = restored.modelsApiKey;
         if (typeof body.modelsApiBase === 'string') merged.modelsApiBase = restored.modelsApiBase;
@@ -132,7 +138,7 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
     // 的队列 —— 仲裁器每次唤醒都重读配置(不缓存),但唤醒本身只由「入队/释放/插队」触发,没有这一行
     // 的话调大上限要等下一条线程跑完才生效。队列为空(含管家关着)时是无操作。
     if (typeof StewardHooks.arbiterRefresh === 'function') { try { StewardHooks.arbiterRefresh(); } catch { /* best-effort */ } }
-    if (body && ['agentCliType', 'claudePath'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
+    if (body && ['agentCliType', 'claudePath', 'codexPath'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
       invalidateAgentCliPathCaches();
     }
     // 123-N2 合并复核（主会话）：用户在设置里改全局引擎（activeProvider／agentCliType／model）也是一次
@@ -141,7 +147,7 @@ function createConfigPatch({ policy, storage, hooks, cli, mcp }) {
     // 只在这三个键真的在 body 里时记；与现值相同则 rememberLastUsedEngineRoute 自己短路不落盘。
     // 【await 而不是 void】：保存请求回 200 之前记录就得落盘——调用方（设置页、e2e）改完全局马上
     // 新开线程是常见序列，fire-and-forget 会让那条新线程仍跟着上一路走（本机实测 agent-team-mode 就这么红）。
-    if (body && ['activeProvider', 'agentCliType', 'model'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
+    if (body && ['activeProvider', 'agentCliType', 'model', 'codexModel'].some(k => Object.prototype.hasOwnProperty.call(body, k))) {
       await rememberLastUsedEngineRoute(sessionEngineRouteFromConfig(next), next);
     }
     // v1.4.3: keep ~/.claude/ in sync — settings.json + agent roles + MCP servers

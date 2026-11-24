@@ -311,8 +311,29 @@ export function createChatStaticRenderer(deps = {}) {
   // A model may alternate reasoning and one or two tools for a long time without emitting prose. Keep the
   // current running step visible, but fold settled process-only stretches into one chronological stage row.
   // This rule is engine-neutral, so Claude CLI and OpenAI-compatible streams converge on the same density.
-  function compactNarrativeProcessRuns(narrative) {
+  function compactNarrativeProcessRuns(narrative, completed = false) {
     if (!narrative) return;
+    if (completed) {
+      const nodes = Array.from(narrative.children);
+      // Keep the trailing answer together, plus any status cards following it.
+      // Without an answer, leave the last tool or terminal error visible.
+      const isAnswer = node => node.classList.contains('bubble') && !node.classList.contains('turn-commentary');
+      let end = nodes.length - 1;
+      while (end >= 0 && !isAnswer(nodes[end])) end--;
+      if (end < 0 || nodes.slice(end + 1).some(isNarrativeProcessNode)) end = nodes.length - 1;
+      else while (end > 0 && isAnswer(nodes[end - 1])) end--;
+      if (end <= 0) return;
+      const marker = document.createComment('completed-process');
+      nodes[0].before(marker);
+      const process = nodes.slice(0, end).flatMap(node => {
+        if (!node.classList.contains('narrative-process-group')) return [node];
+        const children = Array.from(node.querySelector('.narrative-process-body').children);
+        node.remove();
+        return children;
+      });
+      marker.replaceWith(buildNarrativeProcessGroup(process));
+      return;
+    }
     const flush = block => {
       if (!block.length) return;
       const existing = block.find(node => node.classList.contains('narrative-process-group'));
@@ -338,7 +359,7 @@ export function createChatStaticRenderer(deps = {}) {
     }
     flush(block);
   }
-  function renderStaticTurnNarrative(msg, host, idScope = '') {
+  function renderStaticTurnNarrative(msg, host, idScope = '', running = false) {
     const rawSegments = validTurnSegments(msg);
     if (!rawSegments.length) return null;
     const tools = new Map((Array.isArray(msg.toolCalls) ? msg.toolCalls : []).filter(Boolean).map(tc => [String(tc.id || ''), tc]));
@@ -394,7 +415,11 @@ export function createChatStaticRenderer(deps = {}) {
         continue;
       }
       i += 1;
-      if (segment.type === 'text') narrative.append(narrativeTextBubble(segment.text));
+      if (segment.type === 'text') {
+        const bubble = narrativeTextBubble(segment.text);
+        if (segment.phase === 'commentary') bubble.classList.add('turn-commentary');
+        narrative.append(bubble);
+      }
       else if (segment.type === 'steer') narrative.append(buildNarrativeSteerSegment(segment.text, segment.attachments || [])); // 刷新后插话与附件同源。
       else if (segment.type === 'thinking') narrative.append(thinkingPanel(segment.text || '').d);
       else if (segment.type === 'plan') {
@@ -419,7 +444,7 @@ export function createChatStaticRenderer(deps = {}) {
         if (record) { narrative.append(renderStaticNativeAgent(record)); renderedNative.add(String(segment.toolCallId || '')); }
       }
     }
-    compactNarrativeProcessRuns(narrative);
+    compactNarrativeProcessRuns(narrative, !running);
     host.append(narrative);
     return { toolIndex, renderedNative };
   }
@@ -573,7 +598,7 @@ export function createChatStaticRenderer(deps = {}) {
       ? msg.toolCalls.filter(tc => !nativeAgents.length || !['Agent', 'Task', 'TaskOutput'].includes(tc && tc.name))
       : [];
     let narrativeResult = null;
-    if (msg.role === 'assistant' && segments.length) narrativeResult = renderStaticTurnNarrative(msg, main, options.idScope || '');
+    if (msg.role === 'assistant' && segments.length) narrativeResult = renderStaticTurnNarrative(msg, main, options.idScope || '', options.running);
     else {
       if (msg.thinking) { const { d } = thinkingPanel(msg.thinking); main.appendChild(d); }
       const attachmentStrip = msg.role === 'user' ? messageAttachmentStrip(msg) : null;
@@ -597,13 +622,18 @@ export function createChatStaticRenderer(deps = {}) {
     for (const record of nativeAgents) {
       if (!narrativeResult || !narrativeResult.renderedNative.has(String(record && record.toolUseId || ''))) main.appendChild(renderStaticNativeAgent(record));
     }
+    if (!narrativeResult && !options.running && msg.role === 'assistant') {
+      const process = Array.from(main.children).filter(node => isNarrativeProcessNode(node) || node.classList.contains('subagent-card'));
+      const answer = main.querySelector('.bubble');
+      if (process.length && answer?.textContent.trim()) answer.before(buildNarrativeProcessGroup(process));
+    }
     // 137x（用户 2026-09-24）：运行中的回合不出这张「本轮记录 · N 次工具调用」——它读着就是「回合结束」的
     // 总结语气，管家开的线程在跑的时候(session-experience.js 的 paintLiveTurnNarrative 传 running:true)
     // 每 3 秒/每条推送重画一次都会把它重画一遍，看着像是回合反复「结束」。回合真结束后(静态重渲染，
     // options.running 缺省为假)照常显示，不影响历史消息。
     if (narrativeResult && !options.running) {
       const record = turnToolIndexCard(narrativeResult.toolIndex, main);
-      if (record) main.appendChild(record);
+      if (record) (main.querySelector('.turn-narrative > .narrative-process-group > .narrative-process-body') || main).appendChild(record);
     }
     if (msg.turnSummary && !options.readonly) {
       main.appendChild(turnSummaryCard(msg.turnSummary)); // v0.8-S3 「本轮变更」

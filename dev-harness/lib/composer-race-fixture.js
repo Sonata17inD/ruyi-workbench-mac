@@ -45,7 +45,7 @@ function fixture() {
     syncContextWindowManual: () => fx.preflight ? fx.preflight.promise : Promise.resolve(),
     newSession: () => fx.creation.promise,
     el: () => new Element(), autoGrow() {}, isProviderMode: () => true,
-    agentCliMeta: () => ({ id: 'claude' }), currentEngineMeta: () => ({}), currentWorkspace: () => '',
+    agentCliMeta: () => ({ id: 'claude', agentTeam: true }), currentEngineMeta: () => ({}), currentWorkspace: () => '',
     iconTextBtn() {}, authHeaders: () => ({}), updateJumpLatest() {}, renderSessions() {}, renderAttachments() {}, scrollMessagesToBottom() {}, maybeScrollToBottom() {}, compactNarrativeProcessRuns() {},
     messageShell: () => ({ row: new Element(), main: new Element() }),
     renderStaticMessage: message => { rows.push(message); return new Element(); },

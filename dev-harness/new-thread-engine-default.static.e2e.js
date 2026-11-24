@@ -41,17 +41,10 @@ ok(/<label for="cfgNewThreadEngine" data-i18n="settings\.newThreadEngine">/.test
 ok(selectBlock.includes('data-i18n="settings.newThreadEngine.last"')
   && selectBlock.includes('data-i18n="settings.newThreadEngine.global"'),
   '① 两个 option 各自挂着自己的 i18n 键');
-// 位置(W6 设置重组翻面重钉,用户 2026-09-24「把重复/类似的设置统一」):修前它与 #cfgAgentCliType 同住 Agent CLI 页,
-// 而全局主端点在基础页 —— 「选引擎」一件事分三处。现在三处合一处:「用哪个命令行引擎」并进了主模型那枚下拉
-// (#cfgMainProvider 里两个命令行引擎各是一项,#cfgAgentCliType 退役),「新线程默认引擎」紧跟在它下面,同住
-// 「模型分配」页(#stab-models)。判据取「两枚 id 都在这一段里、且退役那枚全页不在」,不钉行号。
-const modelsTabStart = html.indexOf('<div class="settings-tab" id="stab-models">');
-const modelsTabEnd = html.indexOf('<div class="settings-tab"', modelsTabStart + 1);
-const modelsTab = modelsTabStart >= 0 ? html.slice(modelsTabStart, modelsTabEnd > 0 ? modelsTabEnd : html.length) : '';
-ok(modelsTab.includes('id="cfgMainProvider"') && modelsTab.includes('id="cfgNewThreadEngine"')
-  && modelsTab.indexOf('id="cfgNewThreadEngine"') > modelsTab.indexOf('id="cfgMainProvider"')
-  && !html.includes('id="cfgAgentCliType"'),
-  '① 它紧跟主模型那一行、同住「模型分配」页(#stab-models);Agent CLI 驱动那枚选择器已并进主模型下拉');
+// 主模型在「模型与能力」，新线程的继承偏好在「模型分配」。两处各有一个真实控件。
+const pane = id => html.match(new RegExp('<div class="settings-tab" id="stab-' + id + '">([\\s\\S]*?)(?=<div class="settings-tab"|$)'))?.[1] || '';
+ok(pane('overview').includes('id="cfgMainProvider"') && pane('models').includes('id="cfgNewThreadEngine"')
+  && !html.includes('id="cfgAgentCliType"'), '① 主模型与新线程偏好位于各自的设置页');
 ok(html.includes('id="newThreadEngineHint"'), '① 说明行的落点 #newThreadEngineHint 存在');
 
 // ── ② 前端两侧都接上了 ────────────────────────────────────────────────────────────────
@@ -63,10 +56,10 @@ ok(/newThreadEngine:\s*\$\('cfgNewThreadEngine'\)/.test(appjs),
 ok(/\{ ids: \['cfgNewThreadEngine'\], patch: \(\) => \(\{ newThreadEngine: \$\('cfgNewThreadEngine'\)/.test(appjs),
   '② 即存:INSTANT_SETTINGS 里有 cfgNewThreadEngine 那一条(选中即存,不再等页脚「保存」)');
 // W6:命令行引擎合进主模型下拉之后,选它要一次写 activeProvider:'' ＋ agentCliType(不再有第二个写口)。
-ok(/else \{ patch\.model = model; patch\.agentCliType = pick\.cli; \}/.test(appjs)
+ok(/else \{ patch\[cliModelKey\(pick\.cli\)\] = model; patch\.agentCliType = pick\.cli; \}/.test(appjs)
   // ENGINEERING-SPEC §11.1:命令行那几项按前端 Agent CLI 登记表(js/agent-cli-registry.js)的 AGENT_CLI_IDS 现建,每个 CLI 一项。
   && /lead: AGENT_CLI_IDS\.map\(type => \(\{ value: cliEngineValue\(type\)/.test(appjs),
-  '② 主模型下拉把两个命令行引擎各列成一项,选中即一次写 activeProvider＋agentCliType＋model');
+  '② 主模型下拉逐项列出命令行引擎，选中即保存该引擎自己的模型');
 ok(/\$\('newThreadEngineHint'\)[\s\S]{0,120}\.textContent\s*=/.test(appjs),
   '③ 说明行走 textContent(零 innerHTML)');
 ok(/lastUsedEngineRoute/.test(appjs), '③ 说明行读的是 config.lastUsedEngineRoute');

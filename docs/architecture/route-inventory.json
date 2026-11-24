@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "_comment": "第 103 波 103a 路由清册。由 dev-harness/route-inventory.js 机械生成,route-inventory.static.e2e.js 重算比对。改路由/鉴权后请跑生成器,不要手改本文件。",
-  "generatedAt": "2026-11-19T16:03:44.477Z",
+  "generatedAt": "2026-11-24T04:05:42.378Z",
   "sources": {
     "routeAuth": "ruyi-workbench/app/backend/http-route-policy.cjs",
     "routers": [
@@ -12,6 +12,7 @@
       "ruyi-workbench/app/backend/status-routes.cjs",
       "ruyi-workbench/app/backend/workspace-routes.cjs",
       "ruyi-workbench/app/backend/provider-routes.cjs",
+      "ruyi-workbench/app/backend/codex-account.cjs",
       "ruyi-workbench/app/backend/configuration-routes.cjs",
       "ruyi-workbench/app/backend/mission-ledger-routes.cjs",
       "ruyi-workbench/app/backend/autonomy-grant-routes.cjs",
@@ -42,10 +43,10 @@
     ]
   },
   "summary": {
-    "routeAuthEntries": 156,
-    "decisionPoints": 170,
+    "routeAuthEntries": 161,
+    "decisionPoints": 175,
     "byKind": {
-      "exact": 147,
+      "exact": 152,
       "prefix": 11,
       "regex": 12
     },
@@ -57,11 +58,41 @@
       "token",
       "token-browser"
     ],
-    "uncoveredPoints": 6,
+    "uncoveredPoints": 8,
     "problems": 0,
     "warnings": 0
   },
   "routeAuth": [
+    {
+      "m": "GET",
+      "p": "/api/codex/models",
+      "auth": "token",
+      "prefix": false
+    },
+    {
+      "m": "POST",
+      "p": "/api/codex/unlock",
+      "auth": "token",
+      "prefix": false
+    },
+    {
+      "m": "GET",
+      "p": "/api/codex/account",
+      "auth": "token",
+      "prefix": false
+    },
+    {
+      "m": "POST",
+      "p": "/api/codex/login",
+      "auth": "token",
+      "prefix": false
+    },
+    {
+      "m": "POST",
+      "p": "/api/codex/logout",
+      "auth": "token",
+      "prefix": false
+    },
     {
       "m": "GET",
       "p": "/api/privacy/status",
@@ -1740,6 +1771,82 @@
     },
     {
       "kind": "exact",
+      "path": "/api/codex/models",
+      "file": "../backend/codex-account.cjs",
+      "handler": "handleCodexApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "codex-account",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness/codex-settings.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/codex/unlock",
+      "file": "../backend/codex-account.cjs",
+      "handler": "handleCodexApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "codex-account",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness/codex-settings.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/codex/account",
+      "file": "../backend/codex-account.cjs",
+      "handler": "handleCodexApiRoutes",
+      "methods": [
+        "GET"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "codex-account",
+      "auth": "token",
+      "coveredBy": [
+        "dev-harness/codex-settings.browser.e2e.js"
+      ]
+    },
+    {
+      "kind": "exact",
+      "path": "/api/codex/login",
+      "file": "../backend/codex-account.cjs",
+      "handler": "handleCodexApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "codex-account",
+      "auth": "token",
+      "coveredBy": []
+    },
+    {
+      "kind": "exact",
+      "path": "/api/codex/logout",
+      "file": "../backend/codex-account.cjs",
+      "handler": "handleCodexApiRoutes",
+      "methods": [
+        "POST"
+      ],
+      "selfChecksToken": false,
+      "methodOverride": false,
+      "domain": "codex-account",
+      "auth": "token",
+      "coveredBy": []
+    },
+    {
+      "kind": "exact",
       "path": "/api/config",
       "file": "../backend/configuration-routes.cjs",
       "handler": "handleConfigurationApiRoutes",
@@ -1760,6 +1867,7 @@
         "dev-harness/boot-failure-kind.browser.e2e.js",
         "dev-harness/classic-window-live-steer.e2e.js",
         "dev-harness/claude-models-cache.e2e.js",
+        "dev-harness/composer-effort.browser.e2e.js",
         "dev-harness/composer-voice-stream.browser.e2e.js",
         "dev-harness/composer-voice-warmup.browser.e2e.js",
         "dev-harness/config-providers-guard.e2e.js",
@@ -4155,6 +4263,7 @@
       "coveredBy": [
         "dev-harness/asr-config-ui.static.e2e.js",
         "dev-harness/claude-models-cache.e2e.js",
+        "dev-harness/codex-settings.browser.e2e.js",
         "dev-harness/context-window.e2e.js",
         "dev-harness/openai-engine.e2e.js",
         "dev-harness/session-id-path-guard.e2e.js"
@@ -4491,6 +4600,8 @@
         "dev-harness/claude-permission-bridge-mode.e2e.js",
         "dev-harness/claude-resume-recovery.e2e.js",
         "dev-harness/compaction-refetch-guard.e2e.js",
+        "dev-harness/composer-effort.browser.e2e.js",
+        "dev-harness/composer-ime.browser.e2e.js",
         "dev-harness/composer-session-races.browser.e2e.js",
         "dev-harness/compound-effect-audit.e2e.js",
         "dev-harness/context-compact-v2.e2e.js",
@@ -4797,6 +4908,8 @@
         "dev-harness/claude-permission-bridge-mode.e2e.js",
         "dev-harness/claude-resume-recovery.e2e.js",
         "dev-harness/compaction-refetch-guard.e2e.js",
+        "dev-harness/composer-effort.browser.e2e.js",
+        "dev-harness/composer-ime.browser.e2e.js",
         "dev-harness/composer-session-races.browser.e2e.js",
         "dev-harness/compound-effect-audit.e2e.js",
         "dev-harness/context-compact-v2.e2e.js",
@@ -5081,6 +5194,7 @@
         "dev-harness/claude-context-continuity.e2e.js",
         "dev-harness/claude-resume-recovery.e2e.js",
         "dev-harness/compaction-refetch-guard.e2e.js",
+        "dev-harness/composer-effort.browser.e2e.js",
         "dev-harness/compound-effect-audit.e2e.js",
         "dev-harness/context-compact-v2.e2e.js",
         "dev-harness/desktop-execution-root.e2e.js",
@@ -5392,6 +5506,8 @@
         "dev-harness/capabilities.e2e.js",
         "dev-harness/claude-models-cache.e2e.js",
         "dev-harness/cli-probe-stall.e2e.js",
+        "dev-harness/codex-settings.browser.e2e.js",
+        "dev-harness/composer-effort.browser.e2e.js",
         "dev-harness/composer-voice-stream.browser.e2e.js",
         "dev-harness/composer-voice-warmup.browser.e2e.js",
         "dev-harness/config-providers-guard.e2e.js",
@@ -5430,7 +5546,6 @@
         "dev-harness/settings-skills.browser.e2e.js",
         "dev-harness/settings-wave1.browser.e2e.js",
         "dev-harness/shell-mode-late-config.browser.e2e.js",
-        "dev-harness/simple-mode.browser.e2e.js",
         "dev-harness/start-error-surface.e2e.js",
         "dev-harness/steward-continue-unfinished.e2e.js",
         "dev-harness/steward-contract-guard.e2e.js",

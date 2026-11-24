@@ -18,6 +18,19 @@ function createAgentCliDiscovery({ probes, process = globalThis.process }) {
     Promise.resolve().then(probe).catch(() => {}).finally(() => { _cliProbeRefreshing.delete(key); });
     return true;
   }
+  let codexProbe;
+  function detectCodexPath() {
+    if (codexProbe && Date.now() - codexProbe.at < CLAUDEPATH_CACHE_MS) return codexProbe.value;
+    const dirs = [...(process.env.PATH || '').split(path.delimiter), '/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin')];
+    const candidates = [process.env.CODEX_CLI_PATH, ...new Set(dirs.filter(path.isAbsolute).map(dir => path.join(dir, 'codex'))),
+      '/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex'];
+    const value = candidates.find(binary => {
+      if (!binary) return false;
+      try { fs.accessSync(binary, fs.constants.X_OK); return fs.statSync(binary).isFile(); } catch { return false; }
+    }) || '';
+    codexProbe = { at: Date.now(), value };
+    return value;
+  }
   function claudeProbeCandidates() {
     const home = os.homedir();
     const installs = [path.join(home, '.local/bin/claude'), path.join(home, '.claude/local/claude'),
@@ -153,14 +166,14 @@ function createAgentCliDiscovery({ probes, process = globalThis.process }) {
     }
     return true;
   }
-  function invalidateAgentCliPathCaches() { invalidateClaudePathCache(); _agentCliLauncherOk.clear(); _agentCliLauncherPresent.clear(); }
+  function invalidateAgentCliPathCaches() { codexProbe = null; invalidateClaudePathCache(); _agentCliLauncherOk.clear(); _agentCliLauncherPresent.clear(); }
 
   function waitForConfigCliProbes() {
     if (!beforeListen) return bootProbe;
   }
 
   return {
-    detectClaudePath, detectClaudePathUncached, detectClaudePathUncachedAsync, claudeProbeCandidates,
+    detectCodexPath, detectClaudePath, detectClaudePathUncached, detectClaudePathUncachedAsync, claudeProbeCandidates,
     probeAgentCliLauncher, probeAgentCliLauncherVerdictAsync, agentCliProbeVerdict,
     agentCliLauncherOk, agentCliLauncherUsable, invalidateClaudePathCache, invalidateAgentCliPathCaches,
     beginBootCliPathProbes, finishBootCliPathProbes, waitForBootCliPathProbes, waitForConfigCliProbes,

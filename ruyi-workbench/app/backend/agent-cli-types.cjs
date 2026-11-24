@@ -11,7 +11,15 @@ const AGENT_CLI_TYPES = Object.freeze({
     // Claude 每回合经 --mcp-config 拿如意的 MCP 配置(05 适配器 buildArgs),没有用户配置文件要推。
     syncMcpManifest: async () => {},
   }),
-
+  codex: Object.freeze({
+    id: 'codex', label: 'Codex CLI', pathKey: 'codexPath', detectedKey: 'detectedCodexPath', streaming: true, interactive: true, mcp: 'thread',
+    usesStreamJsonInput: () => false,
+    hasNativeQuestionPrompt: () => true,
+    installCandidates: () => [],
+    detectPath: host => host.detectCodexPath(),
+    prepareSpawn: (_host, command, args) => ({ command, args, opts: {} }),
+    syncMcpManifest: async () => {},
+  }),
 });
 
 // 「这是不是一个登记过的 CLI 类型」—— 只认登记表自己的键(不认 toString / constructor 这类原型链上的名字)。

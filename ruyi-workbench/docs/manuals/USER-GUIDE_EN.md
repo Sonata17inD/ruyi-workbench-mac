@@ -20,7 +20,7 @@ Open Ruyi or Ruyi Slim from Applications. The top bar has a **Steward | Workbenc
 
 A new install opens in the **steward view**. Choose **Start the guide** in the welcome content, or use the model-setup prompt when no model is ready. The wizard follows **Language → Engine → Provider → Steward model → Workspace → Safety → Done**; complete the steps needed for your engine.
 
-1. **Connect a model.** Local Ollama and LM Studio need no key. A cloud or on-prem provider needs its address, model name and the appropriate credentials; test the connection after entering them. An installed Claude Code can be selected as an Agent CLI instead.
+1. **Connect a model.** Local Ollama and LM Studio need no key. A cloud or on-prem provider needs its address, model name and the appropriate credentials; test the connection after entering them. An installed Claude Code or Codex CLI can also be selected as the Agent CLI.
 2. **Choose a workspace and permission mode.** Select the materials for this task and decide which actions should ask you first. The workspace is not an operating-system sandbox; see section 2.
 3. **Send a task.** Finishing returns to the steward view, where you can describe the work directly. The workbench view also offers task cards in an empty conversation.
 
@@ -45,6 +45,8 @@ the local files and actions involved.
 ## 2. The concepts that matter
 
 ### Workspace
+
+New workbench chats use `~/Ruyi/workspace`, created automatically on first use. If you customize the Ruyi managed folder, its `workspace` subfolder becomes the default. A project you selected as the default and existing threads keep their assigned folders.
 
 The workspace identifies the materials and output location for a task. File-tool access also depends on permissions and settings: Ask me every step and Edit files without asking normally enforce configured workspace roots; Smart auto, Fully automatic and the outside-workspace setting allow broader access. Scripts, commands and desktop control are not isolated to that folder. **Choosing a folder does not create a sandbox**; check the permission mode and keep your own backups for important material.
 
@@ -214,7 +216,11 @@ The right tool panel can be closed and reopened; its category tabs remain at the
 
 The composer supports attachments, task cards, slash commands, and ordinary natural-language requests, and it
 exists in both views (with a microphone beside Send; until speech recognition is configured it is a grey "set up" button).
-Choose reasoning effort above the composer. Enter confirms an active IME candidate. After composition, Enter sends and Shift+Enter inserts a line break.
+Switching engines selects **High** reasoning effort above the composer. Select another level before sending to change it. On upgrade, Ruyi also sets existing CLI and provider effort settings to High. Providers with reasoning disabled keep it disabled.
+
+While the agent works, you can follow its progress. Once it finishes, the final answer stays visible. Expand **Process** to review intermediate messages, reasoning and tool calls. Text-only replies appear directly.
+
+Enter confirms an active IME candidate. After composition, Enter sends and Shift+Enter inserts a line break.
 
 ## 5. Settings
 
@@ -227,6 +233,8 @@ Open **Settings** at the bottom of the left sidebar. The left side has five grou
 providers / Speech recognition / Agent CLI / Agent roles), **Tools & integrations** (Web search / Integrations and
 MCP / Add-on components / Skills & templates / Migration center) and **System** (Diagnostics / Storage & data /
 Advanced / Update Center). The "?" on each page opens the matching section of this guide.
+
+**ChatGPT plan.** Under **Connections and tools → Agent CLI**, expand **Codex CLI · ChatGPT** and select **Continue with ChatGPT**. Choose the account or workspace and authorize plan usage in the browser. If macOS requests Keychain access, choose **Always Allow** for `ruyi-keychain-helper` so Ruyi can read your sign-in credentials on the next launch. If Keychain requires approval on a later launch, select **Unlock Keychain** on the same page to load your plan models. Under **Models & capabilities**, choose Codex CLI as the main conversation engine and select an available model. If automatic detection misses the CLI, enter the path to the installed executable. Open an ordinary workbench thread to send a task and approve or decline tool requests. Use the Agent CLI settings to check ChatGPT usage or sign out.
 
 Configure either a local Agent CLI path (Claude Code, under Models & Services → Agent CLI) or an
 OpenAI-compatible provider (Models & Services → Model providers: press "+ Add Provider" and pick a starting point from the

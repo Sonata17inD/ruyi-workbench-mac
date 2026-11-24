@@ -72,13 +72,18 @@ function createTurnSegmentBuilder() {
     let tail = segments.length - 1;
     if (type === 'thinking') while (tail >= 0 && isAmbientBackgroundCard(segments[tail])) tail -= 1;
     const last = tail >= 0 ? segments[tail] : undefined;
-    if (last && last.type === type) last.text += value;
+    if (last && last.type === type && !last.phase) last.text += value;
     else segments.push({ id: nextId(), type, text: value });
     fallbackBatchId = '';
     lastEventType = type;
   };
   const consume = evt => {
     if (!evt || typeof evt !== 'object') return;
+    if (evt.type === 'commentary_end') {
+      const last = segments.at(-1);
+      if (last?.type === 'text') last.phase = 'commentary';
+      return;
+    }
     if (evt.type === 'assistant_delta') { appendText('text', evt.text); return; }
     if (evt.type === 'thinking_delta') { appendText('thinking', evt.text); return; }
     if (evt.type === 'tool_use' && !evt.subagentId) {

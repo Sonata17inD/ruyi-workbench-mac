@@ -1,6 +1,6 @@
 'use strict';
 
-function createAgentCliAdapters({ cli, claude, tools, usage }) {
+function createAgentCliAdapters({ cli, claude, codex, tools, usage }) {
   const { AGENT_CLI_TYPES, normalizeAgentCliType, prepareAgentCliSpawn } = cli;
   const {
     CLAUDE_PERMISSION_MODE_MAP, RUYI_MCP_CLI_TOOL_PREFIX, buildClaudeAgentDefinitions, claudeCostFields,
@@ -10,6 +10,10 @@ function createAgentCliAdapters({ cli, claude, tools, usage }) {
   const { appendUsageLedger } = usage;
 
   const AGENT_CLI_ADAPTERS = Object.freeze({
+    codex: Object.freeze({ id: 'codex', modelCatalog: {
+      offline: () => codex.cachedModels(),
+      discover: () => ({ ok: true, engine: 'claude', agentCliType: 'codex', models: codex.cachedModels() }),
+    } }),
     claude: Object.freeze({
       id: 'claude',
       interactive: AGENT_CLI_TYPES.claude.usesStreamJsonInput,

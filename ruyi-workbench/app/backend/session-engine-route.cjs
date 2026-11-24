@@ -18,7 +18,7 @@ function normalizeSessionEngineRoute(raw) {
   if (raw.engine === 'agent' || raw.engine === 'claude') {
     const agentCliType = typeof raw.agentCliType === 'string' && raw.agentCliType.trim()
       ? raw.agentCliType.trim().slice(0, 128) : 'claude';
-    return { engine: 'agent', agentCliType, model, ...override };
+    return { engine: 'agent', agentCliType, model, ...(agentCliType === 'codex' && effort === 'max' ? {} : override) };
   }
   return null;
 }
@@ -30,7 +30,7 @@ function sessionEngineRouteFromConfig(config) {
     const provider = (cfg.providers || []).find(item => item && item.id === providerId);
     return normalizeSessionEngineRoute({ engine: 'openai', providerId, model: provider && provider.model });
   }
-  return normalizeSessionEngineRoute({ engine: 'agent', agentCliType: cfg.agentCliType, model: cfg.model });
+  return normalizeSessionEngineRoute({ engine: 'agent', agentCliType: cfg.agentCliType, model: cfg.agentCliType === 'codex' ? cfg.codexModel : cfg.model });
 }
 
 function inferSessionEngineRoute(session) {
@@ -53,6 +53,7 @@ function unavailableAgentRoute(route) {
 }
 
 function clearNativeResume(session) {
+  delete session.codexThread;
   session.claudeSessionId = null;
   delete session.claudeSessionModel;
   delete session.claudeSessionRequestedModel;
@@ -63,7 +64,7 @@ function clearNativeResume(session) {
 
 function configForSessionEngineRoute(config, session) {
   const route = inferSessionEngineRoute(session);
-  if (!route) return config;
+  if (!route) return config.agentCliType === 'codex' ? { ...config, model:config.codexModel || '' } : config;
   if (route.engine === 'openai') {
     const providers = (config.providers || []).map(provider => provider && provider.id === route.providerId
       ? { ...provider, model: route.model || provider.model || '', ...(route.reasoningEffort && { reasoningEffort: route.reasoningEffort }) }
@@ -74,7 +75,7 @@ function configForSessionEngineRoute(config, session) {
     ...config,
     activeProvider: '',
     agentCliType: route.agentCliType,
-    ...(route.reasoningEffort && { claudeThinkingEffort: route.reasoningEffort }),
+    ...(route.reasoningEffort && { [route.agentCliType === 'codex' ? 'codexThinkingEffort' : 'claudeThinkingEffort']: route.reasoningEffort }),
     model: route.model,
   };
 }
@@ -108,7 +109,7 @@ function createSessionRoutePreferences({ mutateConfig, selectedAgentCli, logEven
     if (route.engine === 'openai') {
       return ((config && config.providers) || []).some(item => item && item.id === route.providerId);
     }
-    if (route.agentCliType !== 'claude') return false;
+    if (!isAgentCliType(route.agentCliType)) return false;
     const cli = selectedAgentCli({ ...(config || {}), agentCliType: route.agentCliType });
     return Boolean(cli && cli.path);
   }

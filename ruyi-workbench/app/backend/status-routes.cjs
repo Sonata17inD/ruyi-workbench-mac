@@ -68,11 +68,13 @@ function createStatusRoutes({
           const cap = p ? learnedWindowCap(p.id, model) : 0;
           return { value: cap ? Math.min(r.value, cap) : r.value, source: r.source, provider: p ? p.id : '', model, learnedCap: cap || undefined };
         })(),
+        modelsAgentCliType: conversationConfig.agentCliType,
         models: agentCliAdapter(conversationConfig.agentCliType).modelCatalog.offline(conversationConfig), // instant offline list for the requested conversation route (per-CLI adapter, 05)
         providerPresets: PROVIDER_PRESETS, // v0.5: built-in OpenAI-compatible provider templates (local Ollama/LM Studio + custom; no vendor presets)
         toolbox: typeof ToolboxHooks.statusView === 'function' ? ToolboxHooks.statusView(config) : { autoDiscover: false, components: [] },   // ruyi-toolbox 已登记的组件与各自状态(只读视图;命令不出进程)
         claudeEndpointPresets: CLAUDE_ENDPOINT_PRESETS, // v1.4.4: third-party Anthropic-compatible endpoint templates for the Claude CLI engine (custom only; no vendor presets)
         detectedClaudePath: detectClaudePath(),
+        detectedCodexPath: selectedAgentCli({ ...config, agentCliType: 'codex' }).detected,
         agentCliDrivers: Object.values(AGENT_CLI_TYPES).map(d => ({ ...d, path: selectedAgentCli({ ...config, agentCliType: d.id }).detected })),
         mcpConfigPath: desktopPending ? mcpConfigFilePath() : await generateMcpConfig(config.mcpCommandMode),
         // v0.7d: desktop MCP discovery status for the settings UI. `detected` is the autodetect result

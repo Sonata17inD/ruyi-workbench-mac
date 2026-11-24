@@ -1,6 +1,6 @@
 'use strict';
 import { effortOptions } from './reasoning-control.js';
-import { providerModels, agentModels } from './model-catalog.js';
+import { providerModels, agentModels, publishAgentModels } from './model-catalog.js';
 
 
 // ── 117j UX-F3/F4（§8.8 键盘可达）：Esc 逐层 ────────────────────────────────────────────
@@ -24,7 +24,7 @@ import { apiErrText } from './net.js';   // 走查 S-05：失败回执取人话�
 import { getLocale } from './i18n.js';
 import { chatProviders } from './util.js';   // 纯函数:只做语音的服务商不进引擎菜单
 // Agent CLI 的品牌名与「有哪几个 CLI」只问这一张登记表（ENGINEERING-SPEC §11.1；与 provider-settings.js 同源）。
-import { AGENT_CLI_IDS, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
+import { AGENT_CLI_IDS, cliModelKey, agentCliMeta, knownAgentCliMeta, storedAgentCliType } from './agent-cli-registry.js';
 // 33 号文 §4（M3-a）：确认类知识（§8.6 那五条文案键 + 「哪一档要二次确认」的判据数据）的
 // 【唯一登记表】住在危险操作确认的共用件 js/confirm-panel.js。本模块只从那边取，再 re-export
 // 维持 117d 起的公开面（settings 与经典壳仍从本模块 import 同名导出，拿到的是同一个数组对象）。
@@ -178,7 +178,7 @@ export function resolveEngineRoute(session, config) {
     const provider = (cfg.providers || []).find(item => item && item.id === providerId) || null;
     return { engine: 'openai', providerId, model: String((provider && provider.model) || '') };
   }
-  return { engine: 'agent', agentCliType: storedAgentCliType(cfg.agentCliType), model: String(cfg.model || '') };
+  return { engine: 'agent', agentCliType: storedAgentCliType(cfg.agentCliType), model: String(cfg[cliModelKey(cfg.agentCliType)] || '') };
 }
 
 // 117u-G3（27 号文 §11.15.7；用户 2026-09-09「这个也不印默认值吧」）：这条会话的权限与模型
@@ -766,7 +766,7 @@ export function createQuickSwitchChips({
       row.setAttribute('aria-checked', current === option.key ? 'true' : 'false');
       row.dataset.engineKey = option.key;
       row.appendChild(el('span', 'steward-chip-option-label', option.label));
-      row.onclick = () => { closeMenu(); patchSession({ engineRoute: option.route }); };
+      row.onclick = () => { closeMenu(); patchSession({ engineRoute: { ...option.route, reasoningEffort: 'high' } }); };
       menu.appendChild(row);
     }
   }
@@ -788,7 +788,7 @@ export function createQuickSwitchChips({
         .filter(model => model.id && !hidden.has(model.id));
     }
     if (!knownAgentCliMeta(route.agentCliType)) return [];
-    const models = agentModels(route.agentCliType, state?.status?.models || []);
+    const models = agentModels(route.agentCliType, state?.status?.modelsAgentCliType === route.agentCliType ? state.status.models : []);
     const group = 'agent:' + route.agentCliType;
     const groupLabel = agentCliMeta(route.agentCliType).label;
     return models
@@ -877,7 +877,14 @@ export function createQuickSwitchChips({
     }
     syncCandidates();
     if (!options.length) {
-      menu.appendChild(el('p', 'steward-chip-option-hint', t('stewardShell.chips.noModels')));
+      const hint = el('p', 'steward-chip-option-hint', t('stewardShell.chips.noModels'));
+      menu.appendChild(hint);
+      const endpoint = route.engine === 'agent' && knownAgentCliMeta(route.agentCliType)?.modelsEndpoint;
+      if (endpoint) api(endpoint).then(result => {
+        if (!result?.models?.length || openMenu !== menu || !menu.contains(hint)) return;
+        publishAgentModels(route.agentCliType, result.models);
+        menu.replaceChildren(); buildModelMenu(menu); placeChipMenu(menu);
+      }).catch(error => { hint.textContent = apiErrText(error); });
       return;
     }
     let filter = '';
@@ -1069,7 +1076,7 @@ export function createQuickSwitchChips({
     const route = resolveEngineRoute(session, config());
     const spec = effortOptions(route, config());
     const busy = pendingWrites.has(sessionId);
-    const selected = spec.values.includes(route.reasoningEffort) ? route.reasoningEffort : '';
+    const selected = route.reasoningEffort || spec.current || '';
     const signature = JSON.stringify([sessionId, route, spec.values, spec.current, spec.enabled, busy, getLocale()]);
     if (signature === effortSignature) return;
     effortSignature = signature;

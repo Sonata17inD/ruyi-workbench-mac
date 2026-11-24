@@ -4,7 +4,7 @@ const { apiFailure, send } = require('./http-protocol.cjs');
 
 function createWorkbenchApiRouter({
   authorizeRoute, handlePrivacyApiRoutes, handleExternalBotApiRoutes, handleStewardApiRoutes, handleEventStreamApiRoutes,
-  handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
+  handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute, handleCodexApiRoutes,
   handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
   handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
   handleMissionLedgerApiRoutes, handleAutonomyGrantApiRoutes, handleAgentWorkflowApiRoutes,
@@ -27,6 +27,7 @@ function createWorkbenchApiRouter({
   register(handlePlaybookApiRoutes, 'playbooks');
   register(handleWorkspaceApiRoutes, 'workspace', 'pick-folder', 'pick-file');
   register(handleModelsApiRoute, 'models');
+  register(handleCodexApiRoutes, 'codex');
   register(handleConfigurationApiRoutes, 'config', 'agent-roles', 'agent-workflows');
   register(handleProviderTestApiRoute, 'provider');
   register(handleSessionApiRoutes, 'sessions');

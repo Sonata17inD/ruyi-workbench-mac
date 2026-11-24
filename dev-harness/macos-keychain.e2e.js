@@ -32,6 +32,17 @@ let disposable;
     t.ok((await S.LocalSecretCrypto.run('unprotect', sealed, entropy)).equals(secret), 'real isolated Keychain wraps and unwraps through the production Node protector');
     const cold = loadServerInternals(['LocalSecretCrypto', 'LocalSecretCryptoHooks']); cold.LocalSecretCryptoHooks.helperPath = () => helper;
     t.ok((await cold.LocalSecretCrypto.run('unprotect', sealed, entropy)).equals(secret), 'a fresh protector instance reads the existing Keychain key');
+    const rebuilt = buildMacKeychainHelper({ output: path.join(root, 'other-edition', 'ruyi-keychain-helper'), testKeychainPath: keychain });
+    t.ok(fs.readFileSync(helper).equals(fs.readFileSync(rebuilt)), 'independent builds retain the same signed Keychain helper identity');
+    cold.LocalSecretCryptoHooks.helperPath = () => rebuilt;
+    const login = await S.LocalSecretCrypto.run('protect', secret, entropy, { allowKeychainPrompt: true });
+    t.ok((await cold.LocalSecretCrypto.run('unprotect', login, entropy)).equals(secret), 'user-initiated protection and silent access share the original disposable Keychain key across editions');
+    const rotated = Buffer.from('next synthetic credential');
+    const updated = await S.LocalSecretCrypto.run('unprotect', login, entropy, { allowKeychainPrompt: true }, (plaintext, reseal) => {
+      if (!plaintext.equals(secret)) throw Error('unexpected credential before rotation');
+      return reseal(rotated);
+    });
+    t.ok((await cold.LocalSecretCrypto.run('unprotect', updated, entropy)).equals(rotated), 'one explicit unlock can open and rotate a saved credential');
     for (const [bytes, aad, code] of [[sealed, Buffer.from('wrong-owner'), 'decrypt_failed'], [Buffer.from('old-dpapi-bytes'), entropy, 'provider_mismatch'],
       [Buffer.concat([sealed.subarray(0, sealed.length - 1), Buffer.from('!')]), entropy, 'decrypt_failed']]) {
       try { await S.LocalSecretCrypto.run('unprotect', bytes, aad); t.fail(code + ' should reject'); }
@@ -92,6 +103,8 @@ let disposable;
     try { await S.LocalSecretCrypto.run('protect', secret, entropy); t.fail('damaged key should reject'); }
     catch (error) { t.ok(error.code === 'local_crypto.keychain_corrupt', 'damaged wrapping key is not silently regenerated'); }
     control('remove-key');
+    try { await S.LocalSecretCrypto.run('unprotect', sealed, entropy, { allowKeychainPrompt: true }); t.fail('explicit unlock must not create a wrapping key'); }
+    catch (error) { t.ok(error.code === 'local_crypto.key_missing', 'interactive read leaves a missing wrapping key missing'); }
     try { await S.LocalSecretCrypto.run('unprotect', sealed, entropy); t.fail('missing key should reject'); }
     catch (error) { t.ok(error.code === 'local_crypto.key_missing', 'unprotect does not create a replacement for a missing key'); }
     // A bounded fake helper covers explicit access denial and malformed IPC, without OS prompts.

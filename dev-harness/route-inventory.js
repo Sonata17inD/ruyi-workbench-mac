@@ -44,6 +44,7 @@ const ROUTER_FILES = [
   '../backend/status-routes.cjs',
   '../backend/workspace-routes.cjs',
   '../backend/provider-routes.cjs',
+  '../backend/codex-account.cjs',
   '../backend/configuration-routes.cjs',
   '../backend/mission-ledger-routes.cjs',
   '../backend/autonomy-grant-routes.cjs',
@@ -100,6 +101,7 @@ const REGEX_ROUTE_SAMPLES = {
 
 // 域归属:按 handler 所在函数名归域(与 23 号方案 103a「按域分批」的批次单位一致)。
 const DOMAIN_BY_HANDLER = [
+  ['handleCodexApiRoutes', 'codex-account'],
   ['handleMcpApiRoutes', 'mcp'],
   ['handleCheckpointApiRoutes', 'checkpoint-storage'],
   ['handleSteerApiRoute', 'steer'],
@@ -121,6 +123,7 @@ const DOMAIN_BY_FILE = {
   '../backend/status-routes.cjs': 'status',
   '../backend/workspace-routes.cjs': 'workspace',
   '../backend/provider-routes.cjs': 'provider',
+  '../backend/codex-account.cjs': 'codex-account',
   '../backend/configuration-routes.cjs': 'configuration',
   '../backend/mission-ledger-routes.cjs': 'mission-ledger',
   '../backend/autonomy-grant-routes.cjs': 'autonomy-grant',

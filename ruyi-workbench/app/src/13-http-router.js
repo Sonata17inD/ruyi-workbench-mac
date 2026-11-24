@@ -90,6 +90,8 @@ const handleWorkspaceApiRoutes = require('./backend/workspace-routes.cjs').creat
   readConfig, resolveWorkspace, DesktopShell,
 });
 
+const handleCodexApiRoutes = require('./backend/codex-account.cjs').createCodexAccountRoutes(CodexAccount);
+
 const { handleModelsApiRoute, handleProviderTestApiRoute } = require('./backend/provider-routes.cjs').createProviderRoutes({
   readConfig, safeSessionId, readSessionRouteHead, configForSessionEngineRoute, agentCliAdapter,
   catalog: { activeOpenAiProvider, fetchOpenAiModels, cachedContextLength, contextWindowFromTable },

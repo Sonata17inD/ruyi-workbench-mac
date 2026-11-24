@@ -2,12 +2,12 @@
   "schema": 1,
   "generatedBy": "dev-harness/durable-state-inventory.js",
   "scope": "workbench-managed JSON, JSONL/NDJSON and ownership sidecars plus consumed external state",
-  "count": 67,
+  "count": 69,
   "lifecycleCounts": {
     "dedicated-exemption": 23,
-    "external-exemption": 6,
+    "external-exemption": 7,
     "regenerable-exemption": 7,
-    "shared-lifecycle": 31
+    "shared-lifecycle": 32
   },
   "entries": [
     {
@@ -597,6 +597,34 @@
       "recovery": "backups next to each edited file",
       "lifecycle": "dedicated-exemption",
       "exemptionReason": "undo ledger: undo only reverses values that still equal what the migration wrote"
+    },
+    {
+      "id": "chatgpt-accounts",
+      "pattern": "<data>/chatgpt-accounts.json",
+      "owner": "../backend/codex-account.cjs",
+      "anchor": "'chatgpt-accounts.json'",
+      "schema": "createCodexAccount holds installation, OAuth registrations and encrypted tokens",
+      "writePrimitive": "serialized atomicWriteJson with mode 0600 and the system secret protector",
+      "corruption": "login / access / models / logout",
+      "capacity": "logout removes the encrypted credentials and retains the issued client ID for reauthorization",
+      "cache": "live model catalog resets on account changes",
+      "recovery": "absent on older installations until first registration",
+      "lifecycle": "shared-lifecycle",
+      "exemptionReason": "Ruyi owns the registration separately from terminal Codex"
+    },
+    {
+      "id": "codex-native-threads",
+      "pattern": "<data>/codex/<account-hash>/",
+      "owner": "../backend/codex-turn.cjs",
+      "anchor": "'codex'",
+      "schema": "Codex app-server owns native thread state under its account-scoped CODEX_HOME",
+      "writePrimitive": "Codex writes native history and databases",
+      "corruption": "thread/resume uses the ID in the Ruyi session",
+      "capacity": "retained for later resume",
+      "cache": "resume is scoped to account, cwd and sequence",
+      "recovery": "a missing native thread is recreated from Ruyi history before a new turn",
+      "lifecycle": "external-exemption",
+      "exemptionReason": "native state belongs to the installed CLI"
     },
     {
       "id": "migration-backups",

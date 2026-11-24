@@ -12,15 +12,24 @@ export const AGENT_CLI_REGISTRY = Object.freeze({
     detectedKey: 'detectedClaudePath',
     thinkingEfforts: Object.freeze(['', 'low', 'medium', 'high', 'xhigh', 'max']),
     compactDefaultLabelKey: 'ctx.compact.defaultClaude',
-    claudeUserCommands: true,
+    claudeUserCommands: true, agentTeam: true, modelsEndpoint: '',
   }),
-
+  codex: Object.freeze({
+    id: 'codex', label: 'Codex CLI', avatarLetter: 'X', eventTag: 'codex',
+    pathKey: 'codexPath', detectedKey: 'detectedCodexPath',
+    thinkingEfforts: Object.freeze(['', 'low', 'medium', 'high', 'xhigh']),
+    compactDefaultLabelKey: 'ctx.compact.defaultCodex', claudeUserCommands: false, agentTeam: false,
+    modelsEndpoint: '/api/codex/models',
+  }),
 });
+
+export const cliModelKey = id => id === 'codex' ? 'codexModel' : 'model';
+export const cliEffortKey = id => id === 'codex' ? 'codexThinkingEffort' : 'claudeThinkingEffort';
 
 // 表的键，按登记顺序（设置页主模型下拉、管家引擎菜单的列出顺序就是它）。
 export const AGENT_CLI_IDS = Object.freeze(Object.keys(AGENT_CLI_REGISTRY));
 
-// config.claudeThinkingEffort（两个 CLI 共用的那一个键）接受的全部取值 = 各行 thinkingEfforts 的并集，按登记顺序。
+// 共用控件展示的强度档位按驱动登记顺序取并集。
 export const AGENT_CLI_THINKING_EFFORT_VALUES = Object.freeze([...new Set(AGENT_CLI_IDS.flatMap(id => AGENT_CLI_REGISTRY[id].thinkingEfforts))]);
 
 export function isAgentCliId(value) {

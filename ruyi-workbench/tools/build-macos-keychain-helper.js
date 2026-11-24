@@ -11,7 +11,9 @@ function buildMacKeychainHelper({ output, testKeychainPath } = {}) {
   const root = path.resolve(__dirname, '..');
   output = output || path.join(root, 'runtime', 'macos', 'ruyi-keychain-helper');
   fs.mkdirSync(path.dirname(output), { recursive: true });
-  const temporary = output + '.' + process.pid + '.tmp';
+  // ld derives the ad-hoc signing identifier from the executable basename.
+  const staging = fs.mkdtempSync(path.join(path.dirname(output), '.keychain-build-'));
+  const temporary = path.join(staging, 'ruyi-keychain-helper');
   try {
     const result = cp.spawnSync('/usr/bin/xcrun', ['clang', '-fobjc-arc', '-Wall', '-Wextra', '-Werror', '-Wno-deprecated-declarations', '-O2',
       '-mmacosx-version-min=14.0', '-arch', architecture, '-framework', 'Foundation', '-framework', 'Security',
@@ -21,7 +23,7 @@ function buildMacKeychainHelper({ output, testKeychainPath } = {}) {
     if (result.error || result.status !== 0) throw new Error(result.error ? result.error.message : result.stderr);
     fs.chmodSync(temporary, 0o755); fs.renameSync(temporary, output);
     return output;
-  } finally { fs.rmSync(temporary, { force: true }); }
+  } finally { fs.rmSync(staging, { recursive: true, force: true }); }
 }
 if (require.main === module) {
   try { console.log(buildMacKeychainHelper()); }

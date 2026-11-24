@@ -100,7 +100,7 @@ function roleInput(field, value, type = 'text') { const input = document.createE
 function roleModelSelect(field, value) {
   const select = document.createElement('select'); select.dataset.roleField = field;
   bindModelSelect(select, {
-    models: () => field === 'claudeModel' ? agentModels('claude', state.status?.models || [])
+    models: () => field === 'claudeModel' ? agentModels('claude', state.status?.modelsAgentCliType === 'claude' ? state.status.models : [])
       : providerModels(chatProviders(state.config).find(p => p.id === (state.config.subagentPreferredProvider || state.config.activeProvider)) || chatProviders(state.config)[0]),
     value, emptyValue: field === 'claudeModel' ? 'inherit' : '', emptyLabel: () => t('role.permInherit'),
   });

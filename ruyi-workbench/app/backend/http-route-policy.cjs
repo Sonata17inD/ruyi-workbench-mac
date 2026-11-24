@@ -1,6 +1,11 @@
 'use strict';
 // 01b-route-auth.js - 110-2a: 从 01-config.js 搬出的 ROUTE_AUTH 路由鉴权表(纯搬家,零行为变更)。
 const ROUTE_AUTH = [
+  { m: 'GET', p: '/api/codex/models', auth: 'token' },
+  { m: 'POST', p: '/api/codex/unlock', auth: 'token' },
+  { m: 'GET', p: '/api/codex/account', auth: 'token' },
+  { m: 'POST', p: '/api/codex/login', auth: 'token' },
+  { m: 'POST', p: '/api/codex/logout', auth: 'token' },
   { m: 'GET', p: '/api/privacy/status', auth: 'token' },
   { m: 'GET', p: '/api/privacy/settings', auth: 'token' },
   { m: 'POST', p: '/api/privacy/settings', auth: 'token' },

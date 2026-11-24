@@ -4,7 +4,7 @@ const SessionTurnRuntime = require('./backend/session-turn-runtime.cjs').createS
   sessions: { createSession, loadSession, rememberLastUsedEngineRoute, sessionMessagesDelta, sessionMessagesStamp, sessionMissionId, sessionTodosSignature, updateSessionMeta },
   routing: { configForSessionEngineRoute, inferSessionEngineRoute, normalizeSessionEngineRoute, sessionEngineRouteFromConfig, sessionEngineRouteScopeOverrides },
   execution: { activeChildren, turnSettlers, turnOutcomePending, driverAutoSessions, assertSessionExecutionOwner, recordSessionExecutionOwner, requestSessionExecutionStop, sessionExecutionSnapshot, stopSession, SessionExecutionHooks, DesktopExecutionHooks },
-  engines: { runOpenAiTurn, runClaudeTurn, runProviderCompact, maybeWriteThreadBrief, settleThreadBrief },
+  engines: { runOpenAiTurn, runClaudeTurn, runCodexTurn, runProviderCompact, maybeWriteThreadBrief, settleThreadBrief },
   mission: { runMissionDriver, bindDriverRun, endDriverRun, revokeGrantsForRun },
   steward: { STEWARD_SESSION_ID, StewardHooks, stewardTaintToolCall, stewardWatchedThread },
   EventStreamHooks, PrivacyCore, PrivacyGateway,

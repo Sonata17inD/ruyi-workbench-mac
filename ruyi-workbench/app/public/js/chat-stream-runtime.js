@@ -139,7 +139,8 @@ export function createChatStreamRuntime(deps = {}) {
   // session or localStorage: sending the message consumes the preference and immediately resets the UI.
   let agentTeamTurnEnabled = false;
   function agentTeamAvailable() {
-    return Number(state.config && state.config.subagentMaxPerTurn) > 0;
+    const meta = currentEngineMeta();
+    return (meta?.engine === 'openai' || agentCliMeta(meta?.agentCliType).agentTeam) && Number(state.config?.subagentMaxPerTurn) > 0;
   }
   function updateAgentTeamButton() {
     const btn = $('agentTeamBtn');
@@ -150,7 +151,7 @@ export function createChatStreamRuntime(deps = {}) {
     btn.setAttribute('aria-pressed', agentTeamTurnEnabled ? 'true' : 'false');
     btn.title = available
       ? t(agentTeamTurnEnabled ? 'composer.agentTeam.activeTitle' : 'composer.agentTeam.title')
-      : t('composer.agentTeam.unavailableTitle');
+      : t(currentEngineMeta()?.engine !== 'openai' && !agentCliMeta(currentEngineMeta()?.agentCliType).agentTeam ? 'composer.agentTeam.unsupportedCli' : 'composer.agentTeam.unavailableTitle');
     btn.setAttribute('aria-label', t('composer.agentTeam.label'));
     iconTextBtn(btn, 'agents', t(agentTeamTurnEnabled ? 'composer.agentTeam.active' : 'composer.agentTeam.label'));
   }
@@ -1205,12 +1206,14 @@ export function createChatStreamRuntime(deps = {}) {
       if (card.resPre && !card.resPre.textContent) card.resPre.textContent = t('chat.toolResultMissing');
       settleNarrativeTool(live, id, true);
     }
-    compactNarrativeProcessRuns(live && live.narrative);
     if (live.bubble && !live.bufferText && (live.errorShown || live.noteShown || live.narrative.childElementCount > 1)) sealLiveTextSegment(live);
     else if (live.bubble) {
       if (!live.bufferText) live.bufferText = t('chat.noTextOutput');
       sealLiveTextSegment(live);
     }
+    compactNarrativeProcessRuns(live.narrative, true);
+    const record = live.narrative.parentElement?.querySelector(':scope > .turn-record');
+    if (record) live.narrative.querySelector(':scope > .narrative-process-group > .narrative-process-body')?.append(record);
     // 回合收尾连做折叠(思考面板/过程组)+ markdown 定版，高度变化集中在这一步；
     // 同任务内补一次粘性跟随，避免回合结束时视口先塌后跳。
     maybeScrollToBottom();
@@ -1336,6 +1339,10 @@ export function createChatStreamRuntime(deps = {}) {
       }
       case 'process':
         setProc(evt.state);
+        break;
+      case 'commentary_end':
+        live.bubble?.classList.add('turn-commentary');
+        sealLiveTextSegment(live);
         break;
       case 'assistant_delta':
         ensureLiveTextSegment(live);

@@ -89,7 +89,7 @@ const EXPECTED = {
   // ── confirm (94) 花钱／换执行主体／改「谁能不问就做什么」的边界／决定用户多久看见 —— 用户按一下按钮 ─────────────────────────────
   agentCliType: 'confirm', newThreadEngine: 'confirm', permissionMode: 'confirm', includeWorkbenchMcp: 'confirm',
   autoResumeClaudeSessions: 'confirm', model: 'confirm', compactProviderId: 'confirm', compactModel: 'confirm',
-  contextWindowOverrides: 'confirm', maxTurns: 'confirm', thinkingBudget: 'confirm', claudeThinkingEffort: 'confirm',
+  contextWindowOverrides: 'confirm', maxTurns: 'confirm', thinkingBudget: 'confirm', claudeThinkingEffort: 'confirm', codexModel: 'confirm', codexThinkingEffort: 'confirm',
   betaInterleavedThinking: 'confirm', engineMode: 'confirm', agentAutoModelTiering: 'confirm', knownModels: 'confirm',
   extraModels: 'confirm', discoverModelsFromProxy: 'confirm', modelsApiBase: 'confirm', activeProvider: 'confirm',
   asrProviderId: 'confirm', asrModel: 'confirm', asrStreamProviderId: 'confirm', asrStreamModel: 'confirm',
@@ -120,7 +120,7 @@ const EXPECTED = {
   // 已知工作区、cwd 校验与 steward_file_read 的可读根。管家能改它 = 能给自己登记一个可读可派的新目录。
   stewardManagedWorkspaces: 'forbidden',
   uiMode: 'forbidden', configSchema: 'forbidden', configExplicitKeysV1: 'forbidden', credentialEncryptionV1: 'forbidden', privacyModeV1: 'forbidden', privacyTechnicalV1: 'forbidden', privacyRulesV1: 'forbidden', privacyPolicyRecoveryRequiredV1: 'forbidden', version: 'forbidden', lastUsedEngineRoute: 'forbidden',
-  claudePath: 'forbidden', defaultWorkspace: 'forbidden', extraClaudeArgs: 'forbidden',
+  claudePath: 'forbidden', codexPath: 'forbidden', defaultWorkspace: 'forbidden', extraClaudeArgs: 'forbidden',
   allowCommandTools: 'forbidden', allowDesktopTools: 'forbidden', mcpCommandMode: 'forbidden', permissionBridge: 'forbidden',
   autonomyAutoResume: 'forbidden', modelsApiKey: 'forbidden', claudeAuthMode: 'forbidden', providers: 'forbidden',
   desktopMcp: 'forbidden', autoImportClaudeCodeMcp: 'forbidden', bridgeExternalToolsToProvider: 'forbidden', summarySingleShotMaxTokensV1: 'forbidden',

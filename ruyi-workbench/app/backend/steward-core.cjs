@@ -1675,7 +1675,7 @@ const STEWARD_CONFIG_TIER_CONFIRM = Object.freeze([
   'runtimeVolatileTailLayoutV1', 'runtimeAppendOnlyToolSchemasV1', 'runtimeExecResultCacheV1', 'execResultCacheMaxEntriesV1',
   'runtimeMemoryVectorRecallV1', 'coreMemoryMaxItemsV1', 'coreMemoryCharBudgetV1', 'memoryRelevanceMaxV1', 'memoryFixedSelectionMaxV1', 'memoryIndexCharCapV1',
   'toolEconomicsShadowV1', 'boundedReadSchedulerV1', 'boundedReadConcurrencyV1', 'metaToolHintsV1', 'actionArgumentModelViewV1', 'toolLoadingMode',
-  'autoCompactThreshold', 'contextWindowOverrides', 'thinkingBudget', 'claudeThinkingEffort', 'betaInterleavedThinking', 'maxTurns', 'openaiMaxToolIterations',
+  'autoCompactThreshold', 'contextWindowOverrides', 'thinkingBudget', 'claudeThinkingEffort', 'codexModel', 'codexThinkingEffort', 'betaInterleavedThinking', 'maxTurns', 'openaiMaxToolIterations',
   // 136:管家压缩触发线系数 —— 调高 = 管家每回合更贵,归「会花钱」那一类;管家只能递按钮。
   // 它的姊妹键 stewardContextBudgetTokens 撞密钥正则(Tokens)仍 forbidden,两个键有意不同档:
   // 正则不开例外(06i 头注),系数没撞正则,按判据落在 confirm。
@@ -1749,7 +1749,7 @@ const STEWARD_CONFIG_HELP = Object.freeze(Object.fromEntries([
   ['enableToolRequiresProbe', '启用工具前先探测依赖是否齐', 'Probe dependencies before enabling a tool'],
   ['sessionSearchIndexV1', '本地会话搜索索引开关', 'Local session search index'],
   ['runtimeFailureTelemetryV1', '本地失败遥测(只记本机,不出网)', 'Local failure telemetry (never leaves the machine)'],
-  ['agentCliType', 'CLI 引擎:claude', 'CLI engine: claude'],
+  ['agentCliType', 'CLI 引擎（Claude 或 Codex）', 'CLI engine (Claude or Codex)'],
   ['engineMode', '引擎模式:interactive / headless', 'Engine mode: interactive / headless'],
   ['activeProvider', '对话主端点:空或 claude-cli = CLI,否则 providers[].id', 'Main endpoint: empty or claude-cli = the CLI, else a providers[].id'],
   ['model', '对话主模型名;空 = 用默认模型', 'Main model; empty = the default model'],
@@ -1818,6 +1818,8 @@ const STEWARD_CONFIG_HELP = Object.freeze(Object.fromEntries([
   ['autoCompactThreshold', '上下文用到多少比例自动压缩(0–1)', 'Auto-compact when context reaches this ratio (0–1)'],
   ['contextWindowOverrides', '按模型覆盖上下文窗口大小', 'Per-model context window overrides'],
   ['thinkingBudget', '思考预算(CLI 引擎)', 'Thinking budget (CLI engine)'],
+  ['codexModel', 'Codex 套餐模型', 'Codex plan model'],
+  ['codexThinkingEffort', 'Codex 推理强度', 'Codex reasoning effort'],
   ['claudeThinkingEffort', 'Claude 思考强度', 'Claude thinking effort'],
   ['betaInterleavedThinking', '交错思考(beta)', 'Interleaved thinking (beta)'],
   ['maxTurns', '一次任务最多多少回合;空 = 不限', 'Max turns per task; empty = unlimited'],

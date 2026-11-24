@@ -4,9 +4,9 @@
   "scanner": "dev-harness/module-dependency-graph.js",
   "summary": {
     "modules": 83,
-    "providedSymbols": 1992,
-    "requiredSymbols": 2959,
-    "edges": 580,
+    "providedSymbols": 1995,
+    "requiredSymbols": 2968,
+    "edges": 581,
     "forwardEdges": 11,
     "duplicateProvides": 0,
     "stronglyConnectedComponents": 0
@@ -3449,9 +3449,11 @@
       "note": "runClaudeTurn/stream-json 解析/spawn 环境/权限桥接线",
       "provides": [
         "AGENT_CLI_ADAPTERS",
+        "CodexAccount",
         "agentCliAdapter",
         "maybeAutoCompactAgentSession",
-        "runClaudeTurn"
+        "runClaudeTurn",
+        "runCodexTurn"
       ],
       "requires": [
         {
@@ -3567,6 +3569,13 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "VERSION",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_CLI_TOOL_PREFIX",
           "kinds": [
@@ -3574,8 +3583,22 @@
           ]
         },
         {
+          "provider": "00b-ruyi-names.js",
+          "symbol": "RUYI_MCP_SERVER_ID",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "agentCliLauncherUsable",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
           "kinds": [
             "read"
           ]
@@ -3702,6 +3725,13 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01j-local-crypto.js",
+          "symbol": "LocalSecretCrypto",
           "kinds": [
             "read"
           ]
@@ -3960,6 +3990,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "requestUserQuestion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "sameClaudeResumeCwd",
           "kinds": [
             "read"
@@ -3969,6 +4006,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -3990,6 +4028,7 @@
           "provider": "04l-skill-registry.js",
           "symbol": "resolveEnabledSkillEntries",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -4067,6 +4106,7 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "appendTurnPolicies",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -4172,12 +4212,20 @@
           "provider": "06w-capability-service.js",
           "symbol": "peekCapabilities",
           "kinds": [
+            "call",
             "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "classifyToolPacks",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "requestNativePermission",
           "kinds": [
             "call"
           ]
@@ -8561,6 +8609,13 @@
           ]
         },
         {
+          "provider": "05-claude-engine.js",
+          "symbol": "runCodexTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "maybeWriteThreadBrief",
           "kinds": [
@@ -10304,6 +10359,7 @@
         "handleChatApiRoute",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
+        "handleCodexApiRoutes",
         "handleConfigurationApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
@@ -11067,6 +11123,13 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "05-claude-engine.js",
+          "symbol": "CodexAccount",
           "kinds": [
             "read"
           ]
@@ -23066,6 +23129,13 @@
         },
         {
           "provider": "13-http-router.js",
+          "symbol": "handleCodexApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
           "symbol": "handleConfigurationApiRoutes",
           "kinds": [
             "read"
@@ -24265,6 +24335,7 @@
         "DesktopExecutionHooks",
         "EventStreamHooks",
         "RUYI_EVENTS",
+        "VERSION",
         "buildAttachmentPrompt",
         "buildDeliveryRevisionPrompt",
         "claudeCostFields",
@@ -24284,7 +24355,8 @@
       "from": "05-claude-engine.js",
       "to": "00b-ruyi-names.js",
       "symbols": [
-        "RUYI_MCP_CLI_TOOL_PREFIX"
+        "RUYI_MCP_CLI_TOOL_PREFIX",
+        "RUYI_MCP_SERVER_ID"
       ],
       "direction": "backward"
     },
@@ -24293,6 +24365,7 @@
       "to": "01-config.js",
       "symbols": [
         "agentCliLauncherUsable",
+        "atomicWriteJson",
         "buildClaudeAgentDefinitions",
         "buildModelHint",
         "buildUserEnvelope",
@@ -24332,6 +24405,14 @@
       "symbols": [
         "ProcessRuntime",
         "killChildTree"
+      ],
+      "direction": "backward"
+    },
+    {
+      "from": "05-claude-engine.js",
+      "to": "01j-local-crypto.js",
+      "symbols": [
+        "LocalSecretCrypto"
       ],
       "direction": "backward"
     },
@@ -24417,6 +24498,7 @@
         "permissionWaitMs",
         "registerSessionExecutionChild",
         "registerUserQuestion",
+        "requestUserQuestion",
         "sameClaudeResumeCwd",
         "stopSession"
       ],
@@ -24518,7 +24600,8 @@
       "from": "05-claude-engine.js",
       "to": "07-autonomy.js",
       "symbols": [
-        "classifyToolPacks"
+        "classifyToolPacks",
+        "requestNativePermission"
       ],
       "direction": "forward"
     },
@@ -26002,7 +26085,8 @@
       "from": "10a-session-turn.js",
       "to": "05-claude-engine.js",
       "symbols": [
-        "runClaudeTurn"
+        "runClaudeTurn",
+        "runCodexTurn"
       ],
       "direction": "backward"
     },
@@ -26739,6 +26823,7 @@
       "from": "13-http-router.js",
       "to": "05-claude-engine.js",
       "symbols": [
+        "CodexAccount",
         "agentCliAdapter"
       ],
       "direction": "backward"
@@ -30410,6 +30495,7 @@
         "handleChatApiRoute",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
+        "handleCodexApiRoutes",
         "handleConfigurationApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",

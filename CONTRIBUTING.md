@@ -67,3 +67,10 @@ Ruyi is an offline-first, air-gap-oriented local AI workbench. A few **hard cons
 Use **Node.js 24** for development and CI (Node.js ≥20 is the runtime minimum). Run directly invoked pieces **serially** because some use fixed ports: `node dev-harness/<name>.e2e.js`. The suite runner supports managed parallelism with `node dev-harness/run-all.js --parallel 4` and reserves performance tests for an exclusive phase; Mac CI runs serially. Passing prints `... E2E: ALL PASS` and exits 0. Live tests need your own key/desktop/Python and are skipped by default. Isolate the user home and both AppData locations as well as the data root with `self-isolate-home.js` or `fixtureChildEnv`; disable unrelated live integrations. New tests should use `dev-harness/lib/harness.js` (`createRunner` → `ok`/`fail`/`done`) for PASS/FAIL lines and the verdict, and `dev-harness/lib/fake-openai-provider.js` (`startFakeProvider` + `textFrames`/`toolCallFrames`/`usageFrame`) instead of a hand-rolled fake provider.
 
 For ACC (`mcp/ai-computer-control/`): `pip install -e` on **Python 3.12** (`requires-python >=3.12`; CI and the bundled offline wheels are 3.12), run `tests/smoke_*.py`; any new file-mutating tool **must** be registered in the `BRIDGED_WRITE_PATH_ARGS` snapshot table (`checkpoint-coverage.e2e.js` enforces this — a missing entry turns the test red). Add new MCPs the drop-in way via `mcp/` (see [`mcp/README.md`](./mcp/README.md)) — no workbench code changes needed. PRs: small, with verification evidence; Chinese or English both welcome.
+
+Codex CLI 的离线回归使用 `node dev-harness/codex-cli.e2e.js` 和 `node dev-harness/codex-settings.browser.e2e.js`。要用已安装的 Codex 验证 stdio、MCP 审批和原生续聊，可运行 `node dev-harness/codex-app-server-smoke.js /absolute/path/to/codex`。测试使用临时账号目录、模拟令牌和回环推理端点，每轮重启后端和 CLI。验证 Mac 候选包时，将下列命令中的路径替换为包内 workbench 目录和本机的 Codex 可执行文件。
+
+```sh
+workbench="/absolute/path/to/Ruyi.app/Contents/Resources/workbench"
+RUYI_TEST_SERVER_JS="$workbench/app/server.js" "$workbench/runtime/node/bin/node" dev-harness/codex-app-server-smoke.js /absolute/path/to/codex
+```

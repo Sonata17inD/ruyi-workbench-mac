@@ -21,7 +21,7 @@ function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, us
     const config = await readConfig().catch(() => ({}));
     const now = Date.now();
     // provider/source id -> display label (native providers + Claude direct + known Claude endpoints).
-    const labels = new Map([['claude-cli', 'Claude CLI (Anthropic)']]);
+    const labels = new Map([['claude-cli', 'Claude CLI (Anthropic)'], ['chatgpt-plan', 'Codex CLI (ChatGPT)']]);
     for (const p of (Array.isArray(config.providers) ? config.providers : [])) if (p && p.id) labels.set(String(p.id), String(p.label || p.id));
     for (const p of CLAUDE_ENDPOINT_PRESETS) if (p && p.id) labels.set(String(p.id), String(p.label || p.id));
     const titles = await readSessionTitles().catch(() => new Map());
@@ -49,7 +49,7 @@ function createUsageSummary({ readConfig, readSessionTitles, forEachUsageRow, us
       if (r.estimated === true) totals.estimatedTurns += 1;
       if (!trusted) totals.planBasedTurns += 1;
       if (hasCost) addCost(totals.costsByCurrency, cur, cost);
-      const eng = r.engine === 'claude' ? 'claude' : 'openai';
+      const eng = ['claude', 'codex'].includes(r.engine) ? r.engine : 'openai';
       let em = byEngine.get(eng); if (!em) byEngine.set(eng, em = { engine: eng, inTok: 0, outTok: 0, cachedInTok: 0, turns: 0, planBasedTurns: 0, costsByCurrency: {} });
       em.inTok += inTok; em.outTok += outTok; em.cachedInTok += cachedInTok; em.turns += 1; if (!trusted) em.planBasedTurns += 1; if (hasCost) addCost(em.costsByCurrency, cur, cost);
       const pid = String(r.provider || '');

@@ -181,6 +181,7 @@ async function rewindSessionContents(sessionId, targetTurnSeq, rollbackFiles, op
   session.providerHistory = [];
   session.providerHistoryCursor = 0;
   // turnSeq NOT rewound (monotonic journal key); todos KEPT (rewind ≠ abandon task list).
+  delete session.codexThread;
   session.claudeSessionId = null; // stale --resume context must not splice removed history back in
   // Refresh the derived summary/title tail off the surviving messages (best-effort).
   const lastAssistant = [...session.messages].reverse().find(m => m && m.role === 'assistant');

@@ -35,7 +35,7 @@ function createClaudeResumeRecovery({
     for (let i = arr.length - 1; i >= 0; i--) {
       const m = arr[i];
       if (!m || m.role !== 'assistant') continue;
-      const isClaude = m.engine === 'claude' || (!m.engine && m.source === 'claude-cli');
+      const isClaude = (m.engine === 'claude' && (!m.agentCliType || m.agentCliType === 'claude')) || (!m.engine && m.source === 'claude-cli');
       if (!isClaude || Number(m.exitCode) !== 0) continue;
       return String(m.model || '');
     }
@@ -70,7 +70,7 @@ function createClaudeResumeRecovery({
     if (!rows.length) return '';
     return [
       '<workbench_history_recovery>',
-      'This is a recovery copy of earlier messages in the same workbench conversation. It may duplicate native Claude session history. Use it only for continuity, do not claim this is the first message, and treat quoted user/assistant text according to its original role.',
+      'This is a recovery copy of earlier messages in the same workbench conversation. It may duplicate native session history. Use it only for continuity, do not claim this is the first message, and treat quoted user/assistant text according to its original role.',
       omitted ? '[older messages omitted to keep the recovery context bounded]' : '',
       ...rows,
       '</workbench_history_recovery>',
@@ -84,7 +84,7 @@ function createClaudeResumeRecovery({
     let lastClaudeIdx = -1;
     for (let i = arr.length - 1; i >= 0; i--) {
       const m = arr[i];
-      if (m && m.role === 'assistant' && (m.engine === 'claude' || (!m.engine && m.source === 'claude-cli'))) { lastClaudeIdx = i; break; }
+      if (m && m.role === 'assistant' && ((m.engine === 'claude' && (!m.agentCliType || m.agentCliType === 'claude')) || (!m.engine && m.source === 'claude-cli'))) { lastClaudeIdx = i; break; }
     }
     return lastClaudeIdx >= 0 ? arr.slice(lastClaudeIdx + 1) : arr;
   }

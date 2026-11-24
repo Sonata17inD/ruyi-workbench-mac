@@ -44,7 +44,7 @@ function createUsageLedger({ paths, onAppend }) {
       const rec = {
         ts,
         sessionId: String(entry.sessionId || ''),
-        engine: entry.engine === 'claude' ? 'claude' : 'openai',
+        engine: ['claude', 'codex'].includes(entry.engine) ? entry.engine : 'openai',
         provider: String(entry.provider || ''),
         model: String(entry.model || ''),
         inTok, outTok, cachedInTok,

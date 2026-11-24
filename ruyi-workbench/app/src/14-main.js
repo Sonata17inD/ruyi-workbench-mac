@@ -2,7 +2,7 @@ const handleApi = require('./backend/workbench-api-router.cjs').createWorkbenchA
   authorizeRoute, handlePrivacyApiRoutes: PrivacyCore.configHooks.handleApiRoutes,
   handleExternalBotApiRoutes: ExternalBotHooks.handleApiRoutes, handleStewardApiRoutes: StewardHooks.handleApiRoutes,
   handleEventStreamApiRoutes: EventStreamHooks.handleApiRoutes,
-  handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute,
+  handleStatusApiRoutes, handlePlaybookApiRoutes, handleWorkspaceApiRoutes, handleModelsApiRoute, handleCodexApiRoutes,
   handleConfigurationApiRoutes, handleProviderTestApiRoute, handleSessionApiRoutes, handleMissionsApiRoutes,
   handleSkillApiRoutes, handleMemoryApiRoutes, handleSessionExecutionApiRoutes, handleInterventionApiRoutes,
   handleMissionLedgerApiRoutes, handleAutonomyGrantApiRoutes, handleAgentWorkflowApiRoutes,

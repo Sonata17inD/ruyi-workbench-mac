@@ -22,7 +22,8 @@ test('staging copy retains payload inventory and cannot mutate the frozen source
 });
 test('payload checks detect byte changes, unexpected files, executable mode changes and missing files', t => {
   const root = fixture(t), app = path.join(root, 'Ruyi.app');
-  fs.mkdirSync(app);
+  fs.mkdirSync(path.join(app, 'Contents'), { recursive: true });
+  fs.writeFileSync(path.join(app, 'Contents', 'Info.plist'), '<plist version="1.0"><dict><key>CFBundleIdentifier</key><string>org.ruyi.workbench.full</string></dict></plist>');
   const file = path.join(app, 'launcher');
   fs.writeFileSync(file, 'original'); fs.chmodSync(file, 0o755);
   const files = inventory(app);

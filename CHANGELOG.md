@@ -3,6 +3,15 @@
 本文件记录面向用户的重要发行变化，不替代完整的 Git 提交历史。版本遵循 `ruyi-workbench/package.json`。
 This file records user-facing release highlights; it does not replace the complete Git history. Versions follow `ruyi-workbench/package.json`.
 
+## 未发布 · Unreleased
+
+- 普通工作台线程支持通过 Codex CLI 登录 ChatGPT，选择套餐模型并使用如意工具。
+- Workbench threads can use Codex CLI with ChatGPT sign-in, plan models and Ruyi tools.
+- 切换引擎时推理强度选中「高」。升级会将已有 CLI 和服务商的强度设置统一为「高」。回合完成后，过程记录自动收起，最终答复保留在对话中。
+- Switching engines selects High reasoning effort. Upgrading also sets existing CLI and provider effort settings to High. Completed turns fold intermediate steps and keep the final answer visible.
+- 新对话默认使用如意管理目录下的 `workspace` 子目录，通常为 `~/Ruyi/workspace`。已有线程保留原工作目录。
+- New chats default to the `workspace` subfolder of the Ruyi managed folder, normally `~/Ruyi/workspace`. Existing threads keep their working directories.
+
 ## 3.0.2 · 2026-11-23
 
 - 完整版更名为 Ruyi，轻量版更名为 Ruyi Slim。两版使用新版图标和对话布局，支持在输入区调整推理强度，并修复中文输入法确认候选时误发送的问题。

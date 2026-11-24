@@ -59,6 +59,13 @@ function createSessionSteering({
     if (!['queue', 'interrupt'].includes(mode)) return { kind: 'failure', code: 'request.invalid', detail: {}, message: 'mode must be queue or interrupt', status: 400 };
     const reg = activeChildren.get(sessionId);
     if (!reg) return steerRefusal('noLiveTurn');
+    if (typeof reg.steer === 'function') {
+      await reg.steer(text, attachments);
+      reg.session.messages.push({ role:'user', content:text, attachments, turnSeq:reg.session.turnSeq, steered:true, createdAt:nowIso() });
+      await saveSession(reg.session, { executionOwner:reg.executionOwner });
+      reg.onEvent({ type:'steered', text, attachments });
+      return { kind:'json', body:{ ok:true, injected:true } };
+    }
     if (reg.kind === 'claude') {
       // 47a Phase A:Claude interactive 引擎 —— stdin 即时注入,无迭代边界队列。
       if (!reg.interactive) {

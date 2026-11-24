@@ -68,7 +68,7 @@ function createMcpServer({ input, output, env, version, configPath,
           }
           if (msg.method === 'tools/call') {
             const name = msg.params?.name;
-            const args = msg.params?.arguments || {};
+            let args = msg.params?.arguments || {};
             const progressToken = msg.params?._meta?.progressToken;
             const progressStartedAt = Date.now();
             // Claude CLI may attach an MCP progress token to a long tool call. Report elapsed liveness while
@@ -80,6 +80,17 @@ function createMcpServer({ input, output, env, version, configPath,
             }, 10000) : null;
             if (progressTimer && progressTimer.unref) progressTimer.unref();
             try {
+              if (env.RUYI_CODEX_MCP === '1') {
+                const proxied = name.startsWith('tool_invoke_');
+                const target = proxied ? args.name : name;
+                if (['orchestrate_agents', 'spawn_agent', 'permission_prompt'].includes(target)) throw new Error('Tool unavailable for Codex CLI: ' + target);
+                const input = proxied ? args.arguments || {} : args;
+                const verdict = await toolCall('permission_prompt', { tool_name: target, input });
+                if (verdict.behavior !== 'allow') return sendMcp(msg.id, {
+                  isError: true, content: [{ type: 'text', text: verdict.message || 'Permission denied' }],
+                });
+                args = proxied ? { ...args, arguments: verdict.updatedInput } : verdict.updatedInput;
+              }
               const result = await toolCall(name, args);
               PrivacyGateway.assertSupported(await readConfig(), 'external-tool-result');
               // S1 修复:MCP tools/call 路径(Claude 引擎)原样直出大结果会灌爆 CLI context。

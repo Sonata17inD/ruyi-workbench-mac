@@ -1,5 +1,6 @@
 'use strict';
-const os = require('node:os');
+const fsp = require('node:fs/promises');
+const { managedWorkspacePath } = require('./config-defaults.cjs');
 
 function createSessionService({
   SESSION_SCHEMA, makeId, clearDeletedSession, readConfig, nowIso, newSessionEngineRoute,
@@ -30,6 +31,9 @@ function createSessionService({
     // 非字符串或空白一律当没传;标题上限与 applySessionMetaPatch 改名同为 200。
     const safeTitle = typeof title === 'string' && title.trim() ? title.slice(0, 200) : undefined;
     const safeCwd = typeof cwd === 'string' && cwd.trim() ? cwd : undefined;
+    const managed = managedWorkspacePath(config.stewardWorkspaceRoot);
+    const workspace = safeCwd || config.defaultWorkspace || managed;
+    if (workspace === managed) await fsp.mkdir(workspace, { recursive: true });
     const session = {
       id,
       schemaVersion: SESSION_SCHEMA,
@@ -37,7 +41,7 @@ function createSessionService({
       title: safeTitle || 'New session',
       summary: '',
       pinned: false,
-      cwd: safeCwd || config.defaultWorkspace || os.homedir(),
+      cwd: workspace,
       createdAt: nowIso(),
       updatedAt: nowIso(),
       claudeSessionId: null,

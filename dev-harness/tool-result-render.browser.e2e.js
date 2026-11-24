@@ -38,7 +38,7 @@ const BIG_B64 = Buffer.concat([PNG_1x1, Buffer.alloc(9216, 0)]).toString('base64
       ok, prefix: 'ruyi-tool-result-render-',
       config: { permissionMode: 'bypass', stewardEnabledV1: false },
       provider: async ctx => {
-        if (!ctx.answered) { ctx.toolCall('file_read', { path: multiLineFile }, 'call_read'); }
+        if (!ctx.answered) { ctx.text('正在读取笔记。'); ctx.toolCall('file_read', { path: multiLineFile }, 'call_read'); }
         else ctx.text('读完了。');
         ctx.stop();
       },
@@ -153,6 +153,18 @@ const BIG_B64 = Buffer.concat([PNG_1x1, Buffer.alloc(9216, 0)]).toString('base64
     ok(live && live.key === 'content' && live.text.startsWith('第 1 行内容\n第 2 行内容'), 'L2 live:content 是真多行文本' + (live ? ' 现场:' + JSON.stringify([live.key, live.text.slice(0, 40)]) : ''));
     // 元数据里嵌套对象(如 file_read 的 non_ascii 采样)内部的换行仍按 JSON 转义显示 —— 那是紧凑元数据,不是正文;断言正文那一块。
     ok(live && !/\\n/.test(live.text) && !/"content":/.test(live.cardText), 'L3 live:正文块里没有字面的 "\\n",正文也不再以 "content": "…" 的 JSON 串出现');
+    const folded = `(() => {
+      const narrative = [...document.querySelectorAll('#messages .turn-narrative')].at(-1);
+      const groups = narrative?.querySelectorAll(':scope > details.narrative-process-group');
+      return groups?.length === 1 && !groups[0].open && groups[0].textContent.includes('正在读取笔记。')
+        && !!groups[0].querySelector('.tool-card') && narrative.querySelector(':scope > .bubble')?.textContent.includes('读完了。');
+    })()`;
+    ok(Boolean(await fx.waitForEval(folded)), 'L4 完成后过程归在一个折叠行，最终答复可见');
+    await fx.evaluate("document.querySelector('#messages .turn-narrative > details > summary').click()");
+    ok(await fx.evaluate("!!document.querySelector('#messages .turn-narrative > details[open] .tool-card')"), 'L5 点开后保留工具记录');
+    await fx.evaluate('location.reload(); true');
+    await sleep(500);
+    ok(Boolean(await fx.waitForEval(folded)), 'L6 重载后保持相同的过程和最终答复边界');
     ok(fx.exceptions.length === 0, `X 页面没有未捕获异常(${fx.exceptions.join(' | ')})`);
   } catch (e) {
     t.fail('fatal: ' + (e && e.stack || e));

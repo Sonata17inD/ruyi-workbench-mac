@@ -4,7 +4,11 @@
 
 面向 Apple Silicon 的离线优先 Agent 工作台。保留 Node Agent 核心、Web UI、Python 文档工具，以及 AppKit／WKWebView 原生宿主；系统能力通过 Mac 原生 helper 提供。
 
-支持 Anthropic Messages、OpenAI 兼容模型服务、本机 Claude Code CLI、MCP 工具、文件与 Office 文档、会话恢复和多 Agent 协作。系统浏览器打开网址只是交接，不代表已连接 DOM 自动化。
+支持 Anthropic Messages、OpenAI 兼容模型服务、本机 Claude Code 与 Codex CLI、MCP 工具、文件与 Office 文档、会话恢复和多 Agent 协作。系统浏览器打开网址只是交接，不代表已连接 DOM 自动化。
+
+## 使用 ChatGPT 套餐运行 Codex
+
+安装本机 Codex CLI（例如 `npm install -g @openai/codex`），在如意的「设置 → 连接与工具 → Agent CLI」展开 **Codex CLI · ChatGPT**，点「使用 ChatGPT 继续」，在系统浏览器中授权套餐用量。回到「模型与能力」，将「对话主模型」设为 Codex CLI，从账号可见的模型里选择一个。在普通工作台线程中发任务即可使用流式对话和如意的 MCP 工具。退出账号和查看套餐用量的入口在同一设置页。[开发计划与验证记录](docs/design/codex-cli-integration-plan.md)
 
 ## 开发
 

@@ -1,9 +1,9 @@
-import { knownAgentCliMeta } from './agent-cli-registry.js';
+import { knownAgentCliMeta, cliEffortKey } from './agent-cli-registry.js';
 import { PROVIDER_REASONING_EFFORT_CHOICES, providerApiStyleMeta } from './provider-api-styles.js';
 
 export function effortOptions(route, config) {
   if (route.engine !== 'openai') {
-    return { values: knownAgentCliMeta(route.agentCliType)?.thinkingEfforts || [], current: config.claudeThinkingEffort || '' };
+    return { values: knownAgentCliMeta(route.agentCliType)?.thinkingEfforts || [], current: config[cliEffortKey(route.agentCliType)] || '' };
   }
   const provider = config.providers?.find(item => item.id === route.providerId);
   if (!provider) return { values: [], current: '' };

@@ -30,7 +30,7 @@ const DEFAULT_PORT = 8765;
 // (同一请求流里先撞哪条闸,决定 26 MB 夹具拿到的是 413 还是放行;反向:把本常量换成 MAX_BODY_BYTES
 // 或把判定挪到 readBody 之后,asr-transcribe.e2e.js 的 24.9/26 MB 返回码对照当场红)。
 const ASR_MAX_BODY_BYTES = 25 * 1024 * 1024;
-const CONFIG_SCHEMA = 14;
+const CONFIG_SCHEMA = 16;
 // v0.8-S0: session file schema. Bumped independently of CONFIG_SCHEMA; normalizeSession backfills.
 const SESSION_SCHEMA = 1;
 

@@ -25,6 +25,8 @@ const FIELDS = {
   thinkingEfforts: 'array',
   compactDefaultLabelKey: 'string',
   claudeUserCommands: 'boolean',
+  agentTeam: 'boolean',
+  modelsEndpoint: 'string',
 };
 // 引擎族取值(不是 CLI 分叉):'claude' = Agent CLI 族的历史名,'openai' = 服务商族。
 const ENGINE_FAMILY_IDS = new Set(['claude', 'openai']);

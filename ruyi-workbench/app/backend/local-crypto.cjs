@@ -13,7 +13,7 @@ function createLocalSecretCrypto({ hooks: LocalSecretCryptoHooks, process = glob
 
 
   const failure = suffix => Object.assign(new Error('local_crypto.' + suffix), { code: 'local_crypto.' + suffix, apiCode: 'local_crypto.' + suffix, statusCode: suffix === 'unsupported' ? 501 : 503 });
-  function keychainKey(create) {
+  function keychainKey(create, allowKeychainPrompt) {
     if (macInFlight >= 4) return Promise.reject(failure('process_busy'));
     macInFlight++;
     return new Promise((resolve, reject) => {
@@ -27,7 +27,7 @@ function createLocalSecretCrypto({ hooks: LocalSecretCryptoHooks, process = glob
       };
       // This native leaf never starts subprocesses. Killing it cannot leave a secret-bearing descendant.
       const stop = suffix => { finish(suffix); if (child) child.kill(); };
-      const timer = setTimeout(() => stop('process_timeout'), LIMIT.processMs);
+      const timer = setTimeout(() => stop('process_timeout'), allowKeychainPrompt ? 120000 : LIMIT.processMs);
       try {
         child = childProcess.spawn(LocalSecretCryptoHooks.helperPath(), [], { stdio: ['pipe', 'pipe', 'ignore'], env: {} });
         child.once('error', error => finish(error.code === 'ENOENT' ? 'dependency_missing' : 'process_failed'));
@@ -52,11 +52,12 @@ function createLocalSecretCrypto({ hooks: LocalSecretCryptoHooks, process = glob
           if (!exact(response, ['ok', 'value']) || !base64(response.value, 32) || Buffer.from(response.value, 'base64').length !== 32) { finish('process_failed'); return; }
           finish(null, Buffer.from(response.value, 'base64'));
         });
-        child.stdin.end(JSON.stringify({ version: 1, op: create ? 'get-or-create' : 'get' }));
+        const op = (create ? 'get-or-create' : 'get') + (allowKeychainPrompt ? '-interactive' : '');
+        child.stdin.end(JSON.stringify({ version: 1, op }));
       } catch { stop('process_failed'); }
     });
   }
-  async function runMac(op, value, entropy) {
+  async function runMac(op, value, entropy, options, usePlaintext) {
     if (!['protect', 'unprotect'].includes(op) || !Buffer.isBuffer(value) || !value.length || value.length > (op === 'protect' ? 65536 : 98304)
       || !Buffer.isBuffer(entropy) || entropy.length > 4096) throw failure('input_invalid');
     let envelope;
@@ -68,25 +69,31 @@ function createLocalSecretCrypto({ hooks: LocalSecretCryptoHooks, process = glob
         || !/^[a-f0-9]{64}$/.test(envelope.keyId) || !base64(envelope.nonce, 12) || Buffer.from(envelope.nonce, 'base64').length !== 12
         || !base64(envelope.tag, 16) || Buffer.from(envelope.tag, 'base64').length !== 16 || !base64(envelope.ciphertext, 65536)) throw failure('decrypt_failed');
     }
-    const key = await keychainKey(op === 'protect');
+    const key = await keychainKey(op === 'protect', options?.allowKeychainPrompt === true);
     try {
       const keyId = cryptoApi.createHash('sha256').update(key).digest('hex');
       const aad = Buffer.concat([MAC_MAGIC, Buffer.from(JSON.stringify([1, MAC_PROVIDER, keyId])), entropy]);
-      if (op === 'protect') {
+      function seal(plaintext) {
+        if (!Buffer.isBuffer(plaintext) || !plaintext.length || plaintext.length > LIMIT.cipherBytes) throw failure('input_invalid');
         const nonce = cryptoApi.randomBytes(12), cipher = cryptoApi.createCipheriv('aes-256-gcm', key, nonce);
         cipher.setAAD(aad);
         return Buffer.concat([MAC_MAGIC, Buffer.from(JSON.stringify({ schemaVersion: 1, provider: MAC_PROVIDER, keyId, nonce: nonce.toString('base64'),
-          ciphertext: Buffer.concat([cipher.update(value), cipher.final()]).toString('base64'), tag: cipher.getAuthTag().toString('base64') }))]);
+          ciphertext: Buffer.concat([cipher.update(plaintext), cipher.final()]).toString('base64'), tag: cipher.getAuthTag().toString('base64') }))]);
       }
+      if (op === 'protect') return seal(value);
       if (envelope.keyId !== keyId) throw failure('key_changed');
       const decipher = cryptoApi.createDecipheriv('aes-256-gcm', key, Buffer.from(envelope.nonce, 'base64'));
       decipher.setAAD(aad); decipher.setAuthTag(Buffer.from(envelope.tag, 'base64'));
-      try { return Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext, 'base64')), decipher.final()]); }
+      let plaintext;
+      try { plaintext = Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext, 'base64')), decipher.final()]); }
       catch { throw failure('decrypt_failed'); }
+      if (!usePlaintext) return plaintext;
+      try { return await usePlaintext(plaintext, seal); }
+      finally { plaintext.fill(0); }
     } finally { key.fill(0); }
   }
-  function run(op, value, entropy) {
-    if (process.platform === 'darwin') return runMac(op, value, entropy);
+  function run(op, value, entropy, options, usePlaintext) {
+    if (process.platform === 'darwin') return runMac(op, value, entropy, options, usePlaintext);
     if (op === 'unprotect' && Buffer.isBuffer(value) && value.subarray(0, MAC_MAGIC.length).equals(MAC_MAGIC)) return Promise.reject(failure('provider_mismatch'));
     return Promise.reject(failure('unsupported'));
   }

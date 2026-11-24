@@ -12,8 +12,8 @@ after(() => fs.rmSync(root, { recursive: true, force: true }));
 const server = require('../../ruyi-workbench/app/server.js');
 
 test('registered execution engines match the adapter catalog', () => {
-  assert.deepEqual(Object.keys(server.AGENT_CLI_TYPES), ['claude']);
-  assert.deepEqual(Object.keys(server.AGENT_CLI_ADAPTERS), ['claude']);
+  assert.deepEqual(Object.keys(server.AGENT_CLI_TYPES), ['claude', 'codex']);
+  assert.deepEqual(Object.keys(server.AGENT_CLI_ADAPTERS).sort(), ['claude', 'codex']);
   assert.equal(server.AGENT_CLI_TYPES.claude.label, 'Claude Code');
   assert.deepEqual(server.prepareAgentCliSpawn('claude', '/opt/Claude Code', ['--flag', 'two words']),
     { command: '/opt/Claude Code', args: ['--flag', 'two words'], opts: {} });

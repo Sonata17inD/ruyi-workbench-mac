@@ -427,7 +427,7 @@ export function createChatRenderPrimitives(deps = {}) {
       const p = (state.config.providers || []).find(x => x.id === pid);
       return { engine: 'openai', providerId: pid, providerLabel: msg.providerLabel || (p && p.label) || pid, model: msg.model || '' };
     }
-    if (msg.engine === 'claude') return { engine: 'claude', model: msg.model || '' };
+    if (msg.engine === 'claude') return { engine: 'claude', agentCliType: msg.agentCliType || 'claude', agentCliLabel:msg.agentCliLabel, model: msg.model || '' };
     const src = String(msg.source || '');
     if (src.startsWith('provider:')) {
       const pid = src.slice('provider:'.length);

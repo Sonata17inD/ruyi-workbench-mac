@@ -7,7 +7,7 @@
 
 | 模块 | 顶层符号 | 跨模块符号引用 | 模块边 | 前向边 | 重复导出 | 强连通分量 |
 |---:|---:|---:|---:|---:|---:|---:|
-| 83 | 1992 | 2959 | 580 | 11 | 0 | 0 |
+| 83 | 1995 | 2968 | 581 | 11 | 0 | 0 |
 
 “前向边”表示较早拼接的模块引用较晚模块，依赖函数提升或延迟执行；它不是自动判错，但已由债务上限锁住，禁止无评审增加。
 
@@ -56,7 +56,7 @@
 | 38 | `04m-voice-service.js` | foundation | 11 | 10 | 7 |
 | 39 | `06v-operational-services.js` | engine | 15 | 13 | 5 |
 | 40 | `06w-capability-service.js` | engine | 9 | 13 | 5 |
-| 41 | `05-claude-engine.js` | engine | 4 | 106 | 24 |
+| 41 | `05-claude-engine.js` | engine | 6 | 112 | 25 |
 | 42 | `06-provider-engine.js` | engine | 38 | 27 | 8 |
 | 43 | `06h-retrieval-index.js` | engine | 4 | 0 | 0 |
 | 44 | `06i-steward-core.js` | engine | 167 | 1 | 1 |
@@ -70,13 +70,13 @@
 | 52 | `09-workflow.js` | orchestration | 26 | 191 | 23 |
 | 53 | `09b-agent-recovery.js` | orchestration | 3 | 19 | 8 |
 | 54 | `10-context-governance.js` | orchestration | 66 | 30 | 11 |
-| 55 | `10a-session-turn.js` | orchestration | 4 | 45 | 16 |
+| 55 | `10a-session-turn.js` | orchestration | 4 | 46 | 16 |
 | 56 | `11-native-tools.js` | tools | 52 | 46 | 11 |
 | 57 | `11b-file-text-io.js` | tools | 1 | 0 | 0 |
 | 58 | `11c-file-visual-io.js` | tools | 1 | 1 | 1 |
 | 59 | `11d-media-inspection.js` | tools | 1 | 1 | 1 |
 | 60 | `12-tool-dispatch.js` | tools | 54 | 164 | 26 |
-| 61 | `13-http-router.js` | transport | 26 | 178 | 27 |
+| 61 | `13-http-router.js` | transport | 27 | 179 | 27 |
 | 62 | `13b-api-domain-routes.js` | transport | 10 | 59 | 13 |
 | 63 | `13e-pretender-index.js` | transport | 19 | 37 | 7 |
 | 64 | `13d-core-domain-routes.js` | transport | 16 | 120 | 17 |
@@ -97,7 +97,7 @@
 | 79 | `13ab-privacy-api.js` | unclassified | 1 | 16 | 13 |
 | 80 | `13w-external-bots.js` | transport | 3 | 11 | 4 |
 | 81 | `13ac-desktop-execution-runtime.js` | unclassified | 1 | 16 | 8 |
-| 82 | `14-main.js` | entrypoint | 13 | 619 | 53 |
+| 82 | `14-main.js` | entrypoint | 13 | 620 | 53 |
 
 ## 模块边
 
@@ -168,19 +168,20 @@
 | `04m-voice-service.js` | `04-permission-runtime.js` | backward | `ToolboxHooks` |
 | `04m-voice-service.js` | `04h-provider-http.js` | backward | `providerBaseWithV1`, `providerPostJsonOnce` |
 | `04m-voice-service.js` | `04i-provider-wire.js` | backward | `providerWireProtocol` |
-| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeJsonParse` |
-| `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX` |
-| `05-claude-engine.js` | `01-config.js` | backward | `agentCliLauncherUsable`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `writeToChild` |
+| `05-claude-engine.js` | `00-boot.js` | backward | `DeliveryHooks`, `DesktopExecutionHooks`, `EventStreamHooks`, `RUYI_EVENTS`, `VERSION`, `buildAttachmentPrompt`, `buildDeliveryRevisionPrompt`, `claudeCostFields`, `createCappedDiagnosticText`, `createNdjsonLineFeeder`, `lastAssistantEngine`, `logEvent`, `normalizeCwd`, `nowIso`, `paths`, `redact`, `safeJsonParse` |
+| `05-claude-engine.js` | `00b-ruyi-names.js` | backward | `RUYI_MCP_CLI_TOOL_PREFIX`, `RUYI_MCP_SERVER_ID` |
+| `05-claude-engine.js` | `01-config.js` | backward | `agentCliLauncherUsable`, `atomicWriteJson`, `buildClaudeAgentDefinitions`, `buildModelHint`, `buildUserEnvelope`, `decodeClaudeCliText`, `discoverModels`, `effectiveAnthropicEnv`, `generateSessionMcpConfig`, `isAskUserTool`, `offlineModelList`, `prepareAgentCliSpawn`, `readConfig`, `selectedAgentCli`, `writeToChild` |
 | `05-claude-engine.js` | `01e-permission-modes.js` | backward | `CLAUDE_PERMISSION_MODE_MAP` |
 | `05-claude-engine.js` | `01f-agent-cli-types.js` | backward | `AGENT_CLI_TYPES`, `normalizeAgentCliType` |
 | `05-claude-engine.js` | `01h-process-runtime.js` | backward | `ProcessRuntime`, `killChildTree` |
+| `05-claude-engine.js` | `01j-local-crypto.js` | backward | `LocalSecretCrypto` |
 | `05-claude-engine.js` | `01o-execution-state.js` | backward | `activeChildren` |
 | `05-claude-engine.js` | `02-session-store.js` | backward | `appendUsageLedger`, `buildTurnSummary`, `bumpMissionChangeSeq`, `captureWorkspaceTurnBaseline`, `finalizeMissionAfterTurn`, `isUntitledSessionTitle`, `journalReadIndex`, `loadSession`, `reconcileTurnMetadata`, `reconcileWorkspaceTurnBaseline`, `saveSession`, `saveTurnFinalSession` |
 | `05-claude-engine.js` | `02c-turn-segments.js` | backward | `createTurnSegmentBuilder` |
 | `05-claude-engine.js` | `02d-session-overrides.js` | backward | `sessionDesktopToolsOf` |
 | `05-claude-engine.js` | `03-bridge-guard.js` | backward | `cwdWarning` |
 | `05-claude-engine.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
-| `05-claude-engine.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `appendLiveTail`, `assertSessionExecutionOwner`, `buildClaudeRecoveryHistory`, `claudeProviderTailSince`, `claudeResumeRouteKey`, `clearPendingPermissions`, `clearPendingQuestions`, `formatQuestionGuidance`, `hasPendingPermissionForSession`, `hasPendingQuestionForSession`, `installActiveChildEventFanout`, `isClaudeResumeMissingError`, `lastSuccessfulClaudeModel`, `nativeClaudeAgentResultInfo`, `parseClaudeEvent`, `permissionWaitMs`, `registerSessionExecutionChild`, `registerUserQuestion`, `sameClaudeResumeCwd`, `stopSession` |
+| `05-claude-engine.js` | `04-permission-runtime.js` | backward | `AgentLoopHooks`, `appendLiveTail`, `assertSessionExecutionOwner`, `buildClaudeRecoveryHistory`, `claudeProviderTailSince`, `claudeResumeRouteKey`, `clearPendingPermissions`, `clearPendingQuestions`, `formatQuestionGuidance`, `hasPendingPermissionForSession`, `hasPendingQuestionForSession`, `installActiveChildEventFanout`, `isClaudeResumeMissingError`, `lastSuccessfulClaudeModel`, `nativeClaudeAgentResultInfo`, `parseClaudeEvent`, `permissionWaitMs`, `registerSessionExecutionChild`, `registerUserQuestion`, `requestUserQuestion`, `sameClaudeResumeCwd`, `stopSession` |
 | `05-claude-engine.js` | `04i-provider-wire.js` | backward | `activeOpenAiProvider` |
 | `05-claude-engine.js` | `04l-skill-registry.js` | backward | `effectiveSkillSelection`, `resolveEnabledSkillEntries` |
 | `05-claude-engine.js` | `06-provider-engine.js` | forward | `buildBrowserAutomationHint`, `buildMemoryCheckPrompt`, `buildMemoryPromptSection`, `buildPlaybookIndexSection`, `buildSkillsPromptSection`, `buildToolCustomizationHint`, `evalPlaybookAvailability`, `loadAllPlaybooks`, `resolveEngineEnvBrief` |
@@ -190,7 +191,7 @@
 | `05-claude-engine.js` | `06e-mission-domain.js` | forward | `buildMissionPromptSection` |
 | `05-claude-engine.js` | `06v-operational-services.js` | backward | `engineTranscriptCwd` |
 | `05-claude-engine.js` | `06w-capability-service.js` | backward | `getCapabilities`, `peekCapabilities` |
-| `05-claude-engine.js` | `07-autonomy.js` | forward | `classifyToolPacks` |
+| `05-claude-engine.js` | `07-autonomy.js` | forward | `classifyToolPacks`, `requestNativePermission` |
 | `05-claude-engine.js` | `10-context-governance.js` | forward | `agentConversationContextMeta`, `runAgentExternalCompact` |
 | `06-provider-engine.js` | `00-boot.js` | backward | `APP_NAME`, `DEFAULT_PORT`, `OVERLAY_ID`, `RUYI_EVENTS`, `VERSION`, `dataRoot`, `externalRoot`, `logEvent`, `neutralizeFenceTag`, `nowIso`, `paths`, `safeJsonParse` |
 | `06-provider-engine.js` | `01-config.js` | backward | `RUNTIME`, `atomicWriteJson`, `readConfig`, `safeSessionId` |
@@ -322,7 +323,7 @@
 | `10a-session-turn.js` | `02e-session-engine-route.js` | backward | `configForSessionEngineRoute`, `inferSessionEngineRoute`, `normalizeSessionEngineRoute`, `sessionEngineRouteFromConfig` |
 | `10a-session-turn.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `10a-session-turn.js` | `04-permission-runtime.js` | backward | `assertSessionExecutionOwner`, `driverAutoSessions`, `recordSessionExecutionOwner`, `requestSessionExecutionStop`, `sessionExecutionSnapshot`, `stopSession`, `turnOutcomePending` |
-| `10a-session-turn.js` | `05-claude-engine.js` | backward | `runClaudeTurn` |
+| `10a-session-turn.js` | `05-claude-engine.js` | backward | `runClaudeTurn`, `runCodexTurn` |
 | `10a-session-turn.js` | `06-provider-engine.js` | backward | `maybeWriteThreadBrief`, `settleThreadBrief` |
 | `10a-session-turn.js` | `06e-mission-domain.js` | backward | `runMissionDriver` |
 | `10a-session-turn.js` | `06f-autonomy-grants.js` | backward | `bindDriverRun`, `endDriverRun`, `revokeGrantsForRun` |
@@ -380,7 +381,7 @@
 | `13-http-router.js` | `03a-privacy-gateway.js` | backward | `PrivacyGateway` |
 | `13-http-router.js` | `04-permission-runtime.js` | backward | `ToolboxHooks`, `requestSessionExecutionStop` |
 | `13-http-router.js` | `04i-provider-wire.js` | backward | `PROVIDER_PRESETS`, `activeOpenAiProvider`, `normalizeProviderApiStyle`, `resolveProvider`, `sanitizeProvider` |
-| `13-http-router.js` | `05-claude-engine.js` | backward | `agentCliAdapter` |
+| `13-http-router.js` | `05-claude-engine.js` | backward | `CodexAccount`, `agentCliAdapter` |
 | `13-http-router.js` | `06-provider-engine.js` | backward | `deleteUserPlaybook`, `draftPlaybookFromSession`, `listPlaybooksWithAvailability`, `normalizePlaybook`, `playbookReuseSources`, `saveUserPlaybook` |
 | `13-http-router.js` | `06c-agent-workflow-catalog.js` | backward | `agentWorkflowSaveProblem`, `deleteAgentWorkflow`, `getAgentWorkflows`, `normalizeAgentWorkflow`, `saveAgentWorkflow` |
 | `13-http-router.js` | `06d-memory-domain.js` | backward | `MEMORY_EXCLUSION_MAX`, `analyzeMemoryMaintenance`, `applyMemoryRelationProposal`, `confirmMemoryRelation`, `decideMemoryProposal`, `deleteMemory`, `deleteMemoryRelation`, `draftMemoryFromSession`, `listMemoryProjectGroups`, `listMemoryRelations`, `loadMemoryRegistry`, `migrateMemory`, `moveMemoryScope`, `projectKeyForCwd`, `proposeMemoryFromSession`, `proposeMemoryRelation`, `readMemoryItem`, `replayPendingMemoryProposal`, `resolveCoreMemoryState`, `saveMemory`, `validateMemoryProposalSave` |
@@ -671,7 +672,7 @@
 | `14-main.js` | `10a-session-turn.js` | backward | `runSessionTurn`, `scheduleAgentWakesAtBoot` |
 | `14-main.js` | `11-native-tools.js` | backward | `adaptiveCatalogForMcp`, `crc32`, `killAllShellSessions`, `readWebCache`, `webCachePath`, `webFetch`, `webSearch`, `writeWebCache`, `zipReadCentralDir`, `zipReadEntryData`, `zipWrite` |
 | `14-main.js` | `12-tool-dispatch.js` | backward | `TOOL_HANDLERS`, `attachScreenshotImage`, `guardDownloadDest`, `suggestToolNames`, `toolArgsMissingRequired`, `toolCall`, `toolFailureResult`, `validateNativeToolArgs`, `withToolArgsGuide` |
-| `14-main.js` | `13-http-router.js` | backward | `ServerStartNotices`, `buildUsageSummary`, `doctor`, `handleAgentWorkflowApiRoutes`, `handleAutonomyGrantApiRoutes`, `handleChatApiRoute`, `handleCheckpointApiRoutes`, `handleCheckpointQueryApiRoutes`, `handleConfigurationApiRoutes`, `handleDiagnosticsApiRoutes`, `handleLocalSupportApiRoutes`, `handleMemoryApiRoutes`, `handleMissionLedgerApiRoutes`, `handleModelsApiRoute`, `handlePlaybookApiRoutes`, `handleProviderTestApiRoute`, `handleSessionExecutionApiRoutes`, `handleSkillApiRoutes`, `handleStatusApiRoutes`, `handleToolApiRoutes`, `handleUsageApiRoutes`, `handleWorkspaceApiRoutes`, `parseArgs` |
+| `14-main.js` | `13-http-router.js` | backward | `ServerStartNotices`, `buildUsageSummary`, `doctor`, `handleAgentWorkflowApiRoutes`, `handleAutonomyGrantApiRoutes`, `handleChatApiRoute`, `handleCheckpointApiRoutes`, `handleCheckpointQueryApiRoutes`, `handleCodexApiRoutes`, `handleConfigurationApiRoutes`, `handleDiagnosticsApiRoutes`, `handleLocalSupportApiRoutes`, `handleMemoryApiRoutes`, `handleMissionLedgerApiRoutes`, `handleModelsApiRoute`, `handlePlaybookApiRoutes`, `handleProviderTestApiRoute`, `handleSessionExecutionApiRoutes`, `handleSkillApiRoutes`, `handleStatusApiRoutes`, `handleToolApiRoutes`, `handleUsageApiRoutes`, `handleWorkspaceApiRoutes`, `parseArgs` |
 | `14-main.js` | `13b-api-domain-routes.js` | backward | `handleAttachmentApiRoutes`, `handleAudioApiRoutes`, `handleMcpApiRoutes`, `handleSteerApiRoute` |
 | `14-main.js` | `13d-core-domain-routes.js` | backward | `buildMissionAggregateRows`, `handleAgentRunApiRoutes`, `handleInterventionApiRoutes`, `handleMissionsApiRoutes`, `handleSessionApiRoutes`, `missionAggregateStats` |
 | `14-main.js` | `13e-pretender-index.js` | backward | `getPretenderProjectionIndex`, `pretenderIndexTestHooks`, `warmPretenderProjectionIndex` |

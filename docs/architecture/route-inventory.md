@@ -1,7 +1,7 @@
 # 路由清册(第 103 波 103a · 机器生成)
 
 > 由 `dev-harness/route-inventory.js` 生成,`route-inventory.static.e2e.js` 重算比对;手改无效。
-> 判定点 170(精确 147 / 前缀 11 / 正则 12),ROUTE_AUTH 156 条,生成于 2026-11-19T16:03:44.477Z。
+> 判定点 175(精确 152 / 前缀 11 / 正则 12),ROUTE_AUTH 161 条,生成于 2026-11-24T04:05:42.378Z。
 
 鉴权级别:`open` 低敏读 · `origin` 同源 · `token` 始终 token · `token-browser` 浏览器须 token/loopback 须同源 · `body-token` handler 自查 body token · `host-gate` 顶层 host 门(非 /api)。`self` = handler 内另有 tokenOk 纵深自查。
 
@@ -70,11 +70,21 @@
 | POST | `/api/checkpoints/rollback` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, artifacts.e2e.js, checkpoint-coverage.e2e.js 等 11 件 |
 | POST | `/api/session/rewind` | exact | token | ../backend/checkpoint-routes.cjs · `handleCheckpointApiRoutes` | action-feedback.static.e2e.js, agent-wake.e2e.js, checkpoint-visibility.e2e.js 等 15 件 |
 
+## codex-account(5)
+
+| 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
+|---|---|---|---|---|---|
+| GET | `/api/codex/models` | exact | token | ../backend/codex-account.cjs · `handleCodexApiRoutes` | codex-settings.browser.e2e.js |
+| POST | `/api/codex/unlock` | exact | token | ../backend/codex-account.cjs · `handleCodexApiRoutes` | codex-settings.browser.e2e.js |
+| GET | `/api/codex/account` | exact | token | ../backend/codex-account.cjs · `handleCodexApiRoutes` | codex-settings.browser.e2e.js |
+| POST | `/api/codex/login` | exact | token | ../backend/codex-account.cjs · `handleCodexApiRoutes` | — |
+| POST | `/api/codex/logout` | exact | token | ../backend/codex-account.cjs · `handleCodexApiRoutes` | — |
+
 ## configuration(6)
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| POST | `/api/config` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 67 件 |
+| POST | `/api/config` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-coordination.e2e.js, agent-team-mode.e2e.js, agent-wake.e2e.js 等 68 件 |
 | GET | `/api/agent-roles` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
 | POST | `/api/agent-roles` | exact | token | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | auth-deny-default.e2e.js, config-mutate-mcp-parity.e2e.js, frontend-domains.static.e2e.js 等 7 件 |
 | GET | `/api/agent-workflows` | exact | token-browser | ../backend/configuration-routes.cjs · `handleConfigurationApiRoutes` | agent-workflow-audit-fixes.e2e.js, auth-deny-default.e2e.js, meta-guard.e2e.js 等 6 件 |
@@ -234,7 +244,7 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/models` | exact | open | ../backend/provider-routes.cjs · `handleModelsApiRoute` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, context-window.e2e.js 等 5 件 |
+| GET | `/api/models` | exact | open | ../backend/provider-routes.cjs · `handleModelsApiRoute` | asr-config-ui.static.e2e.js, claude-models-cache.e2e.js, codex-settings.browser.e2e.js 等 6 件 |
 | POST | `/api/provider/test` | exact | token | ../backend/provider-routes.cjs · `handleProviderTestApiRoute` | anthropic-gateway-setup.e2e.js, anthropic-provider-setup.browser.e2e.js, audit-w23.e2e.js 等 8 件 |
 
 ## scheduler(6)
@@ -252,12 +262,12 @@
 
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
-| GET | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 272 件 |
+| GET | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 274 件 |
 | GET | `/api/sessions/search` | exact | token self | ../backend/session-routes.cjs · `handleSessionApiRoutes` | session-id-path-guard.e2e.js, session-search.e2e.js, steward-runner.e2e.js 等 4 件 |
-| POST | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 272 件 |
+| POST | `/api/sessions` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | a11y-lint.browser.e2e.js, a11y-walkthrough.browser.e2e.js, acc-capability-gates.e2e.js 等 274 件 |
 | POST | `/api/sessions/bulk-delete` | exact | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | session-bulk-cleanup.e2e.js |
 | GET | `/api/sessions/background-counts` | exact | token-browser self | ../backend/session-routes.cjs · `handleSessionApiRoutes` | — |
-| DELETE/GET/PATCH/POST | `/api/sessions/:id` | regex | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | acc-capability-gates.e2e.js, action-feedback.browser.e2e.js, agent-mode-v2.e2e.js 等 153 件 |
+| DELETE/GET/PATCH/POST | `/api/sessions/:id` | regex | token-browser | ../backend/session-routes.cjs · `handleSessionApiRoutes` | acc-capability-gates.e2e.js, action-feedback.browser.e2e.js, agent-mode-v2.e2e.js 等 154 件 |
 
 ## session-execution(3)
 
@@ -280,7 +290,7 @@
 | 方法 | 路径 | 形态 | auth | handler | 测试覆盖 |
 |---|---|---|---|---|---|
 | POST | `/api/bootstrap` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | checkpoint-visibility.e2e.js, claude-binary-live.e2e.js, context-compact-v2.e2e.js 等 21 件 |
-| GET | `/api/status` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 80 件 |
+| GET | `/api/status` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | acc-capability-gates.e2e.js, agent-deadlock-watchdog.e2e.js, asr-transcribe.e2e.js 等 81 件 |
 | GET | `/api/capabilities` | exact | open | ../backend/status-routes.cjs · `handleStatusApiRoutes` | capabilities.e2e.js, macos-capability-popover.browser.e2e.js, macos-capture-host.e2e.js 等 7 件 |
 
 ## steer(2)

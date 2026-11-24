@@ -40,8 +40,8 @@ const FLIPPED = ['runtimeHistoryReadDedupV1', 'runtimeSummaryPromptI18nV1', 'run
 // 一份「旧版本写下的整份配置」:当前默认铺满,改几处 —— 与 2.8.0 及以前每一次写盘的形状相同。
 const fullOldFile = (patch = {}) => ({ ...JSON.parse(JSON.stringify(DEFAULTS)), configExplicitKeysV1: undefined, configSchema: 12, version: '2.8.0', ...patch });
 
-test('前提:schema 已抬到 14(13 是稀疏落盘,14 是出厂权限档翻成智能自动),默认表里有簿记键 configExplicitKeysV1', () => {
-  assert.equal(CONFIG_SCHEMA, 14);
+test('前提:schema 15 支持托管工作区迁移,默认表里有簿记键 configExplicitKeysV1', () => {
+  assert.equal(CONFIG_SCHEMA, 16);
   assert.deepEqual(srv.defaultConfig().configExplicitKeysV1, []);
 });
 
@@ -269,4 +269,27 @@ test('[P] 配置丢了但已有会话:钉回 default 而不是出厂的智能自
     fs.rmSync(marker, { force: true });
     reset();
   }
+});
+
+test('新建线程使用可写的托管子目录，迁移时保留工作区并统一推理强度', async () => {
+  const stewardWorkspaceRoot = path.join(root, 'managed');
+  const target = path.join(stewardWorkspaceRoot, 'workspace');
+  const original = { configSchema: 14, stewardWorkspaceRoot, workspaces: [
+    { path: os.homedir() }, { path: root, execute: false },
+  ], claudeThinkingEffort: '', codexThinkingEffort: 'low' };
+  writeDisk(original);
+  const config = await readConfig();
+  assert.equal(config.defaultWorkspace, target);
+  assert.deepEqual(config.workspaces.map(w => w.path), [target, os.homedir(), root]);
+  assert.equal(config.workspaces[2].execute, false);
+  assert.equal(config.codexThinkingEffort, 'high');
+  assert.equal(config.claudeThinkingEffort, 'high');
+  const session = await srv.createSession({});
+  assert.equal(session.cwd, target);
+  fs.writeFileSync(path.join(session.cwd, 'check.txt'), 'ok');
+  assert.equal((await srv.createSession({ cwd: root })).cwd, root);
+  assert.equal(normalizeConfig({ ...original, workspaces: [{ path: root }] }).config.defaultWorkspace, root);
+  assert.equal(normalizeConfig({ ...original, defaultWorkspace: os.homedir(), configExplicitKeysV1: ['defaultWorkspace'] }).config.defaultWorkspace, os.homedir());
+  assert.equal(DEFAULTS.claudeThinkingEffort, 'high');
+  assert.equal(DEFAULTS.codexThinkingEffort, 'high');
 });

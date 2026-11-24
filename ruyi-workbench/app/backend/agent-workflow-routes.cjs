@@ -2,6 +2,7 @@
 
 const { apiSessionIdInvalid, apiSessionNotFound, json, readJsonBody, send } = require('./http-protocol.cjs');
 const { normalizeCwd } = require('./path-containment.cjs');
+const { inferSessionEngineRoute, sessionEngineRouteFromConfig } = require('./session-engine-route.cjs');
 const { PERMISSION_MODES, resolvePermissionMode } = require('./agent-role-policy.cjs');
 
 function createAgentWorkflowRoutes({
@@ -59,6 +60,10 @@ function createAgentWorkflowRoutes({
       if (!session) return send(res, apiSessionNotFound());
       const config = await readConfig();
       const reg = activeChildren.get(sessionId);
+      const route = inferSessionEngineRoute(session) || sessionEngineRouteFromConfig(config);
+      if (reg?.kind === 'codex' || (!reg && route?.agentCliType === 'codex')) {
+        return send(res, json({ ok: false, error: 'Codex CLI 当前支持普通线程，暂不支持多 Agent 工作流。' }, 400));
+      }
       const provider = resolveProvider(config, body.providerId)
         || activeOpenAiProvider(config)
         || (config.providers || []).find(p => p && p.baseUrl && (p.model || (p.models && p.models.length)));

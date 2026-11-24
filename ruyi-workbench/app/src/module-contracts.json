@@ -3355,9 +3355,11 @@
       "layer": "engine",
       "provides": [
         "AGENT_CLI_ADAPTERS",
+        "CodexAccount",
         "agentCliAdapter",
         "maybeAutoCompactAgentSession",
-        "runClaudeTurn"
+        "runClaudeTurn",
+        "runCodexTurn"
       ],
       "requires": [
         {
@@ -3473,6 +3475,13 @@
           ]
         },
         {
+          "provider": "00-boot.js",
+          "symbol": "VERSION",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "00b-ruyi-names.js",
           "symbol": "RUYI_MCP_CLI_TOOL_PREFIX",
           "kinds": [
@@ -3480,8 +3489,22 @@
           ]
         },
         {
+          "provider": "00b-ruyi-names.js",
+          "symbol": "RUYI_MCP_SERVER_ID",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "01-config.js",
           "symbol": "agentCliLauncherUsable",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01-config.js",
+          "symbol": "atomicWriteJson",
           "kinds": [
             "read"
           ]
@@ -3608,6 +3631,13 @@
         {
           "provider": "01h-process-runtime.js",
           "symbol": "ProcessRuntime",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "01j-local-crypto.js",
+          "symbol": "LocalSecretCrypto",
           "kinds": [
             "read"
           ]
@@ -3866,6 +3896,13 @@
         },
         {
           "provider": "04-permission-runtime.js",
+          "symbol": "requestUserQuestion",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "04-permission-runtime.js",
           "symbol": "sameClaudeResumeCwd",
           "kinds": [
             "read"
@@ -3875,6 +3912,7 @@
           "provider": "04-permission-runtime.js",
           "symbol": "stopSession",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -3896,6 +3934,7 @@
           "provider": "04l-skill-registry.js",
           "symbol": "resolveEnabledSkillEntries",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -3973,6 +4012,7 @@
           "provider": "06b-prompt-registry.js",
           "symbol": "appendTurnPolicies",
           "kinds": [
+            "call",
             "read"
           ]
         },
@@ -4078,12 +4118,20 @@
           "provider": "06w-capability-service.js",
           "symbol": "peekCapabilities",
           "kinds": [
+            "call",
             "read"
           ]
         },
         {
           "provider": "07-autonomy.js",
           "symbol": "classifyToolPacks",
+          "kinds": [
+            "call"
+          ]
+        },
+        {
+          "provider": "07-autonomy.js",
+          "symbol": "requestNativePermission",
           "kinds": [
             "call"
           ]
@@ -8439,6 +8487,13 @@
           ]
         },
         {
+          "provider": "05-claude-engine.js",
+          "symbol": "runCodexTurn",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
           "provider": "06-provider-engine.js",
           "symbol": "maybeWriteThreadBrief",
           "kinds": [
@@ -10170,6 +10225,7 @@
         "handleChatApiRoute",
         "handleCheckpointApiRoutes",
         "handleCheckpointQueryApiRoutes",
+        "handleCodexApiRoutes",
         "handleConfigurationApiRoutes",
         "handleDiagnosticsApiRoutes",
         "handleLocalSupportApiRoutes",
@@ -10933,6 +10989,13 @@
         {
           "provider": "05-claude-engine.js",
           "symbol": "agentCliAdapter",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "05-claude-engine.js",
+          "symbol": "CodexAccount",
           "kinds": [
             "read"
           ]
@@ -22884,6 +22947,13 @@
         {
           "provider": "13-http-router.js",
           "symbol": "handleCheckpointQueryApiRoutes",
+          "kinds": [
+            "read"
+          ]
+        },
+        {
+          "provider": "13-http-router.js",
+          "symbol": "handleCodexApiRoutes",
           "kinds": [
             "read"
           ]

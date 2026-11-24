@@ -31,12 +31,14 @@ int main(void) {
         size_t size = fread(input, 1, sizeof(input), stdin);
         if (size > 4096 || ferror(stdin)) return Emit(@{@"ok":@NO, @"error":@"input_invalid"});
         id request = [NSJSONSerialization JSONObjectWithData:[NSData dataWithBytes:input length:size] options:0 error:NULL];
-        if (![request isKindOfClass:NSDictionary.class] || [request count] != 2 || ![request[@"version"] isEqual:@1]
-            || !([request[@"op"] isEqual:@"get"] || [request[@"op"] isEqual:@"get-or-create"]))
+        if (![request isKindOfClass:NSDictionary.class] || [request count] != 2 || ![request[@"version"] isEqual:@1])
             return Emit(@{@"ok":@NO, @"error":@"input_invalid"});
-        // An unsigned CLI must not leave a UI prompt pending after its caller times out.
-        // Users can unlock their login Keychain / grant access, then retry explicitly.
-        SecKeychainSetUserInteractionAllowed(false);
+        NSString *op = request[@"op"];
+        BOOL create = [op isEqual:@"get-or-create"] || [op isEqual:@"get-or-create-interactive"];
+        BOOL interactive = [op isEqual:@"get-interactive"] || [op isEqual:@"get-or-create-interactive"];
+        if (!create && !interactive && ![op isEqual:@"get"]) return Emit(@{@"ok":@NO, @"error":@"input_invalid"});
+        // A user-initiated sign-in may ask for consent. Background reads and refreshes stay silent.
+        SecKeychainSetUserInteractionAllowed(interactive);
         SecKeychainRef keychain = NULL;
 #ifdef RUYI_KEYCHAIN_TEST_PATH
         OSStatus opened = SecKeychainOpen(RUYI_KEYCHAIN_TEST_PATH, &keychain);
@@ -51,7 +53,7 @@ int main(void) {
         read[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
         CFTypeRef found = NULL;
         OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)read, &found);
-        if (status == errSecItemNotFound && [request[@"op"] isEqual:@"get-or-create"]) {
+        if (status == errSecItemNotFound && create) {
             NSMutableData *key = [NSMutableData dataWithLength:32];
             status = SecRandomCopyBytes(kSecRandomDefault, key.length, key.mutableBytes);
             if (!status) {

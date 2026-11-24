@@ -1577,6 +1577,18 @@
             <p id="agentCliCapabilityHint" class="field-help muted"></p>
             <section class="settings-section" id="settingsSecCliEngine" aria-labelledby="settingsSecCliEngineHeading">
               <h4 id="settingsSecCliEngineHeading" class="settings-subhead" data-i18n="settings.agentCli.sectionEngine">命令行引擎</h4>
+            <details class="field-block" id="codexAccountDetails">
+              <summary>Codex CLI · ChatGPT</summary>
+              <label for="codexPathInput" data-i18n="settings.codex.path">Codex CLI 路径</label>
+              <input id="codexPathInput" data-driver="codex" type="text" placeholder="/opt/homebrew/bin/codex" />
+              <label for="codexAccountSelect" data-i18n="settings.codex.account">ChatGPT 套餐账号</label>
+              <select id="codexAccountSelect"></select>
+              <div><button type="button" id="codexSignIn" data-i18n="settings.codex.login">使用 ChatGPT 继续</button>
+              <button type="button" id="codexUnlock" hidden data-i18n="settings.codex.unlock">解锁钥匙串</button>
+              <button type="button" id="codexSignOut" data-i18n="settings.codex.logout">退出</button></div>
+              <p id="codexAccountStatus" class="field-help muted" role="status"></p>
+              <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noopener" data-i18n="settings.codex.usage">查看 ChatGPT 用量</a>
+            </details>
             <div class="field-block" data-agent-cli-path="claude">
               <label for="claudePathInput" data-i18n="settings.claudePath">Claude CLI 路径</label>
               <input id="claudePathInput" type="text" placeholder="claude.cmd 或内网 CLI 完整路径" data-i18n-attr="placeholder:settings.claudePathPlaceholder" />

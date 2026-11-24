@@ -110,10 +110,10 @@ export function shouldShowOnboarding(config, sessions) {
   return noSessions && noWorkspaces;
 }
 
-export function onboardingStepsFor(config) {
+export function onboardingStepsFor(config, status = {}) {
   const c = asObject(config);
   const providers = chatProviders(c);
-  const engineReady = providers.length > 0 || Boolean(c.claudePath);
+  const engineReady = providers.length > 0 || Boolean(c.claudePath || c.codexPath || status?.detectedCodexPath);
   // 走查 #10：defaultWorkspace 永远有值（缺省＝整个用户目录）、permissionMode 永远有出厂值 —— 拿它们判「做过了」
   // 等于新装第一秒就把「文件夹」「安全档」画成绿的。改成要有真凭据：选过文件夹（recentWorkspaces）、选过档位（显式键）或整套向导走完过。
   const completed = Boolean(asObject(c.onboarding).completedAt);
@@ -426,7 +426,7 @@ export function createOnboardingWizardDomain({
     function render() {
       const ids = activeStepIds();
       const stepId = currentStepId();
-      const steps = onboardingStepsFor(state.config);
+      const steps = onboardingStepsFor(state.config, state.status);
       const meta = STEP_META[stepId];
       frame.modal.setAttribute('aria-label', t('onboarding.wizard.title'));
       // 走查 W1-10：标题与关闭钮的 aria-label 原来只在 buildFrame 写一次，第一步切语言后停在旧语言 —— 每次 render 都按当前语言重写。

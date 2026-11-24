@@ -1,6 +1,7 @@
 'use strict';
 
 // EC-D 第61波：成本/用量看板领域（缓存、范围筛选、聚合与 SVG 图表）。
+import { knownAgentCliMeta } from './agent-cli-registry.js';
 import { api } from './net.js';
 import { $, el, fmtTokens, toast } from './util.js';
 import { getLocale, t } from './i18n.js';
@@ -41,7 +42,7 @@ function fmtCostsByCurrency(costs, prefix) {
 // 诚实渲染判定：后端可能给 planBased(true)=第三方计划内计费，或 costTrusted(false)=成本不可当真实金额。
 // 二者任一命中即视为「计划内 / 成本不可信」——只显 token，不显伪造金额。
 function entryPlanBased(e) { return !!(e && (e.planBased === true || e.costTrusted === false)); }
-function engineDisplayName(engine) { return engine === 'claude' ? 'Claude' : engine === 'openai' ? t('chat.providerNative') : (engine || t('common.other')); }
+function engineDisplayName(engine) { return engine === 'claude' ? 'Claude' : engine === 'openai' ? t('chat.providerNative') : (knownAgentCliMeta(engine)?.label || engine || t('common.other')); }
 
 // 连点「今天 → 本周」时两发请求同时在飞：修前谁后到谁画，慢的「今天」会盖掉已经选中的「本周」。
 // 每发取一个序号，回来时已不是最新那一发就整个丢掉（数据、画面、忙碌标记都归最新那一发管）。
